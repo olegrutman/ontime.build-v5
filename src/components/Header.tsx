@@ -1,4 +1,4 @@
-import { Building2, Plus, Search, Bell, LogOut, Users, Settings, Package, Truck, FileText, CheckSquare, ShoppingCart, FileEdit, Briefcase, Receipt } from 'lucide-react';
+import { Building2, Plus, Search, Bell, LogOut, Users, Settings, Package, Truck, FileText, CheckSquare, ShoppingCart, FileEdit, Briefcase, Receipt, Home, Handshake } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/useAuth';
@@ -39,8 +39,8 @@ export function Header() {
     <header className="sticky top-0 z-50 bg-primary text-primary-foreground">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
+          {/* Logo - clickable to dashboard */}
+          <Link to="/dashboard" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <div className="flex items-center justify-center w-9 h-9 bg-primary-foreground/10 rounded-lg">
               <Building2 className="w-5 h-5" />
             </div>
@@ -52,7 +52,7 @@ export function Header() {
                 </p>
               )}
             </div>
-          </div>
+          </Link>
 
           {/* Search */}
           <div className="hidden md:flex items-center flex-1 max-w-md mx-8">
@@ -109,6 +109,15 @@ export function Header() {
                         )}
                       </div>
                     </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate('/dashboard')}>
+                      <Home className="mr-2 h-4 w-4" />
+                      Dashboard
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/partners')}>
+                      <Handshake className="mr-2 h-4 w-4" />
+                      Partner Directory
+                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => navigate('/catalog')}>
                       <Package className="mr-2 h-4 w-4" />
