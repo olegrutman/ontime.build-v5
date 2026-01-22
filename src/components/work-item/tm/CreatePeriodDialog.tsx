@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { format, addDays, startOfWeek, endOfWeek, startOfDay } from 'date-fns';
+import { useState, useMemo } from 'react';
+import { format, endOfWeek, startOfDay, isWithinInterval, parseISO } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Dialog,
   DialogContent,
@@ -21,17 +22,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, Plus } from 'lucide-react';
+import { CalendarIcon, Plus, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { TMPeriodType } from './types';
+import { TMPeriodType, TMPeriod } from './types';
 
 interface CreatePeriodDialogProps {
   workItemId: string;
+  existingPeriods?: TMPeriod[];
   onCreated: () => void;
 }
 
-export function CreatePeriodDialog({ workItemId, onCreated }: CreatePeriodDialogProps) {
+export function CreatePeriodDialog({ workItemId, existingPeriods = [], onCreated }: CreatePeriodDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [periodType, setPeriodType] = useState<TMPeriodType>('WEEKLY');
@@ -45,9 +47,40 @@ export function CreatePeriodDialog({ workItemId, onCreated }: CreatePeriodDialog
     return endOfWeek(start, { weekStartsOn: 1 }); // Monday start
   };
 
+  // Check for date overlap with existing periods
+  const overlapWarning = useMemo(() => {
+    if (!startDate) return null;
+    
+    const newStart = startDate;
+    const newEnd = getEndDate(startDate, periodType);
+
+    for (const period of existingPeriods) {
+      const existingStart = parseISO(period.period_start);
+      const existingEnd = parseISO(period.period_end);
+
+      // Check if new period overlaps with existing
+      const overlaps = 
+        isWithinInterval(newStart, { start: existingStart, end: existingEnd }) ||
+        isWithinInterval(newEnd, { start: existingStart, end: existingEnd }) ||
+        isWithinInterval(existingStart, { start: newStart, end: newEnd }) ||
+        isWithinInterval(existingEnd, { start: newStart, end: newEnd });
+
+      if (overlaps) {
+        return `Overlaps with existing ${period.period_type.toLowerCase()} period (${format(existingStart, 'MMM d')} - ${format(existingEnd, 'MMM d')})`;
+      }
+    }
+
+    return null;
+  }, [startDate, periodType, existingPeriods]);
+
   const handleCreate = async () => {
     if (!startDate) {
       toast.error('Please select a start date');
+      return;
+    }
+
+    if (overlapWarning) {
+      toast.error('Cannot create overlapping periods');
       return;
     }
 
@@ -139,13 +172,20 @@ export function CreatePeriodDialog({ workItemId, onCreated }: CreatePeriodDialog
               <p className="font-medium">{format(displayEndDate, 'PPP')}</p>
             </div>
           )}
+
+          {overlapWarning && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>{overlapWarning}</AlertDescription>
+            </Alert>
+          )}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button onClick={handleCreate} disabled={loading || !startDate}>
+          <Button onClick={handleCreate} disabled={loading || !startDate || !!overlapWarning}>
             Create Period
           </Button>
         </DialogFooter>

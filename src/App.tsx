@@ -15,6 +15,8 @@ import MaterialOrders from "./pages/MaterialOrders";
 import OrderApprovals from "./pages/OrderApprovals";
 import PurchaseOrders from "./pages/PurchaseOrders";
 import ChangeOrders from "./pages/ChangeOrders";
+import WorkItems from "./pages/WorkItems";
+import SOVDashboard from "./pages/SOVDashboard";
 import { WorkItemPage } from "@/components/work-item";
 import NotFound from "./pages/NotFound";
 
@@ -39,6 +41,8 @@ const App = () => (
             <Route path="/approvals/orders" element={<OrderApprovals />} />
             <Route path="/purchase-orders" element={<PurchaseOrders />} />
             <Route path="/change-orders" element={<ChangeOrders />} />
+            <Route path="/work-items" element={<WorkItems />} />
+            <Route path="/sov" element={<SOVDashboard />} />
             <Route path="/work-item/:id" element={<WorkItemPage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

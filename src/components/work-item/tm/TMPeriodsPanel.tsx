@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
 import { Clock } from 'lucide-react';
 import { TMPeriod } from './types';
 import { TMPeriodCard } from './TMPeriodCard';
+import { TMBillableSlices } from './TMBillableSlices';
 import { CreatePeriodDialog } from './CreatePeriodDialog';
 import { AppRole } from '@/types/organization';
 
@@ -25,6 +27,27 @@ export function TMPeriodsPanel({ workItemId, currentRole, canViewRates, isWorkIt
 
   useEffect(() => {
     fetchPeriods();
+    
+    // Set up realtime subscription
+    const channel = supabase
+      .channel(`tm_periods_${workItemId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tm_periods',
+          filter: `work_item_id=eq.${workItemId}`,
+        },
+        () => {
+          fetchPeriods();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [workItemId]);
 
   const fetchPeriods = async () => {
@@ -85,7 +108,11 @@ export function TMPeriodsPanel({ workItemId, currentRole, canViewRates, isWorkIt
           )}
         </h3>
         {canCreatePeriod && (
-          <CreatePeriodDialog workItemId={workItemId} onCreated={fetchPeriods} />
+          <CreatePeriodDialog 
+            workItemId={workItemId} 
+            existingPeriods={periods}
+            onCreated={fetchPeriods} 
+          />
         )}
       </div>
 
@@ -109,6 +136,17 @@ export function TMPeriodsPanel({ workItemId, currentRole, canViewRates, isWorkIt
             />
           ))}
         </div>
+      )}
+
+      {/* Billable Slices Summary */}
+      {approvedPeriods.length > 0 && (
+        <>
+          <Separator />
+          <TMBillableSlices 
+            workItemId={workItemId} 
+            canViewFinancials={canViewRates} 
+          />
+        </>
       )}
     </div>
   );

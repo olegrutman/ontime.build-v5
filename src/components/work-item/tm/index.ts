@@ -5,4 +5,6 @@ export { TMPeriodActions } from './TMPeriodActions';
 export { TMLaborEntries } from './TMLaborEntries';
 export { TMMaterialEntries } from './TMMaterialEntries';
 export { CreatePeriodDialog } from './CreatePeriodDialog';
+export { TMMarkupEditor } from './TMMarkupEditor';
+export { TMBillableSlices } from './TMBillableSlices';
 export * from './types';
