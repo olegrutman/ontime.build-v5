@@ -64,6 +64,53 @@ export type Database = {
           },
         ]
       }
+      change_work_pricing: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          notes: string | null
+          quantity: number
+          sort_order: number
+          unit_price: number
+          uom: string
+          updated_at: string
+          work_item_id: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          notes?: string | null
+          quantity?: number
+          sort_order?: number
+          unit_price?: number
+          uom?: string
+          updated_at?: string
+          work_item_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          notes?: string | null
+          quantity?: number
+          sort_order?: number
+          unit_price?: number
+          uom?: string
+          updated_at?: string
+          work_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_work_pricing_work_item_id_fkey"
+            columns: ["work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       estimate_packs: {
         Row: {
           created_at: string
@@ -713,8 +760,52 @@ export type Database = {
           },
         ]
       }
+      work_item_participants: {
+        Row: {
+          accepted_at: string | null
+          id: string
+          invited_at: string
+          invited_by: string
+          organization_id: string
+          work_item_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          id?: string
+          invited_at?: string
+          invited_by: string
+          organization_id: string
+          work_item_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          id?: string
+          invited_at?: string
+          invited_by?: string
+          organization_id?: string
+          work_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_item_participants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_item_participants_work_item_id_fkey"
+            columns: ["work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_items: {
         Row: {
+          amount: number | null
+          code: string | null
           created_at: string
           created_by: string
           description: string | null
@@ -724,11 +815,14 @@ export type Database = {
           organization_id: string
           parent_work_item_id: string | null
           project_id: string | null
+          rejection_notes: string | null
           state: string
           title: string
           updated_at: string
         }
         Insert: {
+          amount?: number | null
+          code?: string | null
           created_at?: string
           created_by: string
           description?: string | null
@@ -738,11 +832,14 @@ export type Database = {
           organization_id: string
           parent_work_item_id?: string | null
           project_id?: string | null
+          rejection_notes?: string | null
           state?: string
           title: string
           updated_at?: string
         }
         Update: {
+          amount?: number | null
+          code?: string | null
           created_at?: string
           created_by?: string
           description?: string | null
@@ -752,6 +849,7 @@ export type Database = {
           organization_id?: string
           parent_work_item_id?: string | null
           project_id?: string | null
+          rejection_notes?: string | null
           state?: string
           title?: string
           updated_at?: string
@@ -785,6 +883,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      execute_change_work: {
+        Args: { change_work_id: string }
+        Returns: undefined
+      }
+      generate_change_work_code: { Args: { org_id: string }; Returns: string }
       generate_po_number: { Args: { org_id: string }; Returns: string }
       get_user_org_id: { Args: { _user_id: string }; Returns: string }
       get_user_role_in_org: {
