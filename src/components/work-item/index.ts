@@ -1,0 +1,9 @@
+export { WorkItemPage } from './WorkItemPage';
+export { WorkItemHeader } from './WorkItemHeader';
+export { WorkItemProgress } from './WorkItemProgress';
+export { WorkItemDetails } from './WorkItemDetails';
+export { WorkItemPricing } from './WorkItemPricing';
+export { WorkItemLabor } from './WorkItemLabor';
+export { WorkItemMaterials } from './WorkItemMaterials';
+export { WorkItemActions } from './WorkItemActions';
+export { WorkItemParticipants } from './WorkItemParticipants';
