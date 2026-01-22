@@ -1,4 +1,4 @@
-import { Building2, Plus, Search, Bell, LogOut, Users, Settings, Package, Truck, FileText, CheckSquare, ShoppingCart } from 'lucide-react';
+import { Building2, Plus, Search, Bell, LogOut, Users, Settings, Package, Truck, FileText, CheckSquare, ShoppingCart, FileEdit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/useAuth';
@@ -125,6 +125,10 @@ export function Header() {
                     <DropdownMenuItem onClick={() => navigate('/purchase-orders')}>
                       <FileText className="mr-2 h-4 w-4" />
                       Purchase Orders
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/change-orders')}>
+                      <FileEdit className="mr-2 h-4 w-4" />
+                      Change Orders
                     </DropdownMenuItem>
                     {currentRole === 'GC_PM' && (
                       <>
