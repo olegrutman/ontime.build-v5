@@ -88,7 +88,7 @@ export function AppSidebar() {
     items.some((item) => location.pathname.startsWith(item.url));
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       {/* Header / Logo */}
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-3 px-2 py-3">
@@ -96,7 +96,7 @@ export function AppSidebar() {
             <Building2 className="w-5 h-5 text-primary-foreground" />
           </div>
           {!collapsed && (
-            <div className="overflow-hidden">
+            <div className="overflow-hidden flex-1 min-w-0">
               <h1 className="font-bold text-base tracking-tight text-sidebar-foreground truncate">
                 Ontime.Build
               </h1>

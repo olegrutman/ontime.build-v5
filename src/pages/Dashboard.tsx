@@ -116,7 +116,7 @@ export default function Dashboard() {
       onNewClick={() => navigate('/create-project')}
       newButtonLabel="New Project"
     >
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Search */}
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -165,31 +165,46 @@ export default function Dashboard() {
                 className="hover:bg-accent/50 transition-colors cursor-pointer"
                 onClick={() => navigate(`/project/${project.id}`)}
               >
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                        <Building2 className="h-6 w-6 text-primary" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">{project.name}</h3>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <span className="capitalize">{project.project_type}</span>
-                          <span>•</span>
-                          <span className="capitalize">{project.build_type?.replace('_', ' ')}</span>
-                        </div>
-                      </div>
+                <CardContent className="p-3 sm:p-4">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    {/* Icon */}
+                    <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-lg bg-primary/10 shrink-0">
+                      <Building2 className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                     </div>
-                    <div className="flex items-center gap-4">
-                      <div className="text-right hidden sm:block">
-                        <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
+                    
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-semibold truncate">{project.name}</h3>
+                          <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+                            <span className="capitalize truncate">{project.project_type}</span>
+                            <span className="hidden xs:inline">•</span>
+                            <span className="capitalize truncate hidden xs:inline">{project.build_type?.replace('_', ' ')}</span>
+                          </div>
+                        </div>
+                        <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+                      </div>
+                      
+                      {/* Mobile badge row */}
+                      <div className="flex items-center gap-2 mt-2 sm:hidden">
+                        <Badge variant={project.status === 'active' ? 'default' : 'secondary'} className="text-xs">
                           {project.status}
                         </Badge>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {format(new Date(project.updated_at), 'MMM d, yyyy')}
-                        </p>
+                        <span className="text-xs text-muted-foreground">
+                          {format(new Date(project.updated_at), 'MMM d')}
+                        </span>
                       </div>
-                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    
+                    {/* Desktop status */}
+                    <div className="text-right hidden sm:block shrink-0">
+                      <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
+                        {project.status}
+                      </Badge>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {format(new Date(project.updated_at), 'MMM d, yyyy')}
+                      </p>
                     </div>
                   </div>
                 </CardContent>
