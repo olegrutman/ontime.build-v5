@@ -134,16 +134,16 @@ export default function MaterialOrders() {
 
   return (
     <AppLayout title="Material Orders" subtitle="Create and manage material orders">
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         <div className="flex justify-end">
           <Dialog>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                New Order
+              <Button size="sm" className="sm:size-default">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">New Order</span>
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-[95vw] sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Select Work Item</DialogTitle>
               </DialogHeader>
@@ -163,13 +163,13 @@ export default function MaterialOrders() {
                         className="cursor-pointer hover:border-primary transition-colors"
                         onClick={() => handleStartOrder(wi.id)}
                       >
-                        <CardContent className="py-3">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium">{wi.title}</p>
-                              <p className="text-sm text-muted-foreground">{wi.location_ref || 'No location'}</p>
+                        <CardContent className="py-3 px-3 sm:px-4">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm truncate">{wi.title}</p>
+                              <p className="text-xs text-muted-foreground truncate">{wi.location_ref || 'No location'}</p>
                             </div>
-                            <Badge variant="outline">
+                            <Badge variant="outline" className="text-[10px] sm:text-xs shrink-0">
                               {WORK_ITEM_TYPE_LABELS[wi.item_type]}
                             </Badge>
                           </div>
@@ -183,7 +183,7 @@ export default function MaterialOrders() {
           </Dialog>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Orders List */}
           <div className="lg:col-span-1 space-y-4">
             <h2 className="text-lg font-semibold">Orders</h2>
@@ -256,34 +256,36 @@ export default function MaterialOrders() {
                 </CardHeader>
                 <CardContent>
                   {selectedOrder.items && selectedOrder.items.length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>SKU</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead className="text-right">Qty</TableHead>
-                          <TableHead>UOM</TableHead>
-                          <TableHead>BF/LF</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {selectedOrder.items.map(item => (
-                          <TableRow key={item.id}>
-                            <TableCell className="font-mono text-sm">
-                              {item.supplier_sku || '-'}
-                            </TableCell>
-                            <TableCell>{item.description}</TableCell>
-                            <TableCell className="text-right">{item.quantity}</TableCell>
-                            <TableCell>{item.uom}</TableCell>
-                            <TableCell>
-                              {item.computed_bf && <span>{item.computed_bf} BF</span>}
-                              {item.computed_lf && <span>{item.computed_lf} LF</span>}
-                              {!item.computed_bf && !item.computed_lf && '-'}
-                            </TableCell>
+                    <div className="overflow-x-auto -mx-4 sm:mx-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-xs">SKU</TableHead>
+                            <TableHead className="text-xs">Description</TableHead>
+                            <TableHead className="text-right text-xs">Qty</TableHead>
+                            <TableHead className="text-xs hidden sm:table-cell">UOM</TableHead>
+                            <TableHead className="text-xs hidden sm:table-cell">BF/LF</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {selectedOrder.items.map(item => (
+                            <TableRow key={item.id}>
+                              <TableCell className="font-mono text-xs">
+                                {item.supplier_sku || '-'}
+                              </TableCell>
+                              <TableCell className="text-xs sm:text-sm max-w-[120px] sm:max-w-none truncate">{item.description}</TableCell>
+                              <TableCell className="text-right text-xs sm:text-sm">{item.quantity}</TableCell>
+                              <TableCell className="text-xs hidden sm:table-cell">{item.uom}</TableCell>
+                              <TableCell className="text-xs hidden sm:table-cell">
+                                {item.computed_bf && <span>{item.computed_bf} BF</span>}
+                                {item.computed_lf && <span>{item.computed_lf} LF</span>}
+                                {!item.computed_bf && !item.computed_lf && '-'}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   ) : (
                     <p className="text-muted-foreground text-center py-4">No items in this order</p>
                   )}

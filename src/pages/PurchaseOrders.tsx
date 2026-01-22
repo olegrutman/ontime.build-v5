@@ -253,16 +253,16 @@ export default function PurchaseOrders() {
 
   return (
     <AppLayout title="Purchase Orders" subtitle="Create and send purchase orders to suppliers">
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         <div className="flex justify-end">
           <Dialog open={newPOOpen} onOpenChange={setNewPOOpen}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                New PO
+              <Button size="sm" className="sm:size-default">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">New PO</span>
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Create Purchase Order</DialogTitle>
               </DialogHeader>
@@ -347,7 +347,7 @@ export default function PurchaseOrders() {
           </Dialog>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* PO List */}
           <div className="lg:col-span-1 space-y-4">
             <h2 className="text-lg font-semibold">Orders</h2>

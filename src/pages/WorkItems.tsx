@@ -136,9 +136,9 @@ export default function WorkItems() {
 
   return (
     <AppLayout title="Work Items" subtitle="All projects, SOV items, change orders, and T&M">
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Type Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
           {(Object.keys(TYPE_ICONS) as WorkItemType[]).map((type) => {
             const Icon = TYPE_ICONS[type];
             return (
@@ -149,13 +149,13 @@ export default function WorkItems() {
                 }`}
                 onClick={() => setFilterType(filterType === type ? 'ALL' : type)}
               >
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${TYPE_COLORS[type]}`}>
-                    <Icon className="w-5 h-5" />
+                <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-3">
+                  <div className={`p-1.5 sm:p-2 rounded-lg ${TYPE_COLORS[type]}`}>
+                    <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
-                  <div>
-                    <p className="text-2xl font-bold">{typeCounts[type]}</p>
-                    <p className="text-xs text-muted-foreground">{WORK_ITEM_TYPE_LABELS[type]}</p>
+                  <div className="min-w-0">
+                    <p className="text-lg sm:text-2xl font-bold">{typeCounts[type]}</p>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground truncate">{WORK_ITEM_TYPE_LABELS[type]}</p>
                   </div>
                 </CardContent>
               </Card>
@@ -213,36 +213,42 @@ export default function WorkItems() {
                   className="cursor-pointer hover:shadow-md transition-all"
                   onClick={() => navigate(`/work-item/${item.id}`)}
                 >
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-4">
-                      <div className={`p-2 rounded-lg shrink-0 ${TYPE_COLORS[item.item_type as WorkItemType] || ''}`}>
-                        <Icon className="w-5 h-5" />
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+                      <div className={`p-1.5 sm:p-2 rounded-lg shrink-0 ${TYPE_COLORS[item.item_type as WorkItemType] || ''}`}>
+                        <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                       </div>
                       
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
+                        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1">
                           {item.code && (
-                            <Badge variant="outline" className="text-xs font-mono shrink-0">
+                            <Badge variant="outline" className="text-[10px] sm:text-xs font-mono shrink-0">
                               {item.code}
                             </Badge>
                           )}
                           <StateBadge state={item.state as WorkItemState} size="sm" />
                         </div>
-                        <h3 className="font-medium truncate">{item.title}</h3>
-                        <p className="text-xs text-muted-foreground">
+                        <h3 className="font-medium text-sm sm:text-base truncate">{item.title}</h3>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground">
                           {WORK_ITEM_TYPE_LABELS[item.item_type as WorkItemType]} • 
                           Updated {formatDistanceToNow(new Date(item.updated_at), { addSuffix: true })}
                         </p>
                       </div>
 
-                      <div className="text-right shrink-0">
+                      <div className="text-right shrink-0 hidden sm:block">
                         <p className="font-semibold">{formatCurrency(item.amount)}</p>
                         {item.location_ref && (
                           <p className="text-xs text-muted-foreground">{item.location_ref}</p>
                         )}
                       </div>
 
-                      <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />
+                      <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground shrink-0" />
+                    </div>
+                    
+                    {/* Mobile amount */}
+                    <div className="flex justify-between items-center mt-2 pt-2 border-t sm:hidden">
+                      <span className="text-xs text-muted-foreground">{item.location_ref || 'No location'}</span>
+                      <span className="font-semibold text-sm">{formatCurrency(item.amount)}</span>
                     </div>
                   </CardContent>
                 </Card>
