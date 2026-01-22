@@ -111,6 +111,53 @@ export type Database = {
           },
         ]
       }
+      cost_rollups: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          final_amount: number | null
+          id: string
+          markup_percent: number
+          notes: string | null
+          raw_cost: number
+          updated_at: string
+          work_item_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          description: string
+          final_amount?: number | null
+          id?: string
+          markup_percent?: number
+          notes?: string | null
+          raw_cost?: number
+          updated_at?: string
+          work_item_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          final_amount?: number | null
+          id?: string
+          markup_percent?: number
+          notes?: string | null
+          raw_cost?: number
+          updated_at?: string
+          work_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cost_rollups_work_item_id_fkey"
+            columns: ["work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       estimate_packs: {
         Row: {
           created_at: string
@@ -145,6 +192,50 @@ export type Database = {
             columns: ["estimate_id"]
             isOneToOne: false
             referencedRelation: "project_estimates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      labor_entries: {
+        Row: {
+          created_at: string
+          description: string | null
+          entered_by: string
+          entry_date: string
+          hourly_rate: number | null
+          hours: number
+          id: string
+          updated_at: string
+          work_item_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          entered_by: string
+          entry_date?: string
+          hourly_rate?: number | null
+          hours: number
+          id?: string
+          updated_at?: string
+          work_item_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          entered_by?: string
+          entry_date?: string
+          hourly_rate?: number | null
+          hours?: number
+          id?: string
+          updated_at?: string
+          work_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "labor_entries_work_item_id_fkey"
+            columns: ["work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
             referencedColumns: ["id"]
           },
         ]
@@ -690,6 +781,66 @@ export type Database = {
           },
         ]
       }
+      supplier_quotes: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          notes: string | null
+          quantity: number
+          supplier_id: string
+          tc_markup_percent: number | null
+          tc_notes: string | null
+          unit_cost: number
+          uom: string
+          updated_at: string
+          work_item_id: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          id?: string
+          notes?: string | null
+          quantity?: number
+          supplier_id: string
+          tc_markup_percent?: number | null
+          tc_notes?: string | null
+          unit_cost?: number
+          uom?: string
+          updated_at?: string
+          work_item_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          notes?: string | null
+          quantity?: number
+          supplier_id?: string
+          tc_markup_percent?: number | null
+          tc_notes?: string | null
+          unit_cost?: number
+          uom?: string
+          updated_at?: string
+          work_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_quotes_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_quotes_work_item_id_fkey"
+            columns: ["work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppliers: {
         Row: {
           contact_info: string | null
@@ -880,9 +1031,146 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      cost_rollups_gc: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          final_amount: number | null
+          id: string | null
+          notes: string | null
+          updated_at: string | null
+          work_item_id: string | null
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          final_amount?: number | null
+          id?: string | null
+          notes?: string | null
+          updated_at?: string | null
+          work_item_id?: string | null
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          final_amount?: number | null
+          id?: string | null
+          notes?: string | null
+          updated_at?: string | null
+          work_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cost_rollups_work_item_id_fkey"
+            columns: ["work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      labor_entries_fs: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          entered_by: string | null
+          entry_date: string | null
+          hours: number | null
+          id: string | null
+          updated_at: string | null
+          work_item_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          entered_by?: string | null
+          entry_date?: string | null
+          hours?: number | null
+          id?: string | null
+          updated_at?: string | null
+          work_item_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          entered_by?: string | null
+          entry_date?: string | null
+          hours?: number | null
+          id?: string | null
+          updated_at?: string | null
+          work_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "labor_entries_work_item_id_fkey"
+            columns: ["work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_quotes_public: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string | null
+          notes: string | null
+          quantity: number | null
+          supplier_id: string | null
+          unit_cost: number | null
+          uom: string | null
+          updated_at: string | null
+          work_item_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          notes?: string | null
+          quantity?: number | null
+          supplier_id?: string | null
+          unit_cost?: number | null
+          uom?: string | null
+          updated_at?: string | null
+          work_item_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          notes?: string | null
+          quantity?: number | null
+          supplier_id?: string | null
+          unit_cost?: number | null
+          uom?: string | null
+          updated_at?: string | null
+          work_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_quotes_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_quotes_work_item_id_fkey"
+            columns: ["work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      can_see_financials: { Args: { _user_id: string }; Returns: boolean }
+      can_see_margins: { Args: { _user_id: string }; Returns: boolean }
       execute_change_work: {
         Args: { change_work_id: string }
         Returns: undefined
