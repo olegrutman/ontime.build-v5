@@ -1,8 +1,8 @@
-import { Building2, Plus, Search, Bell, LogOut, Users, Settings } from 'lucide-react';
+import { Building2, Plus, Search, Bell, LogOut, Users, Settings, Package, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/useAuth';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -110,8 +110,19 @@ export function Header() {
                       </div>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => navigate('/catalog')}>
+                      <Package className="mr-2 h-4 w-4" />
+                      Product Catalog
+                    </DropdownMenuItem>
+                    {currentRole === 'GC_PM' && (
+                      <DropdownMenuItem onClick={() => navigate('/admin/suppliers')}>
+                        <Truck className="mr-2 h-4 w-4" />
+                        Manage Suppliers
+                      </DropdownMenuItem>
+                    )}
                     {currentOrg && (
                       <>
+                        <DropdownMenuSeparator />
                         <DropdownMenuLabel className="text-xs text-muted-foreground">
                           Organization: {currentOrg.name}
                         </DropdownMenuLabel>
