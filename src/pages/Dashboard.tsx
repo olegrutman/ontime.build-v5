@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Plus, Briefcase, Building2, Calendar, ChevronRight, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Briefcase, Building2, ChevronRight, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Header } from '@/components/Header';
+import { AppLayout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
@@ -63,23 +63,19 @@ export default function Dashboard() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-4 py-6">
-          <div className="space-y-4">
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-64 w-full" />
-          </div>
-        </main>
-      </div>
+      <AppLayout title="Projects">
+        <div className="p-6 space-y-4">
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      </AppLayout>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-4 py-6">
+      <AppLayout title="Projects">
+        <div className="p-6">
           <Card className="max-w-md mx-auto">
             <CardContent className="p-6 text-center">
               <h2 className="text-lg font-semibold mb-2">Welcome to Ontime.Build</h2>
@@ -89,16 +85,15 @@ export default function Dashboard() {
               <Button onClick={() => navigate('/auth')}>Sign In</Button>
             </CardContent>
           </Card>
-        </main>
-      </div>
+        </div>
+      </AppLayout>
     );
   }
 
   if (!currentOrg) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-4 py-6">
+      <AppLayout title="Projects">
+        <div className="p-6">
           <Card className="max-w-md mx-auto">
             <CardContent className="p-6 text-center">
               <h2 className="text-lg font-semibold mb-2">No Organization</h2>
@@ -108,32 +103,20 @@ export default function Dashboard() {
               <Button onClick={() => navigate('/join-org')}>Join Organization</Button>
             </CardContent>
           </Card>
-        </main>
-      </div>
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-
-      <main className="container mx-auto px-4 py-6 space-y-6">
-        {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">Projects</h1>
-            <p className="text-muted-foreground">
-              Manage your framing projects and work items
-            </p>
-          </div>
-          {currentOrg.type === 'GC' && (
-            <Button onClick={() => navigate('/create-project')}>
-              <Plus className="mr-2 h-4 w-4" />
-              New Project
-            </Button>
-          )}
-        </div>
-
+    <AppLayout
+      title="Projects"
+      subtitle="Manage your framing projects"
+      showNewButton={currentOrg.type === 'GC'}
+      onNewClick={() => navigate('/create-project')}
+      newButtonLabel="New Project"
+    >
+      <div className="p-6 space-y-6">
         {/* Search */}
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -214,7 +197,7 @@ export default function Dashboard() {
             ))}
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 }

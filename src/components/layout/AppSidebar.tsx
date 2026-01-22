@@ -1,0 +1,312 @@
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  Building2,
+  Home,
+  Briefcase,
+  FileText,
+  ClipboardList,
+  Receipt,
+  Package,
+  ShoppingCart,
+  Truck,
+  CheckSquare,
+  Users,
+  Handshake,
+  Settings,
+  LogOut,
+  ChevronDown,
+} from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { NavLink } from '@/components/NavLink';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from '@/components/ui/sidebar';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { ROLE_LABELS } from '@/types/organization';
+import { cn } from '@/lib/utils';
+
+const mainNavItems = [
+  { title: 'Dashboard', url: '/dashboard', icon: Home },
+  { title: 'Work Items', url: '/work-items', icon: Briefcase },
+  { title: 'SOV Dashboard', url: '/sov', icon: Receipt },
+  { title: 'Change Orders', url: '/change-orders', icon: ClipboardList },
+];
+
+const materialsNavItems = [
+  { title: 'Product Catalog', url: '/catalog', icon: Package },
+  { title: 'Material Orders', url: '/orders', icon: ShoppingCart },
+  { title: 'Purchase Orders', url: '/purchase-orders', icon: FileText },
+  { title: 'Project Estimates', url: '/estimates', icon: FileText },
+];
+
+const approvalNavItems = [
+  { title: 'Estimate Approvals', url: '/approvals/estimates', icon: CheckSquare },
+  { title: 'Order Approvals', url: '/approvals/orders', icon: CheckSquare },
+];
+
+const adminNavItems = [
+  { title: 'Partner Directory', url: '/partners', icon: Handshake },
+  { title: 'Manage Suppliers', url: '/admin/suppliers', icon: Truck },
+];
+
+export function AppSidebar() {
+  const { state } = useSidebar();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, profile, userOrgRoles, currentRole, signOut } = useAuth();
+  const collapsed = state === 'collapsed';
+
+  const currentOrg = userOrgRoles.length > 0 ? userOrgRoles[0].organization : null;
+
+  const getInitials = (name?: string | null) => {
+    if (!name) return 'U';
+    return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
+
+  const isActive = (path: string) => location.pathname === path;
+  const isInGroup = (items: typeof mainNavItems) =>
+    items.some((item) => location.pathname.startsWith(item.url));
+
+  return (
+    <Sidebar collapsible="icon">
+      {/* Header / Logo */}
+      <SidebarHeader className="border-b border-sidebar-border">
+        <div className="flex items-center gap-3 px-2 py-3">
+          <div className="flex items-center justify-center w-9 h-9 bg-primary rounded-lg shrink-0">
+            <Building2 className="w-5 h-5 text-primary-foreground" />
+          </div>
+          {!collapsed && (
+            <div className="overflow-hidden">
+              <h1 className="font-bold text-base tracking-tight text-sidebar-foreground truncate">
+                Ontime.Build
+              </h1>
+              {currentOrg && (
+                <p className="text-[10px] text-sidebar-foreground/60 uppercase tracking-widest truncate">
+                  {currentOrg.org_code}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent className="px-2">
+        {/* Main Navigation */}
+        <SidebarGroup>
+          {!collapsed && <SidebarGroupLabel>Navigation</SidebarGroupLabel>}
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {mainNavItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive(item.url)}
+                    tooltip={collapsed ? item.title : undefined}
+                  >
+                    <NavLink
+                      to={item.url}
+                      end={item.url === '/dashboard'}
+                      className="gap-3"
+                      activeClassName="nav-active"
+                    >
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      {!collapsed && <span>{item.title}</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Materials Section */}
+        <SidebarGroup>
+          <Collapsible defaultOpen={isInGroup(materialsNavItems)} className="group/collapsible">
+            <CollapsibleTrigger asChild>
+              <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent rounded-md px-2 py-1.5 justify-between">
+                {!collapsed && (
+                  <>
+                    <span>Materials</span>
+                    <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                  </>
+                )}
+                {collapsed && <Package className="h-4 w-4 mx-auto" />}
+              </SidebarGroupLabel>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {materialsNavItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(item.url)}
+                        tooltip={collapsed ? item.title : undefined}
+                      >
+                        <NavLink
+                          to={item.url}
+                          className="gap-3"
+                          activeClassName="nav-active"
+                        >
+                          <item.icon className="h-4 w-4 shrink-0" />
+                          {!collapsed && <span>{item.title}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </SidebarGroup>
+
+        {/* Approvals Section - Only for GC_PM */}
+        {currentRole === 'GC_PM' && (
+          <SidebarGroup>
+            <Collapsible defaultOpen={isInGroup(approvalNavItems)} className="group/collapsible">
+              <CollapsibleTrigger asChild>
+                <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent rounded-md px-2 py-1.5 justify-between">
+                  {!collapsed && (
+                    <>
+                      <span>Approvals</span>
+                      <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                    </>
+                  )}
+                  {collapsed && <CheckSquare className="h-4 w-4 mx-auto" />}
+                </SidebarGroupLabel>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {approvalNavItems.map((item) => (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive(item.url)}
+                          tooltip={collapsed ? item.title : undefined}
+                        >
+                          <NavLink
+                            to={item.url}
+                            className="gap-3"
+                            activeClassName="nav-active"
+                          >
+                            <item.icon className="h-4 w-4 shrink-0" />
+                            {!collapsed && <span>{item.title}</span>}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </Collapsible>
+          </SidebarGroup>
+        )}
+
+        {/* Admin Section */}
+        <SidebarGroup>
+          <Collapsible defaultOpen={isInGroup(adminNavItems)} className="group/collapsible">
+            <CollapsibleTrigger asChild>
+              <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent rounded-md px-2 py-1.5 justify-between">
+                {!collapsed && (
+                  <>
+                    <span>Admin</span>
+                    <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                  </>
+                )}
+                {collapsed && <Settings className="h-4 w-4 mx-auto" />}
+              </SidebarGroupLabel>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {adminNavItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(item.url)}
+                        tooltip={collapsed ? item.title : undefined}
+                      >
+                        <NavLink
+                          to={item.url}
+                          className="gap-3"
+                          activeClassName="nav-active"
+                        >
+                          <item.icon className="h-4 w-4 shrink-0" />
+                          {!collapsed && <span>{item.title}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </Collapsible>
+        </SidebarGroup>
+      </SidebarContent>
+
+      {/* Footer with User */}
+      <SidebarFooter className="border-t border-sidebar-border">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              className={cn(
+                'h-auto py-2',
+                collapsed ? 'justify-center' : 'justify-start gap-3'
+              )}
+              tooltip={collapsed ? profile?.full_name || 'User' : undefined}
+            >
+              <Avatar className="h-8 w-8 shrink-0">
+                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                  {getInitials(profile?.full_name)}
+                </AvatarFallback>
+              </Avatar>
+              {!collapsed && (
+                <div className="flex-1 overflow-hidden text-left">
+                  <p className="text-sm font-medium truncate text-sidebar-foreground">
+                    {profile?.full_name || 'User'}
+                  </p>
+                  {currentRole && (
+                    <p className="text-xs text-sidebar-foreground/60 truncate">
+                      {ROLE_LABELS[currentRole]}
+                    </p>
+                  )}
+                </div>
+              )}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={handleSignOut}
+              tooltip={collapsed ? 'Sign out' : undefined}
+              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+            >
+              <LogOut className="h-4 w-4 shrink-0" />
+              {!collapsed && <span>Sign out</span>}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+    </Sidebar>
+  );
+}

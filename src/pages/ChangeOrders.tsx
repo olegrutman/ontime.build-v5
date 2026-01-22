@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import { useChangeWork } from '@/hooks/useChangeWork';
 import { useAuth } from '@/hooks/useAuth';
-import { Header } from '@/components/Header';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AppLayout } from '@/components/layout';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateChangeWorkDialog } from '@/components/change-work/CreateChangeWorkDialog';
 import { ChangeWorkCard } from '@/components/change-work/ChangeWorkCard';
@@ -55,58 +53,43 @@ const ChangeOrders = () => {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-4 py-8">
+      <AppLayout title="Change Orders">
+        <div className="p-6">
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">Please sign in to view change orders.</p>
             </CardContent>
           </Card>
-        </main>
-      </div>
+        </div>
+      </AppLayout>
     );
   }
 
   if (userOrgRoles.length === 0) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-4 py-8">
+      <AppLayout title="Change Orders">
+        <div className="p-6">
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">Please join an organization first.</p>
             </CardContent>
           </Card>
-        </main>
-      </div>
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <FileEdit className="w-6 h-6" />
-              Change Orders
-            </h1>
-            <p className="text-muted-foreground">
-              Manage change work items through the approval workflow
-            </p>
-          </div>
-          {canCreate && (
-            <Button onClick={() => setShowCreateDialog(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Change Order
-            </Button>
-          )}
-        </div>
-
+    <AppLayout
+      title="Change Orders"
+      subtitle="Manage change work through approval workflow"
+      showNewButton={canCreate}
+      onNewClick={() => setShowCreateDialog(true)}
+      newButtonLabel="New Change Order"
+    >
+      <div className="p-6 space-y-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           {(['ALL', 'OPEN', 'PRICED', 'APPROVED', 'EXECUTED'] as const).map((state) => (
             <Card
               key={state}
@@ -196,8 +179,8 @@ const ChangeOrders = () => {
           onCreate={createChangeWork}
           isCreating={isCreating}
         />
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 };
 

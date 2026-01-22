@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Header } from '@/components/Header';
+import { AppLayout } from '@/components/layout';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
@@ -22,7 +21,6 @@ import {
   FileText, 
   Search,
   ChevronRight,
-  ArrowRight,
   Filter
 } from 'lucide-react';
 import { StateBadge } from '@/components/StateBadge';
@@ -124,36 +122,23 @@ export default function WorkItems() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-4 py-8">
+      <AppLayout title="Work Items">
+        <div className="p-6">
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">Please sign in to view work items.</p>
             </CardContent>
           </Card>
-        </main>
-      </div>
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto px-4 py-6">
-        {/* Page Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Briefcase className="w-6 h-6" />
-            Work Items
-          </h1>
-          <p className="text-muted-foreground">
-            Unified view of all projects, SOV items, change orders, and T&M work
-          </p>
-        </div>
-
+    <AppLayout title="Work Items" subtitle="All projects, SOV items, change orders, and T&M">
+      <div className="p-6 space-y-6">
         {/* Type Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {(Object.keys(TYPE_ICONS) as WorkItemType[]).map((type) => {
             const Icon = TYPE_ICONS[type];
             return (
@@ -179,7 +164,7 @@ export default function WorkItems() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+        <div className="flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -265,7 +250,7 @@ export default function WorkItems() {
             })}
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 }

@@ -2,14 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Header } from '@/components/Header';
+import { AppLayout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { toast } from 'sonner';
 import { Plus, Package, ShoppingCart, FileText } from 'lucide-react';
 import { MaterialOrder, WorkItem, ORDER_STATUS_LABELS, OrderStatus, WORK_ITEM_TYPE_LABELS } from '@/types/materialOrder';
 import { MaterialOrderWizard } from '@/components/ordering/MaterialOrderWizard';
@@ -126,21 +124,18 @@ export default function MaterialOrders() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
+      <AppLayout title="Material Orders">
+        <div className="p-6 flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">Material Orders</h1>
-            <p className="text-muted-foreground">Create and manage material orders</p>
-          </div>
+    <AppLayout title="Material Orders" subtitle="Create and manage material orders">
+      <div className="p-6 space-y-6">
+        <div className="flex justify-end">
           <Dialog>
             <DialogTrigger asChild>
               <Button>
@@ -327,7 +322,7 @@ export default function MaterialOrders() {
             )}
           </DialogContent>
         </Dialog>
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 }

@@ -3,12 +3,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useChangeWork } from '@/hooks/useChangeWork';
-import { Header } from '@/components/Header';
+import { AppLayout } from '@/components/layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Separator } from '@/components/ui/separator';
 import { CreateChangeWorkDialog } from '@/components/change-work/CreateChangeWorkDialog';
 import { 
   FileText, 
@@ -16,7 +15,6 @@ import {
   CheckCircle, 
   DollarSign,
   TrendingUp,
-  Receipt,
   ArrowRight,
   Plus
 } from 'lucide-react';
@@ -166,43 +164,29 @@ export default function SOVDashboard() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-4 py-8">
+      <AppLayout title="Schedule of Values">
+        <div className="p-6">
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">Please sign in to view SOV dashboard.</p>
             </CardContent>
           </Card>
-        </main>
-      </div>
+        </div>
+      </AppLayout>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto px-4 py-6">
-        {/* Page Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Receipt className="w-6 h-6" />
-              Schedule of Values
-              {projectName && <span className="text-muted-foreground font-normal text-lg ml-2">— {projectName}</span>}
-            </h1>
-            <p className="text-muted-foreground">
-              Aggregated view of contract value, approved changes, and T&M billing
-            </p>
-          </div>
-          {canCreateCO && (
-            <Button onClick={() => setShowCreateCODialog(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Change Order
-            </Button>
-          )}
-        </div>
+  const pageTitle = projectName ? `SOV — ${projectName}` : 'Schedule of Values';
 
+  return (
+    <AppLayout
+      title={pageTitle}
+      subtitle="Aggregated contract value, changes, and T&M billing"
+      showNewButton={canCreateCO}
+      onNewClick={() => setShowCreateCODialog(true)}
+      newButtonLabel="New Change Order"
+    >
+      <div className="p-6 space-y-6">
         {loading ? (
           <div className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -214,7 +198,7 @@ export default function SOVDashboard() {
           <>
             {/* Summary Cards */}
             {canViewFinancials && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <Card>
                   <CardContent className="p-4">
                     <div className="flex items-center gap-2 text-muted-foreground mb-1">
@@ -379,7 +363,7 @@ export default function SOVDashboard() {
           projectId={projectId || undefined}
           projectName={projectName || undefined}
         />
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 }
