@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Header } from '@/components/Header';
+import { AppLayout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Plus, Send, FileText, Download, Trash2, Package } from 'lucide-react';
-import { PurchaseOrder, POLineItem, PO_STATUS_LABELS, POStatus } from '@/types/purchaseOrder';
+import { PurchaseOrder, PO_STATUS_LABELS, POStatus } from '@/types/purchaseOrder';
 
 export default function PurchaseOrders() {
   const { user, userOrgRoles, currentRole, loading: authLoading } = useAuth();
@@ -243,21 +243,18 @@ export default function PurchaseOrders() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
+      <AppLayout title="Purchase Orders">
+        <div className="p-6 flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">Purchase Orders</h1>
-            <p className="text-muted-foreground">Create and send purchase orders to suppliers</p>
-          </div>
+    <AppLayout title="Purchase Orders" subtitle="Create and send purchase orders to suppliers">
+      <div className="p-6 space-y-6">
+        <div className="flex justify-end">
           <Dialog open={newPOOpen} onOpenChange={setNewPOOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -538,7 +535,7 @@ export default function PurchaseOrders() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 }
