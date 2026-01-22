@@ -9,6 +9,8 @@ import Auth from "./pages/Auth";
 import JoinOrg from "./pages/JoinOrg";
 import AdminSuppliers from "./pages/AdminSuppliers";
 import CatalogPage from "./pages/CatalogPage";
+import SupplierEstimates from "./pages/SupplierEstimates";
+import EstimateApprovals from "./pages/EstimateApprovals";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +28,8 @@ const App = () => (
             <Route path="/join-org" element={<JoinOrg />} />
             <Route path="/admin/suppliers" element={<AdminSuppliers />} />
             <Route path="/catalog" element={<CatalogPage />} />
+            <Route path="/estimates" element={<SupplierEstimates />} />
+            <Route path="/approvals/estimates" element={<EstimateApprovals />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

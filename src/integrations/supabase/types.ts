@@ -64,6 +64,44 @@ export type Database = {
           },
         ]
       }
+      estimate_packs: {
+        Row: {
+          created_at: string
+          estimate_id: string
+          id: string
+          pack_name: string
+          pack_type: Database["public"]["Enums"]["pack_type"]
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          estimate_id: string
+          id?: string
+          pack_name: string
+          pack_type?: Database["public"]["Enums"]["pack_type"]
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          estimate_id?: string
+          id?: string
+          pack_name?: string
+          pack_type?: Database["public"]["Enums"]["pack_type"]
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "estimate_packs_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "project_estimates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_invitations: {
         Row: {
           created_at: string
@@ -132,6 +170,60 @@ export type Database = {
         }
         Relationships: []
       }
+      pack_items: {
+        Row: {
+          catalog_item_id: string | null
+          created_at: string
+          description: string
+          id: string
+          notes: string | null
+          pack_id: string
+          quantity: number
+          supplier_sku: string | null
+          uom: string
+          updated_at: string
+        }
+        Insert: {
+          catalog_item_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          notes?: string | null
+          pack_id: string
+          quantity?: number
+          supplier_sku?: string | null
+          uom?: string
+          updated_at?: string
+        }
+        Update: {
+          catalog_item_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          notes?: string | null
+          pack_id?: string
+          quantity?: number
+          supplier_sku?: string | null
+          uom?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pack_items_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pack_items_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -158,6 +250,101 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      project_estimates: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          name: string
+          notes: string | null
+          project_id: string
+          status: Database["public"]["Enums"]["estimate_status"]
+          submitted_at: string | null
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          notes?: string | null
+          project_id: string
+          status?: Database["public"]["Enums"]["estimate_status"]
+          submitted_at?: string | null
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          project_id?: string
+          status?: Database["public"]["Enums"]["estimate_status"]
+          submitted_at?: string | null
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_estimates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_estimates_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          organization_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          organization_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          organization_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       suppliers: {
         Row: {
@@ -280,7 +467,9 @@ export type Database = {
         | "Hardware"
         | "Fasteners"
         | "Other"
+      estimate_status: "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED"
       org_type: "GC" | "TC" | "SUPPLIER"
+      pack_type: "LOOSE_MODIFIABLE" | "ENGINEERED_LOCKED"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -417,7 +606,9 @@ export const Constants = {
         "Fasteners",
         "Other",
       ],
+      estimate_status: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"],
       org_type: ["GC", "TC", "SUPPLIER"],
+      pack_type: ["LOOSE_MODIFIABLE", "ENGINEERED_LOCKED"],
     },
   },
 } as const
