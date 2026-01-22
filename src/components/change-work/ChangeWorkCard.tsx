@@ -1,10 +1,12 @@
+import { useNavigate } from 'react-router-dom';
 import { ChangeWork } from '@/types/changeWork';
 import { WORK_ITEM_STATE_LABELS } from '@/types/workItem';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { StateBadge } from '@/components/StateBadge';
 import { formatDistanceToNow } from 'date-fns';
-import { MapPin, AlertCircle } from 'lucide-react';
+import { MapPin, AlertCircle, ExternalLink } from 'lucide-react';
 
 interface ChangeWorkCardProps {
   changeWork: ChangeWork;
@@ -13,6 +15,8 @@ interface ChangeWorkCardProps {
 }
 
 export function ChangeWorkCard({ changeWork, onClick, isSelected }: ChangeWorkCardProps) {
+  const navigate = useNavigate();
+  
   const formatCurrency = (amount?: number | null) => {
     if (amount === undefined || amount === null) return '—';
     return new Intl.NumberFormat('en-US', {
@@ -21,6 +25,11 @@ export function ChangeWorkCard({ changeWork, onClick, isSelected }: ChangeWorkCa
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
+  };
+
+  const handleOpenDetail = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/work-item/${changeWork.id}`);
   };
 
   return (
@@ -63,11 +72,20 @@ export function ChangeWorkCard({ changeWork, onClick, isSelected }: ChangeWorkCa
               </div>
             )}
           </div>
-          <div className="text-right shrink-0">
+          <div className="text-right shrink-0 flex flex-col items-end gap-1">
             <p className="font-semibold text-sm">{formatCurrency(changeWork.amount)}</p>
             <p className="text-xs text-muted-foreground">
               {changeWork.organization?.org_code}
             </p>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 text-xs px-2"
+              onClick={handleOpenDetail}
+            >
+              <ExternalLink className="w-3 h-3 mr-1" />
+              Open
+            </Button>
           </div>
         </div>
       </CardContent>

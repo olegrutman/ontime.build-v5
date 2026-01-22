@@ -11,6 +11,7 @@ import { TMPeriodStatusBadge } from './TMPeriodStatusBadge';
 import { TMPeriodActions } from './TMPeriodActions';
 import { TMLaborEntries } from './TMLaborEntries';
 import { TMMaterialEntries } from './TMMaterialEntries';
+import { TMMarkupEditor } from './TMMarkupEditor';
 import { AppRole } from '@/types/organization';
 
 interface TMPeriodCardProps {
@@ -24,7 +25,9 @@ export function TMPeriodCard({ period, currentRole, canViewRates, onUpdate }: TM
   const [isOpen, setIsOpen] = useState(period.status === 'OPEN');
   
   const isGC = currentRole === 'GC_PM';
+  const isTC = currentRole === 'TC_PM';
   const showFinancials = canViewRates && (period.status === 'APPROVED' || period.status === 'SUBMITTED');
+  const canEditMarkup = isTC && period.status === 'OPEN';
 
   const formatDateRange = () => {
     const start = format(new Date(period.period_start), 'MMM d');
@@ -103,6 +106,18 @@ export function TMPeriodCard({ period, currentRole, canViewRates, onUpdate }: TM
                   currentRole={currentRole} 
                   canViewCosts={canViewRates} 
                 />
+
+                {/* Markup Editor (TC only, OPEN status) */}
+                {isTC && canViewRates && (
+                  <>
+                    <Separator />
+                    <TMMarkupEditor 
+                      period={period} 
+                      isEditable={canEditMarkup} 
+                      onUpdate={onUpdate} 
+                    />
+                  </>
+                )}
 
                 {/* Approved Period Totals */}
                 {period.status === 'APPROVED' && canViewRates && (
