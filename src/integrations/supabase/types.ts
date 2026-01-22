@@ -879,6 +879,253 @@ export type Database = {
           },
         ]
       }
+      tm_billable_slices: {
+        Row: {
+          created_at: string
+          id: string
+          invoice_reference: string | null
+          invoiced_at: string | null
+          labor_amount: number
+          markup_amount: number
+          material_amount: number
+          period_id: string
+          slice_number: number
+          total_amount: number
+          work_item_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invoice_reference?: string | null
+          invoiced_at?: string | null
+          labor_amount?: number
+          markup_amount?: number
+          material_amount?: number
+          period_id: string
+          slice_number: number
+          total_amount?: number
+          work_item_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invoice_reference?: string | null
+          invoiced_at?: string | null
+          labor_amount?: number
+          markup_amount?: number
+          material_amount?: number
+          period_id?: string
+          slice_number?: number
+          total_amount?: number
+          work_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tm_billable_slices_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: true
+            referencedRelation: "tm_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tm_billable_slices_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: true
+            referencedRelation: "tm_periods_gc"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tm_billable_slices_work_item_id_fkey"
+            columns: ["work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tm_labor_entries: {
+        Row: {
+          created_at: string
+          description: string | null
+          entered_by: string
+          entry_date: string
+          hourly_rate: number | null
+          hours: number
+          id: string
+          period_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          entered_by: string
+          entry_date: string
+          hourly_rate?: number | null
+          hours: number
+          id?: string
+          period_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          entered_by?: string
+          entry_date?: string
+          hourly_rate?: number | null
+          hours?: number
+          id?: string
+          period_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tm_labor_entries_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "tm_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tm_labor_entries_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "tm_periods_gc"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tm_material_entries: {
+        Row: {
+          created_at: string
+          description: string
+          entry_date: string
+          id: string
+          notes: string | null
+          period_id: string
+          quantity: number
+          supplier_id: string | null
+          unit_cost: number | null
+          uom: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          entry_date: string
+          id?: string
+          notes?: string | null
+          period_id: string
+          quantity?: number
+          supplier_id?: string | null
+          unit_cost?: number | null
+          uom?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          entry_date?: string
+          id?: string
+          notes?: string | null
+          period_id?: string
+          quantity?: number
+          supplier_id?: string | null
+          unit_cost?: number | null
+          uom?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tm_material_entries_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "tm_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tm_material_entries_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "tm_periods_gc"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tm_material_entries_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tm_periods: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          final_amount: number | null
+          id: string
+          labor_total: number | null
+          markup_percent: number | null
+          material_total: number | null
+          period_end: string
+          period_start: string
+          period_type: string
+          rejection_notes: string | null
+          status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          updated_at: string
+          work_item_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          final_amount?: number | null
+          id?: string
+          labor_total?: number | null
+          markup_percent?: number | null
+          material_total?: number | null
+          period_end: string
+          period_start: string
+          period_type?: string
+          rejection_notes?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          updated_at?: string
+          work_item_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          final_amount?: number | null
+          id?: string
+          labor_total?: number | null
+          markup_percent?: number | null
+          material_total?: number | null
+          period_end?: string
+          period_start?: string
+          period_type?: string
+          rejection_notes?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          updated_at?: string
+          work_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tm_periods_work_item_id_fkey"
+            columns: ["work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_org_roles: {
         Row: {
           created_at: string
@@ -1167,8 +1414,171 @@ export type Database = {
           },
         ]
       }
+      tm_labor_entries_fs: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          entered_by: string | null
+          entry_date: string | null
+          hours: number | null
+          id: string | null
+          period_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          entered_by?: string | null
+          entry_date?: string | null
+          hours?: number | null
+          id?: string | null
+          period_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          entered_by?: string | null
+          entry_date?: string | null
+          hours?: number | null
+          id?: string | null
+          period_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tm_labor_entries_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "tm_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tm_labor_entries_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "tm_periods_gc"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tm_material_entries_fs: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          entry_date: string | null
+          id: string | null
+          notes: string | null
+          period_id: string | null
+          quantity: number | null
+          supplier_id: string | null
+          uom: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          entry_date?: string | null
+          id?: string | null
+          notes?: string | null
+          period_id?: string | null
+          quantity?: number | null
+          supplier_id?: string | null
+          uom?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          entry_date?: string | null
+          id?: string | null
+          notes?: string | null
+          period_id?: string | null
+          quantity?: number | null
+          supplier_id?: string | null
+          uom?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tm_material_entries_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "tm_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tm_material_entries_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "tm_periods_gc"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tm_material_entries_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tm_periods_gc: {
+        Row: {
+          approved_at: string | null
+          created_at: string | null
+          final_amount: number | null
+          id: string | null
+          period_end: string | null
+          period_start: string | null
+          period_type: string | null
+          rejection_notes: string | null
+          status: string | null
+          submitted_at: string | null
+          updated_at: string | null
+          work_item_id: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          created_at?: string | null
+          final_amount?: number | null
+          id?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          period_type?: string | null
+          rejection_notes?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          updated_at?: string | null
+          work_item_id?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          created_at?: string | null
+          final_amount?: number | null
+          id?: string | null
+          period_end?: string | null
+          period_start?: string | null
+          period_type?: string | null
+          rejection_notes?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          updated_at?: string | null
+          work_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tm_periods_work_item_id_fkey"
+            columns: ["work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      approve_tm_period: { Args: { period_id: string }; Returns: string }
       can_see_financials: { Args: { _user_id: string }; Returns: boolean }
       can_see_margins: { Args: { _user_id: string }; Returns: boolean }
       execute_change_work: {
@@ -1191,6 +1601,10 @@ export type Database = {
       }
       is_gc_pm: { Args: { _user_id: string }; Returns: boolean }
       is_pm_role: { Args: { _user_id: string }; Returns: boolean }
+      reject_tm_period: {
+        Args: { notes: string; period_id: string }
+        Returns: undefined
+      }
       search_catalog: {
         Args: {
           category_filter?: string
@@ -1209,6 +1623,7 @@ export type Database = {
           uom_default: string
         }[]
       }
+      submit_tm_period: { Args: { period_id: string }; Returns: undefined }
       user_in_org: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
