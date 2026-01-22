@@ -18,8 +18,11 @@ interface CreateChangeWorkDialogProps {
     title: string;
     description?: string;
     location_ref?: string;
+    project_id?: string;
   }) => void;
   isCreating: boolean;
+  projectId?: string;
+  projectName?: string;
 }
 
 export function CreateChangeWorkDialog({
@@ -27,6 +30,8 @@ export function CreateChangeWorkDialog({
   onOpenChange,
   onCreate,
   isCreating,
+  projectId,
+  projectName,
 }: CreateChangeWorkDialogProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -38,6 +43,7 @@ export function CreateChangeWorkDialog({
       title,
       description: description || undefined,
       location_ref: locationRef || undefined,
+      project_id: projectId,
     });
     setTitle('');
     setDescription('');
@@ -50,6 +56,9 @@ export function CreateChangeWorkDialog({
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Create Change Order</DialogTitle>
+          {projectName && (
+            <p className="text-sm text-muted-foreground">For project: {projectName}</p>
+          )}
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">

@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useChangeWork } from '@/hooks/useChangeWork';
 import { Header } from '@/components/Header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
+import { CreateChangeWorkDialog } from '@/components/change-work/CreateChangeWorkDialog';
 import { 
   FileText, 
   Clock, 
@@ -15,7 +17,8 @@ import {
   DollarSign,
   TrendingUp,
   Receipt,
-  ArrowRight
+  ArrowRight,
+  Plus
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -48,13 +51,19 @@ interface TMSlice {
 
 export default function SOVDashboard() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const projectId = searchParams.get('project');
   const { user, currentRole, permissions } = useAuth();
+  const { createChangeWork, isCreating } = useChangeWork();
   
   const [sovItems, setSOVItems] = useState<SOVLineItem[]>([]);
   const [tmSlices, setTMSlices] = useState<TMSlice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [projectName, setProjectName] = useState<string | null>(null);
+  const [showCreateCODialog, setShowCreateCODialog] = useState(false);
 
   const canViewFinancials = permissions?.canViewRates ?? false;
+  const canCreateCO = currentRole === 'GC_PM' || currentRole === 'TC_PM';
 
   useEffect(() => {
     if (user) {
@@ -65,13 +74,29 @@ export default function SOVDashboard() {
   const fetchSOVData = async () => {
     setLoading(true);
     
-    // Fetch SOV items (executed change work + original SOV items)
-    const { data: items, error: itemsError } = await supabase
+    // If we have a project filter, fetch project name
+    if (projectId) {
+      const { data: proj } = await supabase
+        .from('projects')
+        .select('name')
+        .eq('id', projectId)
+        .maybeSingle();
+      setProjectName(proj?.name || null);
+    }
+    
+    // Build query for SOV items
+    let itemsQuery = supabase
       .from('work_items')
       .select('id, code, title, item_type, amount, state')
       .in('item_type', ['SOV_ITEM', 'CHANGE_WORK'])
       .in('state', ['APPROVED', 'EXECUTED'])
       .order('created_at', { ascending: true });
+
+    if (projectId) {
+      itemsQuery = itemsQuery.eq('project_id', projectId);
+    }
+
+    const { data: items, error: itemsError } = await itemsQuery;
 
     if (itemsError) {
       console.error('Error fetching SOV items:', itemsError);
@@ -159,14 +184,23 @@ export default function SOVDashboard() {
       <Header />
       <main className="container mx-auto px-4 py-6">
         {/* Page Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Receipt className="w-6 h-6" />
-            Schedule of Values
-          </h1>
-          <p className="text-muted-foreground">
-            Aggregated view of contract value, approved changes, and T&M billing
-          </p>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Receipt className="w-6 h-6" />
+              Schedule of Values
+              {projectName && <span className="text-muted-foreground font-normal text-lg ml-2">— {projectName}</span>}
+            </h1>
+            <p className="text-muted-foreground">
+              Aggregated view of contract value, approved changes, and T&M billing
+            </p>
+          </div>
+          {canCreateCO && (
+            <Button onClick={() => setShowCreateCODialog(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              New Change Order
+            </Button>
+          )}
         </div>
 
         {loading ? (
@@ -336,6 +370,15 @@ export default function SOVDashboard() {
             </div>
           </>
         )}
+
+        <CreateChangeWorkDialog
+          open={showCreateCODialog}
+          onOpenChange={setShowCreateCODialog}
+          onCreate={createChangeWork}
+          isCreating={isCreating}
+          projectId={projectId || undefined}
+          projectName={projectName || undefined}
+        />
       </main>
     </div>
   );
