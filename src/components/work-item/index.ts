@@ -7,3 +7,4 @@ export { WorkItemLabor } from './WorkItemLabor';
 export { WorkItemMaterials } from './WorkItemMaterials';
 export { WorkItemActions } from './WorkItemActions';
 export { WorkItemParticipants } from './WorkItemParticipants';
+export * from './tm';

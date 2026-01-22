@@ -17,6 +17,7 @@ import { WorkItemLabor } from './WorkItemLabor';
 import { WorkItemMaterials } from './WorkItemMaterials';
 import { WorkItemActions } from './WorkItemActions';
 import { WorkItemParticipants } from './WorkItemParticipants';
+import { TMPeriodsPanel } from './tm';
 
 export type WorkItemState = 'OPEN' | 'PRICED' | 'APPROVED' | 'EXECUTED';
 export type WorkItemType = 'PROJECT' | 'SOV_ITEM' | 'CHANGE_WORK' | 'TM_WORK';
@@ -101,8 +102,9 @@ export function WorkItemPage() {
 
   // Panel visibility rules
   const showPricingPanel = (itemType === 'CHANGE_WORK' || itemType === 'SOV_ITEM') && (isTC || (isGC && !isEditable));
-  const showLaborPanel = (itemType === 'TM_WORK' || itemType === 'CHANGE_WORK') && (isTC || isFS);
-  const showMaterialsPanel = (itemType === 'TM_WORK' || itemType === 'CHANGE_WORK') && (isTC || isFS || (isGC && isApproved));
+  const showLaborPanel = itemType === 'CHANGE_WORK' && (isTC || isFS); // Only for CHANGE_WORK, not TM_WORK (uses TMPeriodsPanel)
+  const showMaterialsPanel = itemType === 'CHANGE_WORK' && (isTC || isFS || (isGC && isApproved)); // Only for CHANGE_WORK
+  const showTMPeriodsPanel = itemType === 'TM_WORK' && (isTC || isFS || isGC);
   const showParticipantsPanel = isTC || isGC;
   const showRejectionNotes = workItem?.rejection_notes && (isTC || isGC);
 
@@ -209,6 +211,18 @@ export function WorkItemPage() {
                   workItemId={workItem.id}
                   isEditable={isEditable && !isGC}
                   canViewCosts={permissions?.canViewRates ?? false}
+                />
+              </Card>
+            )}
+
+            {/* T&M Periods Panel - for TM_WORK items */}
+            {showTMPeriodsPanel && (
+              <Card className="p-6">
+                <TMPeriodsPanel
+                  workItemId={workItem.id}
+                  currentRole={currentRole}
+                  canViewRates={permissions?.canViewRates ?? false}
+                  isWorkItemOpen={isEditable}
                 />
               </Card>
             )}
