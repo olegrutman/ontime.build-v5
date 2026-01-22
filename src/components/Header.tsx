@@ -122,6 +122,10 @@ export function Header() {
                       <ShoppingCart className="mr-2 h-4 w-4" />
                       Material Orders
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/purchase-orders')}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Purchase Orders
+                    </DropdownMenuItem>
                     {currentRole === 'GC_PM' && (
                       <>
                         <DropdownMenuSeparator />
