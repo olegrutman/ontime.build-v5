@@ -124,10 +124,19 @@ export function Header() {
                     </DropdownMenuItem>
                     {currentRole === 'GC_PM' && (
                       <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel className="text-xs text-muted-foreground">
+                          Approvals
+                        </DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => navigate('/approvals/estimates')}>
                           <CheckSquare className="mr-2 h-4 w-4" />
                           Estimate Approvals
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/approvals/orders')}>
+                          <CheckSquare className="mr-2 h-4 w-4" />
+                          Order Approvals
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => navigate('/admin/suppliers')}>
                           <Truck className="mr-2 h-4 w-4" />
                           Manage Suppliers
