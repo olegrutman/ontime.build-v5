@@ -186,11 +186,11 @@ export default function SOVDashboard() {
       onNewClick={() => setShowCreateCODialog(true)}
       newButtonLabel="New Change Order"
     >
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {loading ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-24" />)}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+              {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-20 sm:h-24" />)}
             </div>
             <Skeleton className="h-64" />
           </div>
@@ -198,59 +198,59 @@ export default function SOVDashboard() {
           <>
             {/* Summary Cards */}
             {canViewFinancials && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
                 <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                      <FileText className="w-4 h-4" />
-                      <span className="text-xs">Original Contract</span>
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground mb-1">
+                      <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="text-[10px] sm:text-xs">Original Contract</span>
                     </div>
-                    <p className="text-2xl font-bold">{formatCurrency(summary.total_contract)}</p>
+                    <p className="text-base sm:text-2xl font-bold">{formatCurrency(summary.total_contract)}</p>
                   </CardContent>
                 </Card>
                 
                 <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                      <TrendingUp className="w-4 h-4" />
-                      <span className="text-xs">Approved Changes</span>
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground mb-1">
+                      <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="text-[10px] sm:text-xs">Approved Changes</span>
                     </div>
-                    <p className="text-2xl font-bold text-amber-600">
+                    <p className="text-base sm:text-2xl font-bold text-amber-600">
                       +{formatCurrency(summary.approved_changes)}
                     </p>
                   </CardContent>
                 </Card>
                 
                 <Card>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                      <Clock className="w-4 h-4" />
-                      <span className="text-xs">T&M Billed</span>
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-muted-foreground mb-1">
+                      <Clock className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="text-[10px] sm:text-xs">T&M Billed</span>
                     </div>
-                    <p className="text-2xl font-bold text-green-600">
+                    <p className="text-base sm:text-2xl font-bold text-green-600">
                       +{formatCurrency(summary.billed_tm)}
                     </p>
                     {pendingTM > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        {formatCurrency(pendingTM)} pending invoice
+                      <p className="text-[10px] sm:text-xs text-muted-foreground">
+                        {formatCurrency(pendingTM)} pending
                       </p>
                     )}
                   </CardContent>
                 </Card>
                 
                 <Card className="bg-primary text-primary-foreground">
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-2 text-primary-foreground/70 mb-1">
-                      <DollarSign className="w-4 h-4" />
-                      <span className="text-xs">Total Contract Value</span>
+                  <CardContent className="p-3 sm:p-4">
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-primary-foreground/70 mb-1">
+                      <DollarSign className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="text-[10px] sm:text-xs">Total Value</span>
                     </div>
-                    <p className="text-2xl font-bold">{formatCurrency(summary.total_value)}</p>
+                    <p className="text-base sm:text-2xl font-bold">{formatCurrency(summary.total_value)}</p>
                   </CardContent>
                 </Card>
               </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {/* SOV Line Items */}
               <Card>
                 <CardHeader>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Header } from '@/components/Header';
+import { AppLayout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -176,9 +176,11 @@ export default function OrderApprovals() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
+      <AppLayout title="Order Approvals">
+        <div className="p-4 sm:p-6 flex items-center justify-center min-h-[400px]">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </AppLayout>
     );
   }
 
@@ -186,18 +188,12 @@ export default function OrderApprovals() {
   const processedOrders = orders.filter(o => o.status !== 'SUBMITTED');
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">Order Approvals</h1>
-          <p className="text-muted-foreground">Review and approve material orders</p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <AppLayout title="Order Approvals" subtitle="Review and approve material orders">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Pending Approvals */}
           <div className="lg:col-span-1 space-y-4">
-            <h2 className="text-lg font-semibold flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-semibold flex items-center gap-2">
               Pending Review
               {submittedOrders.length > 0 && (
                 <Badge variant="destructive">{submittedOrders.length}</Badge>
@@ -262,7 +258,7 @@ export default function OrderApprovals() {
 
             {processedOrders.length > 0 && (
               <>
-                <h2 className="text-lg font-semibold mt-8">Previously Reviewed</h2>
+                <h2 className="text-base sm:text-lg font-semibold mt-6 sm:mt-8">Previously Reviewed</h2>
                 {processedOrders.map(order => (
                   <Card 
                     key={order.id}
@@ -438,17 +434,17 @@ export default function OrderApprovals() {
                 />
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              <Button variant="outline" onClick={() => setRejectDialogOpen(false)} className="w-full sm:w-auto">
                 Cancel
               </Button>
-              <Button variant="destructive" onClick={handleReject}>
+              <Button variant="destructive" onClick={handleReject} className="w-full sm:w-auto">
                 Reject Order
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 }

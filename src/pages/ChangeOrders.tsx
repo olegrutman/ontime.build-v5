@@ -87,9 +87,9 @@ const ChangeOrders = () => {
       onNewClick={() => setShowCreateDialog(true)}
       newButtonLabel="New Change Order"
     >
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-4">
           {(['ALL', 'OPEN', 'PRICED', 'APPROVED', 'EXECUTED'] as const).map((state) => (
             <Card
               key={state}
@@ -98,9 +98,9 @@ const ChangeOrders = () => {
               }`}
               onClick={() => setActiveTab(state)}
             >
-              <CardContent className="p-4">
-                <p className="text-2xl font-bold">{stateCounts[state]}</p>
-                <p className="text-sm text-muted-foreground capitalize">
+              <CardContent className="p-2 sm:p-4">
+                <p className="text-lg sm:text-2xl font-bold">{stateCounts[state]}</p>
+                <p className="text-[10px] sm:text-sm text-muted-foreground capitalize truncate">
                   {state === 'ALL' ? 'Total' : state.toLowerCase()}
                 </p>
               </CardContent>
@@ -108,7 +108,7 @@ const ChangeOrders = () => {
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* List */}
           <div className={selectedChangeWork ? 'lg:col-span-2' : 'lg:col-span-3'}>
             {isLoading ? (

@@ -2,14 +2,14 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { Header } from '@/components/Header';
+import { AppLayout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Supplier, CatalogItem, CATALOG_CATEGORIES, parseCSVToItems, CatalogCSVRow } from '@/types/supplier';
-import { Plus, Upload, Search, Package, Loader2, Trash2, FileText, Building2, ArrowLeft } from 'lucide-react';
+import { Plus, Upload, Search, Package, Loader2, Trash2, FileText, Building2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -208,31 +208,18 @@ export default function AdminSuppliers() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <div className="flex items-center justify-center h-64">
+      <AppLayout title="Manage Suppliers">
+        <div className="p-4 sm:p-6 flex items-center justify-center min-h-[400px]">
           <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
         </div>
-      </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      
-      <main className="container mx-auto px-4 py-6">
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">Supplier Management</h1>
-            <p className="text-sm text-muted-foreground">Create suppliers and upload product catalogs</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <AppLayout title="Supplier Management" subtitle="Create suppliers and upload product catalogs">
+      <div className="p-4 sm:p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Suppliers List */}
           <div className="lg:col-span-1">
             <Card className="p-4">
@@ -241,11 +228,11 @@ export default function AdminSuppliers() {
                 <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
                   <DialogTrigger asChild>
                     <Button size="sm">
-                      <Plus className="w-4 h-4 mr-1" />
-                      Add
+                      <Plus className="w-4 h-4 sm:mr-1" />
+                      <span className="hidden sm:inline">Add</span>
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-[95vw] sm:max-w-md">
                     <DialogHeader>
                       <DialogTitle>Create Supplier</DialogTitle>
                     </DialogHeader>
@@ -462,7 +449,7 @@ export default function AdminSuppliers() {
             )}
           </div>
         </div>
-      </main>
-    </div>
+      </div>
+    </AppLayout>
   );
 }
