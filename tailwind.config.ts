@@ -13,6 +13,10 @@ export default {
       },
     },
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -57,28 +61,48 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // Work Item States
+        state: {
+          open: "hsl(var(--state-open))",
+          "open-foreground": "hsl(var(--state-open-foreground))",
+          "open-bg": "hsl(var(--state-open-bg))",
+          priced: "hsl(var(--state-priced))",
+          "priced-foreground": "hsl(var(--state-priced-foreground))",
+          "priced-bg": "hsl(var(--state-priced-bg))",
+          approved: "hsl(var(--state-approved))",
+          "approved-foreground": "hsl(var(--state-approved-foreground))",
+          "approved-bg": "hsl(var(--state-approved-bg))",
+          executed: "hsl(var(--state-executed))",
+          "executed-foreground": "hsl(var(--state-executed-foreground))",
+          "executed-bg": "hsl(var(--state-executed-bg))",
+        },
+        // Work Item Types
+        type: {
+          project: "hsl(var(--type-project))",
+          sov: "hsl(var(--type-sov))",
+          change: "hsl(var(--type-change))",
+          tm: "hsl(var(--type-tm))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
       },
+      boxShadow: {
+        'card': 'var(--shadow-card)',
+        'sm': 'var(--shadow-sm)',
+        'md': 'var(--shadow-md)',
+        'lg': 'var(--shadow-lg)',
+      },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
         },
       },
       animation: {
