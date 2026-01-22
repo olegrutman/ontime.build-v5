@@ -655,30 +655,57 @@ export type Database = {
       }
       projects: {
         Row: {
+          address: Json | null
+          build_type: string | null
           created_at: string
+          created_by: string | null
           description: string | null
           id: string
+          mobilization_enabled: boolean | null
           name: string
           organization_id: string
+          parties: Json | null
+          project_type: string | null
+          retainage_percent: number | null
+          scope: Json | null
           status: string
+          structures: Json | null
           updated_at: string
         }
         Insert: {
+          address?: Json | null
+          build_type?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           id?: string
+          mobilization_enabled?: boolean | null
           name: string
           organization_id: string
+          parties?: Json | null
+          project_type?: string | null
+          retainage_percent?: number | null
+          scope?: Json | null
           status?: string
+          structures?: Json | null
           updated_at?: string
         }
         Update: {
+          address?: Json | null
+          build_type?: string | null
           created_at?: string
+          created_by?: string | null
           description?: string | null
           id?: string
+          mobilization_enabled?: boolean | null
           name?: string
           organization_id?: string
+          parties?: Json | null
+          project_type?: string | null
+          retainage_percent?: number | null
+          scope?: Json | null
           status?: string
+          structures?: Json | null
           updated_at?: string
         }
         Relationships: [
@@ -1122,6 +1149,45 @@ export type Database = {
             columns: ["work_item_id"]
             isOneToOne: false
             referencedRelation: "work_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trusted_partners: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          organization_id: string
+          partner_org_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          organization_id: string
+          partner_org_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          partner_org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trusted_partners_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trusted_partners_partner_org_id_fkey"
+            columns: ["partner_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
