@@ -8,15 +8,18 @@ import {
   Users, 
   Building2,
   MapPin,
-  Calendar
+  Calendar,
+  Plus
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useChangeWork } from '@/hooks/useChangeWork';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CreateChangeWorkDialog } from '@/components/change-work/CreateChangeWorkDialog';
 import { format } from 'date-fns';
 
 interface Project {
@@ -45,10 +48,14 @@ interface WorkItemSummary {
 export default function ProjectHome() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, currentRole } = useAuth();
+  const { createChangeWork, isCreating } = useChangeWork();
   const [project, setProject] = useState<Project | null>(null);
   const [summary, setSummary] = useState<WorkItemSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showCreateCODialog, setShowCreateCODialog] = useState(false);
+
+  const canCreateCO = currentRole === 'GC_PM' || currentRole === 'TC_PM';
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -240,12 +247,18 @@ export default function ProjectHome() {
 
           <TabsContent value="change">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-base">Change Work</CardTitle>
+                {canCreateCO && (
+                  <Button size="sm" onClick={() => setShowCreateCODialog(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Change Order
+                  </Button>
+                )}
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Create and manage change orders and T&M work.
+                  Create and manage change orders and T&M work for this project.
                 </p>
                 <Button asChild>
                   <Link to={`/change-orders?project=${id}`}>View Change Orders</Link>
@@ -347,6 +360,15 @@ export default function ProjectHome() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        <CreateChangeWorkDialog
+          open={showCreateCODialog}
+          onOpenChange={setShowCreateCODialog}
+          onCreate={createChangeWork}
+          isCreating={isCreating}
+          projectId={id}
+          projectName={project.name}
+        />
       </main>
     </div>
   );

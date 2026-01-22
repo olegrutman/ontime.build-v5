@@ -81,6 +81,7 @@ export function useChangeWork() {
       description?: string;
       location_ref?: string;
       parent_work_item_id?: string;
+      project_id?: string;
     }) => {
       if (!user || !orgId) throw new Error('Not authenticated');
 
@@ -99,6 +100,7 @@ export function useChangeWork() {
           description: data.description,
           location_ref: data.location_ref,
           parent_work_item_id: data.parent_work_item_id,
+          project_id: data.project_id,
           code: codeResult,
           created_by: user.id,
         })
