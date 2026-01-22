@@ -5,9 +5,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import Landing from "./pages/Landing";
-import Index from "./pages/Index";
+import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import JoinOrg from "./pages/JoinOrg";
+import CreateProject from "./pages/CreateProject";
+import ProjectHome from "./pages/ProjectHome";
+import PartnerDirectory from "./pages/PartnerDirectory";
 import AdminSuppliers from "./pages/AdminSuppliers";
 import CatalogPage from "./pages/CatalogPage";
 import SupplierEstimates from "./pages/SupplierEstimates";
@@ -32,9 +35,12 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Landing />} />
-            <Route path="/dashboard" element={<Index />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/join-org" element={<JoinOrg />} />
+            <Route path="/create-project" element={<CreateProject />} />
+            <Route path="/project/:id" element={<ProjectHome />} />
+            <Route path="/partners" element={<PartnerDirectory />} />
             <Route path="/admin/suppliers" element={<AdminSuppliers />} />
             <Route path="/catalog" element={<CatalogPage />} />
             <Route path="/estimates" element={<SupplierEstimates />} />
@@ -46,7 +52,6 @@ const App = () => (
             <Route path="/work-items" element={<WorkItems />} />
             <Route path="/sov" element={<SOVDashboard />} />
             <Route path="/work-item/:id" element={<WorkItemPage />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
