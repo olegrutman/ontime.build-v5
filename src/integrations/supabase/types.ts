@@ -102,6 +102,157 @@ export type Database = {
           },
         ]
       }
+      material_orders: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          order_number: string | null
+          ordering_mode: string
+          status: Database["public"]["Enums"]["order_status"]
+          submitted_at: string | null
+          submitted_by: string | null
+          supplier_id: string | null
+          updated_at: string
+          work_item_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_number?: string | null
+          ordering_mode: string
+          status?: Database["public"]["Enums"]["order_status"]
+          submitted_at?: string | null
+          submitted_by?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+          work_item_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_number?: string | null
+          ordering_mode?: string
+          status?: Database["public"]["Enums"]["order_status"]
+          submitted_at?: string | null
+          submitted_by?: string | null
+          supplier_id?: string | null
+          updated_at?: string
+          work_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "material_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "material_orders_work_item_id_fkey"
+            columns: ["work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_items: {
+        Row: {
+          catalog_item_id: string | null
+          category: string | null
+          computed_bf: number | null
+          computed_lf: number | null
+          created_at: string
+          description: string
+          from_pack: boolean
+          id: string
+          length_ft: number | null
+          notes: string | null
+          order_id: string
+          pack_id: string | null
+          pieces: number | null
+          quantity: number
+          supplier_sku: string | null
+          thickness_in: number | null
+          uom: string
+          updated_at: string
+          width_in: number | null
+        }
+        Insert: {
+          catalog_item_id?: string | null
+          category?: string | null
+          computed_bf?: number | null
+          computed_lf?: number | null
+          created_at?: string
+          description: string
+          from_pack?: boolean
+          id?: string
+          length_ft?: number | null
+          notes?: string | null
+          order_id: string
+          pack_id?: string | null
+          pieces?: number | null
+          quantity?: number
+          supplier_sku?: string | null
+          thickness_in?: number | null
+          uom?: string
+          updated_at?: string
+          width_in?: number | null
+        }
+        Update: {
+          catalog_item_id?: string | null
+          category?: string | null
+          computed_bf?: number | null
+          computed_lf?: number | null
+          created_at?: string
+          description?: string
+          from_pack?: boolean
+          id?: string
+          length_ft?: number | null
+          notes?: string | null
+          order_id?: string
+          pack_id?: string | null
+          pieces?: number | null
+          quantity?: number
+          supplier_sku?: string | null
+          thickness_in?: number | null
+          uom?: string
+          updated_at?: string
+          width_in?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "material_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_pack_id_fkey"
+            columns: ["pack_id"]
+            isOneToOne: false
+            referencedRelation: "estimate_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_invitations: {
         Row: {
           created_at: string
@@ -416,6 +567,73 @@ export type Database = {
           },
         ]
       }
+      work_items: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          item_type: string
+          location_ref: string | null
+          organization_id: string
+          parent_work_item_id: string | null
+          project_id: string | null
+          state: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          item_type: string
+          location_ref?: string | null
+          organization_id: string
+          parent_work_item_id?: string | null
+          project_id?: string | null
+          state?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          item_type?: string
+          location_ref?: string | null
+          organization_id?: string
+          parent_work_item_id?: string | null
+          project_id?: string | null
+          state?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_items_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_items_parent_work_item_id_fkey"
+            columns: ["parent_work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -468,6 +686,12 @@ export type Database = {
         | "Fasteners"
         | "Other"
       estimate_status: "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED"
+      order_status:
+        | "DRAFT"
+        | "SUBMITTED"
+        | "APPROVED"
+        | "FULFILLED"
+        | "CANCELLED"
       org_type: "GC" | "TC" | "SUPPLIER"
       pack_type: "LOOSE_MODIFIABLE" | "ENGINEERED_LOCKED"
     }
@@ -607,6 +831,13 @@ export const Constants = {
         "Other",
       ],
       estimate_status: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"],
+      order_status: [
+        "DRAFT",
+        "SUBMITTED",
+        "APPROVED",
+        "FULFILLED",
+        "CANCELLED",
+      ],
       org_type: ["GC", "TC", "SUPPLIER"],
       pack_type: ["LOOSE_MODIFIABLE", "ENGINEERED_LOCKED"],
     },
