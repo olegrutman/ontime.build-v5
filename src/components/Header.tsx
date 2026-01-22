@@ -1,4 +1,4 @@
-import { Building2, Plus, Search, Bell, LogOut, Users, Settings, Package, Truck } from 'lucide-react';
+import { Building2, Plus, Search, Bell, LogOut, Users, Settings, Package, Truck, FileText, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/useAuth';
@@ -114,11 +114,21 @@ export function Header() {
                       <Package className="mr-2 h-4 w-4" />
                       Product Catalog
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/estimates')}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      Project Estimates
+                    </DropdownMenuItem>
                     {currentRole === 'GC_PM' && (
-                      <DropdownMenuItem onClick={() => navigate('/admin/suppliers')}>
-                        <Truck className="mr-2 h-4 w-4" />
-                        Manage Suppliers
-                      </DropdownMenuItem>
+                      <>
+                        <DropdownMenuItem onClick={() => navigate('/approvals/estimates')}>
+                          <CheckSquare className="mr-2 h-4 w-4" />
+                          Estimate Approvals
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate('/admin/suppliers')}>
+                          <Truck className="mr-2 h-4 w-4" />
+                          Manage Suppliers
+                        </DropdownMenuItem>
+                      </>
                     )}
                     {currentOrg && (
                       <>
