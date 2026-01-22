@@ -375,6 +375,62 @@ export type Database = {
           },
         ]
       }
+      po_line_items: {
+        Row: {
+          computed_bf: number | null
+          computed_lf: number | null
+          created_at: string
+          description: string
+          id: string
+          length_ft: number | null
+          line_number: number
+          notes: string | null
+          pieces: number | null
+          po_id: string
+          quantity: number
+          supplier_sku: string | null
+          uom: string
+        }
+        Insert: {
+          computed_bf?: number | null
+          computed_lf?: number | null
+          created_at?: string
+          description: string
+          id?: string
+          length_ft?: number | null
+          line_number: number
+          notes?: string | null
+          pieces?: number | null
+          po_id: string
+          quantity: number
+          supplier_sku?: string | null
+          uom?: string
+        }
+        Update: {
+          computed_bf?: number | null
+          computed_lf?: number | null
+          created_at?: string
+          description?: string
+          id?: string
+          length_ft?: number | null
+          line_number?: number
+          notes?: string | null
+          pieces?: number | null
+          po_id?: string
+          quantity?: number
+          supplier_sku?: string | null
+          uom?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "po_line_items_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -493,6 +549,96 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          created_at: string
+          download_token: string | null
+          id: string
+          material_order_id: string | null
+          notes: string | null
+          organization_id: string
+          po_name: string
+          po_number: string
+          project_id: string | null
+          sent_at: string | null
+          sent_by: string | null
+          status: Database["public"]["Enums"]["po_status"]
+          supplier_id: string
+          updated_at: string
+          work_item_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          download_token?: string | null
+          id?: string
+          material_order_id?: string | null
+          notes?: string | null
+          organization_id: string
+          po_name: string
+          po_number: string
+          project_id?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: Database["public"]["Enums"]["po_status"]
+          supplier_id: string
+          updated_at?: string
+          work_item_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          download_token?: string | null
+          id?: string
+          material_order_id?: string | null
+          notes?: string | null
+          organization_id?: string
+          po_name?: string
+          po_number?: string
+          project_id?: string | null
+          sent_at?: string | null
+          sent_by?: string | null
+          status?: Database["public"]["Enums"]["po_status"]
+          supplier_id?: string
+          updated_at?: string
+          work_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_material_order_id_fkey"
+            columns: ["material_order_id"]
+            isOneToOne: false
+            referencedRelation: "material_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_work_item_id_fkey"
+            columns: ["work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
             referencedColumns: ["id"]
           },
         ]
@@ -639,6 +785,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_po_number: { Args: { org_id: string }; Returns: string }
       get_user_org_id: { Args: { _user_id: string }; Returns: string }
       get_user_role_in_org: {
         Args: { _org_id: string; _user_id: string }
@@ -694,6 +841,7 @@ export type Database = {
         | "CANCELLED"
       org_type: "GC" | "TC" | "SUPPLIER"
       pack_type: "LOOSE_MODIFIABLE" | "ENGINEERED_LOCKED"
+      po_status: "DRAFT" | "SENT"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -840,6 +988,7 @@ export const Constants = {
       ],
       org_type: ["GC", "TC", "SUPPLIER"],
       pack_type: ["LOOSE_MODIFIABLE", "ENGINEERED_LOCKED"],
+      po_status: ["DRAFT", "SENT"],
     },
   },
 } as const
