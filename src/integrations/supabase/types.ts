@@ -693,6 +693,89 @@ export type Database = {
         }
         Relationships: []
       }
+      project_contracts: {
+        Row: {
+          allow_mobilization_line_item: boolean | null
+          contract_sum: number | null
+          created_at: string
+          created_by_user_id: string | null
+          from_org_id: string | null
+          from_role: string
+          id: string
+          notes: string | null
+          project_id: string
+          retainage_percent: number | null
+          to_org_id: string | null
+          to_project_team_id: string | null
+          to_role: string
+          trade: string | null
+          updated_at: string
+        }
+        Insert: {
+          allow_mobilization_line_item?: boolean | null
+          contract_sum?: number | null
+          created_at?: string
+          created_by_user_id?: string | null
+          from_org_id?: string | null
+          from_role: string
+          id?: string
+          notes?: string | null
+          project_id: string
+          retainage_percent?: number | null
+          to_org_id?: string | null
+          to_project_team_id?: string | null
+          to_role: string
+          trade?: string | null
+          updated_at?: string
+        }
+        Update: {
+          allow_mobilization_line_item?: boolean | null
+          contract_sum?: number | null
+          created_at?: string
+          created_by_user_id?: string | null
+          from_org_id?: string | null
+          from_role?: string
+          id?: string
+          notes?: string | null
+          project_id?: string
+          retainage_percent?: number | null
+          to_org_id?: string | null
+          to_project_team_id?: string | null
+          to_role?: string
+          trade?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_contracts_from_org_id_fkey"
+            columns: ["from_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_contracts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_contracts_to_org_id_fkey"
+            columns: ["to_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_contracts_to_project_team_id_fkey"
+            columns: ["to_project_team_id"]
+            isOneToOne: false
+            referencedRelation: "project_team"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_estimates: {
         Row: {
           approved_at: string | null
@@ -746,6 +829,75 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          expires_at: string
+          id: string
+          invited_by_user_id: string | null
+          invited_email: string
+          invited_name: string | null
+          invited_org_name: string | null
+          project_id: string
+          project_team_id: string | null
+          role: string
+          status: string
+          token: string
+          trade: string | null
+          trade_custom: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invited_by_user_id?: string | null
+          invited_email: string
+          invited_name?: string | null
+          invited_org_name?: string | null
+          project_id: string
+          project_team_id?: string | null
+          role: string
+          status?: string
+          token?: string
+          trade?: string | null
+          trade_custom?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          expires_at?: string
+          id?: string
+          invited_by_user_id?: string | null
+          invited_email?: string
+          invited_name?: string | null
+          invited_org_name?: string | null
+          project_id?: string
+          project_team_id?: string | null
+          role?: string
+          status?: string
+          token?: string
+          trade?: string | null
+          trade_custom?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_invites_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_invites_project_team_id_fkey"
+            columns: ["project_team_id"]
+            isOneToOne: false
+            referencedRelation: "project_team"
             referencedColumns: ["id"]
           },
         ]
@@ -862,12 +1014,229 @@ export type Database = {
           },
         ]
       }
+      project_scope_details: {
+        Row: {
+          balcony_type: string | null
+          basement_finish: string | null
+          basement_type: string | null
+          construction_type: string | null
+          construction_type_other: string | null
+          created_at: string
+          decking_included: boolean | null
+          decking_type: string | null
+          decking_type_other: string | null
+          decorative_included: boolean | null
+          decorative_item_other: string | null
+          decorative_items: Json | null
+          ext_doors_included: boolean | null
+          fascia_included: boolean | null
+          fascia_soffit_material: string | null
+          fascia_soffit_material_other: string | null
+          floors: number | null
+          foundation_type: string | null
+          has_balconies: boolean | null
+          has_covered_porches: boolean | null
+          has_elevator: boolean | null
+          has_roof_deck: boolean | null
+          has_shared_walls: boolean | null
+          home_type: string | null
+          id: string
+          num_buildings: number | null
+          num_units: number | null
+          project_id: string
+          roof_deck_type: string | null
+          roof_type: string | null
+          shaft_type: string | null
+          shaft_type_notes: string | null
+          siding_included: boolean | null
+          siding_material_other: string | null
+          siding_materials: Json | null
+          soffit_included: boolean | null
+          stairs_type: string | null
+          stories: number | null
+          stories_per_unit: number | null
+          updated_at: string
+          windows_included: boolean | null
+          wrb_included: boolean | null
+        }
+        Insert: {
+          balcony_type?: string | null
+          basement_finish?: string | null
+          basement_type?: string | null
+          construction_type?: string | null
+          construction_type_other?: string | null
+          created_at?: string
+          decking_included?: boolean | null
+          decking_type?: string | null
+          decking_type_other?: string | null
+          decorative_included?: boolean | null
+          decorative_item_other?: string | null
+          decorative_items?: Json | null
+          ext_doors_included?: boolean | null
+          fascia_included?: boolean | null
+          fascia_soffit_material?: string | null
+          fascia_soffit_material_other?: string | null
+          floors?: number | null
+          foundation_type?: string | null
+          has_balconies?: boolean | null
+          has_covered_porches?: boolean | null
+          has_elevator?: boolean | null
+          has_roof_deck?: boolean | null
+          has_shared_walls?: boolean | null
+          home_type?: string | null
+          id?: string
+          num_buildings?: number | null
+          num_units?: number | null
+          project_id: string
+          roof_deck_type?: string | null
+          roof_type?: string | null
+          shaft_type?: string | null
+          shaft_type_notes?: string | null
+          siding_included?: boolean | null
+          siding_material_other?: string | null
+          siding_materials?: Json | null
+          soffit_included?: boolean | null
+          stairs_type?: string | null
+          stories?: number | null
+          stories_per_unit?: number | null
+          updated_at?: string
+          windows_included?: boolean | null
+          wrb_included?: boolean | null
+        }
+        Update: {
+          balcony_type?: string | null
+          basement_finish?: string | null
+          basement_type?: string | null
+          construction_type?: string | null
+          construction_type_other?: string | null
+          created_at?: string
+          decking_included?: boolean | null
+          decking_type?: string | null
+          decking_type_other?: string | null
+          decorative_included?: boolean | null
+          decorative_item_other?: string | null
+          decorative_items?: Json | null
+          ext_doors_included?: boolean | null
+          fascia_included?: boolean | null
+          fascia_soffit_material?: string | null
+          fascia_soffit_material_other?: string | null
+          floors?: number | null
+          foundation_type?: string | null
+          has_balconies?: boolean | null
+          has_covered_porches?: boolean | null
+          has_elevator?: boolean | null
+          has_roof_deck?: boolean | null
+          has_shared_walls?: boolean | null
+          home_type?: string | null
+          id?: string
+          num_buildings?: number | null
+          num_units?: number | null
+          project_id?: string
+          roof_deck_type?: string | null
+          roof_type?: string | null
+          shaft_type?: string | null
+          shaft_type_notes?: string | null
+          siding_included?: boolean | null
+          siding_material_other?: string | null
+          siding_materials?: Json | null
+          soffit_included?: boolean | null
+          stairs_type?: string | null
+          stories?: number | null
+          stories_per_unit?: number | null
+          updated_at?: string
+          windows_included?: boolean | null
+          wrb_included?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_scope_details_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_team: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          id: string
+          invited_at: string
+          invited_by_user_id: string | null
+          invited_email: string | null
+          invited_name: string | null
+          invited_org_name: string | null
+          org_id: string | null
+          project_id: string
+          role: string
+          status: string
+          trade: string | null
+          trade_custom: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          id?: string
+          invited_at?: string
+          invited_by_user_id?: string | null
+          invited_email?: string | null
+          invited_name?: string | null
+          invited_org_name?: string | null
+          org_id?: string | null
+          project_id: string
+          role: string
+          status?: string
+          trade?: string | null
+          trade_custom?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          id?: string
+          invited_at?: string
+          invited_by_user_id?: string | null
+          invited_email?: string | null
+          invited_name?: string | null
+          invited_org_name?: string | null
+          org_id?: string | null
+          project_id?: string
+          role?: string
+          status?: string
+          trade?: string | null
+          trade_custom?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_team_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_team_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           address: Json | null
           build_type: string | null
+          city: string | null
           created_at: string
           created_by: string | null
+          created_by_org_id: string | null
           description: string | null
           id: string
           mobilization_enabled: boolean | null
@@ -877,15 +1246,20 @@ export type Database = {
           project_type: string | null
           retainage_percent: number | null
           scope: Json | null
+          start_date: string | null
+          state: string | null
           status: string
           structures: Json | null
           updated_at: string
+          zip: string | null
         }
         Insert: {
           address?: Json | null
           build_type?: string | null
+          city?: string | null
           created_at?: string
           created_by?: string | null
+          created_by_org_id?: string | null
           description?: string | null
           id?: string
           mobilization_enabled?: boolean | null
@@ -895,15 +1269,20 @@ export type Database = {
           project_type?: string | null
           retainage_percent?: number | null
           scope?: Json | null
+          start_date?: string | null
+          state?: string | null
           status?: string
           structures?: Json | null
           updated_at?: string
+          zip?: string | null
         }
         Update: {
           address?: Json | null
           build_type?: string | null
+          city?: string | null
           created_at?: string
           created_by?: string | null
+          created_by_org_id?: string | null
           description?: string | null
           id?: string
           mobilization_enabled?: boolean | null
@@ -913,11 +1292,21 @@ export type Database = {
           project_type?: string | null
           retainage_percent?: number | null
           scope?: Json | null
+          start_date?: string | null
+          state?: string | null
           status?: string
           structures?: Json | null
           updated_at?: string
+          zip?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "projects_created_by_org_id_fkey"
+            columns: ["created_by_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "projects_organization_id_fkey"
             columns: ["organization_id"]
@@ -1361,6 +1750,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      trades: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          name?: string
+        }
+        Relationships: []
       }
       trusted_partners: {
         Row: {
@@ -1853,9 +2263,15 @@ export type Database = {
       }
     }
     Functions: {
-      accept_project_invite: {
-        Args: { _project_id: string }
-        Returns: undefined
+      accept_project_invite_v2: {
+        Args: {
+          _org_address?: Json
+          _org_id?: string
+          _org_name?: string
+          _token: string
+          _user_id: string
+        }
+        Returns: Json
       }
       approve_tm_period: { Args: { period_id: string }; Returns: string }
       can_see_financials: { Args: { _user_id: string }; Returns: boolean }
@@ -1883,6 +2299,7 @@ export type Database = {
       }
       generate_change_work_code: { Args: { org_id: string }; Returns: string }
       generate_po_number: { Args: { org_id: string }; Returns: string }
+      get_invite_by_token_v2: { Args: { _token: string }; Returns: Json }
       get_my_notifications: {
         Args: { _limit?: number; _offset?: number }
         Returns: {
