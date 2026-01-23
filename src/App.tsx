@@ -9,7 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import JoinOrg from "./pages/JoinOrg";
 import OrgSetup from "./pages/OrgSetup";
-import CreateProject from "./pages/CreateProject";
+import CreateProjectNew from "./pages/CreateProjectNew";
 import ProjectHome from "./pages/ProjectHome";
 import PartnerDirectory from "./pages/PartnerDirectory";
 import AdminSuppliers from "./pages/AdminSuppliers";
@@ -40,7 +40,7 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/join-org" element={<JoinOrg />} />
             <Route path="/org-setup" element={<OrgSetup />} />
-            <Route path="/create-project" element={<CreateProject />} />
+            <Route path="/create-project" element={<CreateProjectNew />} />
             <Route path="/project/:id" element={<ProjectHome />} />
             <Route path="/partners" element={<PartnerDirectory />} />
             <Route path="/admin/suppliers" element={<AdminSuppliers />} />
