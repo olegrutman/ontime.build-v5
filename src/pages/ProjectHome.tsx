@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
-  ArrowLeft, 
   FileText, 
   ClipboardList, 
   Package, 
@@ -22,6 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateChangeWorkDialog } from '@/components/change-work/CreateChangeWorkDialog';
 import { ProjectRelationships } from '@/components/project/ProjectRelationships';
+import { AppLayout } from '@/components/layout';
 import { format } from 'date-fns';
 
 interface Project {
@@ -113,49 +113,36 @@ export default function ProjectHome() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
-          <div className="container mx-auto px-4 h-14 flex items-center">
-            <Skeleton className="h-8 w-32" />
-          </div>
-        </header>
-        <main className="container mx-auto px-4 py-6 space-y-6">
+      <AppLayout title="Loading...">
+        <div className="container mx-auto px-4 py-6 space-y-6">
           <Skeleton className="h-48 w-full" />
           <Skeleton className="h-96 w-full" />
-        </main>
-      </div>
+        </div>
+      </AppLayout>
     );
   }
 
   if (!project) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Project not found</p>
-      </div>
+      <AppLayout title="Project Not Found">
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <p className="text-muted-foreground">Project not found</p>
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur">
-        <div className="container mx-auto px-4 h-14 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="font-semibold">{project.name}</h1>
-            <p className="text-xs text-muted-foreground">
-              {project.project_type} • {project.build_type}
-            </p>
-          </div>
-          <Badge variant={project.status === 'active' ? 'default' : 'secondary'} className="ml-auto">
+    <AppLayout 
+      title={project.name} 
+      subtitle={`${project.project_type} • ${project.build_type}`}
+    >
+      <main className="container mx-auto px-4 py-6 space-y-6">
+        <div className="flex items-center justify-between mb-4">
+          <Badge variant={project.status === 'active' ? 'default' : 'secondary'}>
             {project.status}
           </Badge>
         </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-6 space-y-6">
         {/* Project Summary */}
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
@@ -380,6 +367,6 @@ export default function ProjectHome() {
           projectName={project.name}
         />
       </main>
-    </div>
+    </AppLayout>
   );
 }
