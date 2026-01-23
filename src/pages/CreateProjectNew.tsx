@@ -95,19 +95,25 @@ export default function CreateProjectNew() {
   const saveBasics = async (): Promise<string | null> => {
     if (data.projectId) return data.projectId;
     
+    if (!currentOrg?.id || !user?.id) {
+      toast({ title: 'Error', description: 'Organization not found', variant: 'destructive' });
+      return null;
+    }
+    
     try {
       const { data: project, error } = await supabase
         .from('projects')
         .insert({
           name: data.basics.name,
           project_type: data.basics.projectType,
-          address: data.basics.address,
+          address: { street: data.basics.address } as any,
           city: data.basics.city,
           state: data.basics.state,
           zip: data.basics.zip,
           start_date: data.basics.startDate || null,
-          created_by: user?.id,
-          created_by_org_id: currentOrg?.id,
+          created_by: user.id,
+          created_by_org_id: currentOrg.id,
+          organization_id: currentOrg.id,
           status: 'draft',
         })
         .select('id')
@@ -118,9 +124,10 @@ export default function CreateProjectNew() {
       // Add creator to project_participants
       await supabase.from('project_participants').insert({
         project_id: project.id,
-        organization_id: currentOrg?.id,
-        role: currentOrg?.type,
+        organization_id: currentOrg.id,
+        role: currentOrg.type as any,
         invite_status: 'ACCEPTED',
+        invited_by: user.id,
       });
 
       setData(prev => ({ ...prev, projectId: project.id }));
