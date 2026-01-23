@@ -741,6 +741,7 @@ export type Database = {
           invited_by: string
           organization_id: string
           project_id: string
+          role: Database["public"]["Enums"]["org_type"] | null
         }
         Insert: {
           accepted_at?: string | null
@@ -750,6 +751,7 @@ export type Database = {
           invited_by: string
           organization_id: string
           project_id: string
+          role?: Database["public"]["Enums"]["org_type"] | null
         }
         Update: {
           accepted_at?: string | null
@@ -759,6 +761,7 @@ export type Database = {
           invited_by?: string
           organization_id?: string
           project_id?: string
+          role?: Database["public"]["Enums"]["org_type"] | null
         }
         Relationships: [
           {
@@ -773,6 +776,64 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_relationships: {
+        Row: {
+          billing_direction: string
+          created_at: string
+          downstream_participant_id: string
+          id: string
+          material_responsibility: string | null
+          po_requires_upstream_approval: boolean
+          project_id: string
+          relationship_type: string
+          upstream_participant_id: string
+        }
+        Insert: {
+          billing_direction?: string
+          created_at?: string
+          downstream_participant_id: string
+          id?: string
+          material_responsibility?: string | null
+          po_requires_upstream_approval?: boolean
+          project_id: string
+          relationship_type: string
+          upstream_participant_id: string
+        }
+        Update: {
+          billing_direction?: string
+          created_at?: string
+          downstream_participant_id?: string
+          id?: string
+          material_responsibility?: string | null
+          po_requires_upstream_approval?: boolean
+          project_id?: string
+          relationship_type?: string
+          upstream_participant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_relationships_downstream_participant_id_fkey"
+            columns: ["downstream_participant_id"]
+            isOneToOne: false
+            referencedRelation: "project_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_relationships_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_relationships_upstream_participant_id_fkey"
+            columns: ["upstream_participant_id"]
+            isOneToOne: false
+            referencedRelation: "project_participants"
             referencedColumns: ["id"]
           },
         ]
@@ -1799,6 +1860,21 @@ export type Database = {
           type: Database["public"]["Enums"]["notification_type"]
         }[]
       }
+      get_project_relationships: {
+        Args: { _project_id: string }
+        Returns: {
+          downstream_org_code: string
+          downstream_org_name: string
+          downstream_role: Database["public"]["Enums"]["org_type"]
+          id: string
+          material_responsibility: string
+          po_requires_upstream_approval: boolean
+          relationship_type: string
+          upstream_org_code: string
+          upstream_org_name: string
+          upstream_role: Database["public"]["Enums"]["org_type"]
+        }[]
+      }
       get_unread_count: { Args: never; Returns: number }
       get_user_org_id: { Args: { _user_id: string }; Returns: string }
       get_user_role_in_org: {
@@ -1811,6 +1887,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      invite_org_to_project: {
+        Args: { _org_code: string; _project_id: string; _role: string }
+        Returns: string
       }
       is_gc_pm: { Args: { _user_id: string }; Returns: boolean }
       is_pm_role: { Args: { _user_id: string }; Returns: boolean }
@@ -1878,7 +1958,7 @@ export type Database = {
         | "APPROVED"
         | "FULFILLED"
         | "CANCELLED"
-      org_type: "GC" | "TC" | "SUPPLIER"
+      org_type: "GC" | "TC" | "SUPPLIER" | "FC"
       pack_type: "LOOSE_MODIFIABLE" | "ENGINEERED_LOCKED"
       po_status: "DRAFT" | "SENT"
     }
@@ -2033,7 +2113,7 @@ export const Constants = {
         "FULFILLED",
         "CANCELLED",
       ],
-      org_type: ["GC", "TC", "SUPPLIER"],
+      org_type: ["GC", "TC", "SUPPLIER", "FC"],
       pack_type: ["LOOSE_MODIFIABLE", "ENGINEERED_LOCKED"],
       po_status: ["DRAFT", "SENT"],
     },

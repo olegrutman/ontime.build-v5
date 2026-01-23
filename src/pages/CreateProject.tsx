@@ -54,8 +54,12 @@ export default function CreateProject() {
   const [data, setData] = useState<ProjectWizardData>(initialData);
   const [creating, setCreating] = useState(false);
 
-  // Get user's GC organization (only GC can create projects)
-  const gcOrg = userOrgRoles.find((r) => r.organization?.type === 'GC');
+  // Get user's organization (GC or TC can create projects)
+  const creatorOrgRole = userOrgRoles.find((r) => 
+    r.organization?.type === 'GC' || r.organization?.type === 'TC'
+  );
+  const isGCCreator = creatorOrgRole?.organization?.type === 'GC';
+  const isTCCreator = creatorOrgRole?.organization?.type === 'TC';
 
   const updateData = (updates: Partial<ProjectWizardData>) => {
     setData((prev) => ({ ...prev, ...updates }));
@@ -93,8 +97,8 @@ export default function CreateProject() {
   };
 
   const createProject = async () => {
-    if (!user || !gcOrg?.organization_id) {
-      toast.error('You must be logged in with a GC organization to create projects');
+    if (!user || !creatorOrgRole?.organization_id) {
+      toast.error('You must be logged in with an organization to create projects');
       return;
     }
 
@@ -105,9 +109,17 @@ export default function CreateProject() {
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
-          organization_id: gcOrg.organization_id,
+          organization_id: creatorOrgRole.organization_id,
           name: data.name,
           description: `${data.project_type} - ${data.build_type}`,
+          project_type: data.project_type,
+          build_type: data.build_type,
+          address: data.address,
+          structures: data.structures,
+          scope: data.scope,
+          mobilization_enabled: data.mobilization_enabled,
+          retainage_percent: data.retainage_percent,
+          created_by: user.id,
         } as any)
         .select()
         .single();
@@ -118,7 +130,7 @@ export default function CreateProject() {
       const { data: projectWorkItem, error: wiError } = await supabase
         .from('work_items')
         .insert({
-          organization_id: gcOrg.organization_id,
+          organization_id: creatorOrgRole.organization_id,
           project_id: project.id,
           item_type: 'PROJECT',
           title: data.name,
@@ -131,9 +143,24 @@ export default function CreateProject() {
 
       if (wiError) throw wiError;
 
-      // 3. Create SOV_ITEM work items for each SOV line
+      // 3. Add creator as first participant (ACCEPTED by default)
+      const creatorOrgType = creatorOrgRole.organization?.type as 'GC' | 'TC' | 'FC' | 'SUPPLIER';
+      const { error: creatorPartError } = await supabase
+        .from('project_participants')
+        .insert({
+          project_id: project.id,
+          organization_id: creatorOrgRole.organization_id,
+          role: creatorOrgType,
+          invited_by: user.id,
+          invite_status: 'ACCEPTED',
+          accepted_at: new Date().toISOString(),
+        });
+
+      if (creatorPartError) throw creatorPartError;
+
+      // 4. Create SOV_ITEM work items for each SOV line
       const sovItems = data.sov_items.map((item: SOVLineItem, index: number) => ({
-        organization_id: gcOrg.organization_id,
+        organization_id: creatorOrgRole.organization_id,
         project_id: project.id,
         parent_work_item_id: projectWorkItem.id,
         item_type: 'SOV_ITEM',
@@ -151,19 +178,20 @@ export default function CreateProject() {
         if (sovError) throw sovError;
       }
 
-      // 4. Create work_item_participants for invited parties
-      if (data.parties.length > 0) {
-        const participants = data.parties.map((party) => ({
-          work_item_id: projectWorkItem.id,
-          organization_id: party.org_id!,
-          invited_by: user.id,
-        }));
-
-        const { error: partError } = await supabase
-          .from('work_item_participants')
-          .insert(participants);
-        
-        if (partError) throw partError;
+      // 5. Invite parties using RPC (this also triggers notifications)
+      for (const party of data.parties) {
+        if (party.org_id) {
+          try {
+            await supabase.rpc('invite_org_to_project', {
+              _project_id: project.id,
+              _org_code: party.org_code,
+              _role: party.role,
+            });
+          } catch (inviteError) {
+            console.warn('Failed to invite party:', party.org_code, inviteError);
+            // Continue with other invites
+          }
+        }
       }
 
       toast.success('Project created successfully!');
@@ -195,14 +223,14 @@ export default function CreateProject() {
     }
   };
 
-  if (!gcOrg) {
+  if (!creatorOrgRole) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md">
           <CardContent className="p-6 text-center">
             <h2 className="text-lg font-semibold mb-2">Access Restricted</h2>
             <p className="text-muted-foreground mb-4">
-              Only General Contractor organizations can create projects.
+              Only General Contractor or Trade Contractor organizations can create projects.
             </p>
             <Button onClick={() => navigate('/dashboard')}>
               Back to Dashboard
