@@ -21,7 +21,7 @@ export interface PartyInvite {
   org_code: string;
   org_name?: string;
   org_id?: string;
-  role: 'TC' | 'SUPPLIER';
+  role: 'GC' | 'TC' | 'FC' | 'SUPPLIER';
   material_responsibility?: 'GC' | 'TC';
   po_approval_required?: boolean;
 }

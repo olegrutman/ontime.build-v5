@@ -1,4 +1,4 @@
-export type OrgType = 'GC' | 'TC' | 'SUPPLIER';
+export type OrgType = 'GC' | 'TC' | 'FC' | 'SUPPLIER';
 
 export type AppRole = 'GC_PM' | 'TC_PM' | 'FS' | 'SUPPLIER';
 
@@ -50,6 +50,7 @@ export const ROLE_LABELS: Record<AppRole, string> = {
 export const ORG_TYPE_LABELS: Record<OrgType, string> = {
   GC: 'General Contractor',
   TC: 'Trade Contractor',
+  FC: 'Finishing Contractor',
   SUPPLIER: 'Supplier',
 };
 
@@ -57,6 +58,7 @@ export const ORG_TYPE_LABELS: Record<OrgType, string> = {
 export const ALLOWED_ROLES_BY_ORG_TYPE: Record<OrgType, AppRole[]> = {
   GC: ['GC_PM'],
   TC: ['TC_PM', 'FS'],
+  FC: ['TC_PM', 'FS'], // FC uses same roles as TC for now
   SUPPLIER: ['SUPPLIER'],
 };
 
