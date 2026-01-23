@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { AppLayout } from '@/components/layout';
 import { cn } from '@/lib/utils';
 import { 
   NewProjectWizardData, 
@@ -317,20 +318,20 @@ export default function CreateProjectNew() {
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
+      <AppLayout title="Create Project">
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </AppLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <AppLayout title="Create New Project">
       <div className="max-w-5xl mx-auto p-6">
-        <h1 className="text-2xl font-bold mb-6">Create New Project</h1>
-        
         <div className="grid grid-cols-12 gap-6">
           {/* Progress sidebar */}
-          <div className="col-span-3">
+          <div className="col-span-12 md:col-span-3">
             <Card>
               <CardContent className="p-4">
                 <nav className="space-y-2">
@@ -351,7 +352,7 @@ export default function CreateProjectNew() {
                       )}>
                         {index < currentStep ? <Check className="h-4 w-4" /> : index + 1}
                       </div>
-                      <div>
+                      <div className="hidden md:block">
                         <p className="font-medium text-sm">{step.label}</p>
                         <p className="text-xs text-muted-foreground">{step.description}</p>
                       </div>
@@ -363,7 +364,7 @@ export default function CreateProjectNew() {
           </div>
 
           {/* Main content */}
-          <div className="col-span-9">
+          <div className="col-span-12 md:col-span-9">
             <Card>
               <CardContent className="p-6">
                 {renderStep()}
@@ -403,6 +404,6 @@ export default function CreateProjectNew() {
           </div>
         </div>
       </div>
-    </div>
+    </AppLayout>
   );
 }
