@@ -2,11 +2,21 @@ export type OrgType = 'GC' | 'TC' | 'FC' | 'SUPPLIER';
 
 export type AppRole = 'GC_PM' | 'TC_PM' | 'FS' | 'SUPPLIER';
 
+export interface OrgAddress {
+  street?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+}
+
 export interface Organization {
   id: string;
   org_code: string;
   name: string;
   type: OrgType;
+  address?: OrgAddress | null;
+  phone?: string | null;
+  created_by?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -16,6 +26,9 @@ export interface Profile {
   user_id: string;
   email: string;
   full_name: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  phone?: string | null;
   created_at: string;
   updated_at: string;
 }

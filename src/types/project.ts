@@ -24,6 +24,10 @@ export interface PartyInvite {
   role: 'GC' | 'TC' | 'FC' | 'SUPPLIER';
   material_responsibility?: 'GC' | 'TC';
   po_approval_required?: boolean;
+  // For email invites
+  invitee_email?: string;
+  invitee_first_name?: string;
+  invitee_last_name?: string;
 }
 
 export interface ProjectScope {

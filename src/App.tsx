@@ -8,6 +8,7 @@ import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import JoinOrg from "./pages/JoinOrg";
+import OrgSetup from "./pages/OrgSetup";
 import CreateProject from "./pages/CreateProject";
 import ProjectHome from "./pages/ProjectHome";
 import PartnerDirectory from "./pages/PartnerDirectory";
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/join-org" element={<JoinOrg />} />
+            <Route path="/org-setup" element={<OrgSetup />} />
             <Route path="/create-project" element={<CreateProject />} />
             <Route path="/project/:id" element={<ProjectHome />} />
             <Route path="/partners" element={<PartnerDirectory />} />
