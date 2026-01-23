@@ -67,9 +67,9 @@ export default function Auth() {
     } else {
       toast({
         title: 'Account created!',
-        description: 'You can now join an organization using an org code.',
+        description: 'Please set up your organization to continue.',
       });
-      navigate('/join-org');
+      navigate('/org-setup');
     }
   };
 
@@ -216,7 +216,7 @@ export default function Auth() {
         </Card>
 
         <p className="text-center text-sm text-muted-foreground mt-4">
-          After signing up, you'll need an <strong>org code</strong> to join an organization.
+          New users will set up their organization after signing up.
         </p>
       </div>
     </div>

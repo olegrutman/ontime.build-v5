@@ -513,26 +513,35 @@ export type Database = {
       }
       organizations: {
         Row: {
+          address: Json | null
           created_at: string
+          created_by: string | null
           id: string
           name: string
           org_code: string
+          phone: string | null
           type: Database["public"]["Enums"]["org_type"]
           updated_at: string
         }
         Insert: {
+          address?: Json | null
           created_at?: string
+          created_by?: string | null
           id?: string
           name: string
           org_code: string
+          phone?: string | null
           type: Database["public"]["Enums"]["org_type"]
           updated_at?: string
         }
         Update: {
+          address?: Json | null
           created_at?: string
+          created_by?: string | null
           id?: string
           name?: string
           org_code?: string
+          phone?: string | null
           type?: Database["public"]["Enums"]["org_type"]
           updated_at?: string
         }
@@ -652,24 +661,33 @@ export type Database = {
         Row: {
           created_at: string
           email: string
+          first_name: string | null
           full_name: string | null
           id: string
+          last_name: string | null
+          phone: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
           email: string
+          first_name?: string | null
           full_name?: string | null
           id?: string
+          last_name?: string | null
+          phone?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
           email?: string
+          first_name?: string | null
           full_name?: string | null
           id?: string
+          last_name?: string | null
+          phone?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1836,6 +1854,19 @@ export type Database = {
       approve_tm_period: { Args: { period_id: string }; Returns: string }
       can_see_financials: { Args: { _user_id: string }; Returns: boolean }
       can_see_margins: { Args: { _user_id: string }; Returns: boolean }
+      check_org_setup_needed: { Args: never; Returns: Json }
+      create_organization_and_set_admin: {
+        Args: {
+          _address: Json
+          _org_name: string
+          _org_phone: string
+          _org_type: Database["public"]["Enums"]["org_type"]
+          _user_first_name: string
+          _user_last_name: string
+          _user_phone?: string
+        }
+        Returns: Json
+      }
       decline_project_invite: {
         Args: { _project_id: string }
         Returns: undefined
@@ -1919,6 +1950,18 @@ export type Database = {
           supplier_id: string
           supplier_sku: string
           uom_default: string
+        }[]
+      }
+      search_invite_targets: {
+        Args: { _limit?: number; _query: string }
+        Returns: {
+          city_state: string
+          display_name: string
+          email: string
+          id: string
+          org_type: Database["public"]["Enums"]["org_type"]
+          organization_name: string
+          result_type: string
         }[]
       }
       submit_tm_period: { Args: { period_id: string }; Returns: undefined }

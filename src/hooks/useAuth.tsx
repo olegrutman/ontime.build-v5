@@ -11,6 +11,7 @@ interface AuthContextType {
   currentRole: AppRole | null;
   permissions: RolePermissions | null;
   loading: boolean;
+  needsOrgSetup: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -120,6 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Get current role (first role for now, can be enhanced to allow switching)
   const currentRole = userOrgRoles.length > 0 ? userOrgRoles[0].role : null;
   const permissions = currentRole ? ROLE_PERMISSIONS[currentRole] : null;
+  const needsOrgSetup = !loading && !!user && userOrgRoles.length === 0;
 
   return (
     <AuthContext.Provider
@@ -131,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         currentRole,
         permissions,
         loading,
+        needsOrgSetup,
         signUp,
         signIn,
         signOut,
