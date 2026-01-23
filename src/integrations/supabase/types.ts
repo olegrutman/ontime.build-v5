@@ -2418,6 +2418,10 @@ export type Database = {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
       }
+      user_is_project_participant: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
       user_is_work_item_participant: {
         Args: { _user_id: string; _work_item_id: string }
         Returns: boolean
