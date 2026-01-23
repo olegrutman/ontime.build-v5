@@ -309,7 +309,7 @@ export default function CreateProjectNew() {
       case 3:
         return <ContractsStep team={data.team} contracts={data.contracts} onChange={updateContracts} creatorRole={creatorRole} />;
       case 4:
-        return <ReviewStepNew data={data} />;
+        return <ReviewStepNew data={data} creatorRole={creatorRole} />;
       default:
         return null;
     }

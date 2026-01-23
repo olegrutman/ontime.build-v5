@@ -1,14 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Check, MapPin, Users, FileText, DollarSign } from 'lucide-react';
-import { NewProjectWizardData } from '@/types/projectWizard';
+import { Check, MapPin, Users, FileText, DollarSign, ArrowUp, ArrowDown } from 'lucide-react';
+import { NewProjectWizardData, TeamRole } from '@/types/projectWizard';
 
 interface ReviewStepProps {
   data: NewProjectWizardData;
+  creatorRole?: TeamRole;
 }
 
-export function ReviewStepNew({ data }: ReviewStepProps) {
+export function ReviewStepNew({ data, creatorRole = 'General Contractor' }: ReviewStepProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -16,6 +17,21 @@ export function ReviewStepNew({ data }: ReviewStepProps) {
       minimumFractionDigits: 0,
     }).format(value);
   };
+
+  // Separate upstream (GC) and downstream (FC/TC) contracts for TC creators
+  const upstreamGC = data.team.find(m => m.role === 'General Contractor');
+  const upstreamContract = upstreamGC 
+    ? data.contracts.find(c => c.toTeamMemberId === upstreamGC.id)
+    : null;
+
+  const downstreamMembers = data.team.filter(m => 
+    m.role === 'Field Crew' || m.role === 'Trade Contractor' || m.role === 'Supplier'
+  );
+  const downstreamContracts = data.contracts.filter(c => 
+    downstreamMembers.some(m => m.id === c.toTeamMemberId)
+  );
+
+  const isTC = creatorRole === 'Trade Contractor';
 
   return (
     <div className="space-y-6">
@@ -160,8 +176,69 @@ export function ReviewStepNew({ data }: ReviewStepProps) {
         </CardContent>
       </Card>
 
-      {/* Contracts */}
-      {data.contracts.length > 0 && (
+      {/* Contracts - Split for TC */}
+      {isTC && upstreamContract && upstreamGC && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ArrowUp className="h-4 w-4 text-blue-600" />
+              <span>Your Contract with GC</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between text-sm py-2">
+              <div>
+                <p className="font-medium">{upstreamGC.companyName}</p>
+                <p className="text-muted-foreground">General Contractor</p>
+              </div>
+              <div className="text-right">
+                <p className="font-medium">{formatCurrency(upstreamContract.contractSum)}</p>
+                <p className="text-muted-foreground text-xs">
+                  {upstreamContract.retainagePercent}% retainage
+                  {upstreamContract.allowMobilization && ' • Mobilization'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isTC && downstreamContracts.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ArrowDown className="h-4 w-4 text-green-600" />
+              <span>Your Contracts with Crew/Suppliers ({downstreamContracts.length})</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {downstreamContracts.map((contract) => {
+                const member = data.team.find(t => t.id === contract.toTeamMemberId);
+                if (!member) return null;
+                return (
+                  <div key={contract.toTeamMemberId} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
+                    <div>
+                      <p className="font-medium">{member.companyName}</p>
+                      <p className="text-muted-foreground">{member.role}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">{formatCurrency(contract.contractSum)}</p>
+                      <p className="text-muted-foreground text-xs">
+                        {contract.retainagePercent}% retainage
+                        {contract.allowMobilization && ' • Mobilization'}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* GC view - single contracts card */}
+      {!isTC && data.contracts.length > 0 && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
