@@ -52,7 +52,8 @@ export function TeamStep({ team, onChange, creatorRole }: TeamStepProps) {
       return role !== 'General Contractor'; // GC can invite TC, FC, Supplier
     }
     if (creatorRole === 'Trade Contractor') {
-      return role === 'Field Crew' || role === 'Supplier'; // TC can invite FC, Supplier
+      // TC can invite GC (upstream), FC (downstream crew), and Supplier
+      return role === 'General Contractor' || role === 'Field Crew' || role === 'Supplier';
     }
     return true;
   });
