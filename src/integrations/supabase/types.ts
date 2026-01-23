@@ -1940,6 +1940,16 @@ export type Database = {
             }
             Returns: string
           }
+      invite_org_to_project_by_id: {
+        Args: {
+          _material_responsibility?: string
+          _org_id: string
+          _po_requires_approval?: boolean
+          _project_id: string
+          _role: string
+        }
+        Returns: string
+      }
       is_gc_pm: { Args: { _user_id: string }; Returns: boolean }
       is_pm_role: { Args: { _user_id: string }; Returns: boolean }
       mark_all_notifications_read: { Args: never; Returns: undefined }
