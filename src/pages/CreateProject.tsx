@@ -182,9 +182,9 @@ export default function CreateProject() {
       for (const party of data.parties) {
         if (party.org_id) {
           try {
-            await supabase.rpc('invite_org_to_project', {
+            await supabase.rpc('invite_org_to_project_by_id', {
               _project_id: project.id,
-              _org_code: party.org_code,
+              _org_id: party.org_id,
               _role: party.role,
               _material_responsibility: party.role === 'SUPPLIER' 
                 ? (party.material_responsibility || 'TC') 
@@ -192,7 +192,7 @@ export default function CreateProject() {
               _po_requires_approval: party.po_approval_required || false,
             });
           } catch (inviteError) {
-            console.warn('Failed to invite party:', party.org_code, inviteError);
+            console.warn('Failed to invite party:', party.org_id, inviteError);
             // Continue with other invites
           }
         }
