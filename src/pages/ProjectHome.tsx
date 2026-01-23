@@ -9,7 +9,8 @@ import {
   Building2,
   MapPin,
   Calendar,
-  Plus
+  Plus,
+  GitBranch
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -20,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CreateChangeWorkDialog } from '@/components/change-work/CreateChangeWorkDialog';
+import { ProjectRelationships } from '@/components/project/ProjectRelationships';
 import { format } from 'date-fns';
 
 interface Project {
@@ -227,6 +229,10 @@ export default function ProjectHome() {
               <Users className="h-4 w-4" />
               Team
             </TabsTrigger>
+            <TabsTrigger value="relationships" className="gap-2">
+              <GitBranch className="h-4 w-4" />
+              Relationships
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="sov">
@@ -358,6 +364,10 @@ export default function ProjectHome() {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="relationships">
+            <ProjectRelationships projectId={id!} />
           </TabsContent>
         </Tabs>
 
