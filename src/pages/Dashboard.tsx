@@ -24,12 +24,19 @@ interface Project {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, userOrgRoles, loading: authLoading } = useAuth();
+  const { user, userOrgRoles, loading: authLoading, needsOrgSetup } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 
   const currentOrg = userOrgRoles[0]?.organization;
+
+  // Redirect to org setup if needed
+  useEffect(() => {
+    if (!authLoading && user && needsOrgSetup) {
+      navigate('/org-setup');
+    }
+  }, [authLoading, user, needsOrgSetup, navigate]);
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -98,9 +105,9 @@ export default function Dashboard() {
             <CardContent className="p-6 text-center">
               <h2 className="text-lg font-semibold mb-2">No Organization</h2>
               <p className="text-muted-foreground mb-4">
-                You need to join or create an organization to get started.
+                You need to create an organization to get started.
               </p>
-              <Button onClick={() => navigate('/join-org')}>Join Organization</Button>
+              <Button onClick={() => navigate('/org-setup')}>Create Organization</Button>
             </CardContent>
           </Card>
         </div>
@@ -112,7 +119,7 @@ export default function Dashboard() {
     <AppLayout
       title="Projects"
       subtitle="Manage your framing projects"
-      showNewButton={currentOrg.type === 'GC'}
+      showNewButton={currentOrg.type === 'GC' || currentOrg.type === 'TC'}
       onNewClick={() => navigate('/create-project')}
       newButtonLabel="New Project"
     >

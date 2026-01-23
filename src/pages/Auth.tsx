@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,7 @@ const signInSchema = z.object({
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { signUp, signIn } = useAuth();
+  const { signUp, signIn, needsOrgSetup, userOrgRoles, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -100,9 +100,22 @@ export default function Auth() {
         description: error.message,
       });
     } else {
-      navigate('/');
+      // Navigation will be handled by useEffect once auth state updates
     }
   };
+
+  // Redirect based on org setup status after auth state updates
+  React.useEffect(() => {
+    if (!authLoading && userOrgRoles.length > 0) {
+      navigate('/dashboard');
+    }
+  }, [authLoading, userOrgRoles, navigate]);
+
+  React.useEffect(() => {
+    if (needsOrgSetup) {
+      navigate('/org-setup');
+    }
+  }, [needsOrgSetup, navigate]);
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
