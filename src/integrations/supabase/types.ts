@@ -757,7 +757,9 @@ export type Database = {
           invite_status: string
           invited_at: string
           invited_by: string
+          material_responsibility: string | null
           organization_id: string
+          po_requires_approval: boolean | null
           project_id: string
           role: Database["public"]["Enums"]["org_type"] | null
         }
@@ -767,7 +769,9 @@ export type Database = {
           invite_status?: string
           invited_at?: string
           invited_by: string
+          material_responsibility?: string | null
           organization_id: string
+          po_requires_approval?: boolean | null
           project_id: string
           role?: Database["public"]["Enums"]["org_type"] | null
         }
@@ -777,7 +781,9 @@ export type Database = {
           invite_status?: string
           invited_at?: string
           invited_by?: string
+          material_responsibility?: string | null
           organization_id?: string
+          po_requires_approval?: boolean | null
           project_id?: string
           role?: Database["public"]["Enums"]["org_type"] | null
         }
@@ -1919,10 +1925,21 @@ export type Database = {
         }
         Returns: boolean
       }
-      invite_org_to_project: {
-        Args: { _org_code: string; _project_id: string; _role: string }
-        Returns: string
-      }
+      invite_org_to_project:
+        | {
+            Args: { _org_code: string; _project_id: string; _role: string }
+            Returns: string
+          }
+        | {
+            Args: {
+              _material_responsibility?: string
+              _org_code: string
+              _po_requires_approval?: boolean
+              _project_id: string
+              _role: string
+            }
+            Returns: string
+          }
       is_gc_pm: { Args: { _user_id: string }; Returns: boolean }
       is_pm_role: { Args: { _user_id: string }; Returns: boolean }
       mark_all_notifications_read: { Args: never; Returns: undefined }

@@ -73,8 +73,8 @@ export function PartiesStep({ data, onChange }: PartiesStepProps) {
         invitee_email: emailInvite.email,
         invitee_first_name: emailInvite.firstName,
         invitee_last_name: emailInvite.lastName,
-        material_responsibility: role === 'TC' ? 'TC' : undefined,
-        po_approval_required: role === 'SUPPLIER' ? true : undefined,
+        material_responsibility: role === 'SUPPLIER' ? 'TC' : (role === 'TC' ? 'TC' : undefined),
+        po_approval_required: role === 'SUPPLIER' ? false : undefined,
       };
       onChange({ parties: [...data.parties, party] });
     } else if (pendingInvite.id) {
@@ -83,8 +83,8 @@ export function PartiesStep({ data, onChange }: PartiesStepProps) {
         org_name: pendingInvite.display_name,
         org_id: pendingInvite.id,
         role,
-        material_responsibility: role === 'TC' ? 'TC' : undefined,
-        po_approval_required: role === 'SUPPLIER' ? true : undefined,
+        material_responsibility: role === 'SUPPLIER' ? 'TC' : (role === 'TC' ? 'TC' : undefined),
+        po_approval_required: role === 'SUPPLIER' ? false : undefined,
       };
       onChange({ parties: [...data.parties, party] });
     }
@@ -338,13 +338,29 @@ export function PartiesStep({ data, onChange }: PartiesStepProps) {
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                 </div>
-                <div className="flex items-center justify-between text-sm">
-                  <Label htmlFor={`po-${party.index}`}>PO Requires Upstream Approval</Label>
-                  <Switch
-                    id={`po-${party.index}`}
-                    checked={party.po_approval_required}
-                    onCheckedChange={(checked) => updateParty(party.index, { po_approval_required: checked })}
-                  />
+                <div className="space-y-3 text-sm">
+                  {/* Material Responsibility (who is the buyer) */}
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor={`mat-buyer-${party.index}`}>Material Buyer</Label>
+                    <div className="flex items-center gap-2">
+                      <span className={party.material_responsibility === 'GC' ? 'font-medium' : 'text-muted-foreground'}>GC</span>
+                      <Switch
+                        id={`mat-buyer-${party.index}`}
+                        checked={party.material_responsibility !== 'GC'}
+                        onCheckedChange={(checked) => updateParty(party.index, { material_responsibility: checked ? 'TC' : 'GC' })}
+                      />
+                      <span className={party.material_responsibility !== 'GC' ? 'font-medium' : 'text-muted-foreground'}>TC</span>
+                    </div>
+                  </div>
+                  {/* PO Approval */}
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor={`po-${party.index}`}>PO Requires Upstream Approval</Label>
+                    <Switch
+                      id={`po-${party.index}`}
+                      checked={party.po_approval_required}
+                      onCheckedChange={(checked) => updateParty(party.index, { po_approval_required: checked })}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>
