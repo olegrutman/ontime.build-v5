@@ -1,8 +1,9 @@
-import { Search, Bell, Plus } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
+import { NotificationSheet } from '@/components/notifications';
 
 interface TopBarProps {
   title?: string;
@@ -61,9 +62,10 @@ export function TopBar({
         <Button variant="ghost" size="icon" className="h-9 w-9 sm:hidden">
           <Search className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="icon" className="h-9 w-9">
-          <Bell className="h-4 w-4" />
-        </Button>
+        
+        {/* Notification Bell with Sheet */}
+        <NotificationSheet />
+        
         {showNewButton && (
           <Button size="sm" onClick={onNewClick} className="gap-1.5 h-9 px-2 sm:px-3">
             <Plus className="h-4 w-4" />

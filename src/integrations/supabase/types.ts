@@ -303,6 +303,85 @@ export type Database = {
           },
         ]
       }
+      notification_reads: {
+        Row: {
+          id: string
+          notification_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          notification_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          notification_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_reads_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          action_url: string
+          body: string | null
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          is_read: boolean
+          recipient_org_id: string
+          recipient_user_id: string | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+        }
+        Insert: {
+          action_url: string
+          body?: string | null
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          is_read?: boolean
+          recipient_org_id: string
+          recipient_user_id?: string | null
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+        }
+        Update: {
+          action_url?: string
+          body?: string | null
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          is_read?: boolean
+          recipient_org_id?: string
+          recipient_user_id?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["notification_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_recipient_org_id_fkey"
+            columns: ["recipient_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           catalog_item_id: string | null
@@ -649,6 +728,51 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_participants: {
+        Row: {
+          accepted_at: string | null
+          id: string
+          invite_status: string
+          invited_at: string
+          invited_by: string
+          organization_id: string
+          project_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          id?: string
+          invite_status?: string
+          invited_at?: string
+          invited_by: string
+          organization_id: string
+          project_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          id?: string
+          invite_status?: string
+          invited_at?: string
+          invited_by?: string
+          organization_id?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_participants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_participants_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -1644,15 +1768,38 @@ export type Database = {
       }
     }
     Functions: {
+      accept_project_invite: {
+        Args: { _project_id: string }
+        Returns: undefined
+      }
       approve_tm_period: { Args: { period_id: string }; Returns: string }
       can_see_financials: { Args: { _user_id: string }; Returns: boolean }
       can_see_margins: { Args: { _user_id: string }; Returns: boolean }
+      decline_project_invite: {
+        Args: { _project_id: string }
+        Returns: undefined
+      }
       execute_change_work: {
         Args: { change_work_id: string }
         Returns: undefined
       }
       generate_change_work_code: { Args: { org_id: string }; Returns: string }
       generate_po_number: { Args: { org_id: string }; Returns: string }
+      get_my_notifications: {
+        Args: { _limit?: number; _offset?: number }
+        Returns: {
+          action_url: string
+          body: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          is_read: boolean
+          title: string
+          type: Database["public"]["Enums"]["notification_type"]
+        }[]
+      }
+      get_unread_count: { Args: never; Returns: number }
       get_user_org_id: { Args: { _user_id: string }; Returns: string }
       get_user_role_in_org: {
         Args: { _org_id: string; _user_id: string }
@@ -1667,6 +1814,11 @@ export type Database = {
       }
       is_gc_pm: { Args: { _user_id: string }; Returns: boolean }
       is_pm_role: { Args: { _user_id: string }; Returns: boolean }
+      mark_all_notifications_read: { Args: never; Returns: undefined }
+      mark_notification_read: {
+        Args: { _notification_id: string }
+        Returns: undefined
+      }
       reject_tm_period: {
         Args: { notes: string; period_id: string }
         Returns: undefined
@@ -1690,6 +1842,10 @@ export type Database = {
         }[]
       }
       submit_tm_period: { Args: { period_id: string }; Returns: undefined }
+      user_has_read_notification: {
+        Args: { _notification_id: string; _user_id: string }
+        Returns: boolean
+      }
       user_in_org: {
         Args: { _org_id: string; _user_id: string }
         Returns: boolean
@@ -1709,6 +1865,13 @@ export type Database = {
         | "Fasteners"
         | "Other"
       estimate_status: "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED"
+      notification_type:
+        | "PROJECT_INVITE"
+        | "WORK_ITEM_INVITE"
+        | "PO_SENT"
+        | "CHANGE_SUBMITTED"
+        | "CHANGE_APPROVED"
+        | "CHANGE_REJECTED"
       order_status:
         | "DRAFT"
         | "SUBMITTED"
@@ -1855,6 +2018,14 @@ export const Constants = {
         "Other",
       ],
       estimate_status: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"],
+      notification_type: [
+        "PROJECT_INVITE",
+        "WORK_ITEM_INVITE",
+        "PO_SENT",
+        "CHANGE_SUBMITTED",
+        "CHANGE_APPROVED",
+        "CHANGE_REJECTED",
+      ],
       order_status: [
         "DRAFT",
         "SUBMITTED",
