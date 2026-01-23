@@ -2367,6 +2367,7 @@ export type Database = {
         }
         Returns: string
       }
+      is_gc_or_tc_pm: { Args: { _user_id: string }; Returns: boolean }
       is_gc_pm: { Args: { _user_id: string }; Returns: boolean }
       is_pm_role: { Args: { _user_id: string }; Returns: boolean }
       mark_all_notifications_read: { Args: never; Returns: undefined }
