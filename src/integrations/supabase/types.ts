@@ -693,6 +693,50 @@ export type Database = {
         }
         Relationships: []
       }
+      project_activity: {
+        Row: {
+          activity_type: string
+          actor_company: string | null
+          actor_name: string | null
+          actor_user_id: string | null
+          created_at: string
+          description: string
+          id: string
+          metadata: Json | null
+          project_id: string
+        }
+        Insert: {
+          activity_type: string
+          actor_company?: string | null
+          actor_name?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          metadata?: Json | null
+          project_id: string
+        }
+        Update: {
+          activity_type?: string
+          actor_company?: string | null
+          actor_name?: string | null
+          actor_user_id?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          metadata?: Json | null
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_activity_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_contracts: {
         Row: {
           allow_mobilization_line_item: boolean | null
