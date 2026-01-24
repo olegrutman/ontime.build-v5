@@ -1372,32 +1372,38 @@ export type Database = {
       }
       project_sov_items: {
         Row: {
+          billed_to_date: number | null
           created_at: string
           default_enabled: boolean
           id: string
           item_group: string | null
           item_name: string
           project_id: string
+          scheduled_value: number | null
           sort_order: number
           source: string
         }
         Insert: {
+          billed_to_date?: number | null
           created_at?: string
           default_enabled?: boolean
           id?: string
           item_group?: string | null
           item_name: string
           project_id: string
+          scheduled_value?: number | null
           sort_order?: number
           source?: string
         }
         Update: {
+          billed_to_date?: number | null
           created_at?: string
           default_enabled?: boolean
           id?: string
           item_group?: string | null
           item_name?: string
           project_id?: string
+          scheduled_value?: number | null
           sort_order?: number
           source?: string
         }
@@ -2691,6 +2697,10 @@ export type Database = {
         }[]
       }
       submit_tm_period: { Args: { period_id: string }; Returns: undefined }
+      update_sov_billing_totals: {
+        Args: { p_project_id: string }
+        Returns: undefined
+      }
       user_has_read_notification: {
         Args: { _notification_id: string; _user_id: string }
         Returns: boolean

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, GripVertical, FileSpreadsheet, Pencil, Check, X } from 'lucide-react';
+import { Plus, Trash2, GripVertical, FileSpreadsheet, Pencil, Check, X, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -17,6 +17,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useProjectSOV, ProjectSOVItem } from '@/hooks/useProjectSOV';
+import { SOVProgressBar } from './SOVProgressBar';
+import { SOVProgressSummary } from './SOVProgressSummary';
 
 interface ProjectSOVEditorProps {
   projectId: string;
@@ -39,6 +41,8 @@ export function ProjectSOVEditor({ projectId }: ProjectSOVEditorProps) {
   const [newItemName, setNewItemName] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+  const [editingValueId, setEditingValueId] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState('');
   const [draggedItem, setDraggedItem] = useState<ProjectSOVItem | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
@@ -66,6 +70,25 @@ export function ProjectSOVEditor({ projectId }: ProjectSOVEditorProps) {
     setEditingName('');
   };
 
+  const handleStartValueEdit = (item: ProjectSOVItem) => {
+    setEditingValueId(item.id);
+    setEditingValue(String(item.scheduled_value || ''));
+  };
+
+  const handleSaveValueEdit = async () => {
+    if (editingValueId) {
+      const value = parseFloat(editingValue) || 0;
+      await updateItem(editingValueId, { scheduled_value: value });
+    }
+    setEditingValueId(null);
+    setEditingValue('');
+  };
+
+  const handleCancelValueEdit = () => {
+    setEditingValueId(null);
+    setEditingValue('');
+  };
+
   const handleDragStart = (e: React.DragEvent, item: ProjectSOVItem) => {
     setDraggedItem(item);
     e.dataTransfer.effectAllowed = 'move';
@@ -90,7 +113,6 @@ export function ProjectSOVEditor({ projectId }: ProjectSOVEditorProps) {
     const dragIndex = sovItems.findIndex(item => item.id === draggedItem.id);
     if (dragIndex === dropIndex) return;
 
-    // Create new order
     const newItems = [...sovItems];
     newItems.splice(dragIndex, 1);
     newItems.splice(dropIndex, 0, draggedItem);
@@ -104,19 +126,30 @@ export function ProjectSOVEditor({ projectId }: ProjectSOVEditorProps) {
     setDragOverIndex(null);
   };
 
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(value);
+  };
+
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-4 w-64 mt-2" />
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {[1, 2, 3, 4, 5].map(i => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-64 mt-2" />
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {[1, 2, 3, 4, 5].map(i => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
@@ -159,185 +192,265 @@ export function ProjectSOVEditor({ projectId }: ProjectSOVEditorProps) {
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileSpreadsheet className="h-5 w-5" />
-              Schedule of Values
-            </CardTitle>
-            {projectSOV?.created_from_template_key && (
-              <CardDescription className="mt-1">
-                Generated from {projectSOV.created_from_template_key.replace(/_/g, ' ')} template
-              </CardDescription>
-            )}
-          </div>
-          <Badge variant="secondary">{sovItems.length} items</Badge>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {/* Add new item */}
-        <div className="flex gap-2 mb-4">
-          <Input
-            placeholder="Add new line item..."
-            value={newItemName}
-            onChange={(e) => setNewItemName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleAddItem();
-            }}
-            disabled={saving}
-          />
-          <Button onClick={handleAddItem} disabled={saving || !newItemName.trim()}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
+    <div className="space-y-6">
+      {/* Progress Summary */}
+      <SOVProgressSummary items={sovItems} />
 
-        {/* SOV items list */}
-        <div className="space-y-1">
-          {sovItems.map((item, index) => (
-            <div
-              key={item.id}
-              draggable={editingId !== item.id}
-              onDragStart={(e) => handleDragStart(e, item)}
-              onDragOver={(e) => handleDragOver(e, index)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, index)}
-              onDragEnd={handleDragEnd}
-              className={`
-                flex items-center gap-2 p-3 rounded-lg border bg-card
-                ${draggedItem?.id === item.id ? 'opacity-50' : ''}
-                ${dragOverIndex === index ? 'border-primary border-2' : 'border-border'}
-                ${editingId === item.id ? '' : 'cursor-move hover:bg-muted/50'}
-                transition-colors
-              `}
-            >
-              <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              
-              <span className="text-sm text-muted-foreground w-8 flex-shrink-0">
-                {index + 1}.
-              </span>
-
-              {editingId === item.id ? (
-                <div className="flex-1 flex items-center gap-2">
-                  <Input
-                    value={editingName}
-                    onChange={(e) => setEditingName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleSaveEdit();
-                      if (e.key === 'Escape') handleCancelEdit();
-                    }}
-                    autoFocus
-                    className="h-8"
-                  />
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8"
-                    onClick={handleSaveEdit}
-                    disabled={saving}
-                  >
-                    <Check className="h-4 w-4 text-green-600" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8"
-                    onClick={handleCancelEdit}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <span className="flex-1 text-sm font-medium">{item.item_name}</span>
-                  
-                  {item.source === 'user' && (
-                    <Badge variant="outline" className="text-xs">
-                      Custom
-                    </Badge>
-                  )}
-                  
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8"
-                    onClick={() => handleStartEdit(item)}
-                  >
-                    <Pencil className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                  
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8"
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Delete Line Item</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Are you sure you want to delete "{item.item_name}"? This action cannot be undone.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={() => deleteItem(item.id)}
-                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                        >
-                          Delete
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </>
+      {/* SOV Items Card */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FileSpreadsheet className="h-5 w-5" />
+                Schedule of Values
+              </CardTitle>
+              {projectSOV?.created_from_template_key && (
+                <CardDescription className="mt-1">
+                  Generated from {projectSOV.created_from_template_key.replace(/_/g, ' ')} template
+                </CardDescription>
               )}
             </div>
-          ))}
-        </div>
-
-        {sovItems.length === 0 && (
-          <p className="text-center text-sm text-muted-foreground py-8">
-            No line items yet. Add your first item above.
-          </p>
-        )}
-
-        {/* Regenerate option */}
-        {sovItems.length > 0 && (
-          <div className="mt-6 pt-4 border-t flex justify-end">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" disabled={saving}>
-                  Regenerate from Template
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Regenerate SOV</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This will replace all current SOV line items with a fresh generation from the template.
-                    All custom items and edits will be lost. Are you sure?
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={createProjectSOV}
-                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  >
-                    Regenerate
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <Badge variant="secondary">{sovItems.length} items</Badge>
           </div>
-        )}
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent>
+          {/* Add new item */}
+          <div className="flex gap-2 mb-4">
+            <Input
+              placeholder="Add new line item..."
+              value={newItemName}
+              onChange={(e) => setNewItemName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleAddItem();
+              }}
+              disabled={saving}
+            />
+            <Button onClick={handleAddItem} disabled={saving || !newItemName.trim()}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* SOV items list */}
+          <div className="space-y-2">
+            {sovItems.map((item, index) => {
+              const hasValue = (item.scheduled_value || 0) > 0;
+              const percentage = hasValue 
+                ? Math.min(((item.billed_to_date || 0) / item.scheduled_value) * 100, 100)
+                : 0;
+
+              return (
+                <div
+                  key={item.id}
+                  draggable={editingId !== item.id && editingValueId !== item.id}
+                  onDragStart={(e) => handleDragStart(e, item)}
+                  onDragOver={(e) => handleDragOver(e, index)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, index)}
+                  onDragEnd={handleDragEnd}
+                  className={`
+                    rounded-lg border bg-card overflow-hidden
+                    ${draggedItem?.id === item.id ? 'opacity-50' : ''}
+                    ${dragOverIndex === index ? 'border-primary border-2' : 'border-border'}
+                    transition-colors
+                  `}
+                >
+                  <div className={`
+                    flex items-center gap-2 p-3
+                    ${editingId === item.id || editingValueId === item.id ? '' : 'cursor-move hover:bg-muted/50'}
+                  `}>
+                    <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                    
+                    <span className="text-sm text-muted-foreground w-8 flex-shrink-0">
+                      {index + 1}.
+                    </span>
+
+                    {editingId === item.id ? (
+                      <div className="flex-1 flex items-center gap-2">
+                        <Input
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveEdit();
+                            if (e.key === 'Escape') handleCancelEdit();
+                          }}
+                          autoFocus
+                          className="h-8"
+                        />
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          onClick={handleSaveEdit}
+                          disabled={saving}
+                        >
+                          <Check className="h-4 w-4 text-green-600" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          onClick={handleCancelEdit}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-sm font-medium truncate block">{item.item_name}</span>
+                        </div>
+                        
+                        {item.source === 'user' && (
+                          <Badge variant="outline" className="text-xs flex-shrink-0">
+                            Custom
+                          </Badge>
+                        )}
+
+                        {/* Scheduled Value */}
+                        {editingValueId === item.id ? (
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            <Input
+                              type="number"
+                              value={editingValue}
+                              onChange={(e) => setEditingValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveValueEdit();
+                                if (e.key === 'Escape') handleCancelValueEdit();
+                              }}
+                              autoFocus
+                              className="h-8 w-24"
+                            />
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              onClick={handleSaveValueEdit}
+                              disabled={saving}
+                            >
+                              <Check className="h-4 w-4 text-green-600" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              onClick={handleCancelValueEdit}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleStartValueEdit(item)}
+                            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 min-w-[80px] justify-end"
+                          >
+                            {hasValue ? (
+                              <span className="font-medium">{formatCurrency(item.scheduled_value)}</span>
+                            ) : (
+                              <span className="text-xs italic">Set value</span>
+                            )}
+                          </button>
+                        )}
+                        
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          onClick={() => handleStartEdit(item)}
+                        >
+                          <Pencil className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                        
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Line Item</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete "{item.item_name}"? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteItem(item.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Progress bar for items with scheduled value */}
+                  {hasValue && editingId !== item.id && (
+                    <div className="px-3 pb-3">
+                      <SOVProgressBar
+                        scheduledValue={item.scheduled_value}
+                        billedToDate={item.billed_to_date || 0}
+                        size="sm"
+                      />
+                      <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                        <span>{percentage.toFixed(0)}% billed</span>
+                        <span>{formatCurrency(item.scheduled_value - (item.billed_to_date || 0))} remaining</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {sovItems.length === 0 && (
+            <p className="text-center text-sm text-muted-foreground py-8">
+              No line items yet. Add your first item above.
+            </p>
+          )}
+
+          {/* Regenerate option */}
+          {sovItems.length > 0 && (
+            <div className="mt-6 pt-4 border-t flex justify-end">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="outline" size="sm" disabled={saving}>
+                    Regenerate from Template
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Regenerate SOV</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will replace all current SOV line items with a fresh generation from the template.
+                      All custom items and edits will be lost. Are you sure?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={createProjectSOV}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Regenerate
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

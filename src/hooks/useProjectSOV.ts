@@ -18,6 +18,8 @@ export interface ProjectSOVItem {
   item_group: string | null;
   default_enabled: boolean;
   source: 'template' | 'user';
+  scheduled_value: number;
+  billed_to_date: number;
   created_at: string;
 }
 
