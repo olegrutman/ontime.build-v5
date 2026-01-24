@@ -2794,7 +2794,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "GC_PM" | "TC_PM" | "FS" | "SUPPLIER"
+      app_role: "GC_PM" | "TC_PM" | "FS" | "SUPPLIER" | "FC_PM"
       catalog_category:
         | "Dimensional"
         | "Engineered"
@@ -2946,7 +2946,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["GC_PM", "TC_PM", "FS", "SUPPLIER"],
+      app_role: ["GC_PM", "TC_PM", "FS", "SUPPLIER", "FC_PM"],
       catalog_category: [
         "Dimensional",
         "Engineered",
