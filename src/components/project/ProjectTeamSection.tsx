@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Users, RefreshCw, Mail, CheckCircle } from 'lucide-react';
+import { Users, RefreshCw, Mail, CheckCircle, UserPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { AddTeamMemberDialog } from './AddTeamMemberDialog';
+import { ROLE_PERMISSIONS, OrgType } from '@/types/organization';
 
 interface TeamMember {
   id: string;
@@ -39,31 +42,39 @@ const roleColors: Record<string, string> = {
 };
 
 export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
+  const { userOrgRoles } = useAuth();
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [resending, setResending] = useState<string | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+
+  // Get current user's org type and permissions
+  const currentOrg = userOrgRoles[0]?.organization;
+  const currentOrgType = currentOrg?.type as OrgType | undefined;
+  const currentRole = userOrgRoles[0]?.role;
+  const canInviteMembers = currentRole ? ROLE_PERMISSIONS[currentRole]?.canInviteMembers : false;
+
+  const fetchTeam = async () => {
+    const { data, error } = await supabase
+      .from('project_team')
+      .select('*')
+      .eq('project_id', projectId);
+
+    if (error) {
+      console.error('Error fetching team:', error);
+    } else {
+      // Sort by role order
+      const sorted = (data || []).sort((a, b) => {
+        const orderA = ROLE_ORDER[a.role] || 99;
+        const orderB = ROLE_ORDER[b.role] || 99;
+        return orderA - orderB;
+      });
+      setTeam(sorted);
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const fetchTeam = async () => {
-      const { data, error } = await supabase
-        .from('project_team')
-        .select('*')
-        .eq('project_id', projectId);
-
-      if (error) {
-        console.error('Error fetching team:', error);
-      } else {
-        // Sort by role order
-        const sorted = (data || []).sort((a, b) => {
-          const orderA = ROLE_ORDER[a.role] || 99;
-          const orderB = ROLE_ORDER[b.role] || 99;
-          return orderA - orderB;
-        });
-        setTeam(sorted);
-      }
-      setLoading(false);
-    };
-
     fetchTeam();
   }, [projectId]);
 
@@ -93,7 +104,7 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
   if (loading) {
     return (
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
             <Users className="h-4 w-4" />
             Project Team
@@ -110,110 +121,140 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
 
   if (team.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Project Team
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            No team members have been added to this project yet.
-          </p>
-        </CardContent>
-      </Card>
+      <>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Project Team
+            </CardTitle>
+            {canInviteMembers && (
+              <Button size="sm" onClick={() => setAddDialogOpen(true)}>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Add Team Member
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              No team members have been added to this project yet.
+            </p>
+          </CardContent>
+        </Card>
+        <AddTeamMemberDialog
+          open={addDialogOpen}
+          onOpenChange={setAddDialogOpen}
+          projectId={projectId}
+          creatorOrgType={currentOrgType || null}
+          onMemberAdded={fetchTeam}
+        />
+      </>
     );
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
-          <Users className="h-4 w-4" />
-          Project Team
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {team.map((member) => {
-            const isInvited = member.status === 'Invited';
-            const trade = member.trade_custom || member.trade;
-            const showTrade = member.role === 'Trade Contractor' || member.role === 'Field Crew';
+    <>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Project Team
+          </CardTitle>
+          {canInviteMembers && (
+            <Button size="sm" onClick={() => setAddDialogOpen(true)}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add Team Member
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {team.map((member) => {
+              const isInvited = member.status === 'Invited';
+              const trade = member.trade_custom || member.trade;
+              const showTrade = member.role === 'Trade Contractor' || member.role === 'Field Crew';
 
-            return (
-              <div
-                key={member.id}
-                className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="font-medium text-sm truncate">
-                      {member.invited_org_name || 'Unknown Company'}
-                    </span>
-                    <Badge 
-                      variant="outline" 
-                      className={roleColors[member.role] || ''}
-                    >
-                      {member.role}
-                    </Badge>
-                    {showTrade && trade && (
-                      <Badge variant="secondary" className="text-xs">
-                        {trade}
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <span>{member.invited_name || 'No contact name'}</span>
-                    <span className="flex items-center gap-1">
-                      <Mail className="h-3 w-3" />
-                      {member.invited_email}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 ml-4">
-                  {isInvited ? (
-                    <>
-                      <Badge variant="outline" className="text-amber-600 border-amber-300">
-                        Invited
-                      </Badge>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleResendInvite(member)}
-                        disabled={resending === member.id}
-                        className="h-8"
+              return (
+                <div
+                  key={member.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="font-medium text-sm truncate">
+                        {member.invited_org_name || 'Unknown Company'}
+                      </span>
+                      <Badge 
+                        variant="outline" 
+                        className={roleColors[member.role] || ''}
                       >
-                        {resending === member.id ? (
-                          <RefreshCw className="h-3 w-3 animate-spin" />
-                        ) : (
-                          <>
-                            <RefreshCw className="h-3 w-3 mr-1" />
-                            Resend Invite
-                          </>
-                        )}
-                      </Button>
-                    </>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="text-green-600 border-green-300">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Accepted
+                        {member.role}
                       </Badge>
-                      {member.accepted_at && (
-                        <span className="text-xs text-muted-foreground">
-                          on {format(new Date(member.accepted_at), 'MMM d, yyyy')}
-                        </span>
+                      {showTrade && trade && (
+                        <Badge variant="secondary" className="text-xs">
+                          {trade}
+                        </Badge>
                       )}
                     </div>
-                  )}
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <span>{member.invited_name || 'No contact name'}</span>
+                      <span className="flex items-center gap-1">
+                        <Mail className="h-3 w-3" />
+                        {member.invited_email}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 ml-4">
+                    {isInvited ? (
+                      <>
+                        <Badge variant="outline" className="text-amber-600 border-amber-300">
+                          Invited
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleResendInvite(member)}
+                          disabled={resending === member.id}
+                          className="h-8"
+                        >
+                          {resending === member.id ? (
+                            <RefreshCw className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <>
+                              <RefreshCw className="h-3 w-3 mr-1" />
+                              Resend Invite
+                            </>
+                          )}
+                        </Button>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-green-600 border-green-300">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Accepted
+                        </Badge>
+                        {member.accepted_at && (
+                          <span className="text-xs text-muted-foreground">
+                            on {format(new Date(member.accepted_at), 'MMM d, yyyy')}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      </CardContent>
-    </Card>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+      <AddTeamMemberDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        projectId={projectId}
+        creatorOrgType={currentOrgType || null}
+        onMemberAdded={fetchTeam}
+      />
+    </>
   );
 }
