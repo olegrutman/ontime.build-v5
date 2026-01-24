@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { DollarSign, TrendingUp, Receipt, Percent, BarChart3, AlertCircle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { DollarSign, TrendingUp, Receipt, Percent, BarChart3, AlertCircle, Plus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Contract {
@@ -139,11 +141,15 @@ export function ProjectFinancialsSectionNew({ projectId, viewerRole = 'Trade Con
         {isTCView && (
           <>
             {/* Contract with GC (Revenue) */}
-            <Card className="border-l-4 border-l-primary">
+            <Card className={`border-l-4 ${hasUpstream ? 'border-l-primary' : 'border-l-muted border-dashed'}`}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <DollarSign className="h-5 w-5 text-primary" />
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${hasUpstream ? 'bg-primary/10' : 'bg-muted'}`}>
+                    {hasUpstream ? (
+                      <DollarSign className="h-5 w-5 text-primary" />
+                    ) : (
+                      <Plus className="h-5 w-5 text-muted-foreground" />
+                    )}
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-muted-foreground">Contract with General Contractor</p>
@@ -155,7 +161,15 @@ export function ProjectFinancialsSectionNew({ projectId, viewerRole = 'Trade Con
                         </p>
                       </>
                     ) : (
-                      <p className="text-sm text-muted-foreground italic">Not configured</p>
+                      <div className="mt-1">
+                        <p className="text-sm text-muted-foreground mb-2">Add a GC to track revenue</p>
+                        <Button size="sm" variant="outline" asChild>
+                          <Link to={`/project/${projectId}/edit?step=team`}>
+                            <Plus className="h-3 w-3 mr-1" />
+                            Add GC Contract
+                          </Link>
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </div>
