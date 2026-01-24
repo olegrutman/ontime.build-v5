@@ -4,6 +4,7 @@ import {
   LogoMarquee,
   FeaturesSection,
   HowItWorksSection,
+  AuthSection,
   CTASection,
   Footer,
 } from '@/components/landing';
@@ -17,6 +18,7 @@ export default function Landing() {
         <LogoMarquee />
         <FeaturesSection />
         <HowItWorksSection />
+        <AuthSection />
         <CTASection />
       </main>
       <Footer />
