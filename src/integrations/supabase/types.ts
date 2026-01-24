@@ -198,6 +198,7 @@ export type Database = {
       }
       invoice_line_items: {
         Row: {
+          billed_percent: number | null
           created_at: string
           current_billed: number
           description: string
@@ -208,10 +209,12 @@ export type Database = {
           retainage_percent: number
           scheduled_value: number
           sort_order: number
+          sov_item_id: string | null
           total_billed: number
           work_item_id: string | null
         }
         Insert: {
+          billed_percent?: number | null
           created_at?: string
           current_billed?: number
           description: string
@@ -222,10 +225,12 @@ export type Database = {
           retainage_percent?: number
           scheduled_value?: number
           sort_order?: number
+          sov_item_id?: string | null
           total_billed?: number
           work_item_id?: string | null
         }
         Update: {
+          billed_percent?: number | null
           created_at?: string
           current_billed?: number
           description?: string
@@ -236,6 +241,7 @@ export type Database = {
           retainage_percent?: number
           scheduled_value?: number
           sort_order?: number
+          sov_item_id?: string | null
           total_billed?: number
           work_item_id?: string | null
         }
@@ -245,6 +251,13 @@ export type Database = {
             columns: ["invoice_id"]
             isOneToOne: false
             referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_sov_item_id_fkey"
+            columns: ["sov_item_id"]
+            isOneToOne: false
+            referencedRelation: "project_sov_items"
             referencedColumns: ["id"]
           },
           {
@@ -262,6 +275,7 @@ export type Database = {
           approved_by: string | null
           billing_period_end: string
           billing_period_start: string
+          contract_id: string | null
           created_at: string
           created_by: string
           id: string
@@ -273,6 +287,7 @@ export type Database = {
           rejected_by: string | null
           rejection_reason: string | null
           retainage_amount: number
+          sov_id: string | null
           status: string
           submitted_at: string | null
           submitted_by: string | null
@@ -285,6 +300,7 @@ export type Database = {
           approved_by?: string | null
           billing_period_end: string
           billing_period_start: string
+          contract_id?: string | null
           created_at?: string
           created_by: string
           id?: string
@@ -296,6 +312,7 @@ export type Database = {
           rejected_by?: string | null
           rejection_reason?: string | null
           retainage_amount?: number
+          sov_id?: string | null
           status?: string
           submitted_at?: string | null
           submitted_by?: string | null
@@ -308,6 +325,7 @@ export type Database = {
           approved_by?: string | null
           billing_period_end?: string
           billing_period_start?: string
+          contract_id?: string | null
           created_at?: string
           created_by?: string
           id?: string
@@ -319,6 +337,7 @@ export type Database = {
           rejected_by?: string | null
           rejection_reason?: string | null
           retainage_amount?: number
+          sov_id?: string | null
           status?: string
           submitted_at?: string | null
           submitted_by?: string | null
@@ -328,10 +347,24 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "invoices_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "project_contracts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "invoices_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_sov_id_fkey"
+            columns: ["sov_id"]
+            isOneToOne: false
+            referencedRelation: "project_sov"
             referencedColumns: ["id"]
           },
         ]
@@ -1400,6 +1433,8 @@ export type Database = {
           sort_order: number
           source: string
           sov_id: string | null
+          total_billed_amount: number | null
+          total_completion_percent: number | null
           value_amount: number | null
         }
         Insert: {
@@ -1415,6 +1450,8 @@ export type Database = {
           sort_order?: number
           source?: string
           sov_id?: string | null
+          total_billed_amount?: number | null
+          total_completion_percent?: number | null
           value_amount?: number | null
         }
         Update: {
@@ -1430,6 +1467,8 @@ export type Database = {
           sort_order?: number
           source?: string
           sov_id?: string | null
+          total_billed_amount?: number | null
+          total_completion_percent?: number | null
           value_amount?: number | null
         }
         Relationships: [

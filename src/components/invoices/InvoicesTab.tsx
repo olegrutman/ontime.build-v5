@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CreateInvoiceDialog } from './CreateInvoiceDialog';
+import { CreateInvoiceFromSOV } from './CreateInvoiceFromSOV';
 import { InvoiceCard } from './InvoiceCard';
 import { InvoiceDetail } from './InvoiceDetail';
 import { Invoice, InvoiceStatus, INVOICE_STATUS_LABELS } from '@/types/invoice';
@@ -171,11 +171,10 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
       )}
 
       {/* Create Invoice Dialog */}
-      <CreateInvoiceDialog
+      <CreateInvoiceFromSOV
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         projectId={projectId}
-        retainagePercent={retainagePercent}
         onSuccess={handleCreateSuccess}
       />
     </div>
