@@ -16,6 +16,7 @@ import {
   ScopeDetails,
   ProjectContract
 } from '@/types/projectWizard';
+import { OrgType } from '@/types/organization';
 
 // Import step components
 import { BasicsStepNew } from '@/components/project-wizard-new/BasicsStep';
@@ -140,7 +141,22 @@ export default function CreateProjectNew() {
   };
 
   const saveTeam = async (projectId: string) => {
+    // Team members are now saved directly in TeamStep via AddTeamMemberDialog
+    // This function is kept for backward compatibility with local-only team data
+    // Check if any team members exist only in local state (not yet in DB)
+    const { data: existingTeam } = await supabase
+      .from('project_team')
+      .select('invited_email')
+      .eq('project_id', projectId);
+    
+    const existingEmails = new Set((existingTeam || []).map(m => m.invited_email?.toLowerCase()));
+    
+    // Only save team members that aren't already in the database
     for (const member of data.team) {
+      if (existingEmails.has(member.contactEmail.toLowerCase())) {
+        continue; // Already saved via dialog
+      }
+      
       try {
         // Insert into project_team
         const { data: teamMember, error: teamError } = await supabase
@@ -320,7 +336,15 @@ export default function CreateProjectNew() {
       case 0:
         return <BasicsStepNew data={data.basics} onChange={updateBasics} />;
       case 1:
-        return <TeamStep team={data.team} onChange={updateTeam} creatorRole={creatorRole} />;
+        return (
+          <TeamStep 
+            team={data.team} 
+            onChange={updateTeam} 
+            creatorRole={creatorRole}
+            projectId={data.projectId}
+            creatorOrgType={currentOrg?.type as OrgType | undefined}
+          />
+        );
       case 2:
         return <ScopeStep projectType={data.basics.projectType} scope={data.scope} onChange={updateScope} />;
       case 3:
