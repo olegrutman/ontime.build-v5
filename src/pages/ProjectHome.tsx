@@ -22,11 +22,11 @@ import {
   ProjectScopeSection, 
   ProjectContractsSection, 
   ProjectActivitySection,
-  ProjectFinancialsSection 
+  ProjectFinancialsSectionNew 
 } from '@/components/project';
 import { AppLayout } from '@/components/layout';
 import { InvoicesTab } from '@/components/invoices';
-import { ProjectSOVEditor } from '@/components/sov';
+import { ContractSOVEditor } from '@/components/sov';
 
 interface Project {
   id: string;
@@ -229,13 +229,8 @@ export default function ProjectHome() {
 
           {/* Overview Tab - Command Center */}
           <TabsContent value="overview" className="space-y-6">
-            {/* Financial Summary Cards */}
-            <ProjectFinancialsSection
-              contractValue={summary?.total_amount || 0}
-              changeOrdersTotal={0}
-              billedToDate={0}
-              retainagePercent={project.retainage_percent || 0}
-            />
+            {/* Financial Summary Cards - Using real contract data */}
+            <ProjectFinancialsSectionNew projectId={id!} />
 
             {/* Two Column Layout */}
             <div className="grid gap-6 lg:grid-cols-2">
@@ -253,9 +248,9 @@ export default function ProjectHome() {
             </div>
           </TabsContent>
 
-          {/* SOV Tab */}
+          {/* SOV Tab - Contract-based SOV Editor */}
           <TabsContent value="sov">
-            <ProjectSOVEditor projectId={id!} />
+            <ContractSOVEditor projectId={id!} />
           </TabsContent>
 
           {/* CORs Tab */}
