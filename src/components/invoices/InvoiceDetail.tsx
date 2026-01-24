@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2 } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2, FileDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -197,6 +197,17 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
 
         {/* Action Buttons */}
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invoice-download?invoice_id=${invoiceId}`;
+              window.open(url, '_blank');
+            }}
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            Export PDF
+          </Button>
+
           {status === 'DRAFT' && (
             <Button onClick={handleSubmit} disabled={actionLoading}>
               {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
