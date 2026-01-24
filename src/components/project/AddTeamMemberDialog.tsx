@@ -86,16 +86,17 @@ export function AddTeamMemberDialog({
   const [saving, setSaving] = useState(false);
   
   // Filter available roles based on creator org type
-  // GC can only invite TC and Supplier (NOT Field Crew - that's TC's domain)
-  // TC can invite GC, Field Crew, and Supplier
+  // Rules (wizard + overview):
+  // - General Contractor creators can add ONLY Trade Contractor
+  // - Trade Contractor creators can add General Contractor, Field Crew
+  // - Field Crew cannot add anyone
   const availableRoles = TEAM_ROLES.filter(role => {
     if (creatorOrgType === 'GC') {
-      // GC cannot invite GC or Field Crew
-      return role === 'Trade Contractor' || role === 'Supplier';
+      return role === 'Trade Contractor';
     }
     if (creatorOrgType === 'TC') {
       // TC cannot invite another TC
-      return role === 'General Contractor' || role === 'Field Crew' || role === 'Supplier';
+      return role === 'General Contractor' || role === 'Field Crew';
     }
     if (creatorOrgType === 'FC') {
       // FC cannot invite anyone (handled at UI level)
@@ -105,6 +106,22 @@ export function AddTeamMemberDialog({
   });
 
   const requiresTrade = (role: TeamRole) => role === 'Trade Contractor' || role === 'Field Crew';
+
+  // Ensure default roles always comply with availableRoles
+  useEffect(() => {
+    if (!open) return;
+    if (availableRoles.length === 0) return;
+
+    if (!availableRoles.includes(selectedRole)) {
+      setSelectedRole(availableRoles[0]);
+      setSelectedTrade(undefined);
+    }
+
+    if (!availableRoles.includes(inviteForm.role)) {
+      setInviteForm((prev) => ({ ...prev, role: availableRoles[0], trade: undefined }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, creatorOrgType]);
 
   // Reset state when dialog closes
   useEffect(() => {
