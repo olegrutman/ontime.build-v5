@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -56,23 +56,31 @@ export function ContractsStep({ projectId, contracts, onChange, creatorRole }: C
     fetchTeamMembers();
   }, [fetchTeamMembers]);
 
+  // Memoize derived values to prevent unnecessary re-renders
   // Upstream: TC's contract WITH the GC (TC receives money from GC)
-  const upstreamGC = creatorRole === 'Trade Contractor' 
-    ? teamMembers.find(m => m.role === 'General Contractor')
-    : null;
+  const upstreamGC = useMemo(() => {
+    if (creatorRole !== 'Trade Contractor') return null;
+    return teamMembers.find(m => m.role === 'General Contractor') || null;
+  }, [teamMembers, creatorRole]);
 
   // Downstream: Contracts with parties below the creator
   // GC → TC contracts
   // TC → FC contracts
-  const downstreamMembers = teamMembers.filter(m => {
-    if (creatorRole === 'General Contractor') {
-      return m.role === 'Trade Contractor';
-    }
-    if (creatorRole === 'Trade Contractor') {
-      return m.role === 'Field Crew';
-    }
-    return false;
-  });
+  const downstreamMembers = useMemo(() => {
+    return teamMembers.filter(m => {
+      if (creatorRole === 'General Contractor') {
+        return m.role === 'Trade Contractor';
+      }
+      if (creatorRole === 'Trade Contractor') {
+        return m.role === 'Field Crew';
+      }
+      return false;
+    });
+  }, [teamMembers, creatorRole]);
+
+  // Get IDs for dependency tracking
+  const upstreamGCId = upstreamGC?.id || null;
+  const downstreamMemberIds = useMemo(() => downstreamMembers.map(m => m.id).join(','), [downstreamMembers]);
 
   // Pre-populate contracts for all applicable team members when team changes
   useEffect(() => {
@@ -109,7 +117,8 @@ export function ContractsStep({ projectId, contracts, onChange, creatorRole }: C
       );
       onChange(merged);
     }
-  }, [teamMembers, upstreamGC, downstreamMembers, loading, contracts, onChange]);
+  // Use primitive values for dependencies to avoid infinite loops
+  }, [loading, teamMembers.length, upstreamGCId, downstreamMemberIds]);
 
   const getContract = (memberId: string): ProjectContract => {
     return contracts.find(c => c.toTeamMemberId === memberId) || {
