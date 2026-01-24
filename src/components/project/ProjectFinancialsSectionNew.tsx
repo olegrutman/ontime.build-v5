@@ -98,8 +98,8 @@ export function ProjectFinancialsSectionNew({ projectId, viewerRole = 'Trade Con
   // Profit = Revenue from GC - Cost to FC
   const gcContractValue = upstreamContract?.contract_sum || 0;
   const fcContractValue = downstreamContract?.contract_sum || 0;
-  const hasUpstream = isTCView && upstreamContract && gcContractValue > 0;
-  const hasDownstream = isTCView && downstreamContract && fcContractValue > 0;
+  const hasUpstream = upstreamContract && gcContractValue > 0;
+  const hasDownstream = downstreamContract && fcContractValue > 0;
   const hasBothContracts = hasUpstream && hasDownstream;
   
   const profit = hasBothContracts ? gcContractValue - fcContractValue : 0;
