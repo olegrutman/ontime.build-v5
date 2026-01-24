@@ -2859,6 +2859,20 @@ export type Database = {
           uom_default: string
         }[]
       }
+      search_existing_team_targets: {
+        Args: { _limit?: number; _project_id: string; _query: string }
+        Returns: {
+          city_state: string
+          contact_email: string
+          contact_name: string
+          contact_user_id: string
+          org_id: string
+          org_name: string
+          org_trade: string
+          org_type: string
+          result_type: string
+        }[]
+      }
       search_invite_targets: {
         Args: { _limit?: number; _query: string }
         Returns: {
