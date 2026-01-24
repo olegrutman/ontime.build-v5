@@ -257,6 +257,16 @@ export default function CreateProjectNew() {
       return;
     }
     
+    // Fetch existing contracts to update in-place when re-visiting the step
+    const { data: existingContracts, error: existingError } = await supabase
+      .from('project_contracts')
+      .select('id, to_project_team_id')
+      .eq('project_id', projectId);
+
+    if (existingError) {
+      console.error('Error fetching existing contracts:', existingError);
+    }
+
     for (const contract of data.contracts) {
       try {
         // Find the team member by ID (toTeamMemberId now references project_team.id)
@@ -273,7 +283,9 @@ export default function CreateProjectNew() {
 
         console.log('Saving contract for:', teamMember.invited_org_name, teamMember.role, 'sum:', contract.contractSum);
 
-        const { error } = await supabase.from('project_contracts').insert({
+        const existing = existingContracts?.find((c) => c.to_project_team_id === teamMember.id);
+
+        const payload = {
           project_id: projectId,
           from_org_id: currentOrg?.id,
           from_role: creatorRole,
@@ -286,7 +298,11 @@ export default function CreateProjectNew() {
           allow_mobilization_line_item: contract.allowMobilization,
           notes: contract.notes,
           created_by_user_id: user?.id,
-        });
+        };
+
+        const { error } = existing?.id
+          ? await supabase.from('project_contracts').update(payload).eq('id', existing.id)
+          : await supabase.from('project_contracts').insert(payload);
 
         if (error) {
           console.error('Error inserting contract:', error);

@@ -103,9 +103,13 @@ export function ContractsStep({ projectId, contracts, onChange, creatorRole }: C
         retainagePercent: 0,
         allowMobilization: false,
       }));
-      onChange([...contracts, ...newContracts]);
+      // De-dupe defensively in case of repeated fetch/mount
+      const merged = [...contracts, ...newContracts].filter(
+        (c, idx, arr) => arr.findIndex(x => x.toTeamMemberId === c.toTeamMemberId) === idx
+      );
+      onChange(merged);
     }
-  }, [teamMembers, loading]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [teamMembers, upstreamGC, downstreamMembers, loading, contracts, onChange]);
 
   const getContract = (memberId: string): ProjectContract => {
     return contracts.find(c => c.toTeamMemberId === memberId) || {
@@ -180,8 +184,8 @@ export function ContractsStep({ projectId, contracts, onChange, creatorRole }: C
                 <p className="font-medium">No team members to contract with</p>
                 <p className="text-sm text-muted-foreground mt-1">
                   {creatorRole === 'General Contractor' 
-                    ? 'Add Trade Contractors on the Project Team step first to define their contracts.'
-                    : 'Add a General Contractor or Field Crew members on the Project Team step to define contracts.'}
+                    ? 'Add a Trade Contractor on the Project Team step first.'
+                    : 'Add a General Contractor on the Project Team step first (required). Add Field Crew on the Project Team step first (optional).'}
                 </p>
               </div>
             </div>
