@@ -77,12 +77,16 @@ export function ProjectFinancialsSectionNew({ projectId, viewerRole = 'Trade Con
   // General Contractor sees: contract with Trade Contractor
   // Field Crew sees: contract with Trade Contractor
 
+  // Upstream contract: GC ↔ TC (where TC receives from GC)
   const upstreamContract = contracts.find(c => 
-    c.from_role === 'General Contractor' && c.to_role === 'Trade Contractor'
+    (c.from_role === 'General Contractor' && c.to_role === 'Trade Contractor') ||
+    (c.to_role === 'General Contractor' && c.from_role === 'Trade Contractor')
   );
   
+  // Downstream contract: TC ↔ FC (where TC pays FC)
   const downstreamContract = contracts.find(c => 
-    c.from_role === 'Trade Contractor' && c.to_role === 'Field Crew'
+    (c.from_role === 'Trade Contractor' && c.to_role === 'Field Crew') ||
+    (c.to_role === 'Trade Contractor' && c.from_role === 'Field Crew')
   );
 
   // For Trade Contractor view
@@ -91,15 +95,19 @@ export function ProjectFinancialsSectionNew({ projectId, viewerRole = 'Trade Con
   const isFCView = viewerRole === 'Field Crew';
 
   // Calculate profit (only for Trade Contractor)
-  const hasProfit = isTCView && upstreamContract && downstreamContract;
-  const profit = hasProfit 
-    ? (upstreamContract.contract_sum || 0) - (downstreamContract.contract_sum || 0)
-    : 0;
-  const profitPercent = hasProfit && upstreamContract.contract_sum > 0
-    ? (profit / upstreamContract.contract_sum) * 100
+  // Profit = Revenue from GC - Cost to FC
+  const gcContractValue = upstreamContract?.contract_sum || 0;
+  const fcContractValue = downstreamContract?.contract_sum || 0;
+  const hasUpstream = isTCView && upstreamContract && gcContractValue > 0;
+  const hasDownstream = isTCView && downstreamContract && fcContractValue > 0;
+  const hasBothContracts = hasUpstream && hasDownstream;
+  
+  const profit = hasBothContracts ? gcContractValue - fcContractValue : 0;
+  const profitPercent = hasBothContracts && gcContractValue > 0
+    ? (profit / gcContractValue) * 100
     : 0;
 
-  // Primary contract for billing calculations
+  // Primary contract for billing calculations (TC bills against upstream)
   const primaryContract = isTCView 
     ? upstreamContract 
     : isGCView 
@@ -127,43 +135,99 @@ export function ProjectFinancialsSectionNew({ projectId, viewerRole = 'Trade Con
     <div className="space-y-4">
       {/* Contract Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {/* Trade Contractor: Show both contracts */}
-        {isTCView && upstreamContract && (
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                  <DollarSign className="h-5 w-5 text-primary" />
+        {/* Trade Contractor: Show both contracts and profit */}
+        {isTCView && (
+          <>
+            {/* Contract with GC (Revenue) */}
+            <Card className="border-l-4 border-l-primary">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <DollarSign className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">Contract with General Contractor</p>
+                    {hasUpstream ? (
+                      <>
+                        <p className="text-2xl font-bold">{formatCurrency(gcContractValue)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {upstreamContract.retainage_percent}% retainage • Revenue
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">Not configured</p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Contract with General Contractor</p>
-                  <p className="text-2xl font-bold">{formatCurrency(upstreamContract.contract_sum)}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {upstreamContract.retainage_percent}% retainage
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
 
-        {isTCView && downstreamContract && (
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/20">
-                  <DollarSign className="h-5 w-5 text-orange-600" />
+            {/* Contract with FC (Cost) */}
+            <Card className="border-l-4 border-l-orange-500">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-900/20">
+                    <DollarSign className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">Contract with Field Crew</p>
+                    {hasDownstream ? (
+                      <>
+                        <p className="text-2xl font-bold">{formatCurrency(fcContractValue)}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {downstreamContract.retainage_percent}% retainage • Cost
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">Not configured</p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Contract with Field Crew</p>
-                  <p className="text-2xl font-bold">{formatCurrency(downstreamContract.contract_sum)}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {downstreamContract.retainage_percent}% retainage
-                  </p>
+              </CardContent>
+            </Card>
+
+            {/* Estimated Profit */}
+            <Card className={`border-l-4 ${hasBothContracts && profit > 0 ? 'border-l-green-500' : profit < 0 ? 'border-l-red-500' : 'border-l-muted'}`}>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                    hasBothContracts 
+                      ? profit > 0 
+                        ? 'bg-green-100 dark:bg-green-900/20' 
+                        : 'bg-red-100 dark:bg-red-900/20'
+                      : 'bg-muted'
+                  }`}>
+                    <TrendingUp className={`h-5 w-5 ${
+                      hasBothContracts 
+                        ? profit > 0 ? 'text-green-600' : 'text-red-600'
+                        : 'text-muted-foreground'
+                    }`} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">Estimated Profit</p>
+                    {hasBothContracts ? (
+                      <>
+                        <p className={`text-2xl font-bold ${profit < 0 ? 'text-red-600' : ''}`}>
+                          {formatCurrency(profit)}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {profitPercent.toFixed(1)}% margin
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">
+                        {!hasUpstream && !hasDownstream 
+                          ? 'Add contracts to calculate'
+                          : !hasUpstream 
+                            ? 'Add GC contract'
+                            : 'Add Field Crew contract'}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </>
         )}
 
         {/* GC/FC: Show their single contract */}
@@ -176,42 +240,12 @@ export function ProjectFinancialsSectionNew({ projectId, viewerRole = 'Trade Con
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    Contract with {isGCView ? 'Trade Contractor' : 'Trade Contractor'}
+                    Contract with Trade Contractor
                   </p>
                   <p className="text-2xl font-bold">{formatCurrency(primaryContract.contract_sum)}</p>
                   <p className="text-xs text-muted-foreground">
                     {primaryContract.retainage_percent}% retainage
                   </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Profit Card (Trade Contractor only) */}
-        {isTCView && (
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                  hasProfit 
-                    ? 'bg-green-100 dark:bg-green-900/20' 
-                    : 'bg-muted'
-                }`}>
-                  <TrendingUp className={`h-5 w-5 ${hasProfit ? 'text-green-600' : 'text-muted-foreground'}`} />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Estimated Profit</p>
-                  {hasProfit ? (
-                    <>
-                      <p className="text-2xl font-bold">{formatCurrency(profit)}</p>
-                      <p className="text-xs text-muted-foreground">{profitPercent.toFixed(1)}% margin</p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">
-                      Add Field Crew contract to calculate
-                    </p>
-                  )}
                 </div>
               </div>
             </CardContent>
