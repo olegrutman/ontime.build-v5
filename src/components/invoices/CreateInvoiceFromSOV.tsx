@@ -468,6 +468,8 @@ export function CreateInvoiceFromSOV({
                   {billingItems.map((item) => {
                     const isOverBilling = item.thisBillPercent > item.maxAllowedPercent;
                     const previousPercent = item.total_completion_percent || 0;
+                    const newTotalPercent = previousPercent + item.thisBillPercent;
+                    const previousBilledAmount = item.total_billed_amount || 0;
                     
                     return (
                       <Card 
@@ -498,12 +500,78 @@ export function CreateInvoiceFromSOV({
 
                               {item.enabled && (
                                 <>
-                                  {/* Previous billing info */}
-                                  {previousPercent > 0 && (
-                                    <div className="text-xs text-muted-foreground">
-                                      Previously billed: {previousPercent.toFixed(1)}% ({formatCurrency(item.total_billed_amount || 0)})
+                                  {/* Visual Progress Bar - Previous vs New Billing */}
+                                  <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between text-xs">
+                                      <div className="flex items-center gap-3">
+                                        {previousPercent > 0 && (
+                                          <span className="flex items-center gap-1.5">
+                                            <span className="w-2.5 h-2.5 rounded-sm bg-muted-foreground/40" />
+                                            <span className="text-muted-foreground">
+                                              Previous: {previousPercent.toFixed(1)}% ({formatCurrency(previousBilledAmount)})
+                                            </span>
+                                          </span>
+                                        )}
+                                        {item.thisBillPercent > 0 && (
+                                          <span className="flex items-center gap-1.5">
+                                            <span className={cn(
+                                              "w-2.5 h-2.5 rounded-sm",
+                                              isOverBilling ? "bg-destructive" : "bg-primary"
+                                            )} />
+                                            <span className={cn(
+                                              "font-medium",
+                                              isOverBilling ? "text-destructive" : "text-primary"
+                                            )}>
+                                              This bill: {item.thisBillPercent.toFixed(1)}% ({formatCurrency(item.thisBillAmount)})
+                                            </span>
+                                          </span>
+                                        )}
+                                      </div>
+                                      <span className={cn(
+                                        "font-medium",
+                                        newTotalPercent > 100 ? "text-destructive" : 
+                                        newTotalPercent === 100 ? "text-green-600 dark:text-green-400" : 
+                                        "text-muted-foreground"
+                                      )}>
+                                        {newTotalPercent.toFixed(1)}% total
+                                      </span>
                                     </div>
-                                  )}
+                                    
+                                    {/* Stacked Progress Bar */}
+                                    <div className="relative h-3 w-full rounded-full bg-muted overflow-hidden">
+                                      {/* Previous billing (gray) */}
+                                      <div 
+                                        className="absolute inset-y-0 left-0 bg-muted-foreground/40 transition-all duration-300"
+                                        style={{ width: `${Math.min(previousPercent, 100)}%` }}
+                                      />
+                                      {/* New billing (primary or destructive) */}
+                                      <div 
+                                        className={cn(
+                                          "absolute inset-y-0 transition-all duration-300",
+                                          isOverBilling 
+                                            ? "bg-destructive animate-pulse" 
+                                            : "bg-primary"
+                                        )}
+                                        style={{ 
+                                          left: `${Math.min(previousPercent, 100)}%`,
+                                          width: `${Math.min(item.thisBillPercent, 100 - previousPercent)}%`
+                                        }}
+                                      />
+                                      {/* Overbilling indicator (extends past 100%) */}
+                                      {isOverBilling && (
+                                        <div 
+                                          className="absolute inset-y-0 right-0 bg-destructive/30 animate-pulse"
+                                          style={{ 
+                                            width: `${Math.min(newTotalPercent - 100, 20)}%`
+                                          }}
+                                        />
+                                      )}
+                                      {/* 100% marker */}
+                                      {newTotalPercent > 0 && newTotalPercent < 100 && (
+                                        <div className="absolute right-0 top-0 bottom-0 w-px bg-border" />
+                                      )}
+                                    </div>
+                                  </div>
 
                                   {/* Slider and input */}
                                   <div className="flex items-center gap-4">
@@ -535,18 +603,13 @@ export function CreateInvoiceFromSOV({
                                     </div>
                                   </div>
 
-                                  {/* This bill amount and error */}
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-sm font-medium text-primary">
-                                      This bill: {formatCurrency(item.thisBillAmount)}
-                                    </span>
-                                    {isOverBilling && (
-                                      <span className="text-xs text-destructive flex items-center gap-1">
-                                        <AlertCircle className="h-3 w-3" />
-                                        Max allowed: {item.maxAllowedPercent.toFixed(1)}%
-                                      </span>
-                                    )}
-                                  </div>
+                                  {/* Error message */}
+                                  {isOverBilling && (
+                                    <div className="flex items-center gap-1.5 text-xs text-destructive">
+                                      <AlertCircle className="h-3.5 w-3.5" />
+                                      <span>Cannot exceed 100% total. Maximum for this bill: {item.maxAllowedPercent.toFixed(1)}%</span>
+                                    </div>
+                                  )}
                                 </>
                               )}
                             </div>
