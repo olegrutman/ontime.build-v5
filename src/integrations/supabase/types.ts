@@ -684,15 +684,63 @@ export type Database = {
           },
         ]
       }
+      org_settings: {
+        Row: {
+          created_at: string
+          default_crew_size: number | null
+          default_hourly_rate: number | null
+          default_workday_hours: number | null
+          id: string
+          labor_markup_percent: number | null
+          minimum_service_charge: number | null
+          organization_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          default_crew_size?: number | null
+          default_hourly_rate?: number | null
+          default_workday_hours?: number | null
+          id?: string
+          labor_markup_percent?: number | null
+          minimum_service_charge?: number | null
+          organization_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          default_crew_size?: number | null
+          default_hourly_rate?: number | null
+          default_workday_hours?: number | null
+          id?: string
+          labor_markup_percent?: number | null
+          minimum_service_charge?: number | null
+          organization_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_settings_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organizations: {
         Row: {
           address: Json | null
           created_at: string
           created_by: string | null
           id: string
+          insurance_expiration_date: string | null
+          license_number: string | null
           name: string
           org_code: string
           phone: string | null
+          trade: string | null
+          trade_custom: string | null
           type: Database["public"]["Enums"]["org_type"]
           updated_at: string
         }
@@ -701,9 +749,13 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          insurance_expiration_date?: string | null
+          license_number?: string | null
           name: string
           org_code: string
           phone?: string | null
+          trade?: string | null
+          trade_custom?: string | null
           type: Database["public"]["Enums"]["org_type"]
           updated_at?: string
         }
@@ -712,9 +764,13 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          insurance_expiration_date?: string | null
+          license_number?: string | null
           name?: string
           org_code?: string
           phone?: string | null
+          trade?: string | null
+          trade_custom?: string | null
           type?: Database["public"]["Enums"]["org_type"]
           updated_at?: string
         }
@@ -837,8 +893,12 @@ export type Database = {
           first_name: string | null
           full_name: string | null
           id: string
+          job_title: string | null
+          language: string | null
           last_name: string | null
           phone: string | null
+          preferred_contact_method: string | null
+          timezone: string | null
           updated_at: string
           user_id: string
         }
@@ -848,8 +908,12 @@ export type Database = {
           first_name?: string | null
           full_name?: string | null
           id?: string
+          job_title?: string | null
+          language?: string | null
           last_name?: string | null
           phone?: string | null
+          preferred_contact_method?: string | null
+          timezone?: string | null
           updated_at?: string
           user_id: string
         }
@@ -859,8 +923,12 @@ export type Database = {
           first_name?: string | null
           full_name?: string | null
           id?: string
+          job_title?: string | null
+          language?: string | null
           last_name?: string | null
           phone?: string | null
+          preferred_contact_method?: string | null
+          timezone?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -2201,6 +2269,42 @@ export type Database = {
           },
         ]
       }
+      user_settings: {
+        Row: {
+          created_at: string
+          id: string
+          notify_change_orders: boolean | null
+          notify_email: boolean | null
+          notify_invites: boolean | null
+          notify_invoices: boolean | null
+          notify_sms: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notify_change_orders?: boolean | null
+          notify_email?: boolean | null
+          notify_invites?: boolean | null
+          notify_invoices?: boolean | null
+          notify_sms?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notify_change_orders?: boolean | null
+          notify_email?: boolean | null
+          notify_invites?: boolean | null
+          notify_invoices?: boolean | null
+          notify_sms?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       work_item_participants: {
         Row: {
           accepted_at: string | null
@@ -2772,6 +2876,7 @@ export type Database = {
         Args: { p_project_id: string }
         Returns: undefined
       }
+      user_has_active_projects: { Args: { _user_id: string }; Returns: boolean }
       user_has_read_notification: {
         Args: { _notification_id: string; _user_id: string }
         Returns: boolean

@@ -15,6 +15,7 @@ import {
   Settings,
   LogOut,
   ChevronDown,
+  UserCircle,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { NavLink } from '@/components/NavLink';
@@ -270,29 +271,33 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
+              asChild
+              isActive={isActive('/profile')}
               className={cn(
                 'h-auto py-2',
                 collapsed ? 'justify-center' : 'justify-start gap-3'
               )}
               tooltip={collapsed ? profile?.full_name || 'User' : undefined}
             >
-              <Avatar className="h-8 w-8 shrink-0">
-                <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                  {getInitials(profile?.full_name)}
-                </AvatarFallback>
-              </Avatar>
-              {!collapsed && (
-                <div className="flex-1 overflow-hidden text-left">
-                  <p className="text-sm font-medium truncate text-sidebar-foreground">
-                    {profile?.full_name || 'User'}
-                  </p>
-                  {currentRole && (
-                    <p className="text-xs text-sidebar-foreground/60 truncate">
-                      {ROLE_LABELS[currentRole]}
+              <NavLink to="/profile" className="gap-3" activeClassName="nav-active">
+                <Avatar className="h-8 w-8 shrink-0">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                    {getInitials(profile?.full_name)}
+                  </AvatarFallback>
+                </Avatar>
+                {!collapsed && (
+                  <div className="flex-1 overflow-hidden text-left">
+                    <p className="text-sm font-medium truncate text-sidebar-foreground">
+                      {profile?.full_name || 'User'}
                     </p>
-                  )}
-                </div>
-              )}
+                    {currentRole && (
+                      <p className="text-xs text-sidebar-foreground/60 truncate">
+                        {ROLE_LABELS[currentRole]}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
