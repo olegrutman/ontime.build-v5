@@ -1,6 +1,6 @@
 export type OrgType = 'GC' | 'TC' | 'FC' | 'SUPPLIER';
 
-export type AppRole = 'GC_PM' | 'TC_PM' | 'FS' | 'SUPPLIER';
+export type AppRole = 'GC_PM' | 'TC_PM' | 'FC_PM' | 'FS' | 'SUPPLIER';
 
 export interface OrgAddress {
   street?: string;
@@ -54,8 +54,9 @@ export interface OrgInvitation {
 }
 
 export const ROLE_LABELS: Record<AppRole, string> = {
-  GC_PM: 'GC Project Manager',
-  TC_PM: 'TC Project Manager',
+  GC_PM: 'General Contractor Manager',
+  TC_PM: 'Trade Contractor Manager',
+  FC_PM: 'Field Crew Manager',
   FS: 'Field Supervisor',
   SUPPLIER: 'Supplier',
 };
@@ -71,7 +72,7 @@ export const ORG_TYPE_LABELS: Record<OrgType, string> = {
 export const ALLOWED_ROLES_BY_ORG_TYPE: Record<OrgType, AppRole[]> = {
   GC: ['GC_PM'],
   TC: ['TC_PM', 'FS'],
-  FC: ['TC_PM', 'FS'], // FC uses same roles as TC for now
+  FC: ['FC_PM', 'FS'], // FC now has its own FC_PM role
   SUPPLIER: ['SUPPLIER'],
 };
 
@@ -107,6 +108,16 @@ export const ROLE_PERMISSIONS: Record<AppRole, RolePermissions> = {
     canAddMaterialLists: true,
     canManageOrg: true,
     canInviteMembers: true,
+  },
+  FC_PM: {
+    canViewRates: false, // FC cannot see rates (limited access)
+    canViewMargins: false, // FC cannot see margins/profit
+    canApprove: false,
+    canViewInvoices: true, // Can view their own invoices
+    canAddHoursEstimates: true,
+    canAddMaterialLists: true,
+    canManageOrg: true, // Can manage their own org
+    canInviteMembers: false, // FC cannot invite other parties
   },
   FS: {
     canViewRates: false,

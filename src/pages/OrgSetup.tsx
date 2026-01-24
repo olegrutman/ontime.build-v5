@@ -13,14 +13,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Building2, User, Phone, MapPin, Loader2 } from 'lucide-react';
+import { Building2, User, Phone, MapPin, Loader2, Wrench } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { OrgType, ORG_TYPE_LABELS } from '@/types/organization';
+import { TRADES, Trade } from '@/types/projectWizard';
 
+// Trade is required for TC and FC org types
 const orgSetupSchema = z.object({
   orgType: z.enum(['GC', 'TC', 'FC', 'SUPPLIER']),
   orgName: z.string().min(2, 'Organization name is required'),
+  trade: z.string().optional(),
+  tradeCustom: z.string().optional(),
   street: z.string().min(2, 'Street address is required'),
   city: z.string().min(2, 'City is required'),
   state: z.string().min(2, 'State is required'),
@@ -29,6 +33,15 @@ const orgSetupSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   userPhone: z.string().optional(),
+}).refine((data) => {
+  // Trade is required for TC and FC
+  if ((data.orgType === 'TC' || data.orgType === 'FC') && !data.trade) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Trade is required for Trade Contractor and Field Crew',
+  path: ['trade'],
 });
 
 type OrgSetupForm = z.infer<typeof orgSetupSchema>;
@@ -43,6 +56,8 @@ export default function OrgSetup() {
   const [form, setForm] = useState<OrgSetupForm>({
     orgType: 'TC',
     orgName: '',
+    trade: '',
+    tradeCustom: '',
     street: '',
     city: '',
     state: '',
@@ -54,7 +69,15 @@ export default function OrgSetup() {
   });
 
   const updateField = (field: keyof OrgSetupForm, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => {
+      const updated = { ...prev, [field]: value };
+      // Clear trade when switching to org types that don't need it
+      if (field === 'orgType' && (value === 'GC' || value === 'SUPPLIER')) {
+        updated.trade = '';
+        updated.tradeCustom = '';
+      }
+      return updated;
+    });
     if (errors[field]) {
       setErrors((prev) => {
         const next = { ...prev };
@@ -194,6 +217,57 @@ export default function OrgSetup() {
                   )}
                 </div>
               </div>
+
+              {/* Trade selection for TC and FC */}
+              {(form.orgType === 'TC' || form.orgType === 'FC') && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2 sm:col-span-1">
+                    <Label htmlFor="trade">Trade *</Label>
+                    <Select
+                      value={form.trade}
+                      onValueChange={(v) => {
+                        setForm(prev => ({ ...prev, trade: v as Trade, tradeCustom: v === 'Other' ? prev.tradeCustom : '' }));
+                        if (errors.trade) {
+                          setErrors(prev => {
+                            const next = { ...prev };
+                            delete next.trade;
+                            return next;
+                          });
+                        }
+                      }}
+                    >
+                      <SelectTrigger id="trade" className="mt-1">
+                        <SelectValue placeholder="Select your trade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TRADES.map((trade) => (
+                          <SelectItem key={trade} value={trade}>
+                            {trade}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.trade && (
+                      <p className="text-xs text-destructive mt-1">{errors.trade}</p>
+                    )}
+                  </div>
+                  {form.trade === 'Other' && (
+                    <div className="col-span-2 sm:col-span-1">
+                      <Label htmlFor="tradeCustom">Trade Name</Label>
+                      <div className="relative mt-1">
+                        <Wrench className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          id="tradeCustom"
+                          value={form.tradeCustom}
+                          onChange={(e) => setForm(prev => ({ ...prev, tradeCustom: e.target.value }))}
+                          placeholder="Enter your trade"
+                          className="pl-10"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="street">Street Address</Label>
