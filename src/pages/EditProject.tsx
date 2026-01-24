@@ -477,9 +477,20 @@ export default function EditProject() {
                   </>
                 )}
 
+                {/* Validation message */}
+                {newMember.role !== 'Supplier' && newContractSum <= 0 && newMember.companyName && newMember.contactEmail && (
+                  <p className="text-sm text-amber-600">Contract sum must be greater than $0</p>
+                )}
+
                 <Button 
                   onClick={addMember}
-                  disabled={!newMember.companyName || !newMember.contactEmail || (requiresTrade && !newMember.trade) || saving}
+                  disabled={
+                    !newMember.companyName || 
+                    !newMember.contactEmail || 
+                    (requiresTrade && !newMember.trade) || 
+                    (newMember.role !== 'Supplier' && newContractSum <= 0) ||
+                    saving
+                  }
                 >
                   {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
                   Add to Team
