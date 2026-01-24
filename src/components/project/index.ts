@@ -4,3 +4,4 @@ export { ProjectScopeSection } from './ProjectScopeSection';
 export { ProjectContractsSection } from './ProjectContractsSection';
 export { ProjectActivitySection } from './ProjectActivitySection';
 export { ProjectFinancialsSection } from './ProjectFinancialsSection';
+export { ProjectFinancialsSectionNew } from './ProjectFinancialsSectionNew';

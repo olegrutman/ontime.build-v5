@@ -889,6 +889,7 @@ export type Database = {
           notes: string | null
           project_id: string
           retainage_percent: number | null
+          status: string | null
           to_org_id: string | null
           to_project_team_id: string | null
           to_role: string
@@ -906,6 +907,7 @@ export type Database = {
           notes?: string | null
           project_id: string
           retainage_percent?: number | null
+          status?: string | null
           to_org_id?: string | null
           to_project_team_id?: string | null
           to_role: string
@@ -923,6 +925,7 @@ export type Database = {
           notes?: string | null
           project_id?: string
           retainage_percent?: number | null
+          status?: string | null
           to_org_id?: string | null
           to_project_team_id?: string | null
           to_role?: string
@@ -1343,28 +1346,41 @@ export type Database = {
       }
       project_sov: {
         Row: {
+          contract_id: string | null
           created_at: string
           created_from_template_key: string | null
           id: string
           project_id: string
+          sov_name: string | null
         }
         Insert: {
+          contract_id?: string | null
           created_at?: string
           created_from_template_key?: string | null
           id?: string
           project_id: string
+          sov_name?: string | null
         }
         Update: {
+          contract_id?: string | null
           created_at?: string
           created_from_template_key?: string | null
           id?: string
           project_id?: string
+          sov_name?: string | null
         }
         Relationships: [
           {
+            foreignKeyName: "project_sov_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "project_contracts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "project_sov_project_id_fkey"
             columns: ["project_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
@@ -1378,10 +1394,13 @@ export type Database = {
           id: string
           item_group: string | null
           item_name: string
+          percent_of_contract: number | null
           project_id: string
           scheduled_value: number | null
           sort_order: number
           source: string
+          sov_id: string | null
+          value_amount: number | null
         }
         Insert: {
           billed_to_date?: number | null
@@ -1390,10 +1409,13 @@ export type Database = {
           id?: string
           item_group?: string | null
           item_name: string
+          percent_of_contract?: number | null
           project_id: string
           scheduled_value?: number | null
           sort_order?: number
           source?: string
+          sov_id?: string | null
+          value_amount?: number | null
         }
         Update: {
           billed_to_date?: number | null
@@ -1402,10 +1424,13 @@ export type Database = {
           id?: string
           item_group?: string | null
           item_name?: string
+          percent_of_contract?: number | null
           project_id?: string
           scheduled_value?: number | null
           sort_order?: number
           source?: string
+          sov_id?: string | null
+          value_amount?: number | null
         }
         Relationships: [
           {
@@ -1413,6 +1438,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_sov_items_sov_id_fkey"
+            columns: ["sov_id"]
+            isOneToOne: false
+            referencedRelation: "project_sov"
             referencedColumns: ["id"]
           },
         ]
@@ -2715,6 +2747,10 @@ export type Database = {
       }
       user_is_work_item_participant: {
         Args: { _user_id: string; _work_item_id: string }
+        Returns: boolean
+      }
+      validate_sov_percent_total: {
+        Args: { p_sov_id: string }
         Returns: boolean
       }
     }
