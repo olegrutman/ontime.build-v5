@@ -88,7 +88,7 @@ type SignUpForm = z.infer<typeof signUpSchema>;
 
 export function AuthSection() {
   const navigate = useNavigate();
-  const { signUp, signIn, user, userOrgRoles, loading: authLoading, refreshUserData } = useAuth();
+  const { signIn, user, userOrgRoles, loading: authLoading, refreshUserData } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState('signin');
   const [loading, setLoading] = useState(false);
@@ -194,11 +194,14 @@ export function AuthSection() {
     setLoading(true);
 
     // Step 1: Create auth user
-    const { error: authError } = await signUp(
-      signUpForm.email,
-      signUpForm.password,
-      signUpForm.fullName
-    );
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: signUpForm.email,
+      password: signUpForm.password,
+      options: {
+        emailRedirectTo: window.location.origin,
+        data: { full_name: signUpForm.fullName },
+      },
+    });
 
     if (authError) {
       setLoading(false);
@@ -210,8 +213,28 @@ export function AuthSection() {
       return;
     }
 
-    // Wait for session to be established
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait for session to be fully established
+    // The user must be confirmed and session active before calling RPC
+    let session = authData.session;
+    let retries = 0;
+    const maxRetries = 10;
+    
+    while (!session && retries < maxRetries) {
+      await new Promise(resolve => setTimeout(resolve, 300));
+      const { data: sessionData } = await supabase.auth.getSession();
+      session = sessionData.session;
+      retries++;
+    }
+
+    if (!session) {
+      setLoading(false);
+      toast({
+        variant: 'destructive',
+        title: 'Sign up incomplete',
+        description: 'Please check your email to confirm your account, then sign in.',
+      });
+      return;
+    }
 
     // Step 2: Create organization with role
     const nameParts = signUpForm.fullName.trim().split(' ');

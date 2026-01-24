@@ -103,7 +103,9 @@ export default function OrgSetup() {
       return;
     }
 
-    if (!user) {
+    // Make sure user is authenticated and session is active
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
       toast({
         variant: 'destructive',
         title: 'Not authenticated',
