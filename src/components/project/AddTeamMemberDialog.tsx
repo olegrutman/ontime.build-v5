@@ -86,20 +86,21 @@ export function AddTeamMemberDialog({
   const [saving, setSaving] = useState(false);
   
   // Filter available roles based on creator org type
-  // Rules (wizard + overview):
-  // - General Contractor creators can add ONLY Trade Contractor
-  // - Trade Contractor creators can add General Contractor, Field Crew
+  // Rules:
+  // - General Contractor can add: Trade Contractor, Supplier (NOT Field Crew)
+  // - Trade Contractor can add: General Contractor, Field Crew, Supplier (NOT another TC)
   // - Field Crew cannot add anyone
   const availableRoles = TEAM_ROLES.filter(role => {
     if (creatorOrgType === 'GC') {
-      return role === 'Trade Contractor';
+      // GC can add Trade Contractor and Supplier, but NOT Field Crew or another GC
+      return role === 'Trade Contractor' || role === 'Supplier';
     }
     if (creatorOrgType === 'TC') {
-      // TC cannot invite another TC
-      return role === 'General Contractor' || role === 'Field Crew';
+      // TC can add General Contractor, Field Crew, and Supplier (NOT another TC)
+      return role === 'General Contractor' || role === 'Field Crew' || role === 'Supplier';
     }
     if (creatorOrgType === 'FC') {
-      // FC cannot invite anyone (handled at UI level)
+      // FC cannot invite anyone
       return false;
     }
     return true;
