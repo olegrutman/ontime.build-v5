@@ -12,6 +12,7 @@ import OrgSetup from "./pages/OrgSetup";
 import CreateProjectNew from "./pages/CreateProjectNew";
 import ProjectHome from "./pages/ProjectHome";
 import EditProjectScope from "./pages/EditProjectScope";
+import EditProject from "./pages/EditProject";
 import PartnerDirectory from "./pages/PartnerDirectory";
 import AdminSuppliers from "./pages/AdminSuppliers";
 import CatalogPage from "./pages/CatalogPage";
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/org-setup" element={<OrgSetup />} />
             <Route path="/create-project" element={<CreateProjectNew />} />
             <Route path="/project/:id" element={<ProjectHome />} />
+            <Route path="/project/:id/edit" element={<EditProject />} />
             <Route path="/projects/:id/scope" element={<EditProjectScope />} />
             <Route path="/partners" element={<PartnerDirectory />} />
             <Route path="/admin/suppliers" element={<AdminSuppliers />} />
