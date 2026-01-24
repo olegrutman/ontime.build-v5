@@ -228,12 +228,24 @@ export default function CreateProjectNew() {
   };
 
   const saveContracts = async (projectId: string) => {
+    console.log('Saving contracts:', data.contracts);
+    
     for (const contract of data.contracts) {
       try {
         const teamMember = data.team.find(t => t.id === contract.toTeamMemberId);
-        if (!teamMember) continue;
+        if (!teamMember) {
+          console.warn('No team member found for contract:', contract.toTeamMemberId);
+          continue;
+        }
 
-        await supabase.from('project_contracts').insert({
+        // Skip suppliers (they don't have contracts)
+        if (teamMember.role === 'Supplier') {
+          continue;
+        }
+
+        console.log('Saving contract for:', teamMember.companyName, teamMember.role, 'sum:', contract.contractSum);
+
+        const { error } = await supabase.from('project_contracts').insert({
           project_id: projectId,
           from_org_id: currentOrg?.id,
           from_role: creatorRole,
@@ -245,6 +257,10 @@ export default function CreateProjectNew() {
           notes: contract.notes,
           created_by_user_id: user?.id,
         });
+
+        if (error) {
+          console.error('Error inserting contract:', error);
+        }
       } catch (error: any) {
         console.error('Error saving contract:', error);
       }

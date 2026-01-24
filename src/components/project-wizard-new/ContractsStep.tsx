@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -30,6 +31,37 @@ export function ContractsStep({ team, contracts, onChange, creatorRole }: Contra
     }
     return false;
   });
+
+  // Pre-populate contracts for all applicable team members on mount
+  useEffect(() => {
+    const memberIdsNeedingContracts: string[] = [];
+    
+    // Add upstream GC if exists
+    if (upstreamGC) {
+      memberIdsNeedingContracts.push(upstreamGC.id);
+    }
+    
+    // Add downstream members
+    downstreamMembers.forEach(m => {
+      memberIdsNeedingContracts.push(m.id);
+    });
+    
+    // Find any members that don't have a contract yet
+    const missingContracts = memberIdsNeedingContracts.filter(
+      memberId => !contracts.find(c => c.toTeamMemberId === memberId)
+    );
+    
+    // Create default contracts for missing members
+    if (missingContracts.length > 0) {
+      const newContracts: ProjectContract[] = missingContracts.map(memberId => ({
+        toTeamMemberId: memberId,
+        contractSum: 0,
+        retainagePercent: 0,
+        allowMobilization: false,
+      }));
+      onChange([...contracts, ...newContracts]);
+    }
+  }, [team]); // Only run when team changes
 
   const getContract = (memberId: string): ProjectContract => {
     return contracts.find(c => c.toTeamMemberId === memberId) || {
