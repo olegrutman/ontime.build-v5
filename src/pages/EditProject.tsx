@@ -63,8 +63,13 @@ export default function EditProject() {
     role: 'Trade Contractor',
   });
   
+  // New member contract values
+  const [newContractSum, setNewContractSum] = useState<number>(0);
+  const [newRetainagePercent, setNewRetainagePercent] = useState<number>(0);
+  const [newAllowMobilization, setNewAllowMobilization] = useState<boolean>(false);
+  
   // Contract editing state
-  const [editingContracts, setEditingContracts] = useState<Record<string, Partial<ExistingContract>>>({});
+  const [editingContracts, setEditingContracts] = useState<Record<string, Partial<ExistingContract>>>();
 
   const currentOrg = userOrgRoles[0]?.organization;
   const creatorRole = currentOrg?.type === 'GC' ? 'General Contractor' : 
@@ -172,8 +177,9 @@ export default function EditProject() {
           to_role: newMember.role,
           trade: newMember.trade,
           to_project_team_id: teamMember.id,
-          contract_sum: 0,
-          retainage_percent: 0,
+          contract_sum: newContractSum,
+          retainage_percent: newRetainagePercent,
+          allow_mobilization_line_item: newAllowMobilization,
           created_by_user_id: user.id,
         });
       }
@@ -185,6 +191,9 @@ export default function EditProject() {
         contactEmail: '',
         role: 'Trade Contractor',
       });
+      setNewContractSum(0);
+      setNewRetainagePercent(0);
+      setNewAllowMobilization(false);
       
       toast({ title: 'Team member added', description: 'Invitation will be sent.' });
       
@@ -418,6 +427,54 @@ export default function EditProject() {
                       </div>
                     )}
                   </div>
+                )}
+
+                {/* Contract fields - only show for roles that need contracts */}
+                {newMember.role !== 'Supplier' && (
+                  <>
+                    <Separator className="my-4" />
+                    <p className="text-sm font-medium text-muted-foreground">Contract Terms</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Contract Sum</Label>
+                        <div className="relative">
+                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                          <Input
+                            type="number"
+                            min="0"
+                            step="1000"
+                            className="pl-7"
+                            value={newContractSum || ''}
+                            onChange={(e) => setNewContractSum(parseFloat(e.target.value) || 0)}
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Retainage %</Label>
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            min="0"
+                            max="20"
+                            step="0.5"
+                            className="pr-7"
+                            value={newRetainagePercent || ''}
+                            onChange={(e) => setNewRetainagePercent(parseFloat(e.target.value) || 0)}
+                            placeholder="0"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">%</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Label>Allow Mobilization as a line item?</Label>
+                      <Switch
+                        checked={newAllowMobilization}
+                        onCheckedChange={setNewAllowMobilization}
+                      />
+                    </div>
+                  </>
                 )}
 
                 <Button 
