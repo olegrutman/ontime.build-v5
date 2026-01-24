@@ -26,6 +26,7 @@ import {
 } from '@/components/project';
 import { AppLayout } from '@/components/layout';
 import { InvoicesTab } from '@/components/invoices';
+import { ProjectSOVEditor } from '@/components/sov';
 
 interface Project {
   id: string;
@@ -254,16 +255,7 @@ export default function ProjectHome() {
 
           {/* SOV Tab */}
           <TabsContent value="sov">
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-medium mb-2">Schedule of Values</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                View and manage SOV line items for this project.
-              </p>
-              <Button asChild>
-                <Link to={`/sov?project=${id}`}>View SOV Dashboard</Link>
-              </Button>
-            </div>
+            <ProjectSOVEditor projectId={id!} />
           </TabsContent>
 
           {/* CORs Tab */}

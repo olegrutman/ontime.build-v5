@@ -1341,6 +1341,76 @@ export type Database = {
           },
         ]
       }
+      project_sov: {
+        Row: {
+          created_at: string
+          created_from_template_key: string | null
+          id: string
+          project_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_from_template_key?: string | null
+          id?: string
+          project_id: string
+        }
+        Update: {
+          created_at?: string
+          created_from_template_key?: string | null
+          id?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_sov_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_sov_items: {
+        Row: {
+          created_at: string
+          default_enabled: boolean
+          id: string
+          item_group: string | null
+          item_name: string
+          project_id: string
+          sort_order: number
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          default_enabled?: boolean
+          id?: string
+          item_group?: string | null
+          item_name: string
+          project_id: string
+          sort_order?: number
+          source?: string
+        }
+        Update: {
+          created_at?: string
+          default_enabled?: boolean
+          id?: string
+          item_group?: string | null
+          item_name?: string
+          project_id?: string
+          sort_order?: number
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_sov_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_team: {
         Row: {
           accepted_at: string | null
@@ -1589,6 +1659,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sov_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_name: string
+          generator_rules: Json
+          id: string
+          template_key: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_name: string
+          generator_rules?: Json
+          id?: string
+          template_key: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          generator_rules?: Json
+          id?: string
+          template_key?: string
+        }
+        Relationships: []
       }
       supplier_quotes: {
         Row: {
