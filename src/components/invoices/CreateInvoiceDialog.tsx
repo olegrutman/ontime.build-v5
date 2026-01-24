@@ -335,73 +335,89 @@ export function CreateInvoiceDialog({
               </Button>
             </div>
 
-            <div className="border rounded-lg overflow-hidden">
+            <div className="border rounded-lg overflow-hidden overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[300px]">Description</TableHead>
+                    <TableHead className="w-[250px]">Description</TableHead>
                     <TableHead className="text-right">Scheduled Value</TableHead>
                     <TableHead className="text-right">Previously Billed</TableHead>
                     <TableHead className="text-right">This Period</TableHead>
+                    <TableHead className="text-right">Remaining</TableHead>
                     <TableHead className="w-[50px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {lineItems.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>
-                        <Input
-                          value={item.description}
-                          onChange={(e) => handleLineItemChange(item.id, 'description', e.target.value)}
-                          placeholder="Line item description"
-                          className="h-8"
-                        />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Input
-                          type="number"
-                          value={item.scheduled_value}
-                          onChange={(e) =>
-                            handleLineItemChange(item.id, 'scheduled_value', parseFloat(e.target.value) || 0)
-                          }
-                          className="h-8 w-28 text-right ml-auto"
-                        />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Input
-                          type="number"
-                          value={item.previous_billed}
-                          onChange={(e) =>
-                            handleLineItemChange(item.id, 'previous_billed', parseFloat(e.target.value) || 0)
-                          }
-                          className="h-8 w-28 text-right ml-auto"
-                        />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Input
-                          type="number"
-                          value={item.current_billed}
-                          onChange={(e) =>
-                            handleLineItemChange(item.id, 'current_billed', parseFloat(e.target.value) || 0)
-                          }
-                          className="h-8 w-28 text-right ml-auto"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeLineItem(item.id)}
-                          className="h-8 w-8"
-                        >
-                          <Trash2 className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {lineItems.map((item) => {
+                    const totalBilled = item.previous_billed + item.current_billed;
+                    const remaining = item.scheduled_value - totalBilled;
+                    const isOverbilled = remaining < 0;
+
+                    return (
+                      <TableRow key={item.id} className={isOverbilled ? 'bg-red-50 dark:bg-red-900/10' : ''}>
+                        <TableCell>
+                          <Input
+                            value={item.description}
+                            onChange={(e) => handleLineItemChange(item.id, 'description', e.target.value)}
+                            placeholder="Line item description"
+                            className="h-8"
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Input
+                            type="number"
+                            value={item.scheduled_value}
+                            onChange={(e) =>
+                              handleLineItemChange(item.id, 'scheduled_value', parseFloat(e.target.value) || 0)
+                            }
+                            className="h-8 w-28 text-right ml-auto"
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Input
+                            type="number"
+                            value={item.previous_billed}
+                            onChange={(e) =>
+                              handleLineItemChange(item.id, 'previous_billed', parseFloat(e.target.value) || 0)
+                            }
+                            className="h-8 w-28 text-right ml-auto"
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Input
+                            type="number"
+                            value={item.current_billed}
+                            onChange={(e) =>
+                              handleLineItemChange(item.id, 'current_billed', parseFloat(e.target.value) || 0)
+                            }
+                            className="h-8 w-28 text-right ml-auto"
+                          />
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <span className={cn(
+                            'font-medium',
+                            isOverbilled ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'
+                          )}>
+                            {formatCurrency(remaining)}
+                            {isOverbilled && ' ⚠'}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeLineItem(item.id)}
+                            className="h-8 w-8"
+                          >
+                            <Trash2 className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                   {lineItems.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                         No line items. Click "Add Line" to add billing items.
                       </TableCell>
                     </TableRow>
