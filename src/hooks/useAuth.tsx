@@ -116,6 +116,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setProfile(null);
     setUserOrgRoles([]);
+    // Redirect to landing page
+    window.location.href = '/';
   };
 
   // Get current role (first role for now, can be enhanced to allow switching)
