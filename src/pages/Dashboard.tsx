@@ -31,10 +31,10 @@ export default function Dashboard() {
 
   const currentOrg = userOrgRoles[0]?.organization;
 
-  // Redirect to org setup if needed
+  // Redirect to landing page if user needs to set up org
   useEffect(() => {
     if (!authLoading && user && needsOrgSetup) {
-      navigate('/org-setup');
+      navigate('/#auth');
     }
   }, [authLoading, user, needsOrgSetup, navigate]);
 
@@ -107,7 +107,7 @@ export default function Dashboard() {
               <p className="text-muted-foreground mb-4">
                 You need to create an organization to get started.
               </p>
-              <Button onClick={() => navigate('/org-setup')}>Create Organization</Button>
+              <Button onClick={() => navigate('/#auth')}>Create Organization</Button>
             </CardContent>
           </Card>
         </div>

@@ -7,8 +7,6 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
-import JoinOrg from "./pages/JoinOrg";
-import OrgSetup from "./pages/OrgSetup";
 import CreateProjectNew from "./pages/CreateProjectNew";
 import ProjectHome from "./pages/ProjectHome";
 import EditProjectScope from "./pages/EditProjectScope";
@@ -41,8 +39,6 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/auth" element={<Auth />} />
-            <Route path="/join-org" element={<JoinOrg />} />
-            <Route path="/org-setup" element={<OrgSetup />} />
             <Route path="/create-project" element={<CreateProjectNew />} />
             <Route path="/project/:id" element={<ProjectHome />} />
             <Route path="/project/:id/edit" element={<EditProject />} />

@@ -67,9 +67,9 @@ export default function Auth() {
     } else {
       toast({
         title: 'Account created!',
-        description: 'Please set up your organization to continue.',
+        description: 'Welcome to Ontime.Build.',
       });
-      navigate('/org-setup');
+      navigate('/dashboard');
     }
   };
 
@@ -111,11 +111,7 @@ export default function Auth() {
     }
   }, [authLoading, userOrgRoles, navigate]);
 
-  React.useEffect(() => {
-    if (needsOrgSetup) {
-      navigate('/org-setup');
-    }
-  }, [needsOrgSetup, navigate]);
+  // Users without org setup will be handled by landing page sign-up flow
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
