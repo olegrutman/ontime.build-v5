@@ -86,12 +86,20 @@ export function AddTeamMemberDialog({
   const [saving, setSaving] = useState(false);
   
   // Filter available roles based on creator org type
+  // GC can only invite TC and Supplier (NOT Field Crew - that's TC's domain)
+  // TC can invite GC, Field Crew, and Supplier
   const availableRoles = TEAM_ROLES.filter(role => {
     if (creatorOrgType === 'GC') {
-      return role !== 'General Contractor';
+      // GC cannot invite GC or Field Crew
+      return role === 'Trade Contractor' || role === 'Supplier';
     }
     if (creatorOrgType === 'TC') {
+      // TC cannot invite another TC
       return role === 'General Contractor' || role === 'Field Crew' || role === 'Supplier';
+    }
+    if (creatorOrgType === 'FC') {
+      // FC cannot invite anyone (handled at UI level)
+      return false;
     }
     return true;
   });

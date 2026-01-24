@@ -1,28 +1,70 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
-import { TeamMember, ProjectContract } from '@/types/projectWizard';
-import { DollarSign, ArrowUp, ArrowDown } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ProjectContract } from '@/types/projectWizard';
+import { DollarSign, ArrowUp, ArrowDown, Building2, AlertCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface ProjectTeamMember {
+  id: string;
+  org_id: string | null;
+  role: string;
+  trade: string | null;
+  trade_custom: string | null;
+  invited_org_name: string | null;
+  status: string;
+}
 
 interface ContractsStepProps {
-  team: TeamMember[];
+  projectId?: string;
   contracts: ProjectContract[];
   onChange: (contracts: ProjectContract[]) => void;
   creatorRole: string | null;
 }
 
-export function ContractsStep({ team, contracts, onChange, creatorRole }: ContractsStepProps) {
+export function ContractsStep({ projectId, contracts, onChange, creatorRole }: ContractsStepProps) {
+  const [teamMembers, setTeamMembers] = useState<ProjectTeamMember[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch team members from database
+  const fetchTeamMembers = useCallback(async () => {
+    if (!projectId) return;
+    
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('project_team')
+        .select('id, org_id, role, trade, trade_custom, invited_org_name, status')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      setTeamMembers(data || []);
+    } catch (error) {
+      console.error('Error fetching team members:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    fetchTeamMembers();
+  }, [fetchTeamMembers]);
+
   // Upstream: TC's contract WITH the GC (TC receives money from GC)
   const upstreamGC = creatorRole === 'Trade Contractor' 
-    ? team.find(m => m.role === 'General Contractor')
+    ? teamMembers.find(m => m.role === 'General Contractor')
     : null;
 
-  // Downstream: Contracts TC has with FC (TC pays FC)
-  const downstreamMembers = team.filter(m => {
+  // Downstream: Contracts with parties below the creator
+  // GC → TC contracts
+  // TC → FC contracts
+  const downstreamMembers = teamMembers.filter(m => {
     if (creatorRole === 'General Contractor') {
       return m.role === 'Trade Contractor';
     }
@@ -32,8 +74,10 @@ export function ContractsStep({ team, contracts, onChange, creatorRole }: Contra
     return false;
   });
 
-  // Pre-populate contracts for all applicable team members on mount
+  // Pre-populate contracts for all applicable team members when team changes
   useEffect(() => {
+    if (loading || teamMembers.length === 0) return;
+
     const memberIdsNeedingContracts: string[] = [];
     
     // Add upstream GC if exists
@@ -61,7 +105,7 @@ export function ContractsStep({ team, contracts, onChange, creatorRole }: Contra
       }));
       onChange([...contracts, ...newContracts]);
     }
-  }, [team]); // Only run when team changes
+  }, [teamMembers, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getContract = (memberId: string): ProjectContract => {
     return contracts.find(c => c.toTeamMemberId === memberId) || {
@@ -81,6 +125,42 @@ export function ContractsStep({ team, contracts, onChange, creatorRole }: Contra
     }
   };
 
+  // Loading state
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-semibold">Project Contracts</h2>
+          <p className="text-sm text-muted-foreground">Loading team members...</p>
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-48 w-full" />
+        </div>
+      </div>
+    );
+  }
+
+  // No project ID yet
+  if (!projectId) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-lg font-semibold">Project Contracts</h2>
+          <p className="text-sm text-muted-foreground">
+            Complete the Project Basics step first.
+          </p>
+        </div>
+        <Card>
+          <CardContent className="p-8 text-center text-muted-foreground">
+            <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>Project must be created before defining contracts.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const hasNoContracts = !upstreamGC && downstreamMembers.length === 0;
 
   if (hasNoContracts) {
@@ -92,14 +172,21 @@ export function ContractsStep({ team, contracts, onChange, creatorRole }: Contra
             Define contract terms for your team members.
           </p>
         </div>
-        <div className="text-center py-12 text-muted-foreground">
-          <p>No team members added that require contract terms.</p>
-          <p className="text-sm mt-2">
-            {creatorRole === 'General Contractor' 
-              ? 'Add Trade Contractors in the Team step to define their contracts.'
-              : 'Add a General Contractor or Field Crew members in the Team step to define contracts.'}
-          </p>
-        </div>
+        <Card>
+          <CardContent className="p-8">
+            <div className="flex items-start gap-4">
+              <AlertCircle className="h-6 w-6 text-muted-foreground shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium">No team members to contract with</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {creatorRole === 'General Contractor' 
+                    ? 'Add Trade Contractors on the Project Team step first to define their contracts.'
+                    : 'Add a General Contractor or Field Crew members on the Project Team step to define contracts.'}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -162,20 +249,22 @@ export function ContractsStep({ team, contracts, onChange, creatorRole }: Contra
 }
 
 interface ContractCardProps {
-  member: TeamMember;
+  member: ProjectTeamMember;
   contract: ProjectContract;
   onUpdate: (updates: Partial<ProjectContract>) => void;
   description?: string;
 }
 
 function ContractCard({ member, contract, onUpdate, description }: ContractCardProps) {
+  const tradeName = member.trade === 'Other' ? member.trade_custom : member.trade;
+  
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
           <DollarSign className="h-4 w-4" />
-          {member.companyName}
-          {member.trade && <span className="text-muted-foreground font-normal">({member.trade})</span>}
+          {member.invited_org_name || 'Unknown Company'}
+          {tradeName && <span className="text-muted-foreground font-normal">({tradeName})</span>}
         </CardTitle>
         {description && (
           <p className="text-xs text-muted-foreground">{description}</p>
