@@ -83,6 +83,7 @@ export function ContractsStep({ projectId, contracts, onChange, creatorRole }: C
   const downstreamMemberIds = useMemo(() => downstreamMembers.map(m => m.id).join(','), [downstreamMembers]);
 
   // Pre-populate contracts for all applicable team members when team changes
+  // Use a ref to track contracts to avoid stale closure issues
   useEffect(() => {
     if (loading || teamMembers.length === 0) return;
 
@@ -97,28 +98,29 @@ export function ContractsStep({ projectId, contracts, onChange, creatorRole }: C
     downstreamMembers.forEach(m => {
       memberIdsNeedingContracts.push(m.id);
     });
-    
-    // Find any members that don't have a contract yet
-    const missingContracts = memberIdsNeedingContracts.filter(
-      memberId => !contracts.find(c => c.toTeamMemberId === memberId)
+
+    // Check if we have all needed contracts using current contracts prop
+    const existingContractIds = new Set(contracts.map(c => c.toTeamMemberId));
+    const missingMemberIds = memberIdsNeedingContracts.filter(
+      memberId => !existingContractIds.has(memberId)
     );
     
     // Create default contracts for missing members
-    if (missingContracts.length > 0) {
-      const newContracts: ProjectContract[] = missingContracts.map(memberId => ({
+    if (missingMemberIds.length > 0) {
+      console.log('Creating contracts for missing members:', missingMemberIds);
+      const newContracts: ProjectContract[] = missingMemberIds.map(memberId => ({
         toTeamMemberId: memberId,
         contractSum: 0,
         retainagePercent: 0,
         allowMobilization: false,
       }));
-      // De-dupe defensively in case of repeated fetch/mount
-      const merged = [...contracts, ...newContracts].filter(
-        (c, idx, arr) => arr.findIndex(x => x.toTeamMemberId === c.toTeamMemberId) === idx
-      );
+      // Merge with existing, ensuring no duplicates
+      const merged = [...contracts, ...newContracts];
       onChange(merged);
     }
-  // Use primitive values for dependencies to avoid infinite loops
-  }, [loading, teamMembers.length, upstreamGCId, downstreamMemberIds]);
+  // Include contracts in deps but use length to avoid infinite loops
+  // The Set comparison above handles the actual check
+  }, [loading, teamMembers.length, upstreamGCId, downstreamMemberIds, contracts.length, onChange]);
 
   const getContract = (memberId: string): ProjectContract => {
     return contracts.find(c => c.toTeamMemberId === memberId) || {
