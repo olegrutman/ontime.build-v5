@@ -196,6 +196,146 @@ export type Database = {
           },
         ]
       }
+      invoice_line_items: {
+        Row: {
+          created_at: string
+          current_billed: number
+          description: string
+          id: string
+          invoice_id: string
+          previous_billed: number
+          retainage_amount: number
+          retainage_percent: number
+          scheduled_value: number
+          sort_order: number
+          total_billed: number
+          work_item_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          current_billed?: number
+          description: string
+          id?: string
+          invoice_id: string
+          previous_billed?: number
+          retainage_amount?: number
+          retainage_percent?: number
+          scheduled_value?: number
+          sort_order?: number
+          total_billed?: number
+          work_item_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          current_billed?: number
+          description?: string
+          id?: string
+          invoice_id?: string
+          previous_billed?: number
+          retainage_amount?: number
+          retainage_percent?: number
+          scheduled_value?: number
+          sort_order?: number
+          total_billed?: number
+          work_item_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_line_items_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_line_items_work_item_id_fkey"
+            columns: ["work_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          billing_period_end: string
+          billing_period_start: string
+          created_at: string
+          created_by: string
+          id: string
+          invoice_number: string
+          notes: string | null
+          paid_at: string | null
+          project_id: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          retainage_amount: number
+          status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          subtotal: number
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          billing_period_end: string
+          billing_period_start: string
+          created_at?: string
+          created_by: string
+          id?: string
+          invoice_number: string
+          notes?: string | null
+          paid_at?: string | null
+          project_id: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          retainage_amount?: number
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          subtotal?: number
+          total_amount?: number
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          billing_period_end?: string
+          billing_period_start?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          invoice_number?: string
+          notes?: string | null
+          paid_at?: string | null
+          project_id?: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          retainage_amount?: number
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          subtotal?: number
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       labor_entries: {
         Row: {
           created_at: string

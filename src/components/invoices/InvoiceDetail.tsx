@@ -1,0 +1,342 @@
+import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
+import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableFooter } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { InvoiceStatusBadge } from './InvoiceStatusBadge';
+import { Invoice, InvoiceLineItem, InvoiceStatus } from '@/types/invoice';
+
+interface InvoiceDetailProps {
+  invoiceId: string;
+  projectId: string;
+  onBack: () => void;
+  onUpdate: () => void;
+}
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
+
+export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: InvoiceDetailProps) {
+  const { user, permissions } = useAuth();
+  const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+
+  useEffect(() => {
+    fetchInvoice();
+  }, [invoiceId]);
+
+  const fetchInvoice = async () => {
+    setLoading(true);
+    const [invoiceRes, lineItemsRes] = await Promise.all([
+      supabase.from('invoices').select('*').eq('id', invoiceId).single(),
+      supabase
+        .from('invoice_line_items')
+        .select('*')
+        .eq('invoice_id', invoiceId)
+        .order('sort_order'),
+    ]);
+
+    if (invoiceRes.data) setInvoice(invoiceRes.data as Invoice);
+    if (lineItemsRes.data) setLineItems(lineItemsRes.data as InvoiceLineItem[]);
+    setLoading(false);
+  };
+
+  const updateInvoiceStatus = async (
+    newStatus: InvoiceStatus,
+    additionalFields: Record<string, any> = {}
+  ) => {
+    if (!user || !invoice) return;
+
+    setActionLoading(true);
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({
+          status: newStatus,
+          ...additionalFields,
+        })
+        .eq('id', invoiceId);
+
+      if (error) throw error;
+
+      // Log activity
+      const activityDescriptions: Record<InvoiceStatus, string> = {
+        DRAFT: `Invoice ${invoice.invoice_number} reverted to draft`,
+        SUBMITTED: `Invoice ${invoice.invoice_number} submitted for approval`,
+        APPROVED: `Invoice ${invoice.invoice_number} approved`,
+        REJECTED: `Invoice ${invoice.invoice_number} rejected`,
+        PAID: `Invoice ${invoice.invoice_number} marked as paid`,
+      };
+
+      await supabase.from('project_activity').insert({
+        project_id: projectId,
+        activity_type: `INVOICE_${newStatus}`,
+        description: activityDescriptions[newStatus],
+        actor_user_id: user.id,
+      });
+
+      toast.success(`Invoice ${newStatus.toLowerCase()}`);
+      fetchInvoice();
+      onUpdate();
+    } catch (error: any) {
+      console.error('Error updating invoice:', error);
+      toast.error(error.message || 'Failed to update invoice');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSubmit = () => {
+    updateInvoiceStatus('SUBMITTED', {
+      submitted_at: new Date().toISOString(),
+      submitted_by: user?.id,
+    });
+  };
+
+  const handleApprove = () => {
+    updateInvoiceStatus('APPROVED', {
+      approved_at: new Date().toISOString(),
+      approved_by: user?.id,
+    });
+  };
+
+  const handleReject = () => {
+    if (!rejectionReason.trim()) {
+      toast.error('Please provide a rejection reason');
+      return;
+    }
+    updateInvoiceStatus('REJECTED', {
+      rejected_at: new Date().toISOString(),
+      rejected_by: user?.id,
+      rejection_reason: rejectionReason,
+    });
+    setRejectDialogOpen(false);
+    setRejectionReason('');
+  };
+
+  const handleMarkPaid = () => {
+    updateInvoiceStatus('PAID', {
+      paid_at: new Date().toISOString(),
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-32" />
+        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  if (!invoice) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-muted-foreground">Invoice not found</p>
+        <Button variant="outline" onClick={onBack} className="mt-4">
+          Go Back
+        </Button>
+      </div>
+    );
+  }
+
+  const canApprove = permissions?.canApprove;
+  const status = invoice.status as InvoiceStatus;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={onBack}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-bold">{invoice.invoice_number}</h2>
+              <InvoiceStatusBadge status={status} />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Billing Period: {format(new Date(invoice.billing_period_start), 'MMM d')} -{' '}
+              {format(new Date(invoice.billing_period_end), 'MMM d, yyyy')}
+            </p>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-2">
+          {status === 'DRAFT' && (
+            <Button onClick={handleSubmit} disabled={actionLoading}>
+              {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+              Submit for Approval
+            </Button>
+          )}
+
+          {status === 'SUBMITTED' && canApprove && (
+            <>
+              <Button variant="outline" onClick={() => setRejectDialogOpen(true)} disabled={actionLoading}>
+                <XCircle className="h-4 w-4 mr-2" />
+                Reject
+              </Button>
+              <Button onClick={handleApprove} disabled={actionLoading}>
+                {actionLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                )}
+                Approve
+              </Button>
+            </>
+          )}
+
+          {status === 'APPROVED' && canApprove && (
+            <Button onClick={handleMarkPaid} disabled={actionLoading}>
+              {actionLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <DollarSign className="h-4 w-4 mr-2" />
+              )}
+              Mark as Paid
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Rejection Notice */}
+      {status === 'REJECTED' && invoice.rejection_reason && (
+        <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
+          <CardContent className="p-4">
+            <p className="text-sm font-medium text-red-800 dark:text-red-200">Rejection Reason:</p>
+            <p className="text-sm text-red-700 dark:text-red-300">{invoice.rejection_reason}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Line Items */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Line Items</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Description</TableHead>
+                <TableHead className="text-right">Scheduled Value</TableHead>
+                <TableHead className="text-right">Previously Billed</TableHead>
+                <TableHead className="text-right">This Period</TableHead>
+                <TableHead className="text-right">Total Billed</TableHead>
+                <TableHead className="text-right">% Complete</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {lineItems.map((item) => {
+                const percentComplete =
+                  item.scheduled_value > 0
+                    ? ((item.total_billed / item.scheduled_value) * 100).toFixed(1)
+                    : '0';
+                return (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.description}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(item.scheduled_value)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(item.previous_billed)}</TableCell>
+                    <TableCell className="text-right font-medium">{formatCurrency(item.current_billed)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(item.total_billed)}</TableCell>
+                    <TableCell className="text-right">{percentComplete}%</TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+            <TableFooter>
+              <TableRow>
+                <TableCell colSpan={3} className="text-right font-medium">
+                  Subtotal
+                </TableCell>
+                <TableCell className="text-right font-bold">{formatCurrency(invoice.subtotal)}</TableCell>
+                <TableCell colSpan={2}></TableCell>
+              </TableRow>
+              <TableRow>
+                <TableCell colSpan={3} className="text-right font-medium">
+                  Retainage Withheld
+                </TableCell>
+                <TableCell className="text-right font-medium text-amber-600">
+                  -{formatCurrency(invoice.retainage_amount)}
+                </TableCell>
+                <TableCell colSpan={2}></TableCell>
+              </TableRow>
+              <TableRow className="bg-muted/50">
+                <TableCell colSpan={3} className="text-right font-bold">
+                  Total Due
+                </TableCell>
+                <TableCell className="text-right font-bold text-lg">{formatCurrency(invoice.total_amount)}</TableCell>
+                <TableCell colSpan={2}></TableCell>
+              </TableRow>
+            </TableFooter>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Notes */}
+      {invoice.notes && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Notes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{invoice.notes}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Rejection Dialog */}
+      <AlertDialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reject Invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              Please provide a reason for rejecting this invoice. This will be visible to the submitter.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+            placeholder="Enter rejection reason..."
+            rows={3}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleReject} className="bg-destructive text-destructive-foreground">
+              Reject Invoice
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
