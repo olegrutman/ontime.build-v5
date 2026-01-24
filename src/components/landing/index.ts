@@ -4,4 +4,5 @@ export { LogoMarquee } from './LogoMarquee';
 export { FeaturesSection } from './FeaturesSection';
 export { HowItWorksSection } from './HowItWorksSection';
 export { CTASection } from './CTASection';
+export { AuthSection } from './AuthSection';
 export { Footer } from './Footer';

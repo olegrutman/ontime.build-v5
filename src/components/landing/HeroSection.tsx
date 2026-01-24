@@ -1,10 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Play } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 export function HeroSection() {
-  const navigate = useNavigate();
-
   return (
     <section className="relative pt-32 pb-20 overflow-hidden">
       {/* Background grid pattern */}
@@ -58,11 +55,13 @@ export function HeroSection() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button 
               size="lg" 
-              onClick={() => navigate('/auth')}
+              asChild
               className="h-12 px-8 text-base shadow-purple hover:shadow-lg transition-all"
             >
-              Start free trial
-              <ArrowRight className="ml-2 w-4 h-4" />
+              <a href="#auth">
+                Start free trial
+                <ArrowRight className="ml-2 w-4 h-4" />
+              </a>
             </Button>
             <Button 
               size="lg" 
