@@ -84,6 +84,12 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
 
       if (error) throw error;
 
+      // Update SOV billing totals when invoice status affects billing
+      // (SUBMITTED, APPROVED, PAID affect the billed_to_date calculation)
+      if (['SUBMITTED', 'APPROVED', 'PAID', 'REJECTED', 'DRAFT'].includes(newStatus)) {
+        await supabase.rpc('update_sov_billing_totals', { p_project_id: projectId });
+      }
+
       // Log activity
       const activityDescriptions: Record<InvoiceStatus, string> = {
         DRAFT: `Invoice ${invoice.invoice_number} reverted to draft`,
