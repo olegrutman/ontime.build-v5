@@ -246,9 +246,21 @@ export default function CreateProjectNew() {
   const saveContracts = async (projectId: string) => {
     console.log('Saving contracts:', data.contracts);
     
+    // Fetch team members from database to get accurate data
+    const { data: dbTeamMembers, error: teamError } = await supabase
+      .from('project_team')
+      .select('id, role, trade, trade_custom, invited_org_name, org_id')
+      .eq('project_id', projectId);
+    
+    if (teamError) {
+      console.error('Error fetching team members:', teamError);
+      return;
+    }
+    
     for (const contract of data.contracts) {
       try {
-        const teamMember = data.team.find(t => t.id === contract.toTeamMemberId);
+        // Find the team member by ID (toTeamMemberId now references project_team.id)
+        const teamMember = dbTeamMembers?.find(t => t.id === contract.toTeamMemberId);
         if (!teamMember) {
           console.warn('No team member found for contract:', contract.toTeamMemberId);
           continue;
@@ -259,7 +271,7 @@ export default function CreateProjectNew() {
           continue;
         }
 
-        console.log('Saving contract for:', teamMember.companyName, teamMember.role, 'sum:', contract.contractSum);
+        console.log('Saving contract for:', teamMember.invited_org_name, teamMember.role, 'sum:', contract.contractSum);
 
         const { error } = await supabase.from('project_contracts').insert({
           project_id: projectId,
@@ -267,6 +279,8 @@ export default function CreateProjectNew() {
           from_role: creatorRole,
           to_role: teamMember.role,
           trade: teamMember.trade,
+          to_project_team_id: teamMember.id,
+          to_org_id: teamMember.org_id,
           contract_sum: contract.contractSum,
           retainage_percent: contract.retainagePercent,
           allow_mobilization_line_item: contract.allowMobilization,
@@ -348,7 +362,7 @@ export default function CreateProjectNew() {
       case 2:
         return <ScopeStep projectType={data.basics.projectType} scope={data.scope} onChange={updateScope} />;
       case 3:
-        return <ContractsStep team={data.team} contracts={data.contracts} onChange={updateContracts} creatorRole={creatorRole} />;
+        return <ContractsStep projectId={data.projectId} contracts={data.contracts} onChange={updateContracts} creatorRole={creatorRole} />;
       case 4:
         return <ReviewStepNew data={data} creatorRole={creatorRole} />;
       default:

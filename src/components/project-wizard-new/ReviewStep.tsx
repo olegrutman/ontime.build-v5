@@ -1,8 +1,22 @@
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Check, MapPin, Users, FileText, DollarSign, ArrowUp, ArrowDown } from 'lucide-react';
-import { NewProjectWizardData, TeamRole } from '@/types/projectWizard';
+import { NewProjectWizardData, TeamRole, ProjectContract } from '@/types/projectWizard';
+import { supabase } from '@/integrations/supabase/client';
+
+interface ProjectTeamMember {
+  id: string;
+  org_id: string | null;
+  role: string;
+  trade: string | null;
+  trade_custom: string | null;
+  invited_org_name: string | null;
+  invited_email: string | null;
+  status: string;
+}
 
 interface ReviewStepProps {
   data: NewProjectWizardData;
@@ -10,6 +24,34 @@ interface ReviewStepProps {
 }
 
 export function ReviewStepNew({ data, creatorRole = 'General Contractor' }: ReviewStepProps) {
+  const [teamMembers, setTeamMembers] = useState<ProjectTeamMember[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // Fetch team members from database
+  const fetchTeamMembers = useCallback(async () => {
+    if (!data.projectId) return;
+    
+    setLoading(true);
+    try {
+      const { data: dbData, error } = await supabase
+        .from('project_team')
+        .select('id, org_id, role, trade, trade_custom, invited_org_name, invited_email, status')
+        .eq('project_id', data.projectId)
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      setTeamMembers(dbData || []);
+    } catch (error) {
+      console.error('Error fetching team members:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [data.projectId]);
+
+  useEffect(() => {
+    fetchTeamMembers();
+  }, [fetchTeamMembers]);
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -18,13 +60,17 @@ export function ReviewStepNew({ data, creatorRole = 'General Contractor' }: Revi
     }).format(value);
   };
 
+  const getTradeDisplay = (member: ProjectTeamMember) => {
+    return member.trade === 'Other' ? member.trade_custom : member.trade;
+  };
+
   // Separate upstream (GC) and downstream (FC/TC) contracts for TC creators
-  const upstreamGC = data.team.find(m => m.role === 'General Contractor');
+  const upstreamGC = teamMembers.find(m => m.role === 'General Contractor');
   const upstreamContract = upstreamGC 
     ? data.contracts.find(c => c.toTeamMemberId === upstreamGC.id)
     : null;
 
-  const downstreamMembers = data.team.filter(m => 
+  const downstreamMembers = teamMembers.filter(m => 
     m.role === 'Field Crew' || m.role === 'Trade Contractor' || m.role === 'Supplier'
   );
   const downstreamContracts = data.contracts.filter(c => 
@@ -82,25 +128,36 @@ export function ReviewStepNew({ data, creatorRole = 'General Contractor' }: Revi
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Project Team ({data.team.length})
+            Project Team ({teamMembers.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {data.team.length > 0 ? (
+          {loading ? (
             <div className="space-y-2">
-              {data.team.map((member) => (
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : teamMembers.length > 0 ? (
+            <div className="space-y-2">
+              {teamMembers.map((member) => (
                 <div key={member.id} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
                   <div>
-                    <p className="font-medium">{member.companyName}</p>
-                    <p className="text-muted-foreground">{member.contactEmail}</p>
+                    <p className="font-medium">{member.invited_org_name || 'Unknown Company'}</p>
+                    <p className="text-muted-foreground">{member.invited_email}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant="secondary">{member.role}</Badge>
                     {member.trade && (
-                      <Badge variant="outline">{member.trade}</Badge>
+                      <Badge variant="outline">{getTradeDisplay(member)}</Badge>
                     )}
-                    <Badge variant="outline" className="text-yellow-600 border-yellow-600">
-                      Invited
+                    <Badge 
+                      variant="outline" 
+                      className={member.status === 'Accepted' 
+                        ? 'text-green-600 border-green-600' 
+                        : 'text-yellow-600 border-yellow-600'
+                      }
+                    >
+                      {member.status}
                     </Badge>
                   </div>
                 </div>
@@ -182,13 +239,13 @@ export function ReviewStepNew({ data, creatorRole = 'General Contractor' }: Revi
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <ArrowUp className="h-4 w-4 text-blue-600" />
-              <span>Your Contract with GC</span>
+              <span>Your Contract with General Contractor</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between text-sm py-2">
               <div>
-                <p className="font-medium">{upstreamGC.companyName}</p>
+                <p className="font-medium">{upstreamGC.invited_org_name}</p>
                 <p className="text-muted-foreground">General Contractor</p>
               </div>
               <div className="text-right">
@@ -208,18 +265,18 @@ export function ReviewStepNew({ data, creatorRole = 'General Contractor' }: Revi
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <ArrowDown className="h-4 w-4 text-green-600" />
-              <span>Your Contracts with Crew/Suppliers ({downstreamContracts.length})</span>
+              <span>Your Contracts with Field Crew ({downstreamContracts.length})</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
               {downstreamContracts.map((contract) => {
-                const member = data.team.find(t => t.id === contract.toTeamMemberId);
+                const member = teamMembers.find(t => t.id === contract.toTeamMemberId);
                 if (!member) return null;
                 return (
                   <div key={contract.toTeamMemberId} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
                     <div>
-                      <p className="font-medium">{member.companyName}</p>
+                      <p className="font-medium">{member.invited_org_name}</p>
                       <p className="text-muted-foreground">{member.role}</p>
                     </div>
                     <div className="text-right">
@@ -247,27 +304,33 @@ export function ReviewStepNew({ data, creatorRole = 'General Contractor' }: Revi
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {data.contracts.map((contract) => {
-                const member = data.team.find(t => t.id === contract.toTeamMemberId);
-                if (!member) return null;
-                return (
-                  <div key={contract.toTeamMemberId} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
-                    <div>
-                      <p className="font-medium">{member.companyName}</p>
-                      <p className="text-muted-foreground">{member.role}</p>
+            {loading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {data.contracts.map((contract) => {
+                  const member = teamMembers.find(t => t.id === contract.toTeamMemberId);
+                  if (!member) return null;
+                  return (
+                    <div key={contract.toTeamMemberId} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
+                      <div>
+                        <p className="font-medium">{member.invited_org_name}</p>
+                        <p className="text-muted-foreground">{member.role}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">{formatCurrency(contract.contractSum)}</p>
+                        <p className="text-muted-foreground text-xs">
+                          {contract.retainagePercent}% retainage
+                          {contract.allowMobilization && ' • Mobilization'}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-medium">{formatCurrency(contract.contractSum)}</p>
-                      <p className="text-muted-foreground text-xs">
-                        {contract.retainagePercent}% retainage
-                        {contract.allowMobilization && ' • Mobilization'}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
