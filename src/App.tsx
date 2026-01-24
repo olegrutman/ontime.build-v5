@@ -25,6 +25,7 @@ import ChangeOrders from "./pages/ChangeOrders";
 import WorkItems from "./pages/WorkItems";
 import SOVDashboard from "./pages/SOVDashboard";
 import { WorkItemPage } from "@/components/work-item";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ const App = () => (
             <Route path="/work-items" element={<WorkItems />} />
             <Route path="/sov" element={<SOVDashboard />} />
             <Route path="/work-item/:id" element={<WorkItemPage />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
