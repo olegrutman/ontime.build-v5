@@ -69,7 +69,7 @@ export default function EditProject() {
   const [newAllowMobilization, setNewAllowMobilization] = useState<boolean>(false);
   
   // Contract editing state
-  const [editingContracts, setEditingContracts] = useState<Record<string, Partial<ExistingContract>>>();
+  const [editingContracts, setEditingContracts] = useState<Record<string, Partial<ExistingContract>>>({});
 
   const currentOrg = userOrgRoles[0]?.organization;
   const creatorRole = currentOrg?.type === 'GC' ? 'General Contractor' : 
