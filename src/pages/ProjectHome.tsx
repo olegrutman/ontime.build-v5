@@ -25,6 +25,7 @@ import {
   ProjectFinancialsSection 
 } from '@/components/project';
 import { AppLayout } from '@/components/layout';
+import { InvoicesTab } from '@/components/invoices';
 
 interface Project {
   id: string;
@@ -295,16 +296,10 @@ export default function ProjectHome() {
 
           {/* Invoices Tab */}
           <TabsContent value="invoices">
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Receipt className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-medium mb-2">Invoices</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                View and manage project invoices.
-              </p>
-              <Button variant="outline" disabled>
-                Coming Soon
-              </Button>
-            </div>
+            <InvoicesTab 
+              projectId={id!} 
+              retainagePercent={project.retainage_percent || 0} 
+            />
           </TabsContent>
 
           {/* Team Tab */}
