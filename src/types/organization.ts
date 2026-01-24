@@ -63,7 +63,7 @@ export const ROLE_LABELS: Record<AppRole, string> = {
 export const ORG_TYPE_LABELS: Record<OrgType, string> = {
   GC: 'General Contractor',
   TC: 'Trade Contractor',
-  FC: 'Finishing Contractor',
+  FC: 'Field Crew',
   SUPPLIER: 'Supplier',
 };
 
