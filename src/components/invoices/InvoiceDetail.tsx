@@ -252,6 +252,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
                 <TableHead className="text-right">Previously Billed</TableHead>
                 <TableHead className="text-right">This Period</TableHead>
                 <TableHead className="text-right">Total Billed</TableHead>
+                <TableHead className="text-right">Remaining</TableHead>
                 <TableHead className="text-right">% Complete</TableHead>
               </TableRow>
             </TableHeader>
@@ -261,14 +262,23 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
                   item.scheduled_value > 0
                     ? ((item.total_billed / item.scheduled_value) * 100).toFixed(1)
                     : '0';
+                const remaining = item.scheduled_value - item.total_billed;
+                const isOverbilled = remaining < 0;
+
                 return (
-                  <TableRow key={item.id}>
+                  <TableRow key={item.id} className={isOverbilled ? 'bg-red-50 dark:bg-red-900/10' : ''}>
                     <TableCell className="font-medium">{item.description}</TableCell>
                     <TableCell className="text-right">{formatCurrency(item.scheduled_value)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(item.previous_billed)}</TableCell>
                     <TableCell className="text-right font-medium">{formatCurrency(item.current_billed)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(item.total_billed)}</TableCell>
-                    <TableCell className="text-right">{percentComplete}%</TableCell>
+                    <TableCell className={`text-right font-medium ${isOverbilled ? 'text-red-600 dark:text-red-400' : ''}`}>
+                      {formatCurrency(remaining)}
+                      {isOverbilled && ' ⚠'}
+                    </TableCell>
+                    <TableCell className={`text-right ${parseFloat(percentComplete) > 100 ? 'text-red-600 dark:text-red-400 font-medium' : ''}`}>
+                      {percentComplete}%
+                    </TableCell>
                   </TableRow>
                 );
               })}
@@ -279,7 +289,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
                   Subtotal
                 </TableCell>
                 <TableCell className="text-right font-bold">{formatCurrency(invoice.subtotal)}</TableCell>
-                <TableCell colSpan={2}></TableCell>
+                <TableCell colSpan={3}></TableCell>
               </TableRow>
               <TableRow>
                 <TableCell colSpan={3} className="text-right font-medium">
@@ -288,14 +298,14 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
                 <TableCell className="text-right font-medium text-amber-600">
                   -{formatCurrency(invoice.retainage_amount)}
                 </TableCell>
-                <TableCell colSpan={2}></TableCell>
+                <TableCell colSpan={3}></TableCell>
               </TableRow>
               <TableRow className="bg-muted/50">
                 <TableCell colSpan={3} className="text-right font-bold">
                   Total Due
                 </TableCell>
                 <TableCell className="text-right font-bold text-lg">{formatCurrency(invoice.total_amount)}</TableCell>
-                <TableCell colSpan={2}></TableCell>
+                <TableCell colSpan={3}></TableCell>
               </TableRow>
             </TableFooter>
           </Table>
