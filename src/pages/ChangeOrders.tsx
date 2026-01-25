@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useChangeWork } from '@/hooks/useChangeWork';
 import { useAuth } from '@/hooks/useAuth';
 import { AppLayout } from '@/components/layout';
@@ -12,6 +13,7 @@ import { Plus, FileEdit } from 'lucide-react';
 import { WorkItemState } from '@/types/workItem';
 
 const ChangeOrders = () => {
+  const navigate = useNavigate();
   const { user, userOrgRoles, currentRole } = useAuth();
   const {
     changeWorks,
@@ -144,7 +146,7 @@ const ChangeOrders = () => {
                   <ChangeWorkCard
                     key={changeWork.id}
                     changeWork={changeWork}
-                    onClick={() => setSelectedId(changeWork.id)}
+                    onClick={() => navigate(`/change-order/${changeWork.id}`)}
                     isSelected={selectedId === changeWork.id}
                   />
                 ))}

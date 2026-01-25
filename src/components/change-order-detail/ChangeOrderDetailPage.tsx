@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { useChangeOrder } from '@/hooks/useChangeOrderProject';
+import { useChangeOrder, useChangeOrderProject } from '@/hooks/useChangeOrderProject';
 import { useAuth } from '@/hooks/useAuth';
 import { AppLayout } from '@/components/layout';
 import { Card, CardContent } from '@/components/ui/card';
@@ -38,6 +38,9 @@ export function ChangeOrderDetailPage() {
     addEquipment,
     isLockingFCHours,
   } = useChangeOrder(id || null);
+
+  // Get updateStatus from useChangeOrderProject
+  const { updateStatus, isUpdating } = useChangeOrderProject(changeOrder?.project_id);
 
   const isGC = currentRole === 'GC_PM';
   const isTC = currentRole === 'TC_PM';
@@ -155,9 +158,8 @@ export function ChangeOrderDetailPage() {
                 changeOrder={changeOrder}
                 isGC={isGC}
                 isReadyForApproval={isReadyForApproval}
-                onUpdateStatus={({ id, status, rejection_notes }) => {
-                  // This would call the updateStatus from hook
-                }}
+                onUpdateStatus={updateStatus}
+                isUpdating={isUpdating}
               />
             )}
           </div>
