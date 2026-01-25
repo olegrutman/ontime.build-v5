@@ -43,10 +43,21 @@ const ChangeOrders = () => {
 
   const canCreate = currentRole === 'GC_PM' || currentRole === 'TC_PM';
 
-  // Handle URL params for project selection and auto-open wizard
+  // Valid status values for filtering
+  const validStatuses: ChangeOrderStatus[] = [
+    'draft', 'fc_input', 'tc_pricing', 'ready_for_approval', 'approved', 'rejected', 'contracted'
+  ];
+
+  // Handle URL params for project selection, status filter, and auto-open wizard
   useEffect(() => {
     const projectParam = searchParams.get('project');
+    const statusParam = searchParams.get('status');
     const newParam = searchParams.get('new');
+    
+    // Handle status filter from URL
+    if (statusParam && validStatuses.includes(statusParam as ChangeOrderStatus)) {
+      setActiveTab(statusParam as ChangeOrderStatus);
+    }
     
     if (projectParam && projects.length > 0) {
       const matchingProject = projects.find(p => p.id === projectParam);
