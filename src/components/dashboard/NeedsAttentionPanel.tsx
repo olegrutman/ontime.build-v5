@@ -3,7 +3,7 @@ import { AlertCircle, FileText, ClipboardList, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
-interface AttentionItem {
+export interface AttentionItem {
   id: string;
   type: 'change_order' | 'invoice' | 'invite';
   title: string;
