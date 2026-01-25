@@ -1,4 +1,4 @@
-import { Plus, FileText, ClipboardCheck, Briefcase, Archive } from 'lucide-react';
+import { Plus, FileText, ClipboardCheck, Briefcase, Archive, FileEdit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
@@ -14,6 +14,10 @@ export function QuickActions({ onViewArchived }: QuickActionsProps) {
       <Button onClick={() => navigate('/create-project')} size="sm">
         <Plus className="h-4 w-4 mr-2" />
         New Project
+      </Button>
+      <Button variant="outline" size="sm" onClick={() => navigate('/change-orders')}>
+        <FileEdit className="h-4 w-4 mr-2" />
+        New Change Order
       </Button>
       <Button variant="outline" size="sm" onClick={() => navigate('/invoices')}>
         <FileText className="h-4 w-4 mr-2" />
