@@ -64,6 +64,412 @@ export type Database = {
           },
         ]
       }
+      change_order_checklist: {
+        Row: {
+          change_order_id: string
+          equipment_priced: boolean | null
+          fc_hours_locked: boolean | null
+          id: string
+          location_complete: boolean | null
+          materials_priced: boolean | null
+          scope_complete: boolean | null
+          tc_pricing_complete: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          change_order_id: string
+          equipment_priced?: boolean | null
+          fc_hours_locked?: boolean | null
+          id?: string
+          location_complete?: boolean | null
+          materials_priced?: boolean | null
+          scope_complete?: boolean | null
+          tc_pricing_complete?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          change_order_id?: string
+          equipment_priced?: boolean | null
+          fc_hours_locked?: boolean | null
+          id?: string
+          location_complete?: boolean | null
+          materials_priced?: boolean | null
+          scope_complete?: boolean | null
+          tc_pricing_complete?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_order_checklist_change_order_id_fkey"
+            columns: ["change_order_id"]
+            isOneToOne: true
+            referencedRelation: "change_order_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      change_order_equipment: {
+        Row: {
+          change_order_id: string
+          created_at: string
+          daily_rate: number | null
+          days: number | null
+          description: string
+          flat_cost: number | null
+          id: string
+          notes: string | null
+          pricing_type: string | null
+          sort_order: number | null
+          total_cost: number | null
+          updated_at: string
+        }
+        Insert: {
+          change_order_id: string
+          created_at?: string
+          daily_rate?: number | null
+          days?: number | null
+          description: string
+          flat_cost?: number | null
+          id?: string
+          notes?: string | null
+          pricing_type?: string | null
+          sort_order?: number | null
+          total_cost?: number | null
+          updated_at?: string
+        }
+        Update: {
+          change_order_id?: string
+          created_at?: string
+          daily_rate?: number | null
+          days?: number | null
+          description?: string
+          flat_cost?: number | null
+          id?: string
+          notes?: string | null
+          pricing_type?: string | null
+          sort_order?: number | null
+          total_cost?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_order_equipment_change_order_id_fkey"
+            columns: ["change_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_order_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      change_order_fc_hours: {
+        Row: {
+          change_order_id: string
+          created_at: string
+          description: string | null
+          entered_by: string | null
+          hourly_rate: number | null
+          hours: number
+          id: string
+          is_locked: boolean | null
+          labor_total: number | null
+          locked_at: string | null
+          locked_by: string | null
+          unlock_requested: boolean | null
+          unlock_requested_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          change_order_id: string
+          created_at?: string
+          description?: string | null
+          entered_by?: string | null
+          hourly_rate?: number | null
+          hours?: number
+          id?: string
+          is_locked?: boolean | null
+          labor_total?: number | null
+          locked_at?: string | null
+          locked_by?: string | null
+          unlock_requested?: boolean | null
+          unlock_requested_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          change_order_id?: string
+          created_at?: string
+          description?: string | null
+          entered_by?: string | null
+          hourly_rate?: number | null
+          hours?: number
+          id?: string
+          is_locked?: boolean | null
+          labor_total?: number | null
+          locked_at?: string | null
+          locked_by?: string | null
+          unlock_requested?: boolean | null
+          unlock_requested_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_order_fc_hours_change_order_id_fkey"
+            columns: ["change_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_order_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      change_order_materials: {
+        Row: {
+          change_order_id: string
+          created_at: string
+          description: string
+          final_price: number | null
+          id: string
+          line_total: number | null
+          markup_percent: number | null
+          notes: string | null
+          quantity: number
+          sent_to_supplier: boolean | null
+          sort_order: number | null
+          supplier_id: string | null
+          supplier_locked: boolean | null
+          supplier_locked_at: string | null
+          supplier_price: number | null
+          supplier_priced: boolean | null
+          unit_cost: number | null
+          uom: string | null
+          updated_at: string
+        }
+        Insert: {
+          change_order_id: string
+          created_at?: string
+          description: string
+          final_price?: number | null
+          id?: string
+          line_total?: number | null
+          markup_percent?: number | null
+          notes?: string | null
+          quantity?: number
+          sent_to_supplier?: boolean | null
+          sort_order?: number | null
+          supplier_id?: string | null
+          supplier_locked?: boolean | null
+          supplier_locked_at?: string | null
+          supplier_price?: number | null
+          supplier_priced?: boolean | null
+          unit_cost?: number | null
+          uom?: string | null
+          updated_at?: string
+        }
+        Update: {
+          change_order_id?: string
+          created_at?: string
+          description?: string
+          final_price?: number | null
+          id?: string
+          line_total?: number | null
+          markup_percent?: number | null
+          notes?: string | null
+          quantity?: number
+          sent_to_supplier?: boolean | null
+          sort_order?: number | null
+          supplier_id?: string | null
+          supplier_locked?: boolean | null
+          supplier_locked_at?: string | null
+          supplier_price?: number | null
+          supplier_priced?: boolean | null
+          unit_cost?: number | null
+          uom?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_order_materials_change_order_id_fkey"
+            columns: ["change_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_order_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_order_materials_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      change_order_participants: {
+        Row: {
+          accepted_at: string | null
+          change_order_id: string
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          is_active: boolean | null
+          organization_id: string
+          role: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          change_order_id: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          is_active?: boolean | null
+          organization_id: string
+          role: string
+        }
+        Update: {
+          accepted_at?: string | null
+          change_order_id?: string
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          is_active?: boolean | null
+          organization_id?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_order_participants_change_order_id_fkey"
+            columns: ["change_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_order_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_order_participants_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      change_order_projects: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          created_by_role: string | null
+          description: string | null
+          equipment_cost_responsibility: string | null
+          equipment_total: number | null
+          final_price: number | null
+          id: string
+          labor_total: number | null
+          location_data: Json | null
+          material_cost_responsibility: string | null
+          material_total: number | null
+          project_id: string
+          rejection_notes: string | null
+          requires_equipment: boolean | null
+          requires_materials: boolean | null
+          status: string
+          title: string
+          updated_at: string
+          work_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          created_by_role?: string | null
+          description?: string | null
+          equipment_cost_responsibility?: string | null
+          equipment_total?: number | null
+          final_price?: number | null
+          id?: string
+          labor_total?: number | null
+          location_data?: Json | null
+          material_cost_responsibility?: string | null
+          material_total?: number | null
+          project_id: string
+          rejection_notes?: string | null
+          requires_equipment?: boolean | null
+          requires_materials?: boolean | null
+          status?: string
+          title: string
+          updated_at?: string
+          work_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          created_by_role?: string | null
+          description?: string | null
+          equipment_cost_responsibility?: string | null
+          equipment_total?: number | null
+          final_price?: number | null
+          id?: string
+          labor_total?: number | null
+          location_data?: Json | null
+          material_cost_responsibility?: string | null
+          material_total?: number | null
+          project_id?: string
+          rejection_notes?: string | null
+          requires_equipment?: boolean | null
+          requires_materials?: boolean | null
+          status?: string
+          title?: string
+          updated_at?: string
+          work_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_order_projects_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      change_order_tc_labor: {
+        Row: {
+          change_order_id: string
+          created_at: string
+          description: string | null
+          entered_by: string | null
+          hourly_rate: number | null
+          hours: number
+          id: string
+          labor_total: number | null
+          updated_at: string
+        }
+        Insert: {
+          change_order_id: string
+          created_at?: string
+          description?: string | null
+          entered_by?: string | null
+          hourly_rate?: number | null
+          hours?: number
+          id?: string
+          labor_total?: number | null
+          updated_at?: string
+        }
+        Update: {
+          change_order_id?: string
+          created_at?: string
+          description?: string | null
+          entered_by?: string | null
+          hourly_rate?: number | null
+          hours?: number
+          id?: string
+          labor_total?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_order_tc_labor_change_order_id_fkey"
+            columns: ["change_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_order_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       change_work_pricing: {
         Row: {
           created_at: string
