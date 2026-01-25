@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useChangeOrderProject } from '@/hooks/useChangeOrderProject';
 import { AppLayout } from '@/components/layout';
@@ -25,6 +25,7 @@ interface Project {
 
 const ChangeOrders = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, userOrgRoles, currentRole } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -41,6 +42,27 @@ const ChangeOrders = () => {
   } = useChangeOrderProject(selectedProjectId || undefined);
 
   const canCreate = currentRole === 'GC_PM' || currentRole === 'TC_PM';
+
+  // Handle URL params for project selection and auto-open wizard
+  useEffect(() => {
+    const projectParam = searchParams.get('project');
+    const newParam = searchParams.get('new');
+    
+    if (projectParam && projects.length > 0) {
+      const matchingProject = projects.find(p => p.id === projectParam);
+      if (matchingProject) {
+        setSelectedProjectId(projectParam);
+        
+        // Auto-open wizard if new=true
+        if (newParam === 'true') {
+          setShowWizard(true);
+          // Clear the 'new' param to prevent re-opening on refresh
+          searchParams.delete('new');
+          setSearchParams(searchParams, { replace: true });
+        }
+      }
+    }
+  }, [searchParams, projects, setSearchParams]);
 
   // Fetch projects user has access to
   useEffect(() => {
