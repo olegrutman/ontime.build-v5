@@ -80,8 +80,8 @@ const ChangeOrders = () => {
     const fetchProjects = async () => {
       if (!user) return;
 
-      const currentOrg = userOrgRoles[0];
-      if (!currentOrg) return;
+      const currentOrg = userOrgRoles[0]?.organization;
+      if (!currentOrg?.id) return;
 
       // Fetch owned projects
       const { data: ownedProjects } = await supabase
@@ -93,7 +93,7 @@ const ChangeOrders = () => {
       const { data: teamMemberships } = await supabase
         .from('project_team')
         .select('project_id')
-        .eq('org_id', currentOrg.id);
+        .eq('org_id', currentOrg.id!);
 
       const teamProjectIds = (teamMemberships || [])
         .map((t) => t.project_id)
