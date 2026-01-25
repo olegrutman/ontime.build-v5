@@ -22,6 +22,7 @@ interface ApprovalPanelProps {
   isGC: boolean;
   isReadyForApproval: boolean;
   onUpdateStatus: (data: { id: string; status: ChangeOrderStatus; rejection_notes?: string }) => void;
+  isUpdating?: boolean;
 }
 
 export function ApprovalPanel({
@@ -29,6 +30,7 @@ export function ApprovalPanel({
   isGC,
   isReadyForApproval,
   onUpdateStatus,
+  isUpdating,
 }: ApprovalPanelProps) {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionNotes, setRejectionNotes] = useState('');
@@ -136,6 +138,7 @@ export function ApprovalPanel({
                 variant="outline"
                 className="flex-1 text-red-600 hover:text-red-700 hover:bg-red-50"
                 onClick={() => setShowRejectDialog(true)}
+                disabled={isUpdating}
               >
                 <X className="w-4 h-4 mr-2" />
                 Reject
@@ -143,6 +146,7 @@ export function ApprovalPanel({
               <Button
                 className="flex-1 bg-green-600 hover:bg-green-700"
                 onClick={() => setShowApproveDialog(true)}
+                disabled={isUpdating}
               >
                 <Check className="w-4 h-4 mr-2" />
                 Approve
