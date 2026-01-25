@@ -253,17 +253,24 @@ export default function ProjectHome() {
             <ContractSOVEditor projectId={id!} />
           </TabsContent>
 
-          {/* CORs Tab */}
+          {/* CORs Tab - Change Order Requests (new mini-project system) */}
           <TabsContent value="cors">
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <ClipboardList className="h-12 w-12 text-muted-foreground/50 mb-4" />
               <h3 className="text-lg font-medium mb-2">Change Order Requests</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                View change order requests pending pricing or approval.
+                Create and manage change orders as mini-projects with full workflow.
               </p>
-              <Button asChild>
-                <Link to={`/change-orders?project=${id}`}>View Change Order Requests</Link>
-              </Button>
+              <div className="flex gap-3">
+                <Button asChild variant="outline">
+                  <Link to={`/change-orders?project=${id}`}>View All</Link>
+                </Button>
+                <Button asChild>
+                  <Link to={`/change-orders?project=${id}&new=true`}>
+                    New Change Order
+                  </Link>
+                </Button>
+              </div>
             </div>
           </TabsContent>
 

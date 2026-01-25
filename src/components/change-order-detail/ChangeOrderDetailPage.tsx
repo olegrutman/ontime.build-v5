@@ -14,6 +14,7 @@ import { TCPricingPanel } from './TCPricingPanel';
 import { MaterialsPanel } from './MaterialsPanel';
 import { EquipmentPanel } from './EquipmentPanel';
 import { ApprovalPanel } from './ApprovalPanel';
+import { ParticipantActivationPanel } from './ParticipantActivationPanel';
 
 export function ChangeOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -146,6 +147,20 @@ export function ChangeOrderDetailPage() {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Participant Activation - TC only */}
+            {isTC && (
+              <ParticipantActivationPanel
+                changeOrderId={changeOrder.id}
+                participants={participants}
+                availableFieldCrews={[]} // TODO: Fetch from project participants
+                availableSuppliers={[]} // TODO: Fetch from project participants
+                isTC={isTC}
+                onActivateFC={async () => {}}
+                onActivateSupplier={async () => {}}
+                onDeactivate={async () => {}}
+              />
+            )}
+
             <ChangeOrderChecklist
               checklist={checklist}
               requiresMaterials={changeOrder.requires_materials}

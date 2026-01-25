@@ -8,3 +8,4 @@ export { TCPricingPanel } from './TCPricingPanel';
 export { MaterialsPanel } from './MaterialsPanel';
 export { EquipmentPanel } from './EquipmentPanel';
 export { ApprovalPanel } from './ApprovalPanel';
+export { ParticipantActivationPanel } from './ParticipantActivationPanel';
