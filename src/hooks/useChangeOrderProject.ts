@@ -204,7 +204,7 @@ export function useChangeOrder(changeOrderId: string | null) {
     enabled: !!changeOrderId,
   });
 
-  // Fetch FC hours (private - only TC and FC can see)
+  // Fetch FC hours (private - only TC, FC, and FS can see)
   const { data: fcHours = [] } = useQuery({
     queryKey: ['change-order-fc-hours', changeOrderId],
     queryFn: async () => {
@@ -218,7 +218,7 @@ export function useChangeOrder(changeOrderId: string | null) {
       if (error) throw error;
       return data as ChangeOrderFCHours[];
     },
-    enabled: !!changeOrderId && (currentRole === 'TC_PM' || currentRole === 'FS'),
+    enabled: !!changeOrderId && (currentRole === 'TC_PM' || currentRole === 'FC_PM' || currentRole === 'FS'),
   });
 
   // Fetch TC labor
