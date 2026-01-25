@@ -5,10 +5,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@/components/ui/dialog';
-import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, ArrowRight, Check, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Loader2, MapPin, Type, Wrench, FileText, Package, Truck } from 'lucide-react';
 import { LocationStep } from './LocationStep';
 import { TitleStep } from './TitleStep';
 import { WorkTypeStep } from './WorkTypeStep';
@@ -21,6 +19,7 @@ import {
   ChangeOrderWorkType,
   CostResponsibility,
 } from '@/types/changeOrderProject';
+import { cn } from '@/lib/utils';
 
 interface ChangeOrderWizardDialogProps {
   open: boolean;
@@ -32,12 +31,12 @@ interface ChangeOrderWizardDialogProps {
 }
 
 const STEPS = [
-  { id: 'location', label: 'Location' },
-  { id: 'title', label: 'Title' },
-  { id: 'work_type', label: 'Work Type' },
-  { id: 'description', label: 'Description' },
-  { id: 'materials', label: 'Materials' },
-  { id: 'equipment', label: 'Equipment' },
+  { id: 'location', label: 'Location', icon: MapPin },
+  { id: 'title', label: 'Title', icon: Type },
+  { id: 'work_type', label: 'Work Type', icon: Wrench },
+  { id: 'description', label: 'Description', icon: FileText },
+  { id: 'materials', label: 'Materials', icon: Package },
+  { id: 'equipment', label: 'Equipment', icon: Truck },
 ];
 
 const initialData: ChangeOrderWizardData = {
@@ -61,8 +60,6 @@ export function ChangeOrderWizardDialog({
 }: ChangeOrderWizardDialogProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<ChangeOrderWizardData>(initialData);
-
-  const progress = ((currentStep + 1) / STEPS.length) * 100;
 
   const handleNext = () => {
     if (currentStep < STEPS.length - 1) {
@@ -172,58 +169,131 @@ export function ChangeOrderWizardDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create Change Order</DialogTitle>
-          <p className="text-sm text-muted-foreground">Project: {projectName}</p>
-        </DialogHeader>
-
-        {/* Progress */}
-        <div className="space-y-2 py-2">
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>
-              Step {currentStep + 1} of {STEPS.length}
-            </span>
-            <span>{STEPS[currentStep].label}</span>
+      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden p-0">
+        <div className="flex h-full">
+          {/* Left sidebar with step indicators */}
+          <div className="hidden sm:block w-48 bg-muted/30 border-r p-4">
+            <DialogHeader className="mb-6">
+              <DialogTitle className="text-sm font-medium text-muted-foreground">
+                New Change Order
+              </DialogTitle>
+              <p className="text-xs text-muted-foreground truncate" title={projectName}>
+                {projectName}
+              </p>
+            </DialogHeader>
+            
+            <nav className="space-y-1">
+              {STEPS.map((step, index) => {
+                const Icon = step.icon;
+                const isActive = index === currentStep;
+                const isComplete = index < currentStep;
+                
+                return (
+                  <button
+                    key={step.id}
+                    type="button"
+                    onClick={() => index < currentStep && setCurrentStep(index)}
+                    disabled={index > currentStep}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-3 py-2 rounded-md text-left text-sm transition-colors",
+                      isActive && "bg-primary text-primary-foreground",
+                      isComplete && "text-primary hover:bg-primary/10 cursor-pointer",
+                      !isActive && !isComplete && "text-muted-foreground cursor-not-allowed"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-5 h-5 rounded-full flex items-center justify-center text-xs",
+                      isComplete && "bg-primary text-primary-foreground"
+                    )}>
+                      {isComplete ? (
+                        <Check className="w-3 h-3" />
+                      ) : (
+                        <Icon className="w-3 h-3" />
+                      )}
+                    </div>
+                    <span className="truncate">{step.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
           </div>
-          <Progress value={progress} className="h-2" />
-        </div>
 
-        {/* Step Content */}
-        <div className="min-h-[300px] py-4">{renderStep()}</div>
+          {/* Main content area */}
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Mobile header */}
+            <div className="sm:hidden p-4 border-b">
+              <DialogHeader>
+                <DialogTitle className="text-base">
+                  {STEPS[currentStep].label}
+                </DialogTitle>
+                <p className="text-xs text-muted-foreground">
+                  Step {currentStep + 1} of {STEPS.length} • {projectName}
+                </p>
+              </DialogHeader>
+            </div>
 
-        <DialogFooter className="flex justify-between sm:justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleBack}
-            disabled={currentStep === 0 || isSubmitting}
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
+            {/* Step content */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {renderStep()}
+            </div>
 
-          {isLastStep ? (
-            <Button onClick={handleSubmit} disabled={!canProceed() || isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Creating...
-                </>
+            {/* Footer with navigation */}
+            <div className="flex items-center justify-between p-4 border-t bg-background">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleBack}
+                disabled={currentStep === 0 || isSubmitting}
+              >
+                <ArrowLeft className="w-4 h-4 mr-1" />
+                Back
+              </Button>
+
+              <div className="flex items-center gap-1 sm:hidden">
+                {STEPS.map((_, index) => (
+                  <div
+                    key={index}
+                    className={cn(
+                      "w-2 h-2 rounded-full transition-colors",
+                      index === currentStep ? "bg-primary" : 
+                      index < currentStep ? "bg-primary/50" : "bg-muted"
+                    )}
+                  />
+                ))}
+              </div>
+
+              {isLastStep ? (
+                <Button 
+                  size="sm"
+                  onClick={handleSubmit} 
+                  disabled={!canProceed() || isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 mr-1" />
+                      Create
+                    </>
+                  )}
+                </Button>
               ) : (
-                <>
-                  <Check className="w-4 h-4 mr-2" />
-                  Create Change Order
-                </>
+                <Button 
+                  size="sm"
+                  onClick={handleNext} 
+                  disabled={!canProceed()}
+                >
+                  Next
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
               )}
-            </Button>
-          ) : (
-            <Button onClick={handleNext} disabled={!canProceed()}>
-              Next
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          )}
-        </DialogFooter>
+            </div>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
