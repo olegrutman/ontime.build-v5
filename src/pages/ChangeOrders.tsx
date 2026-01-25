@@ -1,56 +1,141 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useChangeWork } from '@/hooks/useChangeWork';
 import { useAuth } from '@/hooks/useAuth';
+import { useChangeOrderProject } from '@/hooks/useChangeOrderProject';
 import { AppLayout } from '@/components/layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CreateChangeWorkDialog } from '@/components/change-work/CreateChangeWorkDialog';
-import { ChangeWorkCard } from '@/components/change-work/ChangeWorkCard';
-import { ChangeWorkDetail } from '@/components/change-work/ChangeWorkDetail';
-import { Plus, FileEdit } from 'lucide-react';
-import { WorkItemState } from '@/types/workItem';
+import { ChangeOrderWizardDialog } from '@/components/change-order-wizard';
+import { Plus, FileEdit, Building2 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
+import { ChangeOrderStatus } from '@/types/changeOrderProject';
+
+interface Project {
+  id: string;
+  name: string;
+}
 
 const ChangeOrders = () => {
   const navigate = useNavigate();
   const { user, userOrgRoles, currentRole } = useAuth();
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [showWizard, setShowWizard] = useState(false);
+  const [activeTab, setActiveTab] = useState<ChangeOrderStatus | 'ALL'>('ALL');
+
+  const selectedProject = projects.find((p) => p.id === selectedProjectId);
+
   const {
-    changeWorks,
+    changeOrders,
     isLoading,
-    usePricing,
-    useParticipants,
-    createChangeWork,
-    addPricing,
-    updatePricing,
-    deletePricing,
-    inviteParticipant,
-    removeParticipant,
-    advanceState,
+    createChangeOrder,
     isCreating,
-    isAdvancing,
-  } = useChangeWork();
-
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<WorkItemState | 'ALL'>('ALL');
-
-  const selectedChangeWork = changeWorks.find((cw) => cw.id === selectedId);
-  const { data: pricing = [] } = usePricing(selectedId);
-  const { data: participants = [] } = useParticipants(selectedId);
+  } = useChangeOrderProject(selectedProjectId || undefined);
 
   const canCreate = currentRole === 'GC_PM' || currentRole === 'TC_PM';
 
-  const filteredChangeWorks = activeTab === 'ALL'
-    ? changeWorks
-    : changeWorks.filter((cw) => cw.state === activeTab);
+  // Fetch projects user has access to
+  useEffect(() => {
+    const fetchProjects = async () => {
+      if (!user) return;
 
-  const stateCounts = {
-    ALL: changeWorks.length,
-    OPEN: changeWorks.filter((cw) => cw.state === 'OPEN').length,
-    PRICED: changeWorks.filter((cw) => cw.state === 'PRICED').length,
-    APPROVED: changeWorks.filter((cw) => cw.state === 'APPROVED').length,
-    EXECUTED: changeWorks.filter((cw) => cw.state === 'EXECUTED').length,
+      const currentOrg = userOrgRoles[0];
+      if (!currentOrg) return;
+
+      // Fetch owned projects
+      const { data: ownedProjects } = await supabase
+        .from('projects')
+        .select('id, name')
+        .eq('organization_id', currentOrg.id);
+
+      // Fetch projects where org is on the team
+      const { data: teamMemberships } = await supabase
+        .from('project_team')
+        .select('project_id')
+        .eq('org_id', currentOrg.id);
+
+      const teamProjectIds = (teamMemberships || [])
+        .map((t) => t.project_id)
+        .filter((id): id is string => id !== null);
+
+      let assignedProjects: Project[] = [];
+      if (teamProjectIds.length > 0) {
+        const { data } = await supabase
+          .from('projects')
+          .select('id, name')
+          .in('id', teamProjectIds);
+        assignedProjects = (data || []) as Project[];
+      }
+
+      // Merge and dedupe
+      const allProjectsMap = new Map<string, Project>();
+      (ownedProjects || []).forEach((p) => allProjectsMap.set(p.id, p as Project));
+      assignedProjects.forEach((p) => allProjectsMap.set(p.id, p));
+      
+      const allProjects = Array.from(allProjectsMap.values()).sort((a, b) =>
+        a.name.localeCompare(b.name)
+      );
+      
+      setProjects(allProjects);
+      
+      // Auto-select first project if only one
+      if (allProjects.length === 1) {
+        setSelectedProjectId(allProjects[0].id);
+      }
+    };
+
+    fetchProjects();
+  }, [user, userOrgRoles]);
+
+  const filteredChangeOrders =
+    activeTab === 'ALL'
+      ? changeOrders
+      : changeOrders.filter((co) => co.status === activeTab);
+
+  const statusCounts = {
+    ALL: changeOrders.length,
+    draft: changeOrders.filter((co) => co.status === 'draft').length,
+    fc_input: changeOrders.filter((co) => co.status === 'fc_input').length,
+    tc_pricing: changeOrders.filter((co) => co.status === 'tc_pricing').length,
+    ready_for_approval: changeOrders.filter((co) => co.status === 'ready_for_approval').length,
+    approved: changeOrders.filter((co) => co.status === 'approved').length,
+    rejected: changeOrders.filter((co) => co.status === 'rejected').length,
+    contracted: changeOrders.filter((co) => co.status === 'contracted').length,
+  };
+
+  const getStatusLabel = (status: ChangeOrderStatus | 'ALL') => {
+    const labels: Record<ChangeOrderStatus | 'ALL', string> = {
+      ALL: 'All',
+      draft: 'Draft',
+      fc_input: 'Field Crew Input',
+      tc_pricing: 'Trade Contractor Pricing',
+      ready_for_approval: 'Ready for Approval',
+      approved: 'Approved',
+      rejected: 'Rejected',
+      contracted: 'Contracted',
+    };
+    return labels[status];
+  };
+
+  const getStatusColor = (status: ChangeOrderStatus) => {
+    const colors: Record<ChangeOrderStatus, string> = {
+      draft: 'bg-muted text-muted-foreground',
+      fc_input: 'bg-blue-100 text-blue-800',
+      tc_pricing: 'bg-yellow-100 text-yellow-800',
+      ready_for_approval: 'bg-purple-100 text-purple-800',
+      approved: 'bg-green-100 text-green-800',
+      rejected: 'bg-red-100 text-red-800',
+      contracted: 'bg-emerald-100 text-emerald-800',
+    };
+    return colors[status];
   };
 
   if (!user) {
@@ -84,55 +169,84 @@ const ChangeOrders = () => {
   return (
     <AppLayout
       title="Change Orders"
-      subtitle="Manage change work through approval workflow"
-      showNewButton={canCreate}
-      onNewClick={() => setShowCreateDialog(true)}
+      subtitle="Manage change orders as mini-projects"
+      showNewButton={canCreate && !!selectedProjectId}
+      onNewClick={() => setShowWizard(true)}
       newButtonLabel="New Change Order"
     >
       <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-4">
-          {(['ALL', 'OPEN', 'PRICED', 'APPROVED', 'EXECUTED'] as const).map((state) => (
-            <Card
-              key={state}
-              className={`cursor-pointer transition-all ${
-                activeTab === state ? 'ring-2 ring-primary' : 'hover:shadow-md'
-              }`}
-              onClick={() => setActiveTab(state)}
-            >
-              <CardContent className="p-2 sm:p-4">
-                <p className="text-lg sm:text-2xl font-bold">{stateCounts[state]}</p>
-                <p className="text-[10px] sm:text-sm text-muted-foreground capitalize truncate">
-                  {state === 'ALL' ? 'Total' : state.toLowerCase()}
+        {/* Project Selector */}
+        <Card>
+          <CardContent className="py-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Building2 className="h-5 w-5 text-muted-foreground" />
+                <span className="font-medium">Project:</span>
+              </div>
+              <Select
+                value={selectedProjectId || ''}
+                onValueChange={(value) => setSelectedProjectId(value)}
+              >
+                <SelectTrigger className="w-full sm:w-[300px]">
+                  <SelectValue placeholder="Select a project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!selectedProjectId && projects.length > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Select a project to view and create change orders
                 </p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-          {/* List */}
-          <div className={selectedChangeWork ? 'lg:col-span-2' : 'lg:col-span-3'}>
+        {selectedProjectId && (
+          <>
+            {/* Status Tabs */}
+            <div className="flex flex-wrap gap-2">
+              {(['ALL', 'draft', 'fc_input', 'tc_pricing', 'ready_for_approval', 'approved', 'rejected'] as const).map(
+                (status) => (
+                  <Button
+                    key={status}
+                    variant={activeTab === status ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setActiveTab(status)}
+                    className="text-xs"
+                  >
+                    {getStatusLabel(status)} ({statusCounts[status]})
+                  </Button>
+                )
+              )}
+            </div>
+
+            {/* Change Orders List */}
             {isLoading ? (
               <div className="space-y-4">
                 {[1, 2, 3].map((i) => (
                   <Skeleton key={i} className="h-24 w-full" />
                 ))}
               </div>
-            ) : filteredChangeWorks.length === 0 ? (
+            ) : filteredChangeOrders.length === 0 ? (
               <Card>
                 <CardContent className="py-12 text-center">
                   <FileEdit className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
                   <p className="text-muted-foreground">
                     {activeTab === 'ALL'
-                      ? 'No change orders yet'
-                      : `No ${activeTab.toLowerCase()} change orders`}
+                      ? 'No change orders yet for this project'
+                      : `No ${getStatusLabel(activeTab).toLowerCase()} change orders`}
                   </p>
                   {canCreate && activeTab === 'ALL' && (
                     <Button
                       variant="outline"
                       className="mt-4"
-                      onClick={() => setShowCreateDialog(true)}
+                      onClick={() => setShowWizard(true)}
                     >
                       <Plus className="w-4 h-4 mr-2" />
                       Create your first change order
@@ -141,46 +255,80 @@ const ChangeOrders = () => {
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-3">
-                {filteredChangeWorks.map((changeWork) => (
-                  <ChangeWorkCard
-                    key={changeWork.id}
-                    changeWork={changeWork}
-                    onClick={() => navigate(`/change-order/${changeWork.id}`)}
-                    isSelected={selectedId === changeWork.id}
-                  />
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {filteredChangeOrders.map((changeOrder) => (
+                  <Card
+                    key={changeOrder.id}
+                    className="cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => navigate(`/change-order/${changeOrder.id}`)}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between mb-2">
+                        <h3 className="font-semibold line-clamp-1">{changeOrder.title}</h3>
+                        <span
+                          className={`text-xs px-2 py-1 rounded-full ${getStatusColor(
+                            changeOrder.status
+                          )}`}
+                        >
+                          {getStatusLabel(changeOrder.status)}
+                        </span>
+                      </div>
+                      {changeOrder.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                          {changeOrder.description}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        {changeOrder.work_type && (
+                          <span className="capitalize">{changeOrder.work_type.replace('_', ' ')}</span>
+                        )}
+                        {changeOrder.requires_materials && (
+                          <span className="bg-muted px-2 py-0.5 rounded">Materials</span>
+                        )}
+                        {changeOrder.requires_equipment && (
+                          <span className="bg-muted px-2 py-0.5 rounded">Equipment</span>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             )}
-          </div>
+          </>
+        )}
 
-          {/* Detail Panel */}
-          {selectedChangeWork && (
-            <div className="lg:col-span-1">
-              <ChangeWorkDetail
-                changeWork={selectedChangeWork}
-                pricing={pricing}
-                participants={participants}
-                currentRole={currentRole}
-                onClose={() => setSelectedId(null)}
-                onAdvanceState={advanceState}
-                onAddPricing={addPricing}
-                onUpdatePricing={updatePricing}
-                onDeletePricing={deletePricing}
-                onInviteParticipant={inviteParticipant}
-                onRemoveParticipant={removeParticipant}
-                isAdvancing={isAdvancing}
-              />
-            </div>
-          )}
-        </div>
+        {!selectedProjectId && projects.length === 0 && !isLoading && (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Building2 className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+              <p className="text-muted-foreground">
+                No projects found. Create a project first to add change orders.
+              </p>
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={() => navigate('/create-project')}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Create Project
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
-        <CreateChangeWorkDialog
-          open={showCreateDialog}
-          onOpenChange={setShowCreateDialog}
-          onCreate={createChangeWork}
-          isCreating={isCreating}
-        />
+        {/* Change Order Wizard */}
+        {selectedProject && (
+          <ChangeOrderWizardDialog
+            open={showWizard}
+            onOpenChange={setShowWizard}
+            projectId={selectedProject.id}
+            projectName={selectedProject.name}
+            onComplete={async (data) => {
+              await createChangeOrder(data);
+            }}
+            isSubmitting={isCreating}
+          />
+        )}
       </div>
     </AppLayout>
   );
