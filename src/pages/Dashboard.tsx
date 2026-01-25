@@ -17,6 +17,7 @@ import {
   ProjectRow,
   NeedsAttentionPanel,
   ArchiveProjectDialog,
+  CompleteProjectDialog,
   type ProjectStatusFilter,
 } from '@/components/dashboard';
 
@@ -39,6 +40,8 @@ export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>('active');
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [projectToArchive, setProjectToArchive] = useState<{ id: string; name: string } | null>(null);
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const [projectToComplete, setProjectToComplete] = useState<{ id: string; name: string } | null>(null);
 
   const currentOrg = userOrgRoles[0]?.organization;
 
@@ -71,7 +74,22 @@ export default function Dashboard() {
     }
   };
 
-  const handleStatusChange = async (projectId: string, status: 'active' | 'on_hold' | 'completed') => {
+  const handleStatusChange = (projectId: string, status: 'active' | 'on_hold' | 'completed') => {
+    // Show confirmation dialog for "completed" status
+    if (status === 'completed') {
+      const project = projects.find((p) => p.id === projectId);
+      if (project) {
+        setProjectToComplete({ id: project.id, name: project.name });
+        setCompleteDialogOpen(true);
+      }
+      return;
+    }
+
+    // For other statuses, update immediately
+    updateProjectStatus(projectId, status);
+  };
+
+  const updateProjectStatus = async (projectId: string, status: 'active' | 'on_hold' | 'completed') => {
     const statusLabels = {
       active: 'Active',
       on_hold: 'On Hold',
@@ -89,6 +107,13 @@ export default function Dashboard() {
       toast({ title: 'Status Updated', description: `Project is now ${statusLabels[status]}.` });
       refetch();
     }
+  };
+
+  const confirmComplete = async () => {
+    if (!projectToComplete) return;
+    await updateProjectStatus(projectToComplete.id, 'completed');
+    setCompleteDialogOpen(false);
+    setProjectToComplete(null);
   };
 
   const confirmArchive = async () => {
@@ -284,6 +309,14 @@ export default function Dashboard() {
         onOpenChange={setArchiveDialogOpen}
         projectName={projectToArchive?.name || ''}
         onConfirm={confirmArchive}
+      />
+
+      {/* Complete Project Dialog */}
+      <CompleteProjectDialog
+        open={completeDialogOpen}
+        onOpenChange={setCompleteDialogOpen}
+        projectName={projectToComplete?.name || ''}
+        onConfirm={confirmComplete}
       />
     </AppLayout>
   );
