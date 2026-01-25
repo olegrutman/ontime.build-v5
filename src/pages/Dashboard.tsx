@@ -71,6 +71,26 @@ export default function Dashboard() {
     }
   };
 
+  const handleStatusChange = async (projectId: string, status: 'active' | 'on_hold' | 'completed') => {
+    const statusLabels = {
+      active: 'Active',
+      on_hold: 'On Hold',
+      completed: 'Completed',
+    };
+
+    const { error } = await supabase
+      .from('projects')
+      .update({ status })
+      .eq('id', projectId);
+
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to update project status', variant: 'destructive' });
+    } else {
+      toast({ title: 'Status Updated', description: `Project is now ${statusLabels[status]}.` });
+      refetch();
+    }
+  };
+
   const confirmArchive = async () => {
     if (!projectToArchive) return;
 
@@ -239,6 +259,7 @@ export default function Dashboard() {
                     pendingActions={project.pendingActions}
                     onArchive={handleArchive}
                     onUnarchive={handleUnarchive}
+                    onStatusChange={handleStatusChange}
                   />
                 ))}
               </div>

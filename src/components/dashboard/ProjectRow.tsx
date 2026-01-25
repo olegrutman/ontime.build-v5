@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Building2, ChevronRight, MoreVertical, Archive, RotateCcw } from 'lucide-react';
+import { Building2, ChevronRight, MoreVertical, Archive, RotateCcw, PauseCircle, CheckCircle2, PlayCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
@@ -24,6 +25,7 @@ interface ProjectRowProps {
   pendingActions: number;
   onArchive: (projectId: string) => void;
   onUnarchive: (projectId: string) => void;
+  onStatusChange: (projectId: string, status: 'active' | 'on_hold' | 'completed') => void;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -58,9 +60,13 @@ export function ProjectRow({
   pendingActions,
   onArchive,
   onUnarchive,
+  onStatusChange,
 }: ProjectRowProps) {
   const navigate = useNavigate();
   const isArchived = project.status === 'archived';
+  const isOnHold = project.status === 'on_hold';
+  const isCompleted = project.status === 'completed';
+  const isActive = project.status === 'active';
 
   const handleRowClick = () => {
     navigate(`/project/${project.id}`);
@@ -112,10 +118,32 @@ export function ProjectRow({
                         Unarchive Project
                       </DropdownMenuItem>
                     ) : (
-                      <DropdownMenuItem onClick={() => onArchive(project.id)}>
-                        <Archive className="h-4 w-4 mr-2" />
-                        Archive Project
-                      </DropdownMenuItem>
+                      <>
+                        {/* Status change options */}
+                        {!isActive && (
+                          <DropdownMenuItem onClick={() => onStatusChange(project.id, 'active')}>
+                            <PlayCircle className="h-4 w-4 mr-2" />
+                            Set Active
+                          </DropdownMenuItem>
+                        )}
+                        {!isOnHold && (
+                          <DropdownMenuItem onClick={() => onStatusChange(project.id, 'on_hold')}>
+                            <PauseCircle className="h-4 w-4 mr-2" />
+                            Set On Hold
+                          </DropdownMenuItem>
+                        )}
+                        {!isCompleted && (
+                          <DropdownMenuItem onClick={() => onStatusChange(project.id, 'completed')}>
+                            <CheckCircle2 className="h-4 w-4 mr-2" />
+                            Set Completed
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => onArchive(project.id)}>
+                          <Archive className="h-4 w-4 mr-2" />
+                          Archive Project
+                        </DropdownMenuItem>
+                      </>
                     )}
                   </DropdownMenuContent>
                 </DropdownMenu>
