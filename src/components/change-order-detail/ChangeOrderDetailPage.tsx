@@ -59,7 +59,6 @@ export function ChangeOrderDetailPage() {
 
   const hasFCParticipant = participants.some((p) => p.role === 'FC' && p.is_active);
   const isEditable = changeOrder?.status === 'draft' || changeOrder?.status === 'tc_pricing';
-  const isReadyForApproval = changeOrder?.status === 'ready_for_approval';
 
   if (isLoading) {
     return (
@@ -186,8 +185,9 @@ export function ChangeOrderDetailPage() {
             {isGC && (
               <ApprovalPanel
                 changeOrder={changeOrder}
+                checklist={checklist}
                 isGC={isGC}
-                isReadyForApproval={isReadyForApproval}
+                hasFCParticipant={hasFCParticipant}
                 onUpdateStatus={updateStatus}
                 isUpdating={isUpdating}
               />
