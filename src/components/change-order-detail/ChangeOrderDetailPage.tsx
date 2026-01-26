@@ -45,6 +45,8 @@ export function ChangeOrderDetailPage() {
     deactivateParticipant,
     isActivatingParticipant,
     isLockingFCHours,
+    updateChangeOrder,
+    isUpdatingChangeOrder,
   } = useChangeOrder(id || null);
 
   // Get updateStatus from useChangeOrderProject
@@ -103,7 +105,12 @@ export function ChangeOrderDetailPage() {
               <ChangeOrderHeader changeOrder={changeOrder} />
             </Card>
 
-            <ChangeOrderScopePanel changeOrder={changeOrder} />
+            <ChangeOrderScopePanel 
+              changeOrder={changeOrder} 
+              isEditable={isEditable && (isTC || isGC)}
+              onUpdateDescription={updateChangeOrder}
+              isUpdating={isUpdatingChangeOrder}
+            />
 
             {/* FC Hours - visible to TC and FC only */}
             {(isTC || isFC) && hasFCParticipant && (
