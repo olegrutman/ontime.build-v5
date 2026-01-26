@@ -77,8 +77,10 @@ export interface ChangeOrderFCHours {
   id: string;
   change_order_id: string;
   description: string | null;
+  pricing_type: LaborPricingType;
   hours: number;
   hourly_rate: number | null;
+  lump_sum: number | null;
   labor_total: number;
   is_locked: boolean;
   locked_at: string | null;
@@ -90,12 +92,16 @@ export interface ChangeOrderFCHours {
   updated_at: string;
 }
 
+export type LaborPricingType = 'hourly' | 'lump_sum';
+
 export interface ChangeOrderTCLabor {
   id: string;
   change_order_id: string;
   description: string | null;
+  pricing_type: LaborPricingType;
   hours: number;
   hourly_rate: number | null;
+  lump_sum: number | null;
   labor_total: number;
   entered_by: string;
   created_at: string;

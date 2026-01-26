@@ -218,6 +218,26 @@ export function useChangeOrder(changeOrderId: string | null) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // First fetch the change order to get project_id
+  const { data: changeOrderData, isLoading: isLoadingChangeOrder } = useQuery({
+    queryKey: ['change-order-basic', changeOrderId],
+    queryFn: async () => {
+      if (!changeOrderId) return null;
+
+      const { data, error } = await supabase
+        .from('change_order_projects')
+        .select('id, project_id')
+        .eq('id', changeOrderId)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!changeOrderId,
+  });
+
+  const projectId = changeOrderData?.project_id;
+
   // Fetch change order details
   const { data: changeOrder, isLoading } = useQuery({
     queryKey: ['change-order', changeOrderId],
@@ -257,6 +277,84 @@ export function useChangeOrder(changeOrderId: string | null) {
       return data as ChangeOrderParticipant[];
     },
     enabled: !!changeOrderId,
+  });
+
+  // Fetch available Field Crews from project_team (accepted FC members)
+  const { data: availableFieldCrews = [], isLoading: isLoadingFieldCrews } = useQuery({
+    queryKey: ['project-team-field-crews', projectId],
+    queryFn: async () => {
+      if (!projectId) return [];
+
+      const { data, error } = await supabase
+        .from('project_team')
+        .select(`
+          id,
+          org_id,
+          role,
+          status,
+          organizations:org_id (
+            id,
+            name,
+            type,
+            org_code
+          )
+        `)
+        .eq('project_id', projectId)
+        .eq('status', 'Accepted')
+        .eq('role', 'Field Crew');
+
+      if (error) {
+        console.error('Error fetching field crews:', error);
+        return [];
+      }
+      
+      // Map to the expected format
+      return (data || []).map((pt: any) => ({
+        id: pt.organizations?.id || pt.org_id,
+        name: pt.organizations?.name || 'Unknown',
+        type: pt.organizations?.type || 'FC',
+      }));
+    },
+    enabled: !!projectId,
+  });
+
+  // Fetch available Suppliers from project_team (accepted SUPPLIER members)
+  const { data: availableSuppliers = [], isLoading: isLoadingSuppliers } = useQuery({
+    queryKey: ['project-team-suppliers', projectId],
+    queryFn: async () => {
+      if (!projectId) return [];
+
+      const { data, error } = await supabase
+        .from('project_team')
+        .select(`
+          id,
+          org_id,
+          role,
+          status,
+          organizations:org_id (
+            id,
+            name,
+            type,
+            org_code
+          )
+        `)
+        .eq('project_id', projectId)
+        .eq('status', 'Accepted')
+        .eq('role', 'Supplier');
+
+      if (error) {
+        console.error('Error fetching suppliers:', error);
+        return [];
+      }
+      
+      // Map to the expected format
+      return (data || []).map((pt: any) => ({
+        id: pt.organizations?.id || pt.org_id,
+        name: pt.organizations?.name || 'Unknown',
+        type: pt.organizations?.type || 'SUPPLIER',
+      }));
+    },
+    enabled: !!projectId,
   });
 
   // Fetch FC hours (private - only TC, FC, and FS can see)
@@ -354,7 +452,13 @@ export function useChangeOrder(changeOrderId: string | null) {
 
   // Add/Update FC Hours
   const addFCHoursMutation = useMutation({
-    mutationFn: async (data: { description?: string; hours: number; hourly_rate?: number }) => {
+    mutationFn: async (data: { 
+      description?: string; 
+      pricing_type?: 'hourly' | 'lump_sum';
+      hours?: number; 
+      hourly_rate?: number;
+      lump_sum?: number;
+    }) => {
       if (!user || !changeOrderId) throw new Error('Invalid state');
 
       const { data: result, error } = await supabase
@@ -362,8 +466,10 @@ export function useChangeOrder(changeOrderId: string | null) {
         .insert({
           change_order_id: changeOrderId,
           description: data.description,
-          hours: data.hours,
+          pricing_type: data.pricing_type || 'hourly',
+          hours: data.hours || 0,
           hourly_rate: data.hourly_rate,
+          lump_sum: data.lump_sum,
           entered_by: user.id,
         })
         .select()
@@ -374,6 +480,14 @@ export function useChangeOrder(changeOrderId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['change-order-fc-hours', changeOrderId] });
+      toast({ title: 'Hours saved' });
+    },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to save hours',
+        description: error.message,
+      });
     },
   });
 
@@ -402,7 +516,13 @@ export function useChangeOrder(changeOrderId: string | null) {
 
   // Add TC Labor
   const addTCLaborMutation = useMutation({
-    mutationFn: async (data: { description?: string; hours: number; hourly_rate?: number }) => {
+    mutationFn: async (data: { 
+      description?: string; 
+      pricing_type: 'hourly' | 'lump_sum';
+      hours?: number; 
+      hourly_rate?: number;
+      lump_sum?: number;
+    }) => {
       if (!user || !changeOrderId) throw new Error('Invalid state');
 
       const { data: result, error } = await supabase
@@ -410,8 +530,10 @@ export function useChangeOrder(changeOrderId: string | null) {
         .insert({
           change_order_id: changeOrderId,
           description: data.description,
-          hours: data.hours,
+          pricing_type: data.pricing_type,
+          hours: data.hours || 0,
           hourly_rate: data.hourly_rate,
+          lump_sum: data.lump_sum,
           entered_by: user.id,
         })
         .select()
@@ -422,6 +544,14 @@ export function useChangeOrder(changeOrderId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['change-order-tc-labor', changeOrderId] });
+      toast({ title: 'Labor pricing saved' });
+    },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to save labor',
+        description: error.message,
+      });
     },
   });
 
@@ -556,6 +686,68 @@ export function useChangeOrder(changeOrderId: string | null) {
       queryClient.invalidateQueries({ queryKey: ['change-order-participants', changeOrderId] });
       toast({ title: 'Field Crew activated' });
     },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to activate Field Crew',
+        description: error.message,
+      });
+    },
+  });
+
+  // Activate Supplier (TC only)
+  const activateSupplierMutation = useMutation({
+    mutationFn: async (supplierOrgId: string) => {
+      if (!user || !changeOrderId) throw new Error('Invalid state');
+
+      const { error } = await supabase
+        .from('change_order_participants')
+        .upsert({
+          change_order_id: changeOrderId,
+          organization_id: supplierOrgId,
+          role: 'SUPPLIER',
+          is_active: true,
+          invited_by: user.id,
+        });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['change-order-participants', changeOrderId] });
+      toast({ title: 'Supplier activated' });
+    },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to activate Supplier',
+        description: error.message,
+      });
+    },
+  });
+
+  // Deactivate participant
+  const deactivateParticipantMutation = useMutation({
+    mutationFn: async (participantId: string) => {
+      if (!user || !changeOrderId) throw new Error('Invalid state');
+
+      const { error } = await supabase
+        .from('change_order_participants')
+        .update({ is_active: false })
+        .eq('id', participantId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['change-order-participants', changeOrderId] });
+      toast({ title: 'Participant deactivated' });
+    },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to deactivate participant',
+        description: error.message,
+      });
+    },
   });
 
   return {
@@ -566,8 +758,13 @@ export function useChangeOrder(changeOrderId: string | null) {
     materials,
     equipment,
     checklist,
-    isLoading,
+    isLoading: isLoadingChangeOrder || isLoading,
     currentRole,
+    
+    // Available team members for assignment
+    availableFieldCrews,
+    availableSuppliers,
+    isLoadingTeamMembers: isLoadingFieldCrews || isLoadingSuppliers,
     
     // FC Actions
     addFCHours: addFCHoursMutation.mutate,
@@ -580,7 +777,12 @@ export function useChangeOrder(changeOrderId: string | null) {
     lockSupplierPricing: lockSupplierPricingMutation.mutate,
     addEquipment: addEquipmentMutation.mutate,
     updateEquipment: updateEquipmentMutation.mutate,
-    activateFC: activateFCMutation.mutate,
+    
+    // Participant management
+    activateFC: activateFCMutation.mutateAsync,
+    activateSupplier: activateSupplierMutation.mutateAsync,
+    deactivateParticipant: deactivateParticipantMutation.mutateAsync,
+    isActivatingParticipant: activateFCMutation.isPending || activateSupplierMutation.isPending || deactivateParticipantMutation.isPending,
     
     // Loading states
     isAddingFCHours: addFCHoursMutation.isPending,

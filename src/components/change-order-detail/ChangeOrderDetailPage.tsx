@@ -30,6 +30,9 @@ export function ChangeOrderDetailPage() {
     equipment,
     checklist,
     isLoading,
+    availableFieldCrews,
+    availableSuppliers,
+    isLoadingTeamMembers,
     addFCHours,
     lockFCHours,
     addTCLabor,
@@ -37,6 +40,10 @@ export function ChangeOrderDetailPage() {
     updateMaterial,
     lockSupplierPricing,
     addEquipment,
+    activateFC,
+    activateSupplier,
+    deactivateParticipant,
+    isActivatingParticipant,
     isLockingFCHours,
   } = useChangeOrder(id || null);
 
@@ -152,12 +159,13 @@ export function ChangeOrderDetailPage() {
               <ParticipantActivationPanel
                 changeOrderId={changeOrder.id}
                 participants={participants}
-                availableFieldCrews={[]} // TODO: Fetch from project participants
-                availableSuppliers={[]} // TODO: Fetch from project participants
+                availableFieldCrews={availableFieldCrews}
+                availableSuppliers={availableSuppliers}
                 isTC={isTC}
-                onActivateFC={async () => {}}
-                onActivateSupplier={async () => {}}
-                onDeactivate={async () => {}}
+                onActivateFC={activateFC}
+                onActivateSupplier={activateSupplier}
+                onDeactivate={deactivateParticipant}
+                isActivating={isActivatingParticipant}
               />
             )}
 

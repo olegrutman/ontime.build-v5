@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { ChangeOrderFCHours } from '@/types/changeOrderProject';
+import { ChangeOrderFCHours, LaborPricingType } from '@/types/changeOrderProject';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Lock, Plus, Clock, AlertTriangle } from 'lucide-react';
+import { Lock, Plus, Clock, AlertTriangle, DollarSign } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,7 +23,13 @@ interface FieldCrewHoursPanelProps {
   fcHours: ChangeOrderFCHours[];
   isEditable: boolean;
   canViewRates: boolean;
-  onAddHours: (data: { description?: string; hours: number; hourly_rate?: number }) => void;
+  onAddHours: (data: { 
+    description?: string; 
+    pricing_type?: LaborPricingType;
+    hours?: number; 
+    hourly_rate?: number;
+    lump_sum?: number;
+  }) => void;
   onLockHours: (hoursId: string) => void;
   isLocking?: boolean;
 }
@@ -37,26 +44,59 @@ export function FieldCrewHoursPanel({
 }: FieldCrewHoursPanelProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [description, setDescription] = useState('');
+  const [pricingType, setPricingType] = useState<LaborPricingType>('hourly');
   const [hours, setHours] = useState('');
   const [hourlyRate, setHourlyRate] = useState('');
+  const [lumpSum, setLumpSum] = useState('');
   const [lockConfirmId, setLockConfirmId] = useState<string | null>(null);
 
   const handleSubmit = () => {
-    onAddHours({
-      description: description || undefined,
-      hours: parseFloat(hours),
-      hourly_rate: hourlyRate ? parseFloat(hourlyRate) : undefined,
-    });
+    if (pricingType === 'lump_sum') {
+      onAddHours({
+        description: description || undefined,
+        pricing_type: 'lump_sum',
+        hours: 0,
+        lump_sum: parseFloat(lumpSum),
+      });
+    } else {
+      onAddHours({
+        description: description || undefined,
+        pricing_type: 'hourly',
+        hours: parseFloat(hours),
+        hourly_rate: hourlyRate ? parseFloat(hourlyRate) : undefined,
+      });
+    }
+    resetForm();
+  };
+
+  const resetForm = () => {
     setDescription('');
+    setPricingType('hourly');
     setHours('');
     setHourlyRate('');
+    setLumpSum('');
     setShowAddForm(false);
   };
 
-  const totalHours = fcHours.reduce((sum, entry) => sum + entry.hours, 0);
+  const isFormValid = () => {
+    if (pricingType === 'lump_sum') {
+      return lumpSum && parseFloat(lumpSum) > 0;
+    }
+    return hours && parseFloat(hours) > 0;
+  };
+
+  const totalHours = fcHours
+    .filter(e => e.pricing_type !== 'lump_sum')
+    .reduce((sum, entry) => sum + entry.hours, 0);
   const totalLabor = fcHours.reduce((sum, entry) => sum + (entry.labor_total || 0), 0);
   const allLocked = fcHours.length > 0 && fcHours.every((entry) => entry.is_locked);
-  const hasUnlockedHours = fcHours.some((entry) => !entry.is_locked);
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
+  };
 
   return (
     <>
@@ -94,18 +134,31 @@ export function FieldCrewHoursPanel({
                   className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
                 >
                   <div className="flex-1">
-                    <p className="font-medium text-sm">
-                      {entry.description || 'Labor hours'}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {entry.hours} hours
-                      {canViewRates && entry.hourly_rate && ` @ $${entry.hourly_rate}/hr`}
+                    <div className="flex items-center gap-2">
+                      {entry.pricing_type === 'lump_sum' ? (
+                        <DollarSign className="w-3 h-3 text-green-600" />
+                      ) : (
+                        <Clock className="w-3 h-3 text-blue-600" />
+                      )}
+                      <p className="font-medium text-sm">
+                        {entry.description || (entry.pricing_type === 'lump_sum' ? 'Lump Sum' : 'Labor Hours')}
+                      </p>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {entry.pricing_type === 'lump_sum' ? (
+                        'Lump Sum'
+                      ) : (
+                        <>
+                          {entry.hours} hours
+                          {canViewRates && entry.hourly_rate && ` @ ${formatCurrency(entry.hourly_rate)}/hr`}
+                        </>
+                      )}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     {canViewRates && (
                       <span className="font-medium">
-                        ${entry.labor_total?.toFixed(2) || '0.00'}
+                        {formatCurrency(entry.labor_total || 0)}
                       </span>
                     )}
                     {entry.is_locked ? (
@@ -134,13 +187,17 @@ export function FieldCrewHoursPanel({
           {/* Totals */}
           {fcHours.length > 0 && (
             <div className="flex items-center justify-between pt-4 border-t">
-              <span className="font-medium">Total Hours</span>
+              <span className="font-medium">Total</span>
               <div className="text-right">
-                <span className="text-xl font-bold">{totalHours} hrs</span>
+                {totalHours > 0 && (
+                  <span className="text-sm text-muted-foreground mr-3">
+                    {totalHours} hrs
+                  </span>
+                )}
                 {canViewRates && (
-                  <p className="text-sm text-muted-foreground">
-                    ${totalLabor.toFixed(2)}
-                  </p>
+                  <span className="text-xl font-bold">
+                    {formatCurrency(totalLabor)}
+                  </span>
                 )}
               </div>
             </div>
@@ -148,8 +205,30 @@ export function FieldCrewHoursPanel({
 
           {/* Add Form */}
           {showAddForm && (
-            <div className="p-4 border rounded-lg space-y-4 mt-4">
+            <div className="p-4 border rounded-lg space-y-4 mt-4 bg-card">
               <h4 className="font-medium">Add Hours Entry</h4>
+              
+              {/* Pricing Type Toggle */}
+              <div className="space-y-2">
+                <Label>Pricing Type</Label>
+                <Tabs 
+                  value={pricingType} 
+                  onValueChange={(v) => setPricingType(v as LaborPricingType)}
+                  className="w-full"
+                >
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="hourly" className="gap-2">
+                      <Clock className="w-4 h-4" />
+                      Hourly
+                    </TabsTrigger>
+                    <TabsTrigger value="lump_sum" className="gap-2">
+                      <DollarSign className="w-4 h-4" />
+                      Lump Sum
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              </div>
+
               <div className="space-y-3">
                 <div>
                   <Label htmlFor="fc-description">Description</Label>
@@ -161,38 +240,59 @@ export function FieldCrewHoursPanel({
                     rows={2}
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <Label htmlFor="fc-hours">Hours *</Label>
-                    <Input
-                      id="fc-hours"
-                      type="number"
-                      step="0.5"
-                      min="0"
-                      placeholder="0.0"
-                      value={hours}
-                      onChange={(e) => setHours(e.target.value)}
-                    />
+
+                {pricingType === 'hourly' ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label htmlFor="fc-hours">Hours *</Label>
+                      <Input
+                        id="fc-hours"
+                        type="number"
+                        step="0.5"
+                        min="0"
+                        placeholder="0.0"
+                        value={hours}
+                        onChange={(e) => setHours(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="fc-rate">Hourly Rate</Label>
+                      <Input
+                        id="fc-rate"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        value={hourlyRate}
+                        onChange={(e) => setHourlyRate(e.target.value)}
+                      />
+                    </div>
                   </div>
+                ) : (
                   <div>
-                    <Label htmlFor="fc-rate">Hourly Rate</Label>
-                    <Input
-                      id="fc-rate"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="0.00"
-                      value={hourlyRate}
-                      onChange={(e) => setHourlyRate(e.target.value)}
-                    />
+                    <Label htmlFor="fc-lumpsum">Lump Sum Amount *</Label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        id="fc-lumpsum"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="0.00"
+                        className="pl-8"
+                        value={lumpSum}
+                        onChange={(e) => setLumpSum(e.target.value)}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
+
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setShowAddForm(false)}>
+                <Button variant="outline" onClick={resetForm}>
                   Cancel
                 </Button>
-                <Button onClick={handleSubmit} disabled={!hours || parseFloat(hours) <= 0}>
+                <Button onClick={handleSubmit} disabled={!isFormValid()}>
                   Save Hours
                 </Button>
               </div>
