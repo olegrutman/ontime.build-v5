@@ -106,16 +106,17 @@ export function CreateInvoiceFromSOV({
   const currentOrgType = userOrgRoles[0]?.organization?.type;
 
   // Filter contracts to only UPSTREAM contracts where user can invoice
-  // Invoicing flows from contractor (from_org) to client (to_org)
-  // TC invoices GC: TC is from_org (from_role='Trade Contractor'), GC is to_org (to_role='General Contractor')
-  // FC invoices TC: FC is from_org (from_role='Field Crew'), TC is to_org (to_role='Trade Contractor')
+  // Contract structure: from_org (contractor) → to_org (client)
+  // TC (from_org) invoices GC (to_org): from_role='Trade Contractor', to_role='General Contractor'
+  // FC (from_org) invoices TC (to_org): from_role='Field Crew', to_role='Trade Contractor'
+  // Invoice creator must be from_org_id (matches RLS policy)
   const contracts = useMemo(() => {
     if (!currentOrgId) return [];
     
-    // User must be the from_org (the contractor sending the invoice to their client)
+    // User must be the from_org (the contractor creating the invoice)
     const userContracts = allContracts.filter(c => c.from_org_id === currentOrgId);
     
-    // Only include upstream contracts based on org type
+    // Only include contracts where user invoices their upstream client
     return userContracts.filter(c => {
       if (currentOrgType === 'TC') {
         // TC invoices GC: to_role should be 'General Contractor'
