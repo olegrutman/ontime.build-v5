@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Plus, Receipt, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -14,22 +14,54 @@ import { CreateInvoiceFromSOV } from './CreateInvoiceFromSOV';
 import { InvoiceCard } from './InvoiceCard';
 import { InvoiceDetail } from './InvoiceDetail';
 import { Invoice, InvoiceStatus, INVOICE_STATUS_LABELS } from '@/types/invoice';
+import { useAuth } from '@/hooks/useAuth';
 
 interface InvoicesTabProps {
   projectId: string;
   retainagePercent: number;
 }
 
+interface Contract {
+  id: string;
+  from_org_id: string | null;
+  to_org_id: string | null;
+}
+
 export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
+  const { userOrgRoles } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'ALL'>('ALL');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
 
+  // Get current user's organization ID
+  const currentOrgId = userOrgRoles[0]?.organization?.id;
+
+  // Get contract IDs that belong to this user's org
+  const userContractIds = useMemo(() => {
+    if (!currentOrgId) return [];
+    return contracts
+      .filter(c => c.from_org_id === currentOrgId || c.to_org_id === currentOrgId)
+      .map(c => c.id);
+  }, [contracts, currentOrgId]);
+
+  useEffect(() => {
+    // Fetch contracts first to know which ones belong to user
+    const fetchContracts = async () => {
+      const { data } = await supabase
+        .from('project_contracts')
+        .select('id, from_org_id, to_org_id')
+        .eq('project_id', projectId);
+      setContracts((data || []) as Contract[]);
+    };
+    fetchContracts();
+  }, [projectId]);
+
   useEffect(() => {
     fetchInvoices();
-  }, [projectId, statusFilter]);
+  }, [projectId, statusFilter, userContractIds]);
 
   const fetchInvoices = async () => {
     setLoading(true);
@@ -47,8 +79,17 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
 
     if (error) {
       console.error('Error fetching invoices:', error);
+      setInvoices([]);
     } else {
-      setInvoices(data as Invoice[]);
+      // UI-level filter: only show invoices for contracts user has access to
+      // (RLS should already filter, but this is defense in depth)
+      const allInvoices = (data || []) as Invoice[];
+      const visibleInvoices = currentOrgId && userContractIds.length > 0
+        ? allInvoices.filter(inv => 
+            !inv.contract_id || userContractIds.includes(inv.contract_id)
+          )
+        : allInvoices;
+      setInvoices(visibleInvoices);
     }
     setLoading(false);
   };
