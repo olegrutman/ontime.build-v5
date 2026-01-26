@@ -51,8 +51,9 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   const currentOrgId = userOrgRoles[0]?.organization?.id;
 
   // Determine user's role in this invoice's contract
-  const isInvoiceCreator = contract?.to_org_id === currentOrgId; // to_org creates invoices
-  const isInvoiceReceiver = contract?.from_org_id === currentOrgId; // from_org receives/approves
+  // Contract direction: from_org (contractor) → to_org (client)
+  const isInvoiceCreator = contract?.from_org_id === currentOrgId; // from_org creates invoices
+  const isInvoiceReceiver = contract?.to_org_id === currentOrgId; // to_org receives/approves
 
   useEffect(() => {
     fetchInvoice();
