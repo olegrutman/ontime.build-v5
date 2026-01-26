@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -36,6 +36,13 @@ import {
   ROOM_AREA_OPTIONS,
 } from '@/types/changeOrderProject';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+
+interface FieldCrewOption {
+  id: string;
+  org_id: string;
+  org_name: string;
+}
 
 interface ChangeOrderWizardDialogProps {
   open: boolean;
@@ -163,6 +170,49 @@ export function ChangeOrderWizardDialog({
   const [unitIdType, setUnitIdType] = useState<string>('Number');
   const [laborHours, setLaborHours] = useState<string>('');
   const [laborRate, setLaborRate] = useState<string>('65');
+  const [selectedFieldCrew, setSelectedFieldCrew] = useState<string>('');
+  const [fieldCrews, setFieldCrews] = useState<FieldCrewOption[]>([]);
+  const [isLoadingFieldCrews, setIsLoadingFieldCrews] = useState(false);
+
+  // Fetch Field Crew members from project_team when dialog opens
+  useEffect(() => {
+    async function fetchFieldCrews() {
+      if (!open || !projectId) return;
+      
+      setIsLoadingFieldCrews(true);
+      try {
+        const { data, error } = await supabase
+          .from('project_team')
+          .select(`
+            id,
+            org_id,
+            organization:organizations(id, name)
+          `)
+          .eq('project_id', projectId)
+          .eq('role', 'Field Crew')
+          .eq('status', 'Accepted');
+        
+        if (error) {
+          console.error('Error fetching field crews:', error);
+          return;
+        }
+        
+        const crews: FieldCrewOption[] = (data || [])
+          .filter((row) => row.org_id && row.organization)
+          .map((row) => ({
+            id: row.id,
+            org_id: row.org_id!,
+            org_name: (row.organization as { id: string; name: string })?.name || 'Unknown',
+          }));
+        
+        setFieldCrews(crews);
+      } finally {
+        setIsLoadingFieldCrews(false);
+      }
+    }
+    
+    fetchFieldCrews();
+  }, [open, projectId]);
 
   const updateFormData = <K extends keyof ChangeOrderWizardData>(
     field: K,
@@ -210,6 +260,7 @@ export function ChangeOrderWizardDialog({
     setFormData(initialData);
     setReason('');
     setLaborHours('');
+    setSelectedFieldCrew('');
     onOpenChange(false);
   };
 
@@ -218,6 +269,7 @@ export function ChangeOrderWizardDialog({
     setReason('');
     setIsLocationEditing(true);
     setLaborHours('');
+    setSelectedFieldCrew('');
     onOpenChange(false);
   };
 
@@ -434,13 +486,25 @@ export function ChangeOrderWizardDialog({
           {/* Send to Field Crew Section */}
           <SectionCard icon={Users} title="Send to Field Crew">
             <div className="flex items-center justify-between">
-              <Select>
+              <Select 
+                value={selectedFieldCrew} 
+                onValueChange={setSelectedFieldCrew}
+                disabled={isLoadingFieldCrews}
+              >
                 <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Select Field Crew..." />
+                  <SelectValue placeholder={isLoadingFieldCrews ? "Loading..." : "Select Field Crew..."} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="fc1">Field Crew A</SelectItem>
-                  <SelectItem value="fc2">Field Crew B</SelectItem>
+                  {fieldCrews.length === 0 && !isLoadingFieldCrews && (
+                    <SelectItem value="_none" disabled>
+                      No Field Crews on this project
+                    </SelectItem>
+                  )}
+                  {fieldCrews.map((fc) => (
+                    <SelectItem key={fc.id} value={fc.org_id}>
+                      {fc.org_name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <span className="ml-3 px-2 py-0.5 text-xs font-medium text-destructive border border-destructive/30 rounded">
