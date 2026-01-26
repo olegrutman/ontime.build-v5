@@ -184,12 +184,22 @@ export function CreateInvoiceFromSOV({
   }, [open]);
 
   const generateInvoiceNumber = async () => {
-    const { count } = await supabase
+    // Get the highest invoice number for this project to avoid duplicates
+    const { data } = await supabase
       .from('invoices')
-      .select('*', { count: 'exact', head: true })
-      .eq('project_id', projectId);
+      .select('invoice_number')
+      .eq('project_id', projectId)
+      .order('invoice_number', { ascending: false })
+      .limit(1);
     
-    const nextNumber = (count || 0) + 1;
+    let nextNumber = 1;
+    if (data && data.length > 0) {
+      // Extract number from INV-XXXX format
+      const match = data[0].invoice_number.match(/INV-(\d+)/);
+      if (match) {
+        nextNumber = parseInt(match[1], 10) + 1;
+      }
+    }
     setInvoiceNumber(`INV-${nextNumber.toString().padStart(4, '0')}`);
   };
 
