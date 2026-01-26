@@ -3,6 +3,8 @@ export type InvoiceStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED' | 'P
 export interface Invoice {
   id: string;
   project_id: string;
+  contract_id: string | null;
+  sov_id: string | null;
   invoice_number: string;
   billing_period_start: string;
   billing_period_end: string;

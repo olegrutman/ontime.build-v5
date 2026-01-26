@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Contract {
   id: string;
@@ -15,6 +16,8 @@ interface Contract {
   allow_mobilization_line_item: boolean;
   notes: string | null;
   to_project_team_id: string | null;
+  from_org_id: string | null;
+  to_org_id: string | null;
 }
 
 interface TeamMember {
@@ -58,9 +61,13 @@ function getContractDescription(fromRole: string, toRole: string, trade: string 
 }
 
 export function ProjectContractsSection({ projectId }: ProjectContractsSectionProps) {
+  const { userOrgRoles } = useAuth();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Get current user's organization ID
+  const currentOrgId = userOrgRoles[0]?.organization?.id;
 
   useEffect(() => {
     const fetchData = async () => {
@@ -78,7 +85,15 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
       if (contractsResult.error) {
         console.error('Error fetching contracts:', contractsResult.error);
       } else {
-        setContracts(contractsResult.data || []);
+        // Filter contracts to only show those where user's org is involved
+        // This provides UI-level filtering on top of RLS
+        const allContracts = (contractsResult.data || []) as Contract[];
+        const visibleContracts = currentOrgId 
+          ? allContracts.filter(c => 
+              c.from_org_id === currentOrgId || c.to_org_id === currentOrgId
+            )
+          : allContracts;
+        setContracts(visibleContracts);
       }
 
       if (teamResult.error) {
@@ -91,7 +106,7 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
     };
 
     fetchData();
-  }, [projectId]);
+  }, [projectId, currentOrgId]);
 
   if (loading) {
     return (
