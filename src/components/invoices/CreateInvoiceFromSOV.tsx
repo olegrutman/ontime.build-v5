@@ -106,30 +106,28 @@ export function CreateInvoiceFromSOV({
   const currentOrgType = userOrgRoles[0]?.organization?.type;
 
   // Filter contracts to only UPSTREAM contracts where user can invoice
-  // TC can invoice GC (TC is to_org, GC is from_org, from_role = 'General Contractor')
-  // FC can invoice TC (FC is to_org, TC is from_org, from_role = 'Trade Contractor')
+  // Invoicing flows from contractor (from_org) to client (to_org)
+  // TC invoices GC: TC is from_org (from_role='Trade Contractor'), GC is to_org (to_role='General Contractor')
+  // FC invoices TC: FC is from_org (from_role='Field Crew'), TC is to_org (to_role='Trade Contractor')
   const contracts = useMemo(() => {
     if (!currentOrgId) return [];
     
-    // User must be the to_org (the one sending the invoice upstream)
-    const userContracts = allContracts.filter(c => c.to_org_id === currentOrgId);
+    // User must be the from_org (the contractor sending the invoice to their client)
+    const userContracts = allContracts.filter(c => c.from_org_id === currentOrgId);
     
-    // Only include upstream contracts based on role
-    // TC invoices GC: from_role must be 'General Contractor'
-    // FC invoices TC: from_role must be 'Trade Contractor'
+    // Only include upstream contracts based on org type
     return userContracts.filter(c => {
       if (currentOrgType === 'TC') {
-        // TC can only invoice GC (upstream)
-        return c.from_role === 'General Contractor';
+        // TC invoices GC: to_role should be 'General Contractor'
+        return c.to_role === 'General Contractor';
       }
       if (currentOrgType === 'FC') {
-        // FC can only invoice TC (upstream)
-        return c.from_role === 'Trade Contractor';
+        // FC invoices TC: to_role should be 'Trade Contractor'
+        return c.to_role === 'Trade Contractor';
       }
       return false; // GC and other roles cannot create invoices
     });
-    return allContracts.filter(c => c.to_org_id === currentOrgId);
-  }, [allContracts, currentOrgId]);
+  }, [allContracts, currentOrgId, currentOrgType]);
 
   // Fetch contracts and SOVs
   useEffect(() => {
