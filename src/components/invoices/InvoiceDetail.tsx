@@ -194,8 +194,8 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   }
 
   // Contract-based permissions:
-  // - isInvoiceCreator (to_org) can submit drafts
-  // - isInvoiceReceiver (from_org) can approve/reject/mark paid
+  // - isInvoiceCreator (from_org - contractor) can submit drafts
+  // - isInvoiceReceiver (to_org - client) can approve/reject/mark paid
   const canSubmit = isInvoiceCreator;
   const canApprove = isInvoiceReceiver;
   const status = invoice.status as InvoiceStatus;
