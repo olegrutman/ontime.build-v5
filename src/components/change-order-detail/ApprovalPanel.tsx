@@ -53,12 +53,11 @@ export function ApprovalPanel({
 
   const canApprove = isGC && changeOrder.status === 'ready_for_approval';
 
-  // Pricing summary for GC
-  const showPricingSummary =
-    isGC &&
-    (changeOrder.status === 'ready_for_approval' ||
-      changeOrder.status === 'approved' ||
-      changeOrder.status === 'contracted');
+  // Pricing summary for GC - always show when any pricing exists (draft or submitted)
+  const hasPricing = (changeOrder.labor_total ?? 0) > 0 || 
+                     (changeOrder.material_total ?? 0) > 0 || 
+                     (changeOrder.equipment_total ?? 0) > 0;
+  const showPricingSummary = isGC && hasPricing;
 
   return (
     <>
@@ -78,33 +77,39 @@ export function ApprovalPanel({
             </div>
           )}
 
-          {/* Pricing Summary for GC */}
-          {showPricingSummary && (
+          {/* Pricing Summary for GC - show immediately when TC saves */}
+          {isGC && (
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <DollarSign className="w-4 h-4" />
-                Pricing Summary
+                Trade Contractor Pricing {!showPricingSummary && '(Draft)'}
               </div>
 
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Labor Total</span>
-                  <span>${changeOrder.labor_total?.toFixed(2) || '0.00'}</span>
+              {showPricingSummary ? (
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Labor Total</span>
+                    <span>${changeOrder.labor_total?.toFixed(2) || '0.00'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Material Total</span>
+                    <span>${changeOrder.material_total?.toFixed(2) || '0.00'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Equipment Total</span>
+                    <span>${changeOrder.equipment_total?.toFixed(2) || '0.00'}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between font-medium text-base">
+                    <span>Final Price</span>
+                    <span className="text-lg">${changeOrder.final_price?.toFixed(2) || '0.00'}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Material Total</span>
-                  <span>${changeOrder.material_total?.toFixed(2) || '0.00'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Equipment Total</span>
-                  <span>${changeOrder.equipment_total?.toFixed(2) || '0.00'}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between font-medium text-base">
-                  <span>Final Price</span>
-                  <span className="text-lg">${changeOrder.final_price?.toFixed(2) || '0.00'}</span>
-                </div>
-              </div>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  Trade Contractor has not entered pricing yet.
+                </p>
+              )}
             </div>
           )}
 
