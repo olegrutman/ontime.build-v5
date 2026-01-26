@@ -1,6 +1,7 @@
 import { Plus, FileText, ClipboardCheck, Briefcase, Archive, FileEdit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
 
 interface QuickActionsProps {
   onViewArchived: () => void;
@@ -8,6 +9,11 @@ interface QuickActionsProps {
 
 export function QuickActions({ onViewArchived }: QuickActionsProps) {
   const navigate = useNavigate();
+  const { userOrgRoles } = useAuth();
+  
+  // Get current org type - GC cannot create invoices
+  const currentOrgType = userOrgRoles[0]?.organization?.type;
+  const canCreateInvoice = currentOrgType === 'TC' || currentOrgType === 'FC';
 
   return (
     <div className="flex flex-wrap gap-2">
@@ -19,10 +25,12 @@ export function QuickActions({ onViewArchived }: QuickActionsProps) {
         <FileEdit className="h-4 w-4 mr-2" />
         New Work Order
       </Button>
-      <Button variant="outline" size="sm" onClick={() => navigate('/invoices')}>
-        <FileText className="h-4 w-4 mr-2" />
-        Create Invoice
-      </Button>
+      {canCreateInvoice && (
+        <Button variant="outline" size="sm" onClick={() => navigate('/invoices')}>
+          <FileText className="h-4 w-4 mr-2" />
+          Create Invoice
+        </Button>
+      )}
       <Button variant="outline" size="sm" onClick={() => navigate('/change-orders')}>
         <ClipboardCheck className="h-4 w-4 mr-2" />
         Review Work Orders

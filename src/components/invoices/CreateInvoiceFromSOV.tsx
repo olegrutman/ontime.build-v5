@@ -82,12 +82,12 @@ export function CreateInvoiceFromSOV({
   projectId,
   onSuccess,
 }: CreateInvoiceFromSOVProps) {
-  const { user } = useAuth();
+  const { user, userOrgRoles } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   
   // Data
-  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [allContracts, setAllContracts] = useState<(Contract & { from_org_id: string | null; to_org_id: string | null })[]>([]);
   const [sovs, setSovs] = useState<SOV[]>([]);
   const [sovItems, setSovItems] = useState<SOVItem[]>([]);
   
@@ -101,6 +101,15 @@ export function CreateInvoiceFromSOV({
   const [periodEnd, setPeriodEnd] = useState<Date>(endOfMonth(subMonths(new Date(), 1)));
   const [notes, setNotes] = useState('');
 
+  // Get current user's organization ID
+  const currentOrgId = userOrgRoles[0]?.organization?.id;
+
+  // Filter contracts to only those where user is the TO party (can send invoice)
+  const contracts = useMemo(() => {
+    if (!currentOrgId) return [];
+    return allContracts.filter(c => c.to_org_id === currentOrgId);
+  }, [allContracts, currentOrgId]);
+
   // Fetch contracts and SOVs
   useEffect(() => {
     if (open) {
@@ -113,13 +122,13 @@ export function CreateInvoiceFromSOV({
     setLoading(true);
     
     try {
-      // Fetch contracts
+      // Fetch contracts with org IDs
       const { data: contractsData } = await supabase
         .from('project_contracts')
-        .select('id, from_role, to_role, contract_sum, retainage_percent')
+        .select('id, from_role, to_role, contract_sum, retainage_percent, from_org_id, to_org_id')
         .eq('project_id', projectId);
       
-      setContracts((contractsData || []) as Contract[]);
+      setAllContracts((contractsData || []) as (Contract & { from_org_id: string | null; to_org_id: string | null })[]);
       
       // Fetch SOVs
       const { data: sovsData } = await supabase
@@ -139,11 +148,6 @@ export function CreateInvoiceFromSOV({
         
         setSovItems((itemsData || []) as SOVItem[]);
       }
-      
-      // Auto-select first contract if only one
-      if (contractsData && contractsData.length === 1) {
-        setSelectedContractId(contractsData[0].id);
-      }
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load SOV data');
@@ -151,6 +155,15 @@ export function CreateInvoiceFromSOV({
       setLoading(false);
     }
   };
+
+  // Auto-select first eligible contract
+  useEffect(() => {
+    if (contracts.length === 1 && !selectedContractId) {
+      setSelectedContractId(contracts[0].id);
+    } else if (contracts.length === 0) {
+      setSelectedContractId('');
+    }
+  }, [contracts, selectedContractId]);
 
   const generateInvoiceNumber = async () => {
     const { count } = await supabase
@@ -347,7 +360,7 @@ export function CreateInvoiceFromSOV({
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              No contracts found. Please add contracts in Project Setup first.
+              No contracts available for invoicing. You can only create invoices for contracts where your organization is the contractor (Trade Contractor or Field Crew). Please accept a contract first.
             </AlertDescription>
           </Alert>
         ) : sovs.length === 0 ? (

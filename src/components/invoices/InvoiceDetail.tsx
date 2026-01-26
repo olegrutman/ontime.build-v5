@@ -38,13 +38,21 @@ function formatCurrency(amount: number): string {
 }
 
 export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: InvoiceDetailProps) {
-  const { user, permissions } = useAuth();
+  const { user, userOrgRoles } = useAuth();
   const [invoice, setInvoice] = useState<Invoice | null>(null);
   const [lineItems, setLineItems] = useState<InvoiceLineItem[]>([]);
+  const [contract, setContract] = useState<{ from_org_id: string | null; to_org_id: string | null } | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+
+  // Get current user's organization ID
+  const currentOrgId = userOrgRoles[0]?.organization?.id;
+
+  // Determine user's role in this invoice's contract
+  const isInvoiceCreator = contract?.to_org_id === currentOrgId; // to_org creates invoices
+  const isInvoiceReceiver = contract?.from_org_id === currentOrgId; // from_org receives/approves
 
   useEffect(() => {
     fetchInvoice();
@@ -61,7 +69,19 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
         .order('sort_order'),
     ]);
 
-    if (invoiceRes.data) setInvoice(invoiceRes.data as Invoice);
+    if (invoiceRes.data) {
+      setInvoice(invoiceRes.data as Invoice);
+      
+      // Fetch contract to determine permissions
+      if (invoiceRes.data.contract_id) {
+        const { data: contractData } = await supabase
+          .from('project_contracts')
+          .select('from_org_id, to_org_id')
+          .eq('id', invoiceRes.data.contract_id)
+          .single();
+        setContract(contractData);
+      }
+    }
     if (lineItemsRes.data) setLineItems(lineItemsRes.data as InvoiceLineItem[]);
     setLoading(false);
   };
@@ -172,7 +192,11 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
     );
   }
 
-  const canApprove = permissions?.canApprove;
+  // Contract-based permissions:
+  // - isInvoiceCreator (to_org) can submit drafts
+  // - isInvoiceReceiver (from_org) can approve/reject/mark paid
+  const canSubmit = isInvoiceCreator;
+  const canApprove = isInvoiceReceiver;
   const status = invoice.status as InvoiceStatus;
 
   return (
@@ -208,7 +232,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
             Export PDF
           </Button>
 
-          {status === 'DRAFT' && (
+          {status === 'DRAFT' && canSubmit && (
             <Button onClick={handleSubmit} disabled={actionLoading}>
               {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
               Submit for Approval
