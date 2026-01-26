@@ -580,7 +580,7 @@ export function ChangeOrderWizardDialog({
                 <SelectContent>
                   {assigneeOptions.length === 0 && !isLoadingTeam && (
                     <SelectItem value="_none" disabled>
-                      No {assigneeLabel}s on this project
+                      No accepted {assigneeLabel}s on this project yet
                     </SelectItem>
                   )}
                   {assigneeOptions.map((member) => (
@@ -592,6 +592,11 @@ export function ChangeOrderWizardDialog({
                 </SelectContent>
               </Select>
             </div>
+            {assigneeOptions.length === 0 && !isLoadingTeam && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                <strong>No accepted {assigneeLabel}s found.</strong> Add them on the Project Team page and make sure they accept the invite before creating a Work Order.
+              </p>
+            )}
             <p className="text-xs text-muted-foreground mt-3 p-3 bg-muted/50 rounded-lg">
               {isGC ? (
                 <><strong>Note:</strong> The selected Trade Contractor will be responsible for this work order. They will assign Field Crew and submit pricing.</>
