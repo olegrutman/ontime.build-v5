@@ -544,6 +544,8 @@ export function useChangeOrder(changeOrderId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['change-order-tc-labor', changeOrderId] });
+      // Also invalidate the main change order to refresh totals for GC view
+      queryClient.invalidateQueries({ queryKey: ['change-order', changeOrderId] });
       toast({ title: 'Labor pricing saved' });
     },
     onError: (error) => {
@@ -579,6 +581,8 @@ export function useChangeOrder(changeOrderId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['change-order-materials', changeOrderId] });
+      // Also invalidate the main change order to refresh totals for GC view
+      queryClient.invalidateQueries({ queryKey: ['change-order', changeOrderId] });
     },
   });
 
@@ -594,6 +598,7 @@ export function useChangeOrder(changeOrderId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['change-order-materials', changeOrderId] });
+      queryClient.invalidateQueries({ queryKey: ['change-order', changeOrderId] });
     },
   });
 
@@ -647,6 +652,7 @@ export function useChangeOrder(changeOrderId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['change-order-equipment', changeOrderId] });
+      queryClient.invalidateQueries({ queryKey: ['change-order', changeOrderId] });
     },
   });
 
@@ -662,6 +668,7 @@ export function useChangeOrder(changeOrderId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['change-order-equipment', changeOrderId] });
+      queryClient.invalidateQueries({ queryKey: ['change-order', changeOrderId] });
     },
   });
 
