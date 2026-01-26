@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Receipt, Filter } from 'lucide-react';
+import { Plus, Receipt, Filter, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Select,
   SelectContent,
@@ -25,10 +26,12 @@ interface Contract {
   id: string;
   from_org_id: string | null;
   to_org_id: string | null;
+  from_role: string;
+  to_role: string;
 }
 
 export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
-  const { userOrgRoles } = useAuth();
+  const { userOrgRoles, currentRole } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,21 +41,35 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
 
   // Get current user's organization ID
   const currentOrgId = userOrgRoles[0]?.organization?.id;
+  const currentOrgType = userOrgRoles[0]?.organization?.type;
 
-  // Get contract IDs that belong to this user's org
-  const userContractIds = useMemo(() => {
+  // Contracts where user's org is the "to" party (can send invoices)
+  const contractsWhereUserCanInvoice = useMemo(() => {
     if (!currentOrgId) return [];
-    return contracts
-      .filter(c => c.from_org_id === currentOrgId || c.to_org_id === currentOrgId)
-      .map(c => c.id);
+    return contracts.filter(c => c.to_org_id === currentOrgId);
   }, [contracts, currentOrgId]);
+
+  // Contracts where user is a party (can view invoices)
+  const contractsWhereUserIsParty = useMemo(() => {
+    if (!currentOrgId) return [];
+    return contracts.filter(c => c.from_org_id === currentOrgId || c.to_org_id === currentOrgId);
+  }, [contracts, currentOrgId]);
+
+  // Can user create invoices? Only if they have contracts where they are to_org
+  // General Contractors should NOT be able to create invoices (they only receive them)
+  const canCreateInvoice = useMemo(() => {
+    // GC should never create invoices - they only receive them
+    if (currentOrgType === 'GC') return false;
+    // TC can invoice GC, FC can invoice TC
+    return contractsWhereUserCanInvoice.length > 0;
+  }, [currentOrgType, contractsWhereUserCanInvoice]);
 
   useEffect(() => {
     // Fetch contracts first to know which ones belong to user
     const fetchContracts = async () => {
       const { data } = await supabase
         .from('project_contracts')
-        .select('id, from_org_id, to_org_id')
+        .select('id, from_org_id, to_org_id, from_role, to_role')
         .eq('project_id', projectId);
       setContracts((data || []) as Contract[]);
     };
@@ -61,7 +78,7 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
 
   useEffect(() => {
     fetchInvoices();
-  }, [projectId, statusFilter, userContractIds]);
+  }, [projectId, statusFilter, contractsWhereUserIsParty]);
 
   const fetchInvoices = async () => {
     setLoading(true);
@@ -81,12 +98,12 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
       console.error('Error fetching invoices:', error);
       setInvoices([]);
     } else {
-      // UI-level filter: only show invoices for contracts user has access to
-      // (RLS should already filter, but this is defense in depth)
+      // RLS already filters by contract party, but we also apply UI filter for safety
       const allInvoices = (data || []) as Invoice[];
-      const visibleInvoices = currentOrgId && userContractIds.length > 0
+      const contractIds = contractsWhereUserIsParty.map(c => c.id);
+      const visibleInvoices = currentOrgId && contractIds.length > 0
         ? allInvoices.filter(inv => 
-            !inv.contract_id || userContractIds.includes(inv.contract_id)
+            !inv.contract_id || contractIds.includes(inv.contract_id)
           )
         : allInvoices;
       setInvoices(visibleInvoices);
@@ -122,6 +139,38 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
       .reduce((sum, i) => sum + i.total_amount, 0),
   };
 
+  // Determine the user's role context for messaging
+  const getRoleContext = () => {
+    if (currentOrgType === 'GC') {
+      return { 
+        canCreate: false, 
+        message: 'Invoices sent to you by Trade Contractors will appear here.',
+        emptyMessage: 'No invoices received yet. Trade Contractors will submit invoices for their completed work.'
+      };
+    }
+    if (currentOrgType === 'TC') {
+      return { 
+        canCreate: contractsWhereUserCanInvoice.length > 0, 
+        message: 'Create invoices to bill the General Contractor for completed work.',
+        emptyMessage: contractsWhereUserCanInvoice.length > 0 
+          ? 'Create your first invoice to start billing for completed work.'
+          : 'No contract found to invoice. Accept a contract with a General Contractor first.'
+      };
+    }
+    if (currentOrgType === 'FC') {
+      return { 
+        canCreate: contractsWhereUserCanInvoice.length > 0, 
+        message: 'Create invoices to bill the Trade Contractor for your labor.',
+        emptyMessage: contractsWhereUserCanInvoice.length > 0 
+          ? 'Create your first invoice to start billing for completed work.'
+          : 'No contract found to invoice. Accept a contract with a Trade Contractor first.'
+      };
+    }
+    return { canCreate: false, message: '', emptyMessage: 'No invoices available.' };
+  };
+
+  const roleContext = getRoleContext();
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -153,12 +202,22 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
             </SelectContent>
           </Select>
 
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Invoice
-          </Button>
+          {canCreateInvoice && (
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              New Invoice
+            </Button>
+          )}
         </div>
       </div>
+
+      {/* Role-specific info banner */}
+      {roleContext.message && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{roleContext.message}</AlertDescription>
+        </Alert>
+      )}
 
       {/* Summary Cards */}
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
@@ -191,13 +250,15 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
         <div className="flex flex-col items-center justify-center py-12 text-center border rounded-lg bg-muted/20">
           <Receipt className="h-12 w-12 text-muted-foreground/50 mb-4" />
           <h4 className="text-lg font-medium mb-2">No Invoices Yet</h4>
-          <p className="text-sm text-muted-foreground mb-4">
-            Create your first invoice to start billing for completed work.
+          <p className="text-sm text-muted-foreground mb-4 max-w-md">
+            {roleContext.emptyMessage}
           </p>
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Invoice
-          </Button>
+          {canCreateInvoice && (
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Invoice
+            </Button>
+          )}
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
