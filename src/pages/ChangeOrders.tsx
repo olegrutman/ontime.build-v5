@@ -173,11 +173,11 @@ const ChangeOrders = () => {
 
   if (!user) {
     return (
-      <AppLayout title="Change Orders">
+      <AppLayout title="Work Orders">
         <div className="p-6">
           <Card>
             <CardContent className="py-12 text-center">
-              <p className="text-muted-foreground">Please sign in to view change orders.</p>
+              <p className="text-muted-foreground">Please sign in to view work orders.</p>
             </CardContent>
           </Card>
         </div>
@@ -187,7 +187,7 @@ const ChangeOrders = () => {
 
   if (userOrgRoles.length === 0) {
     return (
-      <AppLayout title="Change Orders">
+      <AppLayout title="Work Orders">
         <div className="p-6">
           <Card>
             <CardContent className="py-12 text-center">
@@ -201,11 +201,11 @@ const ChangeOrders = () => {
 
   return (
     <AppLayout
-      title="Change Orders"
-      subtitle="Manage change orders as mini-projects"
+      title="Work Orders"
+      subtitle="Manage change work orders"
       showNewButton={canCreate && !!selectedProjectId}
       onNewClick={() => setShowWizard(true)}
-      newButtonLabel="New Change Order"
+      newButtonLabel="New Work Order"
     >
       <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Project Selector */}
@@ -233,7 +233,7 @@ const ChangeOrders = () => {
               </Select>
               {!selectedProjectId && projects.length > 0 && (
                 <p className="text-sm text-muted-foreground">
-                  Select a project to view and create change orders
+                  Select a project to view and create work orders
                 </p>
               )}
             </div>
@@ -272,8 +272,8 @@ const ChangeOrders = () => {
                   <FileEdit className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
                   <p className="text-muted-foreground">
                     {activeTab === 'ALL'
-                      ? 'No change orders yet for this project'
-                      : `No ${getStatusLabel(activeTab).toLowerCase()} change orders`}
+                      ? 'No work orders yet for this project'
+                      : `No ${getStatusLabel(activeTab).toLowerCase()} work orders`}
                   </p>
                   {canCreate && activeTab === 'ALL' && (
                     <Button
@@ -282,7 +282,7 @@ const ChangeOrders = () => {
                       onClick={() => setShowWizard(true)}
                     >
                       <Plus className="w-4 h-4 mr-2" />
-                      Create your first change order
+                      Create your first work order
                     </Button>
                   )}
                 </CardContent>
@@ -335,7 +335,7 @@ const ChangeOrders = () => {
             <CardContent className="py-12 text-center">
               <Building2 className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
               <p className="text-muted-foreground">
-                No projects found. Create a project first to add change orders.
+                No projects found. Create a project first to add work orders.
               </p>
               <Button
                 variant="outline"

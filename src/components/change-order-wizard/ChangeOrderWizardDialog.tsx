@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { 
   MapPin, 
   Wrench, 
@@ -18,7 +19,7 @@ import {
   Layers, 
   DoorOpen,
   Sparkles,
-  Send,
+  Plus,
   Loader2,
   Package,
   Truck,
@@ -30,18 +31,20 @@ import {
   ChangeOrderWizardData,
   LocationData,
   ChangeOrderWorkType,
-  CostResponsibility,
   WORK_TYPE_LABELS,
   LEVEL_OPTIONS,
   ROOM_AREA_OPTIONS,
 } from '@/types/changeOrderProject';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
-interface FieldCrewOption {
+interface TeamMemberOption {
   id: string;
   org_id: string;
   org_name: string;
+  role: string;
+  trade?: string | null;
 }
 
 interface ChangeOrderWizardDialogProps {
@@ -164,55 +167,106 @@ export function ChangeOrderWizardDialog({
   onComplete,
   isSubmitting = false,
 }: ChangeOrderWizardDialogProps) {
+  const { currentRole } = useAuth();
   const [formData, setFormData] = useState<ChangeOrderWizardData>(initialData);
   const [reason, setReason] = useState<string>('');
   const [isLocationEditing, setIsLocationEditing] = useState(true);
   const [unitIdType, setUnitIdType] = useState<string>('Number');
+  
+  // Labor fields - only for TC
   const [laborHours, setLaborHours] = useState<string>('');
   const [laborRate, setLaborRate] = useState<string>('65');
-  const [selectedFieldCrew, setSelectedFieldCrew] = useState<string>('');
-  const [fieldCrews, setFieldCrews] = useState<FieldCrewOption[]>([]);
-  const [isLoadingFieldCrews, setIsLoadingFieldCrews] = useState(false);
+  
+  // Role-based selection
+  const [selectedAssignee, setSelectedAssignee] = useState<string>('');
+  const [teamMembers, setTeamMembers] = useState<TeamMemberOption[]>([]);
+  const [isLoadingTeam, setIsLoadingTeam] = useState(false);
+  
+  // Participant toggles (other team members)
+  const [participantToggles, setParticipantToggles] = useState<Record<string, boolean>>({});
 
-  // Fetch Field Crew members from project_team when dialog opens
+  // Determine if user is GC or TC
+  const isGC = currentRole === 'GC_PM';
+  const isTC = currentRole === 'TC_PM';
+
+  // Fetch team members based on role when dialog opens
   useEffect(() => {
-    async function fetchFieldCrews() {
+    async function fetchTeamMembers() {
       if (!open || !projectId) return;
       
-      setIsLoadingFieldCrews(true);
+      setIsLoadingTeam(true);
       try {
+        // Fetch all accepted team members
         const { data, error } = await supabase
           .from('project_team')
           .select(`
             id,
             org_id,
+            role,
+            trade,
             organization:organizations(id, name)
           `)
           .eq('project_id', projectId)
-          .eq('role', 'Field Crew')
           .eq('status', 'Accepted');
         
         if (error) {
-          console.error('Error fetching field crews:', error);
+          console.error('Error fetching team members:', error);
           return;
         }
         
-        const crews: FieldCrewOption[] = (data || [])
+        const members: TeamMemberOption[] = (data || [])
           .filter((row) => row.org_id && row.organization)
           .map((row) => ({
             id: row.id,
             org_id: row.org_id!,
             org_name: (row.organization as { id: string; name: string })?.name || 'Unknown',
+            role: row.role || '',
+            trade: row.trade,
           }));
         
-        setFieldCrews(crews);
+        setTeamMembers(members);
+        
+        // Initialize participant toggles (all off by default)
+        const toggles: Record<string, boolean> = {};
+        members.forEach((m) => {
+          toggles[m.org_id] = false;
+        });
+        setParticipantToggles(toggles);
       } finally {
-        setIsLoadingFieldCrews(false);
+        setIsLoadingTeam(false);
       }
     }
     
-    fetchFieldCrews();
+    fetchTeamMembers();
   }, [open, projectId]);
+
+  // Filter assignees based on creator role
+  // GC can only assign to TC, TC can only assign to FC
+  const assigneeOptions = useMemo(() => {
+    if (isGC) {
+      return teamMembers.filter((m) => m.role === 'Trade Contractor');
+    } else if (isTC) {
+      return teamMembers.filter((m) => m.role === 'Field Crew');
+    }
+    return [];
+  }, [teamMembers, isGC, isTC]);
+
+  // Filter participant toggles based on role restrictions
+  // GC can toggle TCs, TC can toggle FCs and Suppliers
+  const toggleableParticipants = useMemo(() => {
+    if (isGC) {
+      // GC can see and toggle Trade Contractors (not Field Crews directly)
+      return teamMembers.filter((m) => 
+        m.role === 'Trade Contractor' && m.org_id !== selectedAssignee
+      );
+    } else if (isTC) {
+      // TC can toggle Field Crews and Suppliers
+      return teamMembers.filter((m) => 
+        (m.role === 'Field Crew' || m.role === 'Supplier') && m.org_id !== selectedAssignee
+      );
+    }
+    return [];
+  }, [teamMembers, isGC, isTC, selectedAssignee]);
 
   const updateFormData = <K extends keyof ChangeOrderWizardData>(
     field: K,
@@ -240,11 +294,13 @@ export function ChangeOrderWizardDialog({
 
   const hasLocationData = formData.location_data.level || formData.location_data.room_area;
 
+  // Labor total calculation (only relevant for TC)
   const laborTotal = useMemo(() => {
+    if (isGC) return 0; // GC doesn't see labor
     const hours = parseFloat(laborHours) || 0;
     const rate = parseFloat(laborRate) || 0;
     return hours * rate;
-  }, [laborHours, laborRate]);
+  }, [laborHours, laborRate, isGC]);
 
   const canSubmit = (): boolean => {
     // Require at minimum: location and work type
@@ -257,27 +313,41 @@ export function ChangeOrderWizardDialog({
 
   const handleSubmit = async () => {
     await onComplete({ ...formData, project_id: projectId });
-    setFormData(initialData);
-    setReason('');
-    setLaborHours('');
-    setSelectedFieldCrew('');
+    resetForm();
     onOpenChange(false);
   };
 
-  const handleClose = () => {
+  const resetForm = () => {
     setFormData(initialData);
     setReason('');
-    setIsLocationEditing(true);
     setLaborHours('');
-    setSelectedFieldCrew('');
+    setLaborRate('65');
+    setSelectedAssignee('');
+    setParticipantToggles({});
+    setIsLocationEditing(true);
+  };
+
+  const handleClose = () => {
+    resetForm();
     onOpenChange(false);
   };
+
+  const toggleParticipant = (orgId: string) => {
+    setParticipantToggles((prev) => ({
+      ...prev,
+      [orgId]: !prev[orgId],
+    }));
+  };
+
+  // Get the label for who we're assigning to based on role
+  const assigneeLabel = isGC ? 'Trade Contractor' : 'Field Crew';
+  const assigneeSectionTitle = isGC ? 'Assign to Trade Contractor' : 'Assign to Field Crew';
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
       <SheetContent side="right" className="w-full sm:max-w-xl md:max-w-2xl overflow-y-auto p-0">
         <SheetHeader className="sticky top-0 z-10 bg-background border-b px-6 py-4">
-          <SheetTitle className="text-lg">New Change Order</SheetTitle>
+          <SheetTitle className="text-lg">New Work Order</SheetTitle>
           <p className="text-sm text-muted-foreground">{projectName}</p>
         </SheetHeader>
 
@@ -428,7 +498,7 @@ export function ChangeOrderWizardDialog({
           {/* Title Section */}
           <SectionCard icon={Sparkles} title="Title (optional)" className="border-dashed">
             <Input
-              placeholder="Brief title for this change order"
+              placeholder="Brief title for this work order"
               value={formData.title}
               onChange={(e) => updateFormData('title', e.target.value)}
             />
@@ -483,68 +553,101 @@ export function ChangeOrderWizardDialog({
             </Select>
           </SectionCard>
 
-          {/* Send to Field Crew Section */}
-          <SectionCard icon={Users} title="Send to Field Crew">
+          {/* Assign To Section - Role-based */}
+          <SectionCard icon={Users} title={assigneeSectionTitle}>
             <div className="flex items-center justify-between">
               <Select 
-                value={selectedFieldCrew} 
-                onValueChange={setSelectedFieldCrew}
-                disabled={isLoadingFieldCrews}
+                value={selectedAssignee} 
+                onValueChange={setSelectedAssignee}
+                disabled={isLoadingTeam}
               >
                 <SelectTrigger className="flex-1">
-                  <SelectValue placeholder={isLoadingFieldCrews ? "Loading..." : "Select Field Crew..."} />
+                  <SelectValue placeholder={isLoadingTeam ? "Loading..." : `Select ${assigneeLabel}...`} />
                 </SelectTrigger>
                 <SelectContent>
-                  {fieldCrews.length === 0 && !isLoadingFieldCrews && (
+                  {assigneeOptions.length === 0 && !isLoadingTeam && (
                     <SelectItem value="_none" disabled>
-                      No Field Crews on this project
+                      No {assigneeLabel}s on this project
                     </SelectItem>
                   )}
-                  {fieldCrews.map((fc) => (
-                    <SelectItem key={fc.id} value={fc.org_id}>
-                      {fc.org_name}
+                  {assigneeOptions.map((member) => (
+                    <SelectItem key={member.id} value={member.org_id}>
+                      {member.org_name}
+                      {member.trade && <span className="text-muted-foreground ml-1">({member.trade})</span>}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <span className="ml-3 px-2 py-0.5 text-xs font-medium text-destructive border border-destructive/30 rounded">
-                Required
-              </span>
             </div>
             <p className="text-xs text-muted-foreground mt-3 p-3 bg-muted/50 rounded-lg">
-              <strong>Note:</strong> This is a work request only. Field Crew will submit hours, then you can add pricing before converting to a Change Order.
+              {isGC ? (
+                <><strong>Note:</strong> The selected Trade Contractor will be responsible for this work order. They will assign Field Crew and submit pricing.</>
+              ) : (
+                <><strong>Note:</strong> This is a work request. The Field Crew will submit hours, then you can add pricing before submitting for approval.</>
+              )}
             </p>
           </SectionCard>
 
-          {/* Labor Section */}
-          <SectionCard icon={Users} title="Labor">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-muted-foreground text-sm">Hours</Label>
-                <Input
-                  type="number"
-                  className="mt-1.5"
-                  placeholder="0"
-                  value={laborHours}
-                  onChange={(e) => setLaborHours(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label className="text-muted-foreground text-sm">Rate ($/hr)</Label>
-                <Input
-                  type="number"
-                  className="mt-1.5"
-                  value={laborRate}
-                  onChange={(e) => setLaborRate(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="flex justify-end mt-3">
-              <p className="text-sm font-medium">
-                Labor Total: <span className="text-primary">${laborTotal.toLocaleString()}</span>
+          {/* Participants Section - Toggle list */}
+          {toggleableParticipants.length > 0 && (
+            <SectionCard icon={Users} title="Additional Participants">
+              <p className="text-sm text-muted-foreground mb-4">
+                Toggle team members to include in this work order.
               </p>
-            </div>
-          </SectionCard>
+              <div className="space-y-3">
+                {toggleableParticipants.map((member) => (
+                  <div 
+                    key={member.org_id}
+                    className="flex items-center justify-between p-3 border rounded-lg"
+                  >
+                    <div>
+                      <p className="font-medium">{member.org_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {member.role}
+                        {member.trade && ` • ${member.trade}`}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={participantToggles[member.org_id] || false}
+                      onCheckedChange={() => toggleParticipant(member.org_id)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          )}
+
+          {/* Labor Section - Only for TC, not GC */}
+          {isTC && (
+            <SectionCard icon={Users} title="Labor">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-muted-foreground text-sm">Hours</Label>
+                  <Input
+                    type="number"
+                    className="mt-1.5"
+                    placeholder="0"
+                    value={laborHours}
+                    onChange={(e) => setLaborHours(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-muted-foreground text-sm">Rate ($/hr)</Label>
+                  <Input
+                    type="number"
+                    className="mt-1.5"
+                    value={laborRate}
+                    onChange={(e) => setLaborRate(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end mt-3">
+                <p className="text-sm font-medium">
+                  Labor Total: <span className="text-primary">${laborTotal.toLocaleString()}</span>
+                </p>
+              </div>
+            </SectionCard>
+          )}
 
           {/* Extra Materials Section */}
           <SectionCard icon={Package} title="Extra Materials">
@@ -567,7 +670,7 @@ export function ChangeOrderWizardDialog({
                 </div>
                 {formData.material_cost_responsibility === 'GC' && (
                   <p className="text-xs text-primary mt-2">
-                    GC will be notified they are responsible for material costs when this change order is submitted.
+                    GC will be notified they are responsible for material costs when this work order is created.
                   </p>
                 )}
               </div>
@@ -613,7 +716,7 @@ export function ChangeOrderWizardDialog({
                 </div>
                 {formData.equipment_cost_responsibility === 'GC' && (
                   <p className="text-xs text-primary mt-2">
-                    GC will be notified they are responsible for equipment costs when this change order is submitted.
+                    GC will be notified they are responsible for equipment costs when this work order is created.
                   </p>
                 )}
               </div>
@@ -641,11 +744,13 @@ export function ChangeOrderWizardDialog({
 
         {/* Sticky Footer */}
         <div className="fixed bottom-0 left-0 right-0 sm:left-auto sm:right-0 sm:w-full sm:max-w-xl md:max-w-2xl bg-background border-t shadow-lg">
-          {/* Total Row */}
-          <div className="flex items-center justify-between px-6 py-3 bg-muted/50">
-            <span className="font-semibold">Total</span>
-            <span className="text-xl font-bold">${laborTotal.toLocaleString()}</span>
-          </div>
+          {/* Total Row - Only show for TC with labor */}
+          {isTC && laborTotal > 0 && (
+            <div className="flex items-center justify-between px-6 py-3 bg-muted/50">
+              <span className="font-semibold">Estimated Labor</span>
+              <span className="text-xl font-bold">${laborTotal.toLocaleString()}</span>
+            </div>
+          )}
           
           {/* Submit Button */}
           <div className="p-4 space-y-2">
@@ -661,8 +766,8 @@ export function ChangeOrderWizardDialog({
                 </>
               ) : (
                 <>
-                  <Send className="w-5 h-5" />
-                  Submit for Approval
+                  <Plus className="w-5 h-5" />
+                  Create
                 </>
               )}
             </Button>
