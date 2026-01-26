@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -39,14 +39,30 @@ const handler = async (req: Request): Promise<Response> => {
       return new Response("Missing invoice_id", { status: 400, headers: corsHeaders });
     }
 
-    if (!authHeader) {
-      return new Response("Unauthorized", { status: 401, headers: corsHeaders });
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
-    // Use service role to fetch data (user auth verified by presence of token)
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Create client with user's auth token to respect RLS policies
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
 
-    // Fetch invoice with related data
+    // Validate the JWT token by getting the user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      console.error("Token validation failed:", authError);
+      return new Response(
+        JSON.stringify({ error: "Invalid or expired token" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    // Fetch invoice with related data - RLS will enforce access control
     const { data: invoice, error: invoiceError } = await supabase
       .from("invoices")
       .select(`
@@ -66,10 +82,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (invoiceError || !invoice) {
       console.error("Invoice fetch error:", invoiceError);
-      return new Response("Invoice not found", { status: 404, headers: corsHeaders });
+      return new Response(
+        JSON.stringify({ error: "Invoice not found or access denied" }),
+        { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
-    // Fetch line items
+    // Fetch line items - RLS will also apply here
     const { data: lineItems, error: lineItemsError } = await supabase
       .from("invoice_line_items")
       .select("*")
