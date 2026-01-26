@@ -757,6 +757,30 @@ export function useChangeOrder(changeOrderId: string | null) {
     },
   });
 
+  // Update change order (for description, etc.)
+  const updateChangeOrderMutation = useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<ChangeOrderProject> & { id: string }) => {
+      const { error } = await supabase
+        .from('change_order_projects')
+        .update(updates as never)
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['change-order', changeOrderId] });
+      queryClient.invalidateQueries({ queryKey: ['change-order-checklist', changeOrderId] });
+      toast({ title: 'Work Order updated' });
+    },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to update Work Order',
+        description: error.message,
+      });
+    },
+  });
+
   return {
     changeOrder,
     participants,
@@ -784,6 +808,8 @@ export function useChangeOrder(changeOrderId: string | null) {
     lockSupplierPricing: lockSupplierPricingMutation.mutate,
     addEquipment: addEquipmentMutation.mutate,
     updateEquipment: updateEquipmentMutation.mutate,
+    updateChangeOrder: updateChangeOrderMutation.mutate,
+    isUpdatingChangeOrder: updateChangeOrderMutation.isPending,
     
     // Participant management
     activateFC: activateFCMutation.mutateAsync,
