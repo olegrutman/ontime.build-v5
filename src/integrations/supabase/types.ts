@@ -3131,6 +3131,10 @@ export type Database = {
       }
     }
     Functions: {
+      accept_project_invite: {
+        Args: { _project_id: string }
+        Returns: undefined
+      }
       accept_project_invite_v2: {
         Args: {
           _org_address?: Json
@@ -3336,6 +3340,7 @@ export type Database = {
         | "CHANGE_SUBMITTED"
         | "CHANGE_APPROVED"
         | "CHANGE_REJECTED"
+        | "PROJECT_ADDED"
       order_status:
         | "DRAFT"
         | "SUBMITTED"
@@ -3489,6 +3494,7 @@ export const Constants = {
         "CHANGE_SUBMITTED",
         "CHANGE_APPROVED",
         "CHANGE_REJECTED",
+        "PROJECT_ADDED",
       ],
       order_status: [
         "DRAFT",
