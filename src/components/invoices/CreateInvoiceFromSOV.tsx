@@ -101,12 +101,33 @@ export function CreateInvoiceFromSOV({
   const [periodEnd, setPeriodEnd] = useState<Date>(endOfMonth(subMonths(new Date(), 1)));
   const [notes, setNotes] = useState('');
 
-  // Get current user's organization ID
+  // Get current user's organization info
   const currentOrgId = userOrgRoles[0]?.organization?.id;
+  const currentOrgType = userOrgRoles[0]?.organization?.type;
 
-  // Filter contracts to only those where user is the TO party (can send invoice)
+  // Filter contracts to only UPSTREAM contracts where user can invoice
+  // TC can invoice GC (TC is to_org, GC is from_org, from_role = 'General Contractor')
+  // FC can invoice TC (FC is to_org, TC is from_org, from_role = 'Trade Contractor')
   const contracts = useMemo(() => {
     if (!currentOrgId) return [];
+    
+    // User must be the to_org (the one sending the invoice upstream)
+    const userContracts = allContracts.filter(c => c.to_org_id === currentOrgId);
+    
+    // Only include upstream contracts based on role
+    // TC invoices GC: from_role must be 'General Contractor'
+    // FC invoices TC: from_role must be 'Trade Contractor'
+    return userContracts.filter(c => {
+      if (currentOrgType === 'TC') {
+        // TC can only invoice GC (upstream)
+        return c.from_role === 'General Contractor';
+      }
+      if (currentOrgType === 'FC') {
+        // FC can only invoice TC (upstream)
+        return c.from_role === 'Trade Contractor';
+      }
+      return false; // GC and other roles cannot create invoices
+    });
     return allContracts.filter(c => c.to_org_id === currentOrgId);
   }, [allContracts, currentOrgId]);
 
@@ -156,14 +177,12 @@ export function CreateInvoiceFromSOV({
     }
   };
 
-  // Auto-select first eligible contract
+  // Reset selection when dialog opens - always let user choose
   useEffect(() => {
-    if (contracts.length === 1 && !selectedContractId) {
-      setSelectedContractId(contracts[0].id);
-    } else if (contracts.length === 0) {
+    if (open) {
       setSelectedContractId('');
     }
-  }, [contracts, selectedContractId]);
+  }, [open]);
 
   const generateInvoiceNumber = async () => {
     const { count } = await supabase
@@ -395,24 +414,25 @@ export function CreateInvoiceFromSOV({
               </CardContent>
             </Card>
 
-            {/* Contract Selection */}
-            {contracts.length > 1 && (
-              <div className="space-y-2">
-                <Label>Select Contract</Label>
-                <Select value={selectedContractId} onValueChange={setSelectedContractId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose a contract to bill" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contracts.map(contract => (
-                      <SelectItem key={contract.id} value={contract.id}>
-                        {getContractDisplayName(contract.from_role, contract.to_role)} — {formatCurrency(contract.contract_sum)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {/* Contract Selection - Always show for upstream invoicing */}
+            <div className="space-y-2">
+              <Label>Select Upstream Contract to Invoice</Label>
+              <Select value={selectedContractId} onValueChange={setSelectedContractId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a contract to bill" />
+                </SelectTrigger>
+                <SelectContent>
+                  {contracts.map(contract => (
+                    <SelectItem key={contract.id} value={contract.id}>
+                      {getContractDisplayName(contract.from_role, contract.to_role)} — {formatCurrency(contract.contract_sum || 0)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Select the contract with your upstream party to create an invoice.
+              </p>
+            </div>
 
             {/* Invoice Details */}
             <div className="grid gap-4 md:grid-cols-3">
