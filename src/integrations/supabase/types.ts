@@ -174,6 +174,8 @@ export type Database = {
           labor_total: number | null
           locked_at: string | null
           locked_by: string | null
+          lump_sum: number | null
+          pricing_type: string | null
           unlock_requested: boolean | null
           unlock_requested_at: string | null
           updated_at: string
@@ -190,6 +192,8 @@ export type Database = {
           labor_total?: number | null
           locked_at?: string | null
           locked_by?: string | null
+          lump_sum?: number | null
+          pricing_type?: string | null
           unlock_requested?: boolean | null
           unlock_requested_at?: string | null
           updated_at?: string
@@ -206,6 +210,8 @@ export type Database = {
           labor_total?: number | null
           locked_at?: string | null
           locked_by?: string | null
+          lump_sum?: number | null
+          pricing_type?: string | null
           unlock_requested?: boolean | null
           unlock_requested_at?: string | null
           updated_at?: string
@@ -436,6 +442,8 @@ export type Database = {
           hours: number
           id: string
           labor_total: number | null
+          lump_sum: number | null
+          pricing_type: string | null
           updated_at: string
         }
         Insert: {
@@ -447,6 +455,8 @@ export type Database = {
           hours?: number
           id?: string
           labor_total?: number | null
+          lump_sum?: number | null
+          pricing_type?: string | null
           updated_at?: string
         }
         Update: {
@@ -458,6 +468,8 @@ export type Database = {
           hours?: number
           id?: string
           labor_total?: number | null
+          lump_sum?: number | null
+          pricing_type?: string | null
           updated_at?: string
         }
         Relationships: [
