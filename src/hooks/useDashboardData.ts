@@ -34,6 +34,14 @@ interface TeamMembership {
   org_id: string | null;
 }
 
+interface PendingInvite {
+  id: string;
+  projectId: string;
+  projectName: string;
+  invitedByOrgName: string;
+  role: string;
+}
+
 interface DashboardData {
   projects: ProjectWithDetails[];
   statusCounts: {
@@ -48,6 +56,7 @@ interface DashboardData {
     pendingInvites: number;
   };
   attentionItems: AttentionItem[];
+  pendingInvites: PendingInvite[];
   billing: {
     role: 'GC' | 'TC' | 'FC';
     invoicesReceived: number;
@@ -68,6 +77,7 @@ export function useDashboardData(): DashboardData {
   const { user, userOrgRoles } = useAuth();
   const [projects, setProjects] = useState<ProjectWithDetails[]>([]);
   const [attentionItems, setAttentionItems] = useState<AttentionItem[]>([]);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [billing, setBilling] = useState({
     invoicesReceived: 0,
     invoicesSent: 0,
@@ -98,21 +108,36 @@ export function useDashboardData(): DashboardData {
         .select('id, name, description, status, project_type, build_type, updated_at, organization_id')
         .eq('organization_id', currentOrg.id);
 
-      // Then get projects where org is on the team
+      // Get projects from project_participants (source of truth for project access)
+      const { data: participantsData } = await supabase
+        .from('project_participants')
+        .select('project_id, role')
+        .eq('organization_id', currentOrg.id)
+        .eq('invite_status', 'ACCEPTED');
+
+      const participantProjectIds = (participantsData || [])
+        .map(p => p.project_id)
+        .filter((id): id is string => id !== null);
+
+      // Also get projects from project_team (legacy support)
       const { data: teamMembershipsData } = await supabase
         .from('project_team')
         .select('project_id, role, org_id')
-        .eq('org_id', currentOrg.id);
+        .eq('org_id', currentOrg.id)
+        .eq('status', 'Accepted');
 
       const teamMemberships: TeamMembership[] = teamMembershipsData || [];
       const teamProjectIds = teamMemberships.map(t => t.project_id).filter((id): id is string => id !== null);
       
+      // Combine project IDs from both sources
+      const allProjectIds = [...new Set([...participantProjectIds, ...teamProjectIds])];
+      
       let assignedProjects: Project[] = [];
-      if (teamProjectIds.length > 0) {
+      if (allProjectIds.length > 0) {
         const { data } = await supabase
           .from('projects')
           .select('id, name, description, status, project_type, build_type, updated_at, organization_id')
-          .in('id', teamProjectIds);
+          .in('id', allProjectIds);
         assignedProjects = (data || []) as Project[];
       }
 
@@ -157,16 +182,53 @@ export function useDashboardData(): DashboardData {
         pendingInvoices = data || [];
       }
 
-      // 5. Get pending team invites
-      let pendingInvites: { id: string; project_id: string | null; invited_org_name: string | null }[] = [];
+      // 5. Get pending team invites SENT by current org (for projects they own)
+      let sentInvites: { id: string; project_id: string | null; invited_org_name: string | null }[] = [];
       if (projectIds.length > 0) {
         const { data } = await supabase
           .from('project_team')
           .select('id, project_id, invited_org_name')
           .in('project_id', projectIds)
           .eq('status', 'Invited');
-        pendingInvites = data || [];
+        sentInvites = data || [];
       }
+
+      // 6. Get pending invites TO the current org (invitations they need to accept/decline)
+      const { data: incomingInvitesData } = await supabase
+        .from('project_participants')
+        .select(`
+          id,
+          project_id,
+          role,
+          projects:project_id (
+            id,
+            name,
+            organization_id,
+            organizations:organization_id (
+              name
+            )
+          )
+        `)
+        .eq('organization_id', currentOrg.id)
+        .eq('invite_status', 'INVITED');
+
+      const incomingInvitesList: PendingInvite[] = (incomingInvitesData || []).map((inv: any) => {
+        const roleMap: Record<string, string> = {
+          'GC': 'General Contractor',
+          'TC': 'Trade Contractor',
+          'FC': 'Field Crew',
+          'SUPPLIER': 'Supplier',
+        };
+        return {
+          id: inv.id,
+          projectId: inv.project_id,
+          projectName: inv.projects?.name || 'Unknown Project',
+          invitedByOrgName: inv.projects?.organizations?.name || 'Unknown',
+          role: roleMap[inv.role] || inv.role,
+        };
+      });
+
+      setPendingInvites(incomingInvitesList);
 
       // Build attention items
       const attentionList: AttentionItem[] = [];
@@ -200,7 +262,8 @@ export function useDashboardData(): DashboardData {
         });
       }
 
-      pendingInvites.forEach(inv => {
+      // Sent invites (for projects they own)
+      sentInvites.forEach(inv => {
         if (!inv.project_id) return;
         const proj = allProjects.find(p => p.id === inv.project_id);
         attentionList.push({
@@ -338,15 +401,16 @@ export function useDashboardData(): DashboardData {
     return {
       changeOrders: attentionItems.filter(i => i.type === 'change_order').length,
       invoices: attentionItems.filter(i => i.type === 'invoice').length,
-      pendingInvites: attentionItems.filter(i => i.type === 'invite').length,
+      pendingInvites: attentionItems.filter(i => i.type === 'invite').length + pendingInvites.length,
     };
-  }, [attentionItems]);
+  }, [attentionItems, pendingInvites]);
 
   return {
     projects,
     statusCounts,
     needsAttention,
     attentionItems,
+    pendingInvites,
     billing: { ...billing, role: billingRole },
     thisMonth,
     loading,

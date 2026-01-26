@@ -3,5 +3,6 @@ export { SummaryCards } from './SummaryCards';
 export { ProjectListFilters, type ProjectStatusFilter } from './ProjectListFilters';
 export { ProjectRow } from './ProjectRow';
 export { NeedsAttentionPanel, type AttentionItem } from './NeedsAttentionPanel';
+export { PendingInvitesPanel, type PendingInvite } from './PendingInvitesPanel';
 export { ArchiveProjectDialog } from './ArchiveProjectDialog';
 export { CompleteProjectDialog } from './CompleteProjectDialog';

@@ -16,6 +16,7 @@ import {
   ProjectListFilters,
   ProjectRow,
   NeedsAttentionPanel,
+  PendingInvitesPanel,
   ArchiveProjectDialog,
   CompleteProjectDialog,
   type ProjectStatusFilter,
@@ -30,6 +31,7 @@ export default function Dashboard() {
     statusCounts,
     needsAttention,
     attentionItems,
+    pendingInvites,
     billing,
     thisMonth,
     loading: dataLoading,
@@ -291,14 +293,16 @@ export default function Dashboard() {
             )}
           </div>
 
-          {/* Needs Attention Sidebar */}
-          <div className="hidden lg:block">
+          {/* Sidebar: Pending Invites + Needs Attention */}
+          <div className="hidden lg:block space-y-4">
+            <PendingInvitesPanel invites={pendingInvites} onRefresh={refetch} />
             <NeedsAttentionPanel items={attentionItems} />
           </div>
         </div>
 
-        {/* Mobile Needs Attention (shown below projects) */}
-        <div className="lg:hidden">
+        {/* Mobile: Pending Invites + Needs Attention (shown below projects) */}
+        <div className="lg:hidden space-y-4">
+          <PendingInvitesPanel invites={pendingInvites} onRefresh={refetch} />
           <NeedsAttentionPanel items={attentionItems} />
         </div>
       </div>

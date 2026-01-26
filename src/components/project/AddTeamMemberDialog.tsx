@@ -253,6 +253,17 @@ export function AddTeamMemberDialog({
     }
   };
 
+  // Map role string to org_type enum
+  const roleToOrgType = (role: TeamRole): 'GC' | 'TC' | 'FC' | 'SUPPLIER' => {
+    switch (role) {
+      case 'General Contractor': return 'GC';
+      case 'Trade Contractor': return 'TC';
+      case 'Field Crew': return 'FC';
+      case 'Supplier': return 'SUPPLIER';
+      default: return 'TC';
+    }
+  };
+
   const handleAddExisting = async () => {
     if (!selectedResult || !user?.id) return;
     
@@ -281,6 +292,26 @@ export function AddTeamMemberDialog({
         });
 
       if (teamError) throw teamError;
+
+      // Also insert into project_participants with ACCEPTED status
+      // This makes the project visible on their dashboard and triggers notification
+      const { error: participantError } = await supabase
+        .from('project_participants')
+        .upsert({
+          project_id: projectId,
+          organization_id: selectedResult.org_id,
+          role: roleToOrgType(selectedRole),
+          invite_status: 'ACCEPTED',
+          invited_by: user.id,
+          accepted_at: new Date().toISOString(),
+        }, {
+          onConflict: 'project_id,organization_id',
+        });
+
+      if (participantError) {
+        console.error('Error adding participant:', participantError);
+        // Don't fail - team member was added successfully
+      }
 
       // Log activity
       await supabase.from('project_activity').insert({
