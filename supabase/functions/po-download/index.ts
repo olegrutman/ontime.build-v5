@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const corsHeaders = {
@@ -16,40 +17,108 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const url = new URL(req.url);
-    const token = url.searchParams.get("token");
+    const downloadToken = url.searchParams.get("token");
     const format = url.searchParams.get("format") || "csv";
+    const authHeader = req.headers.get("Authorization");
 
-    if (!token) {
-      return new Response("Missing download token", { status: 400, headers: corsHeaders });
+    // Two modes: download_token (for external share links) OR authenticated request
+    let po: any = null;
+    let lineItems: any[] = [];
+
+    if (downloadToken) {
+      // Token-based download (for supplier access via email link)
+      // Use service role since suppliers may not have accounts
+      const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+      
+      const { data: poData, error: poError } = await serviceClient
+        .from("purchase_orders")
+        .select(`
+          *,
+          organization:organizations(name, org_code),
+          supplier:suppliers(name, supplier_code),
+          project:projects(name),
+          work_item:work_items(title)
+        `)
+        .eq("download_token", downloadToken)
+        .single();
+
+      if (poError || !poData) {
+        return new Response(
+          JSON.stringify({ error: "Invalid or expired download link" }),
+          { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      
+      po = poData;
+      
+      const { data: items } = await serviceClient
+        .from("po_line_items")
+        .select("*")
+        .eq("po_id", po.id)
+        .order("line_number");
+      
+      lineItems = items || [];
+    } else if (authHeader?.startsWith('Bearer ')) {
+      // Authenticated download - verify user has access via RLS
+      const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } }
+      });
+
+      // Validate the JWT token by getting the user
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        return new Response(
+          JSON.stringify({ error: "Invalid or expired token" }),
+          { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      const poId = url.searchParams.get("po_id");
+      if (!poId) {
+        return new Response(
+          JSON.stringify({ error: "Missing po_id parameter" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Fetch PO with RLS - user must have access
+      const { data: poData, error: poError } = await supabase
+        .from("purchase_orders")
+        .select(`
+          *,
+          organization:organizations(name, org_code),
+          supplier:suppliers(name, supplier_code),
+          project:projects(name),
+          work_item:work_items(title)
+        `)
+        .eq("id", poId)
+        .single();
+
+      if (poError || !poData) {
+        return new Response(
+          JSON.stringify({ error: "PO not found or access denied" }),
+          { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+      
+      po = poData;
+      
+      const { data: items } = await supabase
+        .from("po_line_items")
+        .select("*")
+        .eq("po_id", po.id)
+        .order("line_number");
+      
+      lineItems = items || [];
+    } else {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - provide token or Authorization header" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Fetch PO by download token
-    const { data: po, error: poError } = await supabase
-      .from("purchase_orders")
-      .select(`
-        *,
-        organization:organizations(name, org_code),
-        supplier:suppliers(name, supplier_code),
-        project:projects(name),
-        work_item:work_items(title)
-      `)
-      .eq("download_token", token)
-      .single();
-
-    if (poError || !po) {
-      return new Response("Invalid or expired download link", { status: 404, headers: corsHeaders });
-    }
-
-    // Fetch line items
-    const { data: lineItems } = await supabase
-      .from("po_line_items")
-      .select("*")
-      .eq("po_id", po.id)
-      .order("line_number");
-
-    const items = lineItems || [];
+    const items = lineItems;
     const projectName = po.project?.name || po.work_item?.title || "";
 
     if (format === "csv") {
