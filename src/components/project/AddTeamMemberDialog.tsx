@@ -274,7 +274,8 @@ export function AddTeamMemberDialog({
 
     setSaving(true);
     try {
-      // Insert into project_team with status = Accepted
+      // Insert into project_team with status = Invited
+      // Existing orgs should NOT be auto-accepted; they must accept via dashboard invite flow.
       const { error: teamError } = await supabase
         .from('project_team')
         .insert({
@@ -287,23 +288,22 @@ export function AddTeamMemberDialog({
           invited_name: selectedResult.contact_name,
           invited_org_name: selectedResult.org_name,
           invited_by_user_id: user.id,
-          status: 'Accepted',
-          accepted_at: new Date().toISOString(),
+          status: 'Invited',
         });
 
       if (teamError) throw teamError;
 
-      // Also insert into project_participants with ACCEPTED status
-      // This makes the project visible on their dashboard and triggers notification
+      // Also insert into project_participants with INVITED status
+      // Notification trigger will create a PROJECT_INVITE notification.
       const { error: participantError } = await supabase
         .from('project_participants')
         .upsert({
           project_id: projectId,
           organization_id: selectedResult.org_id,
           role: roleToOrgType(selectedRole),
-          invite_status: 'ACCEPTED',
+          invite_status: 'INVITED',
           invited_by: user.id,
-          accepted_at: new Date().toISOString(),
+          accepted_at: null,
         }, {
           onConflict: 'project_id,organization_id',
         });
@@ -324,7 +324,7 @@ export function AddTeamMemberDialog({
         metadata: { org_name: selectedResult.org_name, role: selectedRole },
       });
 
-      toast.success(`${selectedResult.org_name} added to project`);
+      toast.success(`Invitation sent to ${selectedResult.org_name}`);
       onMemberAdded();
       onOpenChange(false);
     } catch (error: any) {
