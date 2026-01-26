@@ -22,7 +22,7 @@ const ITEM_ICONS = {
 };
 
 const ITEM_LABELS = {
-  change_order: 'Change Order',
+  change_order: 'Work Order',
   invoice: 'Invoice',
   invite: 'Team Invite',
 };

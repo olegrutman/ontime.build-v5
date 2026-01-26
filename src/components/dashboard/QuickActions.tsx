@@ -17,7 +17,7 @@ export function QuickActions({ onViewArchived }: QuickActionsProps) {
       </Button>
       <Button variant="outline" size="sm" onClick={() => navigate('/change-orders')}>
         <FileEdit className="h-4 w-4 mr-2" />
-        New Change Order
+        New Work Order
       </Button>
       <Button variant="outline" size="sm" onClick={() => navigate('/invoices')}>
         <FileText className="h-4 w-4 mr-2" />
@@ -25,7 +25,7 @@ export function QuickActions({ onViewArchived }: QuickActionsProps) {
       </Button>
       <Button variant="outline" size="sm" onClick={() => navigate('/change-orders')}>
         <ClipboardCheck className="h-4 w-4 mr-2" />
-        Review Change Orders
+        Review Work Orders
       </Button>
       <Button variant="outline" size="sm" onClick={() => navigate('/dashboard')}>
         <Briefcase className="h-4 w-4 mr-2" />

@@ -34,7 +34,7 @@ export interface WorkItem {
 export const WORK_ITEM_TYPE_LABELS: Record<WorkItemType, string> = {
   PROJECT: 'Project',
   SOV_ITEM: 'SOV Item',
-  CHANGE_WORK: 'Change Order',
+  CHANGE_WORK: 'Work Order',
   TM_WORK: 'T&M Work',
 };
 

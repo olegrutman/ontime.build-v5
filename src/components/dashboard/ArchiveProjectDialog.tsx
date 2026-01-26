@@ -29,7 +29,7 @@ export function ArchiveProjectDialog({
           <AlertDialogTitle>Archive Project</AlertDialogTitle>
           <AlertDialogDescription>
             Archiving <strong>{projectName}</strong> will lock all data and move it to Archived Projects. 
-            You can still view it later but no new invoices or change orders can be created.
+            You can still view it later but no new invoices or work orders can be created.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

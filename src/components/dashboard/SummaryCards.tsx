@@ -148,7 +148,7 @@ export function SummaryCards({
               <p className="text-sm text-muted-foreground">This Month</p>
               <p className="text-lg font-bold">{thisMonth.invoices} invoices</p>
               <p className="text-xs text-muted-foreground">
-                {thisMonth.changeOrders} change orders
+                {thisMonth.changeOrders} work orders
               </p>
             </div>
           </div>

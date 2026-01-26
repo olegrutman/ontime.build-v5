@@ -312,7 +312,20 @@ export function ChangeOrderWizardDialog({
   };
 
   const handleSubmit = async () => {
-    await onComplete({ ...formData, project_id: projectId });
+    // Build participant list from toggles
+    const enabledParticipants = Object.entries(participantToggles)
+      .filter(([_, enabled]) => enabled)
+      .map(([orgId]) => orgId);
+
+    const submitData = {
+      ...formData,
+      project_id: projectId,
+      reason: reason || undefined,
+      assigned_org_id: selectedAssignee || null,
+      participant_org_ids: enabledParticipants,
+    };
+
+    await onComplete(submitData);
     resetForm();
     onOpenChange(false);
   };

@@ -171,6 +171,9 @@ export interface ChangeOrderWizardData {
   // Step 4: Description
   description: string;
   
+  // Reason for the work order
+  reason?: string;
+  
   // Step 5: Materials
   requires_materials: boolean;
   material_cost_responsibility: CostResponsibility | null;
@@ -178,6 +181,12 @@ export interface ChangeOrderWizardData {
   // Step 6: Equipment
   requires_equipment: boolean;
   equipment_cost_responsibility: CostResponsibility | null;
+  
+  // Assigned contractor (TC for GC creators, FC for TC creators)
+  assigned_org_id?: string | null;
+  
+  // Additional participants toggled on
+  participant_org_ids?: string[];
 }
 
 // Status labels
