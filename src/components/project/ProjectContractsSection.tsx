@@ -181,7 +181,7 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
                       <ClipboardList className="h-3.5 w-3.5 text-orange-600" />
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground">Change Orders</p>
+                      <p className="text-xs text-muted-foreground">Work Orders</p>
                       <p className="text-sm font-medium">$0</p>
                     </div>
                   </div>

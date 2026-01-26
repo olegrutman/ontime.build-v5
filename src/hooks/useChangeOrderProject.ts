@@ -41,7 +41,7 @@ export function useChangeOrderProject(projectId?: string) {
     enabled: !!projectId,
   });
 
-  // Create change order
+  // Create change order with participants
   const createMutation = useMutation({
     mutationFn: async (data: ChangeOrderWizardData & { project_id: string }) => {
       if (!user) throw new Error('Not authenticated');
@@ -64,6 +64,7 @@ export function useChangeOrderProject(projectId?: string) {
         status: 'draft',
       };
 
+      // Insert the work order
       const { data: result, error } = await supabase
         .from('change_order_projects')
         .insert(insertData as never)
@@ -71,16 +72,70 @@ export function useChangeOrderProject(projectId?: string) {
         .single();
 
       if (error) throw error;
-      return result as unknown as ChangeOrderProject;
+      
+      const workOrder = result as unknown as ChangeOrderProject;
+
+      // Insert participants if provided
+      const participantsToInsert: Array<{
+        change_order_id: string;
+        organization_id: string;
+        role: string;
+        is_active: boolean;
+        invited_by: string;
+      }> = [];
+
+      // Add the assigned contractor as primary participant
+      if (data.assigned_org_id) {
+        // Determine role based on who created (GC assigns TC, TC assigns FC)
+        const assignedRole = currentRole === 'GC_PM' ? 'TC' : 'FC';
+        participantsToInsert.push({
+          change_order_id: workOrder.id,
+          organization_id: data.assigned_org_id,
+          role: assignedRole,
+          is_active: true,
+          invited_by: user.id,
+        });
+      }
+
+      // Add additional toggled participants
+      if (data.participant_org_ids && data.participant_org_ids.length > 0) {
+        for (const orgId of data.participant_org_ids) {
+          // Skip if already added as assignee
+          if (orgId === data.assigned_org_id) continue;
+          
+          participantsToInsert.push({
+            change_order_id: workOrder.id,
+            organization_id: orgId,
+            role: 'PARTICIPANT', // Generic role for additional participants
+            is_active: true,
+            invited_by: user.id,
+          });
+        }
+      }
+
+      // Insert all participants
+      if (participantsToInsert.length > 0) {
+        const { error: participantError } = await supabase
+          .from('change_order_participants')
+          .insert(participantsToInsert);
+
+        if (participantError) {
+          console.error('Error inserting participants:', participantError);
+          // Don't fail the whole operation, just log the error
+        }
+      }
+
+      return workOrder;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['change-order-projects'] });
-      toast({ title: 'Change Order created successfully' });
+      queryClient.invalidateQueries({ queryKey: ['change-order-participants'] });
+      toast({ title: 'Work Order created successfully' });
     },
     onError: (error) => {
       toast({
         variant: 'destructive',
-        title: 'Failed to create Change Order',
+        title: 'Failed to create Work Order',
         description: error.message,
       });
     },

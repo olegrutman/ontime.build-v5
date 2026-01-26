@@ -137,7 +137,7 @@ export function Header() {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate('/change-orders')}>
                       <FileEdit className="mr-2 h-4 w-4" />
-                      Change Orders
+                      Work Orders
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => navigate('/work-items')}>

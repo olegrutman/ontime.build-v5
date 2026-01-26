@@ -253,13 +253,13 @@ export default function ProjectHome() {
             <ContractSOVEditor projectId={id!} />
           </TabsContent>
 
-          {/* CORs Tab - Change Order Requests (new mini-project system) */}
+          {/* CORs Tab - Work Order Requests (new mini-project system) */}
           <TabsContent value="cors">
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <ClipboardList className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-medium mb-2">Change Order Requests</h3>
+              <h3 className="text-lg font-medium mb-2">Work Order Requests</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Create and manage change orders as mini-projects with full workflow.
+                Create and manage work orders with full workflow.
               </p>
               <div className="flex gap-3">
                 <Button asChild variant="outline">
@@ -267,7 +267,7 @@ export default function ProjectHome() {
                 </Button>
                 <Button asChild>
                   <Link to={`/change-orders?project=${id}&new=true`}>
-                    New Change Order
+                    New Work Order
                   </Link>
                 </Button>
               </div>
@@ -278,12 +278,12 @@ export default function ProjectHome() {
           <TabsContent value="cos">
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-medium mb-2">Change Orders</h3>
+              <h3 className="text-lg font-medium mb-2">Approved Work Orders</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                View approved change orders for this project.
+                View approved work orders for this project.
               </p>
               <Button asChild>
-                <Link to={`/change-orders?project=${id}&status=approved`}>View Change Orders</Link>
+                <Link to={`/change-orders?project=${id}&status=approved`}>View Work Orders</Link>
               </Button>
             </div>
           </TabsContent>

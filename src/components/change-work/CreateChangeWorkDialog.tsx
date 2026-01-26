@@ -95,7 +95,7 @@ export function CreateChangeWorkDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={!title || isCreating}>
-              {isCreating ? 'Creating...' : 'Create Change Order'}
+              {isCreating ? 'Creating...' : 'Create Work Order'}
             </Button>
           </DialogFooter>
         </form>
