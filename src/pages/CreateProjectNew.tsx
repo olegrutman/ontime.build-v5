@@ -44,7 +44,7 @@ const initialData: NewProjectWizardData = {
 export default function CreateProjectNew() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, userOrgRoles, loading: authLoading } = useAuth();
+  const { user, userOrgRoles, profile, loading: authLoading } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [data, setData] = useState<NewProjectWizardData>(initialData);
   const [saving, setSaving] = useState(false);
@@ -130,6 +130,27 @@ export default function CreateProjectNew() {
         role: currentOrg.type as any,
         invite_status: 'ACCEPTED',
         invited_by: user.id,
+      });
+      
+      // Map org type to role label for project_team
+      const roleLabel = currentOrg.type === 'GC' ? 'General Contractor' 
+        : currentOrg.type === 'TC' ? 'Trade Contractor'
+        : currentOrg.type === 'FC' ? 'Field Crew'
+        : 'Supplier';
+      
+      // Add creator to project_team (so they appear on Team page)
+      await supabase.from('project_team').insert({
+        project_id: project.id,
+        org_id: currentOrg.id,
+        user_id: user.id,
+        role: roleLabel,
+        trade: currentOrg.type === 'TC' || currentOrg.type === 'FC' ? (currentOrg as any).trade : null,
+        invited_email: profile?.email || '',
+        invited_name: profile?.full_name || profile?.first_name || '',
+        invited_org_name: currentOrg.name,
+        invited_by_user_id: user.id,
+        status: 'Accepted',
+        accepted_at: new Date().toISOString(),
       });
 
       setData(prev => ({ ...prev, projectId: project.id }));
