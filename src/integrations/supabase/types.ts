@@ -3243,6 +3243,7 @@ export type Database = {
         Args: { _notification_id: string }
         Returns: undefined
       }
+      normalize_phone: { Args: { phone: string }; Returns: string }
       reject_tm_period: {
         Args: { notes: string; period_id: string }
         Returns: undefined
