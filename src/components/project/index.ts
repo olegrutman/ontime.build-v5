@@ -7,3 +7,4 @@ export { ProjectFinancialsSection } from './ProjectFinancialsSection';
 export { ProjectFinancialsSectionNew } from './ProjectFinancialsSectionNew';
 export { ProjectTopBar } from './ProjectTopBar';
 export { WorkOrderSummaryCard } from './WorkOrderSummaryCard';
+export { WorkOrdersTab } from './WorkOrdersTab';

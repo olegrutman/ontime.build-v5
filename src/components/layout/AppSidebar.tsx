@@ -4,7 +4,6 @@ import {
   Home,
   Briefcase,
   FileText,
-  ClipboardList,
   Receipt,
   Package,
   ShoppingCart,
@@ -45,7 +44,6 @@ const mainNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: Home },
   { title: 'Work Items', url: '/work-items', icon: Briefcase },
   { title: 'SOV Dashboard', url: '/sov', icon: Receipt },
-  { title: 'Work Orders', url: '/change-orders', icon: ClipboardList },
 ];
 
 const materialsNavItems = [
