@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Activity, UserPlus, CheckCircle, FileEdit, ClipboardCheck, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatDistanceToNow } from 'date-fns';
@@ -11,6 +12,7 @@ interface ActivityItem {
   description: string;
   actor_name: string | null;
   actor_company: string | null;
+  actor_user_id: string | null;
   created_at: string;
   metadata: any;
 }
@@ -26,6 +28,8 @@ const activityIcons: Record<string, React.ComponentType<{ className?: string }>>
   CONTRACT_UPDATED: FileEdit,
   CHANGE_ORDER_APPROVED: ClipboardCheck,
   CHANGE_ORDER_SUBMITTED: ClipboardCheck,
+  FC_HOURS_SUBMITTED: ClipboardCheck,
+  FC_HOURS_UPDATED: FileEdit,
   PROJECT_CREATED: Activity,
 };
 
@@ -36,26 +40,118 @@ const activityColors: Record<string, string> = {
   CONTRACT_UPDATED: 'text-orange-500',
   CHANGE_ORDER_APPROVED: 'text-green-500',
   CHANGE_ORDER_SUBMITTED: 'text-amber-500',
+  FC_HOURS_SUBMITTED: 'text-blue-500',
+  FC_HOURS_UPDATED: 'text-purple-500',
   PROJECT_CREATED: 'text-primary',
 };
 
+// Activity types relevant to each role
+const roleActivityTypes: Record<string, string[]> = {
+  'Field Crew': [
+    'INVITE_SENT',
+    'INVITE_ACCEPTED',
+    'FC_HOURS_SUBMITTED',
+    'FC_HOURS_UPDATED',
+    'CHANGE_ORDER_APPROVED',
+  ],
+  'Trade Contractor': [
+    'INVITE_SENT',
+    'INVITE_ACCEPTED',
+    'SCOPE_UPDATED',
+    'CONTRACT_UPDATED',
+    'CHANGE_ORDER_APPROVED',
+    'CHANGE_ORDER_SUBMITTED',
+    'FC_HOURS_SUBMITTED',
+    'FC_HOURS_UPDATED',
+    'PROJECT_CREATED',
+  ],
+  'General Contractor': [
+    'INVITE_SENT',
+    'INVITE_ACCEPTED',
+    'SCOPE_UPDATED',
+    'CONTRACT_UPDATED',
+    'CHANGE_ORDER_APPROVED',
+    'CHANGE_ORDER_SUBMITTED',
+    'PROJECT_CREATED',
+  ],
+};
+
 export function ProjectActivitySection({ projectId }: ProjectActivitySectionProps) {
+  const { user } = useAuth();
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewerRole, setViewerRole] = useState<string>('Trade Contractor');
+  const [userOrgId, setUserOrgId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchActivities = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      // Determine viewer role and org
+      const { data: memberships } = await supabase
+        .from('user_org_roles')
+        .select('organization_id')
+        .eq('user_id', user.id);
+      
+      const userOrgIds = (memberships || []).map(m => m.organization_id);
+      let currentRole = 'Trade Contractor';
+      let currentOrgId: string | null = null;
+      
+      if (userOrgIds.length > 0) {
+        const { data: teamMembers } = await supabase
+          .from('project_team')
+          .select('role, org_id')
+          .eq('project_id', projectId)
+          .in('org_id', userOrgIds);
+        
+        if (teamMembers && teamMembers.length > 0) {
+          currentRole = teamMembers[0].role;
+          currentOrgId = teamMembers[0].org_id;
+        }
+      }
+
+      setViewerRole(currentRole);
+      setUserOrgId(currentOrgId);
+
+      // Get relevant activity types for the role
+      const relevantTypes = roleActivityTypes[currentRole] || roleActivityTypes['Trade Contractor'];
+
+      // Fetch activities filtered by type
       const { data, error } = await supabase
         .from('project_activity')
         .select('*')
         .eq('project_id', projectId)
+        .in('activity_type', relevantTypes)
         .order('created_at', { ascending: false })
         .limit(10);
 
       if (error) {
         console.error('Error fetching activities:', error);
       } else {
-        setActivities(data || []);
+        // For FC, also filter to only show activities from their org or related to them
+        let filteredData = data || [];
+        
+        if (currentRole === 'Field Crew' && currentOrgId) {
+          filteredData = filteredData.filter(activity => {
+            // Show activities where FC's company is mentioned or actor
+            const isOwnActivity = activity.actor_user_id === user.id;
+            const metadata = activity.metadata as Record<string, unknown> | null;
+            const mentionsOwnCompany = metadata?.organization_id === currentOrgId;
+            const isInviteToSelf = activity.activity_type === 'INVITE_SENT' && 
+              metadata?.invited_org_id === currentOrgId;
+            const isAcceptedByOrg = activity.activity_type === 'INVITE_ACCEPTED' && 
+              metadata?.organization_id === currentOrgId;
+            const isFCHoursActivity = ['FC_HOURS_SUBMITTED', 'FC_HOURS_UPDATED'].includes(activity.activity_type);
+            const isApproval = activity.activity_type === 'CHANGE_ORDER_APPROVED';
+            
+            return isOwnActivity || mentionsOwnCompany || isInviteToSelf || isAcceptedByOrg || isFCHoursActivity || isApproval;
+          });
+        }
+        
+        setActivities(filteredData);
       }
       setLoading(false);
     };
@@ -74,7 +170,13 @@ export function ProjectActivitySection({ projectId }: ProjectActivitySectionProp
           filter: `project_id=eq.${projectId}`,
         },
         (payload) => {
-          setActivities((prev) => [payload.new as ActivityItem, ...prev].slice(0, 10));
+          const newActivity = payload.new as ActivityItem;
+          const relevantTypes = roleActivityTypes[viewerRole] || roleActivityTypes['Trade Contractor'];
+          
+          // Only add if relevant to this role
+          if (relevantTypes.includes(newActivity.activity_type)) {
+            setActivities((prev) => [newActivity, ...prev].slice(0, 10));
+          }
         }
       )
       .subscribe();
@@ -82,7 +184,7 @@ export function ProjectActivitySection({ projectId }: ProjectActivitySectionProp
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [projectId]);
+  }, [projectId, user]);
 
   if (loading) {
     return (
