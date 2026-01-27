@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChangeOrderMaterial } from '@/types/changeOrderProject';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,77 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Package, Lock, Send } from 'lucide-react';
+
+// Separate component with local state for TC manual pricing
+function TCManualPricingRow({
+  material,
+  onUpdateMaterial,
+  onLockTCPricing,
+}: {
+  material: ChangeOrderMaterial;
+  onUpdateMaterial: (data: { id: string } & Partial<ChangeOrderMaterial>) => void;
+  onLockTCPricing?: (materialId: string) => void;
+}) {
+  const [unitCost, setUnitCost] = useState<string>(material.unit_cost?.toString() || '');
+
+  // Sync with external changes
+  useEffect(() => {
+    if (material.unit_cost !== null && material.unit_cost !== undefined) {
+      setUnitCost(material.unit_cost.toString());
+    }
+  }, [material.unit_cost]);
+
+  const numericUnitCost = parseFloat(unitCost) || 0;
+  const lineTotal = numericUnitCost * material.quantity;
+
+  const handleBlur = () => {
+    if (numericUnitCost > 0) {
+      onUpdateMaterial({
+        id: material.id,
+        unit_cost: numericUnitCost,
+        line_total: lineTotal,
+      });
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2 pt-2 border-t">
+      <div className="flex-1 grid grid-cols-2 gap-2">
+        <div>
+          <Label className="text-xs">Unit Cost</Label>
+          <Input
+            type="number"
+            step="0.01"
+            min="0"
+            placeholder="0.00"
+            className="h-8"
+            value={unitCost}
+            onChange={(e) => setUnitCost(e.target.value)}
+            onBlur={handleBlur}
+          />
+        </div>
+        <div>
+          <Label className="text-xs">Line Total</Label>
+          <div className="h-8 flex items-center text-sm font-medium">
+            ${lineTotal.toFixed(2)}
+          </div>
+        </div>
+      </div>
+      {numericUnitCost > 0 && onLockTCPricing && (
+        <Button
+          size="sm"
+          onClick={() => {
+            handleBlur(); // Save before locking
+            onLockTCPricing(material.id);
+          }}
+        >
+          <Lock className="w-3 h-3 mr-1" />
+          Lock
+        </Button>
+      )}
+    </div>
+  );
+}
 
 interface MaterialsPanelProps {
   materials: ChangeOrderMaterial[];
@@ -145,45 +216,11 @@ export function MaterialsPanel({
 
                 {/* TC manual pricing - when not sent to supplier and not locked */}
                 {isTC && isEditable && !material.sent_to_supplier && !material.supplier_locked && (
-                  <div className="flex items-center gap-2 pt-2 border-t">
-                    <div className="flex-1 grid grid-cols-2 gap-2">
-                      <div>
-                        <Label className="text-xs">Unit Cost</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          placeholder="0.00"
-                          className="h-8"
-                          value={material.unit_cost || ''}
-                          onChange={(e) => {
-                            const unitCost = parseFloat(e.target.value) || 0;
-                            const lineTotal = unitCost * material.quantity;
-                            onUpdateMaterial({
-                              id: material.id,
-                              unit_cost: unitCost,
-                              line_total: lineTotal,
-                            });
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs">Line Total</Label>
-                        <div className="h-8 flex items-center text-sm font-medium">
-                          ${((material.unit_cost || 0) * material.quantity).toFixed(2)}
-                        </div>
-                      </div>
-                    </div>
-                    {material.unit_cost && material.unit_cost > 0 && onLockTCPricing && (
-                      <Button
-                        size="sm"
-                        onClick={() => onLockTCPricing(material.id)}
-                      >
-                        <Lock className="w-3 h-3 mr-1" />
-                        Lock
-                      </Button>
-                    )}
-                  </div>
+                  <TCManualPricingRow
+                    material={material}
+                    onUpdateMaterial={onUpdateMaterial}
+                    onLockTCPricing={onLockTCPricing}
+                  />
                 )}
 
                 {/* TC markup - after supplier or TC locks pricing */}
