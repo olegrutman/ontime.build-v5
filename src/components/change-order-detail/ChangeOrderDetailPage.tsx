@@ -58,7 +58,10 @@ export function ChangeOrderDetailPage() {
   const isSupplier = currentRole === 'SUPPLIER';
 
   const hasFCParticipant = participants.some((p) => p.role === 'FC' && p.is_active);
-  const isEditable = changeOrder?.status === 'draft' || changeOrder?.status === 'tc_pricing';
+  // FC can edit during draft and fc_input; TC can edit during draft and tc_pricing
+  const isFCEditable = changeOrder?.status === 'draft' || changeOrder?.status === 'fc_input';
+  const isTCEditable = changeOrder?.status === 'draft' || changeOrder?.status === 'tc_pricing';
+  const isEditable = isTCEditable; // General editability for TC/GC
 
   if (isLoading) {
     return (
@@ -111,11 +114,11 @@ export function ChangeOrderDetailPage() {
               isUpdating={isUpdatingChangeOrder}
             />
 
-            {/* FC Hours - visible to TC and FC only */}
-            {(isTC || isFC) && hasFCParticipant && (
+            {/* FC Hours - visible to TC and FC (when they're a participant) */}
+            {((isTC && hasFCParticipant) || (isFC && hasFCParticipant)) && (
               <FieldCrewHoursPanel
                 fcHours={fcHours}
-                isEditable={isFC && isEditable}
+                isEditable={isFC && isFCEditable}
                 canViewRates={isTC || isFC}
                 onAddHours={addFCHours}
                 onLockHours={lockFCHours}
