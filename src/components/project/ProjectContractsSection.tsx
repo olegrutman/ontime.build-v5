@@ -18,6 +18,8 @@ interface Contract {
   to_project_team_id: string | null;
   from_org_id: string | null;
   to_org_id: string | null;
+  from_org_name?: string | null;
+  to_org_name?: string | null;
 }
 
 interface TeamMember {
@@ -30,17 +32,6 @@ interface ProjectContractsSectionProps {
   projectId: string;
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  'GC': 'General Contractor',
-  'TC': 'Trade Contractor',
-  'FC': 'Field Crew',
-  'SUPPLIER': 'Supplier',
-  'General Contractor': 'General Contractor',
-  'Trade Contractor': 'Trade Contractor',
-  'Field Crew': 'Field Crew',
-  'Supplier': 'Supplier',
-};
-
 function formatCurrency(amount: number | null): string {
   if (amount === null || amount === undefined) return '$0';
   return new Intl.NumberFormat('en-US', {
@@ -50,14 +41,15 @@ function formatCurrency(amount: number | null): string {
   }).format(amount);
 }
 
-function getContractDescription(fromRole: string, toRole: string, trade: string | null): string {
-  const fromLabel = ROLE_LABELS[fromRole] || fromRole;
-  const toLabel = ROLE_LABELS[toRole] || toRole;
+function getContractTitle(contract: Contract): string {
+  // Use company names when available
+  const fromName = contract.from_org_name || contract.from_role;
+  const toName = contract.to_org_name || contract.to_role;
   
-  if (trade) {
-    return `${fromLabel} Contract with ${toLabel} (${trade})`;
+  if (contract.trade) {
+    return `${fromName} Contract with ${toName} (${contract.trade})`;
   }
-  return `${fromLabel} Contract with ${toLabel}`;
+  return `${fromName} Contract with ${toName}`;
 }
 
 export function ProjectContractsSection({ projectId }: ProjectContractsSectionProps) {
@@ -74,7 +66,11 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
       const [contractsResult, teamResult] = await Promise.all([
         supabase
           .from('project_contracts')
-          .select('*')
+          .select(`
+            *,
+            from_org:organizations!project_contracts_from_org_id_fkey(name),
+            to_org:organizations!project_contracts_to_org_id_fkey(name)
+          `)
           .eq('project_id', projectId),
         supabase
           .from('project_team')
@@ -87,7 +83,11 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
       } else {
         // Filter contracts to only show those where user's org is involved
         // This provides UI-level filtering on top of RLS
-        const allContracts = (contractsResult.data || []) as Contract[];
+        const allContracts = (contractsResult.data || []).map((c: any) => ({
+          ...c,
+          from_org_name: c.from_org?.name || null,
+          to_org_name: c.to_org?.name || null,
+        })) as Contract[];
         const visibleContracts = currentOrgId 
           ? allContracts.filter(c => 
               c.from_org_id === currentOrgId || c.to_org_id === currentOrgId
@@ -167,13 +167,14 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <h4 className="font-medium text-sm">
-                      {getContractDescription(contract.from_role, contract.to_role, contract.trade)}
+                      {getContractTitle(contract)}
                     </h4>
-                    {relatedMember?.invited_org_name && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {relatedMember.invited_org_name}
-                      </p>
-                    )}
+                    {/* Show role as secondary badge */}
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="text-xs">
+                        {contract.from_role} → {contract.to_role}
+                      </Badge>
+                    </div>
                   </div>
                   <Badge variant={isPending ? 'outline' : 'default'} className={isPending ? 'text-amber-600 border-amber-300' : ''}>
                     {isPending ? 'Pending Acceptance' : 'Active'}

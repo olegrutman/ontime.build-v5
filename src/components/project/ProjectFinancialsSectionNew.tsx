@@ -16,6 +16,10 @@ interface Contract {
   contract_sum: number;
   retainage_percent: number;
   trade: string | null;
+  from_org_id: string | null;
+  to_org_id: string | null;
+  from_org_name?: string | null;
+  to_org_name?: string | null;
 }
 
 interface ProjectFinancialsSectionNewProps {
@@ -46,13 +50,24 @@ export function ProjectFinancialsSectionNew({ projectId, viewerRole = 'Trade Con
   const fetchData = async () => {
     setLoading(true);
     
-    // Fetch contracts
+    // Fetch contracts with org names
     const { data: contractData } = await supabase
       .from('project_contracts')
-      .select('id, from_role, to_role, contract_sum, retainage_percent, trade')
+      .select(`
+        id, from_role, to_role, contract_sum, retainage_percent, trade, from_org_id, to_org_id,
+        from_org:organizations!project_contracts_from_org_id_fkey(name),
+        to_org:organizations!project_contracts_to_org_id_fkey(name)
+      `)
       .eq('project_id', projectId);
     
-    setContracts((contractData || []) as Contract[]);
+    // Map org names to the contract objects
+    const contractsWithNames = (contractData || []).map((c: any) => ({
+      ...c,
+      from_org_name: c.from_org?.name || null,
+      to_org_name: c.to_org?.name || null,
+    })) as Contract[];
+    
+    setContracts(contractsWithNames);
 
     // Fetch billed amounts from invoices
     const { data: invoiceData } = await supabase
@@ -163,6 +178,25 @@ export function ProjectFinancialsSectionNew({ projectId, viewerRole = 'Trade Con
   const retainageAmount = billedToDate * (retainagePercent / 100);
   const outstanding = contractValue - billedToDate;
   const billingProgress = contractValue > 0 ? (billedToDate / contractValue) * 100 : 0;
+
+  // Helper to get company name for a contract's counterparty
+  const getUpstreamCompanyName = () => {
+    if (!upstreamContract) return null;
+    // For TC view, the GC is the counterparty
+    if (upstreamContract.from_role === 'General Contractor') {
+      return upstreamContract.from_org_name;
+    }
+    return upstreamContract.to_org_name;
+  };
+
+  const getDownstreamCompanyName = () => {
+    if (!downstreamContract) return null;
+    // For TC view, the FC is the counterparty
+    if (downstreamContract.to_role === 'Field Crew') {
+      return downstreamContract.to_org_name;
+    }
+    return downstreamContract.from_org_name;
+  };
 
   if (contracts.length === 0) {
     return (
@@ -279,7 +313,9 @@ export function ProjectFinancialsSectionNew({ projectId, viewerRole = 'Trade Con
                     )}
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm text-muted-foreground">Contract with General Contractor</p>
+                    <p className="text-sm text-muted-foreground">
+                      Contract with {getUpstreamCompanyName() || 'General Contractor'}
+                    </p>
                     {hasUpstream ? (
                       <EditableContractValue 
                         contract={upstreamContract} 
@@ -289,11 +325,11 @@ export function ProjectFinancialsSectionNew({ projectId, viewerRole = 'Trade Con
                       />
                     ) : (
                       <div className="mt-1">
-                        <p className="text-sm text-muted-foreground mb-2">Add a GC to track revenue</p>
+                        <p className="text-sm text-muted-foreground mb-2">Add a General Contractor to track revenue</p>
                         <Button size="sm" variant="outline" asChild>
                           <Link to={`/project/${projectId}/edit?step=team`}>
                             <Plus className="h-3 w-3 mr-1" />
-                            Add GC Contract
+                            Add Contract
                           </Link>
                         </Button>
                       </div>
@@ -311,7 +347,9 @@ export function ProjectFinancialsSectionNew({ projectId, viewerRole = 'Trade Con
                     <DollarSign className={`h-5 w-5 ${hasDownstream ? 'text-orange-600' : 'text-muted-foreground'}`} />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm text-muted-foreground">Contract with Field Crew</p>
+                    <p className="text-sm text-muted-foreground">
+                      Contract with {getDownstreamCompanyName() || 'Field Crew'}
+                    </p>
                     {hasDownstream ? (
                       <EditableContractValue 
                         contract={downstreamContract} 
@@ -360,7 +398,7 @@ export function ProjectFinancialsSectionNew({ projectId, viewerRole = 'Trade Con
                         {!hasUpstream && !hasDownstream 
                           ? 'Add contracts to calculate'
                           : !hasUpstream 
-                            ? 'Add GC contract'
+                            ? 'Add upstream contract'
                             : 'Add Field Crew contract'}
                       </p>
                     )}
@@ -381,7 +419,7 @@ export function ProjectFinancialsSectionNew({ projectId, viewerRole = 'Trade Con
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground">
-                    Contract with Trade Contractor
+                    Contract with {primaryContract.from_org_name || primaryContract.to_org_name || 'Trade Contractor'}
                   </p>
                   <EditableContractValue 
                     contract={primaryContract} 

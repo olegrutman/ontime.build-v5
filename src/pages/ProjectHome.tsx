@@ -1,32 +1,29 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { 
-  FileText, 
   ClipboardList, 
   Package, 
-  Users, 
-  MapPin,
   AlertTriangle,
-  LayoutDashboard,
-  Receipt
+  FileText
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { AppSidebar } from '@/components/layout/AppSidebar';
 import { 
   ProjectTeamSection, 
   ProjectScopeSection, 
   ProjectContractsSection, 
   ProjectActivitySection,
-  ProjectFinancialsSectionNew 
+  ProjectFinancialsSectionNew,
+  ProjectTopBar
 } from '@/components/project';
-import { AppLayout } from '@/components/layout';
 import { InvoicesTab } from '@/components/invoices';
 import { ContractSOVEditor } from '@/components/sov';
+import { useToast } from '@/hooks/use-toast';
 
 interface Project {
   id: string;
@@ -55,27 +52,39 @@ interface WorkItemSummary {
   pending_change_orders: number;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  'draft': 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-  'active': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  'on_hold': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-  'completed': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  'draft': 'Draft',
-  'active': 'Active',
-  'on_hold': 'On Hold',
-  'completed': 'Completed',
-};
-
 export default function ProjectHome() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
   const [project, setProject] = useState<Project | null>(null);
   const [summary, setSummary] = useState<WorkItemSummary | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Get active tab from URL or default to 'overview'
+  const activeTab = searchParams.get('tab') || 'overview';
+
+  const handleTabChange = (tab: string) => {
+    setSearchParams({ tab });
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!project) return;
+
+    const { error } = await supabase
+      .from('projects')
+      .update({ status: newStatus })
+      .eq('id', project.id);
+
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to update project status', variant: 'destructive' });
+      return;
+    }
+
+    setProject({ ...project, status: newStatus });
+    toast({ title: 'Project status updated' });
+  };
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -123,185 +132,147 @@ export default function ProjectHome() {
     fetchProject();
   }, [id, navigate]);
 
-  const formatAddress = () => {
-    if (!project) return '';
-    const addr = project.address;
-    if (addr?.street) {
-      return `${addr.street}, ${addr.city || project.city}, ${addr.state || project.state} ${addr.zip || project.zip}`;
-    }
-    if (project.city) {
-      return `${project.city}, ${project.state} ${project.zip}`;
-    }
-    return '';
-  };
-
   if (loading) {
     return (
-      <AppLayout title="Loading...">
-        <div className="container mx-auto px-4 py-6 space-y-6">
-          <Skeleton className="h-12 w-full" />
-          <div className="grid gap-4 md:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton key={i} className="h-24" />
-            ))}
-          </div>
-          <Skeleton className="h-96 w-full" />
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full">
+          <AppSidebar />
+          <SidebarInset className="flex flex-col flex-1">
+            <div className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur px-4 py-3">
+              <Skeleton className="h-8 w-64" />
+            </div>
+            <main className="flex-1 overflow-auto container mx-auto px-4 py-6 space-y-6">
+              <div className="grid gap-4 md:grid-cols-4">
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} className="h-24" />
+                ))}
+              </div>
+              <Skeleton className="h-96 w-full" />
+            </main>
+          </SidebarInset>
         </div>
-      </AppLayout>
+      </SidebarProvider>
     );
   }
 
   if (!project) {
     return (
-      <AppLayout title="Project Not Found">
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <p className="text-muted-foreground">Project not found</p>
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full">
+          <AppSidebar />
+          <SidebarInset className="flex flex-col flex-1">
+            <div className="flex items-center justify-center min-h-[50vh]">
+              <p className="text-muted-foreground">Project not found</p>
+            </div>
+          </SidebarInset>
         </div>
-      </AppLayout>
+      </SidebarProvider>
     );
   }
 
   const projectStatus = project.status || 'draft';
 
   return (
-    <AppLayout title={project.name}>
-      <main className="container mx-auto px-4 py-6 space-y-6">
-        {/* Project Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-2xl font-bold">{project.name}</h1>
-              <Badge className={STATUS_COLORS[projectStatus]}>
-                {STATUS_LABELS[projectStatus] || projectStatus}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              {formatAddress() && (
-                <span className="flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
-                  {formatAddress()}
-                </span>
+    <SidebarProvider>
+      <div className="min-h-screen flex w-full">
+        <AppSidebar />
+        <SidebarInset className="flex flex-col flex-1">
+          {/* Sticky Project Top Bar */}
+          <ProjectTopBar
+            projectName={project.name}
+            projectStatus={projectStatus}
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            onStatusChange={handleStatusChange}
+          />
+
+          {/* Scrollable content */}
+          <main className="flex-1 overflow-auto">
+            <div className="container mx-auto px-4 py-6 space-y-6">
+              {/* Alert Banner */}
+              {summary && summary.pending_change_orders > 0 && activeTab === 'overview' && (
+                <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20">
+                  <AlertTriangle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-amber-800 dark:text-amber-200">
+                    {summary.pending_change_orders} Work Order{summary.pending_change_orders > 1 ? 's' : ''} Need{summary.pending_change_orders === 1 ? 's' : ''} Approval
+                  </AlertDescription>
+                </Alert>
               )}
-              <Badge variant="outline">{project.project_type}</Badge>
-              <Badge variant="outline">{project.build_type}</Badge>
+
+              {/* Overview Tab */}
+              {activeTab === 'overview' && (
+                <div className="space-y-6">
+                  {/* Financial Summary Cards */}
+                  <ProjectFinancialsSectionNew projectId={id!} />
+
+                  {/* Two Column Layout */}
+                  <div className="grid gap-6 lg:grid-cols-2">
+                    {/* Left Column */}
+                    <div className="space-y-6">
+                      <ProjectTeamSection projectId={id!} />
+                      <ProjectContractsSection projectId={id!} />
+                    </div>
+
+                    {/* Right Column */}
+                    <div className="space-y-6">
+                      <ProjectScopeSection projectId={id!} projectType={project.project_type} />
+                      <ProjectActivitySection projectId={id!} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* SOV Tab */}
+              {activeTab === 'sov' && (
+                <ContractSOVEditor projectId={id!} />
+              )}
+
+              {/* Work Orders Tab */}
+              {activeTab === 'work-orders' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-lg font-semibold">Work Orders</h2>
+                    <Button asChild>
+                      <Link to={`/change-orders?project=${id}&new=true`}>
+                        New Work Order
+                      </Link>
+                    </Button>
+                  </div>
+                  <div className="flex flex-col items-center justify-center py-12 text-center border rounded-lg bg-muted/20">
+                    <ClipboardList className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Work Orders</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Create and manage work orders with full workflow.
+                    </p>
+                    <Button asChild variant="outline">
+                      <Link to={`/change-orders?project=${id}`}>View All Work Orders</Link>
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Invoices Tab */}
+              {activeTab === 'invoices' && (
+                <InvoicesTab 
+                  projectId={id!} 
+                  retainagePercent={project.retainage_percent || 0} 
+                />
+              )}
+
+              {/* Documents Tab (placeholder) */}
+              {activeTab === 'documents' && (
+                <div className="flex flex-col items-center justify-center py-12 text-center border rounded-lg bg-muted/20">
+                  <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                  <h3 className="text-lg font-medium mb-2">Documents</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Document management coming soon.
+                  </p>
+                </div>
+              )}
             </div>
-          </div>
-        </div>
-
-        {/* Alert Banner */}
-        {summary && summary.pending_change_orders > 0 && (
-          <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <AlertDescription className="text-amber-800 dark:text-amber-200">
-              {summary.pending_change_orders} Change Order{summary.pending_change_orders > 1 ? 's' : ''} Need{summary.pending_change_orders === 1 ? 's' : ''} Approval
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Navigation Tabs */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="w-full justify-start">
-            <TabsTrigger value="overview" className="gap-2">
-              <LayoutDashboard className="h-4 w-4" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="sov" className="gap-2">
-              <FileText className="h-4 w-4" />
-              SOV
-            </TabsTrigger>
-            <TabsTrigger value="cors" className="gap-2">
-              <ClipboardList className="h-4 w-4" />
-              CORs
-            </TabsTrigger>
-            <TabsTrigger value="cos" className="gap-2">
-              <Package className="h-4 w-4" />
-              COs
-            </TabsTrigger>
-            <TabsTrigger value="invoices" className="gap-2">
-              <Receipt className="h-4 w-4" />
-              Invoices
-            </TabsTrigger>
-            <TabsTrigger value="team" className="gap-2">
-              <Users className="h-4 w-4" />
-              Team
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Overview Tab - Command Center */}
-          <TabsContent value="overview" className="space-y-6">
-            {/* Financial Summary Cards - Using real contract data */}
-            <ProjectFinancialsSectionNew projectId={id!} />
-
-            {/* Two Column Layout */}
-            <div className="grid gap-6 lg:grid-cols-2">
-              {/* Left Column */}
-              <div className="space-y-6">
-                <ProjectTeamSection projectId={id!} />
-                <ProjectContractsSection projectId={id!} />
-              </div>
-
-              {/* Right Column */}
-              <div className="space-y-6">
-                <ProjectScopeSection projectId={id!} projectType={project.project_type} />
-                <ProjectActivitySection projectId={id!} />
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* SOV Tab - Contract-based SOV Editor */}
-          <TabsContent value="sov">
-            <ContractSOVEditor projectId={id!} />
-          </TabsContent>
-
-          {/* CORs Tab - Work Order Requests (new mini-project system) */}
-          <TabsContent value="cors">
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <ClipboardList className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-medium mb-2">Work Order Requests</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                Create and manage work orders with full workflow.
-              </p>
-              <div className="flex gap-3">
-                <Button asChild variant="outline">
-                  <Link to={`/change-orders?project=${id}`}>View All</Link>
-                </Button>
-                <Button asChild>
-                  <Link to={`/change-orders?project=${id}&new=true`}>
-                    New Work Order
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* COs Tab */}
-          <TabsContent value="cos">
-            <div className="flex flex-col items-center justify-center py-12 text-center">
-              <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-medium mb-2">Approved Work Orders</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                View approved work orders for this project.
-              </p>
-              <Button asChild>
-                <Link to={`/change-orders?project=${id}&status=approved`}>View Work Orders</Link>
-              </Button>
-            </div>
-          </TabsContent>
-
-          {/* Invoices Tab */}
-          <TabsContent value="invoices">
-            <InvoicesTab 
-              projectId={id!} 
-              retainagePercent={project.retainage_percent || 0} 
-            />
-          </TabsContent>
-
-          {/* Team Tab */}
-          <TabsContent value="team">
-            <ProjectTeamSection projectId={id!} />
-          </TabsContent>
-        </Tabs>
-      </main>
-    </AppLayout>
+          </main>
+        </SidebarInset>
+      </div>
+    </SidebarProvider>
   );
 }
