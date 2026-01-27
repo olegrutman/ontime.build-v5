@@ -184,23 +184,24 @@ export function CreateInvoiceFromSOV({
   }, [open]);
 
   const generateInvoiceNumber = async () => {
-    // Get the highest invoice number for this project to avoid duplicates
+    // Get ALL invoice numbers for this project to find the true max
     const { data } = await supabase
       .from('invoices')
       .select('invoice_number')
-      .eq('project_id', projectId)
-      .order('invoice_number', { ascending: false })
-      .limit(1);
+      .eq('project_id', projectId);
     
-    let nextNumber = 1;
+    let maxNumber = 0;
     if (data && data.length > 0) {
-      // Extract number from INV-XXXX format
-      const match = data[0].invoice_number.match(/INV-(\d+)/);
-      if (match) {
-        nextNumber = parseInt(match[1], 10) + 1;
-      }
+      // Find the highest number from all invoices
+      data.forEach(inv => {
+        const match = inv.invoice_number.match(/INV-(\d+)/);
+        if (match) {
+          const num = parseInt(match[1], 10);
+          if (num > maxNumber) maxNumber = num;
+        }
+      });
     }
-    setInvoiceNumber(`INV-${nextNumber.toString().padStart(4, '0')}`);
+    setInvoiceNumber(`INV-${(maxNumber + 1).toString().padStart(4, '0')}`);
   };
 
   // Get the selected contract and its SOV
