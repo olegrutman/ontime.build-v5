@@ -32,8 +32,8 @@ export function TCPricingSummary({
 
   // Check completion status
   const hasLaborPricing = tcLabor.length > 0;
-  const allMaterialsPriced = !requiresMaterials || materials.every(m => m.supplier_locked);
-  const allEquipmentPriced = !requiresEquipment || equipment.every(e => e.total_cost && e.total_cost > 0);
+  const allMaterialsPriced = !requiresMaterials || materials.length === 0 || materials.every(m => m.unit_cost && m.unit_cost > 0);
+  const allEquipmentPriced = !requiresEquipment || equipment.length === 0 || equipment.every(e => e.total_cost && e.total_cost > 0);
   
   const isComplete = hasLaborPricing && allMaterialsPriced && allEquipmentPriced;
 
@@ -94,7 +94,7 @@ export function TCPricingSummary({
             <ul className="space-y-0.5">
               {!hasLaborPricing && <li>• Add labor pricing</li>}
               {requiresMaterials && !allMaterialsPriced && (
-                <li>• Lock all material prices</li>
+                <li>• Price all materials</li>
               )}
               {requiresEquipment && !allEquipmentPriced && (
                 <li>• Add equipment costs</li>

@@ -150,9 +150,6 @@ export function ChangeOrderDetailPage() {
                 onAddMaterial={addMaterial}
                 onUpdateMaterial={updateMaterial}
                 onLockSupplierPricing={lockSupplierPricing}
-                onLockTCPricing={(materialId, unitCost, lineTotal) => 
-                  lockTCPricing({ materialId, unitCost, lineTotal })
-                }
               />
             )}
 

@@ -5,17 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Package, Lock, Send } from 'lucide-react';
+import { Plus, Package, Lock, Send, Check } from 'lucide-react';
 
 // Separate component with local state for TC manual pricing
 function TCManualPricingRow({
   material,
   onUpdateMaterial,
-  onLockTCPricing,
 }: {
   material: ChangeOrderMaterial;
   onUpdateMaterial: (data: { id: string } & Partial<ChangeOrderMaterial>) => void;
-  onLockTCPricing?: (materialId: string, unitCost: number, lineTotal: number) => void;
 }) {
   const [unitCost, setUnitCost] = useState<string>(material.unit_cost?.toString() || '');
 
@@ -30,20 +28,11 @@ function TCManualPricingRow({
   const lineTotal = numericUnitCost * material.quantity;
 
   const handleSave = () => {
-    if (numericUnitCost > 0) {
-      onUpdateMaterial({
-        id: material.id,
-        unit_cost: numericUnitCost,
-        line_total: lineTotal,
-      });
-    }
-  };
-
-  const handleLock = () => {
-    if (numericUnitCost > 0 && onLockTCPricing) {
-      // Pass the values directly to avoid stale data issues
-      onLockTCPricing(material.id, numericUnitCost, lineTotal);
-    }
+    onUpdateMaterial({
+      id: material.id,
+      unit_cost: numericUnitCost,
+      line_total: lineTotal,
+    });
   };
 
   return (
@@ -69,15 +58,6 @@ function TCManualPricingRow({
           </div>
         </div>
       </div>
-      {numericUnitCost > 0 && onLockTCPricing && (
-        <Button
-          size="sm"
-          onClick={handleLock}
-        >
-          <Lock className="w-3 h-3 mr-1" />
-          Lock
-        </Button>
-      )}
     </div>
   );
 }
@@ -91,7 +71,6 @@ interface MaterialsPanelProps {
   onAddMaterial: (data: { description: string; quantity: number; uom: string; notes?: string }) => void;
   onUpdateMaterial: (data: { id: string } & Partial<ChangeOrderMaterial>) => void;
   onLockSupplierPricing: (materialId: string) => void;
-  onLockTCPricing?: (materialId: string, unitCost: number, lineTotal: number) => void;
 }
 
 export function MaterialsPanel({
@@ -103,7 +82,6 @@ export function MaterialsPanel({
   onAddMaterial,
   onUpdateMaterial,
   onLockSupplierPricing,
-  onLockTCPricing,
 }: MaterialsPanelProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [description, setDescription] = useState('');
@@ -158,13 +136,13 @@ export function MaterialsPanel({
                 <div className="flex items-center justify-between">
                   <p className="font-medium text-sm">{material.description}</p>
                   <div className="flex items-center gap-2">
-                    {material.supplier_locked && (
+                    {material.unit_cost && material.unit_cost > 0 && (
                       <Badge variant="secondary" className="gap-1">
-                        <Lock className="w-3 h-3" />
+                        <Check className="w-3 h-3" />
                         Priced
                       </Badge>
                     )}
-                    {material.sent_to_supplier && !material.supplier_locked && (
+                    {material.sent_to_supplier && !material.unit_cost && (
                       <Badge variant="outline" className="gap-1">
                         <Send className="w-3 h-3" />
                         Sent to Supplier
@@ -179,12 +157,10 @@ export function MaterialsPanel({
                   </span>
                   {canViewCosts && (
                     <div className="text-right">
-                      {material.supplier_locked ? (
+                      {material.unit_cost && material.unit_cost > 0 ? (
                         <span className="font-medium">
-                          ${(material.final_price || material.line_total || 0).toFixed(2)}
+                          ${(material.line_total || 0).toFixed(2)}
                         </span>
-                      ) : material.unit_cost ? (
-                        <span className="font-medium">${material.line_total?.toFixed(2)}</span>
                       ) : (
                         <span className="text-muted-foreground">Not priced</span>
                       )}
@@ -218,38 +194,12 @@ export function MaterialsPanel({
                   </div>
                 )}
 
-                {/* TC manual pricing - when not sent to supplier and not locked */}
-                {isTC && isEditable && !material.sent_to_supplier && !material.supplier_locked && (
+                {/* TC manual pricing - always editable */}
+                {isTC && isEditable && !material.sent_to_supplier && (
                   <TCManualPricingRow
                     material={material}
                     onUpdateMaterial={onUpdateMaterial}
-                    onLockTCPricing={onLockTCPricing}
                   />
-                )}
-
-                {/* TC markup - after supplier or TC locks pricing */}
-                {isTC && material.supplier_locked && !material.final_price && (
-                  <div className="flex items-center gap-2 pt-2 border-t">
-                    <Label className="text-xs">Markup %</Label>
-                    <Input
-                      type="number"
-                      step="1"
-                      placeholder="0"
-                      className="w-20"
-                      value={material.markup_percent || ''}
-                      onChange={(e) => {
-                        const markup = parseFloat(e.target.value) || 0;
-                        const basePrice = material.supplier_price || material.line_total || 0;
-                        const finalPrice = basePrice * (1 + markup / 100);
-                        onUpdateMaterial({
-                          id: material.id,
-                          markup_percent: markup,
-                          final_price: finalPrice,
-                        });
-                      }}
-                    />
-                    <span className="text-xs text-muted-foreground">%</span>
-                  </div>
                 )}
               </div>
             ))}
