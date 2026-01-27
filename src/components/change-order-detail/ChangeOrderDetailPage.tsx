@@ -54,7 +54,8 @@ export function ChangeOrderDetailPage() {
 
   const isGC = currentRole === 'GC_PM';
   const isTC = currentRole === 'TC_PM';
-  const isFC = currentRole === 'FS';
+  // Field Crew users may be either FC_PM (org-level) or FS (field supervisor)
+  const isFC = currentRole === 'FC_PM' || currentRole === 'FS';
   const isSupplier = currentRole === 'SUPPLIER';
 
   const hasFCParticipant = participants.some((p) => p.role === 'FC' && p.is_active);
