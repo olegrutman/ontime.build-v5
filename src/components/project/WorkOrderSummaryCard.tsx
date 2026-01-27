@@ -12,6 +12,7 @@ interface WorkOrderSummaryCardProps {
 interface WorkOrderTotals {
   tcToGcTotal: number;
   tcToFcTotal: number;
+  fcEarnings: number;
   approvedCount: number;
   pendingCount: number;
   totalCount: number;
@@ -32,6 +33,7 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
   const [totals, setTotals] = useState<WorkOrderTotals>({
     tcToGcTotal: 0,
     tcToFcTotal: 0,
+    fcEarnings: 0,
     approvedCount: 0,
     pendingCount: 0,
     totalCount: 0,
@@ -39,29 +41,104 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
 
   useEffect(() => {
     const fetchWorkOrders = async () => {
-      // Determine viewer role based on current user's organization
-      if (user) {
-        const { data: memberships } = await supabase
-          .from('user_org_roles')
-          .select('organization_id')
-          .eq('user_id', user.id);
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      // Determine viewer role and org based on current user's organization
+      const { data: memberships } = await supabase
+        .from('user_org_roles')
+        .select('organization_id')
+        .eq('user_id', user.id);
+      
+      const userOrgIds = (memberships || []).map(m => m.organization_id);
+      let currentRole = 'Trade Contractor';
+      let currentOrgId: string | null = null;
+      
+      if (userOrgIds.length > 0) {
+        const { data: teamMembers } = await supabase
+          .from('project_team')
+          .select('role, org_id')
+          .eq('project_id', projectId)
+          .in('org_id', userOrgIds);
         
-        const userOrgIds = (memberships || []).map(m => m.organization_id);
-        
-        if (userOrgIds.length > 0) {
-          const { data: teamMembers } = await supabase
-            .from('project_team')
-            .select('role, org_id')
-            .eq('project_id', projectId)
-            .in('org_id', userOrgIds);
-          
-          if (teamMembers && teamMembers.length > 0) {
-            setViewerRole(teamMembers[0].role);
-          }
+        if (teamMembers && teamMembers.length > 0) {
+          currentRole = teamMembers[0].role;
+          currentOrgId = teamMembers[0].org_id;
         }
       }
 
-      // Fetch all work orders for this project
+      setViewerRole(currentRole);
+
+      const isFCView = currentRole === 'Field Crew';
+      const isTCView = currentRole === 'Trade Contractor';
+
+      // For FC: only fetch work orders they participated in
+      if (isFCView && currentOrgId) {
+        // Get work orders where FC is a participant
+        const { data: participations } = await supabase
+          .from('change_order_participants')
+          .select('change_order_id')
+          .eq('organization_id', currentOrgId)
+          .eq('is_active', true);
+
+        const participatedWOIds = (participations || []).map(p => p.change_order_id);
+
+        if (participatedWOIds.length === 0) {
+          setTotals({
+            tcToGcTotal: 0,
+            tcToFcTotal: 0,
+            fcEarnings: 0,
+            approvedCount: 0,
+            pendingCount: 0,
+            totalCount: 0,
+          });
+          setLoading(false);
+          return;
+        }
+
+        // Get FC hours for participated work orders
+        const { data: fcHours } = await supabase
+          .from('change_order_fc_hours')
+          .select('change_order_id, hours, hourly_rate, labor_total')
+          .in('change_order_id', participatedWOIds);
+
+        // Get work order statuses
+        const { data: workOrders } = await supabase
+          .from('change_order_projects')
+          .select('id, status')
+          .in('id', participatedWOIds);
+
+        let approvedCount = 0;
+        let pendingCount = 0;
+
+        for (const wo of workOrders || []) {
+          if (wo.status === 'approved' || wo.status === 'contracted') {
+            approvedCount++;
+          } else if (wo.status !== 'draft') {
+            pendingCount++;
+          }
+        }
+
+        // Calculate FC earnings: hours × hourly_rate
+        const fcEarnings = (fcHours || []).reduce((sum, fc) => {
+          return sum + (fc.labor_total || (fc.hours * (fc.hourly_rate || 0)));
+        }, 0);
+
+        setTotals({
+          tcToGcTotal: 0,
+          tcToFcTotal: 0,
+          fcEarnings,
+          approvedCount,
+          pendingCount,
+          totalCount: participatedWOIds.length,
+        });
+        setLoading(false);
+        return;
+      }
+
+      // For TC and GC: fetch all work orders for this project
       const { data: workOrders, error } = await supabase
         .from('change_order_projects')
         .select('id, status, final_price, labor_total, material_total, equipment_total, created_by_role')
@@ -81,8 +158,6 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
 
       for (const wo of workOrders || []) {
         const total = wo.final_price || 0;
-        
-        // TC to GC work orders (work the TC bills to GC)
         tcToGcTotal += total;
         
         if (wo.status === 'approved' || wo.status === 'contracted') {
@@ -92,21 +167,24 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
         }
       }
 
-      // Fetch FC labor totals for profit calculation
-      const workOrderIds = (workOrders || []).map(wo => wo.id);
-      
-      if (workOrderIds.length > 0) {
-        const { data: fcHours } = await supabase
-          .from('change_order_fc_hours')
-          .select('change_order_id, labor_total')
-          .in('change_order_id', workOrderIds);
+      // Fetch FC labor totals for profit calculation (TC only)
+      if (isTCView) {
+        const workOrderIds = (workOrders || []).map(wo => wo.id);
+        
+        if (workOrderIds.length > 0) {
+          const { data: fcHours } = await supabase
+            .from('change_order_fc_hours')
+            .select('change_order_id, labor_total')
+            .in('change_order_id', workOrderIds);
 
-        tcToFcTotal = (fcHours || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0);
+          tcToFcTotal = (fcHours || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0);
+        }
       }
 
       setTotals({
         tcToGcTotal,
         tcToFcTotal,
+        fcEarnings: 0,
         approvedCount,
         pendingCount,
         totalCount: (workOrders || []).length,
@@ -136,16 +214,17 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
   }
 
   const isTCView = viewerRole === 'Trade Contractor';
+  const isFCView = viewerRole === 'Field Crew';
+  
   const profit = totals.tcToGcTotal - totals.tcToFcTotal;
   const profitPercent = totals.tcToGcTotal > 0 ? (profit / totals.tcToGcTotal) * 100 : 0;
-  const totalWorkOrderValue = isTCView ? totals.tcToGcTotal : totals.tcToGcTotal;
 
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
           <ClipboardList className="h-4 w-4" />
-          Work Orders
+          {isFCView ? 'My Work Orders' : 'Work Orders'}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -165,7 +244,7 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
           </div>
         </div>
 
-        {/* Financial Summary - TC only sees profit */}
+        {/* Financial Summary - Role specific */}
         {isTCView ? (
           <div className="pt-3 border-t space-y-3">
             <div className="flex justify-between items-center">
@@ -191,12 +270,20 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
               </div>
             </div>
           </div>
+        ) : isFCView ? (
+          /* FC sees only their earnings */
+          <div className="pt-3 border-t">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-muted-foreground">My Earnings</span>
+              <span className="text-lg font-bold text-green-600">{formatCurrency(totals.fcEarnings)}</span>
+            </div>
+          </div>
         ) : (
-          /* FC and GC just see totals */
+          /* GC sees work order totals */
           <div className="pt-3 border-t">
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">Work Order Total</span>
-              <span className="text-lg font-bold">{formatCurrency(totalWorkOrderValue)}</span>
+              <span className="text-lg font-bold">{formatCurrency(totals.tcToGcTotal)}</span>
             </div>
           </div>
         )}
