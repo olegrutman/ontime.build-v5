@@ -3308,6 +3308,14 @@ export type Database = {
           result_type: string
         }[]
       }
+      send_work_order_assignment_notification: {
+        Args: {
+          _change_order_id: string
+          _recipient_org_id: string
+          _work_order_title: string
+        }
+        Returns: undefined
+      }
       submit_tm_period: { Args: { period_id: string }; Returns: undefined }
       update_sov_billing_totals: {
         Args: { p_project_id: string }
@@ -3353,6 +3361,7 @@ export type Database = {
         | "CHANGE_APPROVED"
         | "CHANGE_REJECTED"
         | "PROJECT_ADDED"
+        | "WORK_ORDER_ASSIGNED"
       order_status:
         | "DRAFT"
         | "SUBMITTED"
@@ -3507,6 +3516,7 @@ export const Constants = {
         "CHANGE_APPROVED",
         "CHANGE_REJECTED",
         "PROJECT_ADDED",
+        "WORK_ORDER_ASSIGNED",
       ],
       order_status: [
         "DRAFT",

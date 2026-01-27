@@ -7,7 +7,8 @@ import {
   Send, 
   CheckCircle, 
   XCircle,
-  Circle
+  Circle,
+  ClipboardList
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ interface NotificationItemProps {
 const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   PROJECT_INVITE: FolderOpen,
   WORK_ITEM_INVITE: Briefcase,
+  WORK_ORDER_ASSIGNED: ClipboardList,
   PO_SENT: FileText,
   CHANGE_SUBMITTED: Send,
   CHANGE_APPROVED: CheckCircle,
@@ -32,6 +34,7 @@ const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
 const typeColors: Record<string, string> = {
   PROJECT_INVITE: 'text-primary',
   WORK_ITEM_INVITE: 'text-blue-500',
+  WORK_ORDER_ASSIGNED: 'text-orange-500',
   PO_SENT: 'text-purple-500',
   CHANGE_SUBMITTED: 'text-amber-500',
   CHANGE_APPROVED: 'text-green-500',
