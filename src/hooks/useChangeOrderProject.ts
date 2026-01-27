@@ -688,6 +688,20 @@ export function useChangeOrder(changeOrderId: string | null) {
         });
 
       if (error) throw error;
+
+      // Send notification to the Field Crew org
+      const workOrderTitle = changeOrder?.title || 'Work Order';
+      // Type assertion needed until types are regenerated
+      const { error: notifError } = await (supabase.rpc as any)('send_work_order_assignment_notification', {
+        _change_order_id: changeOrderId,
+        _recipient_org_id: fcOrgId,
+        _work_order_title: workOrderTitle,
+      });
+
+      if (notifError) {
+        console.error('Failed to send notification:', notifError);
+        // Don't throw - notification failure shouldn't block activation
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['change-order-participants', changeOrderId] });
