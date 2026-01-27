@@ -28,11 +28,10 @@ function TCManualPricingRow({
   const lineTotal = numericUnitCost * material.quantity;
 
   const handleSave = () => {
-    // Always save if there's input - the mutation handles deduplication
+    // Only update unit_cost - line_total is a generated column in the database
     onUpdateMaterial({
       id: material.id,
       unit_cost: numericUnitCost,
-      line_total: lineTotal,
     });
   };
 
