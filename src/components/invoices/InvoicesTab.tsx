@@ -43,10 +43,11 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
   const currentOrgId = userOrgRoles[0]?.organization?.id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
 
-  // Contracts where user's org is the "to" party (can send invoices)
+  // Contracts where user's org is the "from" party (can create/send invoices)
+  // Invoice direction: from_org_id is the Contractor (sender), to_org_id is Client (receiver)
   const contractsWhereUserCanInvoice = useMemo(() => {
     if (!currentOrgId) return [];
-    return contracts.filter(c => c.to_org_id === currentOrgId);
+    return contracts.filter(c => c.from_org_id === currentOrgId);
   }, [contracts, currentOrgId]);
 
   // Contracts where user is a party (can view invoices)
