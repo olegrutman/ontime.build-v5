@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList, Edit, Home, Building2, ArrowUpDown, Layers } from 'lucide-react';
+import { ClipboardList, Edit, Home, Building2, ArrowUpDown, Layers, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
 
 interface ScopeDetails {
   id: string;
@@ -80,6 +82,7 @@ export function ProjectScopeSection({ projectId, projectType }: ProjectScopeSect
   const navigate = useNavigate();
   const [scope, setScope] = useState<ScopeDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
     const fetchScope = async () => {
@@ -169,18 +172,30 @@ export function ProjectScopeSection({ projectId, projectType }: ProjectScopeSect
   };
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base flex items-center gap-2">
-          <ClipboardList className="h-4 w-4" />
-          Scope & Project Details
-        </CardTitle>
-        <Button size="sm" variant="outline" onClick={() => navigate(`/projects/${projectId}/scope`)}>
-          <Edit className="h-3 w-3 mr-1" />
-          Edit Scope
-        </Button>
-      </CardHeader>
-      <CardContent>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors">
+            <CardTitle className="text-base flex items-center gap-2">
+              <ClipboardList className="h-4 w-4" />
+              Scope & Project Details
+              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", isOpen && "rotate-180")} />
+            </CardTitle>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/projects/${projectId}/scope`);
+              }}
+            >
+              <Edit className="h-3 w-3 mr-1" />
+              Edit Scope
+            </Button>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent>
         <div className="grid gap-6 md:grid-cols-2">
           {/* Structure Section */}
           <div className="space-y-1">
@@ -274,8 +289,10 @@ export function ProjectScopeSection({ projectId, projectType }: ProjectScopeSect
             <BooleanItem label="WRB / Tyvek Included" value={scope.wrb_included} />
             <BooleanItem label="Exterior Doors Included" value={scope.ext_doors_included} />
           </div>
-        </div>
-      </CardContent>
+          </div>
+        </CardContent>
+      </CollapsibleContent>
     </Card>
+  </Collapsible>
   );
 }
