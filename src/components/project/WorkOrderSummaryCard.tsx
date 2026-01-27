@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import { ClipboardList, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
 interface WorkOrderSummaryCardProps {
   projectId: string;
-  viewerRole?: string;
 }
 
 interface WorkOrderTotals {
@@ -25,8 +25,10 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function WorkOrderSummaryCard({ projectId, viewerRole = 'Trade Contractor' }: WorkOrderSummaryCardProps) {
+export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [viewerRole, setViewerRole] = useState<string>('Trade Contractor');
   const [totals, setTotals] = useState<WorkOrderTotals>({
     tcToGcTotal: 0,
     tcToFcTotal: 0,
@@ -37,6 +39,28 @@ export function WorkOrderSummaryCard({ projectId, viewerRole = 'Trade Contractor
 
   useEffect(() => {
     const fetchWorkOrders = async () => {
+      // Determine viewer role based on current user's organization
+      if (user) {
+        const { data: memberships } = await supabase
+          .from('user_org_roles')
+          .select('organization_id')
+          .eq('user_id', user.id);
+        
+        const userOrgIds = (memberships || []).map(m => m.organization_id);
+        
+        if (userOrgIds.length > 0) {
+          const { data: teamMembers } = await supabase
+            .from('project_team')
+            .select('role, org_id')
+            .eq('project_id', projectId)
+            .in('org_id', userOrgIds);
+          
+          if (teamMembers && teamMembers.length > 0) {
+            setViewerRole(teamMembers[0].role);
+          }
+        }
+      }
+
       // Fetch all work orders for this project
       const { data: workOrders, error } = await supabase
         .from('change_order_projects')
@@ -59,12 +83,7 @@ export function WorkOrderSummaryCard({ projectId, viewerRole = 'Trade Contractor
         const total = wo.final_price || 0;
         
         // TC to GC work orders (work the TC bills to GC)
-        if (wo.created_by_role === 'General Contractor' || wo.created_by_role === 'Trade Contractor') {
-          tcToGcTotal += total;
-        }
-        
-        // TC to FC work orders (work the TC pays to FC) - from FC hours
-        // We need to fetch FC labor totals separately
+        tcToGcTotal += total;
         
         if (wo.status === 'approved' || wo.status === 'contracted') {
           approvedCount++;
@@ -98,7 +117,7 @@ export function WorkOrderSummaryCard({ projectId, viewerRole = 'Trade Contractor
     if (projectId) {
       fetchWorkOrders();
     }
-  }, [projectId]);
+  }, [projectId, user]);
 
   if (loading) {
     return (

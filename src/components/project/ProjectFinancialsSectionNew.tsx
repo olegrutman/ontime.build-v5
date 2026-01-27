@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { DollarSign, TrendingUp, Receipt, Percent, BarChart3, AlertCircle, Plus, Pencil, Check, X } from 'lucide-react';
+import { DollarSign, TrendingUp, Receipt, Percent, BarChart3, AlertCircle, Plus, Pencil, Check, X, ClipboardList } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Contract {
@@ -24,7 +25,6 @@ interface Contract {
 
 interface ProjectFinancialsSectionNewProps {
   projectId: string;
-  viewerRole?: string;
 }
 
 function formatCurrency(amount: number): string {
@@ -35,11 +35,14 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function ProjectFinancialsSectionNew({ projectId, viewerRole = 'Trade Contractor' }: ProjectFinancialsSectionNewProps) {
+export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSectionNewProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [billedToDate, setBilledToDate] = useState(0);
+  const [viewerRole, setViewerRole] = useState<string>('Trade Contractor');
+  const [workOrderTotal, setWorkOrderTotal] = useState(0);
   
   // Inline editing state
   const [editingContractId, setEditingContractId] = useState<string | null>(null);
@@ -49,6 +52,30 @@ export function ProjectFinancialsSectionNew({ projectId, viewerRole = 'Trade Con
 
   const fetchData = async () => {
     setLoading(true);
+    
+    // Determine viewer role based on current user's organization
+    if (user) {
+      // Get user's org memberships
+      const { data: memberships } = await supabase
+        .from('user_org_roles')
+        .select('organization_id')
+        .eq('user_id', user.id);
+      
+      const userOrgIds = (memberships || []).map(m => m.organization_id);
+      
+      // Check project team to find user's role
+      if (userOrgIds.length > 0) {
+        const { data: teamMembers } = await supabase
+          .from('project_team')
+          .select('role, org_id')
+          .eq('project_id', projectId)
+          .in('org_id', userOrgIds);
+        
+        if (teamMembers && teamMembers.length > 0) {
+          setViewerRole(teamMembers[0].role);
+        }
+      }
+    }
     
     // Fetch contracts with org names
     const { data: contractData } = await supabase
@@ -79,6 +106,15 @@ export function ProjectFinancialsSectionNew({ projectId, viewerRole = 'Trade Con
     const totalBilled = (invoiceData || []).reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
     setBilledToDate(totalBilled);
     
+    // Fetch work order totals
+    const { data: workOrders } = await supabase
+      .from('change_order_projects')
+      .select('final_price')
+      .eq('project_id', projectId);
+    
+    const woTotal = (workOrders || []).reduce((sum, wo) => sum + (wo.final_price || 0), 0);
+    setWorkOrderTotal(woTotal);
+    
     setLoading(false);
   };
 
@@ -86,7 +122,7 @@ export function ProjectFinancialsSectionNew({ projectId, viewerRole = 'Trade Con
     if (projectId) {
       fetchData();
     }
-  }, [projectId]);
+  }, [projectId, user]);
 
   const startEditing = (contract: Contract) => {
     setEditingContractId(contract.id);
@@ -409,9 +445,52 @@ export function ProjectFinancialsSectionNew({ projectId, viewerRole = 'Trade Con
           </>
         )}
 
-        {/* GC/FC: Show their single contract */}
-        {(isGCView || isFCView) && primaryContract && (
-          <Card>
+        {/* GC View: Show TC contract and Work Orders Total */}
+        {isGCView && (
+          <>
+            {primaryContract && (
+              <Card className="border-l-4 border-l-primary">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                      <DollarSign className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm text-muted-foreground">
+                        Contract with {primaryContract.from_org_name || primaryContract.to_org_name || 'Trade Contractor'}
+                      </p>
+                      <EditableContractValue 
+                        contract={primaryContract} 
+                        value={primaryContract.contract_sum} 
+                        retainage={primaryContract.retainage_percent}
+                        label="Contract" 
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Work Orders Total for GC */}
+            <Card className="border-l-4 border-l-purple-500">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/20">
+                    <ClipboardList className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-muted-foreground">Work Orders Total</p>
+                    <p className="text-2xl font-bold">{formatCurrency(workOrderTotal)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
+
+        {/* FC View: Show their single contract */}
+        {isFCView && primaryContract && (
+          <Card className="border-l-4 border-l-primary">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
