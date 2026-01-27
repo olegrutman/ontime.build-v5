@@ -591,7 +591,7 @@ export function useChangeOrder(changeOrderId: string | null) {
     mutationFn: async ({ id, ...updates }: Partial<ChangeOrderMaterial> & { id: string }) => {
       const { error } = await supabase
         .from('change_order_materials')
-        .update(updates)
+        .update(updates as Record<string, unknown>)
         .eq('id', id);
 
       if (error) throw error;
@@ -599,6 +599,14 @@ export function useChangeOrder(changeOrderId: string | null) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['change-order-materials', changeOrderId] });
       queryClient.invalidateQueries({ queryKey: ['change-order', changeOrderId] });
+      toast({ title: 'Material pricing updated' });
+    },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to update material',
+        description: error.message,
+      });
     },
   });
 

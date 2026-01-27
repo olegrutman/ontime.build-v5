@@ -28,11 +28,19 @@ function TCManualPricingRow({
   const lineTotal = numericUnitCost * material.quantity;
 
   const handleSave = () => {
+    // Always save if there's input - the mutation handles deduplication
     onUpdateMaterial({
       id: material.id,
       unit_cost: numericUnitCost,
       line_total: lineTotal,
     });
+  };
+
+  // Save on Enter key press
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSave();
+    }
   };
 
   return (
@@ -49,6 +57,7 @@ function TCManualPricingRow({
             value={unitCost}
             onChange={(e) => setUnitCost(e.target.value)}
             onBlur={handleSave}
+            onKeyDown={handleKeyDown}
           />
         </div>
         <div>
