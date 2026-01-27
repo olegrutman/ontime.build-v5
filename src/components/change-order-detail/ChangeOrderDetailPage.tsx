@@ -11,6 +11,7 @@ import { ChangeOrderScopePanel } from './ChangeOrderScopePanel';
 import { ChangeOrderChecklist } from './ChangeOrderChecklist';
 import { FieldCrewHoursPanel } from './FieldCrewHoursPanel';
 import { TCPricingPanel } from './TCPricingPanel';
+import { TCPricingSummary } from './TCPricingSummary';
 import { MaterialsPanel } from './MaterialsPanel';
 import { EquipmentPanel } from './EquipmentPanel';
 import { ApprovalPanel } from './ApprovalPanel';
@@ -149,7 +150,9 @@ export function ChangeOrderDetailPage() {
                 onAddMaterial={addMaterial}
                 onUpdateMaterial={updateMaterial}
                 onLockSupplierPricing={lockSupplierPricing}
-                onLockTCPricing={lockTCPricing}
+                onLockTCPricing={(materialId, unitCost, lineTotal) => 
+                  lockTCPricing({ materialId, unitCost, lineTotal })
+                }
               />
             )}
 
@@ -166,6 +169,23 @@ export function ChangeOrderDetailPage() {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* TC Pricing Summary - TC only */}
+            {isTC && (
+              <TCPricingSummary
+                tcLabor={tcLabor}
+                materials={materials}
+                equipment={equipment}
+                requiresMaterials={changeOrder.requires_materials}
+                requiresEquipment={changeOrder.requires_equipment}
+                onSubmitPricing={() => updateStatus({ 
+                  id: changeOrder.id, 
+                  status: 'ready_for_approval' 
+                })}
+                isSubmitting={isUpdating}
+                isEditable={isTCEditable}
+              />
+            )}
+
             {/* Participant Activation - TC only */}
             {isTC && (
               <ParticipantActivationPanel

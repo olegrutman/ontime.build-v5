@@ -15,7 +15,7 @@ function TCManualPricingRow({
 }: {
   material: ChangeOrderMaterial;
   onUpdateMaterial: (data: { id: string } & Partial<ChangeOrderMaterial>) => void;
-  onLockTCPricing?: (materialId: string) => void;
+  onLockTCPricing?: (materialId: string, unitCost: number, lineTotal: number) => void;
 }) {
   const [unitCost, setUnitCost] = useState<string>(material.unit_cost?.toString() || '');
 
@@ -29,13 +29,20 @@ function TCManualPricingRow({
   const numericUnitCost = parseFloat(unitCost) || 0;
   const lineTotal = numericUnitCost * material.quantity;
 
-  const handleBlur = () => {
+  const handleSave = () => {
     if (numericUnitCost > 0) {
       onUpdateMaterial({
         id: material.id,
         unit_cost: numericUnitCost,
         line_total: lineTotal,
       });
+    }
+  };
+
+  const handleLock = () => {
+    if (numericUnitCost > 0 && onLockTCPricing) {
+      // Pass the values directly to avoid stale data issues
+      onLockTCPricing(material.id, numericUnitCost, lineTotal);
     }
   };
 
@@ -52,7 +59,7 @@ function TCManualPricingRow({
             className="h-8"
             value={unitCost}
             onChange={(e) => setUnitCost(e.target.value)}
-            onBlur={handleBlur}
+            onBlur={handleSave}
           />
         </div>
         <div>
@@ -65,10 +72,7 @@ function TCManualPricingRow({
       {numericUnitCost > 0 && onLockTCPricing && (
         <Button
           size="sm"
-          onClick={() => {
-            handleBlur(); // Save before locking
-            onLockTCPricing(material.id);
-          }}
+          onClick={handleLock}
         >
           <Lock className="w-3 h-3 mr-1" />
           Lock
@@ -87,7 +91,7 @@ interface MaterialsPanelProps {
   onAddMaterial: (data: { description: string; quantity: number; uom: string; notes?: string }) => void;
   onUpdateMaterial: (data: { id: string } & Partial<ChangeOrderMaterial>) => void;
   onLockSupplierPricing: (materialId: string) => void;
-  onLockTCPricing?: (materialId: string) => void;
+  onLockTCPricing?: (materialId: string, unitCost: number, lineTotal: number) => void;
 }
 
 export function MaterialsPanel({

@@ -623,19 +623,18 @@ export function useChangeOrder(changeOrderId: string | null) {
 
   // Lock TC Manual Pricing (when TC prices materials themselves without supplier)
   const lockTCPricingMutation = useMutation({
-    mutationFn: async (materialId: string) => {
-      // Find the material to calculate line_total
-      const material = materials.find(m => m.id === materialId);
-      if (!material) throw new Error('Material not found');
-
-      const lineTotal = (material.unit_cost || 0) * material.quantity;
-
+    mutationFn: async ({ materialId, unitCost, lineTotal }: { 
+      materialId: string; 
+      unitCost: number; 
+      lineTotal: number;
+    }) => {
       const { error } = await supabase
         .from('change_order_materials')
         .update({
+          unit_cost: unitCost,
+          line_total: lineTotal,
           supplier_locked: true,
           supplier_locked_at: new Date().toISOString(),
-          line_total: lineTotal,
         })
         .eq('id', materialId);
 

@@ -5,6 +5,7 @@ export { ChangeOrderChecklist } from './ChangeOrderChecklist';
 export { ChangeOrderScopePanel } from './ChangeOrderScopePanel';
 export { FieldCrewHoursPanel } from './FieldCrewHoursPanel';
 export { TCPricingPanel } from './TCPricingPanel';
+export { TCPricingSummary } from './TCPricingSummary';
 export { MaterialsPanel } from './MaterialsPanel';
 export { EquipmentPanel } from './EquipmentPanel';
 export { ApprovalPanel } from './ApprovalPanel';
