@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { 
-  ClipboardList, 
-  Package, 
   AlertTriangle,
   FileText
 } from 'lucide-react';
@@ -20,7 +18,8 @@ import {
   ProjectActivitySection,
   ProjectFinancialsSectionNew,
   ProjectTopBar,
-  WorkOrderSummaryCard
+  WorkOrderSummaryCard,
+  WorkOrdersTab
 } from '@/components/project';
 import { InvoicesTab } from '@/components/invoices';
 import { ContractSOVEditor } from '@/components/sov';
@@ -231,26 +230,7 @@ export default function ProjectHome() {
 
               {/* Work Orders Tab */}
               {activeTab === 'work-orders' && (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-lg font-semibold">Work Orders</h2>
-                    <Button asChild>
-                      <Link to={`/change-orders?project=${id}&new=true`}>
-                        New Work Order
-                      </Link>
-                    </Button>
-                  </div>
-                  <div className="flex flex-col items-center justify-center py-12 text-center border rounded-lg bg-muted/20">
-                    <ClipboardList className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                    <h3 className="text-lg font-medium mb-2">Work Orders</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Create and manage work orders with full workflow.
-                    </p>
-                    <Button asChild variant="outline">
-                      <Link to={`/change-orders?project=${id}`}>View All Work Orders</Link>
-                    </Button>
-                  </div>
-                </div>
+                <WorkOrdersTab projectId={id!} projectName={project.name} />
               )}
 
               {/* Invoices Tab */}
