@@ -39,6 +39,7 @@ export function ChangeOrderDetailPage() {
     addMaterial,
     updateMaterial,
     lockSupplierPricing,
+    lockTCPricing,
     addEquipment,
     activateFC,
     activateSupplier,
@@ -148,6 +149,7 @@ export function ChangeOrderDetailPage() {
                 onAddMaterial={addMaterial}
                 onUpdateMaterial={updateMaterial}
                 onLockSupplierPricing={lockSupplierPricing}
+                onLockTCPricing={lockTCPricing}
               />
             )}
 

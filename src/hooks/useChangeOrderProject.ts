@@ -621,6 +621,33 @@ export function useChangeOrder(changeOrderId: string | null) {
     },
   });
 
+  // Lock TC Manual Pricing (when TC prices materials themselves without supplier)
+  const lockTCPricingMutation = useMutation({
+    mutationFn: async (materialId: string) => {
+      // Find the material to calculate line_total
+      const material = materials.find(m => m.id === materialId);
+      if (!material) throw new Error('Material not found');
+
+      const lineTotal = (material.unit_cost || 0) * material.quantity;
+
+      const { error } = await supabase
+        .from('change_order_materials')
+        .update({
+          supplier_locked: true,
+          supplier_locked_at: new Date().toISOString(),
+          line_total: lineTotal,
+        })
+        .eq('id', materialId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['change-order-materials', changeOrderId] });
+      queryClient.invalidateQueries({ queryKey: ['change-order-checklist', changeOrderId] });
+      toast({ title: 'Material pricing locked' });
+    },
+  });
+
   // Add Equipment
   const addEquipmentMutation = useMutation({
     mutationFn: async (data: {
@@ -820,6 +847,7 @@ export function useChangeOrder(changeOrderId: string | null) {
     addMaterial: addMaterialMutation.mutate,
     updateMaterial: updateMaterialMutation.mutate,
     lockSupplierPricing: lockSupplierPricingMutation.mutate,
+    lockTCPricing: lockTCPricingMutation.mutate,
     addEquipment: addEquipmentMutation.mutate,
     updateEquipment: updateEquipmentMutation.mutate,
     updateChangeOrder: updateChangeOrderMutation.mutate,
