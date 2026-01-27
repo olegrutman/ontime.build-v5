@@ -6,3 +6,4 @@ export { ProjectActivitySection } from './ProjectActivitySection';
 export { ProjectFinancialsSection } from './ProjectFinancialsSection';
 export { ProjectFinancialsSectionNew } from './ProjectFinancialsSectionNew';
 export { ProjectTopBar } from './ProjectTopBar';
+export { WorkOrderSummaryCard } from './WorkOrderSummaryCard';
