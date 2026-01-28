@@ -3158,6 +3158,10 @@ export type Database = {
         Returns: Json
       }
       approve_tm_period: { Args: { period_id: string }; Returns: string }
+      can_accept_project_invite: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
       can_see_financials: { Args: { _user_id: string }; Returns: boolean }
       can_see_margins: { Args: { _user_id: string }; Returns: boolean }
       check_org_setup_needed: { Args: never; Returns: Json }
