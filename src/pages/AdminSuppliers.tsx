@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Supplier, CatalogItem, CATALOG_CATEGORIES, parseCSVToItems, CatalogCSVRow } from '@/types/supplier';
+import { Supplier, CatalogItem, CATALOG_CATEGORIES, parseCSVToItems, CatalogCSVRow, parseInventoryCSV } from '@/types/supplier';
 import { Plus, Upload, Search, Package, Loader2, Trash2, FileText, Building2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -144,7 +144,12 @@ export default function AdminSuppliers() {
     if (!file || !selectedSupplier) return;
 
     const text = await file.text();
-    const items = parseCSVToItems(text);
+    
+    // Auto-detect format based on headers
+    const firstLine = text.split('\n')[0].toLowerCase();
+    const isInventoryFormat = firstLine.includes('sku') && firstLine.includes('main category');
+    
+    const items = isInventoryFormat ? parseInventoryCSV(text) : parseCSVToItems(text);
 
     if (items.length === 0) {
       toast({ variant: 'destructive', title: 'Invalid CSV', description: 'No valid rows found.' });

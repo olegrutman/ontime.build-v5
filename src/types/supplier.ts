@@ -1,4 +1,18 @@
-export type CatalogCategory = 'Dimensional' | 'Engineered' | 'Sheathing' | 'Hardware' | 'Fasteners' | 'Other';
+export type CatalogCategory = 
+  | 'Adhesives'
+  | 'Concrete'
+  | 'Decking'
+  | 'Dimensional'
+  | 'Engineered'
+  | 'Exterior'
+  | 'Fasteners'
+  | 'Hardware'
+  | 'Insulation'
+  | 'Interior'
+  | 'Other'
+  | 'Roofing'
+  | 'Sheathing'
+  | 'Structural';
 
 export interface Supplier {
   id: string;
@@ -29,21 +43,37 @@ export interface CatalogSearchResult extends Omit<CatalogItem, 'created_at' | 'u
 }
 
 export const CATALOG_CATEGORIES: CatalogCategory[] = [
+  'Adhesives',
+  'Concrete',
+  'Decking',
   'Dimensional',
   'Engineered',
-  'Sheathing',
-  'Hardware',
+  'Exterior',
   'Fasteners',
+  'Hardware',
+  'Insulation',
+  'Interior',
   'Other',
+  'Roofing',
+  'Sheathing',
+  'Structural',
 ];
 
 export const CATEGORY_LABELS: Record<CatalogCategory, string> = {
+  Adhesives: 'Adhesives & Sealants',
+  Concrete: 'Concrete & Masonry',
+  Decking: 'Decking',
   Dimensional: 'Dimensional Lumber',
   Engineered: 'Engineered Wood',
-  Sheathing: 'Sheathing',
-  Hardware: 'Hardware',
+  Exterior: 'Exterior',
   Fasteners: 'Fasteners',
+  Hardware: 'Hardware',
+  Insulation: 'Insulation',
+  Interior: 'Interior',
   Other: 'Other',
+  Roofing: 'Roofing',
+  Sheathing: 'Sheathing',
+  Structural: 'Structural',
 };
 
 export const UOM_OPTIONS = [
@@ -125,9 +155,10 @@ function parseCSVLine(line: string): string[] {
   return result.map(v => v.replace(/^["']|["']$/g, ''));
 }
 
-function normalizeCategory(category: string): string {
+function normalizeCategory(category: string): CatalogCategory {
   const normalized = category.toLowerCase().trim();
   const mapping: Record<string, CatalogCategory> = {
+    // Original mappings
     'dimensional': 'Dimensional',
     'lumber': 'Dimensional',
     'engineered': 'Engineered',
@@ -137,6 +168,128 @@ function normalizeCategory(category: string): string {
     'fasteners': 'Fasteners',
     'fastener': 'Fasteners',
     'other': 'Other',
+    // New category mappings
+    'decking': 'Decking',
+    'deck boards': 'Decking',
+    'railing': 'Decking',
+    'exterior': 'Exterior',
+    'siding': 'Exterior',
+    'trim': 'Exterior',
+    'interior': 'Interior',
+    'roofing': 'Roofing',
+    'structural': 'Structural',
+    'adhesives': 'Adhesives',
+    'adhesive': 'Adhesives',
+    'sealants': 'Adhesives',
+    'insulation': 'Insulation',
+    'concrete': 'Concrete',
+    'masonry': 'Concrete',
   };
   return mapping[normalized] || 'Other';
+}
+
+// Enhanced CSV parsing for inventory format with sku, code, name, etc.
+export interface InventoryCSVRow {
+  sku: string;
+  code: string;
+  name: string;
+  description: string;
+  main_category: string;
+  secondary_category: string;
+  qty_type: string;
+  attributes_json?: string;
+}
+
+export function parseInventoryCSV(csvText: string): CatalogCSVRow[] {
+  const lines = csvText.trim().split('\n');
+  if (lines.length < 2) return [];
+
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, '').replace(/ /g, '_'));
+  
+  const items: CatalogCSVRow[] = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseCSVLine(lines[i]);
+    if (values.length < 4) continue;
+
+    const row: Record<string, string> = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index]?.trim() || '';
+    });
+
+    // Check if this is inventory format (has sku, code, name columns) or standard format
+    const isInventoryFormat = 'sku' in row || 'code' in row;
+
+    if (isInventoryFormat) {
+      // Inventory format: sku, code, name, description, Main Category, Secondary Category, qtyType, attributes_json
+      const supplierSku = row.sku || row.code || '';
+      const description = row.name || row.description || '';
+      const mainCategory = row.main_category || '';
+      const secondaryCategory = row.secondary_category || '';
+      
+      if (!supplierSku || !description) continue;
+
+      // Parse attributes_json for size/spec info
+      let sizeOrSpec = '';
+      let searchKeywords: string[] = [];
+      
+      if (row.attributes_json) {
+        try {
+          // Handle escaped quotes in JSON
+          const jsonStr = row.attributes_json.replace(/""/g, '"');
+          const attrs = JSON.parse(jsonStr);
+          
+          // Extract dimension and length for size_or_spec
+          const parts: string[] = [];
+          if (attrs.Dimension) parts.push(attrs.Dimension);
+          if (attrs.Length) parts.push(attrs.Length);
+          sizeOrSpec = parts.join(' ');
+          
+          // Build search keywords from attributes
+          if (attrs.Color) searchKeywords.push(attrs.Color.toLowerCase());
+          if (attrs.Manufacture) searchKeywords.push(attrs.Manufacture.toLowerCase());
+        } catch {
+          // JSON parse failed, that's ok
+        }
+      }
+
+      // Map qtyType to UOM
+      const qtyType = row.qtytype || row.qty_type || 'count';
+      const uomMapping: Record<string, string> = {
+        'count': 'EA',
+        'each': 'EA',
+        'lf': 'LF',
+        'sf': 'SF',
+        'bf': 'BF',
+      };
+      const uom = uomMapping[qtyType.toLowerCase()] || 'EA';
+
+      // Add main and secondary category to keywords
+      if (mainCategory) searchKeywords.push(mainCategory.toLowerCase());
+      if (secondaryCategory) searchKeywords.push(secondaryCategory.toLowerCase());
+
+      items.push({
+        supplier_sku: supplierSku,
+        category: normalizeCategory(mainCategory || 'Other'),
+        description: description,
+        uom_default: uom,
+        size_or_spec: sizeOrSpec || undefined,
+        search_keywords: searchKeywords.length > 0 ? searchKeywords.join(',') : undefined,
+      });
+    } else {
+      // Standard format: supplier_sku, category, description, uom_default, size_or_spec, search_keywords
+      if (!row.supplier_sku || !row.description) continue;
+
+      items.push({
+        supplier_sku: row.supplier_sku,
+        category: normalizeCategory(row.category || 'Other'),
+        description: row.description,
+        uom_default: row.uom_default || 'EA',
+        size_or_spec: row.size_or_spec || row['size'] || row['spec'] || undefined,
+        search_keywords: row.search_keywords || row['keywords'] || undefined,
+      });
+    }
+  }
+
+  return items;
 }
