@@ -14,6 +14,7 @@ import EditProject from "./pages/EditProject";
 import PartnerDirectory from "./pages/PartnerDirectory";
 import AdminSuppliers from "./pages/AdminSuppliers";
 import CatalogPage from "./pages/CatalogPage";
+import InventoryPage from "./pages/InventoryPage";
 import SupplierEstimates from "./pages/SupplierEstimates";
 import EstimateApprovals from "./pages/EstimateApprovals";
 import MaterialOrders from "./pages/MaterialOrders";
@@ -47,6 +48,7 @@ const App = () => (
             <Route path="/partners" element={<PartnerDirectory />} />
             <Route path="/admin/suppliers" element={<AdminSuppliers />} />
             <Route path="/catalog" element={<CatalogPage />} />
+            <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/estimates" element={<SupplierEstimates />} />
             <Route path="/approvals/estimates" element={<EstimateApprovals />} />
             <Route path="/orders" element={<MaterialOrders />} />
