@@ -16,16 +16,52 @@ import {
 } from '@/types/changeOrderProject';
 
 export function useChangeOrderProject(projectId?: string) {
-  const { user, currentRole } = useAuth();
+  const { user, currentRole, userOrgRoles } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // Fetch all change orders for a project
+  // Get current user's organization ID
+  const currentOrgId = userOrgRoles[0]?.organization?.id;
+  const currentOrgType = userOrgRoles[0]?.organization?.type;
+
+  // Fetch all change orders for a project, filtered by participation for FC users
   const { data: changeOrders = [], isLoading } = useQuery({
-    queryKey: ['change-order-projects', projectId],
+    queryKey: ['change-order-projects', projectId, currentOrgId, currentOrgType],
     queryFn: async () => {
       if (!projectId) return [];
 
+      // FC users only see work orders where they are a participant
+      if (currentOrgType === 'FC' && currentOrgId) {
+        // First get the work order IDs where this FC is a participant
+        const { data: participations, error: participationError } = await supabase
+          .from('change_order_participants')
+          .select('change_order_id')
+          .eq('organization_id', currentOrgId)
+          .eq('is_active', true);
+
+        if (participationError) throw participationError;
+
+        const participantWorkOrderIds = (participations || []).map(p => p.change_order_id);
+        
+        if (participantWorkOrderIds.length === 0) {
+          return [];
+        }
+
+        const { data, error } = await supabase
+          .from('change_order_projects')
+          .select(`
+            *,
+            project:projects(id, name)
+          `)
+          .eq('project_id', projectId)
+          .in('id', participantWorkOrderIds)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data as ChangeOrderProject[];
+      }
+
+      // GC and TC see all work orders for the project
       const { data, error } = await supabase
         .from('change_order_projects')
         .select(`
