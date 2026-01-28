@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Receipt, Filter, AlertCircle } from 'lucide-react';
+import { Plus, Receipt, Filter, AlertCircle, Send, Inbox } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -31,23 +32,32 @@ interface Contract {
 }
 
 export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
-  const { userOrgRoles, currentRole } = useAuth();
+  const { userOrgRoles } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'ALL'>('ALL');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
+  const [invoiceDirection, setInvoiceDirection] = useState<'sent' | 'received'>('sent');
 
-  // Get current user's organization ID
+  // Get current user's organization ID and type
   const currentOrgId = userOrgRoles[0]?.organization?.id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
 
+  // TC has both sent and received invoices
+  const isTCWithDualView = currentOrgType === 'TC';
+
   // Contracts where user's org is the "from" party (can create/send invoices)
-  // Invoice direction: from_org_id is the Contractor (sender), to_org_id is Client (receiver)
   const contractsWhereUserCanInvoice = useMemo(() => {
     if (!currentOrgId) return [];
     return contracts.filter(c => c.from_org_id === currentOrgId);
+  }, [contracts, currentOrgId]);
+
+  // Contracts where user's org is the "to" party (receives invoices)
+  const contractsWhereUserReceivesInvoices = useMemo(() => {
+    if (!currentOrgId) return [];
+    return contracts.filter(c => c.to_org_id === currentOrgId);
   }, [contracts, currentOrgId]);
 
   // Contracts where user is a party (can view invoices)
@@ -56,17 +66,35 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
     return contracts.filter(c => c.from_org_id === currentOrgId || c.to_org_id === currentOrgId);
   }, [contracts, currentOrgId]);
 
-  // Can user create invoices? Only if they have contracts where they are to_org
-  // General Contractors should NOT be able to create invoices (they only receive them)
+  // Can user create invoices? Only if they have contracts where they are from_org
   const canCreateInvoice = useMemo(() => {
-    // GC should never create invoices - they only receive them
     if (currentOrgType === 'GC') return false;
-    // TC can invoice GC, FC can invoice TC
     return contractsWhereUserCanInvoice.length > 0;
   }, [currentOrgType, contractsWhereUserCanInvoice]);
 
+  // Separate invoices into sent and received
+  const { sentInvoices, receivedInvoices } = useMemo(() => {
+    if (!currentOrgId) return { sentInvoices: [], receivedInvoices: [] };
+    
+    const sentContractIds = contractsWhereUserCanInvoice.map(c => c.id);
+    const receivedContractIds = contractsWhereUserReceivesInvoices.map(c => c.id);
+    
+    const sent = invoices.filter(inv => inv.contract_id && sentContractIds.includes(inv.contract_id));
+    const received = invoices.filter(inv => inv.contract_id && receivedContractIds.includes(inv.contract_id));
+    
+    return { sentInvoices: sent, receivedInvoices: received };
+  }, [invoices, currentOrgId, contractsWhereUserCanInvoice, contractsWhereUserReceivesInvoices]);
+
+  // Current view invoices based on direction
+  const currentInvoices = useMemo(() => {
+    if (!isTCWithDualView) {
+      // GC only receives, FC only sends
+      return currentOrgType === 'GC' ? receivedInvoices : sentInvoices;
+    }
+    return invoiceDirection === 'sent' ? sentInvoices : receivedInvoices;
+  }, [isTCWithDualView, currentOrgType, invoiceDirection, sentInvoices, receivedInvoices]);
+
   useEffect(() => {
-    // Fetch contracts first to know which ones belong to user
     const fetchContracts = async () => {
       const { data } = await supabase
         .from('project_contracts')
@@ -99,7 +127,6 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
       console.error('Error fetching invoices:', error);
       setInvoices([]);
     } else {
-      // RLS already filters by contract party, but we also apply UI filter for safety
       const allInvoices = (data || []) as Invoice[];
       const contractIds = contractsWhereUserIsParty.map(c => c.id);
       const visibleInvoices = currentOrgId && contractIds.length > 0
@@ -128,91 +155,223 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
     );
   }
 
-  // Summary stats
+  // Calculate stats for current view
   const stats = {
-    total: invoices.length,
-    draft: invoices.filter((i) => i.status === 'DRAFT').length,
-    submitted: invoices.filter((i) => i.status === 'SUBMITTED').length,
-    approved: invoices.filter((i) => i.status === 'APPROVED').length,
-    paid: invoices.filter((i) => i.status === 'PAID').length,
-    totalBilled: invoices
+    total: currentInvoices.length,
+    draft: currentInvoices.filter((i) => i.status === 'DRAFT').length,
+    submitted: currentInvoices.filter((i) => i.status === 'SUBMITTED').length,
+    approved: currentInvoices.filter((i) => i.status === 'APPROVED').length,
+    paid: currentInvoices.filter((i) => i.status === 'PAID').length,
+    totalBilled: currentInvoices
       .filter((i) => i.status === 'APPROVED' || i.status === 'PAID')
       .reduce((sum, i) => sum + i.total_amount, 0),
   };
 
-  // Determine the user's role context for messaging
+  // Role context messaging
   const getRoleContext = () => {
     if (currentOrgType === 'GC') {
       return { 
-        canCreate: false, 
         message: 'Invoices sent to you by Trade Contractors will appear here.',
         emptyMessage: 'No invoices received yet. Trade Contractors will submit invoices for their completed work.'
       };
     }
     if (currentOrgType === 'TC') {
-      return { 
-        canCreate: contractsWhereUserCanInvoice.length > 0, 
-        message: 'Create invoices to bill the General Contractor for completed work.',
-        emptyMessage: contractsWhereUserCanInvoice.length > 0 
-          ? 'Create your first invoice to start billing for completed work.'
-          : 'No contract found to invoice. Accept a contract with a General Contractor first.'
-      };
+      if (invoiceDirection === 'sent') {
+        return { 
+          message: 'Invoices you send to the General Contractor for completed work.',
+          emptyMessage: contractsWhereUserCanInvoice.length > 0 
+            ? 'Create your first invoice to start billing the GC.'
+            : 'No contract with a General Contractor found.'
+        };
+      } else {
+        return { 
+          message: 'Invoices received from Field Crews for their labor.',
+          emptyMessage: 'No invoices received from Field Crews yet.'
+        };
+      }
     }
     if (currentOrgType === 'FC') {
       return { 
-        canCreate: contractsWhereUserCanInvoice.length > 0, 
-        message: 'Create invoices to bill the Trade Contractor for your labor.',
+        message: 'Invoices you send to the Trade Contractor for your labor.',
         emptyMessage: contractsWhereUserCanInvoice.length > 0 
           ? 'Create your first invoice to start billing for completed work.'
-          : 'No contract found to invoice. Accept a contract with a Trade Contractor first.'
+          : 'No contract with a Trade Contractor found.'
       };
     }
-    return { canCreate: false, message: '', emptyMessage: 'No invoices available.' };
+    return { message: '', emptyMessage: 'No invoices available.' };
   };
 
   const roleContext = getRoleContext();
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h3 className="text-lg font-semibold">Invoices</h3>
-          <p className="text-sm text-muted-foreground">
-            {stats.total} invoice{stats.total !== 1 ? 's' : ''} •{' '}
-            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(
-              stats.totalBilled
-            )}{' '}
-            billed
-          </p>
+  const renderInvoiceList = () => {
+    if (loading) {
+      return (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-36" />
+          ))}
         </div>
+      );
+    }
 
-        <div className="flex items-center gap-3">
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as InvoiceStatus | 'ALL')}>
-            <SelectTrigger className="w-[160px]">
-              <Filter className="h-4 w-4 mr-2" />
-              <SelectValue placeholder="Filter by status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All Statuses</SelectItem>
-              {(Object.keys(INVOICE_STATUS_LABELS) as InvoiceStatus[]).map((status) => (
-                <SelectItem key={status} value={status}>
-                  {INVOICE_STATUS_LABELS[status]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {canCreateInvoice && (
+    if (currentInvoices.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-12 text-center border rounded-lg bg-muted/20">
+          <Receipt className="h-12 w-12 text-muted-foreground/50 mb-4" />
+          <h4 className="text-lg font-medium mb-2">No Invoices Yet</h4>
+          <p className="text-sm text-muted-foreground mb-4 max-w-md">
+            {roleContext.emptyMessage}
+          </p>
+          {canCreateInvoice && invoiceDirection === 'sent' && (
             <Button onClick={() => setCreateDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
-              New Invoice
+              Create Invoice
             </Button>
           )}
         </div>
+      );
+    }
+
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {currentInvoices.map((invoice) => (
+          <InvoiceCard
+            key={invoice.id}
+            invoice={invoice}
+            onClick={() => setSelectedInvoiceId(invoice.id)}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  const renderSummaryCards = () => (
+    <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+      <div className="bg-muted/50 rounded-lg p-4 text-center">
+        <p className="text-2xl font-bold">{stats.draft}</p>
+        <p className="text-xs text-muted-foreground">Draft</p>
+      </div>
+      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-center">
+        <p className="text-2xl font-bold text-blue-600">{stats.submitted}</p>
+        <p className="text-xs text-muted-foreground">Pending Approval</p>
+      </div>
+      <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-center">
+        <p className="text-2xl font-bold text-green-600">{stats.approved}</p>
+        <p className="text-xs text-muted-foreground">Approved</p>
+      </div>
+      <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 text-center">
+        <p className="text-2xl font-bold text-purple-600">{stats.paid}</p>
+        <p className="text-xs text-muted-foreground">Paid</p>
+      </div>
+    </div>
+  );
+
+  const renderHeader = (showCreateButton: boolean) => (
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div>
+        <h3 className="text-lg font-semibold">
+          {isTCWithDualView 
+            ? (invoiceDirection === 'sent' ? 'Sent to GC' : 'Received from FC')
+            : 'Invoices'
+          }
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          {stats.total} invoice{stats.total !== 1 ? 's' : ''} •{' '}
+          {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(
+            stats.totalBilled
+          )}{' '}
+          billed
+        </p>
       </div>
 
-      {/* Role-specific info banner */}
+      <div className="flex items-center gap-3">
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as InvoiceStatus | 'ALL')}>
+          <SelectTrigger className="w-[160px]">
+            <Filter className="h-4 w-4 mr-2" />
+            <SelectValue placeholder="Filter by status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">All Statuses</SelectItem>
+            {(Object.keys(INVOICE_STATUS_LABELS) as InvoiceStatus[]).map((status) => (
+              <SelectItem key={status} value={status}>
+                {INVOICE_STATUS_LABELS[status]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {showCreateButton && canCreateInvoice && (
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Invoice
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
+  // For TC: Show tabbed interface
+  if (isTCWithDualView) {
+    return (
+      <div className="space-y-6">
+        <Tabs value={invoiceDirection} onValueChange={(v) => setInvoiceDirection(v as 'sent' | 'received')}>
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="sent" className="flex items-center gap-2">
+              <Send className="h-4 w-4" />
+              Sent to GC
+              {sentInvoices.length > 0 && (
+                <span className="ml-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium">
+                  {sentInvoices.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="received" className="flex items-center gap-2">
+              <Inbox className="h-4 w-4" />
+              From Field Crews
+              {receivedInvoices.length > 0 && (
+                <span className="ml-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium">
+                  {receivedInvoices.length}
+                </span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="sent" className="space-y-6 mt-6">
+            {renderHeader(true)}
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{roleContext.message}</AlertDescription>
+            </Alert>
+            {renderSummaryCards()}
+            {renderInvoiceList()}
+          </TabsContent>
+
+          <TabsContent value="received" className="space-y-6 mt-6">
+            {renderHeader(false)}
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{roleContext.message}</AlertDescription>
+            </Alert>
+            {renderSummaryCards()}
+            {renderInvoiceList()}
+          </TabsContent>
+        </Tabs>
+
+        <CreateInvoiceFromSOV
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
+          projectId={projectId}
+          onSuccess={handleCreateSuccess}
+        />
+      </div>
+    );
+  }
+
+  // For GC and FC: Single view
+  return (
+    <div className="space-y-6">
+      {renderHeader(currentOrgType !== 'GC')}
+
       {roleContext.message && (
         <Alert>
           <AlertCircle className="h-4 w-4" />
@@ -220,60 +379,9 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
         </Alert>
       )}
 
-      {/* Summary Cards */}
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-        <div className="bg-muted/50 rounded-lg p-4 text-center">
-          <p className="text-2xl font-bold">{stats.draft}</p>
-          <p className="text-xs text-muted-foreground">Draft</p>
-        </div>
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-center">
-          <p className="text-2xl font-bold text-blue-600">{stats.submitted}</p>
-          <p className="text-xs text-muted-foreground">Pending Approval</p>
-        </div>
-        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-center">
-          <p className="text-2xl font-bold text-green-600">{stats.approved}</p>
-          <p className="text-xs text-muted-foreground">Approved</p>
-        </div>
-        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 text-center">
-          <p className="text-2xl font-bold text-purple-600">{stats.paid}</p>
-          <p className="text-xs text-muted-foreground">Paid</p>
-        </div>
-      </div>
+      {renderSummaryCards()}
+      {renderInvoiceList()}
 
-      {/* Invoice List */}
-      {loading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-36" />
-          ))}
-        </div>
-      ) : invoices.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center border rounded-lg bg-muted/20">
-          <Receipt className="h-12 w-12 text-muted-foreground/50 mb-4" />
-          <h4 className="text-lg font-medium mb-2">No Invoices Yet</h4>
-          <p className="text-sm text-muted-foreground mb-4 max-w-md">
-            {roleContext.emptyMessage}
-          </p>
-          {canCreateInvoice && (
-            <Button onClick={() => setCreateDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Invoice
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {invoices.map((invoice) => (
-            <InvoiceCard
-              key={invoice.id}
-              invoice={invoice}
-              onClick={() => setSelectedInvoiceId(invoice.id)}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Create Invoice Dialog */}
       <CreateInvoiceFromSOV
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
