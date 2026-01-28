@@ -52,12 +52,20 @@ export function ItemPicker({ onAddItem, onClose }: ItemPickerProps) {
   } | null>(null);
 
   const categoryIcons: Record<CatalogCategory, React.ReactNode> = {
+    Adhesives: <Package className="h-5 w-5" />,
+    Concrete: <Package className="h-5 w-5" />,
+    Decking: <Layers className="h-5 w-5" />,
     Dimensional: <Ruler className="h-5 w-5" />,
     Engineered: <Layers className="h-5 w-5" />,
-    Sheathing: <Package className="h-5 w-5" />,
-    Hardware: <Hammer className="h-5 w-5" />,
+    Exterior: <Package className="h-5 w-5" />,
     Fasteners: <Package className="h-5 w-5" />,
+    Hardware: <Hammer className="h-5 w-5" />,
+    Insulation: <Package className="h-5 w-5" />,
+    Interior: <Package className="h-5 w-5" />,
     Other: <Package className="h-5 w-5" />,
+    Roofing: <Package className="h-5 w-5" />,
+    Sheathing: <Package className="h-5 w-5" />,
+    Structural: <Layers className="h-5 w-5" />,
   };
 
   const handleCategorySelect = (category: CatalogCategory) => {
