@@ -32,13 +32,13 @@ export interface InventoryPreset {
   filters: Partial<InventoryFilters>;
 }
 
-// Common presets for quick access
+// Common presets for quick access - matches actual catalog_category enum values
 export const INVENTORY_PRESETS: InventoryPreset[] = [
-  { id: 'lumber', label: 'Lumber', filters: { mainCategory: 'Dimensional' } },
+  { id: 'dimensional', label: 'Dimensional', filters: { mainCategory: 'Dimensional' } },
   { id: 'engineered', label: 'Engineered', filters: { mainCategory: 'Engineered' } },
-  { id: 'sheathing', label: 'Sheathing', filters: { mainCategory: 'Sheathing' } },
   { id: 'hardware', label: 'Hardware', filters: { mainCategory: 'Hardware' } },
-  { id: 'fasteners', label: 'Fasteners', filters: { mainCategory: 'Fasteners' } },
+  { id: 'decking', label: 'Decking', filters: { mainCategory: 'Decking' } },
+  { id: 'roofing', label: 'Roofing', filters: { mainCategory: 'Roofing' } },
 ];
 
 // Secondary categories map (main → secondaries)
