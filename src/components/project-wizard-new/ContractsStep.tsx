@@ -69,10 +69,12 @@ export function ContractsStep({ projectId, contracts, onChange, creatorRole }: C
   const downstreamMembers = useMemo(() => {
     return teamMembers.filter(m => {
       if (creatorRole === 'General Contractor') {
-        return m.role === 'Trade Contractor';
+        // GC can have contracts with TC and Supplier
+        return m.role === 'Trade Contractor' || m.role === 'Supplier';
       }
       if (creatorRole === 'Trade Contractor') {
-        return m.role === 'Field Crew';
+        // TC can have contracts with FC and Supplier
+        return m.role === 'Field Crew' || m.role === 'Supplier';
       }
       return false;
     });
@@ -195,8 +197,8 @@ export function ContractsStep({ projectId, contracts, onChange, creatorRole }: C
                 <p className="font-medium">No team members to contract with</p>
                 <p className="text-sm text-muted-foreground mt-1">
                   {creatorRole === 'General Contractor' 
-                    ? 'Add a Trade Contractor on the Project Team step first.'
-                    : 'Add a General Contractor on the Project Team step first (required). Add Field Crew on the Project Team step first (optional).'}
+                    ? 'Add a Trade Contractor or Supplier on the Project Team step first.'
+                    : 'Add a General Contractor on the Project Team step first (required). Add Field Crew or Suppliers on the Project Team step (optional).'}
                 </p>
               </div>
             </div>
@@ -245,8 +247,8 @@ export function ContractsStep({ projectId, contracts, onChange, creatorRole }: C
             <ArrowDown className="h-4 w-4" />
             <span>
               {creatorRole === 'Trade Contractor' 
-                ? 'Contracts with Field Crew' 
-                : 'Contracts with Trade Contractors'}
+                ? 'Contracts with Field Crew and Suppliers' 
+                : 'Contracts with Trade Contractors and Suppliers'}
             </span>
           </div>
           {downstreamMembers.map((member) => (

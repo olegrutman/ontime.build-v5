@@ -297,11 +297,6 @@ export default function CreateProjectNew() {
           continue;
         }
 
-        // Skip suppliers (they don't have contracts)
-        if (teamMember.role === 'Supplier') {
-          continue;
-        }
-
         console.log('Saving contract for:', teamMember.invited_org_name, teamMember.role, 'sum:', contract.contractSum);
 
         const existing = existingContracts?.find((c) => c.to_project_team_id === teamMember.id);
