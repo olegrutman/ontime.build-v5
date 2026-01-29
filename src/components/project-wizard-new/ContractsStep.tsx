@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ProjectContract } from '@/types/projectWizard';
 import { DollarSign, ArrowUp, ArrowDown, Building2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 
 interface ProjectTeamMember {
   id: string;
@@ -297,12 +298,15 @@ function ContractCard({ member, contract, onUpdate, description }: ContractCardP
                 type="number"
                 min="0"
                 step="100"
-                className="pl-7"
+                className={cn("pl-7", contract.contractSum === 0 && "border-amber-400 focus-visible:ring-amber-400")}
                 value={contract.contractSum || ''}
                 onChange={(e) => onUpdate({ contractSum: parseFloat(e.target.value) || 0 })}
                 placeholder="0.00"
               />
             </div>
+            {contract.contractSum === 0 && (
+              <p className="text-xs text-amber-600">Enter the contract sum</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label>Retainage %</Label>

@@ -265,7 +265,7 @@ export default function CreateProjectNew() {
   };
 
   const saveContracts = async (projectId: string) => {
-    console.log('Saving contracts:', data.contracts);
+    console.log('Saving contracts, state has:', data.contracts.length, 'contracts');
     
     // Fetch team members from database to get accurate data
     const { data: dbTeamMembers, error: teamError } = await supabase
@@ -278,6 +278,20 @@ export default function CreateProjectNew() {
       return;
     }
     
+    // Determine which team members SHOULD have contracts based on creator role
+    const membersNeedingContracts = (dbTeamMembers || []).filter(m => {
+      if (creatorRole === 'General Contractor') {
+        return m.role === 'Trade Contractor' || m.role === 'Supplier';
+      }
+      if (creatorRole === 'Trade Contractor') {
+        // TC needs upstream contract with GC AND downstream with FC/Supplier
+        return m.role === 'General Contractor' || m.role === 'Field Crew' || m.role === 'Supplier';
+      }
+      return false;
+    });
+    
+    console.log('Members needing contracts:', membersNeedingContracts.map(m => ({ id: m.id, role: m.role, name: m.invited_org_name })));
+    
     // Fetch existing contracts to update in-place when re-visiting the step
     const { data: existingContracts, error: existingError } = await supabase
       .from('project_contracts')
@@ -288,16 +302,14 @@ export default function CreateProjectNew() {
       console.error('Error fetching existing contracts:', existingError);
     }
 
-    for (const contract of data.contracts) {
+    // Process each member that needs a contract
+    for (const teamMember of membersNeedingContracts) {
       try {
-        // Find the team member by ID (toTeamMemberId now references project_team.id)
-        const teamMember = dbTeamMembers?.find(t => t.id === contract.toTeamMemberId);
-        if (!teamMember) {
-          console.warn('No team member found for contract:', contract.toTeamMemberId);
-          continue;
-        }
-
-        console.log('Saving contract for:', teamMember.invited_org_name, teamMember.role, 'sum:', contract.contractSum);
+        // Find contract data from state (may not exist if UI didn't populate it)
+        const contract = data.contracts.find(c => c.toTeamMemberId === teamMember.id);
+        
+        console.log('Processing contract for:', teamMember.invited_org_name, teamMember.role, 
+          'state contract:', contract ? { sum: contract.contractSum, ret: contract.retainagePercent } : 'NOT FOUND');
 
         const existing = existingContracts?.find((c) => c.to_project_team_id === teamMember.id);
 
@@ -309,12 +321,14 @@ export default function CreateProjectNew() {
           trade: teamMember.trade,
           to_project_team_id: teamMember.id,
           to_org_id: teamMember.org_id,
-          contract_sum: contract.contractSum,
-          retainage_percent: contract.retainagePercent,
-          allow_mobilization_line_item: contract.allowMobilization,
-          notes: contract.notes,
+          contract_sum: contract?.contractSum ?? 0,
+          retainage_percent: contract?.retainagePercent ?? 0,
+          allow_mobilization_line_item: contract?.allowMobilization ?? false,
+          notes: contract?.notes ?? null,
           created_by_user_id: user?.id,
         };
+
+        console.log('Upserting contract payload:', { ...payload, contract_sum: payload.contract_sum });
 
         const { error } = existing?.id
           ? await supabase.from('project_contracts').update(payload).eq('id', existing.id)
