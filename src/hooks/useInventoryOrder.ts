@@ -59,9 +59,9 @@ export function useInventoryOrder(projectId?: string) {
 
       // If we have a project context, we need to filter by work items in that project
       // For now, just get the most recent draft
-      const { data, error } = await query.single();
+      const { data, error } = await query.maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error fetching draft order:', error);
         return null;
       }
