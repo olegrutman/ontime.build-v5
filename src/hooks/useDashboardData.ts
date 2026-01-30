@@ -200,6 +200,7 @@ export function useDashboardData(): DashboardData {
           id,
           project_id,
           role,
+          invited_by,
           projects:project_id (
             id,
             name,
@@ -212,6 +213,25 @@ export function useDashboardData(): DashboardData {
         .eq('organization_id', currentOrg.id)
         .eq('invite_status', 'INVITED');
 
+      // Fetch inviter organizations for all pending invites
+      const inviterUserIds = (incomingInvitesData || [])
+        .map((inv: any) => inv.invited_by)
+        .filter((id: string | null): id is string => id !== null);
+      
+      let inviterOrgMap: Record<string, string> = {};
+      if (inviterUserIds.length > 0) {
+        const { data: inviterOrgs } = await supabase
+          .from('user_org_roles')
+          .select('user_id, organizations:organization_id (name)')
+          .in('user_id', inviterUserIds);
+        
+        (inviterOrgs || []).forEach((uor: any) => {
+          if (uor.user_id && uor.organizations?.name) {
+            inviterOrgMap[uor.user_id] = uor.organizations.name;
+          }
+        });
+      }
+
       const incomingInvitesList: PendingInvite[] = (incomingInvitesData || []).map((inv: any) => {
         const roleMap: Record<string, string> = {
           'GC': 'General Contractor',
@@ -219,11 +239,13 @@ export function useDashboardData(): DashboardData {
           'FC': 'Field Crew',
           'SUPPLIER': 'Supplier',
         };
+        // Use the actual inviter's org name, fallback to project owner's org
+        const inviterOrgName = inv.invited_by ? inviterOrgMap[inv.invited_by] : null;
         return {
           id: inv.id,
           projectId: inv.project_id,
           projectName: inv.projects?.name || 'Unknown Project',
-          invitedByOrgName: inv.projects?.organizations?.name || 'Unknown',
+          invitedByOrgName: inviterOrgName || inv.projects?.organizations?.name || 'Unknown',
           role: roleMap[inv.role] || inv.role,
         };
       });
