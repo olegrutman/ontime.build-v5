@@ -43,6 +43,7 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
   const [billedToDate, setBilledToDate] = useState(0);
   const [viewerRole, setViewerRole] = useState<string>('Trade Contractor');
   const [workOrderTotal, setWorkOrderTotal] = useState(0);
+  const [userOrgIds, setUserOrgIds] = useState<string[]>([]);
   
   // Inline editing state
   const [editingContractId, setEditingContractId] = useState<string | null>(null);
@@ -123,6 +124,21 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
       fetchData();
     }
   }, [projectId, user]);
+
+  // Fetch user org IDs for counterparty lookup
+  useEffect(() => {
+    const fetchUserOrgIds = async () => {
+      if (user) {
+        const { data: memberships } = await supabase
+          .from('user_org_roles')
+          .select('organization_id')
+          .eq('user_id', user.id);
+        
+        setUserOrgIds((memberships || []).map(m => m.organization_id));
+      }
+    };
+    fetchUserOrgIds();
+  }, [user]);
 
   const startEditing = (contract: Contract) => {
     setEditingContractId(contract.id);
@@ -237,23 +253,6 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
     return contract.to_org_name || contract.from_org_name || contract.to_role;
   };
 
-  // Get user org IDs for counterparty lookup
-  const [userOrgIds, setUserOrgIds] = useState<string[]>([]);
-  
-  // Update fetchData to also track user org IDs
-  useEffect(() => {
-    const fetchUserOrgIds = async () => {
-      if (user) {
-        const { data: memberships } = await supabase
-          .from('user_org_roles')
-          .select('organization_id')
-          .eq('user_id', user.id);
-        
-        setUserOrgIds((memberships || []).map(m => m.organization_id));
-      }
-    };
-    fetchUserOrgIds();
-  }, [user]);
 
   const getUpstreamCompanyName = () => {
     return getContractCounterpartyName(upstreamContract, userOrgIds);
