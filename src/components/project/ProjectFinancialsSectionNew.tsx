@@ -215,23 +215,52 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
   const outstanding = contractValue - billedToDate;
   const billingProgress = contractValue > 0 ? (billedToDate / contractValue) * 100 : 0;
 
-  // Helper to get company name for a contract's counterparty
-  const getUpstreamCompanyName = () => {
-    if (!upstreamContract) return null;
-    // For TC view, the GC is the counterparty
-    if (upstreamContract.from_role === 'General Contractor') {
-      return upstreamContract.from_org_name;
+  // Helper to get the "other party" company name for a contract
+  // based on current user's organization
+  const getContractCounterpartyName = (contract: Contract | undefined, userOrgIds: string[]): string => {
+    if (!contract) return 'Unknown';
+    
+    // Check if user's org is the "from" side (client/payer)
+    const isFromOrg = contract.from_org_id && userOrgIds.includes(contract.from_org_id);
+    // Check if user's org is the "to" side (contractor/receiver)
+    const isToOrg = contract.to_org_id && userOrgIds.includes(contract.to_org_id);
+    
+    if (isFromOrg) {
+      // User is the client, show the contractor they hired
+      return contract.to_org_name || contract.to_role;
+    } else if (isToOrg) {
+      // User is the contractor, show who hired them
+      return contract.from_org_name || contract.from_role;
     }
-    return upstreamContract.to_org_name;
+    
+    // Fallback: prefer showing the "to" party
+    return contract.to_org_name || contract.from_org_name || contract.to_role;
+  };
+
+  // Get user org IDs for counterparty lookup
+  const [userOrgIds, setUserOrgIds] = useState<string[]>([]);
+  
+  // Update fetchData to also track user org IDs
+  useEffect(() => {
+    const fetchUserOrgIds = async () => {
+      if (user) {
+        const { data: memberships } = await supabase
+          .from('user_org_roles')
+          .select('organization_id')
+          .eq('user_id', user.id);
+        
+        setUserOrgIds((memberships || []).map(m => m.organization_id));
+      }
+    };
+    fetchUserOrgIds();
+  }, [user]);
+
+  const getUpstreamCompanyName = () => {
+    return getContractCounterpartyName(upstreamContract, userOrgIds);
   };
 
   const getDownstreamCompanyName = () => {
-    if (!downstreamContract) return null;
-    // For TC view, the FC is the counterparty
-    if (downstreamContract.to_role === 'Field Crew') {
-      return downstreamContract.to_org_name;
-    }
-    return downstreamContract.from_org_name;
+    return getContractCounterpartyName(downstreamContract, userOrgIds);
   };
 
   if (contracts.length === 0) {
@@ -457,7 +486,7 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
                     </div>
                     <div className="flex-1">
                       <p className="text-sm text-muted-foreground">
-                        Contract with {primaryContract.from_org_name || primaryContract.to_org_name || 'Trade Contractor'}
+                        Contract with {getContractCounterpartyName(primaryContract, userOrgIds)}
                       </p>
                       <EditableContractValue 
                         contract={primaryContract} 
@@ -498,7 +527,7 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground">
-                    Contract with {primaryContract.from_org_name || primaryContract.to_org_name || 'Trade Contractor'}
+                    Contract with {getContractCounterpartyName(primaryContract, userOrgIds)}
                   </p>
                   <EditableContractValue 
                     contract={primaryContract} 
