@@ -25,7 +25,7 @@ import {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, userOrgRoles, loading: authLoading, needsOrgSetup } = useAuth();
+  const { user, userOrgRoles, loading: authLoading, needsOrgSetup, signOut } = useAuth();
   const {
     projects,
     statusCounts,
@@ -192,11 +192,13 @@ export default function Dashboard() {
         <div className="p-6">
           <Card className="max-w-md mx-auto">
             <CardContent className="p-6 text-center">
-              <h2 className="text-lg font-semibold mb-2">No Organization</h2>
+              <h2 className="text-lg font-semibold mb-2">Account Setup Incomplete</h2>
               <p className="text-muted-foreground mb-4">
-                You need to create an organization to get started.
+                Your account is not linked to an organization. Please sign out and create a new account with your organization details.
               </p>
-              <Button onClick={() => navigate('/#auth')}>Create Organization</Button>
+              <div className="flex gap-2 justify-center">
+                <Button variant="outline" onClick={() => signOut()}>Sign Out</Button>
+              </div>
             </CardContent>
           </Card>
         </div>
