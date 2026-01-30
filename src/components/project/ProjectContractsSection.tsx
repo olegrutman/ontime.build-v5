@@ -41,15 +41,30 @@ function formatCurrency(amount: number | null): string {
   }).format(amount);
 }
 
-function getContractTitle(contract: Contract): string {
-  // Use company names when available
-  const fromName = contract.from_org_name || contract.from_role;
-  const toName = contract.to_org_name || contract.to_role;
+function getContractTitle(contract: Contract, currentOrgId: string | undefined): string {
+  // Show "Contract with [other party]" - the viewer sees who they're contracting WITH
+  const isFromOrg = currentOrgId && contract.from_org_id === currentOrgId;
+  const isToOrg = currentOrgId && contract.to_org_id === currentOrgId;
+  
+  // Determine the "other party" name
+  let otherPartyName: string;
+  if (isFromOrg) {
+    // User is the client/payer, show the contractor they hired
+    otherPartyName = contract.to_org_name || contract.to_role;
+  } else if (isToOrg) {
+    // User is the contractor, show who hired them
+    otherPartyName = contract.from_org_name || contract.from_role;
+  } else {
+    // Fallback: show both parties
+    const fromName = contract.from_org_name || contract.from_role;
+    const toName = contract.to_org_name || contract.to_role;
+    otherPartyName = `${fromName} → ${toName}`;
+  }
   
   if (contract.trade) {
-    return `${fromName} Contract with ${toName} (${contract.trade})`;
+    return `Contract with ${otherPartyName} (${contract.trade})`;
   }
-  return `${fromName} Contract with ${toName}`;
+  return `Contract with ${otherPartyName}`;
 }
 
 export function ProjectContractsSection({ projectId }: ProjectContractsSectionProps) {
@@ -167,7 +182,7 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <h4 className="font-medium text-sm">
-                      {getContractTitle(contract)}
+                      {getContractTitle(contract, currentOrgId)}
                     </h4>
                     {/* Show role as secondary badge */}
                     <div className="flex items-center gap-2 mt-1">
