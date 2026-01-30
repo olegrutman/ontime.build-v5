@@ -54,10 +54,12 @@ const signUpSchema = z.object({
   zip: z.string().min(5, 'ZIP code is required'),
   // Role
   role: z.enum(['GC', 'TC', 'FC', 'SUPPLIER']),
+  // Job title (for GC users)
+  jobTitle: z.string().optional(),
   // Trade (conditional)
   trade: z.string().optional(),
   tradeCustom: z.string().optional(),
-  // Pricing defaults (optional)
+  // Pricing defaults (optional - only for TC/FC)
   defaultHourlyRate: z.string().optional(),
   laborMarkupPercent: z.string().optional(),
   useRateForChangeOrders: z.boolean().optional(),
@@ -113,6 +115,7 @@ export function AuthSection() {
     state: '',
     zip: '',
     role: 'TC',
+    jobTitle: '',
     trade: '',
     tradeCustom: '',
     defaultHourlyRate: '',
@@ -134,6 +137,15 @@ export function AuthSection() {
       if (field === 'role' && (value === 'GC' || value === 'SUPPLIER')) {
         updated.trade = '';
         updated.tradeCustom = '';
+      }
+      // Clear job title when switching away from GC
+      if (field === 'role' && value !== 'GC') {
+        updated.jobTitle = '';
+      }
+      // Clear pricing fields when switching to GC
+      if (field === 'role' && value === 'GC') {
+        updated.defaultHourlyRate = '';
+        updated.laborMarkupPercent = '';
       }
       return updated;
     });
@@ -278,8 +290,17 @@ export function AuthSection() {
         .eq('id', orgId);
     }
 
-    // Step 4: Store pricing defaults if provided
-    if (signUpForm.defaultHourlyRate || signUpForm.laborMarkupPercent) {
+    // Step 4: Update profile with job title if provided (for GC users)
+    if (signUpForm.role === 'GC' && signUpForm.jobTitle && session?.user) {
+      await supabase
+        .from('profiles')
+        .update({ job_title: signUpForm.jobTitle })
+        .eq('user_id', session.user.id);
+    }
+
+    // Step 5: Store pricing defaults if provided (for TC/FC users)
+    if ((signUpForm.role === 'TC' || signUpForm.role === 'FC') && 
+        (signUpForm.defaultHourlyRate || signUpForm.laborMarkupPercent)) {
       const orgId = (orgData as { organization_id: string }).organization_id;
       await supabase.from('org_settings').upsert({
         organization_id: orgId,
@@ -300,7 +321,8 @@ export function AuthSection() {
   };
 
   const showTradeField = signUpForm.role === 'TC' || signUpForm.role === 'FC';
-
+  const showPricingFields = signUpForm.role === 'TC' || signUpForm.role === 'FC';
+  const showJobTitleField = signUpForm.role === 'GC';
   return (
     <section id="auth" className="py-20 bg-muted/30">
       <div className="container mx-auto px-4">
@@ -559,6 +581,23 @@ export function AuthSection() {
                       </Select>
                       {errors.role && <p className="text-xs text-destructive mt-1">{errors.role}</p>}
                     </div>
+
+                    {/* Job Title field for GC users */}
+                    {showJobTitleField && (
+                      <div>
+                        <Label htmlFor="jobTitle">Your Role in the Company</Label>
+                        <div className="relative mt-1">
+                          <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            id="jobTitle"
+                            value={signUpForm.jobTitle}
+                            onChange={(e) => updateSignUpField('jobTitle', e.target.value)}
+                            placeholder="e.g. Project Manager, Superintendent"
+                            className="pl-10"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* SECTION D: Trade (conditional) */}
@@ -607,66 +646,68 @@ export function AuthSection() {
                     </div>
                   )}
 
-                  {/* SECTION E: Pricing Defaults (optional) */}
-                  <div className="space-y-4 pt-4 border-t">
-                    <h3 className="text-sm font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
-                      <DollarSign className="w-4 h-4" />
-                      Pricing Defaults <span className="font-normal">(optional)</span>
-                    </h3>
-                    <p className="text-xs text-muted-foreground -mt-2">
-                      Pre-fill labor rates when creating change orders
-                    </p>
+                  {/* SECTION E: Pricing Defaults (optional - only for TC/FC) */}
+                  {showPricingFields && (
+                    <div className="space-y-4 pt-4 border-t">
+                      <h3 className="text-sm font-medium flex items-center gap-2 text-muted-foreground uppercase tracking-wide">
+                        <DollarSign className="w-4 h-4" />
+                        Pricing Defaults <span className="font-normal">(optional)</span>
+                      </h3>
+                      <p className="text-xs text-muted-foreground -mt-2">
+                        Pre-fill labor rates when creating change orders
+                      </p>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="defaultHourlyRate">Default Hourly Rate</Label>
-                        <div className="relative mt-1">
-                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input
-                            id="defaultHourlyRate"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={signUpForm.defaultHourlyRate}
-                            onChange={(e) => updateSignUpField('defaultHourlyRate', e.target.value)}
-                            placeholder="65.00"
-                            className="pl-10"
-                          />
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="defaultHourlyRate">Default Hourly Rate</Label>
+                          <div className="relative mt-1">
+                            <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input
+                              id="defaultHourlyRate"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={signUpForm.defaultHourlyRate}
+                              onChange={(e) => updateSignUpField('defaultHourlyRate', e.target.value)}
+                              placeholder="65.00"
+                              className="pl-10"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <Label htmlFor="laborMarkupPercent">Labor Markup %</Label>
+                          <div className="relative mt-1">
+                            <Percent className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input
+                              id="laborMarkupPercent"
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.1"
+                              value={signUpForm.laborMarkupPercent}
+                              onChange={(e) => updateSignUpField('laborMarkupPercent', e.target.value)}
+                              placeholder="15"
+                              className="pl-10"
+                            />
+                          </div>
                         </div>
                       </div>
-                      <div>
-                        <Label htmlFor="laborMarkupPercent">Labor Markup %</Label>
-                        <div className="relative mt-1">
-                          <Percent className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input
-                            id="laborMarkupPercent"
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="0.1"
-                            value={signUpForm.laborMarkupPercent}
-                            onChange={(e) => updateSignUpField('laborMarkupPercent', e.target.value)}
-                            placeholder="15"
-                            className="pl-10"
-                          />
-                        </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="useRateForChangeOrders"
+                          checked={signUpForm.useRateForChangeOrders}
+                          onCheckedChange={(checked) => updateSignUpField('useRateForChangeOrders', !!checked)}
+                        />
+                        <label
+                          htmlFor="useRateForChangeOrders"
+                          className="text-sm text-muted-foreground cursor-pointer"
+                        >
+                          Use this rate to pre-fill change orders
+                        </label>
                       </div>
                     </div>
-
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="useRateForChangeOrders"
-                        checked={signUpForm.useRateForChangeOrders}
-                        onCheckedChange={(checked) => updateSignUpField('useRateForChangeOrders', !!checked)}
-                      />
-                      <label
-                        htmlFor="useRateForChangeOrders"
-                        className="text-sm text-muted-foreground cursor-pointer"
-                      >
-                        Use this rate to pre-fill change orders
-                      </label>
-                    </div>
-                  </div>
+                  )}
 
                   <Button type="submit" className="w-full h-12 text-base shadow-purple" disabled={loading}>
                     {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
