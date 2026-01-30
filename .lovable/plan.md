@@ -1,64 +1,75 @@
 
 
-# Plan: Complete Database Reset for Fresh Testing
+# Plan: Update Dashboard "No Organization" State
 
-## Current Data Summary
+## Problem
+The Dashboard currently shows a "Create Organization" button when a user has no organization linked. However, since organizations are created during the signup process, this button and message are misleading.
 
-| Data Type | Count |
-|-----------|-------|
-| Projects | 4 |
-| Organizations | 10 |
-| Users/Profiles | Multiple (linked to orgs) |
+## Solution
 
-## What Will Be Deleted
+Update the "No Organization" state in the Dashboard to:
+1. Remove the "Create Organization" button
+2. Show an appropriate message explaining the situation
+3. Provide a "Contact Support" or "Sign Out" option since this is an edge case that shouldn't normally occur
 
-This will clear ALL test data from the following tables (in order to respect foreign key constraints):
+## Changes
 
-### Child Tables (deleted first)
-- Change order data (materials, equipment, labor, participants, checklist)
-- Work items and participants
-- T&M periods and entries
-- Invoices and line items
-- Purchase orders and line items
-- Material orders and items
-- Project contracts, SOVs, scope details
-- Project team, participants, invites, relationships
-- Notifications and reads
-- Estimates and packs
-- Cost rollups
-- Labor entries
+### File: `src/pages/Dashboard.tsx`
 
-### Parent Tables (deleted after)
-- Projects
-- Suppliers and catalog items
-- Organizations
-- User org roles
-- Org settings and invitations
-- Profiles
+**Current Code (lines 189-205):**
+```tsx
+if (!currentOrg) {
+  return (
+    <AppLayout title="Dashboard">
+      <div className="p-6">
+        <Card className="max-w-md mx-auto">
+          <CardContent className="p-6 text-center">
+            <h2 className="text-lg font-semibold mb-2">No Organization</h2>
+            <p className="text-muted-foreground mb-4">
+              You need to create an organization to get started.
+            </p>
+            <Button onClick={() => navigate('/#auth')}>Create Organization</Button>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+}
+```
 
-### Auth Users
-- All users from `auth.users` will be deleted
+**Updated Code:**
+```tsx
+if (!currentOrg) {
+  return (
+    <AppLayout title="Dashboard">
+      <div className="p-6">
+        <Card className="max-w-md mx-auto">
+          <CardContent className="p-6 text-center">
+            <h2 className="text-lg font-semibold mb-2">Account Setup Incomplete</h2>
+            <p className="text-muted-foreground mb-4">
+              Your account is not linked to an organization. Please sign out and create a new account with your organization details.
+            </p>
+            <div className="flex gap-2 justify-center">
+              <Button variant="outline" onClick={() => signOut()}>Sign Out</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
+  );
+}
+```
 
-## Important Notes
+## Technical Details
 
-1. **You will be logged out** - Your current user account will be deleted
-2. **You'll need to sign up again** - Create new test accounts after the reset
-3. **This cannot be undone** - All data will be permanently removed
+- Import `signOut` from the `useAuth` hook (already available in the component via destructuring)
+- Update the destructured values from `useAuth()` to include `signOut`
+- Change the messaging to reflect that this is an incomplete account state rather than a "create organization" flow
 
-## Database Migration
+## Testing
 
-The cleanup will use a SQL migration that:
-1. Disables triggers temporarily to avoid conflicts
-2. Deletes data from child tables first (respecting foreign keys)
-3. Deletes parent table data
-4. Removes all auth users
-5. Re-enables triggers
-
-## After Reset
-
-Once complete, you can:
-1. Sign up with a new GC account
-2. Create a TC account
-3. Create an FC account
-4. Create projects and test all invitation flows
+After this change:
+1. If a user somehow ends up without an organization, they'll see a clear message
+2. They can sign out and create a fresh account with proper organization setup
+3. No confusing "Create Organization" button that doesn't actually create an organization
 
