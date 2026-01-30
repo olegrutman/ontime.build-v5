@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Check, MapPin, Users, FileText, DollarSign, ArrowUp, ArrowDown } from 'lucide-react';
+import { Check, MapPin, Users, FileText, DollarSign, ArrowUp, ArrowDown, Building2, Home, Layers, Mountain, PaintBucket } from 'lucide-react';
 import { NewProjectWizardData, TeamRole, ProjectContract } from '@/types/projectWizard';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -63,6 +63,70 @@ export function ReviewStepNew({ data, creatorRole = 'General Contractor' }: Revi
   const getTradeDisplay = (member: ProjectTeamMember) => {
     return member.trade === 'Other' ? member.trade_custom : member.trade;
   };
+
+  // Helper functions for formatting scope details
+  const formatFoundation = () => {
+    if (!data.scope.foundationType) return null;
+    if (data.scope.foundationType === 'Basement') {
+      const parts = [data.scope.basementType, data.scope.basementFinish].filter(Boolean);
+      return parts.length > 0 
+        ? `Basement (${parts.join(', ')})` 
+        : 'Basement';
+    }
+    return data.scope.foundationType;
+  };
+
+  const formatElevator = () => {
+    if (!data.scope.hasElevator) return null;
+    return data.scope.shaftType 
+      ? `Yes (${data.scope.shaftType} shaft)` 
+      : 'Yes';
+  };
+
+  const formatRoofDeck = () => {
+    if (!data.scope.hasRoofDeck) return null;
+    return data.scope.roofDeckType || 'Yes';
+  };
+
+  const formatBalconies = () => {
+    if (!data.scope.hasBalconies) return null;
+    return data.scope.balconyType || 'Yes';
+  };
+
+  const formatDecking = () => {
+    if (!data.scope.deckingIncluded) return null;
+    return data.scope.deckingType || 'Yes';
+  };
+
+  const formatSiding = () => {
+    if (!data.scope.sidingIncluded) return null;
+    const materials = data.scope.sidingMaterials;
+    if (materials && materials.length > 0) {
+      return materials.join(', ');
+    }
+    return 'Included';
+  };
+
+  const formatFasciaSoffit = () => {
+    if (!data.scope.fasciaIncluded && !data.scope.soffitIncluded) return null;
+    return data.scope.fasciaSoffitMaterial || 'Included';
+  };
+
+  const formatDecorative = () => {
+    const items = data.scope.decorativeItems;
+    if (!items || items.length === 0) return null;
+    return items.join(', ');
+  };
+
+  // Check if sections have data
+  const hasStructureDetails = data.scope.homeType || data.scope.floors || data.scope.foundationType;
+  const hasBuildingBasics = data.scope.numBuildings || data.scope.stories || data.scope.constructionType;
+  const hasUnitDetails = data.scope.numUnits || data.scope.storiesPerUnit || data.scope.hasSharedWalls;
+  const hasStairsOrElevator = data.scope.stairsType || data.scope.hasElevator;
+  const hasRoofDetails = data.scope.roofType || data.scope.hasRoofDeck;
+  const hasExteriorFeatures = data.scope.hasCoveredPorches || data.scope.hasBalconies || data.scope.deckingIncluded;
+  const hasFinishes = data.scope.sidingIncluded || data.scope.fasciaIncluded || data.scope.soffitIncluded || formatDecorative() || 
+    data.scope.windowsIncluded || data.scope.wrbIncluded || data.scope.extDoorsIncluded;
 
   // Separate upstream (GC) and downstream (FC/TC) contracts for TC creators
   const upstreamGC = teamMembers.find(m => m.role === 'General Contractor');
@@ -177,59 +241,225 @@ export function ReviewStepNew({ data, creatorRole = 'General Contractor' }: Revi
             Scope & Details
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-4 text-sm">
-            {data.scope.homeType && (
-              <div>
-                <p className="text-muted-foreground">Home Type</p>
-                <p className="font-medium">{data.scope.homeType}</p>
+        <CardContent className="space-y-4">
+          {/* Structure Details */}
+          {hasStructureDetails && (
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <Home className="h-3 w-3" />
+                Structure
+              </p>
+              <div className="grid grid-cols-2 gap-3 text-sm pl-4">
+                {data.scope.homeType && (
+                  <div>
+                    <p className="text-muted-foreground text-xs">Home Type</p>
+                    <p className="font-medium">{data.scope.homeType}</p>
+                  </div>
+                )}
+                {data.scope.floors && (
+                  <div>
+                    <p className="text-muted-foreground text-xs">Floors</p>
+                    <p className="font-medium">{data.scope.floors}</p>
+                  </div>
+                )}
+                {formatFoundation() && (
+                  <div className="col-span-2">
+                    <p className="text-muted-foreground text-xs">Foundation</p>
+                    <p className="font-medium">{formatFoundation()}</p>
+                  </div>
+                )}
               </div>
-            )}
-            {data.scope.floors && (
-              <div>
-                <p className="text-muted-foreground">Floors</p>
-                <p className="font-medium">{data.scope.floors}</p>
+            </div>
+          )}
+
+          {/* Building Basics (for multi-family) */}
+          {hasBuildingBasics && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <Building2 className="h-3 w-3" />
+                  Building Basics
+                </p>
+                <div className="grid grid-cols-2 gap-3 text-sm pl-4">
+                  {data.scope.numBuildings && (
+                    <div>
+                      <p className="text-muted-foreground text-xs">Buildings</p>
+                      <p className="font-medium">{data.scope.numBuildings}</p>
+                    </div>
+                  )}
+                  {data.scope.stories && (
+                    <div>
+                      <p className="text-muted-foreground text-xs">Stories</p>
+                      <p className="font-medium">{data.scope.stories}</p>
+                    </div>
+                  )}
+                  {data.scope.constructionType && (
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground text-xs">Construction Type</p>
+                      <p className="font-medium">
+                        {data.scope.constructionType === 'Other' 
+                          ? data.scope.constructionTypeOther 
+                          : data.scope.constructionType}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-            {data.scope.foundationType && (
-              <div>
-                <p className="text-muted-foreground">Foundation</p>
-                <p className="font-medium">{data.scope.foundationType}</p>
+            </>
+          )}
+
+          {/* Unit Details (for townhomes/duplexes) */}
+          {hasUnitDetails && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <Layers className="h-3 w-3" />
+                  Unit Details
+                </p>
+                <div className="grid grid-cols-2 gap-3 text-sm pl-4">
+                  {data.scope.numUnits && (
+                    <div>
+                      <p className="text-muted-foreground text-xs">Number of Units</p>
+                      <p className="font-medium">{data.scope.numUnits}</p>
+                    </div>
+                  )}
+                  {data.scope.storiesPerUnit && (
+                    <div>
+                      <p className="text-muted-foreground text-xs">Stories per Unit</p>
+                      <p className="font-medium">{data.scope.storiesPerUnit}</p>
+                    </div>
+                  )}
+                  {data.scope.hasSharedWalls && (
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground text-xs">Shared Walls</p>
+                      <p className="font-medium">Yes</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-            {data.scope.roofType && (
-              <div>
-                <p className="text-muted-foreground">Roof Type</p>
-                <p className="font-medium">{data.scope.roofType}</p>
+            </>
+          )}
+
+          {/* Stairs & Elevator */}
+          {hasStairsOrElevator && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Stairs & Elevator</p>
+                <div className="grid grid-cols-2 gap-3 text-sm pl-4">
+                  {data.scope.stairsType && (
+                    <div>
+                      <p className="text-muted-foreground text-xs">Stairs</p>
+                      <p className="font-medium">{data.scope.stairsType}</p>
+                    </div>
+                  )}
+                  {formatElevator() && (
+                    <div>
+                      <p className="text-muted-foreground text-xs">Elevator</p>
+                      <p className="font-medium">{formatElevator()}</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-            {data.scope.stairsType && (
-              <div>
-                <p className="text-muted-foreground">Stairs</p>
-                <p className="font-medium">{data.scope.stairsType}</p>
+            </>
+          )}
+
+          {/* Roof */}
+          {hasRoofDetails && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <Mountain className="h-3 w-3" />
+                  Roof
+                </p>
+                <div className="grid grid-cols-2 gap-3 text-sm pl-4">
+                  {data.scope.roofType && (
+                    <div>
+                      <p className="text-muted-foreground text-xs">Roof Type</p>
+                      <p className="font-medium">{data.scope.roofType}</p>
+                    </div>
+                  )}
+                  {formatRoofDeck() && (
+                    <div>
+                      <p className="text-muted-foreground text-xs">Roof Deck</p>
+                      <p className="font-medium">{formatRoofDeck()}</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-            {data.scope.numBuildings && (
-              <div>
-                <p className="text-muted-foreground">Buildings</p>
-                <p className="font-medium">{data.scope.numBuildings}</p>
+            </>
+          )}
+
+          {/* Exterior Features */}
+          {hasExteriorFeatures && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Exterior Features</p>
+                <div className="grid grid-cols-2 gap-3 text-sm pl-4">
+                  {data.scope.hasCoveredPorches && (
+                    <div>
+                      <p className="text-muted-foreground text-xs">Covered Porches</p>
+                      <p className="font-medium">Yes</p>
+                    </div>
+                  )}
+                  {formatBalconies() && (
+                    <div>
+                      <p className="text-muted-foreground text-xs">Balconies</p>
+                      <p className="font-medium">{formatBalconies()}</p>
+                    </div>
+                  )}
+                  {formatDecking() && (
+                    <div>
+                      <p className="text-muted-foreground text-xs">Decking</p>
+                      <p className="font-medium">{formatDecking()}</p>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
-          </div>
-          
-          <Separator className="my-3" />
-          
-          <div className="flex flex-wrap gap-1">
-            {data.scope.hasElevator && <Badge variant="outline">Elevator</Badge>}
-            {data.scope.hasRoofDeck && <Badge variant="outline">Roof Deck</Badge>}
-            {data.scope.hasCoveredPorches && <Badge variant="outline">Covered Porches</Badge>}
-            {data.scope.hasBalconies && <Badge variant="outline">Balconies</Badge>}
-            {data.scope.deckingIncluded && <Badge variant="outline">Decking</Badge>}
-            {data.scope.sidingIncluded && <Badge variant="outline">Siding</Badge>}
-            {data.scope.windowsIncluded && <Badge variant="outline">Windows Install</Badge>}
-            {data.scope.wrbIncluded && <Badge variant="outline">WRB/Tyvek</Badge>}
-            {data.scope.extDoorsIncluded && <Badge variant="outline">Exterior Doors</Badge>}
-          </div>
+            </>
+          )}
+
+          {/* Finishes Included */}
+          {hasFinishes && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                  <PaintBucket className="h-3 w-3" />
+                  Finishes Included
+                </p>
+                <div className="grid grid-cols-2 gap-3 text-sm pl-4">
+                  {formatSiding() && (
+                    <div>
+                      <p className="text-muted-foreground text-xs">Siding</p>
+                      <p className="font-medium">{formatSiding()}</p>
+                    </div>
+                  )}
+                  {formatFasciaSoffit() && (
+                    <div>
+                      <p className="text-muted-foreground text-xs">Fascia/Soffit</p>
+                      <p className="font-medium">{formatFasciaSoffit()}</p>
+                    </div>
+                  )}
+                  {formatDecorative() && (
+                    <div className="col-span-2">
+                      <p className="text-muted-foreground text-xs">Decorative</p>
+                      <p className="font-medium">{formatDecorative()}</p>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-1 pl-4 pt-1">
+                  {data.scope.windowsIncluded && <Badge variant="outline" className="text-xs">Windows Install</Badge>}
+                  {data.scope.wrbIncluded && <Badge variant="outline" className="text-xs">WRB/Tyvek</Badge>}
+                  {data.scope.extDoorsIncluded && <Badge variant="outline" className="text-xs">Exterior Doors</Badge>}
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
