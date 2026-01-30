@@ -1,171 +1,98 @@
 
-# Bug Fix: Contract Prices Not Saving/Displaying Correctly
+# Plan: Fix Notification Inviter Name for All Role Combinations
 
 ## Problem Summary
-
-When a GC creates a project through the wizard:
-1. Contract prices entered in the Contracts step are saved as `$0` in the database
-2. Trade Contractor contracts are missing entirely
-3. These incorrect values propagate to the Project Overview page and SOV page
-
-## Root Cause Analysis
-
-After investigating the code flow and database state, I identified **two distinct issues**:
-
-### Issue 1: Contract Sum Saved as 0
-
-**Location**: `src/components/project-wizard-new/ContractsStep.tsx` (lines 111-121)
-
-When the ContractsStep component pre-populates contracts for team members, it creates default objects with `contractSum: 0`. The user enters values, but there's a **race condition**:
-
-1. The `useEffect` runs and creates contracts with `contractSum: 0`
-2. User enters a value (e.g., `$50,000`)
-3. The `onChange` callback updates parent state
-4. User clicks "Next" - but the `saveContracts` function runs immediately
-5. If state hasn't fully propagated, the old `0` value gets saved
-
-**Evidence**: Database shows `contract_sum: 0.00` for the Supplier contract despite the user likely entering a value.
-
-### Issue 2: Trade Contractor Contract Missing
-
-**Location**: `src/pages/CreateProjectNew.tsx` (lines 291-330)
-
-The `saveContracts` function iterates over `data.contracts`, but if a contract wasn't added to the state (due to the timing issue in Issue 1), it never gets saved.
-
-**Evidence**: Database shows `contract_id: <nil>` for the Trade Contractor team member.
-
----
+When one organization invites another to a project, the notification shows the **project owner's name** instead of the **actual inviter's organization name**. This is incorrect when:
+- TC invites FC to a GC-owned project (shows GC name, should show TC name)
+- TC invites Supplier to a GC-owned project (shows GC name, should show TC name)
 
 ## Solution
 
-### Fix 1: Ensure Contract State is Synchronized Before Navigation
+### Part 1: Update the Database Trigger
 
-**File**: `src/pages/CreateProjectNew.tsx`
+Fix the `notify_project_invite()` function to look up the actual inviter's organization:
 
-Before navigating from the Contracts step, ensure the latest contract data is captured by:
-- Calling `saveContracts` with the actual form data rather than relying on stale state
-- Or modifying the step navigation to wait for state updates
-
-### Fix 2: Ensure All Downstream Members Get Contracts
-
-**File**: `src/pages/CreateProjectNew.tsx`
-
-In the `saveContracts` function, add a fallback that creates contracts for any team members that should have one but don't exist in the `data.contracts` array:
-
-```typescript
-// After processing existing contracts, check for missing ones
-const dbDownstreamMembers = dbTeamMembers?.filter(m => 
-  (creatorRole === 'General Contractor' && (m.role === 'Trade Contractor' || m.role === 'Supplier')) ||
-  (creatorRole === 'Trade Contractor' && (m.role === 'Field Crew' || m.role === 'Supplier'))
-);
-
-for (const member of dbDownstreamMembers || []) {
-  const hasContract = data.contracts.some(c => c.toTeamMemberId === member.id);
-  if (!hasContract) {
-    // Create a default contract for members without one
-    // ...
-  }
-}
+```sql
+CREATE OR REPLACE FUNCTION public.notify_project_invite()
+RETURNS TRIGGER
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  _project projects;
+  _inviter_org organizations;
+BEGIN
+  -- Get project details
+  SELECT * INTO _project FROM projects WHERE id = NEW.project_id;
+  
+  -- Get ACTUAL inviter's org name (from the user who invited, not project owner)
+  SELECT o.* INTO _inviter_org 
+  FROM user_org_roles uor
+  JOIN organizations o ON o.id = uor.organization_id
+  WHERE uor.user_id = NEW.invited_by
+  LIMIT 1;
+  
+  -- Fallback to project owner if inviter org not found
+  IF _inviter_org IS NULL THEN
+    SELECT * INTO _inviter_org FROM organizations WHERE id = _project.organization_id;
+  END IF;
+  
+  IF NEW.invite_status = 'INVITED' THEN
+    INSERT INTO notifications (...) VALUES (..., _inviter_org.name || ' has invited...');
+  ELSIF NEW.invite_status = 'ACCEPTED' THEN
+    INSERT INTO notifications (...) VALUES (..., 'by ' || COALESCE(_inviter_org.name, 'the project owner'));
+  END IF;
+  
+  RETURN NEW;
+END;
+$$;
 ```
 
-### Fix 3: Add Validation on Contract Values
+### Part 2: Update the Dashboard Data Fetching
 
-**File**: `src/components/project-wizard-new/ContractsStep.tsx`
+Fix `useDashboardData.ts` to fetch the actual inviter's organization:
 
-Add visual feedback when contract sum is 0 or empty, encouraging users to enter a value before proceeding.
+1. Add `invited_by` to the query for pending invites
+2. Separately fetch the inviter's organization via `user_org_roles`
+3. Update the `invitedByOrgName` field to use the correct organization
 
----
+### Part 3: Add Inviter Org ID to project_participants (Optional Enhancement)
 
-## Files to Modify
+For better performance and simpler queries, consider adding an `invited_by_org_id` column to `project_participants`:
 
-| File | Changes |
-|------|---------|
-| `src/pages/CreateProjectNew.tsx` | Update `saveContracts` to handle missing contracts and ensure proper data capture |
-| `src/components/project-wizard-new/ContractsStep.tsx` | Add validation indicator for zero-value contracts |
+```sql
+ALTER TABLE project_participants ADD COLUMN invited_by_org_id uuid REFERENCES organizations(id);
+```
+
+Then update the application code to populate this when creating invites.
 
 ---
 
 ## Technical Details
 
-### CreateProjectNew.tsx Changes
+### Files to Modify
 
-1. **Modify `saveContracts` function** to:
-   - Log all contracts being processed for debugging
-   - Create missing contracts for downstream team members
-   - Handle the case where a team member exists but no contract was defined
+1. **supabase/migrations/new_migration.sql** - Database trigger fix
+2. **src/hooks/useDashboardData.ts** - Fix inviter org lookup for pending invites
 
-```typescript
-const saveContracts = async (projectId: string) => {
-  // Fetch team members from database
-  const { data: dbTeamMembers } = await supabase
-    .from('project_team')
-    .select('id, role, trade, trade_custom, invited_org_name, org_id')
-    .eq('project_id', projectId);
-  
-  // Determine which team members SHOULD have contracts
-  const membersNeedingContracts = (dbTeamMembers || []).filter(m => {
-    if (creatorRole === 'General Contractor') {
-      return m.role === 'Trade Contractor' || m.role === 'Supplier';
-    }
-    if (creatorRole === 'Trade Contractor') {
-      return m.role === 'Field Crew' || m.role === 'Supplier';
-    }
-    return false;
-  });
+### Database Changes
+- Update `notify_project_invite()` function to use `NEW.invited_by` instead of `_project.organization_id`
+- The trigger already has access to `NEW.invited_by` (the user ID), just needs to look up their org
 
-  // Process each member that needs a contract
-  for (const teamMember of membersNeedingContracts) {
-    const contract = data.contracts.find(c => c.toTeamMemberId === teamMember.id);
-    
-    const payload = {
-      project_id: projectId,
-      from_org_id: currentOrg?.id,
-      from_role: creatorRole,
-      to_role: teamMember.role,
-      trade: teamMember.trade,
-      to_project_team_id: teamMember.id,
-      to_org_id: teamMember.org_id,
-      contract_sum: contract?.contractSum || 0,
-      retainage_percent: contract?.retainagePercent || 0,
-      allow_mobilization_line_item: contract?.allowMobilization || false,
-      notes: contract?.notes || null,
-      created_by_user_id: user?.id,
-    };
-    
-    // Upsert the contract
-    // ...
-  }
-};
-```
+### Expected Behavior After Fix
 
-### ContractsStep.tsx Changes
-
-Add a visual indicator for contracts with zero value:
-
-```tsx
-<Input
-  type="number"
-  value={contract.contractSum || ''}
-  onChange={(e) => onUpdate({ contractSum: parseFloat(e.target.value) || 0 })}
-  className={cn("pl-7", contract.contractSum === 0 && "border-amber-300")}
-/>
-{contract.contractSum === 0 && (
-  <p className="text-xs text-amber-600 mt-1">
-    Enter the contract sum for this party
-  </p>
-)}
-```
+| Scenario | Before (Bug) | After (Fixed) |
+|----------|--------------|---------------|
+| GC invites TC | "GC has invited you" | "GC has invited you" (correct) |
+| TC invites FC | "GC has invited you" (wrong) | "TC has invited you" (correct) |
+| TC invites Supplier | "GC has invited you" (wrong) | "TC has invited you" (correct) |
+| GC invites Supplier | "GC has invited you" | "GC has invited you" (correct) |
 
 ---
 
-## Testing Checklist
+## Testing Plan
 
-After implementation:
-1. Create a new project as GC
-2. Add a Trade Contractor and Supplier to the team
-3. Enter contract values ($50,000 for TC, $10,000 for Supplier)
-4. Complete the wizard
-5. Navigate to Project Overview
-6. Verify Contract Summary shows correct values
-7. Navigate to SOV page
-8. Verify contract values are reflected in SOV generation
+1. Log in as TC user
+2. Create/open a GC-owned project where TC is a participant  
+3. Invite an FC organization to the project
+4. Log in as FC user
+5. Check notifications - should show TC's org name, not GC's
+
