@@ -293,25 +293,8 @@ export function AddTeamMemberDialog({
 
       if (teamError) throw teamError;
 
-      // Also insert into project_participants with INVITED status
-      // Notification trigger will create a PROJECT_INVITE notification.
-      const { error: participantError } = await supabase
-        .from('project_participants')
-        .upsert({
-          project_id: projectId,
-          organization_id: selectedResult.org_id,
-          role: roleToOrgType(selectedRole),
-          invite_status: 'INVITED',
-          invited_by: user.id,
-          accepted_at: null,
-        }, {
-          onConflict: 'project_id,organization_id',
-        });
-
-      if (participantError) {
-        console.error('Error adding participant:', participantError);
-        // Don't fail - team member was added successfully
-      }
+      // Note: project_participants insert is now handled by database trigger
+      // (trg_sync_team_to_participants) which also fires the notification
 
       // Log activity
       await supabase.from('project_activity').insert({
