@@ -1,149 +1,152 @@
 
 
-# Plan: Enhance Scope & Details Display in Review Step
+# Fix: TC to FC Invitation Notifications
 
-## Current State
+## Problem Summary
 
-The "Scope & Details" tile on the Review step currently shows a minimal summary:
-- A 2-column grid with only 6 fields (home type, floors, foundation, roof type, stairs, buildings)
-- A separator followed by simple badges for boolean flags (elevator, roof deck, porches, etc.)
+When a Trade Contractor (TC) invites a Field Crew (FC) to a project, the FC doesn't receive the notification and doesn't see the invitation in their dashboard.
 
-Many collected scope details are not displayed at all, such as:
-- Basement type and finish (when applicable)
-- Construction type for multi-family
-- Unit counts for townhomes/duplexes
-- Decking type details
-- Siding materials list
-- Balcony type
-- Fascia/soffit details
-- Decorative items
-- Elevator shaft type
-- Roof deck type
+## Root Cause Analysis
+
+There are two separate invitation tracking systems that aren't properly synchronized:
+
+| System | Purpose | Notification | RLS Issue |
+|--------|---------|--------------|-----------|
+| `project_invites` | Email invites for new users | None | N/A |
+| `project_participants` | Org-level project access | Yes (trigger) | Only project owner can INSERT |
+
+**Current Flow (TC inviting FC):**
+1. TC adds FC via "Search Existing" in AddTeamMemberDialog
+2. Code inserts into `project_team` - succeeds
+3. Code tries to insert into `project_participants` - **fails silently**
+4. RLS policy rejects because TC is not the project owner (GC is)
+5. Since insert fails, notification trigger never fires
+6. FC never sees the invitation
 
 ## Solution
 
-Reorganize the Scope & Details card into logical, labeled sections that match how data is collected in the ScopeStep. This will make the review more comprehensive and easier to scan.
+### Option A (Recommended): Add a database trigger on `project_team` to sync to `project_participants`
 
-## Changes
+Create a trigger that automatically creates/updates `project_participants` when `project_team` records are created with status='Invited'. This ensures the notification system always works regardless of RLS policies.
 
-### File: `src/components/project-wizard-new/ReviewStep.tsx`
+### Option B: Fix the RLS policy on `project_participants`
 
-#### 1. Add Building2 icon import
+Expand the INSERT policy to allow any accepted project participant to invite new participants, not just the project owner.
 
-Add `Building2` to the existing Lucide icon imports for the section headers.
+---
 
-#### 2. Replace the Scope & Details card content (lines 172-234)
+## Technical Implementation (Option A)
 
-**New structure:**
+### 1. Create Database Trigger Function
 
-```text
-Scope & Details
-|
-+-- Structure Details (conditionally shown)
-|   - Home Type, Floors, Foundation
-|   - Basement Type + Finish (if basement selected)
-|
-+-- Building Basics (for multi-family projects)
-|   - Number of Buildings, Stories, Construction Type
-|
-+-- Unit Details (for townhomes/duplexes)
-|   - Number of Units, Stories per Unit, Shared Walls
-|
-+-- Stairs & Elevator
-|   - Stairs Type
-|   - Elevator with Shaft Type (if has elevator)
-|
-+-- Roof
-|   - Roof Type
-|   - Roof Deck Type (if has roof deck)
-|
-+-- Exterior Features (grouped)
-|   - Covered Porches, Balconies (with type)
-|   - Decking (with type)
-|
-+-- Finishes Included
-|   - Siding with materials list
-|   - Fascia/Soffit with material
-|   - Decorative items list
-|   - Windows Install, WRB/Tyvek, Exterior Doors
+Create a new function `sync_project_team_to_participants` that:
+- Fires AFTER INSERT on `project_team`
+- When `status = 'Invited'` and `org_id IS NOT NULL`
+- Creates/updates a `project_participants` record with `invite_status = 'INVITED'`
+- Uses `SECURITY DEFINER` to bypass RLS
+
+```sql
+CREATE OR REPLACE FUNCTION public.sync_project_team_to_participants()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+BEGIN
+  -- Only sync when we have an org_id and status is Invited
+  IF NEW.org_id IS NOT NULL AND NEW.status = 'Invited' THEN
+    -- Map role string to org_type enum
+    DECLARE
+      _role_type text;
+    BEGIN
+      _role_type := CASE NEW.role
+        WHEN 'General Contractor' THEN 'GC'
+        WHEN 'Trade Contractor' THEN 'TC'
+        WHEN 'Field Crew' THEN 'FC'
+        WHEN 'Supplier' THEN 'SUPPLIER'
+        ELSE 'TC'
+      END;
+      
+      -- Upsert into project_participants
+      INSERT INTO project_participants (
+        project_id,
+        organization_id,
+        role,
+        invite_status,
+        invited_by
+      ) VALUES (
+        NEW.project_id,
+        NEW.org_id,
+        _role_type::org_type,
+        'INVITED',
+        NEW.invited_by_user_id
+      )
+      ON CONFLICT (project_id, organization_id) 
+      DO UPDATE SET
+        invite_status = 'INVITED',
+        invited_by = NEW.invited_by_user_id,
+        accepted_at = NULL
+      WHERE project_participants.invite_status != 'ACCEPTED';
+    END;
+  END IF;
+  
+  RETURN NEW;
+END;
+$$;
 ```
 
-#### 3. Implementation Details
+### 2. Create the Trigger
 
-**Section-based display with headers:**
-- Group related fields under subheadings (e.g., "Structure", "Roof", "Exterior Features")
-- Use `text-xs font-medium text-muted-foreground uppercase tracking-wide` for section headers
-- Show more specific values instead of just "yes/no" badges
-
-**Show additional context:**
-- For basement: show "Walkout Basement (Finished)" instead of just "Basement"
-- For elevator: show "Elevator (Sandeblock shaft)" 
-- For siding: show comma-separated list of materials
-- For balconies: show the balcony type
-- For decking: show the decking type
-
-**Conditional display:**
-- Only show sections that have data
-- Use helper functions to format compound values
-
-#### 4. Helper function additions
-
-Add a helper to format compound scope items:
-
-```typescript
-const formatFoundation = () => {
-  if (!data.scope.foundationType) return null;
-  if (data.scope.foundationType === 'Basement') {
-    const parts = [data.scope.basementType, data.scope.basementFinish].filter(Boolean);
-    return parts.length > 0 
-      ? `Basement (${parts.join(', ')})` 
-      : 'Basement';
-  }
-  return data.scope.foundationType;
-};
+```sql
+CREATE TRIGGER trg_sync_team_to_participants
+  AFTER INSERT ON public.project_team
+  FOR EACH ROW
+  EXECUTE FUNCTION sync_project_team_to_participants();
 ```
 
-## Example Output
+### 3. Clean Up Frontend Code
 
-Instead of:
+Remove the redundant `project_participants` insert from `AddTeamMemberDialog.tsx` since the trigger now handles it:
 
-| Foundation | Roof Type |
-|------------|-----------|
-| Basement   | Mixed     |
+**File: `src/components/project/AddTeamMemberDialog.tsx`**
 
-**Badges:** Elevator, Balconies, Siding
+Remove lines 296-314 (the `project_participants.upsert` call and its error handling) from `handleAddExisting()`.
 
-The new output would be:
+---
 
-```text
-Structure
-  Home Type: Custom Home
-  Floors: 2
-  Foundation: Basement (Walkout, Finished)
+## Additional Fixes Needed
 
-Stairs & Elevator
-  Stairs: Field Built
-  Elevator: Yes (Wood shaft)
+### Fix "Invite by Email" Flow
 
-Roof
-  Type: Mixed
-  Roof Deck: Framed
+The "Invite by Email" path also needs to create a notification when the invited user signs up. This requires:
 
-Exterior Features
-  Covered Porches: Yes
-  Balconies: Cantilever Framed
-  Decking: Composite
+1. During signup, check if there's a `project_invites` record matching the email
+2. Link it to the new user's organization
+3. Create the `project_participants` record
+4. This triggers the existing notification
 
-Finishes Included
-  Siding: Fiber Cement, Wood
-  Fascia/Soffit: Wood
-  Decorative: Corbels, Columns
-  Other: Windows Install, WRB/Tyvek
-```
+**OR** create a separate trigger on `project_invites` that sends a different type of notification (email-based invite pending).
+
+---
 
 ## Files to Modify
 
-| File | Changes |
-|------|---------|
-| `src/components/project-wizard-new/ReviewStep.tsx` | Enhance Scope & Details card with sectioned, descriptive content |
+| File/Resource | Change |
+|--------------|--------|
+| Database migration | Add `sync_project_team_to_participants` function and trigger |
+| `src/components/project/AddTeamMemberDialog.tsx` | Remove redundant `project_participants` insert (optional cleanup) |
+
+---
+
+## Testing Plan
+
+After implementation:
+1. Log in as TC user who is already accepted on a project
+2. Navigate to project Team tab
+3. Click "Add Team Member" and search for an existing FC organization
+4. Add the FC to the project
+5. Log out and log in as the FC user
+6. Verify: FC should see a notification bell with unread count
+7. Verify: FC should see the project invitation in dashboard Pending Invites panel
+8. Verify: FC can accept and the project appears in their project list
 
