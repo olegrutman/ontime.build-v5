@@ -38,6 +38,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
     updateItemName,
     addItem,
     deleteItem,
+    deleteSOV,
     reorderItems,
     getSOVTotals
   } = useContractSOV(projectId);
@@ -239,7 +240,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                         </CardDescription>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                       {!totals.isValid && items.length > 0 && (
                         <Badge variant="destructive" className="gap-1">
                           <AlertCircle className="h-3 w-3" />
@@ -250,6 +251,49 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                         <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
                           100%
                         </Badge>
+                      )}
+                      
+                      {/* Delete SOV button - only if no billed items */}
+                      {totals.totalBilled === 0 ? (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              disabled={saving}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete SOV</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete "{sov.sov_name}" and all {items.length} line items? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteSOV(sov.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete SOV
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      ) : (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8 cursor-not-allowed opacity-50"
+                          disabled
+                          title="Cannot delete - SOV has billing history"
+                        >
+                          <Trash2 className="h-4 w-4 text-muted-foreground" />
+                        </Button>
                       )}
                     </div>
                   </div>

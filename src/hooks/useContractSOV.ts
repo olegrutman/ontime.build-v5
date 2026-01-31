@@ -316,9 +316,21 @@ export function useContractSOV(projectId: string | undefined) {
     return [];
   }, [templates]);
 
-  // Create SOVs for all contracts
+  // Create SOVs for all contracts (only for contracts with a price > 0)
   const createAllSOVs = useCallback(async () => {
     if (!projectId || contracts.length === 0) return;
+    
+    // Filter to only contracts with a contract_sum > 0
+    const contractsWithValue = contracts.filter(c => (c.contract_sum || 0) > 0);
+    
+    if (contractsWithValue.length === 0) {
+      toast({
+        title: 'No Contracts with Value',
+        description: 'Add contract prices before creating SOVs.',
+        variant: 'destructive'
+      });
+      return;
+    }
     
     setSaving(true);
     
@@ -352,15 +364,15 @@ export function useContractSOV(projectId: string | undefined) {
       // Adjust last item to ensure total = 100
       const lastItemPercent = parseFloat((100 - (defaultPercent * (itemNames.length - 1))).toFixed(2));
       
-      // Delete existing SOVs for this project
+      // Delete ALL existing SOVs for this project (clean slate)
       const existingSovIds = sovs.map(s => s.id);
       if (existingSovIds.length > 0) {
         await supabase.from('project_sov_items').delete().in('sov_id', existingSovIds);
         await supabase.from('project_sov').delete().eq('project_id', projectId);
       }
       
-      // Create SOV for each contract
-      for (const contract of contracts) {
+      // Create SOV for each contract WITH value
+      for (const contract of contractsWithValue) {
         const sovName = getContractDisplayName(contract.from_role, contract.to_role);
         
         // Create SOV record
@@ -402,7 +414,7 @@ export function useContractSOV(projectId: string | undefined) {
       
       toast({
         title: 'SOVs Created',
-        description: `Created ${contracts.length} SOV(s) with ${itemNames.length} items each.`
+        description: `Created ${contractsWithValue.length} SOV(s) with ${itemNames.length} items each.`
       });
       
       await fetchData();
@@ -604,6 +616,59 @@ export function useContractSOV(projectId: string | undefined) {
     return { totalPercent, totalValue, totalBilled, isValid, remaining };
   }, [sovItems]);
 
+  // Delete an entire SOV (only if no items have been billed)
+  const deleteSOV = useCallback(async (sovId: string) => {
+    const items = sovItems[sovId] || [];
+    const hasBilledItems = items.some(item => (item.billed_to_date || 0) > 0);
+    
+    if (hasBilledItems) {
+      toast({
+        title: 'Cannot Delete',
+        description: 'This SOV has items with billing history and cannot be deleted.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    setSaving(true);
+    try {
+      // Delete all items first
+      await supabase
+        .from('project_sov_items')
+        .delete()
+        .eq('sov_id', sovId);
+      
+      // Delete the SOV
+      const { error } = await supabase
+        .from('project_sov')
+        .delete()
+        .eq('id', sovId);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setSovs(prev => prev.filter(s => s.id !== sovId));
+      setSovItems(prev => {
+        const next = { ...prev };
+        delete next[sovId];
+        return next;
+      });
+      
+      toast({
+        title: 'SOV Deleted',
+        description: 'Schedule of Values has been removed.'
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to delete SOV',
+        variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, [sovItems]);
+
   return {
     contracts,
     sovs,
@@ -616,6 +681,7 @@ export function useContractSOV(projectId: string | undefined) {
     updateItemName,
     addItem,
     deleteItem,
+    deleteSOV,
     reorderItems,
     getSOVTotals,
     refresh: fetchData
