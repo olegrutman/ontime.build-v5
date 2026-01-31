@@ -38,6 +38,7 @@ interface Contract {
   to_org_id: string | null;
   from_org_name?: string;
   to_org_name?: string;
+  trade?: string | null;
 }
 
 interface SOV {
@@ -121,13 +122,18 @@ export function CreateInvoiceFromSOV({
     const userContracts = allContracts.filter(c => c.from_org_id === currentOrgId);
     
     // Only include contracts where user invoices their upstream client
+    // AND the contract has a value > 0 (cannot invoice $0 contracts)
     return userContracts.filter(c => {
+      // Must have a contract value to invoice
+      if (!c.contract_sum || c.contract_sum <= 0) return false;
+      
       if (currentOrgType === 'TC') {
         // TC invoices GC: to_role should be 'General Contractor'
         return c.to_role === 'General Contractor';
       }
       if (currentOrgType === 'FC') {
         // FC invoices TC: to_role should be 'Trade Contractor'
+        // Include ALL FC->TC contracts (primary + work order labor contracts)
         return c.to_role === 'Trade Contractor';
       }
       return false; // GC and other roles cannot create invoices
@@ -149,7 +155,7 @@ export function CreateInvoiceFromSOV({
       const { data: contractsData } = await supabase
         .from('project_contracts')
         .select(`
-          id, from_role, to_role, contract_sum, retainage_percent, from_org_id, to_org_id,
+          id, from_role, to_role, contract_sum, retainage_percent, from_org_id, to_org_id, trade,
           from_org:organizations!project_contracts_from_org_id_fkey(name),
           to_org:organizations!project_contracts_to_org_id_fkey(name)
         `)
@@ -166,6 +172,7 @@ export function CreateInvoiceFromSOV({
         to_org_id: c.to_org_id,
         from_org_name: c.from_org?.name || undefined,
         to_org_name: c.to_org?.name || undefined,
+        trade: c.trade || null,
       }));
       
       setAllContracts(mappedContracts);
@@ -469,17 +476,21 @@ export function CreateInvoiceFromSOV({
 
             {/* Contract Selection - Always show for upstream invoicing */}
             <div className="space-y-2">
-              <Label>Select Upstream Contract to Invoice</Label>
+              <Label>Select Contract to Invoice</Label>
               <Select value={selectedContractId} onValueChange={setSelectedContractId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choose a contract to bill" />
                 </SelectTrigger>
                 <SelectContent>
-                  {contracts.map(contract => (
-                    <SelectItem key={contract.id} value={contract.id}>
-                      {getContractDisplayName(contract.from_role, contract.to_role)} — {formatCurrency(contract.contract_sum || 0)}
-                    </SelectItem>
-                  ))}
+                  {contracts.map(contract => {
+                    const isWorkOrder = contract.trade === 'Work Order' || contract.trade === 'Work Order Labor';
+                    const typeLabel = isWorkOrder ? '[Work Order]' : '[Contract]';
+                    return (
+                      <SelectItem key={contract.id} value={contract.id}>
+                        {typeLabel} {getContractDisplayName(contract.from_role, contract.to_role)} — {formatCurrency(contract.contract_sum || 0)}
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">

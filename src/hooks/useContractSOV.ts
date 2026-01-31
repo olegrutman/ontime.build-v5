@@ -316,17 +316,23 @@ export function useContractSOV(projectId: string | undefined) {
     return [];
   }, [templates]);
 
-  // Create SOVs for all contracts (only for contracts with a price > 0)
+  // Create SOVs for all contracts (only for contracts with a price > 0 AND not work order contracts)
   const createAllSOVs = useCallback(async () => {
     if (!projectId || contracts.length === 0) return;
     
-    // Filter to only contracts with a contract_sum > 0
-    const contractsWithValue = contracts.filter(c => (c.contract_sum || 0) > 0);
+    // Filter to only PRIMARY contracts (not work orders) with a contract_sum > 0
+    // Work order contracts have trade = 'Work Order' or 'Work Order Labor'
+    const isWorkOrderContract = (c: ProjectContract) => 
+      c.trade === 'Work Order' || c.trade === 'Work Order Labor';
+    
+    const contractsWithValue = contracts.filter(c => 
+      (c.contract_sum || 0) > 0 && !isWorkOrderContract(c)
+    );
     
     if (contractsWithValue.length === 0) {
       toast({
-        title: 'No Contracts with Value',
-        description: 'Add contract prices before creating SOVs.',
+        title: 'No Eligible Contracts',
+        description: 'Add contract prices to primary contracts (not work orders) before creating SOVs.',
         variant: 'destructive'
       });
       return;
@@ -364,11 +370,15 @@ export function useContractSOV(projectId: string | undefined) {
       // Adjust last item to ensure total = 100
       const lastItemPercent = parseFloat((100 - (defaultPercent * (itemNames.length - 1))).toFixed(2));
       
-      // Delete ALL existing SOVs for this project (clean slate)
-      const existingSovIds = sovs.map(s => s.id);
+      // Delete only PRIMARY contract SOVs for this project (not work order SOVs)
+      // Work order SOVs are managed separately by the work order finalization process
+      const primaryContractIds = contractsWithValue.map(c => c.id);
+      const existingPrimarySovs = sovs.filter(s => primaryContractIds.includes(s.contract_id));
+      const existingSovIds = existingPrimarySovs.map(s => s.id);
+      
       if (existingSovIds.length > 0) {
         await supabase.from('project_sov_items').delete().in('sov_id', existingSovIds);
-        await supabase.from('project_sov').delete().eq('project_id', projectId);
+        await supabase.from('project_sov').delete().in('id', existingSovIds);
       }
       
       // Create SOV for each contract WITH value
