@@ -10,3 +10,4 @@ export { MaterialsPanel } from './MaterialsPanel';
 export { EquipmentPanel } from './EquipmentPanel';
 export { ApprovalPanel } from './ApprovalPanel';
 export { ParticipantActivationPanel } from './ParticipantActivationPanel';
+export { GCLaborReviewPanel } from './GCLaborReviewPanel';
