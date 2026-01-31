@@ -1,170 +1,168 @@
 
-# Plan: Fix FC Contract Visibility and Allow TC to Add FC Contract Price
+# Plan: Fix Invoice Send/Receive/Approve Flow
 
-## Problem Summary
+## Overview
+This plan addresses three issues discovered in the invoice workflow:
+1. No notification is sent when an invoice is submitted
+2. The dashboard's "Needs Attention" panel doesn't properly show invoices pending approval
+3. TC organizations can't see invoices from Field Crews in their attention items
 
-Two related issues:
-1. When FC accepts a project invite from TC, they should only see the TC→FC contract value, not the GC→TC contract price
-2. TC needs a way to add/set the contract price with FC directly from the project overview page
+---
 
-## Root Cause Analysis
+## Changes Required
 
-### Issue 1: FC Contract Visibility
-The dashboard hook (`useDashboardData.ts`) fetches contracts and filters by role:
+### 1. Create Invoice Notification Trigger (Database)
+Add a new database trigger that creates a notification when an invoice status changes to SUBMITTED.
+
+**New trigger function: `notify_invoice_submitted`**
+- Fires when invoice `status` changes to `SUBMITTED`
+- Looks up the contract to find the `to_org_id` (the party who should approve)
+- Creates a notification for that organization with:
+  - Type: `INVOICE_SUBMITTED`
+  - Title: "Invoice Received: [invoice_number]"
+  - Body: "[sender org name] has submitted invoice [number] for $[amount]"
+  - Entity type: `INVOICE`
+  - Action URL: `/project/[project_id]?tab=invoices`
+
+**SQL Migration:**
+```sql
+-- Add INVOICE_SUBMITTED to notification_type enum if not exists
+ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'INVOICE_SUBMITTED';
+ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'INVOICE_APPROVED';
+ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'INVOICE_REJECTED';
+
+-- Create the trigger function
+CREATE OR REPLACE FUNCTION notify_invoice_submitted()
+RETURNS TRIGGER AS $$
+DECLARE
+  _contract project_contracts;
+  _from_org organizations;
+  _invoice invoices;
+BEGIN
+  -- Only trigger when status changes to SUBMITTED
+  IF NEW.status = 'SUBMITTED' AND (OLD.status IS NULL OR OLD.status != 'SUBMITTED') THEN
+    -- Get invoice and contract details
+    SELECT * INTO _contract FROM project_contracts WHERE id = NEW.contract_id;
+    SELECT * INTO _from_org FROM organizations WHERE id = _contract.from_org_id;
+    
+    -- Notify the receiving organization (to_org)
+    INSERT INTO notifications (
+      recipient_org_id,
+      type,
+      title,
+      body,
+      entity_type,
+      entity_id,
+      action_url
+    ) VALUES (
+      _contract.to_org_id,
+      'INVOICE_SUBMITTED',
+      'Invoice Received: ' || NEW.invoice_number,
+      _from_org.name || ' has submitted invoice "' || NEW.invoice_number || '" for $' || NEW.total_amount::text,
+      'INVOICE',
+      NEW.id,
+      '/project/' || NEW.project_id || '?tab=invoices'
+    );
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create the trigger
+CREATE TRIGGER notify_invoice_status_change
+  AFTER UPDATE OF status ON invoices
+  FOR EACH ROW
+  EXECUTE FUNCTION notify_invoice_submitted();
+```
+
+---
+
+### 2. Fix Dashboard Attention Items Logic
+Update `src/hooks/useDashboardData.ts` to properly filter and display pending invoices.
+
+**Changes:**
+1. Modify the pending invoices query to join with contracts and filter by `to_org_id`
+2. Extend the attention items logic to include both GC and TC organizations
+
+**Updated query (around line 182):**
 ```typescript
-} else if (orgType === 'FC') {
-  const fcContract = projectContracts.find(c => c.to_role === 'Field Crew');
-  contractValue = fcContract?.contract_sum || null;
+// Get pending invoices where current org is the APPROVER (to_org)
+let pendingInvoices: { id: string; project_id: string; invoice_number: string; contract_id: string }[] = [];
+if (projectIds.length > 0) {
+  const { data } = await supabase
+    .from('invoices')
+    .select(`
+      id, project_id, invoice_number, contract_id,
+      project_contracts!inner(to_org_id)
+    `)
+    .in('project_id', projectIds)
+    .eq('status', 'SUBMITTED')
+    .eq('project_contracts.to_org_id', currentOrg.id);
+  pendingInvoices = data || [];
 }
 ```
 
-This correctly looks for FC contracts, but the problem is:
-- RLS on `project_contracts` allows viewing if user's org is in `from_org_id` OR `to_org_id`
-- If no TC→FC contract exists yet, the FC might see the GC→TC contract (if RLS allows them as project creator - edge case)
-- The `ProjectContractsSection` on overview also needs to filter properly
-
-### Issue 2: Missing TC→FC Contract Creation
-When TC invites FC via `AddTeamMemberDialog`:
-- Only a `project_team` record is created
-- No contract is created (unlike `EditProject.tsx` which creates contracts)
-- TC has no UI to add the contract price from the project overview
-
-## Solution
-
-### 1. Dashboard Contract Filtering (useDashboardData.ts)
-
-Add additional filtering to ensure FC only sees contracts where their org is explicitly involved:
-
+**Updated attention items logic (around line 280):**
 ```typescript
-} else if (orgType === 'FC') {
-  // FC sees their contract (from TC to FC) only if they are the to_org
-  const fcContract = projectContracts.find(c => 
-    c.to_role === 'Field Crew' && c.to_org_id === currentOrg.id
-  );
-  contractValue = fcContract?.contract_sum || null;
-}
-```
-
-**Changes needed:**
-- Modify the contracts query to also fetch `from_org_id` and `to_org_id`
-- Update the FC filtering logic to check org IDs
-
-### 2. ProjectContractsSection Filtering
-
-The current filtering in `ProjectContractsSection.tsx` (lines 99-111) already filters by org:
-```typescript
-const visibleContracts = currentOrgId 
-  ? allContracts.filter(c => 
-      c.from_org_id === currentOrgId || c.to_org_id === currentOrgId
-    )
-  : allContracts;
-```
-
-This is correct - FC will only see contracts where they are involved. No changes needed here.
-
-### 3. Enable TC to Add FC Contract (ProjectFinancialsSectionNew.tsx)
-
-When TC views the project overview and no TC→FC contract exists, show an "Add Contract" UI:
-
-**Current behavior (lines 406-426):**
-```typescript
-{hasDownstream ? (
-  <EditableContractValue ... />
-) : (
-  <p className="text-sm text-muted-foreground italic">Not configured</p>
-)}
-```
-
-**New behavior:**
-- Instead of just "Not configured", show an "Add Contract" button
-- When clicked, show an inline form to enter contract sum and retainage
-- On save, create the TC→FC contract record
-
-### 4. Create Contract on Team Member Add (AddTeamMemberDialog.tsx)
-
-When TC adds an FC via the team dialog, automatically create a placeholder contract:
-
-**File: `src/components/project/AddTeamMemberDialog.tsx`**
-
-After inserting into `project_team`, also create a `project_contracts` record:
-```typescript
-// If TC is inviting FC, create a placeholder contract
-if (selectedRole === 'Field Crew') {
-  await supabase.from('project_contracts').insert({
-    project_id: projectId,
-    from_org_id: currentOrgId, // TC's org
-    to_org_id: selectedResult.org_id, // FC's org
-    from_role: 'Trade Contractor',
-    to_role: 'Field Crew',
-    trade: selectedTrade || null,
-    contract_sum: 0, // Placeholder - TC can edit later
-    retainage_percent: 0,
-    created_by_user_id: user.id,
+// Show invoice approvals for orgs that receive invoices (GC receives from TC, TC receives from FC)
+// The query already filters to only invoices where current org is the approver
+pendingInvoices.forEach(inv => {
+  const proj = allProjects.find(p => p.id === inv.project_id);
+  attentionList.push({
+    id: inv.id,
+    type: 'invoice',
+    title: inv.invoice_number,
+    projectName: proj?.name || 'Unknown Project',
+    projectId: inv.project_id,
   });
-}
+});
 ```
+
+---
+
+### 3. Add Notification for Invoice Approval/Rejection (Optional Enhancement)
+Add notifications when an invoice is approved or rejected to notify the sender.
+
+**Extend the trigger function to handle APPROVED and REJECTED status:**
+```sql
+-- When invoice is APPROVED, notify the sender (from_org)
+IF NEW.status = 'APPROVED' AND OLD.status = 'SUBMITTED' THEN
+  INSERT INTO notifications (...) VALUES (
+    _contract.from_org_id,
+    'INVOICE_APPROVED',
+    'Invoice Approved: ' || NEW.invoice_number,
+    ...
+  );
+END IF;
+
+-- When invoice is REJECTED, notify the sender (from_org)
+IF NEW.status = 'REJECTED' AND OLD.status = 'SUBMITTED' THEN
+  INSERT INTO notifications (...) VALUES (
+    _contract.from_org_id,
+    'INVOICE_REJECTED',
+    'Invoice Rejected: ' || NEW.invoice_number,
+    ...
+  );
+END IF;
+```
+
+---
 
 ## Files to Modify
 
-| File | Changes |
-|------|---------|
-| `src/hooks/useDashboardData.ts` | Add `from_org_id`, `to_org_id` to contracts query; filter FC contracts by org ID |
-| `src/components/project/ProjectFinancialsSectionNew.tsx` | Add "Create Contract" UI for TC when no FC contract exists |
-| `src/components/project/AddTeamMemberDialog.tsx` | Create TC→FC contract when TC invites FC |
+| File | Change |
+|------|--------|
+| New SQL Migration | Create `notify_invoice_submitted` trigger function and trigger |
+| `src/hooks/useDashboardData.ts` | Fix pending invoice query to filter by `to_org_id` and update attention items logic |
+| `src/components/notifications/NotificationItem.tsx` | Add icon handling for new `INVOICE_*` notification types (if not already handled) |
 
-## Technical Details
+---
 
-### useDashboardData.ts Changes
+## Technical Notes
 
-Line 153-159 - Update contracts query:
-```typescript
-let contracts: { 
-  project_id: string; 
-  to_role: string; 
-  from_role: string; 
-  contract_sum: number;
-  from_org_id: string | null;
-  to_org_id: string | null;
-}[] = [];
-if (projectIds.length > 0) {
-  const { data } = await supabase
-    .from('project_contracts')
-    .select('project_id, to_role, from_role, contract_sum, from_org_id, to_org_id')
-    .in('project_id', projectIds);
-  contracts = data || [];
-}
-```
-
-Lines 327-331 - Update FC filtering:
-```typescript
-} else if (orgType === 'FC') {
-  // FC only sees contracts where their org is the recipient (to_org_id)
-  const fcContract = projectContracts.find(c => 
-    c.to_role === 'Field Crew' && c.to_org_id === currentOrg.id
-  );
-  contractValue = fcContract?.contract_sum || null;
-}
-```
-
-### ProjectFinancialsSectionNew.tsx Changes
-
-Add a new component for creating contracts, and modify the TC downstream contract section to show this when no contract exists.
-
-### AddTeamMemberDialog.tsx Changes
-
-In `handleAddExisting()`, after the team insert succeeds, add contract creation for FC invites.
-
-## Expected Behavior After Fix
-
-1. **FC Dashboard**: FC will only see contract value if a TC→FC contract exists and they are the `to_org`. If no TC→FC contract exists, contract value shows as "—" (null).
-
-2. **TC Project Overview**: TC will see "Add Contract" button in the FC contract card if no contract exists. Clicking it allows inline entry of contract sum and retainage.
-
-3. **TC Inviting FC**: When TC adds an FC via Add Team Member dialog, a placeholder contract is created with $0 value, which TC can then edit from the overview page.
-
-## Testing Scenarios
-
-1. TC invites FC to project → verify contract placeholder is created with $0
-2. FC accepts invite → verify FC dashboard shows "—" for contract (not GC→TC value)
-3. TC edits FC contract value from overview → verify FC can now see their contract value
-4. FC views project overview → verify FC only sees TC→FC contract, not GC→TC
+- The contract direction is: `from_org` (sender/contractor) to `to_org` (receiver/client)
+- Invoice creators are always `from_org_id` (enforced by RLS)
+- Invoice approvers are always `to_org_id`
+- The existing RLS policies correctly allow `to_org` to update SUBMITTED invoices
+- The UI already correctly shows approve/reject buttons based on `isInvoiceReceiver` check
