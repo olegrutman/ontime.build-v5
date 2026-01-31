@@ -21,8 +21,7 @@ import MaterialOrders from "./pages/MaterialOrders";
 import OrderApprovals from "./pages/OrderApprovals";
 import PurchaseOrders from "./pages/PurchaseOrders";
 import ChangeOrders from "./pages/ChangeOrders";
-import WorkItems from "./pages/WorkItems";
-import SOVDashboard from "./pages/SOVDashboard";
+
 import { WorkItemPage } from "@/components/work-item";
 import { ChangeOrderDetailPage } from "@/components/change-order-detail";
 import Profile from "./pages/Profile";
@@ -56,8 +55,6 @@ const App = () => (
             <Route path="/purchase-orders" element={<PurchaseOrders />} />
             <Route path="/change-orders" element={<ChangeOrders />} />
             <Route path="/change-order/:id" element={<ChangeOrderDetailPage />} />
-            <Route path="/work-items" element={<WorkItems />} />
-            <Route path="/sov" element={<SOVDashboard />} />
             <Route path="/work-item/:id" element={<WorkItemPage />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<NotFound />} />
