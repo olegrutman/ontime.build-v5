@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, GripVertical, FileSpreadsheet, Pencil, Check, X, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Trash2, GripVertical, FileSpreadsheet, Pencil, Check, X, AlertCircle, ChevronDown, ChevronRight, Lock, Unlock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -40,7 +40,8 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
     deleteItem,
     deleteSOV,
     reorderItems,
-    getSOVTotals
+    getSOVTotals,
+    toggleSOVLock
   } = useContractSOV(projectId);
 
   const [expandedSovs, setExpandedSovs] = useState<Set<string>>(new Set());
@@ -250,7 +251,15 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                       </div>
                     </div>
                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      {!totals.isValid && items.length > 0 && (
+                      {/* Lock status badge */}
+                      {sov.is_locked && (
+                        <Badge variant="secondary" className="gap-1 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                          <Lock className="h-3 w-3" />
+                          Locked
+                        </Badge>
+                      )}
+                      
+                      {!totals.isValid && items.length > 0 && !sov.is_locked && (
                         <Badge variant="destructive" className="gap-1">
                           <AlertCircle className="h-3 w-3" />
                           {totals.totalPercent.toFixed(1)}%
@@ -262,8 +271,66 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                         </Badge>
                       )}
                       
-                      {/* Delete SOV button - only if no billed items */}
-                      {totals.totalBilled === 0 ? (
+                      {/* Lock/Unlock button */}
+                      {sov.is_locked ? (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              disabled={saving}
+                            >
+                              <Unlock className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Unlock SOV</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This will unlock the SOV and allow editing. Are you sure you want to unlock "{sov.sov_name}"?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => toggleSOVLock(sov.id, false)}>
+                                Unlock
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      ) : totals.isValid && items.length > 0 ? (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              disabled={saving}
+                              title="Lock SOV"
+                            >
+                              <Lock className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Lock SOV</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Locking will prevent any further edits to this SOV. You can still create invoices against it.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => toggleSOVLock(sov.id, true)}>
+                                Lock SOV
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      ) : null}
+                      
+                      {/* Delete SOV button - only if no billed items and not locked */}
+                      {totals.totalBilled === 0 && !sov.is_locked ? (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
                             <Button
@@ -299,7 +366,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                           variant="ghost"
                           className="h-8 w-8 cursor-not-allowed opacity-50"
                           disabled
-                          title="Cannot delete - SOV has billing history"
+                          title={sov.is_locked ? "SOV is locked" : "Cannot delete - SOV has billing history"}
                         >
                           <Trash2 className="h-4 w-4 text-muted-foreground" />
                         </Button>
@@ -311,8 +378,18 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
 
               <CollapsibleContent>
                 <CardContent className="pt-0">
+                  {/* Locked notice */}
+                  {sov.is_locked && (
+                    <Alert className="mb-4 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+                      <Lock className="h-4 w-4 text-amber-600" />
+                      <AlertDescription className="text-amber-800 dark:text-amber-200">
+                        This SOV is locked. Unlock to make changes.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
                   {/* Percent validation warning */}
-                  {!totals.isValid && items.length > 0 && (
+                  {!totals.isValid && items.length > 0 && !sov.is_locked && (
                     <Alert variant="destructive" className="mb-4">
                       <AlertCircle className="h-4 w-4" />
                       <AlertDescription>
@@ -324,24 +401,26 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                     </Alert>
                   )}
 
-                  {/* Add new item */}
-                  <div className="flex gap-2 mb-4">
-                    <Input
-                      placeholder="Add new line item..."
-                      value={newItemNames[sov.id] || ''}
-                      onChange={(e) => setNewItemNames(prev => ({ ...prev, [sov.id]: e.target.value }))}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleAddItem(sov.id);
-                      }}
-                      disabled={saving}
-                    />
-                    <Button 
-                      onClick={() => handleAddItem(sov.id)} 
-                      disabled={saving || !newItemNames[sov.id]?.trim()}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  {/* Add new item - hidden when locked */}
+                  {!sov.is_locked && (
+                    <div className="flex gap-2 mb-4">
+                      <Input
+                        placeholder="Add new line item..."
+                        value={newItemNames[sov.id] || ''}
+                        onChange={(e) => setNewItemNames(prev => ({ ...prev, [sov.id]: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleAddItem(sov.id);
+                        }}
+                        disabled={saving}
+                      />
+                      <Button 
+                        onClick={() => handleAddItem(sov.id)} 
+                        disabled={saving || !newItemNames[sov.id]?.trim()}
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
 
                   {/* Items list */}
                   <div className="space-y-2">
@@ -351,14 +430,16 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                       const isDragging = draggedItem?.id === item.id;
                       const isDragOver = dragOverIndex?.sovId === sov.id && dragOverIndex?.index === index;
 
+                      const isLocked = sov.is_locked;
+
                       return (
                         <div
                           key={item.id}
-                          draggable={!isEditing && !isEditingPercent}
-                          onDragStart={(e) => handleDragStart(e, sov.id, item)}
-                          onDragOver={(e) => handleDragOver(e, sov.id, index)}
+                          draggable={!isEditing && !isEditingPercent && !isLocked}
+                          onDragStart={(e) => !isLocked && handleDragStart(e, sov.id, item)}
+                          onDragOver={(e) => !isLocked && handleDragOver(e, sov.id, index)}
                           onDragLeave={() => setDragOverIndex(null)}
-                          onDrop={(e) => handleDrop(e, sov.id, index)}
+                          onDrop={(e) => !isLocked && handleDrop(e, sov.id, index)}
                           onDragEnd={() => { setDraggedItem(null); setDragOverIndex(null); }}
                           className={`
                             rounded-lg border bg-card overflow-hidden
@@ -432,59 +513,76 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                                     </Button>
                                   </div>
                                 ) : (
-                                  <button
-                                    onClick={() => handleStartPercentEdit(sov.id, item)}
-                                    className="flex items-center gap-2 text-sm hover:text-foreground transition-colors flex-shrink-0"
-                                  >
+                                  <div className="flex items-center gap-2 text-sm flex-shrink-0">
                                     <span className="text-muted-foreground w-16 text-right">
                                       {item.percent_of_contract?.toFixed(2)}%
                                     </span>
                                     <span className="font-medium w-24 text-right">
                                       {formatCurrency(item.value_amount || 0)}
                                     </span>
-                                  </button>
+                                  </div>
                                 )}
 
-                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleStartEdit(sov.id, item)}>
-                                  <Pencil className="h-4 w-4 text-muted-foreground" />
-                                </Button>
+                                {/* Edit buttons - hidden when locked */}
+                                {!isLocked && (
+                                  <>
+                                    <Button 
+                                      size="icon" 
+                                      variant="ghost" 
+                                      className="h-8 w-8" 
+                                      onClick={() => handleStartPercentEdit(sov.id, item)}
+                                      title="Edit percentage"
+                                    >
+                                      <Pencil className="h-3 w-3 text-muted-foreground" />
+                                    </Button>
+                                    <Button 
+                                      size="icon" 
+                                      variant="ghost" 
+                                      className="h-8 w-8" 
+                                      onClick={() => handleStartEdit(sov.id, item)}
+                                      title="Edit name"
+                                    >
+                                      <Pencil className="h-4 w-4 text-muted-foreground" />
+                                    </Button>
 
-                                {/* Only show delete for unused items (no billing) */}
-                                {(item.billed_to_date || 0) === 0 ? (
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <Button size="icon" variant="ghost" className="h-8 w-8">
-                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                    {/* Delete button - only for unused items (no billing) */}
+                                    {(item.billed_to_date || 0) === 0 ? (
+                                      <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                          <Button size="icon" variant="ghost" className="h-8 w-8">
+                                            <Trash2 className="h-4 w-4 text-destructive" />
+                                          </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                          <AlertDialogHeader>
+                                            <AlertDialogTitle>Delete Line Item</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                              Are you sure you want to delete "{item.item_name}"? This action cannot be undone.
+                                            </AlertDialogDescription>
+                                          </AlertDialogHeader>
+                                          <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction
+                                              onClick={() => deleteItem(sov.id, item.id)}
+                                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                            >
+                                              Delete
+                                            </AlertDialogAction>
+                                          </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                      </AlertDialog>
+                                    ) : (
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        className="h-8 w-8 cursor-not-allowed opacity-50"
+                                        disabled
+                                        title="Cannot delete - item has billing history"
+                                      >
+                                        <Trash2 className="h-4 w-4 text-muted-foreground" />
                                       </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Delete Line Item</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          Are you sure you want to delete "{item.item_name}"? This action cannot be undone.
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction
-                                          onClick={() => deleteItem(sov.id, item.id)}
-                                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                        >
-                                          Delete
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                ) : (
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    className="h-8 w-8 cursor-not-allowed opacity-50"
-                                    disabled
-                                    title="Cannot delete - item has billing history"
-                                  >
-                                    <Trash2 className="h-4 w-4 text-muted-foreground" />
-                                  </Button>
+                                    )}
+                                  </>
                                 )}
                               </>
                             )}
@@ -531,36 +629,6 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
         );
       })}
 
-      {/* Regenerate option */}
-      {hasSOVs && (
-        <div className="flex justify-end">
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" disabled={saving}>
-                Regenerate All SOVs
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Regenerate All SOVs</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will replace all SOV line items with a fresh generation from the template.
-                  All custom items and percentage edits will be lost.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={createAllSOVs}
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                >
-                  Regenerate
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      )}
     </div>
   );
 }

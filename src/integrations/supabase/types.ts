@@ -1869,6 +1869,9 @@ export type Database = {
           created_at: string
           created_from_template_key: string | null
           id: string
+          is_locked: boolean
+          locked_at: string | null
+          locked_by: string | null
           project_id: string
           sov_name: string | null
         }
@@ -1877,6 +1880,9 @@ export type Database = {
           created_at?: string
           created_from_template_key?: string | null
           id?: string
+          is_locked?: boolean
+          locked_at?: string | null
+          locked_by?: string | null
           project_id: string
           sov_name?: string | null
         }
@@ -1885,6 +1891,9 @@ export type Database = {
           created_at?: string
           created_from_template_key?: string | null
           id?: string
+          is_locked?: boolean
+          locked_at?: string | null
+          locked_by?: string | null
           project_id?: string
           sov_name?: string | null
         }
