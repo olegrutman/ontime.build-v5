@@ -24,6 +24,9 @@ export interface ContractSOV {
   sov_name: string;
   created_from_template_key: string | null;
   created_at: string;
+  is_locked: boolean;
+  locked_at: string | null;
+  locked_by: string | null;
 }
 
 export interface ContractSOVItem {
@@ -518,10 +521,20 @@ export function useContractSOV(projectId: string | undefined) {
     }
   }, []);
 
-  // Add item to SOV
+  // Add item to SOV (blocked if locked)
   const addItem = useCallback(async (sovId: string, itemName: string) => {
     const sov = sovs.find(s => s.id === sovId);
     if (!sov) return;
+    
+    // Block if SOV is locked
+    if (sov.is_locked) {
+      toast({
+        title: 'SOV Locked',
+        description: 'This SOV is locked and cannot be modified.',
+        variant: 'destructive'
+      });
+      return;
+    }
     
     const contract = contracts.find(c => c.id === sov.contract_id);
     if (!contract) return;
@@ -679,6 +692,61 @@ export function useContractSOV(projectId: string | undefined) {
     }
   }, [sovItems]);
 
+  // Lock/unlock an SOV
+  const toggleSOVLock = useCallback(async (sovId: string, lock: boolean) => {
+    const sov = sovs.find(s => s.id === sovId);
+    if (!sov) return;
+    
+    // Check totals before locking
+    if (lock) {
+      const totals = getSOVTotals(sovId);
+      if (!totals.isValid) {
+        toast({
+          title: 'Cannot Lock',
+          description: 'SOV percentages must total 100% before locking.',
+          variant: 'destructive'
+        });
+        return;
+      }
+    }
+    
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('project_sov')
+        .update({
+          is_locked: lock,
+          locked_at: lock ? new Date().toISOString() : null,
+          locked_by: lock ? (await supabase.auth.getUser()).data.user?.id : null
+        })
+        .eq('id', sovId);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setSovs(prev => prev.map(s =>
+        s.id === sovId
+          ? { ...s, is_locked: lock, locked_at: lock ? new Date().toISOString() : null }
+          : s
+      ));
+      
+      toast({
+        title: lock ? 'SOV Locked' : 'SOV Unlocked',
+        description: lock
+          ? 'This SOV is now locked and cannot be edited.'
+          : 'This SOV is now unlocked and can be edited.'
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update lock status',
+        variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, [sovs, getSOVTotals]);
+
   return {
     contracts,
     sovs,
@@ -694,6 +762,7 @@ export function useContractSOV(projectId: string | undefined) {
     deleteSOV,
     reorderItems,
     getSOVTotals,
+    toggleSOVLock,
     refresh: fetchData
   };
 }
