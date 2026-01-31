@@ -362,34 +362,47 @@ export function ProjectSOVEditor({ projectId }: ProjectSOVEditorProps) {
                           <Pencil className="h-4 w-4 text-muted-foreground" />
                         </Button>
                         
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8"
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Line Item</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete "{item.item_name}"? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteItem(item.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        {/* Only show delete for unused items (no billing) */}
+                        {(item.billed_to_date || 0) === 0 ? (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
                               >
-                                Delete
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Line Item</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete "{item.item_name}"? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteItem(item.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        ) : (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 cursor-not-allowed opacity-50"
+                            disabled
+                            title="Cannot delete - item has billing history"
+                          >
+                            <Trash2 className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        )}
                       </>
                     )}
                   </div>
