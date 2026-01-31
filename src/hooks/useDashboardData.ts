@@ -178,15 +178,25 @@ export function useDashboardData(): DashboardData {
         pendingCOs = data || [];
       }
 
-      // 4. Get pending invoices (SUBMITTED, awaiting approval)
-      let pendingInvoices: { id: string; project_id: string; invoice_number: string }[] = [];
+      // 4. Get pending invoices (SUBMITTED, awaiting approval by current org)
+      // Filter by to_org_id to only show invoices where current org is the approver
+      let pendingInvoices: { id: string; project_id: string; invoice_number: string; contract_id: string | null }[] = [];
       if (projectIds.length > 0) {
         const { data } = await supabase
           .from('invoices')
-          .select('id, project_id, invoice_number')
+          .select(`
+            id, project_id, invoice_number, contract_id,
+            project_contracts!inner(to_org_id)
+          `)
           .in('project_id', projectIds)
-          .eq('status', 'SUBMITTED');
-        pendingInvoices = data || [];
+          .eq('status', 'SUBMITTED')
+          .eq('project_contracts.to_org_id', currentOrg.id);
+        pendingInvoices = (data || []).map((inv: any) => ({
+          id: inv.id,
+          project_id: inv.project_id,
+          invoice_number: inv.invoice_number,
+          contract_id: inv.contract_id
+        }));
       }
 
       // 5. Get pending team invites SENT by current org (for projects they own)
@@ -277,19 +287,18 @@ export function useDashboardData(): DashboardData {
         });
       }
 
-      // Show invoice approvals for GC, or submitted invoices for TC/FC
-      if (orgType === 'GC') {
-        pendingInvoices.forEach(inv => {
-          const proj = allProjects.find(p => p.id === inv.project_id);
-          attentionList.push({
-            id: inv.id,
-            type: 'invoice',
-            title: inv.invoice_number,
-            projectName: proj?.name || 'Unknown Project',
-            projectId: inv.project_id,
-          });
+      // Show invoice approvals for orgs that receive invoices (GC receives from TC, TC receives from FC)
+      // The query already filters to only invoices where current org is the approver (to_org_id)
+      pendingInvoices.forEach(inv => {
+        const proj = allProjects.find(p => p.id === inv.project_id);
+        attentionList.push({
+          id: inv.id,
+          type: 'invoice',
+          title: inv.invoice_number,
+          projectName: proj?.name || 'Unknown Project',
+          projectId: inv.project_id,
         });
-      }
+      });
 
       // Sent invites (for projects they own)
       sentInvites.forEach(inv => {

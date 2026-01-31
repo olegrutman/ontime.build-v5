@@ -8,7 +8,10 @@ import {
   CheckCircle, 
   XCircle,
   Circle,
-  ClipboardList
+  ClipboardList,
+  Receipt,
+  FileCheck,
+  FileX
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -29,6 +32,9 @@ const typeIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   CHANGE_SUBMITTED: Send,
   CHANGE_APPROVED: CheckCircle,
   CHANGE_REJECTED: XCircle,
+  INVOICE_SUBMITTED: Receipt,
+  INVOICE_APPROVED: FileCheck,
+  INVOICE_REJECTED: FileX,
 };
 
 const typeColors: Record<string, string> = {
@@ -39,6 +45,9 @@ const typeColors: Record<string, string> = {
   CHANGE_SUBMITTED: 'text-amber-500',
   CHANGE_APPROVED: 'text-green-500',
   CHANGE_REJECTED: 'text-red-500',
+  INVOICE_SUBMITTED: 'text-blue-600',
+  INVOICE_APPROVED: 'text-green-600',
+  INVOICE_REJECTED: 'text-red-600',
 };
 
 export function NotificationItem({ notification, onMarkRead, onClose }: NotificationItemProps) {
