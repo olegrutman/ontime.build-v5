@@ -34,6 +34,10 @@ interface Contract {
   to_role: string;
   contract_sum: number;
   retainage_percent: number;
+  from_org_id: string | null;
+  to_org_id: string | null;
+  from_org_name?: string;
+  to_org_name?: string;
 }
 
 interface SOV {
@@ -87,7 +91,7 @@ export function CreateInvoiceFromSOV({
   const [saving, setSaving] = useState(false);
   
   // Data
-  const [allContracts, setAllContracts] = useState<(Contract & { from_org_id: string | null; to_org_id: string | null })[]>([]);
+  const [allContracts, setAllContracts] = useState<Contract[]>([]);
   const [sovs, setSovs] = useState<SOV[]>([]);
   const [sovItems, setSovItems] = useState<SOVItem[]>([]);
   
@@ -134,7 +138,6 @@ export function CreateInvoiceFromSOV({
   useEffect(() => {
     if (open) {
       fetchData();
-      generateInvoiceNumber();
     }
   }, [open, projectId]);
 
@@ -142,13 +145,30 @@ export function CreateInvoiceFromSOV({
     setLoading(true);
     
     try {
-      // Fetch contracts with org IDs
+      // Fetch contracts with org IDs and names (via join)
       const { data: contractsData } = await supabase
         .from('project_contracts')
-        .select('id, from_role, to_role, contract_sum, retainage_percent, from_org_id, to_org_id')
+        .select(`
+          id, from_role, to_role, contract_sum, retainage_percent, from_org_id, to_org_id,
+          from_org:organizations!project_contracts_from_org_id_fkey(name),
+          to_org:organizations!project_contracts_to_org_id_fkey(name)
+        `)
         .eq('project_id', projectId);
       
-      setAllContracts((contractsData || []) as (Contract & { from_org_id: string | null; to_org_id: string | null })[]);
+      // Map to Contract interface with org names
+      const mappedContracts: Contract[] = (contractsData || []).map((c: any) => ({
+        id: c.id,
+        from_role: c.from_role,
+        to_role: c.to_role,
+        contract_sum: c.contract_sum,
+        retainage_percent: c.retainage_percent,
+        from_org_id: c.from_org_id,
+        to_org_id: c.to_org_id,
+        from_org_name: c.from_org?.name || undefined,
+        to_org_name: c.to_org?.name || undefined,
+      }));
+      
+      setAllContracts(mappedContracts);
       
       // Fetch SOVs
       const { data: sovsData } = await supabase
@@ -183,8 +203,21 @@ export function CreateInvoiceFromSOV({
     }
   }, [open]);
 
-  const generateInvoiceNumber = async () => {
-    // Get ALL invoice numbers for this project to find the true max
+  // Helper to get initials from company name (first 2 letters, uppercase)
+  const getOrgInitials = (name: string | undefined): string => {
+    if (!name) return 'XX';
+    // Remove common prefixes/suffixes and get first 2 letters
+    const cleaned = name.replace(/^(the\s+)/i, '').trim();
+    return cleaned.substring(0, 2).toUpperCase();
+  };
+
+  const generateInvoiceNumber = async (contract: Contract) => {
+    // Get initials from org names
+    const fromInitials = getOrgInitials(contract.from_org_name);
+    const toInitials = getOrgInitials(contract.to_org_name);
+    const prefix = `INV-${fromInitials}-${toInitials}`;
+    
+    // Get ALL invoice numbers for this project with the same prefix to find the true max
     const { data } = await supabase
       .from('invoices')
       .select('invoice_number')
@@ -192,16 +225,17 @@ export function CreateInvoiceFromSOV({
     
     let maxNumber = 0;
     if (data && data.length > 0) {
-      // Find the highest number from all invoices
+      // Find the highest number from invoices with matching prefix
+      const prefixPattern = new RegExp(`^${prefix}-(\\d+)$`);
       data.forEach(inv => {
-        const match = inv.invoice_number.match(/INV-(\d+)/);
+        const match = inv.invoice_number.match(prefixPattern);
         if (match) {
           const num = parseInt(match[1], 10);
           if (num > maxNumber) maxNumber = num;
         }
       });
     }
-    setInvoiceNumber(`INV-${(maxNumber + 1).toString().padStart(4, '0')}`);
+    setInvoiceNumber(`${prefix}-${(maxNumber + 1).toString().padStart(4, '0')}`);
   };
 
   // Get the selected contract and its SOV
@@ -214,6 +248,15 @@ export function CreateInvoiceFromSOV({
     sovs.find(s => s.contract_id === selectedContractId),
     [sovs, selectedContractId]
   );
+
+  // Generate invoice number when contract is selected
+  useEffect(() => {
+    if (selectedContract) {
+      generateInvoiceNumber(selectedContract);
+    } else {
+      setInvoiceNumber('');
+    }
+  }, [selectedContract]);
 
   // Update billing items when contract changes
   useEffect(() => {
