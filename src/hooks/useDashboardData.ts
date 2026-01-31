@@ -150,11 +150,18 @@ export function useDashboardData(): DashboardData {
       // 2. Get contracts for user's role on each project
       const projectIds = allProjects.map(p => p.id);
       
-      let contracts: { project_id: string; to_role: string; from_role: string; contract_sum: number }[] = [];
+      let contracts: { 
+        project_id: string; 
+        to_role: string; 
+        from_role: string; 
+        contract_sum: number;
+        from_org_id: string | null;
+        to_org_id: string | null;
+      }[] = [];
       if (projectIds.length > 0) {
         const { data } = await supabase
           .from('project_contracts')
-          .select('project_id, to_role, from_role, contract_sum')
+          .select('project_id, to_role, from_role, contract_sum, from_org_id, to_org_id')
           .in('project_id', projectIds);
         contracts = data || [];
       }
@@ -325,8 +332,10 @@ export function useDashboardData(): DashboardData {
           const tcContract = projectContracts.find(c => c.to_role === 'Trade Contractor');
           contractValue = tcContract?.contract_sum || null;
         } else if (orgType === 'FC') {
-          // FC sees their contract (from TC to FC)
-          const fcContract = projectContracts.find(c => c.to_role === 'Field Crew');
+          // FC only sees contracts where their org is the recipient (to_org_id)
+          const fcContract = projectContracts.find(c => 
+            c.to_role === 'Field Crew' && c.to_org_id === currentOrg.id
+          );
           contractValue = fcContract?.contract_sum || null;
         }
 

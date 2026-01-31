@@ -37,19 +37,26 @@ function formatCurrency(amount: number): string {
 
 export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSectionNewProps) {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, userOrgRoles } = useAuth();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [billedToDate, setBilledToDate] = useState(0);
   const [viewerRole, setViewerRole] = useState<string>('Trade Contractor');
   const [workOrderTotal, setWorkOrderTotal] = useState(0);
   const [userOrgIds, setUserOrgIds] = useState<string[]>([]);
+  const [fcParticipants, setFcParticipants] = useState<{ org_id: string; org_name: string }[]>([]);
   
   // Inline editing state
   const [editingContractId, setEditingContractId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<number>(0);
   const [editRetainage, setEditRetainage] = useState<number>(0);
   const [saving, setSaving] = useState(false);
+  
+  // Create new contract state
+  const [creatingContract, setCreatingContract] = useState(false);
+  const [newContractValue, setNewContractValue] = useState<number>(0);
+  const [newContractRetainage, setNewContractRetainage] = useState<number>(0);
+  const [selectedFcOrgId, setSelectedFcOrgId] = useState<string>('');
 
   const fetchData = async () => {
     setLoading(true);
@@ -116,6 +123,20 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
     const woTotal = (workOrders || []).reduce((sum, wo) => sum + (wo.final_price || 0), 0);
     setWorkOrderTotal(woTotal);
     
+    // Fetch FC participants for TC to create contracts
+    const { data: fcData } = await supabase
+      .from('project_participants')
+      .select('organization_id, organizations:organization_id (name)')
+      .eq('project_id', projectId)
+      .eq('role', 'FC')
+      .eq('invite_status', 'ACCEPTED');
+    
+    const fcList = (fcData || []).map((p: any) => ({
+      org_id: p.organization_id,
+      org_name: p.organizations?.name || 'Unknown',
+    }));
+    setFcParticipants(fcList);
+    
     setLoading(false);
   };
 
@@ -176,6 +197,52 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
       
       toast({ title: 'Contract updated' });
       setEditingContractId(null);
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const createFcContract = async () => {
+    if (!selectedFcOrgId || !user) return;
+    
+    const currentOrgId = userOrgRoles[0]?.organization?.id;
+    if (!currentOrgId) return;
+    
+    setSaving(true);
+    try {
+      const { data, error } = await supabase
+        .from('project_contracts')
+        .insert({
+          project_id: projectId,
+          from_org_id: currentOrgId,
+          to_org_id: selectedFcOrgId,
+          from_role: 'Trade Contractor',
+          to_role: 'Field Crew',
+          contract_sum: newContractValue,
+          retainage_percent: newContractRetainage,
+          created_by_user_id: user.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Get org name for display
+      const fcOrg = fcParticipants.find(p => p.org_id === selectedFcOrgId);
+      
+      setContracts([...contracts, {
+        ...data,
+        from_org_name: userOrgRoles[0]?.organization?.name || null,
+        to_org_name: fcOrg?.org_name || null,
+      }]);
+      
+      toast({ title: 'Contract created' });
+      setCreatingContract(false);
+      setNewContractValue(0);
+      setNewContractRetainage(0);
+      setSelectedFcOrgId('');
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
@@ -421,8 +488,89 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
                         retainage={downstreamContract.retainage_percent}
                         label="Cost" 
                       />
+                    ) : creatingContract ? (
+                      <div className="space-y-2 mt-2">
+                        {fcParticipants.length > 1 && (
+                          <select
+                            className="w-full h-8 text-sm border rounded px-2 bg-background"
+                            value={selectedFcOrgId}
+                            onChange={(e) => setSelectedFcOrgId(e.target.value)}
+                          >
+                            <option value="">Select Field Crew...</option>
+                            {fcParticipants.map(fc => (
+                              <option key={fc.org_id} value={fc.org_id}>{fc.org_name}</option>
+                            ))}
+                          </select>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                            <Input
+                              type="number"
+                              min="0"
+                              step="1000"
+                              className="pl-6 h-8 text-sm"
+                              value={newContractValue || ''}
+                              onChange={(e) => setNewContractValue(parseFloat(e.target.value) || 0)}
+                              placeholder="Contract sum"
+                              autoFocus
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <Input
+                              type="number"
+                              min="0"
+                              max="20"
+                              step="0.5"
+                              className="pr-6 h-8 text-sm"
+                              value={newContractRetainage || ''}
+                              onChange={(e) => setNewContractRetainage(parseFloat(e.target.value) || 0)}
+                              placeholder="Retainage"
+                            />
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
+                          </div>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button 
+                            size="sm" 
+                            variant="default" 
+                            onClick={createFcContract} 
+                            disabled={saving || (fcParticipants.length > 1 && !selectedFcOrgId)} 
+                            className="h-7 px-2"
+                          >
+                            <Check className="h-3 w-3" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            onClick={() => setCreatingContract(false)} 
+                            disabled={saving} 
+                            className="h-7 px-2"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : fcParticipants.length > 0 ? (
+                      <div className="mt-1">
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          onClick={() => {
+                            setCreatingContract(true);
+                            if (fcParticipants.length === 1) {
+                              setSelectedFcOrgId(fcParticipants[0].org_id);
+                            }
+                          }}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add Contract
+                        </Button>
+                      </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground italic">Not configured</p>
+                      <p className="text-sm text-muted-foreground italic">No Field Crew added</p>
                     )}
                   </div>
                 </div>
