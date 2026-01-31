@@ -264,6 +264,12 @@ export function AddTeamMemberDialog({
     }
   };
 
+  // Get current user's org ID and type
+  const getCurrentUserOrg = () => {
+    const membership = user ? undefined : undefined; // Will be fetched below
+    return null;
+  };
+
   const handleAddExisting = async () => {
     if (!selectedResult || !user?.id) return;
     
@@ -274,6 +280,16 @@ export function AddTeamMemberDialog({
 
     setSaving(true);
     try {
+      // Get current user's org info for contract creation
+      const { data: userOrgData } = await supabase
+        .from('user_org_roles')
+        .select('organization_id, organizations:organization_id (type)')
+        .eq('user_id', user.id)
+        .single();
+      
+      const currentOrgId = userOrgData?.organization_id;
+      const currentOrgType = (userOrgData?.organizations as any)?.type;
+
       // Insert into project_team with status = Invited
       // Existing orgs should NOT be auto-accepted; they must accept via dashboard invite flow.
       const { error: teamError } = await supabase
@@ -295,6 +311,21 @@ export function AddTeamMemberDialog({
 
       // Note: project_participants insert is now handled by database trigger
       // (trg_sync_team_to_participants) which also fires the notification
+
+      // If TC is inviting FC, create a placeholder contract
+      if (currentOrgType === 'TC' && selectedRole === 'Field Crew' && currentOrgId) {
+        await supabase.from('project_contracts').insert({
+          project_id: projectId,
+          from_org_id: currentOrgId,
+          to_org_id: selectedResult.org_id,
+          from_role: 'Trade Contractor',
+          to_role: 'Field Crew',
+          trade: selectedTrade || null,
+          contract_sum: 0,
+          retainage_percent: 0,
+          created_by_user_id: user.id,
+        });
+      }
 
       // Log activity
       await supabase.from('project_activity').insert({
