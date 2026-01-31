@@ -220,6 +220,10 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
         const items = sovItems[sov.id] || [];
         const totals = getSOVTotals(sov.id);
         const isExpanded = expandedSovs.has(sov.id);
+        
+        // Determine if this is a work order SOV
+        const isWorkOrderSOV = contract?.trade === 'Work Order' || contract?.trade === 'Work Order Labor';
+        const sovSourceLabel = isWorkOrderSOV ? 'Work Order' : 'Contract';
 
         return (
           <Card key={sov.id}>
@@ -234,9 +238,14 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                         <ChevronRight className="h-5 w-5 text-muted-foreground" />
                       )}
                       <div>
-                        <CardTitle className="text-base">{sov.sov_name}</CardTitle>
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-base">{sov.sov_name}</CardTitle>
+                          <Badge variant={isWorkOrderSOV ? "outline" : "secondary"} className="text-xs">
+                            {sovSourceLabel}
+                          </Badge>
+                        </div>
                         <CardDescription>
-                          Contract: {formatCurrency(contract?.contract_sum || 0)} • {items.length} items
+                          {formatCurrency(contract?.contract_sum || 0)} • {items.length} item{items.length !== 1 ? 's' : ''}
                         </CardDescription>
                       </div>
                     </div>
