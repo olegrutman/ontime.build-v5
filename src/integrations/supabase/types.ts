@@ -3374,6 +3374,9 @@ export type Database = {
         | "CHANGE_REJECTED"
         | "PROJECT_ADDED"
         | "WORK_ORDER_ASSIGNED"
+        | "INVOICE_SUBMITTED"
+        | "INVOICE_APPROVED"
+        | "INVOICE_REJECTED"
       order_status:
         | "DRAFT"
         | "SUBMITTED"
@@ -3537,6 +3540,9 @@ export const Constants = {
         "CHANGE_REJECTED",
         "PROJECT_ADDED",
         "WORK_ORDER_ASSIGNED",
+        "INVOICE_SUBMITTED",
+        "INVOICE_APPROVED",
+        "INVOICE_REJECTED",
       ],
       order_status: [
         "DRAFT",
