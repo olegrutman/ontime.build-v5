@@ -1,87 +1,108 @@
 
-# Plan: Add TC Labor Details Tile for GC on Work Order Approval Page
+# Plan: Fix Contract Direction Validation Trigger
 
-## Overview
-Currently, the GC's work order approval page shows only the total labor amount in the "Finalize Work Order" panel. This plan adds a dedicated tile that displays the TC's labor pricing details - whether hourly (hours x rate) or lump sum - so the GC can properly review the pricing before approval.
+## Problem Identified
 
-## Current State
-- GC sees: Labor Total, Material Total, Equipment Total, and Final Price
-- GC does NOT see: The breakdown of how labor was priced (hours/rate vs lump sum)
-- The `tcLabor` data is already fetched and available in `ChangeOrderDetailPage.tsx` but not passed to `ApprovalPanel`
+There is a semantic mismatch between two database triggers:
 
-## Changes Required
+1. **Contract Creation Trigger** (`convert_change_order_to_contract`):
+   - Uses `from_org_id` = CONTRACTOR (sender of invoices)
+   - Uses `to_org_id` = CLIENT (receiver/payer)
+   - Example: FC -> TC contract means FC (contractor) bills TC (client)
 
-### 1. Create New Component: `GCLaborReviewPanel.tsx`
-Create a new component that displays the TC labor entries in a read-only format for GC review.
+2. **Validation Trigger** (`validate_contract_direction`):
+   - Uses `from_org_id` = CLIENT (payer/hirer)
+   - Uses `to_org_id` = CONTRACTOR (receiver)
+   - This is the OPPOSITE semantic!
 
-**Location**: `src/components/change-order-detail/GCLaborReviewPanel.tsx`
+When the work order finalization creates an FC -> TC contract (FC bills TC), the validation trigger incorrectly interprets it as "FC is trying to HIRE TC" and rejects it.
 
-**Features**:
-- Displays each TC labor entry with:
-  - Description (if provided)
-  - Pricing type indicator (Hourly clock icon or Lump Sum dollar icon)
-  - For hourly: Shows "X hours @ $Y/hr = $Z"
-  - For lump sum: Shows "Lump Sum: $X"
-- Shows the total labor amount at the bottom
-- Read-only view (no edit buttons for GC)
-- Uses consistent styling with other panels in the detail page
+## Root Cause
 
-### 2. Update `ChangeOrderDetailPage.tsx`
-Add the new `GCLaborReviewPanel` to the main content area when the user is a GC.
+The validation trigger was updated in migration `20260129165520` with comments stating "from_org is the CLIENT" - but this contradicts:
+- The contract creation trigger
+- The system memory note: "from_org_id represents the Contractor (sender of invoices)"
+- The invoice creation flow where `from_org` creates invoices
 
-**Changes**:
-- Import the new component
-- Add conditional rendering for GC users to show the labor review panel
-- Position it in the main content area (left column) alongside Materials and Equipment panels
+## Solution
 
-### 3. Optional: Simplify ApprovalPanel
-Since labor details will now be in a dedicated panel, consider whether to keep or remove the "Labor Total" line from the ApprovalPanel's pricing summary to avoid duplication.
+Update the `validate_contract_direction` trigger to use the correct semantic where:
+- `from_org_id` = CONTRACTOR (invoice sender)
+- `to_org_id` = CLIENT (payer)
 
----
+### Valid Contract Directions (CONTRACTOR -> CLIENT)
+| From (Contractor) | To (Client) | Description |
+|-------------------|-------------|-------------|
+| TC | GC | Trade Contractor bills General Contractor |
+| FC | TC | Field Crew bills Trade Contractor |
+| Supplier | GC | Supplier bills General Contractor |
+| Supplier | TC | Supplier bills Trade Contractor |
 
-## Technical Details
+### Invalid Contract Directions
+- GC cannot bill TC (GC is always client, never contractor)
+- GC cannot bill FC
+- TC cannot bill FC (TC hires FC, not the other way)
 
-### New Component Structure
-```text
-+----------------------------------+
-| Trade Contractor Labor           |
-| [HardHat icon]                   |
-+----------------------------------+
-| [Clock] Labor Hours              |
-|   8 hours @ $75.00/hr   $600.00  |
-+----------------------------------+
-| [Dollar] Overtime Premium        |
-|   Lump Sum              $200.00  |
-+----------------------------------+
-| Total Labor              $800.00 |
-+----------------------------------+
+## Database Migration
+
+```sql
+-- Fix the validate_contract_direction trigger to use correct semantic:
+-- from_org = CONTRACTOR (bills/invoices), to_org = CLIENT (pays)
+
+CREATE OR REPLACE FUNCTION public.validate_contract_direction()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+BEGIN
+  -- Prevent self-referential contracts
+  IF NEW.from_org_id = NEW.to_org_id AND NEW.from_org_id IS NOT NULL THEN
+    RAISE EXCEPTION 'Contract cannot have the same organization on both sides';
+  END IF;
+
+  -- from_org is the CONTRACTOR (bills/invoices), to_org is the CLIENT (pays)
+  -- Valid flows:
+  --   TC -> GC (TC bills GC)
+  --   FC -> TC (FC bills TC)
+  --   Supplier -> GC (Supplier bills GC)
+  --   Supplier -> TC (Supplier bills TC)
+  --
+  -- Invalid: GC cannot bill anyone downstream
+  IF NEW.from_role = 'General Contractor' THEN
+    RAISE EXCEPTION 'Invalid contract direction: General Contractor cannot be the contractor/invoicer.';
+  END IF;
+
+  -- Invalid: FC can only bill TC
+  IF NEW.from_role = 'Field Crew' AND NEW.to_role != 'Trade Contractor' THEN
+    RAISE EXCEPTION 'Invalid contract direction: Field Crew can only bill Trade Contractors.';
+  END IF;
+
+  -- Invalid: TC can only bill GC
+  IF NEW.from_role = 'Trade Contractor' AND NEW.to_role != 'General Contractor' THEN
+    RAISE EXCEPTION 'Invalid contract direction: Trade Contractor can only bill General Contractors.';
+  END IF;
+
+  -- Invalid: Supplier can only bill GC or TC
+  IF NEW.from_role = 'Supplier' AND NEW.to_role NOT IN ('General Contractor', 'Trade Contractor') THEN
+    RAISE EXCEPTION 'Invalid contract direction: Supplier can only bill General Contractors or Trade Contractors.';
+  END IF;
+
+  RETURN NEW;
+END;
+$function$;
 ```
 
-### Props Interface
-```typescript
-interface GCLaborReviewPanelProps {
-  tcLabor: ChangeOrderTCLabor[];
-}
-```
-
-### Visibility Rules
-- GC can see: Hours, hourly rate, lump sum amounts, descriptions
-- GC cannot see: FC (Field Crew) pricing details (already enforced by current logic)
-
----
-
-## Files to Create/Modify
+## Files to Modify
 
 | File | Action |
 |------|--------|
-| `src/components/change-order-detail/GCLaborReviewPanel.tsx` | Create new component |
-| `src/components/change-order-detail/ChangeOrderDetailPage.tsx` | Import and add the new panel for GC users |
-| `src/components/change-order-detail/index.ts` | Export the new component |
+| New SQL Migration | Fix `validate_contract_direction` trigger with correct semantic |
 
----
+## Expected Outcome
 
-## Outcome
-After implementation, when a GC views a work order in "Ready for Approval" status, they will see:
-1. A dedicated "Trade Contractor Labor" tile showing the detailed breakdown
-2. Each labor entry clearly identified as hourly or lump sum
-3. Full transparency on how the TC calculated their labor pricing
+After this fix:
+1. GC can finalize work orders without errors
+2. TC -> GC contracts are created correctly
+3. FC -> TC contracts are created correctly (when FC labor exists)
+4. The validation still prevents truly invalid contracts (e.g., GC trying to bill FC)
