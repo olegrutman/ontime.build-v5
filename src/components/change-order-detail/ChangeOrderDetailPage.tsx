@@ -16,6 +16,7 @@ import { MaterialsPanel } from './MaterialsPanel';
 import { EquipmentPanel } from './EquipmentPanel';
 import { ApprovalPanel } from './ApprovalPanel';
 import { ParticipantActivationPanel } from './ParticipantActivationPanel';
+import { GCLaborReviewPanel } from './GCLaborReviewPanel';
 
 export function ChangeOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -137,6 +138,11 @@ export function ChangeOrderDetailPage() {
                 canViewRates={true}
                 onAddLabor={addTCLabor}
               />
+            )}
+
+            {/* GC Labor Review - GC only */}
+            {isGC && tcLabor.length > 0 && (
+              <GCLaborReviewPanel tcLabor={tcLabor} />
             )}
 
             {/* Materials */}
