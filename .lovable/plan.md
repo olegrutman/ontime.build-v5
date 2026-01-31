@@ -1,41 +1,87 @@
-# Plan: Fix Invoice Send/Receive/Approve Flow
 
-## Status: ✅ COMPLETED
+# Plan: Add TC Labor Details Tile for GC on Work Order Approval Page
 
 ## Overview
-This plan addressed three issues discovered in the invoice workflow:
-1. ✅ No notification is sent when an invoice is submitted
-2. ✅ The dashboard's "Needs Attention" panel doesn't properly show invoices pending approval
-3. ✅ TC organizations can't see invoices from Field Crews in their attention items
+Currently, the GC's work order approval page shows only the total labor amount in the "Finalize Work Order" panel. This plan adds a dedicated tile that displays the TC's labor pricing details - whether hourly (hours x rate) or lump sum - so the GC can properly review the pricing before approval.
+
+## Current State
+- GC sees: Labor Total, Material Total, Equipment Total, and Final Price
+- GC does NOT see: The breakdown of how labor was priced (hours/rate vs lump sum)
+- The `tcLabor` data is already fetched and available in `ChangeOrderDetailPage.tsx` but not passed to `ApprovalPanel`
+
+## Changes Required
+
+### 1. Create New Component: `GCLaborReviewPanel.tsx`
+Create a new component that displays the TC labor entries in a read-only format for GC review.
+
+**Location**: `src/components/change-order-detail/GCLaborReviewPanel.tsx`
+
+**Features**:
+- Displays each TC labor entry with:
+  - Description (if provided)
+  - Pricing type indicator (Hourly clock icon or Lump Sum dollar icon)
+  - For hourly: Shows "X hours @ $Y/hr = $Z"
+  - For lump sum: Shows "Lump Sum: $X"
+- Shows the total labor amount at the bottom
+- Read-only view (no edit buttons for GC)
+- Uses consistent styling with other panels in the detail page
+
+### 2. Update `ChangeOrderDetailPage.tsx`
+Add the new `GCLaborReviewPanel` to the main content area when the user is a GC.
+
+**Changes**:
+- Import the new component
+- Add conditional rendering for GC users to show the labor review panel
+- Position it in the main content area (left column) alongside Materials and Equipment panels
+
+### 3. Optional: Simplify ApprovalPanel
+Since labor details will now be in a dedicated panel, consider whether to keep or remove the "Labor Total" line from the ApprovalPanel's pricing summary to avoid duplication.
 
 ---
 
-## Changes Implemented
+## Technical Details
 
-### 1. ✅ Created Invoice Notification Trigger (Database)
-Added a new database trigger `notify_invoice_status_change` that creates notifications when:
-- Invoice status changes to `SUBMITTED` → notifies `to_org_id` (approver)
-- Invoice status changes to `APPROVED` → notifies `from_org_id` (sender)
-- Invoice status changes to `REJECTED` → notifies `from_org_id` (sender)
+### New Component Structure
+```text
++----------------------------------+
+| Trade Contractor Labor           |
+| [HardHat icon]                   |
++----------------------------------+
+| [Clock] Labor Hours              |
+|   8 hours @ $75.00/hr   $600.00  |
++----------------------------------+
+| [Dollar] Overtime Premium        |
+|   Lump Sum              $200.00  |
++----------------------------------+
+| Total Labor              $800.00 |
++----------------------------------+
+```
 
-### 2. ✅ Fixed Dashboard Attention Items Logic
-Updated `src/hooks/useDashboardData.ts`:
-- Modified pending invoices query to join with contracts and filter by `to_org_id`
-- Removed the GC-only restriction for invoice attention items
-- Now all orgs see invoices where they are the approver
+### Props Interface
+```typescript
+interface GCLaborReviewPanelProps {
+  tcLabor: ChangeOrderTCLabor[];
+}
+```
 
-### 3. ✅ Added Notification Icons for Invoice Types
-Updated `src/components/notifications/NotificationItem.tsx`:
-- Added `INVOICE_SUBMITTED` with Receipt icon (blue)
-- Added `INVOICE_APPROVED` with FileCheck icon (green)
-- Added `INVOICE_REJECTED` with FileX icon (red)
+### Visibility Rules
+- GC can see: Hours, hourly rate, lump sum amounts, descriptions
+- GC cannot see: FC (Field Crew) pricing details (already enforced by current logic)
 
 ---
 
-## Files Modified
+## Files to Create/Modify
 
-| File | Change |
+| File | Action |
 |------|--------|
-| SQL Migration | Created `notify_invoice_status_change` trigger function |
-| `src/hooks/useDashboardData.ts` | Fixed pending invoice query to filter by `to_org_id` |
-| `src/components/notifications/NotificationItem.tsx` | Added invoice notification type icons |
+| `src/components/change-order-detail/GCLaborReviewPanel.tsx` | Create new component |
+| `src/components/change-order-detail/ChangeOrderDetailPage.tsx` | Import and add the new panel for GC users |
+| `src/components/change-order-detail/index.ts` | Export the new component |
+
+---
+
+## Outcome
+After implementation, when a GC views a work order in "Ready for Approval" status, they will see:
+1. A dedicated "Trade Contractor Labor" tile showing the detailed breakdown
+2. Each labor entry clearly identified as hourly or lump sum
+3. Full transparency on how the TC calculated their labor pricing
