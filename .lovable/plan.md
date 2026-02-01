@@ -1,101 +1,199 @@
 
-# Plan: Clear All Test Data
+# Plan: Add Fascia, Soffit, and Decorative Elements to Scope Step
 
 ## Overview
-Delete all existing projects, work orders, invoices, and related data from the database to allow you to start fresh with testing.
+Add missing Fascia & Soffit options and Exterior Decorative Elements sections to the Scope & Details step in the project setup wizard. The decorative elements section will include a text field to specify custom items.
 
-## Current Data to be Deleted
-| Table | Records |
-|-------|---------|
-| Projects | 1 |
-| Work Orders | 3 |
-| Invoices | 3 |
-| SOV Items | 72 |
-| Contracts | 9 |
-| Team Members | 4 |
-| Scope Details | 1 |
+---
 
-## Deletion Order (respecting foreign key constraints)
+## Current State
 
-Due to foreign key relationships, data must be deleted in the correct order:
+The `ScopeDetails` type in `src/types/projectWizard.ts` already includes these fields:
+- `fasciaIncluded?: boolean`
+- `soffitIncluded?: boolean`  
+- `fasciaSoffitMaterial?: string`
+- `fasciaSoffitMaterialOther?: string`
+- `decorativeIncluded?: boolean`
+- `decorativeItems?: string[]`
+- `decorativeItemOther?: string`
 
-### Phase 1: Delete Work Order Related Data
-1. `change_order_checklist` - work order checklists
-2. `change_order_equipment` - equipment entries
-3. `change_order_fc_hours` - field crew hours
-4. `change_order_materials` - materials
-5. `change_order_tc_labor` - TC labor entries
-6. `change_order_participants` - work order participants
-7. `change_order_projects` - the work orders themselves
+However, the UI in `ScopeStep.tsx` does not render these options - they are missing from the form.
 
-### Phase 2: Delete Invoice Related Data
-1. `invoice_line_items` - invoice line items
-2. `invoices` - the invoices
+---
 
-### Phase 3: Delete Project Related Data
-1. `project_activity` - activity logs
-2. `project_contracts` - contracts
-3. `project_scope_details` - scope configuration
-4. `project_sov_items` - SOV line items
-5. `project_sov` - SOV headers
-6. `project_team` - team members
-7. `project_participants` - project participants
-8. `project_invites` - pending invites
-9. `project_relationships` - project relationships
-10. `projects` - the projects themselves
+## Files to Modify
 
-### Phase 4: Optional Cleanup
-- `notifications` - clear notification history
-- `project_activity` - clear activity logs
+| File | Change |
+|------|--------|
+| `src/components/project-wizard-new/ScopeStep.tsx` | Add Fascia & Soffit card and Decorative Elements card |
 
-## Technical Implementation
+---
 
-A single database migration will execute `DELETE FROM` statements in the correct order:
+## UI Changes
 
-```sql
--- Phase 1: Work Order data
-DELETE FROM change_order_checklist;
-DELETE FROM change_order_equipment;
-DELETE FROM change_order_fc_hours;
-DELETE FROM change_order_materials;
-DELETE FROM change_order_tc_labor;
-DELETE FROM change_order_participants;
-DELETE FROM change_order_projects;
+### New Card: Fascia & Soffit
+Location: After the Siding card, before Optional Scope Items
 
--- Phase 2: Invoice data
-DELETE FROM invoice_line_items;
-DELETE FROM invoices;
-
--- Phase 3: Project data
-DELETE FROM project_activity;
-DELETE FROM project_contracts;
-DELETE FROM project_scope_details;
-DELETE FROM project_sov_items;
-DELETE FROM project_sov;
-DELETE FROM project_team;
-DELETE FROM project_participants;
-DELETE FROM project_invites;
-DELETE FROM project_relationships;
-DELETE FROM projects;
-
--- Phase 4: Cleanup
-DELETE FROM notifications;
+```
++----------------------------------------------------------+
+|  Fascia & Soffit                                         |
++----------------------------------------------------------+
+|  Fascia Included?                              [toggle]  |
+|  Soffit Included?                              [toggle]  |
+|                                                          |
+|  (When either enabled):                                  |
+|  Material: [Wood / Fiber Cement / Metal / Vinyl / Other] |
+|  (If Other): [Specify other material____________]        |
++----------------------------------------------------------+
 ```
 
-## What Will NOT Be Deleted
-- **Organizations** - your company/team structure
-- **User profiles** - your account and team member accounts
-- **Suppliers** - supplier directory
-- **Catalog items** - product catalog
-- **Trades** - trade definitions
-- **Trusted partners** - partner relationships
+### New Card: Decorative Elements
+Location: After Fascia & Soffit card
 
-## After Deletion
-You'll have a clean slate to:
-- Create new test projects
-- Test the Work Order wizard
-- Test invoicing flows
-- etc.
+```
++----------------------------------------------------------+
+|  Decorative Elements                                     |
++----------------------------------------------------------+
+|  Decorative Elements Included?                 [toggle]  |
+|                                                          |
+|  (When enabled):                                         |
+|  Select items (multi-select):                            |
+|  [ ] Corbels                                             |
+|  [ ] Columns                                             |
+|  [ ] Decorative Beams                                    |
+|  [ ] Brackets                                            |
+|  [ ] Faux Trusses                                        |
+|  [ ] Other                                               |
+|                                                          |
+|  (If Other selected):                                    |
+|  [Specify other decorative items___________]             |
++----------------------------------------------------------+
+```
 
-## Note
-After running this, you'll be redirected to the dashboard since the current project will no longer exist.
+---
+
+## Implementation Details
+
+### 1. Add Fascia & Soffit Card (after Siding card, ~line 466)
+
+```tsx
+{/* Fascia & Soffit */}
+<Card>
+  <CardHeader className="pb-3">
+    <CardTitle className="text-base">Fascia & Soffit</CardTitle>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <div className="flex items-center justify-between">
+      <Label>Fascia Included?</Label>
+      <Switch
+        checked={scope.fasciaIncluded || false}
+        onCheckedChange={(checked) => update({ fasciaIncluded: checked })}
+      />
+    </div>
+    <div className="flex items-center justify-between">
+      <Label>Soffit Included?</Label>
+      <Switch
+        checked={scope.soffitIncluded || false}
+        onCheckedChange={(checked) => update({ soffitIncluded: checked })}
+      />
+    </div>
+    {(scope.fasciaIncluded || scope.soffitIncluded) && (
+      <div className="space-y-2">
+        <Label>Material</Label>
+        <Select
+          value={scope.fasciaSoffitMaterial || ''}
+          onValueChange={(v) => update({ fasciaSoffitMaterial: v })}
+        >
+          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+          <SelectContent>
+            {FASCIA_SOFFIT_MATERIALS.map(material => (
+              <SelectItem key={material} value={material}>{material}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {scope.fasciaSoffitMaterial === 'Other' && (
+          <Input
+            placeholder="Specify other material"
+            value={scope.fasciaSoffitMaterialOther || ''}
+            onChange={(e) => update({ fasciaSoffitMaterialOther: e.target.value })}
+          />
+        )}
+      </div>
+    )}
+  </CardContent>
+</Card>
+```
+
+### 2. Add Decorative Elements Card (after Fascia & Soffit)
+
+```tsx
+{/* Decorative Elements */}
+<Card>
+  <CardHeader className="pb-3">
+    <CardTitle className="text-base">Decorative Elements</CardTitle>
+  </CardHeader>
+  <CardContent className="space-y-4">
+    <div className="flex items-center justify-between">
+      <Label>Decorative Elements Included?</Label>
+      <Switch
+        checked={scope.decorativeIncluded || false}
+        onCheckedChange={(checked) => update({ decorativeIncluded: checked })}
+      />
+    </div>
+    {scope.decorativeIncluded && (
+      <div className="space-y-2">
+        <Label>Select items (check all that apply)</Label>
+        <div className="grid grid-cols-2 gap-2">
+          {DECORATIVE_ITEMS.map(item => (
+            <div key={item} className="flex items-center space-x-2">
+              <Checkbox
+                id={`decorative-${item}`}
+                checked={(scope.decorativeItems || []).includes(item)}
+                onCheckedChange={() => toggleArrayItem('decorativeItems', item)}
+              />
+              <label htmlFor={`decorative-${item}`} className="text-sm">{item}</label>
+            </div>
+          ))}
+        </div>
+        {(scope.decorativeItems || []).includes('Other') && (
+          <Input
+            placeholder="Specify other decorative items"
+            value={scope.decorativeItemOther || ''}
+            onChange={(e) => update({ decorativeItemOther: e.target.value })}
+          />
+        )}
+      </div>
+    )}
+  </CardContent>
+</Card>
+```
+
+---
+
+## Summary of Changes
+
+1. **Fascia & Soffit Card**
+   - Toggle for Fascia Included
+   - Toggle for Soffit Included
+   - Material dropdown (shows when either is enabled)
+   - Custom material text field (shows when "Other" is selected)
+
+2. **Decorative Elements Card**
+   - Toggle for Decorative Elements Included
+   - Multi-select checkboxes for: Corbels, Columns, Decorative Beams, Brackets, Faux Trusses, Other
+   - Custom specification text field (shows when "Other" is checked)
+
+---
+
+## Testing Checklist
+
+1. Navigate to /create-project and proceed to Scope & Details step
+2. Verify Fascia & Soffit card appears after Siding
+3. Toggle Fascia on - verify material dropdown appears
+4. Toggle Soffit on - material dropdown should still be visible
+5. Select "Other" material - verify text input appears
+6. Verify Decorative Elements card appears
+7. Toggle Decorative Elements on - verify checkboxes appear
+8. Check multiple items - verify they're saved correctly
+9. Check "Other" - verify specification text field appears
+10. Complete wizard to Review step - verify scope summary shows these new options
