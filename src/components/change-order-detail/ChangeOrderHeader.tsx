@@ -15,6 +15,14 @@ function formatLocation(location: LocationData): string {
   if (location.level) parts.push(location.level);
   if (location.unit) parts.push(`Unit ${location.unit}`);
   if (location.room_area) parts.push(location.room_area);
+  // Add exterior feature for outside locations
+  if (location.exterior_feature) {
+    const formatted = location.exterior_feature
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+    parts.push(formatted);
+  }
   return parts.length > 0 ? parts.join(' • ') : 'No location specified';
 }
 
