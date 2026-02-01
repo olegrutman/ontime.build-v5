@@ -2,17 +2,21 @@ import { WorkItem, WORK_ITEM_TYPE_LABELS } from '@/types/workItem';
 import { StateBadge } from './StateBadge';
 import { TypeIndicator, TypeDot } from './TypeIndicator';
 import { Card } from '@/components/ui/card';
-import { MapPin, Users, ChevronRight, DollarSign } from 'lucide-react';
+import { MapPin, Users, ChevronRight, DollarSign, Eye, Edit, Copy } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { HoverActions, HoverAction } from '@/components/ui/hover-actions';
+import { StatusColumn, WORK_ITEM_STATUS_OPTIONS } from '@/components/ui/status-column';
 
 interface WorkItemCardProps {
   item: WorkItem;
   depth?: number;
   onClick?: () => void;
   isSelected?: boolean;
+  onEdit?: (item: WorkItem) => void;
+  onDuplicate?: (item: WorkItem) => void;
 }
 
-export function WorkItemCard({ item, depth = 0, onClick, isSelected }: WorkItemCardProps) {
+export function WorkItemCard({ item, depth = 0, onClick, isSelected, onEdit, onDuplicate }: WorkItemCardProps) {
   const formatCurrency = (amount?: number) => {
     if (!amount) return '—';
     return new Intl.NumberFormat('en-US', {
@@ -26,6 +30,33 @@ export function WorkItemCard({ item, depth = 0, onClick, isSelected }: WorkItemC
   const locationString = [item.location?.structure, item.location?.floor, item.location?.area]
     .filter(Boolean)
     .join(' › ');
+
+  const hoverActions: HoverAction[] = [
+    {
+      icon: <Eye className="h-4 w-4" />,
+      label: 'View Details',
+      onClick: (e) => {
+        e.stopPropagation();
+        onClick?.();
+      },
+    },
+    ...(onEdit ? [{
+      icon: <Edit className="h-4 w-4" />,
+      label: 'Edit',
+      onClick: (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onEdit(item);
+      },
+    }] : []),
+    ...(onDuplicate ? [{
+      icon: <Copy className="h-4 w-4" />,
+      label: 'Duplicate',
+      onClick: (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onDuplicate(item);
+      },
+    }] : []),
+  ];
 
   return (
     <Card 
@@ -92,8 +123,11 @@ export function WorkItemCard({ item, depth = 0, onClick, isSelected }: WorkItemC
             </div>
           </div>
           
-          {/* Right side - Amount and chevron */}
-          <div className="flex items-center gap-3">
+          {/* Right side - Amount, hover actions, and chevron */}
+          <div className="flex items-center gap-2">
+            {/* Hover Actions - Monday-style */}
+            <HoverActions actions={hoverActions} />
+            
             <div className="text-right">
               <div className="flex items-center gap-1 text-sm font-semibold">
                 {item.amount ? (
@@ -109,7 +143,7 @@ export function WorkItemCard({ item, depth = 0, onClick, isSelected }: WorkItemC
                 {WORK_ITEM_TYPE_LABELS[item.type]}
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-muted-foreground/50 group-hover:text-primary transition-colors" />
+            <ChevronRight className="w-5 h-5 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-all group-hover:text-primary" />
           </div>
         </div>
       </div>

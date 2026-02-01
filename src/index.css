@@ -74,6 +74,22 @@
     --sidebar-border: 222 47% 20%;
     --sidebar-ring: 252 82% 60%;
 
+    /* Monday.com-inspired status colors */
+    --monday-green: 160 84% 39%;
+    --monday-yellow: 32 98% 61%;
+    --monday-red: 354 74% 57%;
+    --monday-blue: 199 100% 38%;
+    --monday-purple: 271 57% 62%;
+    --monday-gray: 0 0% 77%;
+    --monday-orange: 25 95% 53%;
+    --monday-teal: 174 72% 43%;
+
+    /* Organization type colors */
+    --org-gc: 217 91% 60%;
+    --org-tc: 142 71% 45%;
+    --org-fc: 271 57% 62%;
+    --org-supplier: 38 92% 50%;
+
     /* Custom shadows */
     --shadow-sm: 0 1px 2px 0 hsl(222 47% 11% / 0.03);
     --shadow-md: 0 4px 12px -2px hsl(222 47% 11% / 0.08);

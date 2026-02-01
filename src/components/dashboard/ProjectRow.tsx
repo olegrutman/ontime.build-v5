@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Building2, ChevronRight, MoreVertical, Archive, RotateCcw, PauseCircle, CheckCircle2, PlayCircle } from 'lucide-react';
+import { Building2, ChevronRight, MoreVertical, Archive, RotateCcw, PauseCircle, CheckCircle2, PlayCircle, Eye, Edit, Copy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { format } from 'date-fns';
+import { StatusColumn, PROJECT_STATUS_OPTIONS } from '@/components/ui/status-column';
+import { HoverActions, HoverAction } from '@/components/ui/hover-actions';
 
 interface ProjectRowProps {
   project: {
@@ -76,9 +78,22 @@ export function ProjectRow({
     e.stopPropagation();
   };
 
+  const hoverActions: HoverAction[] = [
+    {
+      icon: <Eye className="h-4 w-4" />,
+      label: 'View Project',
+      onClick: () => navigate(`/project/${project.id}`),
+    },
+    {
+      icon: <Edit className="h-4 w-4" />,
+      label: 'Edit Project',
+      onClick: () => navigate(`/project/${project.id}/edit`),
+    },
+  ];
+
   return (
     <Card
-      className="hover:bg-accent/50 transition-colors cursor-pointer"
+      className="group hover:bg-accent/50 transition-colors cursor-pointer"
       onClick={handleRowClick}
     >
       <CardContent className="p-3 sm:p-4">
@@ -103,8 +118,10 @@ export function ProjectRow({
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              <div className="flex items-center gap-1 shrink-0">
+                {/* Hover Actions - Monday-style */}
+                <HoverActions actions={hoverActions} className="mr-1" />
+                <ChevronRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild onClick={handleMenuClick}>
                     <Button variant="ghost" size="icon" className="h-8 w-8">
