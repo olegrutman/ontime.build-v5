@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useChangeOrderProject } from '@/hooks/useChangeOrderProject';
@@ -40,6 +40,11 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
 
   // Check SOV readiness - gates work order creation
   const sovReadiness = useSOVReadiness(projectId);
+
+  // Refetch SOV status on mount to ensure fresh data after tab navigation
+  useEffect(() => {
+    sovReadiness.refetch();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // GC and TC can create work orders with full wizard; FC uses simplified dialog
   const isFC = currentRole === 'FC_PM';

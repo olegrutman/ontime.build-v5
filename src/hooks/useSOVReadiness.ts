@@ -21,7 +21,7 @@ interface SOV {
   is_locked: boolean;
 }
 
-export function useSOVReadiness(projectId: string | undefined): SOVReadiness {
+export function useSOVReadiness(projectId: string | undefined): SOVReadiness & { refetch: () => void } {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [sovs, setSovs] = useState<SOV[]>([]);
   const [loading, setLoading] = useState(true);
@@ -125,5 +125,8 @@ export function useSOVReadiness(projectId: string | undefined): SOVReadiness {
     };
   }, [contracts, sovs, loading]);
 
-  return readiness;
+  return {
+    ...readiness,
+    refetch: fetchData
+  };
 }
