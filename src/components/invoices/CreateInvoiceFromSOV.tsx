@@ -596,6 +596,27 @@ export function CreateInvoiceFromSOV({
                                 </span>
                               </div>
 
+                              {/* Previous billing summary - always visible */}
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">
+                                  {previousBilledAmount > 0 
+                                    ? `Previously billed: ${formatCurrency(previousBilledAmount)} (${previousPercent.toFixed(1)}%)`
+                                    : 'Not yet billed'
+                                  }
+                                </span>
+                                <span className={cn(
+                                  "font-medium",
+                                  item.maxAllowedPercent === 0 
+                                    ? "text-green-600 dark:text-green-400" 
+                                    : "text-muted-foreground"
+                                )}>
+                                  {item.maxAllowedPercent === 0 
+                                    ? "Fully billed" 
+                                    : `${formatCurrency(item.value_amount - previousBilledAmount)} remaining`
+                                  }
+                                </span>
+                              </div>
+
                               {item.enabled && (
                                 <>
                                   {/* Fully billed indicator */}
