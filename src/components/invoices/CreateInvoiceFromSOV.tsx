@@ -488,7 +488,7 @@ export function CreateInvoiceFromSOV({
                     const typeLabel = isWorkOrder ? '[Work Order]' : '[Contract]';
                     return (
                       <SelectItem key={contract.id} value={contract.id}>
-                        {typeLabel} {getContractDisplayName(contract.from_role, contract.to_role)} — {formatCurrency(contract.contract_sum || 0)}
+                        {typeLabel} {getContractDisplayName(contract.from_role, contract.to_role, contract.from_org_name, contract.to_org_name)} — {formatCurrency(contract.contract_sum || 0)}
                       </SelectItem>
                     );
                   })}

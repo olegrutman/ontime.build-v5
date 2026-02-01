@@ -179,7 +179,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
           <div className="text-xs text-muted-foreground mb-6">
             {contracts.map((c, i) => (
               <div key={c.id}>
-                {i + 1}. {getContractDisplayName(c.from_role, c.to_role)} — {formatCurrency(c.contract_sum)}
+                {i + 1}. {getContractDisplayName(c.from_role, c.to_role, c.from_org_name, c.to_org_name)} — {formatCurrency(c.contract_sum)}
               </div>
             ))}
           </div>
