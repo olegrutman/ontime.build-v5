@@ -1,15 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Users, RefreshCw, Mail, CheckCircle, UserPlus } from 'lucide-react';
+import { Users, RefreshCw, Mail, CheckCircle, UserPlus, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { AddTeamMemberDialog } from './AddTeamMemberDialog';
 import { ROLE_PERMISSIONS, OrgType } from '@/types/organization';
+import { cn } from '@/lib/utils';
 
 interface TeamMember {
   id: string;
@@ -47,6 +49,7 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
   const [loading, setLoading] = useState(true);
   const [resending, setResending] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
 
   // Get current user's org type and permissions
   const currentOrg = userOrgRoles[0]?.organization;
@@ -155,98 +158,116 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Project Team
-          </CardTitle>
-          {canInviteMembers && (
-            <Button size="sm" onClick={() => setAddDialogOpen(true)}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Add Team Member
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {team.map((member) => {
-              const isInvited = member.status === 'Invited';
-              const trade = member.trade_custom || member.trade;
-              const showTrade = member.role === 'Trade Contractor' || member.role === 'Field Crew';
+        <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+          <CollapsibleTrigger asChild>
+            <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Project Team ({team.length})
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                {canInviteMembers && (
+                  <Button 
+                    size="sm" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAddDialogOpen(true);
+                    }}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Add Team Member
+                  </Button>
+                )}
+                <ChevronDown className={cn(
+                  "h-4 w-4 text-muted-foreground transition-transform duration-200",
+                  isOpen && "rotate-180"
+                )} />
+              </div>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent>
+              <div className="space-y-3">
+                {team.map((member) => {
+                  const isInvited = member.status === 'Invited';
+                  const trade = member.trade_custom || member.trade;
+                  const showTrade = member.role === 'Trade Contractor' || member.role === 'Field Crew';
 
-              return (
-                <div
-                  key={member.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className="font-medium text-sm truncate">
-                        {member.invited_org_name || 'Unknown Company'}
-                      </span>
-                      <Badge 
-                        variant="outline" 
-                        className={roleColors[member.role] || ''}
-                      >
-                        {member.role}
-                      </Badge>
-                      {showTrade && trade && (
-                        <Badge variant="secondary" className="text-xs">
-                          {trade}
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span>{member.invited_name || 'No contact name'}</span>
-                      <span className="flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        {member.invited_email}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 ml-4">
-                    {isInvited ? (
-                      <>
-                        <Badge variant="outline" className="text-amber-600 border-amber-300">
-                          Invited
-                        </Badge>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleResendInvite(member)}
-                          disabled={resending === member.id}
-                          className="h-8"
-                        >
-                          {resending === member.id ? (
-                            <RefreshCw className="h-3 w-3 animate-spin" />
-                          ) : (
-                            <>
-                              <RefreshCw className="h-3 w-3 mr-1" />
-                              Resend Invite
-                            </>
-                          )}
-                        </Button>
-                      </>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline" className="text-green-600 border-green-300">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Accepted
-                        </Badge>
-                        {member.accepted_at && (
-                          <span className="text-xs text-muted-foreground">
-                            on {format(new Date(member.accepted_at), 'MMM d, yyyy')}
+                  return (
+                    <div
+                      key={member.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          <span className="font-medium text-sm truncate">
+                            {member.invited_org_name || 'Unknown Company'}
                           </span>
+                          <Badge 
+                            variant="outline" 
+                            className={roleColors[member.role] || ''}
+                          >
+                            {member.role}
+                          </Badge>
+                          {showTrade && trade && (
+                            <Badge variant="secondary" className="text-xs">
+                              {trade}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                          <span>{member.invited_name || 'No contact name'}</span>
+                          <span className="flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {member.invited_email}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 ml-4">
+                        {isInvited ? (
+                          <>
+                            <Badge variant="outline" className="text-amber-600 border-amber-300">
+                              Invited
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleResendInvite(member)}
+                              disabled={resending === member.id}
+                              className="h-8"
+                            >
+                              {resending === member.id ? (
+                                <RefreshCw className="h-3 w-3 animate-spin" />
+                              ) : (
+                                <>
+                                  <RefreshCw className="h-3 w-3 mr-1" />
+                                  Resend Invite
+                                </>
+                              )}
+                            </Button>
+                          </>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-green-600 border-green-300">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Accepted
+                            </Badge>
+                            {member.accepted_at && (
+                              <span className="text-xs text-muted-foreground">
+                                on {format(new Date(member.accepted_at), 'MMM d, yyyy')}
+                              </span>
+                            )}
+                          </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
       </Card>
       <AddTeamMemberDialog
         open={addDialogOpen}
