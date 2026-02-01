@@ -20,7 +20,8 @@ import {
   ProjectTopBar,
   WorkOrderSummaryCard,
   WorkOrdersTab,
-  InvoiceSummaryCard
+  InvoiceSummaryCard,
+  PurchaseOrdersTab
 } from '@/components/project';
 import { InvoicesTab } from '@/components/invoices';
 import { ContractSOVEditor } from '@/components/sov';
@@ -241,6 +242,11 @@ export default function ProjectHome() {
                   projectId={id!} 
                   retainagePercent={project.retainage_percent || 0} 
                 />
+              )}
+
+              {/* Purchase Orders Tab */}
+              {activeTab === 'purchase-orders' && (
+                <PurchaseOrdersTab projectId={id!} />
               )}
 
               {/* Documents Tab (placeholder) */}

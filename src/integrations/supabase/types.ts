@@ -2315,6 +2315,123 @@ export type Database = {
         }
         Relationships: []
       }
+      supplier_estimate_items: {
+        Row: {
+          created_at: string | null
+          description: string
+          estimate_id: string
+          id: string
+          line_total: number | null
+          notes: string | null
+          quantity: number
+          supplier_sku: string | null
+          unit_price: number
+          uom: string
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          estimate_id: string
+          id?: string
+          line_total?: number | null
+          notes?: string | null
+          quantity?: number
+          supplier_sku?: string | null
+          unit_price?: number
+          uom?: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          estimate_id?: string
+          id?: string
+          line_total?: number | null
+          notes?: string | null
+          quantity?: number
+          supplier_sku?: string | null
+          unit_price?: number
+          uom?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_estimate_items_estimate_id_fkey"
+            columns: ["estimate_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_estimates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_estimates: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string | null
+          id: string
+          name: string
+          notes: string | null
+          project_id: string
+          status: string
+          submitted_at: string | null
+          supplier_org_id: string
+          total_amount: number | null
+          updated_at: string | null
+          work_order_id: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          project_id: string
+          status?: string
+          submitted_at?: string | null
+          supplier_org_id: string
+          total_amount?: number | null
+          updated_at?: string | null
+          work_order_id?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          project_id?: string
+          status?: string
+          submitted_at?: string | null
+          supplier_org_id?: string
+          total_amount?: number | null
+          updated_at?: string | null
+          work_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_estimates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_estimates_supplier_org_id_fkey"
+            columns: ["supplier_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_estimates_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_order_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       supplier_quotes: {
         Row: {
           created_at: string

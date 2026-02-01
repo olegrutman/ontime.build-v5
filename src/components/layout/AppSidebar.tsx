@@ -55,6 +55,12 @@ const materialsNavItems = [
   { title: 'Project Estimates', url: '/estimates', icon: FileText },
 ];
 
+// Supplier-only nav items
+const supplierNavItems = [
+  { title: 'My Inventory', url: '/supplier/inventory', icon: Boxes },
+  { title: 'My Estimates', url: '/supplier/estimates', icon: FileText },
+];
+
 const approvalNavItems = [
   { title: 'Estimate Approvals', url: '/approvals/estimates', icon: CheckSquare },
   { title: 'Order Approvals', url: '/approvals/orders', icon: CheckSquare },
@@ -73,6 +79,7 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
 
   const currentOrg = userOrgRoles.length > 0 ? userOrgRoles[0].organization : null;
+  const isSupplier = currentOrg?.type === 'SUPPLIER';
 
   const getInitials = (name?: string | null) => {
     if (!name) return 'U';
@@ -180,6 +187,49 @@ export function AppSidebar() {
             </CollapsibleContent>
           </Collapsible>
         </SidebarGroup>
+
+        {/* Supplier Section - Only for Supplier orgs */}
+        {isSupplier && (
+          <SidebarGroup>
+            <Collapsible defaultOpen={isInGroup(supplierNavItems)} className="group/collapsible">
+              <CollapsibleTrigger asChild>
+                <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent rounded-md px-2 py-1.5 justify-between">
+                  {!collapsed && (
+                    <>
+                      <span>My Business</span>
+                      <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                    </>
+                  )}
+                  {collapsed && <Boxes className="h-4 w-4 mx-auto" />}
+                </SidebarGroupLabel>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {supplierNavItems.map((item) => (
+                      <SidebarMenuItem key={item.title}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive(item.url)}
+                          tooltip={collapsed ? item.title : undefined}
+                        >
+                          <NavLink
+                            to={item.url}
+                            className="gap-3"
+                            activeClassName="nav-active"
+                          >
+                            <item.icon className="h-4 w-4 shrink-0" />
+                            {!collapsed && <span>{item.title}</span>}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </Collapsible>
+          </SidebarGroup>
+        )}
 
         {/* Approvals Section - Only for GC_PM */}
         {currentRole === 'GC_PM' && (

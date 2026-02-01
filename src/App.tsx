@@ -21,6 +21,8 @@ import MaterialOrders from "./pages/MaterialOrders";
 import OrderApprovals from "./pages/OrderApprovals";
 import PurchaseOrders from "./pages/PurchaseOrders";
 import ChangeOrders from "./pages/ChangeOrders";
+import SupplierInventory from "./pages/SupplierInventory";
+import SupplierProjectEstimates from "./pages/SupplierProjectEstimates";
 
 import { WorkItemPage } from "@/components/work-item";
 import { ChangeOrderDetailPage } from "@/components/change-order-detail";
@@ -56,6 +58,8 @@ const App = () => (
             <Route path="/change-orders" element={<ChangeOrders />} />
             <Route path="/change-order/:id" element={<ChangeOrderDetailPage />} />
             <Route path="/work-item/:id" element={<WorkItemPage />} />
+            <Route path="/supplier/inventory" element={<SupplierInventory />} />
+            <Route path="/supplier/estimates" element={<SupplierProjectEstimates />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

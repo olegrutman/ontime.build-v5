@@ -123,6 +123,12 @@ export function ProjectTopBar({
               Invoices
             </TabsTrigger>
             <TabsTrigger
+              value="purchase-orders"
+              className="h-8 px-3 data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md"
+            >
+              POs
+            </TabsTrigger>
+            <TabsTrigger
               value="documents"
               className="h-8 px-3 data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md"
               disabled
