@@ -15,6 +15,7 @@ import { TCPricingSummary } from './TCPricingSummary';
 import { MaterialsPanel } from './MaterialsPanel';
 import { EquipmentPanel } from './EquipmentPanel';
 import { ApprovalPanel } from './ApprovalPanel';
+import { TCApprovalPanel } from './TCApprovalPanel';
 import { ParticipantActivationPanel } from './ParticipantActivationPanel';
 import { GCLaborReviewPanel } from './GCLaborReviewPanel';
 import { ContractedPricingCard } from './ContractedPricingCard';
@@ -213,6 +214,16 @@ export function ChangeOrderDetailPage() {
                 onActivateSupplier={activateSupplier}
                 onDeactivate={deactivateParticipant}
                 isActivating={isActivatingParticipant}
+              />
+            )}
+
+            {/* TC Approval Panel - for FC-submitted work orders */}
+            {isTC && changeOrder.created_by_role === 'FC_PM' && (
+              <TCApprovalPanel
+                changeOrder={changeOrder}
+                fcHours={fcHours}
+                onUpdateStatus={updateStatus}
+                isUpdating={isUpdating}
               />
             )}
 

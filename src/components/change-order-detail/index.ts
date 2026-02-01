@@ -9,6 +9,7 @@ export { TCPricingSummary } from './TCPricingSummary';
 export { MaterialsPanel } from './MaterialsPanel';
 export { EquipmentPanel } from './EquipmentPanel';
 export { ApprovalPanel } from './ApprovalPanel';
+export { TCApprovalPanel } from './TCApprovalPanel';
 export { ParticipantActivationPanel } from './ParticipantActivationPanel';
 export { GCLaborReviewPanel } from './GCLaborReviewPanel';
 export { ContractedPricingCard } from './ContractedPricingCard';
