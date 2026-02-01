@@ -30,9 +30,9 @@ export function useChangeOrderProject(projectId?: string) {
     queryFn: async () => {
       if (!projectId) return [];
 
-      // FC users only see work orders where they are a participant
-      if (currentOrgType === 'FC' && currentOrgId) {
-        // First get the work order IDs where this FC is a participant
+      // FC and SUPPLIER users only see work orders where they are a participant
+      if ((currentOrgType === 'FC' || currentOrgType === 'SUPPLIER') && currentOrgId) {
+        // First get the work order IDs where this org is a participant
         const { data: participations, error: participationError } = await supabase
           .from('change_order_participants')
           .select('change_order_id')
