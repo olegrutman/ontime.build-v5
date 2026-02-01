@@ -6,8 +6,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChangeOrderWizardDialog } from '@/components/change-order-wizard';
-import { Plus, FileEdit } from 'lucide-react';
+import { Plus, FileEdit, Eye, Edit } from 'lucide-react';
 import { ChangeOrderStatus } from '@/types/changeOrderProject';
+import { ViewSwitcher, ViewMode } from '@/components/ui/view-switcher';
+import { StatusColumn, CHANGE_ORDER_STATUS_OPTIONS } from '@/components/ui/status-column';
+import { HoverActions, HoverAction } from '@/components/ui/hover-actions';
+import { WorkOrdersBoard } from './WorkOrdersBoard';
 
 interface WorkOrdersTabProps {
   projectId: string;
@@ -19,6 +23,7 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
   const { currentRole } = useAuth();
   const [showWizard, setShowWizard] = useState(false);
   const [activeTab, setActiveTab] = useState<ChangeOrderStatus | 'ALL'>('ALL');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   const {
     changeOrders,
@@ -75,9 +80,16 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
 
   return (
     <div className="space-y-4">
-      {/* Header with New Work Order button */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Work Orders</h2>
+      {/* Header with View Switcher and New Work Order button */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <h2 className="text-lg font-semibold">Work Orders</h2>
+          <ViewSwitcher
+            value={viewMode}
+            onChange={setViewMode}
+            availableModes={['list', 'board']}
+          />
+        </div>
         {canCreate && (
           <Button onClick={() => setShowWizard(true)}>
             <Plus className="h-4 w-4 mr-2" />
@@ -86,30 +98,34 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
         )}
       </div>
 
-      {/* Status Tabs */}
-      <div className="flex flex-wrap gap-2">
-        {(['ALL', 'draft', 'fc_input', 'tc_pricing', 'ready_for_approval', 'approved', 'rejected'] as const).map(
-          (status) => (
-            <Button
-              key={status}
-              variant={activeTab === status ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setActiveTab(status)}
-              className="text-xs"
-            >
-              {getStatusLabel(status)} ({statusCounts[status]})
-            </Button>
-          )
-        )}
-      </div>
+      {/* Status Tabs - only show in list view */}
+      {viewMode === 'list' && (
+        <div className="flex flex-wrap gap-2">
+          {(['ALL', 'draft', 'fc_input', 'tc_pricing', 'ready_for_approval', 'approved', 'rejected'] as const).map(
+            (status) => (
+              <Button
+                key={status}
+                variant={activeTab === status ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setActiveTab(status)}
+                className="text-xs"
+              >
+                {getStatusLabel(status)} ({statusCounts[status]})
+              </Button>
+            )
+          )}
+        </div>
+      )}
 
-      {/* Work Orders List */}
+      {/* Work Orders Content */}
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-24 w-full" />
           ))}
         </div>
+      ) : viewMode === 'board' ? (
+        <WorkOrdersBoard changeOrders={changeOrders} />
       ) : filteredChangeOrders.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
@@ -133,42 +149,59 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredChangeOrders.map((changeOrder) => (
-            <Card
-              key={changeOrder.id}
-              className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => navigate(`/change-order/${changeOrder.id}`)}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-semibold line-clamp-1">{changeOrder.title}</h3>
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full whitespace-nowrap ${getStatusColor(
-                      changeOrder.status
-                    )}`}
-                  >
-                    {getStatusLabel(changeOrder.status)}
-                  </span>
-                </div>
-                {changeOrder.description && (
-                  <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                    {changeOrder.description}
-                  </p>
-                )}
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  {changeOrder.work_type && (
-                    <span className="capitalize">{changeOrder.work_type.replace('_', ' ')}</span>
+          {filteredChangeOrders.map((changeOrder) => {
+            const hoverActions: HoverAction[] = [
+              {
+                icon: <Eye className="h-4 w-4" />,
+                label: 'View',
+                onClick: () => navigate(`/change-order/${changeOrder.id}`),
+              },
+              {
+                icon: <Edit className="h-4 w-4" />,
+                label: 'Edit',
+                onClick: () => navigate(`/change-order/${changeOrder.id}`),
+              },
+            ];
+
+            return (
+              <Card
+                key={changeOrder.id}
+                className="group cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => navigate(`/change-order/${changeOrder.id}`)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-2 gap-2">
+                    <h3 className="font-semibold line-clamp-1 flex-1">{changeOrder.title}</h3>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <HoverActions actions={hoverActions} />
+                      <StatusColumn
+                        value={changeOrder.status}
+                        options={CHANGE_ORDER_STATUS_OPTIONS}
+                        size="sm"
+                        disabled
+                      />
+                    </div>
+                  </div>
+                  {changeOrder.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+                      {changeOrder.description}
+                    </p>
                   )}
-                  {changeOrder.requires_materials && (
-                    <span className="bg-muted px-2 py-0.5 rounded">Materials</span>
-                  )}
-                  {changeOrder.requires_equipment && (
-                    <span className="bg-muted px-2 py-0.5 rounded">Equipment</span>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    {changeOrder.work_type && (
+                      <span className="capitalize">{changeOrder.work_type.replace('_', ' ')}</span>
+                    )}
+                    {changeOrder.requires_materials && (
+                      <span className="bg-muted px-2 py-0.5 rounded">Materials</span>
+                    )}
+                    {changeOrder.requires_equipment && (
+                      <span className="bg-muted px-2 py-0.5 rounded">Equipment</span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 

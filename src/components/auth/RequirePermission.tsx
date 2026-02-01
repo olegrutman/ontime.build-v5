@@ -1,0 +1,144 @@
+import * as React from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { RolePermissions, ROLE_PERMISSIONS, AppRole } from '@/types/organization';
+
+type PermissionKey = keyof RolePermissions;
+
+interface RequirePermissionProps {
+  /** Single permission or array of permissions to check */
+  permission: PermissionKey | PermissionKey[];
+  /** If true, requires ALL permissions. If false (default), requires ANY permission */
+  requireAll?: boolean;
+  /** Content to render when permission is granted */
+  children: React.ReactNode;
+  /** Fallback content when permission is denied (default: null) */
+  fallback?: React.ReactNode;
+}
+
+/**
+ * Permission-aware component that conditionally renders children based on user role permissions.
+ * 
+ * @example
+ * // Single permission
+ * <RequirePermission permission="canApprove">
+ *   <Button>Approve</Button>
+ * </RequirePermission>
+ * 
+ * @example
+ * // Multiple permissions (ANY)
+ * <RequirePermission permission={["canViewRates", "canViewMargins"]}>
+ *   <PricingDetails />
+ * </RequirePermission>
+ * 
+ * @example
+ * // Multiple permissions (ALL)
+ * <RequirePermission permission={["canApprove", "canViewInvoices"]} requireAll>
+ *   <AdminPanel />
+ * </RequirePermission>
+ */
+export function RequirePermission({
+  permission,
+  requireAll = false,
+  children,
+  fallback = null,
+}: RequirePermissionProps) {
+  const { currentRole } = useAuth();
+
+  const hasPermission = React.useMemo(() => {
+    if (!currentRole) return false;
+
+    const permissions = ROLE_PERMISSIONS[currentRole as AppRole];
+    if (!permissions) return false;
+
+    const permissionList = Array.isArray(permission) ? permission : [permission];
+
+    if (requireAll) {
+      return permissionList.every((p) => permissions[p]);
+    }
+    return permissionList.some((p) => permissions[p]);
+  }, [currentRole, permission, requireAll]);
+
+  if (!hasPermission) {
+    return <>{fallback}</>;
+  }
+
+  return <>{children}</>;
+}
+
+/**
+ * Hook to check permissions programmatically
+ */
+export function usePermission(permission: PermissionKey | PermissionKey[], requireAll = false): boolean {
+  const { currentRole } = useAuth();
+
+  return React.useMemo(() => {
+    if (!currentRole) return false;
+
+    const permissions = ROLE_PERMISSIONS[currentRole as AppRole];
+    if (!permissions) return false;
+
+    const permissionList = Array.isArray(permission) ? permission : [permission];
+
+    if (requireAll) {
+      return permissionList.every((p) => permissions[p]);
+    }
+    return permissionList.some((p) => permissions[p]);
+  }, [currentRole, permission, requireAll]);
+}
+
+/**
+ * Higher-order component for permission-based rendering
+ */
+export function withPermission<P extends object>(
+  WrappedComponent: React.ComponentType<P>,
+  permission: PermissionKey | PermissionKey[],
+  options?: { requireAll?: boolean; fallback?: React.ReactNode }
+): React.FC<P> {
+  const { requireAll = false, fallback = null } = options || {};
+
+  return function PermissionWrappedComponent(props: P) {
+    return (
+      <RequirePermission permission={permission} requireAll={requireAll} fallback={fallback}>
+        <WrappedComponent {...props} />
+      </RequirePermission>
+    );
+  };
+}
+
+/**
+ * Component that shows different content based on organization type
+ */
+interface RequireOrgTypeProps {
+  orgTypes: ('GC' | 'TC' | 'FC' | 'SUPPLIER')[];
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}
+
+export function RequireOrgType({ orgTypes, children, fallback = null }: RequireOrgTypeProps) {
+  const { currentRole } = useAuth();
+
+  const orgType = React.useMemo(() => {
+    if (!currentRole) return null;
+    
+    switch (currentRole) {
+      case 'GC_PM':
+        return 'GC';
+      case 'TC_PM':
+        return 'TC';
+      case 'FC_PM':
+        return 'FC';
+      case 'FS':
+        return 'TC'; // Field supervisors are under TC
+      case 'SUPPLIER':
+        return 'SUPPLIER';
+      default:
+        return null;
+    }
+  }, [currentRole]);
+
+  if (!orgType || !orgTypes.includes(orgType)) {
+    return <>{fallback}</>;
+  }
+
+  return <>{children}</>;
+}
