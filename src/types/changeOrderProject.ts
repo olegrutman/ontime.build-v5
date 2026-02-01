@@ -5,6 +5,9 @@ export interface LocationData {
   level?: string; // Floor, Roof, Basement, etc.
   unit?: string;
   room_area?: string; // Kitchen, Bathroom, Corridor, etc.
+  custom_room_area?: string; // When "Other" is selected
+  exterior_feature?: string; // e.g., "balcony_left", "siding_front", "roof_deck"
+  custom_exterior?: string; // When "Other" is selected
 }
 
 export type ChangeOrderWorkType = 
@@ -44,6 +47,8 @@ export interface ChangeOrderProject {
   equipment_total: number;
   final_price: number;
   rejection_notes: string | null;
+  reason: string | null;
+  fixing_trade_notes: string | null;
   created_by: string;
   created_by_role: string | null;
   created_at: string;
@@ -165,20 +170,23 @@ export interface ChangeOrderChecklist {
 
 // Wizard form data
 export interface ChangeOrderWizardData {
-  // Step 1: Location
-  location_data: LocationData;
-  
-  // Step 2: Title (optional, auto-generated from location)
+  // Step 1: Title (optional, auto-generated from location)
   title: string;
+  
+  // Step 2: Location
+  location_data: LocationData;
   
   // Step 3: Work Type
   work_type: ChangeOrderWorkType | null;
   
-  // Step 4: Description
-  description: string;
-  
-  // Reason for the work order
+  // Reason for the work order (especially for fixing)
   reason?: string;
+  
+  // Notes about which trade caused the issue (when fixing due to other trades)
+  fixing_trade_notes?: string;
+  
+  // Step 4: Description (AI-generated or manual)
+  description: string;
   
   // Step 5: Materials
   requires_materials: boolean;

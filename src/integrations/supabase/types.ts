@@ -364,12 +364,14 @@ export type Database = {
           equipment_cost_responsibility: string | null
           equipment_total: number | null
           final_price: number | null
+          fixing_trade_notes: string | null
           id: string
           labor_total: number | null
           location_data: Json | null
           material_cost_responsibility: string | null
           material_total: number | null
           project_id: string
+          reason: string | null
           rejection_notes: string | null
           requires_equipment: boolean | null
           requires_materials: boolean | null
@@ -386,12 +388,14 @@ export type Database = {
           equipment_cost_responsibility?: string | null
           equipment_total?: number | null
           final_price?: number | null
+          fixing_trade_notes?: string | null
           id?: string
           labor_total?: number | null
           location_data?: Json | null
           material_cost_responsibility?: string | null
           material_total?: number | null
           project_id: string
+          reason?: string | null
           rejection_notes?: string | null
           requires_equipment?: boolean | null
           requires_materials?: boolean | null
@@ -408,12 +412,14 @@ export type Database = {
           equipment_cost_responsibility?: string | null
           equipment_total?: number | null
           final_price?: number | null
+          fixing_trade_notes?: string | null
           id?: string
           labor_total?: number | null
           location_data?: Json | null
           material_cost_responsibility?: string | null
           material_total?: number | null
           project_id?: string
+          reason?: string | null
           rejection_notes?: string | null
           requires_equipment?: boolean | null
           requires_materials?: boolean | null

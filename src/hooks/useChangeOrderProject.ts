@@ -91,6 +91,8 @@ export function useChangeOrderProject(projectId?: string) {
         description: data.description || null,
         location_data: data.location_data,
         work_type: data.work_type,
+        reason: data.reason || null,
+        fixing_trade_notes: data.fixing_trade_notes || null,
         requires_materials: data.requires_materials,
         material_cost_responsibility: data.material_cost_responsibility,
         requires_equipment: data.requires_equipment,
