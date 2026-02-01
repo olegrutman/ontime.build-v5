@@ -230,6 +230,7 @@ export function useContractSOV(projectId: string | undefined) {
   const [sovs, setSovs] = useState<ContractSOV[]>([]);
   const [sovItems, setSovItems] = useState<Record<string, ContractSOVItem[]>>({});
   const [templates, setTemplates] = useState<SOVTemplate[]>([]);
+  const [sovBillingStatus, setSovBillingStatus] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -299,8 +300,22 @@ export function useContractSOV(projectId: string | undefined) {
           itemsBySov[item.sov_id].push(item);
         }
         setSovItems(itemsBySov);
+        
+        // Check billing status for each SOV (has submitted/approved/paid invoices)
+        const billingResult = await supabase
+          .from('invoices')
+          .select('sov_id, status')
+          .in('sov_id', fetchedSovs.map(s => s.id))
+          .in('status', ['SUBMITTED', 'APPROVED', 'PAID']);
+        
+        const billingStatus: Record<string, boolean> = {};
+        for (const sov of fetchedSovs) {
+          billingStatus[sov.id] = (billingResult.data || []).some(inv => inv.sov_id === sov.id);
+        }
+        setSovBillingStatus(billingStatus);
       } else {
         setSovItems({});
+        setSovBillingStatus({});
       }
     } catch (error) {
       console.error('Error fetching SOV data:', error);
@@ -778,6 +793,11 @@ export function useContractSOV(projectId: string | undefined) {
     }
   }, [sovs, getSOVTotals]);
 
+  // Check if an SOV has billing activity (submitted/approved/paid invoices)
+  const hasBillingActivity = useCallback((sovId: string): boolean => {
+    return sovBillingStatus[sovId] || false;
+  }, [sovBillingStatus]);
+
   return {
     contracts,
     sovs,
@@ -794,6 +814,7 @@ export function useContractSOV(projectId: string | undefined) {
     reorderItems,
     getSOVTotals,
     toggleSOVLock,
+    hasBillingActivity,
     refresh: fetchData
   };
 }

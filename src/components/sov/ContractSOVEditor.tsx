@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, GripVertical, FileSpreadsheet, Pencil, Check, X, AlertCircle, ChevronDown, ChevronRight, Lock, Unlock } from 'lucide-react';
+import { Plus, Trash2, GripVertical, FileSpreadsheet, Pencil, Check, X, AlertCircle, ChevronDown, ChevronRight, Lock, Unlock, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,7 +47,8 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
     deleteSOV,
     reorderItems,
     getSOVTotals,
-    toggleSOVLock
+    toggleSOVLock,
+    hasBillingActivity
   } = useContractSOV(projectId);
 
   const [expandedSovs, setExpandedSovs] = useState<Set<string>>(new Set());
@@ -237,6 +239,12 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
         // Determine if this is a work order SOV
         const isWorkOrderSOV = contract?.trade === 'Work Order' || contract?.trade === 'Work Order Labor';
         const sovSourceLabel = isWorkOrderSOV ? 'Work Order' : 'Contract';
+        
+        // Check if SOV has billing activity (submitted/approved/paid invoices)
+        const hasBilling = hasBillingActivity(sov.id);
+        
+        // SOV is effectively locked if manually locked OR has billing activity
+        const isEffectivelyLocked = sov.is_locked || hasBilling;
 
         return (
           <Card key={sov.id}>
@@ -263,28 +271,36 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                       </div>
                     </div>
                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                      {/* Lock status badge */}
-                      {sov.is_locked && (
+                      {/* Billing Active badge - takes precedence over manual lock */}
+                      {hasBilling && (
+                        <Badge variant="secondary" className="gap-1 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                          <DollarSign className="h-3 w-3" />
+                          Billing Active
+                        </Badge>
+                      )}
+                      
+                      {/* Manual lock status badge - only show if not billing active */}
+                      {!hasBilling && sov.is_locked && (
                         <Badge variant="secondary" className="gap-1 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
                           <Lock className="h-3 w-3" />
                           Locked
                         </Badge>
                       )}
                       
-                      {!totals.isValid && items.length > 0 && !sov.is_locked && (
+                      {!totals.isValid && items.length > 0 && !isEffectivelyLocked && (
                         <Badge variant="destructive" className="gap-1">
                           <AlertCircle className="h-3 w-3" />
                           {totals.totalPercent.toFixed(1)}%
                         </Badge>
                       )}
-                      {totals.isValid && items.length > 0 && (
+                      {totals.isValid && items.length > 0 && !hasBilling && (
                         <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
                           100%
                         </Badge>
                       )}
                       
-                      {/* Lock/Unlock button - hidden for FC */}
-                      {!isFC && (
+                      {/* Lock/Unlock button - hidden for FC and when billing is active */}
+                      {!isFC && !hasBilling && (
                         <>
                           {sov.is_locked ? (
                             <AlertDialog>
@@ -342,50 +358,68 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                               </AlertDialogContent>
                             </AlertDialog>
                           ) : null}
-                          
-                          {/* Delete SOV button - only if no billed items and not locked */}
-                          {totals.totalBilled === 0 && !sov.is_locked ? (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-8 w-8"
-                                  disabled={saving}
-                                >
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete SOV</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Are you sure you want to delete "{sov.sov_name || 'this SOV'}" and all {items.length} line items? This action cannot be undone.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => deleteSOV(sov.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Delete SOV
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          ) : (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8 cursor-not-allowed opacity-50"
-                              disabled
-                              title={sov.is_locked ? "SOV is locked" : "Cannot delete - SOV has billing history"}
-                            >
-                              <Trash2 className="h-4 w-4 text-muted-foreground" />
-                            </Button>
-                          )}
                         </>
+                      )}
+                      
+                      {/* Billing active indicator - tooltip explaining why locked */}
+                      {hasBilling && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help">
+                                <Lock className="h-4 w-4 text-green-600" />
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>SOV is locked because invoices have been submitted</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                      
+                      {/* Delete SOV button - only if no billed items, not locked, and no billing activity */}
+                      {!isFC && (
+                        totals.totalBilled === 0 && !isEffectivelyLocked ? (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-8 w-8"
+                                disabled={saving}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete SOV</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete "{sov.sov_name || 'this SOV'}" and all {items.length} line items? This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => deleteSOV(sov.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete SOV
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        ) : (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 cursor-not-allowed opacity-50"
+                            disabled
+                            title={hasBilling ? "SOV has billing activity" : sov.is_locked ? "SOV is locked" : "Cannot delete - SOV has billing history"}
+                          >
+                            <Trash2 className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                        )
                       )}
                     </div>
                   </div>
@@ -394,8 +428,18 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
 
               <CollapsibleContent>
                 <CardContent className="pt-0">
-                  {/* Locked notice */}
-                  {sov.is_locked && (
+                  {/* Billing Active notice */}
+                  {hasBilling && (
+                    <Alert className="mb-4 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30">
+                      <DollarSign className="h-4 w-4 text-green-600" />
+                      <AlertDescription className="text-green-800 dark:text-green-200">
+                        This SOV has active billing. Editing is disabled because invoices have been submitted.
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  
+                  {/* Manual Locked notice - only show if not billing active */}
+                  {!hasBilling && sov.is_locked && (
                     <Alert className="mb-4 border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
                       <Lock className="h-4 w-4 text-amber-600" />
                       <AlertDescription className="text-amber-800 dark:text-amber-200">
@@ -405,7 +449,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                   )}
 
                   {/* Percent validation warning */}
-                  {!totals.isValid && items.length > 0 && !sov.is_locked && (
+                  {!totals.isValid && items.length > 0 && !isEffectivelyLocked && (
                     <Alert variant="destructive" className="mb-4">
                       <AlertCircle className="h-4 w-4" />
                       <AlertDescription>
@@ -417,8 +461,8 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                     </Alert>
                   )}
 
-                  {/* Add new item - hidden when locked or FC */}
-                  {!sov.is_locked && !isFC && (
+                  {/* Add new item - hidden when effectively locked or FC */}
+                  {!isEffectivelyLocked && !isFC && (
                     <div className="flex gap-2 mb-4">
                       <Input
                         placeholder="Add new line item..."
@@ -446,7 +490,8 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                       const isDragging = draggedItem?.id === item.id;
                       const isDragOver = dragOverIndex?.sovId === sov.id && dragOverIndex?.index === index;
 
-                      const isLocked = sov.is_locked;
+                      // Use effective lock (manual lock OR billing activity)
+                      const isLocked = isEffectivelyLocked;
 
                       return (
                         <div

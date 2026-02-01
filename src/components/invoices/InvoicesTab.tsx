@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Receipt, Filter, AlertCircle, Send, Inbox } from 'lucide-react';
+import { Plus, Receipt, Filter, AlertCircle, Send, Inbox, AlertTriangle, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   Select,
   SelectContent,
@@ -17,7 +18,9 @@ import { InvoiceCard } from './InvoiceCard';
 import { InvoiceDetail } from './InvoiceDetail';
 import { Invoice, InvoiceStatus, INVOICE_STATUS_LABELS } from '@/types/invoice';
 import { useAuth } from '@/hooks/useAuth';
+import { useSOVReadiness } from '@/hooks/useSOVReadiness';
 import { toast } from 'sonner';
+
 interface InvoicesTabProps {
   projectId: string;
   retainagePercent: number;
@@ -42,6 +45,9 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [invoiceDirection, setInvoiceDirection] = useState<'sent' | 'received'>('sent');
+
+  // Check SOV readiness - gates invoice creation
+  const sovReadiness = useSOVReadiness(projectId);
 
   // Get current user's organization ID and type
   const currentOrgId = userOrgRoles[0]?.organization?.id;
@@ -73,6 +79,9 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
     if (currentOrgType === 'GC') return false;
     return contractsWhereUserCanInvoice.length > 0;
   }, [currentOrgType, contractsWhereUserCanInvoice]);
+
+  // Block invoice creation if SOVs aren't ready
+  const isBlocked = !sovReadiness.isReady && !sovReadiness.loading;
 
   // Separate invoices into sent and received
   const { sentInvoices, receivedInvoices } = useMemo(() => {
@@ -349,6 +358,31 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
     </div>
   );
 
+  const renderSOVAlert = () => {
+    if (!isBlocked) return null;
+    return (
+      <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+        <AlertTriangle className="h-4 w-4 text-amber-600" />
+        <AlertTitle className="text-amber-800 dark:text-amber-200">SOV Setup Required</AlertTitle>
+        <AlertDescription className="text-amber-700 dark:text-amber-300 flex items-center justify-between">
+          <span>{sovReadiness.message}</span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="ml-4 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/50"
+            onClick={() => {
+              const sovTabButton = document.querySelector('[data-value="sov"]') as HTMLButtonElement;
+              if (sovTabButton) sovTabButton.click();
+            }}
+          >
+            Go to SOV Tab
+            <ArrowRight className="h-4 w-4 ml-1" />
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  };
+
   const renderHeader = (showCreateButton: boolean) => (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
       <div>
@@ -384,10 +418,23 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
         </Select>
 
         {showCreateButton && canCreateInvoice && (
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Invoice
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button onClick={() => setCreateDialogOpen(true)} disabled={isBlocked}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    New Invoice
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {isBlocked && (
+                <TooltipContent>
+                  <p>Create and lock all SOVs first</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         )}
       </div>
     </div>
@@ -420,6 +467,7 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
           </TabsList>
 
           <TabsContent value="sent" className="space-y-6 mt-6">
+            {renderSOVAlert()}
             {renderHeader(true)}
             <Alert>
               <AlertCircle className="h-4 w-4" />
@@ -430,6 +478,7 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
           </TabsContent>
 
           <TabsContent value="received" className="space-y-6 mt-6">
+            {renderSOVAlert()}
             {renderHeader(false)}
             <Alert>
               <AlertCircle className="h-4 w-4" />
@@ -453,6 +502,7 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
   // For GC and FC: Single view
   return (
     <div className="space-y-6">
+      {renderSOVAlert()}
       {renderHeader(currentOrgType !== 'GC')}
 
       {roleContext.message && (
