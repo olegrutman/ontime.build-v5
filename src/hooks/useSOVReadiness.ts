@@ -21,9 +21,13 @@ interface SOV {
   is_locked: boolean;
 }
 
+// Billing activity statuses that indicate SOV is effectively locked
+const BILLING_ACTIVE_STATUSES = ['SUBMITTED', 'APPROVED', 'PAID'];
+
 export function useSOVReadiness(projectId: string | undefined): SOVReadiness & { refetch: () => void } {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [sovs, setSovs] = useState<SOV[]>([]);
+  const [contractsWithBilling, setContractsWithBilling] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -34,7 +38,7 @@ export function useSOVReadiness(projectId: string | undefined): SOVReadiness & {
 
     setLoading(true);
     try {
-      const [contractsResult, sovsResult] = await Promise.all([
+      const [contractsResult, sovsResult, billingResult] = await Promise.all([
         supabase
           .from('project_contracts')
           .select('id, contract_sum, trade')
@@ -42,11 +46,25 @@ export function useSOVReadiness(projectId: string | undefined): SOVReadiness & {
         supabase
           .from('project_sov')
           .select('id, contract_id, is_locked')
+          .eq('project_id', projectId),
+        // Fetch contracts that have active billing (invoices in SUBMITTED/APPROVED/PAID status)
+        supabase
+          .from('invoices')
+          .select('contract_id')
           .eq('project_id', projectId)
+          .in('status', BILLING_ACTIVE_STATUSES)
       ]);
 
       setContracts((contractsResult.data || []) as Contract[]);
       setSovs((sovsResult.data || []) as SOV[]);
+      
+      // Build set of contract IDs that have active billing
+      const billingSet = new Set(
+        (billingResult.data || [])
+          .map(i => i.contract_id)
+          .filter((id): id is string => id !== null)
+      );
+      setContractsWithBilling(billingSet);
     } catch (error) {
       console.error('Error fetching SOV readiness data:', error);
     } finally {
@@ -93,9 +111,12 @@ export function useSOVReadiness(projectId: string | undefined): SOVReadiness & {
     const contractsWithSOVs = new Set(sovs.map(s => s.contract_id).filter(Boolean));
     const contractsWithoutSOVs = primaryContracts.filter(c => !contractsWithSOVs.has(c.id));
 
-    // Check which SOVs are unlocked
+    // Check which SOVs are unlocked AND have no billing activity
+    // An SOV is considered "ready" if is_locked=true OR has active billing
     const unlockedSOVs = sovs.filter(
-      s => !s.is_locked && primaryContracts.some(c => c.id === s.contract_id)
+      s => !s.is_locked && 
+           !contractsWithBilling.has(s.contract_id || '') && 
+           primaryContracts.some(c => c.id === s.contract_id)
     );
 
     const pendingContracts = contractsWithoutSOVs.length;
@@ -123,7 +144,7 @@ export function useSOVReadiness(projectId: string | undefined): SOVReadiness & {
       loading: false,
       message
     };
-  }, [contracts, sovs, loading]);
+  }, [contracts, sovs, contractsWithBilling, loading]);
 
   return {
     ...readiness,
