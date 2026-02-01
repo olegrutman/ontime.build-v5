@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { WorkOrderWizard } from '@/components/work-order-wizard';
+import { FCWorkOrderDialog, FCWorkOrderData } from '@/components/fc-work-order';
 import { Plus, FileEdit, Eye, Edit } from 'lucide-react';
 import { ChangeOrderStatus } from '@/types/changeOrderProject';
 import { ViewSwitcher, ViewMode } from '@/components/ui/view-switcher';
@@ -22,6 +23,7 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
   const navigate = useNavigate();
   const { currentRole } = useAuth();
   const [showWizard, setShowWizard] = useState(false);
+  const [showFCDialog, setShowFCDialog] = useState(false);
   const [activeTab, setActiveTab] = useState<ChangeOrderStatus | 'ALL'>('ALL');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
 
@@ -29,11 +31,14 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
     changeOrders,
     isLoading,
     createChangeOrder,
+    createFCWorkOrder,
     isCreating,
+    isCreatingFC,
   } = useChangeOrderProject(projectId);
 
-  // GC and TC can create work orders; FC can also submit work orders for TC approval
-  const canCreate = currentRole === 'GC_PM' || currentRole === 'TC_PM' || currentRole === 'FC_PM';
+  // GC and TC can create work orders with full wizard; FC uses simplified dialog
+  const isFC = currentRole === 'FC_PM';
+  const canCreate = currentRole === 'GC_PM' || currentRole === 'TC_PM' || isFC;
 
   const filteredChangeOrders =
     activeTab === 'ALL'
@@ -91,9 +96,9 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
           />
         </div>
         {canCreate && (
-          <Button onClick={() => setShowWizard(true)}>
+          <Button onClick={() => isFC ? setShowFCDialog(true) : setShowWizard(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            New Work Order
+            {isFC ? 'Submit Work Order' : 'New Work Order'}
           </Button>
         )}
       </div>
@@ -205,17 +210,36 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
         </div>
       )}
 
-      {/* Work Order Wizard */}
-      <WorkOrderWizard
-        open={showWizard}
-        onOpenChange={setShowWizard}
-        projectId={projectId}
-        projectName={projectName}
-        onComplete={async (data) => {
-          await createChangeOrder(data);
-        }}
-        isSubmitting={isCreating}
-      />
+      {/* Work Order Wizard (GC/TC) */}
+      {!isFC && (
+        <WorkOrderWizard
+          open={showWizard}
+          onOpenChange={setShowWizard}
+          projectId={projectId}
+          projectName={projectName}
+          onComplete={async (data) => {
+            await createChangeOrder(data);
+          }}
+          isSubmitting={isCreating}
+        />
+      )}
+
+      {/* FC Work Order Dialog (simplified) */}
+      {isFC && (
+        <FCWorkOrderDialog
+          open={showFCDialog}
+          onOpenChange={setShowFCDialog}
+          projectId={projectId}
+          projectName={projectName}
+          onSubmit={async (data: FCWorkOrderData) => {
+            await createFCWorkOrder({
+              project_id: projectId,
+              ...data,
+            });
+          }}
+          isSubmitting={isCreatingFC}
+        />
+      )}
     </div>
   );
 }

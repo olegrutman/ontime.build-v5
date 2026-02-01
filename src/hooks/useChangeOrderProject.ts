@@ -179,6 +179,102 @@ export function useChangeOrderProject(projectId?: string) {
     },
   });
 
+  // FC creates a simplified work order that goes directly to TC for approval
+  const createFCWorkOrderMutation = useMutation({
+    mutationFn: async (data: {
+      project_id: string;
+      location_data: LocationData;
+      description: string;
+      pricing_type: 'hourly' | 'lump_sum';
+      hours?: number;
+      hourly_rate?: number;
+      lump_sum?: number;
+    }) => {
+      if (!user || !currentOrgId) throw new Error('Not authenticated');
+
+      // Generate title from location
+      const title = generateTitleFromLocation(data.location_data);
+
+      // Create the work order with status 'tc_pricing' (awaiting TC approval)
+      const insertData = {
+        project_id: data.project_id,
+        title,
+        description: data.description,
+        location_data: data.location_data,
+        work_type: null, // FC doesn't specify work type
+        requires_materials: false,
+        material_cost_responsibility: null,
+        requires_equipment: false,
+        equipment_cost_responsibility: null,
+        created_by: user.id,
+        created_by_role: currentRole,
+        status: 'tc_pricing', // Goes directly to TC for review
+      };
+
+      const { data: result, error } = await supabase
+        .from('change_order_projects')
+        .insert(insertData as never)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      const workOrder = result as unknown as ChangeOrderProject;
+
+      // Add FC as participant
+      const { error: participantError } = await supabase
+        .from('change_order_participants')
+        .insert({
+          change_order_id: workOrder.id,
+          organization_id: currentOrgId,
+          role: 'FC',
+          is_active: true,
+          invited_by: user.id,
+        });
+
+      if (participantError) {
+        console.error('Error adding FC participant:', participantError);
+      }
+
+      // Add FC hours entry with their pricing
+      const laborTotal = data.pricing_type === 'hourly'
+        ? (data.hours || 0) * (data.hourly_rate || 0)
+        : data.lump_sum || 0;
+
+      const { error: hoursError } = await supabase
+        .from('change_order_fc_hours')
+        .insert({
+          change_order_id: workOrder.id,
+          description: data.description,
+          pricing_type: data.pricing_type,
+          hours: data.hours || 0,
+          hourly_rate: data.pricing_type === 'hourly' ? data.hourly_rate : null,
+          lump_sum: data.pricing_type === 'lump_sum' ? data.lump_sum : null,
+          labor_total: laborTotal,
+          is_locked: false,
+          entered_by: user.id,
+        });
+
+      if (hoursError) {
+        console.error('Error adding FC hours:', hoursError);
+      }
+
+      return workOrder;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['change-order-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['change-order-fc-hours'] });
+      toast({ title: 'Work Order submitted to Trade Contractor' });
+    },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to submit Work Order',
+        description: error.message,
+      });
+    },
+  });
+
   // Update change order
   const updateMutation = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<ChangeOrderProject> & { id: string }) => {
@@ -243,9 +339,11 @@ export function useChangeOrderProject(projectId?: string) {
     changeOrders,
     isLoading,
     createChangeOrder: createMutation.mutateAsync,
+    createFCWorkOrder: createFCWorkOrderMutation.mutateAsync,
     updateChangeOrder: updateMutation.mutate,
     updateStatus: updateStatusMutation.mutate,
     isCreating: createMutation.isPending,
+    isCreatingFC: createFCWorkOrderMutation.isPending,
     isUpdating: updateMutation.isPending,
   };
 }
