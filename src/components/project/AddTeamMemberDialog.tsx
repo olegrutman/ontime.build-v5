@@ -292,7 +292,7 @@ export function AddTeamMemberDialog({
 
       // Insert into project_team with status = Invited
       // Existing orgs should NOT be auto-accepted; they must accept via dashboard invite flow.
-      const { error: teamError } = await supabase
+      const { data: teamData, error: teamError } = await supabase
         .from('project_team')
         .insert({
           project_id: projectId,
@@ -305,9 +305,23 @@ export function AddTeamMemberDialog({
           invited_org_name: selectedResult.org_name,
           invited_by_user_id: user.id,
           status: 'Invited',
-        });
+        })
+        .select('id')
+        .single();
 
       if (teamError) throw teamError;
+
+      // Create project_invites record for existing orgs too (ensures consistent invite acceptance flow)
+      await supabase.from('project_invites').insert({
+        project_id: projectId,
+        project_team_id: teamData.id,
+        role: selectedRole,
+        trade: requiresTrade(selectedRole) ? selectedTrade : null,
+        invited_email: selectedResult.contact_email,
+        invited_name: selectedResult.contact_name,
+        invited_org_name: selectedResult.org_name,
+        invited_by_user_id: user.id,
+      });
 
       // Note: project_participants insert is now handled by database trigger
       // (trg_sync_team_to_participants) which also fires the notification
