@@ -170,10 +170,31 @@ export default function EditProject() {
 
       // Create contract if applicable
       if (newMember.role !== 'Supplier') {
-        await supabase.from('project_contracts').insert({
+        // Determine contract direction based on who should invoice whom
+        // Worker (invoice sender) = from_org, Payer = to_org
+        const isCreatorUpstream = 
+          (creatorRole === 'General Contractor') ||
+          (creatorRole === 'Trade Contractor' && newMember.role === 'Field Crew');
+
+        const contractPayload = isCreatorUpstream ? {
+          // Invitee is worker, creator is payer
+          project_id: id,
+          from_org_id: null, // Invitee org not yet known (they haven't accepted)
+          from_role: newMember.role,
+          to_org_id: currentOrg?.id,
+          to_role: creatorRole,
+          trade: newMember.trade,
+          to_project_team_id: teamMember.id,
+          contract_sum: newContractSum,
+          retainage_percent: newRetainagePercent,
+          allow_mobilization_line_item: newAllowMobilization,
+          created_by_user_id: user.id,
+        } : {
+          // Creator is worker, invitee is payer (e.g., TC inviting GC)
           project_id: id,
           from_org_id: currentOrg?.id,
           from_role: creatorRole,
+          to_org_id: null, // Invitee org not yet known (they haven't accepted)
           to_role: newMember.role,
           trade: newMember.trade,
           to_project_team_id: teamMember.id,
@@ -181,7 +202,9 @@ export default function EditProject() {
           retainage_percent: newRetainagePercent,
           allow_mobilization_line_item: newAllowMobilization,
           created_by_user_id: user.id,
-        });
+        };
+
+        await supabase.from('project_contracts').insert(contractPayload);
       }
 
       setExistingTeam([...existingTeam, teamMember as ExistingTeamMember]);

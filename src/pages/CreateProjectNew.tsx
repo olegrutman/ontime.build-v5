@@ -313,14 +313,36 @@ export default function CreateProjectNew() {
 
         const existing = existingContracts?.find((c) => c.to_project_team_id === teamMember.id);
 
-        const payload = {
+        // Determine contract direction based on who should invoice whom
+        // Worker (invoice sender) = from_org, Payer = to_org
+        // If creator is upstream (GC or TC inviting FC), invitee is the worker
+        const isCreatorUpstream = 
+          (creatorRole === 'General Contractor') ||
+          (creatorRole === 'Trade Contractor' && teamMember.role === 'Field Crew');
+
+        const payload = isCreatorUpstream ? {
+          // Invitee is worker, creator is payer
+          project_id: projectId,
+          from_org_id: teamMember.org_id,
+          from_role: teamMember.role,
+          to_org_id: currentOrg?.id,
+          to_role: creatorRole,
+          trade: teamMember.trade,
+          to_project_team_id: teamMember.id,
+          contract_sum: contract?.contractSum ?? 0,
+          retainage_percent: contract?.retainagePercent ?? 0,
+          allow_mobilization_line_item: contract?.allowMobilization ?? false,
+          notes: contract?.notes ?? null,
+          created_by_user_id: user?.id,
+        } : {
+          // Creator is worker, invitee is payer (e.g., TC inviting GC)
           project_id: projectId,
           from_org_id: currentOrg?.id,
           from_role: creatorRole,
+          to_org_id: teamMember.org_id,
           to_role: teamMember.role,
           trade: teamMember.trade,
           to_project_team_id: teamMember.id,
-          to_org_id: teamMember.org_id,
           contract_sum: contract?.contractSum ?? 0,
           retainage_percent: contract?.retainagePercent ?? 0,
           allow_mobilization_line_item: contract?.allowMobilization ?? false,
