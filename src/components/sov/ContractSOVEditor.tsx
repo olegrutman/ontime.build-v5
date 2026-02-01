@@ -20,12 +20,17 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useContractSOV, ContractSOV, ContractSOVItem, ProjectContract, getContractDisplayName } from '@/hooks/useContractSOV';
 import { SOVProgressBar } from './SOVProgressBar';
+import { RequireOrgType } from '@/components/auth/RequirePermission';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ContractSOVEditorProps {
   projectId: string;
 }
 
 export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
+  const { currentRole } = useAuth();
+  const isFC = currentRole === 'FC_PM';
+  
   const {
     contracts,
     sovs,
@@ -171,39 +176,46 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
           <FileSpreadsheet className="h-12 w-12 text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-medium mb-2">Create Schedule of Values</h3>
+          <h3 className="text-lg font-medium mb-2">
+            {isFC ? 'No Schedule of Values' : 'Create Schedule of Values'}
+          </h3>
           <p className="text-sm text-muted-foreground mb-2 max-w-md">
-            Create SOVs for your {contracts.length} contract{contracts.length > 1 ? 's' : ''}.
-            Each contract will get matching line items with percentage allocations.
+            {isFC 
+              ? 'The Trade Contractor has not created a Schedule of Values for this project yet.'
+              : `Create SOVs for your ${contracts.length} contract${contracts.length > 1 ? 's' : ''}. Each contract will get matching line items with percentage allocations.`}
           </p>
-          <div className="text-xs text-muted-foreground mb-6">
-            {contracts.map((c, i) => (
-              <div key={c.id}>
-                {i + 1}. {getContractDisplayName(c.from_role, c.to_role, c.from_org_name, c.to_org_name)} — {formatCurrency(c.contract_sum)}
+          {!isFC && (
+            <>
+              <div className="text-xs text-muted-foreground mb-6">
+                {contracts.map((c, i) => (
+                  <div key={c.id}>
+                    {i + 1}. {getContractDisplayName(c.from_role, c.to_role, c.from_org_name, c.to_org_name)} — {formatCurrency(c.contract_sum)}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button disabled={saving}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create SOVs from Template
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Create Schedule of Values</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will generate SOV line items for each contract based on your project type.
-                  Line items will be distributed evenly by percentage and must total 100%.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={createAllSOVs}>Create SOVs</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button disabled={saving}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create SOVs from Template
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Create Schedule of Values</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will generate SOV line items for each contract based on your project type.
+                      Line items will be distributed evenly by percentage and must total 100%.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={createAllSOVs}>Create SOVs</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
+          )}
         </CardContent>
       </Card>
     );
@@ -271,105 +283,109 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                         </Badge>
                       )}
                       
-                      {/* Lock/Unlock button */}
-                      {sov.is_locked ? (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
+                      {/* Lock/Unlock button - hidden for FC */}
+                      {!isFC && (
+                        <>
+                          {sov.is_locked ? (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8"
+                                  disabled={saving}
+                                >
+                                  <Unlock className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Unlock SOV</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    This will unlock the SOV and allow editing. Are you sure you want to unlock "{sov.sov_name || 'this SOV'}"?
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => toggleSOVLock(sov.id, false)}>
+                                    Unlock
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          ) : totals.isValid && items.length > 0 ? (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8"
+                                  disabled={saving}
+                                  title="Lock SOV"
+                                >
+                                  <Lock className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Lock SOV</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Locking will prevent any further edits to this SOV. You can still create invoices against it.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction onClick={() => toggleSOVLock(sov.id, true)}>
+                                    Lock SOV
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          ) : null}
+                          
+                          {/* Delete SOV button - only if no billed items and not locked */}
+                          {totals.totalBilled === 0 && !sov.is_locked ? (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  className="h-8 w-8"
+                                  disabled={saving}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Delete SOV</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Are you sure you want to delete "{sov.sov_name || 'this SOV'}" and all {items.length} line items? This action cannot be undone.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => deleteSOV(sov.id)}
+                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                  >
+                                    Delete SOV
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          ) : (
                             <Button
                               size="icon"
                               variant="ghost"
-                              className="h-8 w-8"
-                              disabled={saving}
+                              className="h-8 w-8 cursor-not-allowed opacity-50"
+                              disabled
+                              title={sov.is_locked ? "SOV is locked" : "Cannot delete - SOV has billing history"}
                             >
-                              <Unlock className="h-4 w-4 text-muted-foreground" />
+                              <Trash2 className="h-4 w-4 text-muted-foreground" />
                             </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Unlock SOV</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                This will unlock the SOV and allow editing. Are you sure you want to unlock "{sov.sov_name || 'this SOV'}"?
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => toggleSOVLock(sov.id, false)}>
-                                Unlock
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      ) : totals.isValid && items.length > 0 ? (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8"
-                              disabled={saving}
-                              title="Lock SOV"
-                            >
-                              <Lock className="h-4 w-4 text-muted-foreground" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Lock SOV</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Locking will prevent any further edits to this SOV. You can still create invoices against it.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => toggleSOVLock(sov.id, true)}>
-                                Lock SOV
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      ) : null}
-                      
-                      {/* Delete SOV button - only if no billed items and not locked */}
-                      {totals.totalBilled === 0 && !sov.is_locked ? (
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-8 w-8"
-                              disabled={saving}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete SOV</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete "{sov.sov_name || 'this SOV'}" and all {items.length} line items? This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => deleteSOV(sov.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                Delete SOV
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      ) : (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 cursor-not-allowed opacity-50"
-                          disabled
-                          title={sov.is_locked ? "SOV is locked" : "Cannot delete - SOV has billing history"}
-                        >
-                          <Trash2 className="h-4 w-4 text-muted-foreground" />
-                        </Button>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
@@ -401,8 +417,8 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                     </Alert>
                   )}
 
-                  {/* Add new item - hidden when locked */}
-                  {!sov.is_locked && (
+                  {/* Add new item - hidden when locked or FC */}
+                  {!sov.is_locked && !isFC && (
                     <div className="flex gap-2 mb-4">
                       <Input
                         placeholder="Add new line item..."
@@ -523,8 +539,8 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                                   </div>
                                 )}
 
-                                {/* Edit buttons - hidden when locked */}
-                                {!isLocked && (
+                                {/* Edit buttons - hidden when locked or FC */}
+                                {!isLocked && !isFC && (
                                   <>
                                     <Button 
                                       size="icon" 

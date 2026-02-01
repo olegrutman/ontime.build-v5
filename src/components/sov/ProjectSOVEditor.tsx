@@ -19,12 +19,17 @@ import {
 import { useProjectSOV, ProjectSOVItem } from '@/hooks/useProjectSOV';
 import { SOVProgressBar } from './SOVProgressBar';
 import { SOVProgressSummary } from './SOVProgressSummary';
+import { RequireOrgType } from '@/components/auth/RequirePermission';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ProjectSOVEditorProps {
   projectId: string;
 }
 
 export function ProjectSOVEditor({ projectId }: ProjectSOVEditorProps) {
+  const { currentRole } = useAuth();
+  const isFC = currentRole === 'FC_PM';
+  
   const {
     projectSOV,
     sovItems,
@@ -45,6 +50,7 @@ export function ProjectSOVEditor({ projectId }: ProjectSOVEditorProps) {
   const [editingValue, setEditingValue] = useState('');
   const [draggedItem, setDraggedItem] = useState<ProjectSOVItem | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
 
   const handleAddItem = async () => {
     if (!newItemName.trim()) return;
@@ -160,32 +166,35 @@ export function ProjectSOVEditor({ projectId }: ProjectSOVEditorProps) {
           <FileSpreadsheet className="h-12 w-12 text-muted-foreground/50 mb-4" />
           <h3 className="text-lg font-medium mb-2">No Schedule of Values</h3>
           <p className="text-sm text-muted-foreground mb-6 max-w-md">
-            Create a Schedule of Values from a template based on your project type and scope.
-            The template will be customized based on your project details.
+            {isFC 
+              ? 'The Trade Contractor has not created a Schedule of Values for this project yet.'
+              : 'Create a Schedule of Values from a template based on your project type and scope. The template will be customized based on your project details.'}
           </p>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button disabled={saving}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create SOV from Template
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Create Schedule of Values</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will generate SOV line items based on your project type and scope details.
-                  The template will be automatically selected and customized.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={createProjectSOV}>
-                  Create SOV
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+          {!isFC && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button disabled={saving}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create SOV from Template
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Create Schedule of Values</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will generate SOV line items based on your project type and scope details.
+                    The template will be automatically selected and customized.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={createProjectSOV}>
+                    Create SOV
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </CardContent>
       </Card>
     );
@@ -215,21 +224,23 @@ export function ProjectSOVEditor({ projectId }: ProjectSOVEditorProps) {
           </div>
         </CardHeader>
         <CardContent>
-          {/* Add new item */}
-          <div className="flex gap-2 mb-4">
-            <Input
-              placeholder="Add new line item..."
-              value={newItemName}
-              onChange={(e) => setNewItemName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleAddItem();
-              }}
-              disabled={saving}
-            />
-            <Button onClick={handleAddItem} disabled={saving || !newItemName.trim()}>
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
+          {/* Add new item - FC cannot add items */}
+          {!isFC && (
+            <div className="flex gap-2 mb-4">
+              <Input
+                placeholder="Add new line item..."
+                value={newItemName}
+                onChange={(e) => setNewItemName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleAddItem();
+                }}
+                disabled={saving}
+              />
+              <Button onClick={handleAddItem} disabled={saving || !newItemName.trim()}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
 
           {/* SOV items list */}
           <div className="space-y-2">
@@ -341,67 +352,82 @@ export function ProjectSOVEditor({ projectId }: ProjectSOVEditorProps) {
                             </Button>
                           </div>
                         ) : (
-                          <button
-                            onClick={() => handleStartValueEdit(item)}
-                            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 min-w-[80px] justify-end"
-                          >
-                            {hasValue ? (
-                              <span className="font-medium">{formatCurrency(item.scheduled_value)}</span>
-                            ) : (
-                              <span className="text-xs italic">Set value</span>
-                            )}
-                          </button>
+                          isFC ? (
+                            <span className="flex items-center gap-1 text-sm text-muted-foreground flex-shrink-0 min-w-[80px] justify-end">
+                              {hasValue ? (
+                                <span className="font-medium">{formatCurrency(item.scheduled_value)}</span>
+                              ) : (
+                                <span className="text-xs italic">—</span>
+                              )}
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handleStartValueEdit(item)}
+                              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors flex-shrink-0 min-w-[80px] justify-end"
+                            >
+                              {hasValue ? (
+                                <span className="font-medium">{formatCurrency(item.scheduled_value)}</span>
+                              ) : (
+                                <span className="text-xs italic">Set value</span>
+                              )}
+                            </button>
+                          )
                         )}
                         
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8"
-                          onClick={() => handleStartEdit(item)}
-                        >
-                          <Pencil className="h-4 w-4 text-muted-foreground" />
-                        </Button>
-                        
-                        {/* Only show delete for unused items (no billing) */}
-                        {(item.billed_to_date || 0) === 0 ? (
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
+                        {/* Edit and delete buttons - hidden for FC */}
+                        {!isFC && (
+                          <>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              onClick={() => handleStartEdit(item)}
+                            >
+                              <Pencil className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                            
+                            {/* Only show delete for unused items (no billing) */}
+                            {(item.billed_to_date || 0) === 0 ? (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-8 w-8"
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Line Item</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      Are you sure you want to delete "{item.item_name}"? This action cannot be undone.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => deleteItem(item.id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Delete
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            ) : (
                               <Button
                                 size="icon"
                                 variant="ghost"
-                                className="h-8 w-8"
+                                className="h-8 w-8 cursor-not-allowed opacity-50"
+                                disabled
+                                title="Cannot delete - item has billing history"
                               >
-                                <Trash2 className="h-4 w-4 text-destructive" />
+                                <Trash2 className="h-4 w-4 text-muted-foreground" />
                               </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Line Item</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Are you sure you want to delete "{item.item_name}"? This action cannot be undone.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => deleteItem(item.id)}
-                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                >
-                                  Delete
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        ) : (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-8 w-8 cursor-not-allowed opacity-50"
-                            disabled
-                            title="Cannot delete - item has billing history"
-                          >
-                            <Trash2 className="h-4 w-4 text-muted-foreground" />
-                          </Button>
+                            )}
+                          </>
                         )}
                       </>
                     )}
@@ -428,12 +454,12 @@ export function ProjectSOVEditor({ projectId }: ProjectSOVEditorProps) {
 
           {sovItems.length === 0 && (
             <p className="text-center text-sm text-muted-foreground py-8">
-              No line items yet. Add your first item above.
+              {isFC ? 'No line items in this SOV yet.' : 'No line items yet. Add your first item above.'}
             </p>
           )}
 
-          {/* Regenerate option */}
-          {sovItems.length > 0 && (
+          {/* Regenerate option - hidden for FC */}
+          {sovItems.length > 0 && !isFC && (
             <div className="mt-6 pt-4 border-t flex justify-end">
               <AlertDialog>
                 <AlertDialogTrigger asChild>
