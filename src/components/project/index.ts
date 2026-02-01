@@ -9,3 +9,4 @@ export { ProjectTopBar } from './ProjectTopBar';
 export { WorkOrderSummaryCard } from './WorkOrderSummaryCard';
 export { WorkOrdersTab } from './WorkOrdersTab';
 export { InvoiceSummaryCard } from './InvoiceSummaryCard';
+export { PurchaseOrdersTab } from './PurchaseOrdersTab';
