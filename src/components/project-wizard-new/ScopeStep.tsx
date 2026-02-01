@@ -465,6 +465,92 @@ export function ScopeStep({ projectType, scope, onChange }: ScopeStepProps) {
         </CardContent>
       </Card>
 
+      {/* Fascia & Soffit */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Fascia & Soffit</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label>Fascia Included?</Label>
+            <Switch
+              checked={scope.fasciaIncluded || false}
+              onCheckedChange={(checked) => update({ fasciaIncluded: checked })}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Soffit Included?</Label>
+            <Switch
+              checked={scope.soffitIncluded || false}
+              onCheckedChange={(checked) => update({ soffitIncluded: checked })}
+            />
+          </div>
+          {(scope.fasciaIncluded || scope.soffitIncluded) && (
+            <div className="space-y-2">
+              <Label>Material</Label>
+              <Select
+                value={scope.fasciaSoffitMaterial || ''}
+                onValueChange={(v) => update({ fasciaSoffitMaterial: v })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                  {FASCIA_SOFFIT_MATERIALS.map(material => (
+                    <SelectItem key={material} value={material}>{material}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {scope.fasciaSoffitMaterial === 'Other' && (
+                <Input
+                  placeholder="Specify other material"
+                  value={scope.fasciaSoffitMaterialOther || ''}
+                  onChange={(e) => update({ fasciaSoffitMaterialOther: e.target.value })}
+                />
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Decorative Elements */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Decorative Elements</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label>Decorative Elements Included?</Label>
+            <Switch
+              checked={scope.decorativeIncluded || false}
+              onCheckedChange={(checked) => update({ decorativeIncluded: checked })}
+            />
+          </div>
+          {scope.decorativeIncluded && (
+            <div className="space-y-2">
+              <Label>Select items (check all that apply)</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {DECORATIVE_ITEMS.map(item => (
+                  <div key={item} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`decorative-${item}`}
+                      checked={(scope.decorativeItems || []).includes(item)}
+                      onCheckedChange={() => toggleArrayItem('decorativeItems', item)}
+                    />
+                    <label htmlFor={`decorative-${item}`} className="text-sm">{item}</label>
+                  </div>
+                ))}
+              </div>
+              {(scope.decorativeItems || []).includes('Other') && (
+                <Input
+                  placeholder="Specify other decorative items"
+                  value={scope.decorativeItemOther || ''}
+                  onChange={(e) => update({ decorativeItemOther: e.target.value })}
+                />
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Optional Scope Items */}
       <Card>
         <CardHeader className="pb-3">
