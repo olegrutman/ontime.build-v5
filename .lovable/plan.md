@@ -1,136 +1,203 @@
 
-
-# Plan: Show Previous Amount Billed on SOV Items Before Enabling
+# Plan: Replace Role Labels with Company Names on SOV and Invoice Pages
 
 ## Problem Summary
-Currently, the previous billing amount for SOV items is only displayed **after** the user toggles the item on (enables it). Users need to see this information **upfront** to make informed decisions about which items to bill.
+Currently, the SOV page and Invoice page display generic role labels like "Trade Contractor Contract with General Contractor" instead of actual company names like "ABC Framing Contract with XYZ Construction". This makes it hard for users to identify which contract/company they're working with.
 
 ## Current Behavior
-- Previous billing info (lines 613-619) is inside `{item.enabled && (...)}` block
-- Users must toggle an item ON to see how much was previously billed
-- This requires trial-and-error to find items with remaining balance
+
+**SOV Page (`ContractSOVEditor.tsx`):**
+- SOV name shows as "Trade Contractor Contract with General Contractor"
+- Contract list in empty state shows "Trade Contractor Contract with General Contractor"
+
+**Invoice Page:**
+- `InvoicesTab.tsx` tab labels show "Sent to GC" and "From Field Crews" instead of actual company names
+- Role context messages reference "GC", "TC", "FC" abbreviations
+- `CreateInvoiceFromSOV.tsx` contract dropdown shows "[Contract] Trade Contractor Contract with General Contractor"
 
 ## Solution
-Move the previous billing summary **outside** the `enabled` condition so it's always visible on each SOV item card, regardless of whether the item is toggled on.
+
+Update the `getContractDisplayName` function and all display logic to use actual organization names when available, falling back to roles only when names aren't present.
 
 ---
 
 ## Implementation Details
 
-### File: `src/components/invoices/CreateInvoiceFromSOV.tsx`
+### 1. Update `getContractDisplayName` Function
 
-**Current Structure (lines 590-697):**
-```
-├── Item details container (flex-1)
-│   ├── Item name + Scheduled Value (always visible)
-│   └── {item.enabled && (...)}  ← Previous billing hidden here
-│       ├── Fully billed indicator OR
-│       ├── Progress bar with previous/new billing
-│       ├── Slider + Input
-│       └── Max available hint
-```
+**File: `src/hooks/useContractSOV.ts`**
 
-**New Structure:**
-```
-├── Item details container (flex-1)
-│   ├── Item name + Scheduled Value (always visible)
-│   ├── Previous billing summary (ALWAYS visible) ← NEW
-│   └── {item.enabled && (...)}
-│       ├── Fully billed indicator OR
-│       ├── Progress bar (without redundant text)
-│       ├── Slider + Input
-│       └── Max available hint
+Create an enhanced version that accepts organization names:
+
+```typescript
+// New signature with optional org names
+export function getContractDisplayName(
+  fromRole: string, 
+  toRole: string,
+  fromOrgName?: string | null,
+  toOrgName?: string | null
+): string {
+  const from = fromOrgName || fromRole;
+  const to = toOrgName || toRole;
+  return `${from} → ${to}`;
+}
 ```
 
----
+### 2. Update `ProjectContract` Interface
 
-## Specific Changes
+**File: `src/hooks/useContractSOV.ts`**
 
-### Add new section between item header and enabled block (after line 597)
+Add organization name fields to the contract interface:
 
-Add a compact summary row showing:
-- Previous billed amount and percentage
-- Remaining balance (value - previous billed)
+```typescript
+export interface ProjectContract {
+  // ... existing fields
+  from_org_id?: string | null;
+  to_org_id?: string | null;
+  from_org_name?: string | null;
+  to_org_name?: string | null;
+}
+```
 
-```tsx
-{/* Previous billing summary - always visible */}
-<div className="flex items-center justify-between text-sm">
-  <div className="flex items-center gap-2 text-muted-foreground">
-    {previousBilledAmount > 0 ? (
-      <>
-        <span>Previously billed: {formatCurrency(previousBilledAmount)} ({previousPercent.toFixed(1)}%)</span>
-      </>
-    ) : (
-      <span>Not yet billed</span>
-    )}
+### 3. Update Contract Query to Include Org Names
+
+**File: `src/hooks/useContractSOV.ts`**
+
+Modify the fetchData query to join organization names:
+
+```typescript
+supabase
+  .from('project_contracts')
+  .select(`
+    *,
+    from_org:organizations!project_contracts_from_org_id_fkey(name),
+    to_org:organizations!project_contracts_to_org_id_fkey(name)
+  `)
+  .eq('project_id', projectId)
+```
+
+Then map the results to include `from_org_name` and `to_org_name`.
+
+### 4. Update SOV Name Generation
+
+**File: `src/hooks/useContractSOV.ts`**
+
+When creating SOVs, use org names:
+
+```typescript
+const sovName = getContractDisplayName(
+  contract.from_role, 
+  contract.to_role,
+  contract.from_org_name,
+  contract.to_org_name
+);
+```
+
+### 5. Update ContractSOVEditor Display
+
+**File: `src/components/sov/ContractSOVEditor.tsx`**
+
+Update contract list display to show company names:
+
+```typescript
+{contracts.map((c, i) => (
+  <div key={c.id}>
+    {i + 1}. {getContractDisplayName(c.from_role, c.to_role, c.from_org_name, c.to_org_name)} — {formatCurrency(c.contract_sum)}
   </div>
-  <span className={cn(
-    "font-medium",
-    item.maxAllowedPercent === 0 
-      ? "text-green-600 dark:text-green-400" 
-      : "text-muted-foreground"
-  )}>
-    {item.maxAllowedPercent === 0 
-      ? "Fully billed" 
-      : `${formatCurrency(item.value_amount - previousBilledAmount)} remaining`
-    }
-  </span>
-</div>
+))}
 ```
 
-### Keep progress bar legend when enabled (lines 611-629)
+### 6. Update Invoice Contract Dropdown
 
-The detailed legend with colored squares will remain visible when the item is enabled, as it shows the "This bill" breakdown.
+**File: `src/components/invoices/CreateInvoiceFromSOV.tsx`**
 
----
+The contract data already has org names from the query. Update the dropdown to use them:
 
-## Visual Mockup
-
-**Before (item disabled):**
-```
-┌─────────────────────────────────────────────────────────────┐
-│ ○  Framing - Main Structure                        $50,000  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-**After (item disabled):**
-```
-┌─────────────────────────────────────────────────────────────┐
-│ ○  Framing - Main Structure                        $50,000  │
-│    Previously billed: $25,000 (50%)        $25,000 remaining│
-└─────────────────────────────────────────────────────────────┘
+```typescript
+<SelectItem key={contract.id} value={contract.id}>
+  {typeLabel} {getContractDisplayName(
+    contract.from_role, 
+    contract.to_role,
+    contract.from_org_name,
+    contract.to_org_name
+  )} — {formatCurrency(contract.contract_sum || 0)}
+</SelectItem>
 ```
 
-**After (item enabled with new billing):**
-```
-┌─────────────────────────────────────────────────────────────┐
-│ ●  Framing - Main Structure                        $50,000  │
-│    Previously billed: $25,000 (50%)        $25,000 remaining│
-│    ┌──────────────────────────────────────────────────────┐ │
-│    │ ■ Previous: 50%    ■ This bill: 25% ($12,500)  75%  │ │
-│    │ [▓▓▓▓▓▓▓▓▓▓████████░░░░░░░░░░░░░░░░░░░░░░░░░░░] │    │ │
-│    │ ○────────────●──────────────────────○ [25%]         │ │
-│    │ Max available: 50.0%                                │ │
-│    └──────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
+### 7. Update InvoicesTab Tab Labels
+
+**File: `src/components/invoices/InvoicesTab.tsx`**
+
+For the TC dual-view tabs, dynamically show the GC company name:
+
+```typescript
+// Add query for GC org name from contracts
+const gcOrgName = useMemo(() => {
+  const gcContract = contracts.find(c => c.to_role === 'General Contractor');
+  return gcContract?.to_org_name || 'GC';
+}, [contracts]);
+
+// In tab triggers:
+<TabsTrigger value="sent">
+  <Send className="h-4 w-4" />
+  Sent to {gcOrgName}
+</TabsTrigger>
 ```
 
 ---
 
 ## Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/components/invoices/CreateInvoiceFromSOV.tsx` | Add "Previously billed" and "Remaining" row visible for all items |
+| File | Changes |
+|------|---------|
+| `src/hooks/useContractSOV.ts` | Update `ProjectContract` interface, modify contract query to include org names, update `getContractDisplayName` signature |
+| `src/components/sov/ContractSOVEditor.tsx` | Pass org names to `getContractDisplayName` calls |
+| `src/components/invoices/CreateInvoiceFromSOV.tsx` | Pass org names to `getContractDisplayName` calls |
+| `src/components/invoices/InvoicesTab.tsx` | Fetch org names for tab labels, update role context messages |
+
+---
+
+## Visual Changes
+
+**Before (SOV Page):**
+```
+Trade Contractor Contract with General Contractor — $50,000
+```
+
+**After (SOV Page):**
+```
+ABC Framing → XYZ Construction — $50,000
+```
+
+**Before (Invoice Tab - TC View):**
+```
+Tabs: [Sent to GC] [From Field Crews]
+```
+
+**After (Invoice Tab - TC View):**
+```
+Tabs: [Sent to XYZ Construction] [From Field Crews]
+```
+
+**Before (Invoice Creation Dropdown):**
+```
+[Contract] Trade Contractor Contract with General Contractor — $50,000
+```
+
+**After (Invoice Creation Dropdown):**
+```
+[Contract] ABC Framing → XYZ Construction — $50,000
+```
 
 ---
 
 ## Testing Checklist
 
-1. Open invoice creation dialog
-2. Verify each SOV item shows previous billed amount (or "Not yet billed")
-3. Verify remaining balance is displayed
-4. Verify items at 100% show "Fully billed"
-5. Toggle items on and verify the detailed progress bar still works
-6. Create an invoice and confirm calculations are correct
+1. Navigate to a project's SOV tab
+2. Verify SOV names show company names instead of roles
+3. Navigate to Invoices tab
+4. Verify tab labels show company names (for TC users)
+5. Open "Create Invoice" dialog
+6. Verify contract dropdown shows company names
+7. Test with contracts missing org assignments (should fall back to roles)
 
