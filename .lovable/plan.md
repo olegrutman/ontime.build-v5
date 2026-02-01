@@ -1,199 +1,148 @@
 
-# Plan: Add Fascia, Soffit, and Decorative Elements to Scope Step
 
-## Overview
-Add missing Fascia & Soffit options and Exterior Decorative Elements sections to the Scope & Details step in the project setup wizard. The decorative elements section will include a text field to specify custom items.
+# Plan: Fix Contract Values Not Showing on Overview Page
+
+## Problem Analysis
+
+When a Trade Contractor creates a project and adds contract values in the wizard, those values don't appear on the overview page for any contractor account.
+
+### Root Cause
+
+There are **duplicate contracts** in the database for the same party relationships:
+
+| Contract ID | Contract Sum | Created At | to_project_team_id |
+|-------------|-------------|------------|-------------------|
+| ba72fe23... | **$0.00** | 19:24:32 | **null** |
+| 1364fdc5... | **$1,500,000** | 19:31:18 | 5f10a94b... |
+
+The duplication occurs because:
+
+1. **AddTeamMemberDialog** creates a contract with `contract_sum: 0` and **no `to_project_team_id`** when a team member is added
+2. **saveContracts** (in CreateProjectNew.tsx) looks for existing contracts by `to_project_team_id` to update them
+3. Since the original contract has `to_project_team_id: null`, no match is found, so a NEW contract is created with the actual values
+
+The **UI displays $0** because:
+- The fetch query has no explicit ordering
+- `.find()` returns the **first match** (the older $0 contract)
+- The newer contract with actual values is ignored
 
 ---
 
-## Current State
+## Solution
 
-The `ScopeDetails` type in `src/types/projectWizard.ts` already includes these fields:
-- `fasciaIncluded?: boolean`
-- `soffitIncluded?: boolean`  
-- `fasciaSoffitMaterial?: string`
-- `fasciaSoffitMaterialOther?: string`
-- `decorativeIncluded?: boolean`
-- `decorativeItems?: string[]`
-- `decorativeItemOther?: string`
+Fix the root cause by ensuring `saveContracts` matches existing contracts by organization IDs (which are always populated) instead of relying on `to_project_team_id`.
 
-However, the UI in `ScopeStep.tsx` does not render these options - they are missing from the form.
-
----
-
-## Files to Modify
+### Changes Required
 
 | File | Change |
 |------|--------|
-| `src/components/project-wizard-new/ScopeStep.tsx` | Add Fascia & Soffit card and Decorative Elements card |
+| `src/pages/CreateProjectNew.tsx` | Update `saveContracts` to match contracts by org IDs |
+| Database cleanup | Delete duplicate $0 contracts |
 
 ---
 
-## UI Changes
+## Technical Implementation
 
-### New Card: Fascia & Soffit
-Location: After the Siding card, before Optional Scope Items
+### 1. Fix saveContracts Matching Logic
 
-```
-+----------------------------------------------------------+
-|  Fascia & Soffit                                         |
-+----------------------------------------------------------+
-|  Fascia Included?                              [toggle]  |
-|  Soffit Included?                              [toggle]  |
-|                                                          |
-|  (When either enabled):                                  |
-|  Material: [Wood / Fiber Cement / Metal / Vinyl / Other] |
-|  (If Other): [Specify other material____________]        |
-+----------------------------------------------------------+
-```
+**File: `src/pages/CreateProjectNew.tsx`**
 
-### New Card: Decorative Elements
-Location: After Fascia & Soffit card
+Currently, the code fetches existing contracts and matches by `to_project_team_id`:
 
-```
-+----------------------------------------------------------+
-|  Decorative Elements                                     |
-+----------------------------------------------------------+
-|  Decorative Elements Included?                 [toggle]  |
-|                                                          |
-|  (When enabled):                                         |
-|  Select items (multi-select):                            |
-|  [ ] Corbels                                             |
-|  [ ] Columns                                             |
-|  [ ] Decorative Beams                                    |
-|  [ ] Brackets                                            |
-|  [ ] Faux Trusses                                        |
-|  [ ] Other                                               |
-|                                                          |
-|  (If Other selected):                                    |
-|  [Specify other decorative items___________]             |
-+----------------------------------------------------------+
+```typescript
+// Current (broken)
+const { data: existingContracts } = await supabase
+  .from('project_contracts')
+  .select('id, to_project_team_id')
+  .eq('project_id', projectId);
+
+const existing = existingContracts?.find((c) => c.to_project_team_id === teamMember.id);
 ```
 
----
+Change to match by organization IDs instead:
 
-## Implementation Details
+```typescript
+// Fixed - match by from_org_id and to_org_id
+const { data: existingContracts } = await supabase
+  .from('project_contracts')
+  .select('id, from_org_id, to_org_id, to_project_team_id')
+  .eq('project_id', projectId);
 
-### 1. Add Fascia & Soffit Card (after Siding card, ~line 466)
-
-```tsx
-{/* Fascia & Soffit */}
-<Card>
-  <CardHeader className="pb-3">
-    <CardTitle className="text-base">Fascia & Soffit</CardTitle>
-  </CardHeader>
-  <CardContent className="space-y-4">
-    <div className="flex items-center justify-between">
-      <Label>Fascia Included?</Label>
-      <Switch
-        checked={scope.fasciaIncluded || false}
-        onCheckedChange={(checked) => update({ fasciaIncluded: checked })}
-      />
-    </div>
-    <div className="flex items-center justify-between">
-      <Label>Soffit Included?</Label>
-      <Switch
-        checked={scope.soffitIncluded || false}
-        onCheckedChange={(checked) => update({ soffitIncluded: checked })}
-      />
-    </div>
-    {(scope.fasciaIncluded || scope.soffitIncluded) && (
-      <div className="space-y-2">
-        <Label>Material</Label>
-        <Select
-          value={scope.fasciaSoffitMaterial || ''}
-          onValueChange={(v) => update({ fasciaSoffitMaterial: v })}
-        >
-          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-          <SelectContent>
-            {FASCIA_SOFFIT_MATERIALS.map(material => (
-              <SelectItem key={material} value={material}>{material}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {scope.fasciaSoffitMaterial === 'Other' && (
-          <Input
-            placeholder="Specify other material"
-            value={scope.fasciaSoffitMaterialOther || ''}
-            onChange={(e) => update({ fasciaSoffitMaterialOther: e.target.value })}
-          />
-        )}
-      </div>
-    )}
-  </CardContent>
-</Card>
+// Match by the org IDs we're about to insert
+const existing = existingContracts?.find((c) => {
+  if (isCreatorUpstream) {
+    return c.from_org_id === teamMember.org_id && c.to_org_id === currentOrg?.id;
+  } else {
+    return c.from_org_id === currentOrg?.id && c.to_org_id === teamMember.org_id;
+  }
+});
 ```
 
-### 2. Add Decorative Elements Card (after Fascia & Soffit)
+### 2. Also Update to_project_team_id on Existing Contracts
 
-```tsx
-{/* Decorative Elements */}
-<Card>
-  <CardHeader className="pb-3">
-    <CardTitle className="text-base">Decorative Elements</CardTitle>
-  </CardHeader>
-  <CardContent className="space-y-4">
-    <div className="flex items-center justify-between">
-      <Label>Decorative Elements Included?</Label>
-      <Switch
-        checked={scope.decorativeIncluded || false}
-        onCheckedChange={(checked) => update({ decorativeIncluded: checked })}
-      />
-    </div>
-    {scope.decorativeIncluded && (
-      <div className="space-y-2">
-        <Label>Select items (check all that apply)</Label>
-        <div className="grid grid-cols-2 gap-2">
-          {DECORATIVE_ITEMS.map(item => (
-            <div key={item} className="flex items-center space-x-2">
-              <Checkbox
-                id={`decorative-${item}`}
-                checked={(scope.decorativeItems || []).includes(item)}
-                onCheckedChange={() => toggleArrayItem('decorativeItems', item)}
-              />
-              <label htmlFor={`decorative-${item}`} className="text-sm">{item}</label>
-            </div>
-          ))}
-        </div>
-        {(scope.decorativeItems || []).includes('Other') && (
-          <Input
-            placeholder="Specify other decorative items"
-            value={scope.decorativeItemOther || ''}
-            onChange={(e) => update({ decorativeItemOther: e.target.value })}
-          />
-        )}
-      </div>
-    )}
-  </CardContent>
-</Card>
+When updating an existing contract, ensure `to_project_team_id` is set:
+
+```typescript
+const payload = {
+  // ... existing fields ...
+  to_project_team_id: teamMember.id, // Always set this
+};
+```
+
+### 3. Clean Up Duplicate Contracts (One-time Database Fix)
+
+Delete the duplicate $0 contracts that have no `to_project_team_id`:
+
+```sql
+-- Delete duplicate contracts where contract_sum = 0 
+-- and a newer contract exists with the same party relationship
+DELETE FROM project_contracts pc1
+WHERE pc1.contract_sum = 0
+  AND pc1.to_project_team_id IS NULL
+  AND EXISTS (
+    SELECT 1 FROM project_contracts pc2
+    WHERE pc2.project_id = pc1.project_id
+      AND pc2.from_org_id = pc1.from_org_id
+      AND pc2.to_org_id = pc1.to_org_id
+      AND pc2.id != pc1.id
+      AND pc2.contract_sum > 0
+  );
 ```
 
 ---
 
-## Summary of Changes
+## Why This Fixes the Problem
 
-1. **Fascia & Soffit Card**
-   - Toggle for Fascia Included
-   - Toggle for Soffit Included
-   - Material dropdown (shows when either is enabled)
-   - Custom material text field (shows when "Other" is selected)
+1. **Matching by org IDs** ensures we find the contract even if `to_project_team_id` wasn't set during initial creation
+2. **Updating existing contracts** instead of creating duplicates keeps the data clean
+3. **Setting `to_project_team_id`** on update ensures the contract links properly to the team member
+4. **Cleaning up duplicates** fixes the existing bad data
 
-2. **Decorative Elements Card**
-   - Toggle for Decorative Elements Included
-   - Multi-select checkboxes for: Corbels, Columns, Decorative Beams, Brackets, Faux Trusses, Other
-   - Custom specification text field (shows when "Other" is checked)
+---
+
+## Alternative Consideration: Add Unique Constraint
+
+To prevent this issue in the future, consider adding a unique constraint on `(project_id, from_org_id, to_org_id)` to prevent duplicate contracts for the same party relationship:
+
+```sql
+CREATE UNIQUE INDEX unique_contract_parties 
+ON project_contracts(project_id, from_org_id, to_org_id);
+```
+
+This would cause the duplicate insert to fail, forcing an update instead.
 
 ---
 
 ## Testing Checklist
 
-1. Navigate to /create-project and proceed to Scope & Details step
-2. Verify Fascia & Soffit card appears after Siding
-3. Toggle Fascia on - verify material dropdown appears
-4. Toggle Soffit on - material dropdown should still be visible
-5. Select "Other" material - verify text input appears
-6. Verify Decorative Elements card appears
-7. Toggle Decorative Elements on - verify checkboxes appear
-8. Check multiple items - verify they're saved correctly
-9. Check "Other" - verify specification text field appears
-10. Complete wizard to Review step - verify scope summary shows these new options
+1. Clean up existing duplicate contracts in database
+2. Log in as TC and create a new project
+3. Add a GC and FC to the team
+4. Enter contract values on the Contracts step
+5. Complete the wizard
+6. Verify contract values appear on the Project Overview
+7. Log in as GC and verify contract values are visible
+8. Log in as FC and verify contract values are visible
+9. Edit the project and change contract values
+10. Verify the updated values appear (no new duplicates created)
+
