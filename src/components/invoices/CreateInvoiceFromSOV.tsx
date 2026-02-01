@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
-import { CalendarIcon, AlertCircle, FileText, DollarSign } from 'lucide-react';
+import { CalendarIcon, AlertCircle, FileText, DollarSign, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -319,7 +319,8 @@ export function CreateInvoiceFromSOV({
     setBillingItems(prev => prev.map(item => {
       if (item.id !== itemId) return item;
       
-      const clampedPercent = Math.min(Math.max(0, percent), 100);
+      // Clamp to maxAllowedPercent to prevent exceeding 100% total billing
+      const clampedPercent = Math.min(Math.max(0, percent), item.maxAllowedPercent);
       const billAmount = Math.round((item.value_amount * clampedPercent / 100) * 100) / 100;
       
       return {
@@ -597,115 +598,97 @@ export function CreateInvoiceFromSOV({
 
                               {item.enabled && (
                                 <>
-                                  {/* Visual Progress Bar - Previous vs New Billing */}
-                                  <div className="space-y-1.5">
-                                    <div className="flex items-center justify-between text-xs">
-                                      <div className="flex items-center gap-3">
-                                        {previousPercent > 0 && (
-                                          <span className="flex items-center gap-1.5">
-                                            <span className="w-2.5 h-2.5 rounded-sm bg-muted-foreground/40" />
-                                            <span className="text-muted-foreground">
-                                              Previous: {previousPercent.toFixed(1)}% ({formatCurrency(previousBilledAmount)})
-                                            </span>
+                                  {/* Fully billed indicator */}
+                                  {item.maxAllowedPercent === 0 ? (
+                                    <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                                      <CheckCircle className="h-4 w-4" />
+                                      <span>Fully billed (100%)</span>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      {/* Visual Progress Bar - Previous vs New Billing */}
+                                      <div className="space-y-1.5">
+                                        <div className="flex items-center justify-between text-xs">
+                                          <div className="flex items-center gap-3">
+                                            {previousPercent > 0 && (
+                                              <span className="flex items-center gap-1.5">
+                                                <span className="w-2.5 h-2.5 rounded-sm bg-muted-foreground/40" />
+                                                <span className="text-muted-foreground">
+                                                  Previous: {previousPercent.toFixed(1)}% ({formatCurrency(previousBilledAmount)})
+                                                </span>
+                                              </span>
+                                            )}
+                                            {item.thisBillPercent > 0 && (
+                                              <span className="flex items-center gap-1.5">
+                                                <span className="w-2.5 h-2.5 rounded-sm bg-primary" />
+                                                <span className="font-medium text-primary">
+                                                  This bill: {item.thisBillPercent.toFixed(1)}% ({formatCurrency(item.thisBillAmount)})
+                                                </span>
+                                              </span>
+                                            )}
+                                          </div>
+                                          <span className={cn(
+                                            "font-medium",
+                                            newTotalPercent === 100 ? "text-green-600 dark:text-green-400" : 
+                                            "text-muted-foreground"
+                                          )}>
+                                            {newTotalPercent.toFixed(1)}% total
                                           </span>
-                                        )}
-                                        {item.thisBillPercent > 0 && (
-                                          <span className="flex items-center gap-1.5">
-                                            <span className={cn(
-                                              "w-2.5 h-2.5 rounded-sm",
-                                              isOverBilling ? "bg-destructive" : "bg-primary"
-                                            )} />
-                                            <span className={cn(
-                                              "font-medium",
-                                              isOverBilling ? "text-destructive" : "text-primary"
-                                            )}>
-                                              This bill: {item.thisBillPercent.toFixed(1)}% ({formatCurrency(item.thisBillAmount)})
-                                            </span>
-                                          </span>
-                                        )}
+                                        </div>
+                                        
+                                        {/* Stacked Progress Bar */}
+                                        <div className="relative h-3 w-full rounded-full bg-muted overflow-hidden">
+                                          {/* Previous billing (gray) */}
+                                          <div 
+                                            className="absolute inset-y-0 left-0 bg-muted-foreground/40 transition-all duration-300"
+                                            style={{ width: `${Math.min(previousPercent, 100)}%` }}
+                                          />
+                                          {/* New billing (primary) */}
+                                          <div 
+                                            className="absolute inset-y-0 bg-primary transition-all duration-300"
+                                            style={{ 
+                                              left: `${Math.min(previousPercent, 100)}%`,
+                                              width: `${Math.min(item.thisBillPercent, 100 - previousPercent)}%`
+                                            }}
+                                          />
+                                          {/* 100% marker */}
+                                          {newTotalPercent > 0 && newTotalPercent < 100 && (
+                                            <div className="absolute right-0 top-0 bottom-0 w-px bg-border" />
+                                          )}
+                                        </div>
                                       </div>
-                                      <span className={cn(
-                                        "font-medium",
-                                        newTotalPercent > 100 ? "text-destructive" : 
-                                        newTotalPercent === 100 ? "text-green-600 dark:text-green-400" : 
-                                        "text-muted-foreground"
-                                      )}>
-                                        {newTotalPercent.toFixed(1)}% total
-                                      </span>
-                                    </div>
-                                    
-                                    {/* Stacked Progress Bar */}
-                                    <div className="relative h-3 w-full rounded-full bg-muted overflow-hidden">
-                                      {/* Previous billing (gray) */}
-                                      <div 
-                                        className="absolute inset-y-0 left-0 bg-muted-foreground/40 transition-all duration-300"
-                                        style={{ width: `${Math.min(previousPercent, 100)}%` }}
-                                      />
-                                      {/* New billing (primary or destructive) */}
-                                      <div 
-                                        className={cn(
-                                          "absolute inset-y-0 transition-all duration-300",
-                                          isOverBilling 
-                                            ? "bg-destructive animate-pulse" 
-                                            : "bg-primary"
-                                        )}
-                                        style={{ 
-                                          left: `${Math.min(previousPercent, 100)}%`,
-                                          width: `${Math.min(item.thisBillPercent, 100 - previousPercent)}%`
-                                        }}
-                                      />
-                                      {/* Overbilling indicator (extends past 100%) */}
-                                      {isOverBilling && (
-                                        <div 
-                                          className="absolute inset-y-0 right-0 bg-destructive/30 animate-pulse"
-                                          style={{ 
-                                            width: `${Math.min(newTotalPercent - 100, 20)}%`
-                                          }}
-                                        />
-                                      )}
-                                      {/* 100% marker */}
-                                      {newTotalPercent > 0 && newTotalPercent < 100 && (
-                                        <div className="absolute right-0 top-0 bottom-0 w-px bg-border" />
-                                      )}
-                                    </div>
-                                  </div>
 
-                                  {/* Slider and input */}
-                                  <div className="flex items-center gap-4">
-                                    <div className="flex-1">
-                                      <Slider
-                                        value={[item.thisBillPercent]}
-                                        onValueChange={([value]) => handlePercentChange(item.id, value)}
-                                        max={100}
-                                        step={1}
-                                        disabled={!item.enabled}
-                                        className={cn(isOverBilling && "[&_[role=slider]]:bg-destructive")}
-                                      />
-                                    </div>
-                                    <div className="flex items-center gap-1 w-24">
-                                      <Input
-                                        type="number"
-                                        min="0"
-                                        max="100"
-                                        step="0.5"
-                                        value={item.thisBillPercent}
-                                        onChange={(e) => handlePercentChange(item.id, parseFloat(e.target.value) || 0)}
-                                        disabled={!item.enabled}
-                                        className={cn(
-                                          "h-8 w-16 text-right",
-                                          isOverBilling && "border-destructive"
-                                        )}
-                                      />
-                                      <span className="text-sm">%</span>
-                                    </div>
-                                  </div>
+                                      {/* Slider and input */}
+                                      <div className="flex items-center gap-4">
+                                        <div className="flex-1">
+                                          <Slider
+                                            value={[item.thisBillPercent]}
+                                            onValueChange={([value]) => handlePercentChange(item.id, value)}
+                                            max={item.maxAllowedPercent}
+                                            step={1}
+                                            disabled={!item.enabled}
+                                          />
+                                        </div>
+                                        <div className="flex items-center gap-1 w-24">
+                                          <Input
+                                            type="number"
+                                            min="0"
+                                            max={item.maxAllowedPercent}
+                                            step="0.5"
+                                            value={item.thisBillPercent}
+                                            onChange={(e) => handlePercentChange(item.id, parseFloat(e.target.value) || 0)}
+                                            disabled={!item.enabled}
+                                            className="h-8 w-16 text-right"
+                                          />
+                                          <span className="text-sm">%</span>
+                                        </div>
+                                      </div>
 
-                                  {/* Error message */}
-                                  {isOverBilling && (
-                                    <div className="flex items-center gap-1.5 text-xs text-destructive">
-                                      <AlertCircle className="h-3.5 w-3.5" />
-                                      <span>Cannot exceed 100% total. Maximum for this bill: {item.maxAllowedPercent.toFixed(1)}%</span>
-                                    </div>
+                                      {/* Max available hint */}
+                                      <div className="text-xs text-muted-foreground">
+                                        Max available: {item.maxAllowedPercent.toFixed(1)}%
+                                      </div>
+                                    </>
                                   )}
                                 </>
                               )}
