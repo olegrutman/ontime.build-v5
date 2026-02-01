@@ -1,92 +1,52 @@
 
-# Plan: Fix SOV Readiness to Account for Billing Activity
+# Plan: Simplify SOV Workflow - Only Require SOV Existence, Auto-Lock on First Invoice
 
-## Problem Analysis
+## Problem Summary
 
-The SOV warning on the Work Orders tab persists even though SOVs are functionally locked through billing activity. The current issue:
+The current flow requires SOVs to be **both created AND locked** before allowing:
+1. Work order creation
+2. Invoice creation
 
-1. **SOV Editor UI**: Shows "Billing Active" label when invoices exist (SUBMITTED/APPROVED/PAID), treating the SOV as locked for editing
-2. **SOV Readiness Hook**: Only checks the `is_locked` boolean flag, ignoring the billing activity state
+The user wants to simplify this:
+- SOVs only need to **exist** (be created) for work orders and invoices
+- SOVs should be **auto-locked when the first invoice is created** against them
 
-This causes a mismatch where:
-- The database shows `is_locked: false` for a contract with active billing
-- The UI shows "Billing Active" on the SOV
-- The Work Orders tab incorrectly blocks new work order creation
+---
+
+## Current State Analysis
+
+### Files Using SOV Readiness Check
+| File | Usage |
+|------|-------|
+| `src/hooks/useSOVReadiness.ts` | Central hook that checks if SOVs are ready |
+| `src/components/project/WorkOrdersTab.tsx` | Blocks "New Work Order" button if not ready |
+| `src/components/invoices/InvoicesTab.tsx` | Blocks "New Invoice" button if not ready |
+
+### Current Readiness Logic in `useSOVReadiness.ts`
+```typescript
+// Currently requires:
+// 1. All primary contracts have SOVs created
+// 2. All those SOVs are locked OR have billing activity
+const isReady = pendingContracts === 0 && unlockedCount === 0;
+```
 
 ### Current Database State
-| Contract | Trade | is_locked | Has Billing |
-|----------|-------|-----------|-------------|
-| TC_Test → GC_Test | NULL (Primary) | false | Yes (1 invoice) |
-| FC_Test → TC_Test | Framer | false | No |
+SOVs have an `is_locked` boolean flag that is currently manually toggled by users.
 
 ---
 
 ## Solution
 
-Update `useSOVReadiness.ts` to also fetch billing activity status and consider an SOV as "ready" if EITHER:
-- `is_locked = true`, OR
-- The SOV has at least one invoice in SUBMITTED, APPROVED, or PAID status (billing has begun)
+### Part 1: Change SOV Readiness Logic
 
-This aligns the Work Orders gate with the same logic used by the SOV Editor UI.
+Update `useSOVReadiness.ts` to only check if SOVs **exist** for primary contracts:
+- Remove the check for `is_locked` status
+- Remove the check for billing activity
+- Ready = all primary contracts have SOVs created
 
----
+### Part 2: Auto-Lock SOV on First Invoice
 
-## Implementation Details
-
-### Update useSOVReadiness.ts
-
-Modify the data fetch to include billing activity:
-
-```typescript
-interface SOV {
-  id: string;
-  contract_id: string | null;
-  is_locked: boolean;
-  has_billing: boolean; // NEW: true if invoices exist
-}
-```
-
-Fetch billing status using a subquery or join:
-
-```typescript
-const sovsResult = await supabase
-  .from('project_sov')
-  .select(`
-    id, 
-    contract_id, 
-    is_locked,
-    invoices:project_contracts!contract_id(
-      invoices!inner(id, status)
-    )
-  `)
-  .eq('project_id', projectId);
-```
-
-Alternative approach - use a separate query for simplicity:
-
-```typescript
-// Fetch invoices with billing activity for this project
-const invoicesResult = await supabase
-  .from('invoices')
-  .select('contract_id')
-  .eq('project_id', projectId)
-  .in('status', ['SUBMITTED', 'APPROVED', 'PAID']);
-
-const contractsWithBilling = new Set(
-  invoicesResult.data?.map(i => i.contract_id).filter(Boolean) || []
-);
-```
-
-Then update the unlocked check:
-
-```typescript
-// Check which SOVs are unlocked (and have no billing activity)
-const unlockedSOVs = sovs.filter(
-  s => !s.is_locked && 
-       !contractsWithBilling.has(s.contract_id) && 
-       primaryContracts.some(c => c.id === s.contract_id)
-);
-```
+Create a database trigger that automatically sets `is_locked = true` when the first invoice is created for an SOV.
 
 ---
 
@@ -94,69 +54,146 @@ const unlockedSOVs = sovs.filter(
 
 | File | Change |
 |------|--------|
-| `src/hooks/useSOVReadiness.ts` | Add billing activity check to the readiness logic |
+| `src/hooks/useSOVReadiness.ts` | Simplify readiness logic to only check SOV existence |
+| `src/components/project/WorkOrdersTab.tsx` | Update tooltip text to reflect new requirement |
+| `src/components/invoices/InvoicesTab.tsx` | Update tooltip text to reflect new requirement |
+| Database migration | Add trigger to auto-lock SOV on first invoice creation |
 
 ---
 
-## Technical Details
+## Implementation Details
 
-### Modified Query Strategy
+### 1. Update useSOVReadiness.ts
 
-Option 1 (Recommended - Separate query for clarity):
+**Remove:**
+- The `unlockedSOVs` calculation
+- The billing activity check
+- The `unlockedSOVs` return field
+
+**Simplified Logic:**
 ```typescript
-const [contractsResult, sovsResult, billingResult] = await Promise.all([
-  supabase
-    .from('project_contracts')
-    .select('id, contract_sum, trade')
-    .eq('project_id', projectId),
-  supabase
-    .from('project_sov')
-    .select('id, contract_id, is_locked')
-    .eq('project_id', projectId),
-  supabase
-    .from('invoices')
-    .select('contract_id')
-    .eq('project_id', projectId)
-    .in('status', ['SUBMITTED', 'APPROVED', 'PAID'])
-]);
+// Only check if SOVs exist for all primary contracts
+const contractsWithSOVs = new Set(sovs.map(s => s.contract_id).filter(Boolean));
+const contractsWithoutSOVs = primaryContracts.filter(c => !contractsWithSOVs.has(c.id));
+const pendingContracts = contractsWithoutSOVs.length;
 
-const contractsWithBilling = new Set(
-  billingResult.data?.map(i => i.contract_id).filter(Boolean) || []
-);
+// Ready if all primary contracts have SOVs
+const isReady = pendingContracts === 0;
+
+// Simplified message
+let message = '';
+if (isReady) {
+  message = 'All SOVs are created.';
+} else {
+  message = `Create SOVs for ${pendingContracts} contract${pendingContracts > 1 ? 's' : ''} before creating work orders.`;
+}
 ```
 
-### Updated Readiness Logic
+### 2. Update WorkOrdersTab.tsx
 
+Update the tooltip:
 ```typescript
-// Check which SOVs are unlocked AND have no billing activity
-const unlockedSOVs = sovs.filter(
-  s => !s.is_locked && 
-       !contractsWithBilling.has(s.contract_id) && 
-       primaryContracts.some(c => c.id === s.contract_id)
-);
+// Old: "Create and lock all SOVs first"
+// New: "Create SOVs for all contracts first"
 ```
 
-This means an SOV is considered "ready" if:
-- It has `is_locked = true`, OR
-- It has billing activity (invoices in SUBMITTED/APPROVED/PAID status)
+### 3. Update InvoicesTab.tsx
+
+Same tooltip update.
+
+### 4. Database Trigger for Auto-Lock
+
+Create a trigger on the `invoices` table that:
+1. Fires `AFTER INSERT`
+2. Checks if this is the first invoice for the SOV
+3. If yes, updates `project_sov.is_locked = true`
+
+```sql
+CREATE OR REPLACE FUNCTION auto_lock_sov_on_first_invoice()
+RETURNS TRIGGER AS $$
+BEGIN
+  -- Only process if invoice has an sov_id
+  IF NEW.sov_id IS NOT NULL THEN
+    -- Check if this is the first invoice for this SOV
+    -- (count of invoices for this SOV before this insert should be 0)
+    IF NOT EXISTS (
+      SELECT 1 FROM invoices 
+      WHERE sov_id = NEW.sov_id 
+        AND id != NEW.id
+    ) THEN
+      -- This is the first invoice - auto-lock the SOV
+      UPDATE project_sov
+      SET is_locked = true,
+          locked_at = NOW(),
+          locked_by = NEW.created_by
+      WHERE id = NEW.sov_id
+        AND is_locked = false;
+    END IF;
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE TRIGGER trigger_auto_lock_sov_on_first_invoice
+AFTER INSERT ON invoices
+FOR EACH ROW
+EXECUTE FUNCTION auto_lock_sov_on_first_invoice();
+```
 
 ---
 
-## Expected Results
+## Interface Changes
 
-After implementation:
-1. SOVs with billing activity will no longer show as "unlocked" in the readiness check
-2. The warning will disappear when all primary contract SOVs are either:
-   - Manually locked (`is_locked = true`), OR
-   - Have active billing (invoices submitted/approved/paid)
-3. The New Work Order button will become enabled
+### SOVReadiness Interface Update
+
+```typescript
+// Remove unlockedSOVs from the interface
+interface SOVReadiness {
+  isReady: boolean;
+  pendingContracts: number;
+  // REMOVED: unlockedSOVs: number;
+  loading: boolean;
+  message: string;
+}
+```
+
+---
+
+## Expected Behavior After Implementation
+
+1. **Work Orders Tab:**
+   - Warning only shows if primary contracts are missing SOVs
+   - Once SOVs are created (regardless of lock status), work orders can be created
+
+2. **Invoices Tab:**
+   - Same behavior - only checks for SOV existence
+
+3. **First Invoice Creation:**
+   - When a user creates the first invoice for an SOV
+   - Database trigger automatically sets `is_locked = true`
+   - SOV becomes read-only (cannot add/remove/edit items)
+
+4. **SOV Editor UI:**
+   - Lock/unlock buttons still work for manual control
+   - Once billing starts, the "Billing Active" badge shows and prevents editing
 
 ---
 
 ## Testing Checklist
 
-1. Verify SOVs with `is_locked = true` and no billing are considered ready
-2. Verify SOVs with `is_locked = false` but with billing are considered ready
-3. Verify SOVs with `is_locked = false` and no billing still show the warning
-4. Test that locking an SOV via the UI dismisses the warning
-5. Test that submitting an invoice against an unlocked SOV also dismisses the warning
+1. Create a project with contracts but no SOVs
+   - Work Orders tab should show warning
+   - Invoice creation should be blocked
+
+2. Create SOVs (without locking them)
+   - Warning should disappear
+   - Work orders and invoices can now be created
+
+3. Create an invoice against an unlocked SOV
+   - SOV should auto-lock after invoice is created
+   - SOV Editor should show "Locked" badge
+
+4. Verify existing locked SOVs still work correctly
+
+5. Verify Work Order SOVs (trade = 'Work Order') are still excluded from the readiness check
