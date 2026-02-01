@@ -20,8 +20,8 @@ export interface ProjectContract {
 export interface ContractSOV {
   id: string;
   project_id: string;
-  contract_id: string;
-  sov_name: string;
+  contract_id: string | null;
+  sov_name: string | null;
   created_from_template_key: string | null;
   created_at: string;
   is_locked: boolean;
