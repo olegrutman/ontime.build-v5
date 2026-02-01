@@ -1,122 +1,98 @@
 
-# Plan: Fix Outside Location Not Registering as Complete
+# Plan: Unify Retainage Display for Main and Work Order Contracts
 
-## Problem Analysis
+## Overview
+Update the contract display in `ProjectContractsSection.tsx` to show both retainage percentage AND the calculated retainage amount, applied consistently to both Main Contracts and Change Order Contracts.
 
-When a work order is created with "Outside" location selected, two issues occur:
+---
 
-1. **Database checklist shows `location_complete: false`** even with valid outside location data
-2. **Header displays "Exterior" but not the actual feature** (e.g., "Fascia")
+## Current State
 
-### Root Cause
-
-The database trigger `update_co_checklist_location` only checks for `room_area` or `level`:
-
-```sql
--- Current (broken) logic
-v_location_complete := (
-  NEW.location_data IS NOT NULL 
-  AND (
-    (NEW.location_data->>'room_area') IS NOT NULL AND (NEW.location_data->>'room_area') != ''
-    OR (NEW.location_data->>'level') IS NOT NULL AND (NEW.location_data->>'level') != ''
-  )
-);
-```
-
-It **does not check `exterior_feature`**, which is the field used for outside locations.
+The `ProjectContractsSection.tsx` currently displays:
+- Contract Sum
+- Work Orders ($0 placeholder)
+- Invoiced ($0 placeholder)
+- Retainage: Only shows percentage (e.g., "10%")
 
 ---
 
 ## Solution
 
-### 1. Fix Database Trigger
+### Calculate and Display Retainage Amount
 
-Update the trigger to also check for `exterior_feature` when determining location completeness:
+For each contract, calculate the retainage amount based on:
+- **Contract Sum** × **Retainage Percent** / 100
 
-```sql
-v_location_complete := (
-  NEW.location_data IS NOT NULL 
-  AND (
-    -- Inside location: room_area or level
-    (NEW.location_data->>'room_area') IS NOT NULL AND (NEW.location_data->>'room_area') != ''
-    OR (NEW.location_data->>'level') IS NOT NULL AND (NEW.location_data->>'level') != ''
-    -- Outside location: exterior_feature
-    OR (NEW.location_data->>'exterior_feature') IS NOT NULL AND (NEW.location_data->>'exterior_feature') != ''
-  )
-);
+Display format: Show both the percentage and the calculated amount
+
+```text
+Retainage
+10% ($4,500)
 ```
 
-### 2. Fix Header Display
-
-Update `formatLocation` in `ChangeOrderHeader.tsx` to include the exterior feature:
-
-```typescript
-function formatLocation(location: LocationData): string {
-  const parts: string[] = [];
-  if (location.inside_outside) {
-    parts.push(location.inside_outside === 'inside' ? 'Interior' : 'Exterior');
-  }
-  if (location.level) parts.push(location.level);
-  if (location.unit) parts.push(`Unit ${location.unit}`);
-  if (location.room_area) parts.push(location.room_area);
-  // Add exterior feature for outside locations
-  if (location.exterior_feature) {
-    const formatted = location.exterior_feature
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-    parts.push(formatted);
-  }
-  return parts.length > 0 ? parts.join(' • ') : 'No location specified';
-}
-```
-
-### 3. Recalculate Existing Data
-
-Run an update to fix existing work orders with outside locations:
-
-```sql
-UPDATE change_order_checklist cl
-SET location_complete = (
-  SELECT 
-    cop.location_data IS NOT NULL 
-    AND (
-      (cop.location_data->>'room_area') IS NOT NULL AND (cop.location_data->>'room_area') != ''
-      OR (cop.location_data->>'level') IS NOT NULL AND (cop.location_data->>'level') != ''
-      OR (cop.location_data->>'exterior_feature') IS NOT NULL AND (cop.location_data->>'exterior_feature') != ''
-    )
-  FROM change_order_projects cop
-  WHERE cop.id = cl.change_order_id
-),
-updated_at = now();
+Or vertically:
+```text
+Retainage
+$4,500
+(10%)
 ```
 
 ---
 
-## Files to Modify
+## Implementation Details
+
+### Update ProjectContractsSection.tsx
+
+Modify the retainage display cell:
+
+```typescript
+// Current (line 236):
+<p className="text-sm font-medium">{contract.retainage_percent || 0}%</p>
+
+// Updated:
+const retainageAmount = (contract.contract_sum || 0) * ((contract.retainage_percent || 0) / 100);
+
+<div>
+  <p className="text-xs text-muted-foreground">Retainage</p>
+  <p className="text-sm font-medium">{formatCurrency(retainageAmount)}</p>
+  <p className="text-xs text-muted-foreground">({contract.retainage_percent || 0}%)</p>
+</div>
+```
+
+This applies to ALL contracts in the section - both main contracts and work order contracts will use the same consistent display.
+
+---
+
+## File Changes
 
 | File | Change |
 |------|--------|
-| Database Migration | Update `update_co_checklist_location` trigger to include `exterior_feature` |
-| `src/components/change-order-detail/ChangeOrderHeader.tsx` | Update `formatLocation` to display exterior feature |
+| `src/components/project/ProjectContractsSection.tsx` | Update retainage display to show both amount and percentage |
 
 ---
 
 ## Expected Results
 
-After these changes:
+Before:
+```text
+Retainage
+10%
+```
 
-- Work order "Fascia" will show `location_complete: true` in the checklist
-- Header will display "Exterior • Fascia" instead of just "Exterior"
-- All future outside work orders will properly register location as complete
+After:
+```text
+Retainage
+$4,500
+(10%)
+```
+
+Both main contracts and change order contracts will display retainage identically with the calculated amount prominently shown and the percentage as secondary information.
 
 ---
 
 ## Testing Checklist
 
-1. Verify existing "Fascia" work order now shows location complete
-2. Create a new work order with Outside > Fascia selected
-3. Confirm checklist shows location complete
-4. Confirm header displays "Exterior • Fascia"
-5. Test other exterior features (Siding, Soffit, etc.)
-6. Verify inside locations still work correctly
+1. Verify main contracts show retainage amount and percentage
+2. Verify work order (change order) contracts show the same format
+3. Confirm $0 contracts show $0 retainage correctly
+4. Confirm 0% retainage shows as $0 (0%)
