@@ -1,57 +1,33 @@
 
-# Plan: Fix SOV Warning Not Updating After Locking SOVs
+# Plan: Fix SOV Readiness to Account for Billing Activity
 
 ## Problem Analysis
 
-The SOV warning on the Work Orders tab doesn't disappear after SOVs are locked because the `useSOVReadiness` hook only fetches data once on mount. When the user:
-1. Views Work Orders tab → sees warning (SOVs not locked)
-2. Goes to SOV tab → locks SOVs
-3. Returns to Work Orders tab → warning still shows (stale data)
+The SOV warning on the Work Orders tab persists even though SOVs are functionally locked through billing activity. The current issue:
 
-The hook doesn't re-fetch data when the user navigates between tabs or when SOVs are updated.
+1. **SOV Editor UI**: Shows "Billing Active" label when invoices exist (SUBMITTED/APPROVED/PAID), treating the SOV as locked for editing
+2. **SOV Readiness Hook**: Only checks the `is_locked` boolean flag, ignoring the billing activity state
 
----
+This causes a mismatch where:
+- The database shows `is_locked: false` for a contract with active billing
+- The UI shows "Billing Active" on the SOV
+- The Work Orders tab incorrectly blocks new work order creation
 
-## Root Cause
-
-In `useSOVReadiness.ts`:
-```typescript
-useEffect(() => {
-  fetchData();
-}, [fetchData]);
-```
-
-This only runs once when the hook mounts. There's no mechanism to:
-- Refetch when the tab becomes active
-- Listen for database changes
-- Invalidate stale data
+### Current Database State
+| Contract | Trade | is_locked | Has Billing |
+|----------|-------|-----------|-------------|
+| TC_Test → GC_Test | NULL (Primary) | false | Yes (1 invoice) |
+| FC_Test → TC_Test | Framer | false | No |
 
 ---
 
 ## Solution
 
-Add a **refetch trigger** that runs when the user navigates to the Work Orders tab, and expose it to allow manual refetching.
+Update `useSOVReadiness.ts` to also fetch billing activity status and consider an SOV as "ready" if EITHER:
+- `is_locked = true`, OR
+- The SOV has at least one invoice in SUBMITTED, APPROVED, or PAID status (billing has begun)
 
-### Option A: Add Refetch on Visibility (Recommended)
-
-Add a `refetch` function that can be called externally, and auto-refetch when the hook is re-mounted (which happens when switching tabs in this SPA pattern).
-
-### Implementation
-
-1. **Expose a `refetch` function** from `useSOVReadiness`
-2. **Add `key` prop pattern** to force re-mount when tab changes, OR
-3. **Use tab change as dependency** to trigger refetch
-
-The cleanest approach is to expose `refetch` and call it when the Work Orders tab becomes active.
-
----
-
-## File Changes
-
-| File | Change |
-|------|--------|
-| `src/hooks/useSOVReadiness.ts` | Export `refetch` function from the hook |
-| `src/components/project/WorkOrdersTab.tsx` | Call refetch on mount to ensure fresh data |
+This aligns the Work Orders gate with the same logic used by the SOV Editor UI.
 
 ---
 
@@ -59,72 +35,128 @@ The cleanest approach is to expose `refetch` and call it when the Work Orders ta
 
 ### Update useSOVReadiness.ts
 
+Modify the data fetch to include billing activity:
+
 ```typescript
-export function useSOVReadiness(projectId: string | undefined): SOVReadiness & { refetch: () => void } {
-  // ... existing state ...
-
-  const fetchData = useCallback(async () => {
-    // ... existing fetch logic ...
-  }, [projectId]);
-
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  // ... existing readiness computation ...
-
-  return {
-    ...readiness,
-    refetch: fetchData  // Expose refetch function
-  };
+interface SOV {
+  id: string;
+  contract_id: string | null;
+  is_locked: boolean;
+  has_billing: boolean; // NEW: true if invoices exist
 }
 ```
 
-### Update WorkOrdersTab.tsx
+Fetch billing status using a subquery or join:
 
 ```typescript
-const sovReadiness = useSOVReadiness(projectId);
-
-// Refetch SOV status on mount to ensure fresh data
-useEffect(() => {
-  sovReadiness.refetch();
-}, []); // Only on mount
+const sovsResult = await supabase
+  .from('project_sov')
+  .select(`
+    id, 
+    contract_id, 
+    is_locked,
+    invoices:project_contracts!contract_id(
+      invoices!inner(id, status)
+    )
+  `)
+  .eq('project_id', projectId);
 ```
 
-This ensures that every time the user navigates to the Work Orders tab, the SOV readiness check runs fresh.
+Alternative approach - use a separate query for simplicity:
+
+```typescript
+// Fetch invoices with billing activity for this project
+const invoicesResult = await supabase
+  .from('invoices')
+  .select('contract_id')
+  .eq('project_id', projectId)
+  .in('status', ['SUBMITTED', 'APPROVED', 'PAID']);
+
+const contractsWithBilling = new Set(
+  invoicesResult.data?.map(i => i.contract_id).filter(Boolean) || []
+);
+```
+
+Then update the unlocked check:
+
+```typescript
+// Check which SOVs are unlocked (and have no billing activity)
+const unlockedSOVs = sovs.filter(
+  s => !s.is_locked && 
+       !contractsWithBilling.has(s.contract_id) && 
+       primaryContracts.some(c => c.id === s.contract_id)
+);
+```
 
 ---
 
-## Alternative: Add Interval Polling
+## File Changes
 
-If real-time updates are desired without navigation, we could add polling:
+| File | Change |
+|------|--------|
+| `src/hooks/useSOVReadiness.ts` | Add billing activity check to the readiness logic |
 
+---
+
+## Technical Details
+
+### Modified Query Strategy
+
+Option 1 (Recommended - Separate query for clarity):
 ```typescript
-useEffect(() => {
-  fetchData();
-  const interval = setInterval(fetchData, 30000); // Poll every 30s
-  return () => clearInterval(interval);
-}, [fetchData]);
+const [contractsResult, sovsResult, billingResult] = await Promise.all([
+  supabase
+    .from('project_contracts')
+    .select('id, contract_sum, trade')
+    .eq('project_id', projectId),
+  supabase
+    .from('project_sov')
+    .select('id, contract_id, is_locked')
+    .eq('project_id', projectId),
+  supabase
+    .from('invoices')
+    .select('contract_id')
+    .eq('project_id', projectId)
+    .in('status', ['SUBMITTED', 'APPROVED', 'PAID'])
+]);
+
+const contractsWithBilling = new Set(
+  billingResult.data?.map(i => i.contract_id).filter(Boolean) || []
+);
 ```
 
-However, this adds unnecessary network traffic. The refetch-on-mount approach is cleaner.
+### Updated Readiness Logic
+
+```typescript
+// Check which SOVs are unlocked AND have no billing activity
+const unlockedSOVs = sovs.filter(
+  s => !s.is_locked && 
+       !contractsWithBilling.has(s.contract_id) && 
+       primaryContracts.some(c => c.id === s.contract_id)
+);
+```
+
+This means an SOV is considered "ready" if:
+- It has `is_locked = true`, OR
+- It has billing activity (invoices in SUBMITTED/APPROVED/PAID status)
 
 ---
 
 ## Expected Results
 
 After implementation:
-1. User views Work Orders tab → sees SOV warning
-2. User goes to SOV tab → locks all SOVs
-3. User returns to Work Orders tab → **warning disappears** (fresh fetch on mount)
-4. New Work Order button becomes enabled
+1. SOVs with billing activity will no longer show as "unlocked" in the readiness check
+2. The warning will disappear when all primary contract SOVs are either:
+   - Manually locked (`is_locked = true`), OR
+   - Have active billing (invoices submitted/approved/paid)
+3. The New Work Order button will become enabled
 
 ---
 
 ## Testing Checklist
 
-1. Navigate to Work Orders tab with unlocked SOVs → verify warning shows
-2. Go to SOV tab and lock all primary contract SOVs
-3. Return to Work Orders tab → verify warning is gone
-4. Verify New Work Order button is enabled
-5. Test refresh behavior doesn't cause flickering
+1. Verify SOVs with `is_locked = true` and no billing are considered ready
+2. Verify SOVs with `is_locked = false` but with billing are considered ready
+3. Verify SOVs with `is_locked = false` and no billing still show the warning
+4. Test that locking an SOV via the UI dismisses the warning
+5. Test that submitting an invoice against an unlocked SOV also dismisses the warning
