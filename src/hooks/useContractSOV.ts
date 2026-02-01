@@ -14,6 +14,10 @@ export interface ProjectContract {
   allow_mobilization_line_item: boolean;
   status: string;
   to_project_team_id: string | null;
+  from_org_id?: string | null;
+  to_org_id?: string | null;
+  from_org_name?: string | null;
+  to_org_name?: string | null;
 }
 
 // SOV types
@@ -97,9 +101,16 @@ interface ProjectScopeDetails {
   has_roof_deck: boolean | null;
 }
 
-// Get contract display name
-export function getContractDisplayName(fromRole: string, toRole: string): string {
-  return `${fromRole} Contract with ${toRole}`;
+// Get contract display name - uses org names if available, falls back to roles
+export function getContractDisplayName(
+  fromRole: string, 
+  toRole: string,
+  fromOrgName?: string | null,
+  toOrgName?: string | null
+): string {
+  const from = fromOrgName || fromRole;
+  const to = toOrgName || toRole;
+  return `${from} → ${to}`;
 }
 
 // Map project type to template key
@@ -233,7 +244,11 @@ export function useContractSOV(projectId: string | undefined) {
       const [contractsResult, sovsResult, templatesResult] = await Promise.all([
         supabase
           .from('project_contracts')
-          .select('*')
+          .select(`
+            *,
+            from_org:organizations!project_contracts_from_org_id_fkey(name),
+            to_org:organizations!project_contracts_to_org_id_fkey(name)
+          `)
           .eq('project_id', projectId),
         supabase
           .from('project_sov')
@@ -245,7 +260,23 @@ export function useContractSOV(projectId: string | undefined) {
           .order('display_name')
       ]);
       
-      const fetchedContracts = (contractsResult.data || []) as ProjectContract[];
+      // Map contracts with org names
+      const fetchedContracts: ProjectContract[] = (contractsResult.data || []).map((c: any) => ({
+        id: c.id,
+        project_id: c.project_id,
+        from_role: c.from_role,
+        to_role: c.to_role,
+        trade: c.trade,
+        contract_sum: c.contract_sum,
+        retainage_percent: c.retainage_percent,
+        allow_mobilization_line_item: c.allow_mobilization_line_item,
+        status: c.status,
+        to_project_team_id: c.to_project_team_id,
+        from_org_id: c.from_org_id,
+        to_org_id: c.to_org_id,
+        from_org_name: c.from_org?.name || null,
+        to_org_name: c.to_org?.name || null,
+      }));
       const fetchedSovs = (sovsResult.data || []) as ContractSOV[];
       
       setContracts(fetchedContracts);
@@ -386,7 +417,7 @@ export function useContractSOV(projectId: string | undefined) {
       
       // Create SOV for each contract WITH value
       for (const contract of contractsWithValue) {
-        const sovName = getContractDisplayName(contract.from_role, contract.to_role);
+        const sovName = getContractDisplayName(contract.from_role, contract.to_role, contract.from_org_name, contract.to_org_name);
         
         // Create SOV record
         const { data: newSov, error: sovError } = await supabase

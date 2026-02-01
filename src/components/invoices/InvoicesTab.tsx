@@ -29,6 +29,8 @@ interface Contract {
   to_org_id: string | null;
   from_role: string;
   to_role: string;
+  from_org_name?: string | null;
+  to_org_name?: string | null;
 }
 
 export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
@@ -85,6 +87,12 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
     return { sentInvoices: sent, receivedInvoices: received };
   }, [invoices, currentOrgId, contractsWhereUserCanInvoice, contractsWhereUserReceivesInvoices]);
 
+  // Get GC org name from contracts for tab label
+  const gcOrgName = useMemo(() => {
+    const gcContract = contracts.find(c => c.to_role === 'General Contractor');
+    return gcContract?.to_org_name || 'GC';
+  }, [contracts]);
+
   // Current view invoices based on direction
   const currentInvoices = useMemo(() => {
     if (!isTCWithDualView) {
@@ -98,9 +106,25 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
     const fetchContracts = async () => {
       const { data } = await supabase
         .from('project_contracts')
-        .select('id, from_org_id, to_org_id, from_role, to_role')
+        .select(`
+          id, from_org_id, to_org_id, from_role, to_role,
+          from_org:organizations!project_contracts_from_org_id_fkey(name),
+          to_org:organizations!project_contracts_to_org_id_fkey(name)
+        `)
         .eq('project_id', projectId);
-      setContracts((data || []) as Contract[]);
+      
+      // Map to Contract interface with org names
+      const mappedContracts: Contract[] = (data || []).map((c: any) => ({
+        id: c.id,
+        from_org_id: c.from_org_id,
+        to_org_id: c.to_org_id,
+        from_role: c.from_role,
+        to_role: c.to_role,
+        from_org_name: c.from_org?.name || null,
+        to_org_name: c.to_org?.name || null,
+      }));
+      
+      setContracts(mappedContracts);
     };
     fetchContracts();
   }, [projectId]);
@@ -330,7 +354,7 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
       <div>
         <h3 className="text-lg font-semibold">
           {isTCWithDualView 
-            ? (invoiceDirection === 'sent' ? 'Sent to GC' : 'Received from FC')
+            ? (invoiceDirection === 'sent' ? `Sent to ${gcOrgName}` : 'Received from Field Crews')
             : 'Invoices'
           }
         </h3>
@@ -377,7 +401,7 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="sent" className="flex items-center gap-2">
               <Send className="h-4 w-4" />
-              Sent to GC
+              Sent to {gcOrgName}
               {sentInvoices.length > 0 && (
                 <span className="ml-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium">
                   {sentInvoices.length}
