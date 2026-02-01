@@ -73,10 +73,11 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
 
       const isFCView = currentRole === 'Field Crew';
       const isTCView = currentRole === 'Trade Contractor';
+      const isSupplierView = currentRole === 'Supplier';
 
-      // For FC: only fetch work orders they participated in
-      if (isFCView && currentOrgId) {
-        // Get work orders where FC is a participant
+      // For FC and Supplier: only fetch work orders they participated in
+      if ((isFCView || isSupplierView) && currentOrgId) {
+        // Get work orders where this org is a participant
         const { data: participations } = await supabase
           .from('change_order_participants')
           .select('change_order_id')
@@ -98,12 +99,6 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
           return;
         }
 
-        // Get FC hours for participated work orders
-        const { data: fcHours } = await supabase
-          .from('change_order_fc_hours')
-          .select('change_order_id, hours, hourly_rate, labor_total')
-          .in('change_order_id', participatedWOIds);
-
         // Get work order statuses
         const { data: workOrders } = await supabase
           .from('change_order_projects')
@@ -121,10 +116,18 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
           }
         }
 
-        // Calculate FC earnings: hours × hourly_rate
-        const fcEarnings = (fcHours || []).reduce((sum, fc) => {
-          return sum + (fc.labor_total || (fc.hours * (fc.hourly_rate || 0)));
-        }, 0);
+        // For FC: also calculate their labor earnings
+        let fcEarnings = 0;
+        if (isFCView) {
+          const { data: fcHours } = await supabase
+            .from('change_order_fc_hours')
+            .select('change_order_id, hours, hourly_rate, labor_total')
+            .in('change_order_id', participatedWOIds);
+
+          fcEarnings = (fcHours || []).reduce((sum, fc) => {
+            return sum + (fc.labor_total || (fc.hours * (fc.hourly_rate || 0)));
+          }, 0);
+        }
 
         setTotals({
           tcToGcTotal: 0,
@@ -215,6 +218,7 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
 
   const isTCView = viewerRole === 'Trade Contractor';
   const isFCView = viewerRole === 'Field Crew';
+  const isSupplierView = viewerRole === 'Supplier';
   
   const profit = totals.tcToGcTotal - totals.tcToFcTotal;
   const profitPercent = totals.tcToGcTotal > 0 ? (profit / totals.tcToGcTotal) * 100 : 0;
@@ -224,7 +228,7 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
           <ClipboardList className="h-4 w-4" />
-          {isFCView ? 'My Work Orders' : 'Work Orders'}
+          {(isFCView || isSupplierView) ? 'My Work Orders' : 'Work Orders'}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -278,6 +282,9 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
               <span className="text-lg font-bold text-green-600">{formatCurrency(totals.fcEarnings)}</span>
             </div>
           </div>
+        ) : isSupplierView ? (
+          /* Supplier sees just the count summary - no financial details */
+          null
         ) : (
           /* GC sees work order totals */
           <div className="pt-3 border-t">
