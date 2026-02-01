@@ -244,10 +244,12 @@ Spreadsheet-style with:
 | 1.1 Status Columns | Medium | High | 1 | ✅ Done |
 | 1.3 Hover Actions | Low | Medium | 2 | ✅ Done |
 | 2.2 Role Badges | Low | Medium | 2.5 | ✅ Done |
-| 2.3 Permission Components | Low | High | 3 | 🔜 Next |
-| 3.3 Relationship Visualization | Medium | Medium | 4 | Pending |
-| 4.1-4.3 View Modes | High | High | 5 | Pending |
-| 3.1-3.2 Access Levels | High | Medium | 6 | Pending |
+| 2.3 Permission Components | Low | High | 3 | ✅ Done |
+| 4.1 View Switcher | Medium | High | 4 | ✅ Done |
+| 4.2 Board View | High | High | 5 | ✅ Done |
+| 3.1-3.2 Access Levels (DB) | High | Medium | 6 | ✅ Done |
+| 3.3 Relationship Visualization | Medium | Medium | 7 | Pending |
+| 4.3 Table View | Medium | Medium | 8 | Pending |
 
 ---
 

@@ -1319,6 +1319,7 @@ export type Database = {
           timezone: string | null
           updated_at: string
           user_id: string
+          view_preference: string | null
         }
         Insert: {
           created_at?: string
@@ -1334,6 +1335,7 @@ export type Database = {
           timezone?: string | null
           updated_at?: string
           user_id: string
+          view_preference?: string | null
         }
         Update: {
           created_at?: string
@@ -1349,6 +1351,7 @@ export type Database = {
           timezone?: string | null
           updated_at?: string
           user_id?: string
+          view_preference?: string | null
         }
         Relationships: []
       }
@@ -1535,6 +1538,50 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_guests: {
+        Row: {
+          accepted_at: string | null
+          access_level: string | null
+          created_at: string | null
+          email: string
+          expires_at: string | null
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          project_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          access_level?: string | null
+          created_at?: string | null
+          email: string
+          expires_at?: string | null
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          project_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          access_level?: string | null
+          created_at?: string | null
+          email?: string
+          expires_at?: string | null
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_guests_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -1986,6 +2033,7 @@ export type Database = {
       project_team: {
         Row: {
           accepted_at: string | null
+          access_level: string | null
           created_at: string
           id: string
           invited_at: string
@@ -2004,6 +2052,7 @@ export type Database = {
         }
         Insert: {
           accepted_at?: string | null
+          access_level?: string | null
           created_at?: string
           id?: string
           invited_at?: string
@@ -2022,6 +2071,7 @@ export type Database = {
         }
         Update: {
           accepted_at?: string | null
+          access_level?: string | null
           created_at?: string
           id?: string
           invited_at?: string
@@ -3211,6 +3261,10 @@ export type Database = {
           type: Database["public"]["Enums"]["notification_type"]
         }[]
       }
+      get_project_access_level: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: string
+      }
       get_project_relationships: {
         Args: { _project_id: string }
         Returns: {
@@ -3231,6 +3285,10 @@ export type Database = {
       get_user_role_in_org: {
         Args: { _org_id: string; _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_project_access: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
       }
       has_role: {
         Args: {
