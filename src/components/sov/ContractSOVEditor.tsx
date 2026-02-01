@@ -240,7 +240,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                       )}
                       <div>
                         <div className="flex items-center gap-2">
-                          <CardTitle className="text-base">{sov.sov_name}</CardTitle>
+                          <CardTitle className="text-base">{sov.sov_name || 'Unnamed SOV'}</CardTitle>
                           <Badge variant={isWorkOrderSOV ? "outline" : "secondary"} className="text-xs">
                             {sovSourceLabel}
                           </Badge>
@@ -288,7 +288,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Unlock SOV</AlertDialogTitle>
                               <AlertDialogDescription>
-                                This will unlock the SOV and allow editing. Are you sure you want to unlock "{sov.sov_name}"?
+                                This will unlock the SOV and allow editing. Are you sure you want to unlock "{sov.sov_name || 'this SOV'}"?
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
@@ -346,7 +346,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                             <AlertDialogHeader>
                               <AlertDialogTitle>Delete SOV</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Are you sure you want to delete "{sov.sov_name}" and all {items.length} line items? This action cannot be undone.
+                                Are you sure you want to delete "{sov.sov_name || 'this SOV'}" and all {items.length} line items? This action cannot be undone.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>

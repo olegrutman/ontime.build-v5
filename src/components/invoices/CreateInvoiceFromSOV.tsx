@@ -43,8 +43,8 @@ interface Contract {
 
 interface SOV {
   id: string;
-  contract_id: string;
-  sov_name: string;
+  contract_id: string | null;
+  sov_name: string | null;
 }
 
 interface SOVItem {
