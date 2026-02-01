@@ -312,19 +312,42 @@ export function AddTeamMemberDialog({
       // Note: project_participants insert is now handled by database trigger
       // (trg_sync_team_to_participants) which also fires the notification
 
-      // If TC is inviting FC, create a placeholder contract
-      if (currentOrgType === 'TC' && selectedRole === 'Field Crew' && currentOrgId) {
-        await supabase.from('project_contracts').insert({
+      // Create contract if applicable (not for Suppliers)
+      // Determine contract direction based on who should invoice whom
+      // Worker (invoice sender) = from_org, Payer = to_org
+      if (selectedRole !== 'Supplier' && currentOrgId) {
+        const creatorRoleLabel = currentOrgType === 'GC' ? 'General Contractor' 
+          : currentOrgType === 'TC' ? 'Trade Contractor' : null;
+        
+        const isCreatorUpstream = 
+          (currentOrgType === 'GC') ||
+          (currentOrgType === 'TC' && selectedRole === 'Field Crew');
+
+        const contractPayload = isCreatorUpstream ? {
+          // Invitee is worker, creator is payer
           project_id: projectId,
-          from_org_id: currentOrgId,
-          to_org_id: selectedResult.org_id,
-          from_role: 'Trade Contractor',
-          to_role: 'Field Crew',
+          from_org_id: selectedResult.org_id,
+          from_role: selectedRole,
+          to_org_id: currentOrgId,
+          to_role: creatorRoleLabel,
           trade: selectedTrade || null,
           contract_sum: 0,
           retainage_percent: 0,
           created_by_user_id: user.id,
-        });
+        } : {
+          // Creator is worker, invitee is payer (e.g., TC inviting GC)
+          project_id: projectId,
+          from_org_id: currentOrgId,
+          from_role: creatorRoleLabel,
+          to_org_id: selectedResult.org_id,
+          to_role: selectedRole,
+          trade: selectedTrade || null,
+          contract_sum: 0,
+          retainage_percent: 0,
+          created_by_user_id: user.id,
+        };
+
+        await supabase.from('project_contracts').insert(contractPayload);
       }
 
       // Log activity
