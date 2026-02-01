@@ -293,9 +293,10 @@ export default function CreateProjectNew() {
     console.log('Members needing contracts:', membersNeedingContracts.map(m => ({ id: m.id, role: m.role, name: m.invited_org_name })));
     
     // Fetch existing contracts to update in-place when re-visiting the step
+    // Match by org IDs since to_project_team_id may be null on initial creation
     const { data: existingContracts, error: existingError } = await supabase
       .from('project_contracts')
-      .select('id, to_project_team_id')
+      .select('id, from_org_id, to_org_id, to_project_team_id')
       .eq('project_id', projectId);
 
     if (existingError) {
@@ -311,14 +312,22 @@ export default function CreateProjectNew() {
         console.log('Processing contract for:', teamMember.invited_org_name, teamMember.role, 
           'state contract:', contract ? { sum: contract.contractSum, ret: contract.retainagePercent } : 'NOT FOUND');
 
-        const existing = existingContracts?.find((c) => c.to_project_team_id === teamMember.id);
-
         // Determine contract direction based on who should invoice whom
         // Worker (invoice sender) = from_org, Payer = to_org
         // If creator is upstream (GC or TC inviting FC), invitee is the worker
         const isCreatorUpstream = 
           (creatorRole === 'General Contractor') ||
           (creatorRole === 'Trade Contractor' && teamMember.role === 'Field Crew');
+
+        // Match existing contract by org IDs (which are always populated)
+        // This ensures we find contracts even if to_project_team_id wasn't set initially
+        const existing = existingContracts?.find((c) => {
+          if (isCreatorUpstream) {
+            return c.from_org_id === teamMember.org_id && c.to_org_id === currentOrg?.id;
+          } else {
+            return c.from_org_id === currentOrg?.id && c.to_org_id === teamMember.org_id;
+          }
+        });
 
         const payload = isCreatorUpstream ? {
           // Invitee is worker, creator is payer
@@ -350,7 +359,8 @@ export default function CreateProjectNew() {
           created_by_user_id: user?.id,
         };
 
-        console.log('Upserting contract payload:', { ...payload, contract_sum: payload.contract_sum });
+        console.log('Upserting contract payload:', { ...payload, contract_sum: payload.contract_sum }, 
+          'existing:', existing?.id ? 'UPDATE' : 'INSERT');
 
         const { error } = existing?.id
           ? await supabase.from('project_contracts').update(payload).eq('id', existing.id)
