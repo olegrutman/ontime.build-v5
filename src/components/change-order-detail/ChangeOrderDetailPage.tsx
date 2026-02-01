@@ -17,6 +17,7 @@ import { EquipmentPanel } from './EquipmentPanel';
 import { ApprovalPanel } from './ApprovalPanel';
 import { ParticipantActivationPanel } from './ParticipantActivationPanel';
 import { GCLaborReviewPanel } from './GCLaborReviewPanel';
+import { ContractedPricingCard } from './ContractedPricingCard';
 
 export function ChangeOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -172,6 +173,17 @@ export function ChangeOrderDetailPage() {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Contracted Pricing - visible to all roles */}
+            <ContractedPricingCard
+              changeOrder={changeOrder}
+              fcHours={fcHours}
+              tcLabor={tcLabor}
+              materials={materials}
+              equipment={equipment}
+              participants={participants}
+              currentRole={currentRole}
+            />
+
             {/* TC Pricing Summary - TC only */}
             {isTC && (
               <TCPricingSummary
