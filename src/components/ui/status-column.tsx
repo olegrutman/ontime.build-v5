@@ -138,7 +138,7 @@ export const INVOICE_STATUS_OPTIONS: StatusOption[] = [
 ];
 
 export const CHANGE_ORDER_STATUS_OPTIONS: StatusOption[] = [
-  { value: 'draft', label: 'Draft', color: '#C4C4C4' },
+  { value: 'draft', label: 'In Progress', color: '#C4C4C4' },
   { value: 'fc_input', label: 'FC Input', color: '#0086C0' },
   { value: 'tc_pricing', label: 'TC Pricing', color: '#FDAB3D' },
   { value: 'ready_for_approval', label: 'Ready', color: '#A25DDC' },

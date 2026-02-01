@@ -205,7 +205,7 @@ export interface ChangeOrderWizardData {
 
 // Status labels
 export const CHANGE_ORDER_STATUS_LABELS: Record<ChangeOrderStatus, string> = {
-  draft: 'Draft',
+  draft: 'In Progress',
   fc_input: 'Field Crew Input',
   tc_pricing: 'Trade Contractor Pricing',
   ready_for_approval: 'Ready for Approval',
