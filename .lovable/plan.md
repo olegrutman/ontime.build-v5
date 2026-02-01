@@ -1,41 +1,33 @@
 
-# Plan: Fix Duplicate Description on Work Order Page
+# Plan: Fix Supplier Project Invite Acceptance Issue
 
-## Problem Identified
+## Problem Summary
 
-The work order detail page displays the description **twice**:
+When a TC invites a Supplier via the "Search Existing" flow in the Project Team tile, the Supplier cannot accept the invite from their dashboard.
 
-1. **In `ChangeOrderHeader.tsx`** (lines 68-72):
-   ```tsx
-   {changeOrder.description && (
-     <div className="p-4 bg-muted/30 rounded-lg">
-       <p className="text-sm whitespace-pre-wrap">{changeOrder.description}</p>
-     </div>
-   )}
-   ```
+## Root Cause Analysis
 
-2. **In `ChangeOrderScopePanel.tsx`** (lines 90-99):
-   ```tsx
-   <div className="p-3 bg-muted/30 rounded-lg min-h-[60px]">
-     {changeOrder.description ? (
-       <p className="text-sm">{changeOrder.description}</p>
-     ) : (
-       <p className="text-sm text-muted-foreground italic">
-         No description provided...
-       </p>
-     )}
-   </div>
-   ```
+After extensive investigation, I found that:
 
-Both components are rendered on the `ChangeOrderDetailPage.tsx`, resulting in the description appearing twice on the page.
+1. **The database functions are correct** - `accept_project_invite` includes SUPPLIER in `can_accept_project_invite`
+2. **The invite data exists** - Both `project_team` and `project_participants` entries are correctly created
+3. **The matching logic should work** - The fallback query in `accept_project_invite` correctly finds the `project_team` entry
 
----
+However, there's an **inconsistency between the two invitation flows**:
+
+| Flow | Creates `project_team` | Creates `project_invites` |
+|------|------------------------|---------------------------|
+| **Search Existing** (handleAddExisting) | Yes | **NO** |
+| **Invite by Email** (handleInviteByEmail) | Yes | Yes |
+
+While the `accept_project_invite` function has a fallback that should work without `project_invites`, this inconsistency could cause issues with:
+- The notification system expecting a `project_invites` record
+- Invite tracking and resend functionality
+- Edge cases in the matching logic
 
 ## Solution
 
-Remove the description display from **`ChangeOrderHeader.tsx`** since:
-- The `ChangeOrderScopePanel` is the proper place for the description (it has the edit functionality)
-- The header should focus on title, status, location, and key metadata only
+Add `project_invites` record creation to the "Search Existing" flow in `AddTeamMemberDialog.tsx` to ensure consistent behavior.
 
 ---
 
@@ -43,39 +35,65 @@ Remove the description display from **`ChangeOrderHeader.tsx`** since:
 
 | File | Change |
 |------|--------|
-| `src/components/change-order-detail/ChangeOrderHeader.tsx` | Remove the description section (lines 67-72) |
+| `src/components/project/AddTeamMemberDialog.tsx` | Add project_invites creation in handleAddExisting |
 
 ---
 
 ## Implementation Details
 
-### Remove from ChangeOrderHeader.tsx
+### Update handleAddExisting Function
 
-Delete lines 67-72:
-```tsx
-// REMOVE THIS BLOCK:
-{changeOrder.description && (
-  <div className="p-4 bg-muted/30 rounded-lg">
-    <p className="text-sm whitespace-pre-wrap">{changeOrder.description}</p>
-  </div>
-)}
+After successfully inserting into `project_team`, also create a corresponding `project_invites` record:
+
+```typescript
+// Current code (lines 295-308):
+const { data: teamData, error: teamError } = await supabase
+  .from('project_team')
+  .insert({...})
+  .select('id')
+  .single();
+
+if (teamError) throw teamError;
+
+// ADD THIS: Create project_invites record for existing orgs too
+await supabase.from('project_invites').insert({
+  project_id: projectId,
+  project_team_id: teamData.id,
+  role: selectedRole,
+  trade: requiresTrade(selectedRole) ? selectedTrade : null,
+  invited_email: selectedResult.contact_email,
+  invited_name: selectedResult.contact_name,
+  invited_org_name: selectedResult.org_name,
+  invited_by_user_id: user.id,
+});
 ```
 
-The header will now only show:
-- Title
-- Project name
-- Status badge
-- Location
-- Work type
-- Created date
+### Key Changes
 
-The description will remain exclusively in the `ChangeOrderScopePanel` component where it can be edited.
+1. Modify the `project_team` insert to return the created `id`
+2. Create a corresponding `project_invites` record linked via `project_team_id`
+3. This ensures both invitation flows create the same database records
 
 ---
 
-## Result
+## Expected Behavior After Fix
 
-After this fix:
-- Description appears only once (in the Scope Details panel)
-- Edit functionality remains intact
-- Header is cleaner and focused on key metadata
+1. **TC invites Supplier** via "Search Existing"
+   - Creates `project_team` entry (status: Invited)
+   - Creates `project_invites` entry (status: Invited)
+   - Trigger creates `project_participants` entry (invite_status: INVITED)
+
+2. **Supplier sees invite** in Dashboard
+   - `useDashboardData` fetches from `project_participants` correctly
+
+3. **Supplier clicks Accept**
+   - `accept_project_invite` RPC finds matching invite via primary lookup (now works)
+   - Updates `project_invites.status` to 'Accepted'
+   - Updates `project_team.status` to 'Accepted'
+   - Updates `project_participants.invite_status` to 'ACCEPTED'
+
+---
+
+## Technical Details
+
+The fix ensures consistency in the invitation flow by creating matching records in both `project_team` and `project_invites` tables, regardless of whether the invite was sent via "Search Existing" or "Invite by Email".
