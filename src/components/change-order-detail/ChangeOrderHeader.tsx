@@ -64,12 +64,6 @@ export function ChangeOrderHeader({ changeOrder }: ChangeOrderHeaderProps) {
         </div>
       </div>
 
-      {/* Description */}
-      {changeOrder.description && (
-        <div className="p-4 bg-muted/30 rounded-lg">
-          <p className="text-sm whitespace-pre-wrap">{changeOrder.description}</p>
-        </div>
-      )}
     </div>
   );
 }
