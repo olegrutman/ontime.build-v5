@@ -1,142 +1,95 @@
 
-# Plan: SOV Gating and Edit Lock Rules
+# Plan: Fix Outside Location Not Registering as Complete
 
-## Overview
-Implement a robust SOV workflow that:
-1. **Gates transactions** until all primary contract SOVs are created and locked
-2. **Allows SOV editing** until the first invoice is submitted (not just created) for approval
+## Problem Analysis
 
----
+When a work order is created with "Outside" location selected, two issues occur:
 
-## Current Issues
+1. **Database checklist shows `location_complete: false`** even with valid outside location data
+2. **Header displays "Exterior" but not the actual feature** (e.g., "Fascia")
 
-1. **TC can create work orders before SOVs exist** - This bypasses the intended workflow where SOVs should be set up first
-2. **No enforcement of SOV completion** - Users can proceed with transactions without properly configuring billing structure
-3. **Lock timing is wrong** - Currently locks on manual action, but should remain editable until first invoice submission
+### Root Cause
 
----
+The database trigger `update_co_checklist_location` only checks for `room_area` or `level`:
 
-## Solution Design
+```sql
+-- Current (broken) logic
+v_location_complete := (
+  NEW.location_data IS NOT NULL 
+  AND (
+    (NEW.location_data->>'room_area') IS NOT NULL AND (NEW.location_data->>'room_area') != ''
+    OR (NEW.location_data->>'level') IS NOT NULL AND (NEW.location_data->>'level') != ''
+  )
+);
+```
 
-### Concept: SOV Readiness Check
-
-Create a centralized check that answers: "Are all primary contracts ready for billing?"
-
-**Conditions for SOV Readiness:**
-- All primary contracts (non-work-order) with `contract_sum > 0` must have an SOV
-- Each SOV must be locked (`is_locked = true`)
-
-### Concept: SOV Edit Window
-
-SOV editing should be allowed until the SOV has active billing:
-- **Editable**: No invoices with status SUBMITTED, APPROVED, or PAID exist for this SOV
-- **Locked from editing**: First invoice submitted for approval
+It **does not check `exterior_feature`**, which is the field used for outside locations.
 
 ---
 
-## Implementation Details
+## Solution
 
-### 1. Create SOV Readiness Hook
+### 1. Fix Database Trigger
 
-**New file: `src/hooks/useSOVReadiness.ts`**
+Update the trigger to also check for `exterior_feature` when determining location completeness:
+
+```sql
+v_location_complete := (
+  NEW.location_data IS NOT NULL 
+  AND (
+    -- Inside location: room_area or level
+    (NEW.location_data->>'room_area') IS NOT NULL AND (NEW.location_data->>'room_area') != ''
+    OR (NEW.location_data->>'level') IS NOT NULL AND (NEW.location_data->>'level') != ''
+    -- Outside location: exterior_feature
+    OR (NEW.location_data->>'exterior_feature') IS NOT NULL AND (NEW.location_data->>'exterior_feature') != ''
+  )
+);
+```
+
+### 2. Fix Header Display
+
+Update `formatLocation` in `ChangeOrderHeader.tsx` to include the exterior feature:
 
 ```typescript
-interface SOVReadiness {
-  isReady: boolean;            // All SOVs created and locked
-  pendingContracts: number;    // Contracts without SOVs
-  unlockedSOVs: number;        // SOVs not yet locked
-  loading: boolean;
-  message: string;             // User-friendly status message
+function formatLocation(location: LocationData): string {
+  const parts: string[] = [];
+  if (location.inside_outside) {
+    parts.push(location.inside_outside === 'inside' ? 'Interior' : 'Exterior');
+  }
+  if (location.level) parts.push(location.level);
+  if (location.unit) parts.push(`Unit ${location.unit}`);
+  if (location.room_area) parts.push(location.room_area);
+  // Add exterior feature for outside locations
+  if (location.exterior_feature) {
+    const formatted = location.exterior_feature
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+    parts.push(formatted);
+  }
+  return parts.length > 0 ? parts.join(' • ') : 'No location specified';
 }
 ```
 
-Logic:
-- Fetch all primary contracts with `contract_sum > 0` (excluding Work Order trades)
-- Fetch all SOVs for the project
-- Check if each qualifying contract has a corresponding locked SOV
-- Return readiness status
+### 3. Recalculate Existing Data
 
-### 2. Block Work Order Creation Until SOVs Ready
+Run an update to fix existing work orders with outside locations:
 
-**Modify: `src/components/project/WorkOrdersTab.tsx`**
-
-- Import and use `useSOVReadiness` hook
-- When `!isReady`, show an alert banner explaining SOVs must be set up first
-- Disable or hide the "New Work Order" button with tooltip explaining why
-- Link to the SOV tab for easy navigation
-
+```sql
+UPDATE change_order_checklist cl
+SET location_complete = (
+  SELECT 
+    cop.location_data IS NOT NULL 
+    AND (
+      (cop.location_data->>'room_area') IS NOT NULL AND (cop.location_data->>'room_area') != ''
+      OR (cop.location_data->>'level') IS NOT NULL AND (cop.location_data->>'level') != ''
+      OR (cop.location_data->>'exterior_feature') IS NOT NULL AND (cop.location_data->>'exterior_feature') != ''
+    )
+  FROM change_order_projects cop
+  WHERE cop.id = cl.change_order_id
+),
+updated_at = now();
 ```
-+----------------------------------------------------------+
-|  ⚠️ SOV Setup Required                                   |
-|  Create and lock Schedule of Values for all contracts    |
-|  before creating work orders.                            |
-|  [Go to SOV Tab]                                         |
-+----------------------------------------------------------+
-```
-
-### 3. Block Invoice Creation Until SOVs Ready
-
-**Modify: `src/components/invoices/InvoicesTab.tsx`**
-
-- Import and use `useSOVReadiness` hook
-- When `!isReady`, disable "New Invoice" button
-- Show informational alert about SOV requirement
-
-### 4. Update SOV Edit Lock Logic
-
-**Modify: `src/hooks/useContractSOV.ts`**
-
-Add a function to check if an SOV has submitted invoices:
-
-```typescript
-const hasSubmittedInvoices = useCallback(async (sovId: string) => {
-  const { data } = await supabase
-    .from('invoices')
-    .select('id')
-    .eq('sov_id', sovId)
-    .in('status', ['SUBMITTED', 'APPROVED', 'PAID'])
-    .limit(1);
-  return (data && data.length > 0);
-}, []);
-```
-
-### 5. Update SOV Editor UI
-
-**Modify: `src/components/sov/ContractSOVEditor.tsx`**
-
-For each SOV, check if it has submitted invoices:
-- If yes: Show "Billing Active" badge, disable all editing (items, percentages, lock toggle)
-- If no: Allow editing even if previously locked (can unlock to edit)
-
-Replace current lock logic with invoice-based lock:
-
-| Has Submitted Invoices? | UI State |
-|------------------------|----------|
-| No | Editable - can add/edit/delete items, adjust percentages |
-| Yes | Locked - show "Billing Active" indicator, all editing disabled |
-
-### 6. Remove Manual Lock Requirement for Billing
-
-The lock button becomes optional for workflow organization but billing-based lock is automatic:
-- **Manual Lock**: User can still lock early if they want to signify "this SOV is finalized"
-- **Automatic Lock**: Once first invoice is submitted, editing is disabled regardless of manual lock state
-
----
-
-## UI Changes Summary
-
-### WorkOrdersTab
-- Add alert banner when SOVs not ready
-- Disable "New Work Order" button with explanation
-
-### InvoicesTab  
-- Disable "New Invoice" button when SOVs not ready
-- Show guidance message
-
-### ContractSOVEditor
-- Show "Billing Active" badge on SOVs with submitted invoices
-- Disable editing for SOVs with submitted invoices
-- Update empty state to clarify SOV must be created before transactions
 
 ---
 
@@ -144,36 +97,26 @@ The lock button becomes optional for workflow organization but billing-based loc
 
 | File | Change |
 |------|--------|
-| `src/hooks/useSOVReadiness.ts` | New hook for SOV readiness check |
-| `src/components/project/WorkOrdersTab.tsx` | Add SOV readiness gate |
-| `src/components/invoices/InvoicesTab.tsx` | Add SOV readiness gate |
-| `src/hooks/useContractSOV.ts` | Add invoice check for edit lock |
-| `src/components/sov/ContractSOVEditor.tsx` | Update UI for billing-based lock |
+| Database Migration | Update `update_co_checklist_location` trigger to include `exterior_feature` |
+| `src/components/change-order-detail/ChangeOrderHeader.tsx` | Update `formatLocation` to display exterior feature |
 
 ---
 
-## Edge Cases Handled
+## Expected Results
 
-1. **No primary contracts** - SOV readiness returns true (nothing to configure)
-2. **All contracts are $0** - SOV readiness returns true (no billing needed)
-3. **Work order contracts** - Excluded from primary SOV check (they get SOVs on finalization)
-4. **Invoice in DRAFT status** - Does NOT lock the SOV (can still edit)
-5. **Invoice REJECTED** - SOV remains editable (can fix and resubmit)
-6. **Multiple invoices** - Any SUBMITTED/APPROVED/PAID locks the SOV
+After these changes:
+
+- Work order "Fascia" will show `location_complete: true` in the checklist
+- Header will display "Exterior • Fascia" instead of just "Exterior"
+- All future outside work orders will properly register location as complete
 
 ---
 
 ## Testing Checklist
 
-1. Create a project with a TC → GC contract
-2. Verify "New Work Order" is disabled before SOV creation
-3. Create SOV from template
-4. Verify "New Work Order" is still disabled (SOV not locked)
-5. Lock the SOV to 100%
-6. Verify "New Work Order" is now enabled
-7. Create a work order
-8. Create an invoice in DRAFT status
-9. Verify SOV items are still editable
-10. Submit the invoice for approval
-11. Verify SOV items are now locked with "Billing Active" indicator
-12. Verify unlock button is hidden/disabled for SOVs with billing
+1. Verify existing "Fascia" work order now shows location complete
+2. Create a new work order with Outside > Fascia selected
+3. Confirm checklist shows location complete
+4. Confirm header displays "Exterior • Fascia"
+5. Test other exterior features (Siding, Soffit, etc.)
+6. Verify inside locations still work correctly
