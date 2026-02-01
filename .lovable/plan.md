@@ -1,175 +1,130 @@
 
-# Plan: Project Overview Enhancements
+# Plan: Fix SOV Warning Not Updating After Locking SOVs
 
-## Overview
-Implement four enhancements to the Project Overview page:
-1. Create a new Invoice Summary tile (similar to Work Orders)
-2. Make the Project Team tile collapsible
-3. Separate Main Contracts from Change Order Contracts
-4. Rename "Work Order" to "Change Order" and remove Work Orders column from Change Order contracts
+## Problem Analysis
+
+The SOV warning on the Work Orders tab doesn't disappear after SOVs are locked because the `useSOVReadiness` hook only fetches data once on mount. When the user:
+1. Views Work Orders tab → sees warning (SOVs not locked)
+2. Goes to SOV tab → locks SOVs
+3. Returns to Work Orders tab → warning still shows (stale data)
+
+The hook doesn't re-fetch data when the user navigates between tabs or when SOVs are updated.
 
 ---
 
-## 1. Create InvoiceSummaryCard Component
+## Root Cause
 
-**New file: `src/components/project/InvoiceSummaryCard.tsx`**
-
-A new tile matching the WorkOrderSummaryCard design that shows:
-- Count stats: Draft, Pending Approval, Approved, Paid
-- Role-specific financial views:
-  - **GC**: Total received invoices pending approval
-  - **TC**: Sent vs Received totals (like Work Orders profit view)
-  - **FC**: My submitted invoices total
-
-### Data Fetching
+In `useSOVReadiness.ts`:
 ```typescript
-const { data: invoices } = await supabase
-  .from('invoices')
-  .select('id, status, total_amount, contract_id')
-  .eq('project_id', projectId);
+useEffect(() => {
+  fetchData();
+}, [fetchData]);
 ```
 
-### Display Layout
-```text
-+---------------------------------------------+
-|  [Receipt Icon] Invoices                    |
-+---------------------------------------------+
-|    [2]           [3]           [7]          |
-|  Approved      Pending        Total         |
-+---------------------------------------------+
-|  Total Billed                    $42,151    |
-+---------------------------------------------+
-```
+This only runs once when the hook mounts. There's no mechanism to:
+- Refetch when the tab becomes active
+- Listen for database changes
+- Invalidate stale data
 
 ---
 
-## 2. Make ProjectTeamSection Collapsible
+## Solution
 
-**Modify: `src/components/project/ProjectTeamSection.tsx`**
+Add a **refetch trigger** that runs when the user navigates to the Work Orders tab, and expose it to allow manual refetching.
 
-Use existing Radix Collapsible primitive from `@/components/ui/collapsible`:
-- Wrap CardHeader in CollapsibleTrigger
-- Wrap CardContent in CollapsibleContent
-- Add ChevronDown icon that rotates on expand
-- Default state: expanded
-- Show team count in header (always visible)
+### Option A: Add Refetch on Visibility (Recommended)
 
-### Implementation Pattern
-```typescript
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown } from 'lucide-react';
+Add a `refetch` function that can be called externally, and auto-refetch when the hook is re-mounted (which happens when switching tabs in this SPA pattern).
 
-const [isOpen, setIsOpen] = useState(true);
+### Implementation
 
-return (
-  <Card>
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <CollapsibleTrigger asChild>
-        <CardHeader className="cursor-pointer">
-          <div className="flex items-center justify-between">
-            <CardTitle>Project Team ({team.length})</CardTitle>
-            <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
-          </div>
-        </CardHeader>
-      </CollapsibleTrigger>
-      <CollapsibleContent>
-        <CardContent>{/* team list */}</CardContent>
-      </CollapsibleContent>
-    </Collapsible>
-  </Card>
-);
-```
+1. **Expose a `refetch` function** from `useSOVReadiness`
+2. **Add `key` prop pattern** to force re-mount when tab changes, OR
+3. **Use tab change as dependency** to trigger refetch
+
+The cleanest approach is to expose `refetch` and call it when the Work Orders tab becomes active.
 
 ---
 
-## 3. Separate Contract Types
-
-**Modify: `src/components/project/ProjectContractsSection.tsx`**
-
-Split contracts into two groups with clear visual separation:
-
-### Separation Logic
-```typescript
-const isChangeOrderContract = (contract: Contract) => 
-  contract.trade === 'Work Order' || contract.trade === 'Work Order Labor';
-
-const mainContracts = contracts.filter(c => !isChangeOrderContract(c));
-const changeOrderContracts = contracts.filter(c => isChangeOrderContract(c));
-```
-
-### Display Structure
-- **Section 1: "Main Contracts"** - Primary project contracts (GC-TC, TC-FC)
-- **Section 2: "Change Order Contracts"** - Auto-generated from Change Orders
-- Hide sections if empty (no Change Order contracts = no section shown)
-
----
-
-## 4. Rename Labels and Remove Work Orders Column
-
-**In ProjectContractsSection.tsx:**
-
-### Label Changes
-| Current | New |
-|---------|-----|
-| `trade === 'Work Order'` | Display as "Change Order" |
-| `trade === 'Work Order Labor'` | Display as "Change Order Labor" |
-
-### Column Changes for Change Order Contracts
-- **Remove** the "Work Orders" column/stat (lines 210-218) from Change Order contracts section
-- Main contracts keep all 4 columns: Contract Sum, Work Orders, Invoiced, Retainage
-- Change Order contracts show only 3 columns: Contract Sum, Invoiced, Retainage
-
----
-
-## File Changes Summary
+## File Changes
 
 | File | Change |
 |------|--------|
-| `src/components/project/InvoiceSummaryCard.tsx` | **NEW** - Invoice summary tile matching WorkOrderSummaryCard design |
-| `src/components/project/index.ts` | Export InvoiceSummaryCard |
-| `src/pages/ProjectHome.tsx` | Add InvoiceSummaryCard below WorkOrderSummaryCard |
-| `src/components/project/ProjectTeamSection.tsx` | Make collapsible with Radix Collapsible |
-| `src/components/project/ProjectContractsSection.tsx` | Separate contracts, rename labels, remove Work Orders column from Change Order section |
+| `src/hooks/useSOVReadiness.ts` | Export `refetch` function from the hook |
+| `src/components/project/WorkOrdersTab.tsx` | Call refetch on mount to ensure fresh data |
 
 ---
 
-## Updated Layout in ProjectHome.tsx
+## Implementation Details
 
-Left column order:
-```text
-- WorkOrderSummaryCard
-- InvoiceSummaryCard (NEW)
-- ProjectTeamSection (collapsible)
-- ProjectContractsSection (separated sections)
-```
+### Update useSOVReadiness.ts
 
----
-
-## Technical Notes
-
-### InvoiceSummaryCard Role Views
-- **GC View**: Shows received invoices count, pending approval count, total amounts received
-- **TC View**: Shows sent vs received summary with net position
-- **FC View**: Shows "My Invoices" with submitted/approved counts and earnings
-
-### Contract Trade Mapping
 ```typescript
-const formatTrade = (trade: string | null): string => {
-  if (trade === 'Work Order') return 'Change Order';
-  if (trade === 'Work Order Labor') return 'Change Order Labor';
-  return trade || '';
-};
+export function useSOVReadiness(projectId: string | undefined): SOVReadiness & { refetch: () => void } {
+  // ... existing state ...
+
+  const fetchData = useCallback(async () => {
+    // ... existing fetch logic ...
+  }, [projectId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // ... existing readiness computation ...
+
+  return {
+    ...readiness,
+    refetch: fetchData  // Expose refetch function
+  };
+}
 ```
+
+### Update WorkOrdersTab.tsx
+
+```typescript
+const sovReadiness = useSOVReadiness(projectId);
+
+// Refetch SOV status on mount to ensure fresh data
+useEffect(() => {
+  sovReadiness.refetch();
+}, []); // Only on mount
+```
+
+This ensures that every time the user navigates to the Work Orders tab, the SOV readiness check runs fresh.
+
+---
+
+## Alternative: Add Interval Polling
+
+If real-time updates are desired without navigation, we could add polling:
+
+```typescript
+useEffect(() => {
+  fetchData();
+  const interval = setInterval(fetchData, 30000); // Poll every 30s
+  return () => clearInterval(interval);
+}, [fetchData]);
+```
+
+However, this adds unnecessary network traffic. The refetch-on-mount approach is cleaner.
+
+---
+
+## Expected Results
+
+After implementation:
+1. User views Work Orders tab → sees SOV warning
+2. User goes to SOV tab → locks all SOVs
+3. User returns to Work Orders tab → **warning disappears** (fresh fetch on mount)
+4. New Work Order button becomes enabled
 
 ---
 
 ## Testing Checklist
 
-1. Verify InvoiceSummaryCard displays correct counts for each status
-2. Verify role-specific views work (GC/TC/FC)
-3. Test ProjectTeamSection collapse/expand animation
-4. Verify Main Contracts section shows only primary contracts
-5. Verify Change Order Contracts section shows only work order contracts
-6. Confirm "Work Order" labels now read "Change Order"
-7. Confirm Work Orders column is removed from Change Order contracts
-8. Test empty state when no Change Order contracts exist
+1. Navigate to Work Orders tab with unlocked SOVs → verify warning shows
+2. Go to SOV tab and lock all primary contract SOVs
+3. Return to Work Orders tab → verify warning is gone
+4. Verify New Work Order button is enabled
+5. Test refresh behavior doesn't cause flickering
