@@ -2,18 +2,20 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useChangeOrderProject } from '@/hooks/useChangeOrderProject';
+import { useSOVReadiness } from '@/hooks/useSOVReadiness';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { WorkOrderWizard } from '@/components/work-order-wizard';
 import { FCWorkOrderDialog, FCWorkOrderData } from '@/components/fc-work-order';
-import { Plus, FileEdit, Eye, Edit } from 'lucide-react';
+import { Plus, FileEdit, Eye, Edit, AlertTriangle, ArrowRight } from 'lucide-react';
 import { ChangeOrderStatus } from '@/types/changeOrderProject';
 import { ViewSwitcher, ViewMode } from '@/components/ui/view-switcher';
 import { StatusColumn, CHANGE_ORDER_STATUS_OPTIONS } from '@/components/ui/status-column';
 import { HoverActions, HoverAction } from '@/components/ui/hover-actions';
 import { WorkOrdersBoard } from './WorkOrdersBoard';
-
 interface WorkOrdersTabProps {
   projectId: string;
   projectName: string;
@@ -36,9 +38,15 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
     isCreatingFC,
   } = useChangeOrderProject(projectId);
 
+  // Check SOV readiness - gates work order creation
+  const sovReadiness = useSOVReadiness(projectId);
+
   // GC and TC can create work orders with full wizard; FC uses simplified dialog
   const isFC = currentRole === 'FC_PM';
   const canCreate = currentRole === 'GC_PM' || currentRole === 'TC_PM' || isFC;
+  
+  // Block creation if SOVs aren't ready (except for FC who submit directly)
+  const isBlocked = !isFC && !sovReadiness.isReady && !sovReadiness.loading;
 
   const filteredChangeOrders =
     activeTab === 'ALL'
@@ -85,6 +93,30 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
 
   return (
     <div className="space-y-4">
+      {/* SOV Readiness Alert Banner */}
+      {isBlocked && (
+        <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-amber-800 dark:text-amber-200">SOV Setup Required</AlertTitle>
+          <AlertDescription className="text-amber-700 dark:text-amber-300 flex items-center justify-between">
+            <span>{sovReadiness.message}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-4 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/50"
+              onClick={() => {
+                // Navigate to SOV tab - assuming parent handles tab switching
+                const sovTabButton = document.querySelector('[data-value="sov"]') as HTMLButtonElement;
+                if (sovTabButton) sovTabButton.click();
+              }}
+            >
+              Go to SOV Tab
+              <ArrowRight className="h-4 w-4 ml-1" />
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Header with View Switcher and New Work Order button */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -96,10 +128,26 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
           />
         </div>
         {canCreate && (
-          <Button onClick={() => isFC ? setShowFCDialog(true) : setShowWizard(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            {isFC ? 'Submit Work Order' : 'New Work Order'}
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span>
+                  <Button 
+                    onClick={() => isFC ? setShowFCDialog(true) : setShowWizard(true)}
+                    disabled={isBlocked}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    {isFC ? 'Submit Work Order' : 'New Work Order'}
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              {isBlocked && (
+                <TooltipContent>
+                  <p>Create and lock all SOVs first</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         )}
       </div>
 
