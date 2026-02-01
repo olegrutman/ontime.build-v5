@@ -233,7 +233,10 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground">Retainage</p>
-                      <p className="text-sm font-medium">{contract.retainage_percent || 0}%</p>
+                      <p className="text-sm font-medium">
+                        {formatCurrency((contract.contract_sum || 0) * ((contract.retainage_percent || 0) / 100))}
+                      </p>
+                      <p className="text-xs text-muted-foreground">({contract.retainage_percent || 0}%)</p>
                     </div>
                   </div>
                 </div>
