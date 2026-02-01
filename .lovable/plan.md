@@ -1,308 +1,176 @@
 
+# Plan: Fix FC Invoice Contract Selection Issue
 
-# Plan: Enhance Ontime.Build with Monday.com-Style Design Patterns
+## Problem Summary
+Field Crew (FC) users cannot see the "main contract" when creating invoices to bill the Trade Contractor (TC). They can only see Work Order Labor contracts.
 
-## Overview
-This plan enhances your existing GC/TC/FC/Supplier organizational model with Monday.com-inspired visual design, permission patterns, and multi-company collaboration features while preserving your current architecture.
+## Root Cause Analysis
+The contract direction is stored **backwards** for TC-to-FC relationships:
 
----
+**Current (Incorrect) Main Contract Storage:**
+| Field | Value | Meaning |
+|-------|-------|---------|
+| `from_org_id` | TC | "Sender of invoices" |
+| `to_org_id` | FC | "Payer/receiver" |
 
-## Current State Analysis
+**Correct Direction Should Be:**
+| Field | Value | Meaning |
+|-------|-------|---------|
+| `from_org_id` | FC | "Sender of invoices" (worker) |
+| `to_org_id` | TC | "Payer/receiver" (hirer) |
 
-### What You Have (Strengths to Keep)
-- Solid organizational hierarchy: GC -> TC -> FC -> Supplier
-- Role-based permission system (`ROLE_PERMISSIONS` in `types/organization.ts`)
-- Project-centric navigation with tabs (Overview, SOV, Work Orders, Invoices)
-- Dark sidebar with collapsible groups
-- State badges with color coding
+The invoicing system filters contracts where `from_org_id === currentOrgId`. Since FC is stored as `to_org_id` in the main contract, they cannot select it.
 
-### Gaps vs Monday.com
-- **Visual**: Static status badges vs Monday's colorful, interactive status columns
-- **Board View**: No kanban/board layouts for work items
-- **Hover Actions**: Most actions require explicit menus vs hover-reveal
-- **Permissions UI**: Role permissions are code-only, not visualized
-- **Guest Access**: No concept of limited "viewer" or "guest" roles within a project
-
----
-
-## Phase 1: Visual Design Enhancements
-
-### 1.1 Status Columns (Monday-Style)
-Replace static badges with interactive, colorful status indicators.
-
-**New Component**: `src/components/ui/status-column.tsx`
-
-| Feature | Description |
-|---------|-------------|
-| Color Picker | Click status to open color palette |
-| Inline Labels | Editable status text |
-| Pulse Animation | New updates show a subtle pulse |
-| Progress Mode | Status can show % complete |
-
-**Color Palette** (Monday-inspired):
-```
---monday-green: #00C875
---monday-yellow: #FDAB3D
---monday-red: #E2445C
---monday-blue: #0086C0
---monday-purple: #A25DDC
---monday-gray: #C4C4C4
-```
-
-### 1.2 Board View Components
-
-**New Component**: `src/components/board/BoardColumn.tsx`
-- Vertical column with status header
-- Drag-and-drop items between columns
-- Collapse/expand functionality
-- Item count badge
-
-**New Component**: `src/components/board/BoardItem.tsx`
-- Condensed card for board view
-- Shows title, assignee avatar, due date
-- Hover reveals quick actions
-
-### 1.3 Hover-Activated Actions
-
-**Pattern**: Show action buttons only on hover
-
-```tsx
-// Before (current)
-<DropdownMenu>
-  <DropdownMenuTrigger>
-    <MoreVertical />
-  </DropdownMenuTrigger>
-</DropdownMenu>
-
-// After (Monday-style)
-<div className="group">
-  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-    <Button size="icon" variant="ghost">
-      <Edit className="h-4 w-4" />
-    </Button>
-    <Button size="icon" variant="ghost">
-      <Copy className="h-4 w-4" />
-    </Button>
-  </div>
-</div>
-```
-
-**Files to Update**:
-- `ProjectRow.tsx` - Add hover actions
-- `WorkItemCard.tsx` - Add hover actions
-- `InvoiceCard.tsx` - Add hover actions
+Work Order Labor contracts work correctly because they're stored with FC as `from_org`.
 
 ---
 
-## Phase 2: Permission Model Visualization
+## Solution
 
-### 2.1 Permission Matrix UI
+Fix the contract creation logic so that **the party doing the work is always `from_org`** (the invoice sender).
 
-**New Page**: `src/pages/RolePermissions.tsx`
+### Phase 1: Fix Contract Creation Logic
 
-Display a visual matrix showing what each role can do:
+**Files to modify:**
+- `src/pages/CreateProjectNew.tsx`
+- `src/pages/EditProject.tsx`
+- `src/components/project/AddTeamMemberDialog.tsx`
 
+**Logic change:**
 ```
-              | GC_PM | TC_PM | FC_PM | FS | SUPPLIER
-View Rates    |   x   |   x   |       |    |
-Approve Work  |   x   |       |       |    |
-View Invoices |   x   |   x   |   x   |    |
-Add Hours     |   x   |   x   |   x   | x  |
-Invite Members|   x   |   x   |       |    |
-```
-
-### 2.2 Role Badges in UI
-
-**New Component**: `src/components/ui/role-badge.tsx`
-
-Show user's role with organization type color:
-- GC: Blue badge
-- TC: Green badge  
-- FC: Purple badge
-- Supplier: Amber badge
-
-Display throughout the app:
-- Project team list
-- Activity feed
-- Invoice creators
-
-### 2.3 Permission-Aware Components
-
-Create a higher-order component for permission-based rendering:
-
-**New Utility**: `src/components/auth/RequirePermission.tsx`
-
-```tsx
-<RequirePermission permission="canApprove">
-  <Button>Approve Work Order</Button>
-</RequirePermission>
+When creating a contract:
+- If creator is TC and inviting FC:
+  - from_org_id = FC's org (the worker/invoicer)
+  - to_org_id = TC's org (the payer)
+  - from_role = "Field Crew"
+  - to_role = "Trade Contractor"
+  
+- If creator is GC and inviting TC:
+  - from_org_id = TC's org (the worker/invoicer)
+  - to_org_id = GC's org (the payer)
+  - from_role = "Trade Contractor"
+  - to_role = "General Contractor"
 ```
 
----
+### Phase 2: Data Migration
 
-## Phase 3: Multi-Company Collaboration
+Create a database migration to fix existing contracts:
 
-### 3.1 Project Access Levels
-
-Enhance `project_team` with granular access levels (like Monday's board permissions):
-
-| Level | Description |
-|-------|-------------|
-| Owner | Full control, can delete project |
-| Admin | Manage team, settings, all actions |
-| Editor | Create/edit work items, invoices |
-| Viewer | Read-only access to project |
-
-**Database Migration**:
 ```sql
-ALTER TABLE project_team 
-ADD COLUMN access_level TEXT DEFAULT 'Editor' 
-CHECK (access_level IN ('Owner', 'Admin', 'Editor', 'Viewer'));
+-- Swap from/to for TC->FC contracts (where TC is incorrectly stored as from_org)
+UPDATE project_contracts
+SET 
+  from_org_id = to_org_id,
+  to_org_id = from_org_id,
+  from_role = to_role,
+  to_role = from_role
+WHERE 
+  from_role = 'Trade Contractor' 
+  AND to_role = 'Field Crew'
+  AND trade IS NOT NULL  -- Main contracts have a trade
+  AND trade NOT IN ('Work Order', 'Work Order Labor');  -- Exclude work orders
 ```
 
-### 3.2 Guest/External User Support
+### Phase 3: Fix SOV Ownership (if needed)
 
-Allow inviting external users with limited access:
+After swapping contract direction, verify that SOVs still reference the correct contract and that RLS policies work correctly.
 
-**New Table**: `project_guests`
+---
+
+## Implementation Details
+
+### File: `src/pages/CreateProjectNew.tsx` (Lines 316-329)
+
+**Before:**
+```typescript
+const payload = {
+  from_org_id: currentOrg?.id,      // Creator (TC)
+  from_role: creatorRole,           // "Trade Contractor"
+  to_role: teamMember.role,         // "Field Crew"
+  to_org_id: teamMember.org_id,     // Invitee (FC)
+  // ...
+};
+```
+
+**After:**
+```typescript
+// Determine direction based on who should invoice whom
+// Worker (invoice sender) = from_org, Payer = to_org
+const isCreatorUpstream = 
+  (creatorRole === 'General Contractor') ||
+  (creatorRole === 'Trade Contractor' && teamMember.role === 'Field Crew');
+
+const payload = isCreatorUpstream ? {
+  // Invitee is worker, creator is payer
+  from_org_id: teamMember.org_id,
+  from_role: teamMember.role,
+  to_org_id: currentOrg?.id,
+  to_role: creatorRole,
+  // ...
+} : {
+  // Creator is worker, invitee is payer (e.g., TC inviting GC)
+  from_org_id: currentOrg?.id,
+  from_role: creatorRole,
+  to_org_id: teamMember.org_id,
+  to_role: teamMember.role,
+  // ...
+};
+```
+
+### File: `src/components/project/AddTeamMemberDialog.tsx` (Lines 316-328)
+
+Apply the same direction logic when TC invites FC.
+
+---
+
+## Database Migration
+
 ```sql
-CREATE TABLE project_guests (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
-  email TEXT NOT NULL,
-  access_level TEXT DEFAULT 'Viewer',
-  invited_by UUID REFERENCES auth.users(id),
-  accepted_at TIMESTAMPTZ,
-  expires_at TIMESTAMPTZ
-);
+-- Fix existing TC->FC contracts where direction is backwards
+-- Main contracts (with trade like 'Framer', 'Electrician', etc.)
+UPDATE project_contracts
+SET 
+  from_org_id = to_org_id,
+  to_org_id = from_org_id,
+  from_role = to_role,
+  to_role = from_role
+WHERE 
+  from_role = 'Trade Contractor' 
+  AND to_role = 'Field Crew'
+  AND (trade IS NULL OR trade NOT IN ('Work Order', 'Work Order Labor'));
+
+-- Update any SOV references if needed (they're linked by contract_id, so no change needed)
+-- Update any invoice references if needed (they're linked by contract_id, so no change needed)
 ```
-
-### 3.3 Organization Relationship Visualization
-
-**Enhanced Component**: `src/components/project/ProjectRelationships.tsx`
-
-Visual hierarchy showing:
-```
-GC (Acme Construction)
-  └─ TC (Smith Electrical) [Contract: $150K]
-       └─ FC (Jones Crew) [Contract: $45K]
-       └─ Supplier (ABC Supply)
-```
-
-### 3.4 Cross-Organization Activity Feed
-
-Show activity from all project participants with proper privacy:
-
-| Actor Role | Can See |
-|------------|---------|
-| GC | All activity (no rates from TC/FC) |
-| TC | Own + FC activity (no GC internal notes) |
-| FC | Only own activity |
 
 ---
 
-## Phase 4: Board/Table View Toggle
+## Testing Checklist
 
-### 4.1 View Switcher Component
-
-**New Component**: `src/components/ui/view-switcher.tsx`
-
-Toggle between:
-- List View (current default)
-- Board View (kanban-style)
-- Table View (spreadsheet-style)
-
-### 4.2 Work Orders Board View
-
-**New Component**: `src/components/project/WorkOrdersBoard.tsx`
-
-Columns based on status:
-- Draft
-- Ready for Review
-- Approved
-- In Progress
-- Completed
-
-Drag work orders between columns to update status.
-
-### 4.3 Invoices Table View
-
-**New Component**: `src/components/invoices/InvoicesTable.tsx`
-
-Spreadsheet-style with:
-- Sortable columns
-- Inline editing
-- Multi-select for bulk actions
-- Export to CSV
+1. Create a new project as TC, invite FC
+2. Verify the contract is stored with FC as `from_org` and TC as `to_org`
+3. Log in as FC, go to project, navigate to Invoices tab
+4. Click "New Invoice" and verify the main contract appears in the dropdown
+5. Create an invoice and verify it flows correctly through approval
 
 ---
 
-## Implementation Priority
+## Risk Assessment
 
-| Phase | Effort | Impact | Priority | Status |
-|-------|--------|--------|----------|--------|
-| 1.1 Status Columns | Medium | High | 1 | ✅ Done |
-| 1.3 Hover Actions | Low | Medium | 2 | ✅ Done |
-| 2.2 Role Badges | Low | Medium | 2.5 | ✅ Done |
-| 2.3 Permission Components | Low | High | 3 | ✅ Done |
-| 4.1 View Switcher | Medium | High | 4 | ✅ Done |
-| 4.2 Board View | High | High | 5 | ✅ Done |
-| 3.1-3.2 Access Levels (DB) | High | Medium | 6 | ✅ Done |
-| 3.3 Relationship Visualization | Medium | Medium | 7 | Pending |
-| 4.3 Table View | Medium | Medium | 8 | Pending |
+| Risk | Mitigation |
+|------|------------|
+| Existing invoices may be affected | Invoices reference `contract_id`, not org direction - no impact |
+| RLS policies may break | RLS uses org membership, not direction - minimal impact |
+| SOV visibility may change | SOVs are linked by `contract_id` - no impact |
+| UI labels may be confusing | Verify dropdown labels still make sense after swap |
 
 ---
 
-## Files to Create
+## Files Summary
 
-| File | Purpose |
-|------|---------|
-| `src/components/ui/status-column.tsx` | Interactive status picker |
-| `src/components/ui/role-badge.tsx` | Organization role indicator |
-| `src/components/ui/view-switcher.tsx` | List/Board/Table toggle |
-| `src/components/auth/RequirePermission.tsx` | Permission-based rendering |
-| `src/components/board/BoardColumn.tsx` | Kanban column |
-| `src/components/board/BoardItem.tsx` | Kanban item card |
-| `src/components/project/WorkOrdersBoard.tsx` | Board view for work orders |
-| `src/components/invoices/InvoicesTable.tsx` | Table view for invoices |
-
-## Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/index.css` | Add Monday.com color palette |
-| `src/components/dashboard/ProjectRow.tsx` | Add hover actions |
-| `src/components/project/ProjectTeamSection.tsx` | Add access level selector |
-| `src/components/project/ProjectRelationships.tsx` | Enhanced hierarchy visualization |
-| `src/components/project/WorkOrdersTab.tsx` | Add view mode toggle |
-
-## Database Migrations
-
-| Migration | Purpose |
-|-----------|---------|
-| Add `access_level` to `project_team` | Granular project permissions |
-| Create `project_guests` table | External viewer support |
-| Add `view_preference` to `profiles` | Remember user's preferred view mode |
-
----
-
-## Visual Reference
-
-### Monday.com Status Column Behavior
-1. Click on status cell opens color dropdown
-2. Status colors are project-customizable
-3. Labels are editable inline
-4. Changing status triggers animations
-
-### Permission Inheritance Flow
-```
-User logs in
-  ├─ Check user_org_roles -> Get AppRole (GC_PM, TC_PM, etc.)
-  ├─ Check project_team -> Get access_level (Owner, Admin, Editor, Viewer)
-  └─ Combine for final permissions
-```
-
-This layered approach means:
-- A TC_PM with "Viewer" access on a project cannot edit that project
-- A GC_PM with "Editor" access has full edit rights via role permissions
-
+| File | Change Type |
+|------|-------------|
+| `src/pages/CreateProjectNew.tsx` | Modify contract direction logic |
+| `src/pages/EditProject.tsx` | Modify contract direction logic |
+| `src/components/project/AddTeamMemberDialog.tsx` | Modify contract direction logic |
+| `supabase/migrations/[timestamp]_fix_contract_direction.sql` | Data migration |
