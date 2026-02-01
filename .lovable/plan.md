@@ -1,148 +1,179 @@
 
+# Plan: SOV Gating and Edit Lock Rules
 
-# Plan: Fix Contract Values Not Showing on Overview Page
-
-## Problem Analysis
-
-When a Trade Contractor creates a project and adds contract values in the wizard, those values don't appear on the overview page for any contractor account.
-
-### Root Cause
-
-There are **duplicate contracts** in the database for the same party relationships:
-
-| Contract ID | Contract Sum | Created At | to_project_team_id |
-|-------------|-------------|------------|-------------------|
-| ba72fe23... | **$0.00** | 19:24:32 | **null** |
-| 1364fdc5... | **$1,500,000** | 19:31:18 | 5f10a94b... |
-
-The duplication occurs because:
-
-1. **AddTeamMemberDialog** creates a contract with `contract_sum: 0` and **no `to_project_team_id`** when a team member is added
-2. **saveContracts** (in CreateProjectNew.tsx) looks for existing contracts by `to_project_team_id` to update them
-3. Since the original contract has `to_project_team_id: null`, no match is found, so a NEW contract is created with the actual values
-
-The **UI displays $0** because:
-- The fetch query has no explicit ordering
-- `.find()` returns the **first match** (the older $0 contract)
-- The newer contract with actual values is ignored
+## Overview
+Implement a robust SOV workflow that:
+1. **Gates transactions** until all primary contract SOVs are created and locked
+2. **Allows SOV editing** until the first invoice is submitted (not just created) for approval
 
 ---
 
-## Solution
+## Current Issues
 
-Fix the root cause by ensuring `saveContracts` matches existing contracts by organization IDs (which are always populated) instead of relying on `to_project_team_id`.
+1. **TC can create work orders before SOVs exist** - This bypasses the intended workflow where SOVs should be set up first
+2. **No enforcement of SOV completion** - Users can proceed with transactions without properly configuring billing structure
+3. **Lock timing is wrong** - Currently locks on manual action, but should remain editable until first invoice submission
 
-### Changes Required
+---
+
+## Solution Design
+
+### Concept: SOV Readiness Check
+
+Create a centralized check that answers: "Are all primary contracts ready for billing?"
+
+**Conditions for SOV Readiness:**
+- All primary contracts (non-work-order) with `contract_sum > 0` must have an SOV
+- Each SOV must be locked (`is_locked = true`)
+
+### Concept: SOV Edit Window
+
+SOV editing should be allowed until the SOV has active billing:
+- **Editable**: No invoices with status SUBMITTED, APPROVED, or PAID exist for this SOV
+- **Locked from editing**: First invoice submitted for approval
+
+---
+
+## Implementation Details
+
+### 1. Create SOV Readiness Hook
+
+**New file: `src/hooks/useSOVReadiness.ts`**
+
+```typescript
+interface SOVReadiness {
+  isReady: boolean;            // All SOVs created and locked
+  pendingContracts: number;    // Contracts without SOVs
+  unlockedSOVs: number;        // SOVs not yet locked
+  loading: boolean;
+  message: string;             // User-friendly status message
+}
+```
+
+Logic:
+- Fetch all primary contracts with `contract_sum > 0` (excluding Work Order trades)
+- Fetch all SOVs for the project
+- Check if each qualifying contract has a corresponding locked SOV
+- Return readiness status
+
+### 2. Block Work Order Creation Until SOVs Ready
+
+**Modify: `src/components/project/WorkOrdersTab.tsx`**
+
+- Import and use `useSOVReadiness` hook
+- When `!isReady`, show an alert banner explaining SOVs must be set up first
+- Disable or hide the "New Work Order" button with tooltip explaining why
+- Link to the SOV tab for easy navigation
+
+```
++----------------------------------------------------------+
+|  ⚠️ SOV Setup Required                                   |
+|  Create and lock Schedule of Values for all contracts    |
+|  before creating work orders.                            |
+|  [Go to SOV Tab]                                         |
++----------------------------------------------------------+
+```
+
+### 3. Block Invoice Creation Until SOVs Ready
+
+**Modify: `src/components/invoices/InvoicesTab.tsx`**
+
+- Import and use `useSOVReadiness` hook
+- When `!isReady`, disable "New Invoice" button
+- Show informational alert about SOV requirement
+
+### 4. Update SOV Edit Lock Logic
+
+**Modify: `src/hooks/useContractSOV.ts`**
+
+Add a function to check if an SOV has submitted invoices:
+
+```typescript
+const hasSubmittedInvoices = useCallback(async (sovId: string) => {
+  const { data } = await supabase
+    .from('invoices')
+    .select('id')
+    .eq('sov_id', sovId)
+    .in('status', ['SUBMITTED', 'APPROVED', 'PAID'])
+    .limit(1);
+  return (data && data.length > 0);
+}, []);
+```
+
+### 5. Update SOV Editor UI
+
+**Modify: `src/components/sov/ContractSOVEditor.tsx`**
+
+For each SOV, check if it has submitted invoices:
+- If yes: Show "Billing Active" badge, disable all editing (items, percentages, lock toggle)
+- If no: Allow editing even if previously locked (can unlock to edit)
+
+Replace current lock logic with invoice-based lock:
+
+| Has Submitted Invoices? | UI State |
+|------------------------|----------|
+| No | Editable - can add/edit/delete items, adjust percentages |
+| Yes | Locked - show "Billing Active" indicator, all editing disabled |
+
+### 6. Remove Manual Lock Requirement for Billing
+
+The lock button becomes optional for workflow organization but billing-based lock is automatic:
+- **Manual Lock**: User can still lock early if they want to signify "this SOV is finalized"
+- **Automatic Lock**: Once first invoice is submitted, editing is disabled regardless of manual lock state
+
+---
+
+## UI Changes Summary
+
+### WorkOrdersTab
+- Add alert banner when SOVs not ready
+- Disable "New Work Order" button with explanation
+
+### InvoicesTab  
+- Disable "New Invoice" button when SOVs not ready
+- Show guidance message
+
+### ContractSOVEditor
+- Show "Billing Active" badge on SOVs with submitted invoices
+- Disable editing for SOVs with submitted invoices
+- Update empty state to clarify SOV must be created before transactions
+
+---
+
+## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/pages/CreateProjectNew.tsx` | Update `saveContracts` to match contracts by org IDs |
-| Database cleanup | Delete duplicate $0 contracts |
+| `src/hooks/useSOVReadiness.ts` | New hook for SOV readiness check |
+| `src/components/project/WorkOrdersTab.tsx` | Add SOV readiness gate |
+| `src/components/invoices/InvoicesTab.tsx` | Add SOV readiness gate |
+| `src/hooks/useContractSOV.ts` | Add invoice check for edit lock |
+| `src/components/sov/ContractSOVEditor.tsx` | Update UI for billing-based lock |
 
 ---
 
-## Technical Implementation
+## Edge Cases Handled
 
-### 1. Fix saveContracts Matching Logic
-
-**File: `src/pages/CreateProjectNew.tsx`**
-
-Currently, the code fetches existing contracts and matches by `to_project_team_id`:
-
-```typescript
-// Current (broken)
-const { data: existingContracts } = await supabase
-  .from('project_contracts')
-  .select('id, to_project_team_id')
-  .eq('project_id', projectId);
-
-const existing = existingContracts?.find((c) => c.to_project_team_id === teamMember.id);
-```
-
-Change to match by organization IDs instead:
-
-```typescript
-// Fixed - match by from_org_id and to_org_id
-const { data: existingContracts } = await supabase
-  .from('project_contracts')
-  .select('id, from_org_id, to_org_id, to_project_team_id')
-  .eq('project_id', projectId);
-
-// Match by the org IDs we're about to insert
-const existing = existingContracts?.find((c) => {
-  if (isCreatorUpstream) {
-    return c.from_org_id === teamMember.org_id && c.to_org_id === currentOrg?.id;
-  } else {
-    return c.from_org_id === currentOrg?.id && c.to_org_id === teamMember.org_id;
-  }
-});
-```
-
-### 2. Also Update to_project_team_id on Existing Contracts
-
-When updating an existing contract, ensure `to_project_team_id` is set:
-
-```typescript
-const payload = {
-  // ... existing fields ...
-  to_project_team_id: teamMember.id, // Always set this
-};
-```
-
-### 3. Clean Up Duplicate Contracts (One-time Database Fix)
-
-Delete the duplicate $0 contracts that have no `to_project_team_id`:
-
-```sql
--- Delete duplicate contracts where contract_sum = 0 
--- and a newer contract exists with the same party relationship
-DELETE FROM project_contracts pc1
-WHERE pc1.contract_sum = 0
-  AND pc1.to_project_team_id IS NULL
-  AND EXISTS (
-    SELECT 1 FROM project_contracts pc2
-    WHERE pc2.project_id = pc1.project_id
-      AND pc2.from_org_id = pc1.from_org_id
-      AND pc2.to_org_id = pc1.to_org_id
-      AND pc2.id != pc1.id
-      AND pc2.contract_sum > 0
-  );
-```
-
----
-
-## Why This Fixes the Problem
-
-1. **Matching by org IDs** ensures we find the contract even if `to_project_team_id` wasn't set during initial creation
-2. **Updating existing contracts** instead of creating duplicates keeps the data clean
-3. **Setting `to_project_team_id`** on update ensures the contract links properly to the team member
-4. **Cleaning up duplicates** fixes the existing bad data
-
----
-
-## Alternative Consideration: Add Unique Constraint
-
-To prevent this issue in the future, consider adding a unique constraint on `(project_id, from_org_id, to_org_id)` to prevent duplicate contracts for the same party relationship:
-
-```sql
-CREATE UNIQUE INDEX unique_contract_parties 
-ON project_contracts(project_id, from_org_id, to_org_id);
-```
-
-This would cause the duplicate insert to fail, forcing an update instead.
+1. **No primary contracts** - SOV readiness returns true (nothing to configure)
+2. **All contracts are $0** - SOV readiness returns true (no billing needed)
+3. **Work order contracts** - Excluded from primary SOV check (they get SOVs on finalization)
+4. **Invoice in DRAFT status** - Does NOT lock the SOV (can still edit)
+5. **Invoice REJECTED** - SOV remains editable (can fix and resubmit)
+6. **Multiple invoices** - Any SUBMITTED/APPROVED/PAID locks the SOV
 
 ---
 
 ## Testing Checklist
 
-1. Clean up existing duplicate contracts in database
-2. Log in as TC and create a new project
-3. Add a GC and FC to the team
-4. Enter contract values on the Contracts step
-5. Complete the wizard
-6. Verify contract values appear on the Project Overview
-7. Log in as GC and verify contract values are visible
-8. Log in as FC and verify contract values are visible
-9. Edit the project and change contract values
-10. Verify the updated values appear (no new duplicates created)
-
+1. Create a project with a TC → GC contract
+2. Verify "New Work Order" is disabled before SOV creation
+3. Create SOV from template
+4. Verify "New Work Order" is still disabled (SOV not locked)
+5. Lock the SOV to 100%
+6. Verify "New Work Order" is now enabled
+7. Create a work order
+8. Create an invoice in DRAFT status
+9. Verify SOV items are still editable
+10. Submit the invoice for approval
+11. Verify SOV items are now locked with "Billing Active" indicator
+12. Verify unlock button is hidden/disabled for SOVs with billing
