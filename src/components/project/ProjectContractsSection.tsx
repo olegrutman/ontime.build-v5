@@ -41,6 +41,16 @@ function formatCurrency(amount: number | null): string {
   }).format(amount);
 }
 
+function formatTrade(trade: string | null): string {
+  if (trade === 'Work Order') return 'Change Order';
+  if (trade === 'Work Order Labor') return 'Change Order Labor';
+  return trade || '';
+}
+
+function isChangeOrderContract(contract: Contract): boolean {
+  return contract.trade === 'Work Order' || contract.trade === 'Work Order Labor';
+}
+
 function getContractTitle(contract: Contract, currentOrgId: string | undefined): string {
   // Show "Contract with [other party]" - the viewer sees who they're contracting WITH
   const isFromOrg = currentOrgId && contract.from_org_id === currentOrgId;
@@ -61,10 +71,98 @@ function getContractTitle(contract: Contract, currentOrgId: string | undefined):
     otherPartyName = `${fromName} → ${toName}`;
   }
   
-  if (contract.trade) {
-    return `Contract with ${otherPartyName} (${contract.trade})`;
+  const displayTrade = formatTrade(contract.trade);
+  if (displayTrade) {
+    return `Contract with ${otherPartyName} (${displayTrade})`;
   }
   return `Contract with ${otherPartyName}`;
+}
+
+interface ContractCardProps {
+  contract: Contract;
+  currentOrgId: string | undefined;
+  teamMembers: TeamMember[];
+  showWorkOrdersColumn: boolean;
+}
+
+function ContractCard({ contract, currentOrgId, teamMembers, showWorkOrdersColumn }: ContractCardProps) {
+  // Find related team member to check status
+  const relatedMember = teamMembers.find(m => m.id === contract.to_project_team_id);
+  const isPending = relatedMember?.status === 'Invited';
+
+  return (
+    <div className="p-4 rounded-lg bg-muted/50 border border-border/50">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <h4 className="font-medium text-sm">
+            {getContractTitle(contract, currentOrgId)}
+          </h4>
+          {/* Show role as secondary badge */}
+          <div className="flex items-center gap-2 mt-1">
+            <Badge variant="outline" className="text-xs">
+              {contract.from_role} → {contract.to_role}
+            </Badge>
+          </div>
+        </div>
+        <Badge variant={isPending ? 'outline' : 'default'} className={isPending ? 'text-amber-600 border-amber-300' : ''}>
+          {isPending ? 'Pending Acceptance' : 'Active'}
+        </Badge>
+      </div>
+
+      <div className={`grid gap-3 ${showWorkOrdersColumn ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3'}`}>
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded bg-primary/10">
+            <DollarSign className="h-3.5 w-3.5 text-primary" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Contract Sum</p>
+            <p className="text-sm font-medium">{formatCurrency(contract.contract_sum)}</p>
+          </div>
+        </div>
+
+        {showWorkOrdersColumn && (
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded bg-orange-100 dark:bg-orange-900/20">
+              <ClipboardList className="h-3.5 w-3.5 text-orange-600" />
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Change Orders</p>
+              <p className="text-sm font-medium">$0</p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded bg-green-100 dark:bg-green-900/20">
+            <Receipt className="h-3.5 w-3.5 text-green-600" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Invoiced</p>
+            <p className="text-sm font-medium">$0</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 rounded bg-muted">
+            <FileText className="h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Retainage</p>
+            <p className="text-sm font-medium">
+              {formatCurrency((contract.contract_sum || 0) * ((contract.retainage_percent || 0) / 100))}
+            </p>
+            <p className="text-xs text-muted-foreground">({contract.retainage_percent || 0}%)</p>
+          </div>
+        </div>
+      </div>
+
+      {contract.notes && (
+        <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
+          {contract.notes}
+        </p>
+      )}
+    </div>
+  );
 }
 
 export function ProjectContractsSection({ projectId }: ProjectContractsSectionProps) {
@@ -159,6 +257,10 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
     );
   }
 
+  // Separate contracts into main and change order contracts
+  const mainContracts = contracts.filter(c => !isChangeOrderContract(c));
+  const changeOrderContracts = contracts.filter(c => isChangeOrderContract(c));
+
   return (
     <Card>
       <CardHeader>
@@ -168,87 +270,42 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          {contracts.map((contract) => {
-            // Find related team member to check status
-            const relatedMember = teamMembers.find(m => m.id === contract.to_project_team_id);
-            const isPending = relatedMember?.status === 'Invited';
-
-            return (
-              <div
-                key={contract.id}
-                className="p-4 rounded-lg bg-muted/50 border border-border/50"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h4 className="font-medium text-sm">
-                      {getContractTitle(contract, currentOrgId)}
-                    </h4>
-                    {/* Show role as secondary badge */}
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline" className="text-xs">
-                        {contract.from_role} → {contract.to_role}
-                      </Badge>
-                    </div>
-                  </div>
-                  <Badge variant={isPending ? 'outline' : 'default'} className={isPending ? 'text-amber-600 border-amber-300' : ''}>
-                    {isPending ? 'Pending Acceptance' : 'Active'}
-                  </Badge>
-                </div>
-
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded bg-primary/10">
-                      <DollarSign className="h-3.5 w-3.5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Contract Sum</p>
-                      <p className="text-sm font-medium">{formatCurrency(contract.contract_sum)}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded bg-orange-100 dark:bg-orange-900/20">
-                      <ClipboardList className="h-3.5 w-3.5 text-orange-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Work Orders</p>
-                      <p className="text-sm font-medium">$0</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded bg-green-100 dark:bg-green-900/20">
-                      <Receipt className="h-3.5 w-3.5 text-green-600" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Invoiced</p>
-                      <p className="text-sm font-medium">$0</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded bg-muted">
-                      <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Retainage</p>
-                      <p className="text-sm font-medium">
-                        {formatCurrency((contract.contract_sum || 0) * ((contract.retainage_percent || 0) / 100))}
-                      </p>
-                      <p className="text-xs text-muted-foreground">({contract.retainage_percent || 0}%)</p>
-                    </div>
-                  </div>
-                </div>
-
-                {contract.notes && (
-                  <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
-                    {contract.notes}
-                  </p>
-                )}
+        <div className="space-y-6">
+          {/* Main Contracts Section */}
+          {mainContracts.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-muted-foreground">Main Contracts</h3>
+              <div className="space-y-4">
+                {mainContracts.map((contract) => (
+                  <ContractCard
+                    key={contract.id}
+                    contract={contract}
+                    currentOrgId={currentOrgId}
+                    teamMembers={teamMembers}
+                    showWorkOrdersColumn={true}
+                  />
+                ))}
               </div>
-            );
-          })}
+            </div>
+          )}
+
+          {/* Change Order Contracts Section */}
+          {changeOrderContracts.length > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-sm font-medium text-muted-foreground">Change Order Contracts</h3>
+              <div className="space-y-4">
+                {changeOrderContracts.map((contract) => (
+                  <ContractCard
+                    key={contract.id}
+                    contract={contract}
+                    currentOrgId={currentOrgId}
+                    teamMembers={teamMembers}
+                    showWorkOrdersColumn={false}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

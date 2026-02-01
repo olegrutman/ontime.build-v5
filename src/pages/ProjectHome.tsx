@@ -19,7 +19,8 @@ import {
   ProjectFinancialsSectionNew,
   ProjectTopBar,
   WorkOrderSummaryCard,
-  WorkOrdersTab
+  WorkOrdersTab,
+  InvoiceSummaryCard
 } from '@/components/project';
 import { InvoicesTab } from '@/components/invoices';
 import { ContractSOVEditor } from '@/components/sov';
@@ -210,6 +211,7 @@ export default function ProjectHome() {
                     {/* Left Column */}
                     <div className="space-y-6">
                       <WorkOrderSummaryCard projectId={id!} />
+                      <InvoiceSummaryCard projectId={id!} />
                       <ProjectTeamSection projectId={id!} />
                       <ProjectContractsSection projectId={id!} />
                     </div>
