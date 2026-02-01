@@ -430,7 +430,7 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
               </TooltipTrigger>
               {isBlocked && (
                 <TooltipContent>
-                  <p>Create and lock all SOVs first</p>
+                  <p>Create SOVs for all contracts first</p>
                 </TooltipContent>
               )}
             </Tooltip>

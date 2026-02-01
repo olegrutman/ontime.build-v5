@@ -148,7 +148,7 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
               </TooltipTrigger>
               {isBlocked && (
                 <TooltipContent>
-                  <p>Create and lock all SOVs first</p>
+                  <p>Create SOVs for all contracts first</p>
                 </TooltipContent>
               )}
             </Tooltip>
