@@ -17,7 +17,7 @@ import { InvoiceCard } from './InvoiceCard';
 import { InvoiceDetail } from './InvoiceDetail';
 import { Invoice, InvoiceStatus, INVOICE_STATUS_LABELS } from '@/types/invoice';
 import { useAuth } from '@/hooks/useAuth';
-
+import { toast } from 'sonner';
 interface InvoicesTabProps {
   projectId: string;
   retainagePercent: number;
@@ -143,6 +143,49 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
     fetchInvoices();
   };
 
+  // Quick submit invoice from card
+  const handleQuickSubmit = async (invoice: Invoice) => {
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ 
+          status: 'SUBMITTED',
+          submitted_at: new Date().toISOString(),
+        })
+        .eq('id', invoice.id);
+
+      if (error) throw error;
+      toast.success('Invoice submitted successfully');
+      fetchInvoices();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to submit invoice');
+    }
+  };
+
+  // Quick approve invoice from card
+  const handleQuickApprove = async (invoice: Invoice) => {
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ 
+          status: 'APPROVED',
+          approved_at: new Date().toISOString(),
+        })
+        .eq('id', invoice.id);
+
+      if (error) throw error;
+      toast.success('Invoice approved successfully');
+      fetchInvoices();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to approve invoice');
+    }
+  };
+
+  // Edit invoice - opens detail view for editing
+  const handleEditInvoice = (invoice: Invoice) => {
+    setSelectedInvoiceId(invoice.id);
+  };
+
   // Show invoice detail view
   if (selectedInvoiceId) {
     return (
@@ -232,15 +275,31 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
       );
     }
 
+    // Determine if user can submit (from_org) or approve (to_org)
+    const getInvoicePermissions = (invoice: Invoice) => {
+      const contract = contracts.find(c => c.id === invoice.contract_id);
+      const canSubmit = contract?.from_org_id === currentOrgId;
+      const canApprove = contract?.to_org_id === currentOrgId;
+      return { canSubmit, canApprove };
+    };
+
     return (
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {currentInvoices.map((invoice) => (
-          <InvoiceCard
-            key={invoice.id}
-            invoice={invoice}
-            onClick={() => setSelectedInvoiceId(invoice.id)}
-          />
-        ))}
+        {currentInvoices.map((invoice) => {
+          const { canSubmit, canApprove } = getInvoicePermissions(invoice);
+          return (
+            <InvoiceCard
+              key={invoice.id}
+              invoice={invoice}
+              onClick={() => setSelectedInvoiceId(invoice.id)}
+              onEdit={canSubmit ? handleEditInvoice : undefined}
+              onSubmit={canSubmit ? handleQuickSubmit : undefined}
+              onApprove={canApprove ? handleQuickApprove : undefined}
+              canSubmit={canSubmit}
+              canApprove={canApprove}
+            />
+          );
+        })}
       </div>
     );
   };
