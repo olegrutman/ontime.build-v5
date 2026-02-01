@@ -5,7 +5,7 @@ import { useChangeOrderProject } from '@/hooks/useChangeOrderProject';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChangeOrderWizardDialog } from '@/components/change-order-wizard';
+import { WorkOrderWizard } from '@/components/work-order-wizard';
 import { Plus, FileEdit, Eye, Edit } from 'lucide-react';
 import { ChangeOrderStatus } from '@/types/changeOrderProject';
 import { ViewSwitcher, ViewMode } from '@/components/ui/view-switcher';
@@ -205,8 +205,8 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
         </div>
       )}
 
-      {/* Change Order Wizard */}
-      <ChangeOrderWizardDialog
+      {/* Work Order Wizard */}
+      <WorkOrderWizard
         open={showWizard}
         onOpenChange={setShowWizard}
         projectId={projectId}

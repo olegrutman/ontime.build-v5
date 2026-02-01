@@ -1,1 +1,4 @@
 project_id = "gzqgbfazwvmwmirbqfwf"
+
+[functions.generate-work-order-description]
+verify_jwt = false
