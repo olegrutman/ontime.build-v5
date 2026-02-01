@@ -1,12 +1,16 @@
 import { format } from 'date-fns';
-import { FileText, Calendar, DollarSign } from 'lucide-react';
+import { FileText, Calendar, DollarSign, Eye, Edit, Download } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 import { Invoice, InvoiceStatus } from '@/types/invoice';
+import { HoverActions, HoverAction } from '@/components/ui/hover-actions';
+import { StatusColumn, INVOICE_STATUS_OPTIONS } from '@/components/ui/status-column';
 
 interface InvoiceCardProps {
   invoice: Invoice;
   onClick: () => void;
+  onEdit?: (invoice: Invoice) => void;
+  onDownload?: (invoice: Invoice) => void;
 }
 
 function formatCurrency(amount: number): string {
@@ -17,10 +21,37 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function InvoiceCard({ invoice, onClick }: InvoiceCardProps) {
+export function InvoiceCard({ invoice, onClick, onEdit, onDownload }: InvoiceCardProps) {
+  const hoverActions: HoverAction[] = [
+    {
+      icon: <Eye className="h-4 w-4" />,
+      label: 'View Details',
+      onClick: (e) => {
+        e.stopPropagation();
+        onClick();
+      },
+    },
+    ...(onEdit ? [{
+      icon: <Edit className="h-4 w-4" />,
+      label: 'Edit Invoice',
+      onClick: (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onEdit(invoice);
+      },
+    }] : []),
+    ...(onDownload ? [{
+      icon: <Download className="h-4 w-4" />,
+      label: 'Download PDF',
+      onClick: (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onDownload(invoice);
+      },
+    }] : []),
+  ];
+
   return (
     <Card
-      className="cursor-pointer hover:border-primary/50 transition-colors"
+      className="group cursor-pointer hover:border-primary/50 transition-colors"
       onClick={onClick}
     >
       <CardContent className="p-4">
@@ -36,7 +67,15 @@ export function InvoiceCard({ invoice, onClick }: InvoiceCardProps) {
               </p>
             </div>
           </div>
-          <InvoiceStatusBadge status={invoice.status as InvoiceStatus} />
+          <div className="flex items-center gap-2">
+            <HoverActions actions={hoverActions} />
+            <StatusColumn
+              value={invoice.status}
+              options={INVOICE_STATUS_OPTIONS}
+              size="sm"
+              disabled
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4 text-sm">
