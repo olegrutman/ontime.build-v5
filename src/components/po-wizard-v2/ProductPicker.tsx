@@ -10,9 +10,9 @@ import {
   CatalogProduct,
   CategoryCount,
   SecondaryCount,
-  CATEGORY_DISPLAY,
+  VIRTUAL_CATEGORIES,
+  VirtualCategory,
   getFilterSequence,
-  FIELD_LABELS,
 } from '@/types/poWizardV2';
 import { CategoryGrid } from './CategoryGrid';
 import { SecondaryCategoryList } from './SecondaryCategoryList';
@@ -43,18 +43,24 @@ export function ProductPicker({
   const [step, setStep] = useState<PickerStep>('category');
   const [categories, setCategories] = useState<CategoryCount[]>([]);
   const [secondaryCategories, setSecondaryCategories] = useState<SecondaryCount[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedVirtualCategory, setSelectedVirtualCategory] = useState<string | null>(null);
   const [selectedSecondary, setSelectedSecondary] = useState<string | null>(null);
   const [appliedFilters, setAppliedFilters] = useState<Record<string, string>>({});
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Get the actual DB category for queries
+  const getDbCategory = useCallback(() => {
+    if (!selectedVirtualCategory) return null;
+    return VIRTUAL_CATEGORIES[selectedVirtualCategory]?.dbCategory || null;
+  }, [selectedVirtualCategory]);
+
   // Reset state when opening
   useEffect(() => {
     if (open) {
       setStep('category');
-      setSelectedCategory(null);
+      setSelectedVirtualCategory(null);
       setSelectedSecondary(null);
       setAppliedFilters({});
       setProducts([]);
@@ -69,30 +75,54 @@ export function ProductPicker({
     if (!supplierId) return;
     setLoading(true);
     try {
+      // Fetch all items with category and secondary_category
       const { data, error } = await supabase
         .from('catalog_items')
-        .select('category')
+        .select('category, secondary_category')
         .eq('supplier_id', supplierId);
 
       if (error) throw error;
 
-      // Count by category
-      const counts: Record<string, number> = {};
+      // Count by secondary_category and category
+      const secondaryCounts: Record<string, number> = {};
+      const categoryCounts: Record<string, number> = {};
+      
       data?.forEach(item => {
-        counts[item.category] = (counts[item.category] || 0) + 1;
+        const sec = item.secondary_category || 'UNCATEGORIZED';
+        const cat = item.category;
+        secondaryCounts[sec] = (secondaryCounts[sec] || 0) + 1;
+        categoryCounts[cat] = (categoryCounts[cat] || 0) + 1;
       });
 
-      const categoryList: CategoryCount[] = Object.entries(counts)
-        .map(([category, count]) => ({
-          category,
-          count,
-          displayName: CATEGORY_DISPLAY[category]?.name || category,
-          icon: CATEGORY_DISPLAY[category]?.icon || '📦',
-        }))
-        .filter(c => c.count > 0)
-        .sort((a, b) => b.count - a.count);
+      // Build virtual category counts
+      const virtualCounts: CategoryCount[] = [];
+      
+      Object.entries(VIRTUAL_CATEGORIES).forEach(([key, virtual]) => {
+        let count = 0;
+        
+        if (virtual.secondaryCategories.length === 0) {
+          // Include all from that DB category
+          count = categoryCounts[virtual.dbCategory] || 0;
+        } else {
+          // Sum counts from specified secondary categories
+          virtual.secondaryCategories.forEach(sec => {
+            count += secondaryCounts[sec] || 0;
+          });
+        }
+        
+        if (count > 0) {
+          virtualCounts.push({
+            category: key, // Virtual key
+            count,
+            displayName: virtual.displayName,
+            icon: virtual.icon,
+          });
+        }
+      });
 
-      setCategories(categoryList);
+      // Sort by count descending
+      virtualCounts.sort((a, b) => b.count - a.count);
+      setCategories(virtualCounts);
     } catch (error) {
       console.error('Error fetching categories:', error);
     } finally {
@@ -100,16 +130,27 @@ export function ProductPicker({
     }
   };
 
-  const fetchSecondaryCategories = async (category: string) => {
-    if (!supplierId) return;
+  const fetchSecondaryCategories = async (virtualKey: string) => {
+    if (!supplierId) return [];
+    
+    const virtual = VIRTUAL_CATEGORIES[virtualKey];
+    if (!virtual) return [];
+    
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('catalog_items')
         .select('secondary_category')
         .eq('supplier_id', supplierId)
-        .eq('category', category as any)
+        .eq('category', virtual.dbCategory as any)
         .not('secondary_category', 'is', null);
+
+      // If virtual category has specific secondaries, filter to those
+      if (virtual.secondaryCategories.length > 0) {
+        query = query.in('secondary_category', virtual.secondaryCategories);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -136,20 +177,25 @@ export function ProductPicker({
     }
   };
 
-  const fetchProducts = async (categoryValue: string, secondary: string | null, specFilters: Record<string, string>) => {
+  const fetchProducts = async (virtualKey: string, secondary: string | null, specFilters: Record<string, string>) => {
     if (!supplierId) return;
+    
+    const virtual = VIRTUAL_CATEGORIES[virtualKey];
+    if (!virtual) return;
+    
     setLoading(true);
     try {
-      // Build filter object for RPC or manual filtering
+      // Build filter object for .match()
       const filterObj: Record<string, any> = {
         supplier_id: supplierId,
-        category: categoryValue,
+        category: virtual.dbCategory,
       };
-      
+
+      // Filter by secondary category if selected
       if (secondary) {
         filterObj.secondary_category = secondary;
       }
-      
+
       // Apply spec filters
       Object.entries(specFilters).forEach(([key, value]) => {
         if (value) {
@@ -157,11 +203,17 @@ export function ProductPicker({
         }
       });
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('catalog_items')
         .select('*')
-        .match(filterObj)
-        .limit(100);
+        .match(filterObj);
+
+      // If no secondary selected but virtual has specific ones, filter to those
+      if (!secondary && virtual.secondaryCategories.length > 0) {
+        query = query.in('secondary_category', virtual.secondaryCategories);
+      }
+
+      const { data, error } = await query.limit(100);
 
       if (error) throw error;
 
@@ -173,34 +225,40 @@ export function ProductPicker({
     }
   };
 
-  const handleCategorySelect = useCallback(async (categoryValue: string) => {
-    setSelectedCategory(categoryValue);
+  const handleCategorySelect = useCallback(async (virtualKey: string) => {
+    setSelectedVirtualCategory(virtualKey);
     setAppliedFilters({});
     
-    // Check for secondary categories
-    const secondaries = await fetchSecondaryCategories(categoryValue);
+    const virtual = VIRTUAL_CATEGORIES[virtualKey];
+    if (!virtual) return;
+    
+    // Fetch secondary categories for this virtual category
+    const secondaries = await fetchSecondaryCategories(virtualKey);
     
     if (secondaries && secondaries.length > 1) {
+      // Multiple sub-categories - show selection
       setStep('secondary');
     } else if (secondaries && secondaries.length === 1) {
       // Auto-select single secondary
-      setSelectedSecondary(secondaries[0].secondary_category);
+      const secondary = secondaries[0].secondary_category;
+      setSelectedSecondary(secondary);
+      
       // Check if we need filter steps
-      const filterSeq = getFilterSequence(categoryValue, secondaries[0].secondary_category);
+      const filterSeq = getFilterSequence(virtual.dbCategory, secondary);
       if (filterSeq.length > 0) {
         setStep('filter-step');
       } else {
         // No filters needed - go directly to products
-        fetchProducts(categoryValue, secondaries[0].secondary_category, {});
+        fetchProducts(virtualKey, secondary, {});
         setStep('products');
       }
     } else {
-      // No secondary categories
-      const filterSeq = getFilterSequence(categoryValue, null);
+      // No secondary categories (or empty array for "all of category")
+      const filterSeq = getFilterSequence(virtual.dbCategory, null);
       if (filterSeq.length > 0) {
         setStep('filter-step');
       } else {
-        fetchProducts(categoryValue, null, {});
+        fetchProducts(virtualKey, null, {});
         setStep('products');
       }
     }
@@ -210,26 +268,29 @@ export function ProductPicker({
     setSelectedSecondary(secondary);
     setAppliedFilters({});
     
+    const virtual = selectedVirtualCategory ? VIRTUAL_CATEGORIES[selectedVirtualCategory] : null;
+    if (!virtual) return;
+    
     // Check if we need filter steps
-    const filterSeq = getFilterSequence(selectedCategory || '', secondary);
+    const filterSeq = getFilterSequence(virtual.dbCategory, secondary);
     if (filterSeq.length > 0) {
       setStep('filter-step');
     } else {
       // No filters needed - go directly to products
-      if (selectedCategory) {
-        fetchProducts(selectedCategory, secondary, {});
+      if (selectedVirtualCategory) {
+        fetchProducts(selectedVirtualCategory, secondary, {});
       }
       setStep('products');
     }
-  }, [selectedCategory, supplierId]);
+  }, [selectedVirtualCategory, supplierId]);
 
   const handleFilterComplete = useCallback((filters: Record<string, string>) => {
     setAppliedFilters(filters);
-    if (selectedCategory) {
-      fetchProducts(selectedCategory, selectedSecondary, filters);
+    if (selectedVirtualCategory) {
+      fetchProducts(selectedVirtualCategory, selectedSecondary, filters);
     }
     setStep('products');
-  }, [selectedCategory, selectedSecondary, supplierId]);
+  }, [selectedVirtualCategory, selectedSecondary, supplierId]);
 
   const handleProductSelect = useCallback((product: CatalogProduct) => {
     setSelectedProduct(product);
@@ -241,38 +302,40 @@ export function ProductPicker({
       setStep('secondary');
     } else {
       setStep('category');
-      setSelectedCategory(null);
+      setSelectedVirtualCategory(null);
     }
     setSelectedSecondary(null);
     setAppliedFilters({});
   }, [secondaryCategories.length]);
 
   const handleBack = useCallback(() => {
+    const virtual = selectedVirtualCategory ? VIRTUAL_CATEGORIES[selectedVirtualCategory] : null;
+    
     switch (step) {
       case 'secondary':
         setStep('category');
-        setSelectedCategory(null);
+        setSelectedVirtualCategory(null);
         break;
       case 'filter-step':
         if (secondaryCategories.length > 1) {
           setStep('secondary');
         } else {
           setStep('category');
-          setSelectedCategory(null);
+          setSelectedVirtualCategory(null);
         }
         setSelectedSecondary(null);
         setAppliedFilters({});
         break;
       case 'products':
         // Go back to filter-step if there are filters, otherwise to secondary/category
-        const filterSeq = getFilterSequence(selectedCategory || '', selectedSecondary);
+        const filterSeq = getFilterSequence(virtual?.dbCategory || '', selectedSecondary);
         if (filterSeq.length > 0) {
           setStep('filter-step');
         } else if (secondaryCategories.length > 1) {
           setStep('secondary');
         } else {
           setStep('category');
-          setSelectedCategory(null);
+          setSelectedVirtualCategory(null);
         }
         break;
       case 'quantity':
@@ -280,7 +343,7 @@ export function ProductPicker({
         setSelectedProduct(null);
         break;
     }
-  }, [step, secondaryCategories.length, selectedCategory, selectedSecondary]);
+  }, [step, secondaryCategories.length, selectedVirtualCategory, selectedSecondary]);
 
   const handleClose = () => {
     onClearEdit();
@@ -288,19 +351,24 @@ export function ProductPicker({
   };
 
   const getTitle = () => {
+    const virtual = selectedVirtualCategory ? VIRTUAL_CATEGORIES[selectedVirtualCategory] : null;
+    
     switch (step) {
       case 'category':
         return 'Select Category';
       case 'secondary':
-        return selectedCategory ? CATEGORY_DISPLAY[selectedCategory]?.name || selectedCategory : 'Select Type';
+        return virtual?.displayName || 'Select Type';
       case 'filter-step':
-        return selectedSecondary || CATEGORY_DISPLAY[selectedCategory || '']?.name || 'Filter Products';
+        return selectedSecondary || virtual?.displayName || 'Filter Products';
       case 'products':
         return 'Select Product';
       case 'quantity':
         return 'Add to PO';
     }
   };
+
+  // Get db category for StepByStepFilter
+  const dbCategory = selectedVirtualCategory ? VIRTUAL_CATEGORIES[selectedVirtualCategory]?.dbCategory : null;
 
   const content = (
     <div className="flex flex-col h-full">
@@ -333,10 +401,10 @@ export function ProductPicker({
             onSelect={handleSecondarySelect}
           />
         )}
-        {step === 'filter-step' && (
+        {step === 'filter-step' && dbCategory && (
           <StepByStepFilter
             supplierId={supplierId}
-            category={selectedCategory}
+            category={dbCategory}
             secondaryCategory={selectedSecondary}
             onComplete={handleFilterComplete}
             onBack={handleFilterStepBack}
