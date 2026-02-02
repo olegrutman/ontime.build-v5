@@ -22,10 +22,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 import { PurchaseOrder, PO_STATUS_LABELS } from '@/types/purchaseOrder';
+import { POWizard } from '@/components/po-wizard';
+import { POWizardData } from '@/types/poWizard';
 
 interface PurchaseOrdersTabProps {
   projectId: string;
+  projectName?: string;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -33,11 +37,13 @@ const STATUS_COLORS: Record<string, string> = {
   SENT: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
 };
 
-export function PurchaseOrdersTab({ projectId }: PurchaseOrdersTabProps) {
+export function PurchaseOrdersTab({ projectId, projectName }: PurchaseOrdersTabProps) {
   const { userOrgRoles, currentRole } = useAuth();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [wizardOpen, setWizardOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
@@ -90,6 +96,61 @@ export function PurchaseOrdersTab({ projectId }: PurchaseOrdersTabProps) {
     setLoading(false);
   };
 
+  const handleCreatePO = async (data: POWizardData) => {
+    if (!currentOrgId) return;
+    
+    setIsSubmitting(true);
+    try {
+      // Generate PO number
+      const { data: poNumber } = await supabase.rpc('generate_po_number', {
+        org_id: currentOrgId,
+      });
+
+      // Create PO
+      const { data: newPO, error: poError } = await supabase
+        .from('purchase_orders')
+        .insert({
+          organization_id: currentOrgId,
+          po_number: poNumber,
+          po_name: `PO for ${data.project_name || 'Materials'}`,
+          supplier_id: data.supplier_id,
+          project_id: data.project_id,
+          work_item_id: data.work_item_id,
+          notes: data.notes || null,
+          status: 'DRAFT',
+        })
+        .select()
+        .single();
+
+      if (poError) throw poError;
+
+      // Insert line items
+      if (data.line_items.length > 0) {
+        const lineItems = data.line_items.map((item, idx) => ({
+          po_id: newPO.id,
+          line_number: idx + 1,
+          supplier_sku: item.supplier_sku,
+          description: item.description,
+          quantity: item.quantity,
+          uom: item.uom,
+          pieces: item.pieces,
+          length_ft: item.length_ft,
+        }));
+
+        const { error: lineError } = await supabase.from('po_line_items').insert(lineItems);
+        if (lineError) throw lineError;
+      }
+
+      toast.success(`PO ${poNumber} created`);
+      fetchPurchaseOrders();
+    } catch (error: any) {
+      console.error('Error creating PO:', error);
+      toast.error('Failed to create PO: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const filteredPOs = statusFilter === 'all'
     ? purchaseOrders
     : purchaseOrders.filter(po => po.status === statusFilter);
@@ -110,6 +171,7 @@ export function PurchaseOrdersTab({ projectId }: PurchaseOrdersTabProps) {
   }
 
   return (
+    <>
     <div className="space-y-6">
       {/* Header with Stats */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -131,7 +193,7 @@ export function PurchaseOrdersTab({ projectId }: PurchaseOrdersTabProps) {
             </SelectContent>
           </Select>
           {canCreatePO && (
-            <Button size="sm" disabled>
+            <Button size="sm" onClick={() => setWizardOpen(true)}>
               <Plus className="h-4 w-4 mr-1" />
               Create PO
             </Button>
@@ -200,5 +262,16 @@ export function PurchaseOrdersTab({ projectId }: PurchaseOrdersTabProps) {
         </Card>
       )}
     </div>
+
+      {/* PO Creation Wizard */}
+      <POWizard
+        open={wizardOpen}
+        onOpenChange={setWizardOpen}
+        onComplete={handleCreatePO}
+        isSubmitting={isSubmitting}
+        initialProjectId={projectId}
+        initialProjectName={projectName}
+      />
+    </>
   );
 }
