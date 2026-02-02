@@ -16,43 +16,91 @@ export type Database = {
     Tables: {
       catalog_items: {
         Row: {
+          attributes: Json | null
+          bundle_qty: number | null
+          bundle_type: string | null
           category: Database["public"]["Enums"]["catalog_category"]
+          color: string | null
           created_at: string
           description: string
+          dimension: string | null
+          finish: string | null
           id: string
+          length: string | null
+          manufacturer: string | null
+          max_length: number | null
+          min_length: number | null
+          name: string | null
+          product_type: string | null
           search_keywords: string[] | null
           search_vector: unknown
+          secondary_category: string | null
           size_or_spec: string | null
           supplier_id: string
           supplier_sku: string
+          thickness: string | null
           uom_default: string
           updated_at: string
+          use_type: string | null
+          wood_species: string | null
         }
         Insert: {
+          attributes?: Json | null
+          bundle_qty?: number | null
+          bundle_type?: string | null
           category?: Database["public"]["Enums"]["catalog_category"]
+          color?: string | null
           created_at?: string
           description: string
+          dimension?: string | null
+          finish?: string | null
           id?: string
+          length?: string | null
+          manufacturer?: string | null
+          max_length?: number | null
+          min_length?: number | null
+          name?: string | null
+          product_type?: string | null
           search_keywords?: string[] | null
           search_vector?: unknown
+          secondary_category?: string | null
           size_or_spec?: string | null
           supplier_id: string
           supplier_sku: string
+          thickness?: string | null
           uom_default?: string
           updated_at?: string
+          use_type?: string | null
+          wood_species?: string | null
         }
         Update: {
+          attributes?: Json | null
+          bundle_qty?: number | null
+          bundle_type?: string | null
           category?: Database["public"]["Enums"]["catalog_category"]
+          color?: string | null
           created_at?: string
           description?: string
+          dimension?: string | null
+          finish?: string | null
           id?: string
+          length?: string | null
+          manufacturer?: string | null
+          max_length?: number | null
+          min_length?: number | null
+          name?: string | null
+          product_type?: string | null
           search_keywords?: string[] | null
           search_vector?: unknown
+          secondary_category?: string | null
           size_or_spec?: string | null
           supplier_id?: string
           supplier_sku?: string
+          thickness?: string | null
           uom_default?: string
           updated_at?: string
+          use_type?: string | null
+          wood_species?: string | null
         }
         Relationships: [
           {
@@ -3474,6 +3522,34 @@ export type Database = {
           supplier_id: string
           supplier_sku: string
           uom_default: string
+        }[]
+      }
+      search_catalog_v2: {
+        Args: {
+          category_filter?: string
+          manufacturer_filter?: string
+          max_results?: number
+          search_query?: string
+          secondary_category_filter?: string
+        }
+        Returns: {
+          bundle_qty: number
+          bundle_type: string
+          category: string
+          color: string
+          description: string
+          dimension: string
+          id: string
+          length: string
+          manufacturer: string
+          name: string
+          rank: number
+          secondary_category: string
+          size_or_spec: string
+          supplier_sku: string
+          thickness: string
+          uom_default: string
+          wood_species: string
         }[]
       }
       search_existing_team_targets: {
