@@ -1,9 +1,36 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
-// Get and sanitize the API key (remove any whitespace/newlines that could break headers)
+// Read RESEND_API_KEY and validate it strictly.
+// The runtime error "failed to parse header value" happens when a header contains
+// illegal control characters (often copied in with newlines).
 const rawApiKey = Deno.env.get("RESEND_API_KEY");
-const RESEND_API_KEY = rawApiKey?.trim().replace(/[\r\n]/g, '');
+
+function getValidatedResendApiKey(): string {
+  if (!rawApiKey) {
+    throw new Error(
+      "RESEND_API_KEY is not configured. Please add it in your backend secrets.",
+    );
+  }
+
+  // Reject any ASCII control chars (0x00-0x1F, 0x7F) that would make headers invalid.
+  if (/[\x00-\x1F\x7F]/.test(rawApiKey)) {
+    throw new Error(
+      "RESEND_API_KEY contains invalid hidden characters. Please re-save the key in backend secrets (paste only the key, no whitespace/newlines).",
+    );
+  }
+
+  const trimmed = rawApiKey.trim();
+
+  // API keys should not contain whitespace; if they do, it's almost certainly a paste issue.
+  if (/\s/.test(trimmed)) {
+    throw new Error(
+      "RESEND_API_KEY contains whitespace. Please re-save the key in backend secrets (no spaces/newlines).",
+    );
+  }
+
+  return trimmed;
+}
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -24,10 +51,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Validate RESEND_API_KEY before proceeding
-    if (!RESEND_API_KEY) {
-      throw new Error("RESEND_API_KEY is not configured. Please add it in your backend secrets.");
-    }
+    const RESEND_API_KEY = getValidatedResendApiKey();
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const { po_id, supplier_email }: SendPORequest = await req.json();
@@ -77,12 +101,13 @@ const handler = async (req: Request): Promise<Response> => {
     const totalItems = lineItems?.length || 0;
 
     // Send email using Resend REST API
+    const headers = new Headers();
+    headers.set("Content-Type", "application/json");
+    headers.set("Authorization", `Bearer ${RESEND_API_KEY}`);
+
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${RESEND_API_KEY}`,
-      },
+      headers,
       body: JSON.stringify({
         from: "Ontime.Build <onboarding@resend.dev>",
         to: [supplier_email],
