@@ -246,7 +246,15 @@ export default function ProjectHome() {
 
               {/* Purchase Orders Tab */}
               {activeTab === 'purchase-orders' && (
-                <PurchaseOrdersTab projectId={id!} />
+                <PurchaseOrdersTab 
+                  projectId={id!} 
+                  projectName={project?.name}
+                  projectAddress={
+                    project?.address 
+                      ? `${project.address.street || ''}, ${project.address.city || ''}, ${project.address.state || ''} ${project.address.zip || ''}`.replace(/^,\s*|,\s*$/g, '').trim()
+                      : ''
+                  }
+                />
               )}
 
               {/* Documents Tab (placeholder) */}

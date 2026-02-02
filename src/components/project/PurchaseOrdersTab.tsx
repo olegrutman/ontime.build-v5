@@ -24,12 +24,13 @@ import {
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { PurchaseOrder, PO_STATUS_LABELS } from '@/types/purchaseOrder';
-import { POWizard } from '@/components/po-wizard';
-import { POWizardData } from '@/types/poWizard';
+import { POWizardV2 } from '@/components/po-wizard-v2';
+import { POWizardV2Data } from '@/types/poWizardV2';
 
 interface PurchaseOrdersTabProps {
   projectId: string;
   projectName?: string;
+  projectAddress?: string;
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -37,7 +38,7 @@ const STATUS_COLORS: Record<string, string> = {
   SENT: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
 };
 
-export function PurchaseOrdersTab({ projectId, projectName }: PurchaseOrdersTabProps) {
+export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: PurchaseOrdersTabProps) {
   const { userOrgRoles, currentRole } = useAuth();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,7 +97,7 @@ export function PurchaseOrdersTab({ projectId, projectName }: PurchaseOrdersTabP
     setLoading(false);
   };
 
-  const handleCreatePO = async (data: POWizardData) => {
+  const handleCreatePO = async (data: POWizardV2Data) => {
     if (!currentOrgId) return;
     
     setIsSubmitting(true);
@@ -115,7 +116,6 @@ export function PurchaseOrdersTab({ projectId, projectName }: PurchaseOrdersTabP
           po_name: `PO for ${data.project_name || 'Materials'}`,
           supplier_id: data.supplier_id,
           project_id: data.project_id,
-          work_item_id: data.work_item_id,
           notes: data.notes || null,
           status: 'DRAFT',
         })
@@ -130,11 +130,11 @@ export function PurchaseOrdersTab({ projectId, projectName }: PurchaseOrdersTabP
           po_id: newPO.id,
           line_number: idx + 1,
           supplier_sku: item.supplier_sku,
-          description: item.description,
+          description: item.name,
           quantity: item.quantity,
           uom: item.uom,
-          pieces: item.pieces,
-          length_ft: item.length_ft,
+          pieces: item.unit_mode === 'BUNDLE' ? item.bundle_count : null,
+          notes: item.item_notes || null,
         }));
 
         const { error: lineError } = await supabase.from('po_line_items').insert(lineItems);
@@ -142,6 +142,7 @@ export function PurchaseOrdersTab({ projectId, projectName }: PurchaseOrdersTabP
       }
 
       toast.success(`PO ${poNumber} created`);
+      setWizardOpen(false);
       fetchPurchaseOrders();
     } catch (error: any) {
       console.error('Error creating PO:', error);
@@ -263,14 +264,15 @@ export function PurchaseOrdersTab({ projectId, projectName }: PurchaseOrdersTabP
       )}
     </div>
 
-      {/* PO Creation Wizard */}
-      <POWizard
+      {/* PO Creation Wizard v2 */}
+      <POWizardV2
         open={wizardOpen}
         onOpenChange={setWizardOpen}
+        projectId={projectId}
+        projectName={projectName || 'Project'}
+        projectAddress={projectAddress || ''}
         onComplete={handleCreatePO}
         isSubmitting={isSubmitting}
-        initialProjectId={projectId}
-        initialProjectName={projectName}
       />
     </>
   );
