@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, Package, FileSpreadsheet, AlertCircle } from 'lucide-react';
+import { Upload, Package, FileSpreadsheet, AlertCircle, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -174,28 +174,33 @@ export default function SupplierInventory() {
       // Ensure supplier record exists, creating one if needed
       const supplierId = await ensureSupplierRecord(currentOrg.id, currentOrg.name);
 
-      // Prepare items for upsert with all enhanced columns
-      const itemsToInsert = csvPreview.map(row => ({
-        supplier_id: supplierId,
-        supplier_sku: row.supplier_sku,
-        name: row.name || null,
-        description: row.description,
-        category: row.category as CatalogCategory,
-        secondary_category: row.secondary_category || null,
-        manufacturer: row.manufacturer || null,
-        use_type: row.use_type || null,
-        product_type: row.product_type || null,
-        dimension: row.dimension || null,
-        thickness: row.thickness || null,
-        length: row.length || null,
-        color: row.color || null,
-        finish: row.finish || null,
-        wood_species: row.wood_species || null,
-        bundle_type: row.bundle_type || null,
-        bundle_qty: row.bundle_qty || null,
-        uom_default: row.uom_default,
-        size_or_spec: row.size_or_spec || null,
-      }));
+      // De-duplicate by SKU - keep the LAST occurrence (allows overrides in CSV)
+      const uniqueItems = new Map<string, any>();
+      csvPreview.forEach(row => {
+        uniqueItems.set(row.supplier_sku, {
+          supplier_id: supplierId,
+          supplier_sku: row.supplier_sku,
+          name: row.name || null,
+          description: row.description,
+          category: row.category as CatalogCategory,
+          secondary_category: row.secondary_category || null,
+          manufacturer: row.manufacturer || null,
+          use_type: row.use_type || null,
+          product_type: row.product_type || null,
+          dimension: row.dimension || null,
+          thickness: row.thickness || null,
+          length: row.length || null,
+          color: row.color || null,
+          finish: row.finish || null,
+          wood_species: row.wood_species || null,
+          bundle_type: row.bundle_type || null,
+          bundle_qty: row.bundle_qty || null,
+          uom_default: row.uom_default,
+          size_or_spec: row.size_or_spec || null,
+        });
+      });
+
+      const itemsToInsert = Array.from(uniqueItems.values());
 
       const { error } = await supabase
         .from('catalog_items')
@@ -203,7 +208,13 @@ export default function SupplierInventory() {
 
       if (error) throw error;
 
-      toast({ title: 'Success', description: `${csvPreview.length} items imported` });
+      const duplicatesRemoved = csvPreview.length - itemsToInsert.length;
+      toast({ 
+        title: 'Success', 
+        description: duplicatesRemoved > 0 
+          ? `${itemsToInsert.length} items imported (${duplicatesRemoved} duplicates merged)` 
+          : `${itemsToInsert.length} items imported` 
+      });
       setShowPreview(false);
       setCsvPreview([]);
       fetchCatalogItems();
@@ -221,6 +232,16 @@ export default function SupplierInventory() {
   // Count unique values
   const uniqueCategories = new Set(items.map(i => i.category)).size;
   const uniqueManufacturers = new Set(items.filter(i => i.manufacturer).map(i => i.manufacturer)).size;
+
+  // Detect duplicate SKUs in preview
+  const duplicateSkuCount = useMemo(() => {
+    if (csvPreview.length === 0) return 0;
+    const skuCounts = csvPreview.reduce((acc, row) => {
+      acc[row.supplier_sku] = (acc[row.supplier_sku] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    return Object.values(skuCounts).filter(count => count > 1).length;
+  }, [csvPreview]);
 
   if (authLoading || (!isSupplier && loading)) {
     return (
@@ -409,6 +430,14 @@ export default function SupplierInventory() {
                 <DialogHeader>
                   <DialogTitle>Preview Import ({csvPreview.length} items)</DialogTitle>
                 </DialogHeader>
+                {duplicateSkuCount > 0 && (
+                  <Alert className="border-amber-500/50 bg-amber-500/10">
+                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                    <AlertDescription className="text-amber-700 dark:text-amber-400">
+                      Found {duplicateSkuCount} duplicate SKUs. Last occurrence of each will be used.
+                    </AlertDescription>
+                  </Alert>
+                )}
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
