@@ -57,6 +57,7 @@ export interface CatalogItem {
 
 export interface CatalogSearchResult {
   id: string;
+  supplier_id: string;
   supplier_sku: string;
   name: string | null;
   description: string;
