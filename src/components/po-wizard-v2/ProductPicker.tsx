@@ -27,6 +27,7 @@ interface ProductPickerProps {
   onOpenChange: (open: boolean) => void;
   supplierId: string | null;
   onAddItem: (item: POWizardV2LineItem) => void;
+  onUpdateItem?: (item: POWizardV2LineItem) => void;
   editingItem: POWizardV2LineItem | null;
   onClearEdit: () => void;
 }
@@ -36,6 +37,7 @@ export function ProductPicker({
   onOpenChange,
   supplierId,
   onAddItem,
+  onUpdateItem,
   editingItem,
   onClearEdit,
 }: ProductPickerProps) {
@@ -56,9 +58,35 @@ export function ProductPicker({
     return VIRTUAL_CATEGORIES[selectedVirtualCategory]?.dbCategory || null;
   }, [selectedVirtualCategory]);
 
-  // Reset state when opening
+  // Handle editing - load the product and go to quantity screen
   useEffect(() => {
-    if (open) {
+    if (open && editingItem && supplierId) {
+      // Fetch the product for the editing item
+      const fetchEditingProduct = async () => {
+        setLoading(true);
+        try {
+          const { data, error } = await supabase
+            .from('catalog_items')
+            .select('*')
+            .eq('id', editingItem.catalog_item_id)
+            .single();
+          
+          if (error) throw error;
+          
+          if (data) {
+            setSelectedProduct(data as CatalogProduct);
+            setStep('quantity');
+          }
+        } catch (error) {
+          console.error('Error fetching product for edit:', error);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchEditingProduct();
+    } else if (open && !editingItem) {
+      // Normal open - reset state
       setStep('category');
       setSelectedVirtualCategory(null);
       setSelectedSecondary(null);
@@ -69,7 +97,7 @@ export function ProductPicker({
         fetchCategories();
       }
     }
-  }, [open, supplierId]);
+  }, [open, supplierId, editingItem]);
 
   const fetchCategories = async () => {
     if (!supplierId) return;
@@ -422,7 +450,9 @@ export function ProductPicker({
           <QuantityPanel
             product={selectedProduct}
             onAdd={onAddItem}
+            onUpdate={onUpdateItem}
             onClose={handleClose}
+            editingItem={editingItem}
           />
         )}
       </div>

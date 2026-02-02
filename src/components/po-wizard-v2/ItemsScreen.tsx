@@ -76,15 +76,26 @@ export function ItemsScreen({
                         <p className="text-sm text-muted-foreground truncate">
                           {item.specs}
                         </p>
-                        <div className="flex items-center gap-2 mt-2">
-                          <Badge variant="outline">
-                            {item.is_engineered && item.length_ft
-                              ? `${item.quantity} pcs @ ${item.length_ft}' = ${item.computed_lf} LF`
-                              : `${item.quantity} ${item.unit_mode === 'BUNDLE' ? item.bundle_name || 'BDL' : item.uom}`
-                            }
-                          </Badge>
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                          {item.is_engineered && item.length_ft ? (
+                            <>
+                              <Badge variant="outline">
+                                {item.quantity} pcs
+                              </Badge>
+                              <Badge variant="outline">
+                                {item.length_ft}' each
+                              </Badge>
+                              <Badge variant="secondary" className="font-semibold">
+                                = {item.computed_lf} LF
+                              </Badge>
+                            </>
+                          ) : (
+                            <Badge variant="outline">
+                              {item.quantity} {item.unit_mode === 'BUNDLE' ? item.bundle_name || 'BDL' : item.uom}
+                            </Badge>
+                          )}
                           {item.item_notes && (
-                            <span className="text-xs text-muted-foreground truncate">
+                            <span className="text-xs text-muted-foreground truncate max-w-[120px]">
                               {item.item_notes}
                             </span>
                           )}
