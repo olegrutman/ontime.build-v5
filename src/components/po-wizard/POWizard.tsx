@@ -11,8 +11,8 @@ import { NotesStep } from './steps/NotesStep';
 import { ReviewStep } from './steps/ReviewStep';
 
 const STEPS = [
-  { title: 'Supplier', key: 'supplier' },
   { title: 'Project', key: 'project' },
+  { title: 'Supplier', key: 'supplier' },
   { title: 'Items', key: 'items' },
   { title: 'Notes', key: 'notes' },
   { title: 'Review', key: 'review' },
@@ -49,10 +49,10 @@ export function POWizard({
 
   const canGoNext = (): boolean => {
     switch (currentStep) {
-      case 1: // Supplier - required
-        return !!formData.supplier_id;
-      case 2: // Project - required
+      case 1: // Project - required
         return !!formData.project_id;
+      case 2: // Supplier - required
+        return !!formData.supplier_id;
       case 3: // Items - need at least one
         return formData.line_items.length > 0;
       case 4: // Notes - optional
@@ -107,15 +107,15 @@ export function POWizard({
 
         <div className="p-6 min-h-[400px] max-h-[60vh] overflow-y-auto">
           {currentStep === 1 && (
-            <SupplierStep data={formData} onChange={handleChange} />
-          )}
-          {currentStep === 2 && (
             <ProjectStep
               data={formData}
               onChange={handleChange}
               initialProjectId={initialProjectId}
               initialProjectName={initialProjectName}
             />
+          )}
+          {currentStep === 2 && (
+            <SupplierStep data={formData} onChange={handleChange} projectId={formData.project_id} />
           )}
           {currentStep === 3 && (
             <ItemsStep
