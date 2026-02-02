@@ -9,37 +9,57 @@ import { CatalogProduct, POWizardV2LineItem } from '@/types/poWizardV2';
 interface QuantityPanelProps {
   product: CatalogProduct;
   onAdd: (item: POWizardV2LineItem) => void;
+  onUpdate?: (item: POWizardV2LineItem) => void;
   onClose: () => void;
+  editingItem?: POWizardV2LineItem | null;
 }
 
-export function QuantityPanel({ product, onAdd, onClose }: QuantityPanelProps) {
+export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem }: QuantityPanelProps) {
+  const isEditing = !!editingItem;
+  
   // Detection
   const isEngineered = product.category === 'Engineered';
   const hasBundle = !!product.bundle_type && !!product.bundle_qty;
   const bundleQty = product.bundle_qty || 0;
 
-  // State for engineered lumber
-  const [pieces, setPieces] = useState(1);
-  const [lengthFt, setLengthFt] = useState(12);
+  // State for engineered lumber - pre-fill if editing
+  const [pieces, setPieces] = useState(() => 
+    editingItem?.is_engineered ? editingItem.quantity : 1
+  );
+  const [lengthFt, setLengthFt] = useState(() => 
+    editingItem?.length_ft || 12
+  );
   const computedLf = pieces * lengthFt;
 
-  // State for standard/bundle products
-  const [orderMode, setOrderMode] = useState<'bundle' | 'each'>(hasBundle ? 'bundle' : 'each');
-  const [quantity, setQuantity] = useState(hasBundle ? bundleQty : 1);
-  const [notes, setNotes] = useState('');
+  // State for standard/bundle products - pre-fill if editing
+  const [orderMode, setOrderMode] = useState<'bundle' | 'each'>(() => {
+    if (editingItem) {
+      return editingItem.unit_mode === 'BUNDLE' ? 'bundle' : 'each';
+    }
+    return hasBundle ? 'bundle' : 'each';
+  });
+  const [quantity, setQuantity] = useState(() => {
+    if (editingItem && !editingItem.is_engineered) {
+      return editingItem.quantity;
+    }
+    return hasBundle ? bundleQty : 1;
+  });
+  const [notes, setNotes] = useState(() => editingItem?.item_notes || '');
 
   // Smart detection: quantity matches bundle = full bundle
   const isFullBundle = hasBundle && quantity === bundleQty && orderMode === 'bundle';
   const isModifiedBundle = hasBundle && orderMode === 'bundle' && quantity !== bundleQty;
 
-  // When order mode changes, update quantity appropriately
+  // When order mode changes, update quantity appropriately (only if not editing)
   useEffect(() => {
+    if (isEditing) return; // Don't auto-update when editing
+    
     if (orderMode === 'bundle' && hasBundle) {
       setQuantity(bundleQty);
     } else if (orderMode === 'each') {
       setQuantity(1);
     }
-  }, [orderMode, hasBundle, bundleQty]);
+  }, [orderMode, hasBundle, bundleQty, isEditing]);
 
   const formatSpecs = () => {
     const parts: string[] = [];
@@ -51,28 +71,33 @@ export function QuantityPanel({ product, onAdd, onClose }: QuantityPanelProps) {
     return parts.join(' | ');
   };
 
-  const handleAdd = () => {
+  const handleSubmit = () => {
     if (isEngineered) {
       // Engineered lumber - track pieces and length
       const item: POWizardV2LineItem = {
-        id: crypto.randomUUID(),
+        id: editingItem?.id || crypto.randomUUID(),
         catalog_item_id: product.id,
         supplier_sku: product.supplier_sku,
         name: product.name || product.description,
         specs: formatSpecs(),
         quantity: pieces,
         unit_mode: 'EACH',
-        uom: 'EA',
+        uom: 'LF', // Use LF for engineered
         length_ft: lengthFt,
         computed_lf: computedLf,
         is_engineered: true,
         item_notes: notes || undefined,
       };
-      onAdd(item);
+      
+      if (isEditing && onUpdate) {
+        onUpdate(item);
+      } else {
+        onAdd(item);
+      }
     } else {
       // Standard or Bundle
       const item: POWizardV2LineItem = {
-        id: crypto.randomUUID(),
+        id: editingItem?.id || crypto.randomUUID(),
         catalog_item_id: product.id,
         supplier_sku: product.supplier_sku,
         name: product.name || product.description,
@@ -84,7 +109,12 @@ export function QuantityPanel({ product, onAdd, onClose }: QuantityPanelProps) {
         uom: product.uom_default,
         item_notes: notes || undefined,
       };
-      onAdd(item);
+      
+      if (isEditing && onUpdate) {
+        onUpdate(item);
+      } else {
+        onAdd(item);
+      }
     }
     onClose();
   };
@@ -285,13 +315,13 @@ export function QuantityPanel({ product, onAdd, onClose }: QuantityPanelProps) {
         />
       </div>
 
-      {/* Add Button */}
+      {/* Submit Button */}
       <Button
         className="w-full h-14 text-base"
-        onClick={handleAdd}
+        onClick={handleSubmit}
       >
         <Check className="h-5 w-5 mr-2" />
-        Add to PO
+        {isEditing ? 'Update Item' : 'Add to PO'}
       </Button>
     </div>
   );

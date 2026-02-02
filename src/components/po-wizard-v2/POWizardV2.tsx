@@ -136,13 +136,16 @@ export function POWizardV2({
     toast.success('Item added');
   }, []);
 
-  const handleUpdateItem = useCallback((itemId: string, updates: Partial<POWizardV2LineItem>) => {
+  const handleUpdateItem = useCallback((updatedItem: POWizardV2LineItem) => {
     setFormData(prev => ({
       ...prev,
       line_items: prev.line_items.map(item =>
-        item.id === itemId ? { ...item, ...updates } : item
+        item.id === updatedItem.id ? updatedItem : item
       ),
     }));
+    setPickerOpen(false);
+    setEditingItem(null);
+    toast.success('Item updated');
   }, []);
 
   const handleRemoveItem = useCallback((itemId: string) => {
@@ -185,7 +188,10 @@ export function POWizardV2({
         <ItemsScreen
           items={formData.line_items}
           onAddItem={() => setPickerOpen(true)}
-          onEditItem={setEditingItem}
+          onEditItem={(item) => {
+            setEditingItem(item);
+            setPickerOpen(true);
+          }}
           onRemoveItem={handleRemoveItem}
           onBack={() => setScreen('header')}
           onNext={() => setScreen('review')}
@@ -212,6 +218,7 @@ export function POWizardV2({
         onOpenChange={setPickerOpen}
         supplierId={formData.supplier_id}
         onAddItem={handleAddItem}
+        onUpdateItem={handleUpdateItem}
         editingItem={editingItem}
         onClearEdit={() => setEditingItem(null)}
       />
