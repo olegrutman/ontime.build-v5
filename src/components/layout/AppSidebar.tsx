@@ -48,7 +48,6 @@ const mainNavItems = [
 ];
 
 const materialsNavItems = [
-  { title: 'Inventory', url: '/inventory', icon: Boxes },
   { title: 'Product Catalog', url: '/catalog', icon: Package },
   { title: 'Material Orders', url: '/orders', icon: ShoppingCart },
   { title: 'Purchase Orders', url: '/purchase-orders', icon: FileText },
