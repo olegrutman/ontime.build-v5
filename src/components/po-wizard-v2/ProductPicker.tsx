@@ -11,14 +11,16 @@ import {
   CategoryCount,
   SecondaryCount,
   CATEGORY_DISPLAY,
+  getFilterSequence,
+  FIELD_LABELS,
 } from '@/types/poWizardV2';
 import { CategoryGrid } from './CategoryGrid';
 import { SecondaryCategoryList } from './SecondaryCategoryList';
-import { SpecFilters } from './SpecFilters';
+import { StepByStepFilter } from './StepByStepFilter';
 import { ProductList } from './ProductList';
 import { QuantityPanel } from './QuantityPanel';
 
-type PickerStep = 'category' | 'secondary' | 'specs' | 'products' | 'quantity';
+type PickerStep = 'category' | 'secondary' | 'filter-step' | 'products' | 'quantity';
 
 interface ProductPickerProps {
   open: boolean;
@@ -43,7 +45,7 @@ export function ProductPicker({
   const [secondaryCategories, setSecondaryCategories] = useState<SecondaryCount[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSecondary, setSelectedSecondary] = useState<string | null>(null);
-  const [filters, setFilters] = useState<Record<string, string>>({});
+  const [appliedFilters, setAppliedFilters] = useState<Record<string, string>>({});
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null);
   const [loading, setLoading] = useState(false);
@@ -54,7 +56,7 @@ export function ProductPicker({
       setStep('category');
       setSelectedCategory(null);
       setSelectedSecondary(null);
-      setFilters({});
+      setAppliedFilters({});
       setProducts([]);
       setSelectedProduct(null);
       if (supplierId) {
@@ -148,8 +150,9 @@ export function ProductPicker({
         filterObj.secondary_category = secondary;
       }
       
+      // Apply spec filters
       Object.entries(specFilters).forEach(([key, value]) => {
-        if (value && value !== 'all') {
+        if (value) {
           filterObj[key] = value;
         }
       });
@@ -172,6 +175,7 @@ export function ProductPicker({
 
   const handleCategorySelect = useCallback(async (categoryValue: string) => {
     setSelectedCategory(categoryValue);
+    setAppliedFilters({});
     
     // Check for secondary categories
     const secondaries = await fetchSecondaryCategories(categoryValue);
@@ -181,33 +185,67 @@ export function ProductPicker({
     } else if (secondaries && secondaries.length === 1) {
       // Auto-select single secondary
       setSelectedSecondary(secondaries[0].secondary_category);
-      setStep('specs');
+      // Check if we need filter steps
+      const filterSeq = getFilterSequence(categoryValue, secondaries[0].secondary_category);
+      if (filterSeq.length > 0) {
+        setStep('filter-step');
+      } else {
+        // No filters needed - go directly to products
+        fetchProducts(categoryValue, secondaries[0].secondary_category, {});
+        setStep('products');
+      }
     } else {
-      // No secondary categories - go to specs or products
-      setStep('specs');
+      // No secondary categories
+      const filterSeq = getFilterSequence(categoryValue, null);
+      if (filterSeq.length > 0) {
+        setStep('filter-step');
+      } else {
+        fetchProducts(categoryValue, null, {});
+        setStep('products');
+      }
     }
   }, [supplierId]);
 
   const handleSecondarySelect = useCallback((secondary: string) => {
     setSelectedSecondary(secondary);
-    setStep('specs');
-  }, []);
-
-  const handleFilterChange = useCallback((key: string, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
-  }, []);
-
-  const handleShowProducts = useCallback(() => {
-    if (selectedCategory) {
-      fetchProducts(selectedCategory, selectedSecondary, filters);
+    setAppliedFilters({});
+    
+    // Check if we need filter steps
+    const filterSeq = getFilterSequence(selectedCategory || '', secondary);
+    if (filterSeq.length > 0) {
+      setStep('filter-step');
+    } else {
+      // No filters needed - go directly to products
+      if (selectedCategory) {
+        fetchProducts(selectedCategory, secondary, {});
+      }
       setStep('products');
     }
-  }, [selectedCategory, selectedSecondary, filters, supplierId]);
+  }, [selectedCategory, supplierId]);
+
+  const handleFilterComplete = useCallback((filters: Record<string, string>) => {
+    setAppliedFilters(filters);
+    if (selectedCategory) {
+      fetchProducts(selectedCategory, selectedSecondary, filters);
+    }
+    setStep('products');
+  }, [selectedCategory, selectedSecondary, supplierId]);
 
   const handleProductSelect = useCallback((product: CatalogProduct) => {
     setSelectedProduct(product);
     setStep('quantity');
   }, []);
+
+  const handleFilterStepBack = useCallback(() => {
+    if (secondaryCategories.length > 1) {
+      setStep('secondary');
+    } else {
+      setStep('category');
+      setSelectedCategory(null);
+    }
+    setSelectedSecondary(null);
+    setAppliedFilters({});
+  }, [secondaryCategories.length]);
 
   const handleBack = useCallback(() => {
     switch (step) {
@@ -215,7 +253,7 @@ export function ProductPicker({
         setStep('category');
         setSelectedCategory(null);
         break;
-      case 'specs':
+      case 'filter-step':
         if (secondaryCategories.length > 1) {
           setStep('secondary');
         } else {
@@ -223,17 +261,26 @@ export function ProductPicker({
           setSelectedCategory(null);
         }
         setSelectedSecondary(null);
-        setFilters({});
+        setAppliedFilters({});
         break;
       case 'products':
-        setStep('specs');
+        // Go back to filter-step if there are filters, otherwise to secondary/category
+        const filterSeq = getFilterSequence(selectedCategory || '', selectedSecondary);
+        if (filterSeq.length > 0) {
+          setStep('filter-step');
+        } else if (secondaryCategories.length > 1) {
+          setStep('secondary');
+        } else {
+          setStep('category');
+          setSelectedCategory(null);
+        }
         break;
       case 'quantity':
         setStep('products');
         setSelectedProduct(null);
         break;
     }
-  }, [step, secondaryCategories.length]);
+  }, [step, secondaryCategories.length, selectedCategory, selectedSecondary]);
 
   const handleClose = () => {
     onClearEdit();
@@ -246,7 +293,7 @@ export function ProductPicker({
         return 'Select Category';
       case 'secondary':
         return selectedCategory ? CATEGORY_DISPLAY[selectedCategory]?.name || selectedCategory : 'Select Type';
-      case 'specs':
+      case 'filter-step':
         return selectedSecondary || CATEGORY_DISPLAY[selectedCategory || '']?.name || 'Filter Products';
       case 'products':
         return 'Select Product';
@@ -286,15 +333,14 @@ export function ProductPicker({
             onSelect={handleSecondarySelect}
           />
         )}
-        {step === 'specs' && (
-          <SpecFilters
+        {step === 'filter-step' && (
+          <StepByStepFilter
             supplierId={supplierId}
             category={selectedCategory}
             secondaryCategory={selectedSecondary}
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            onShowProducts={handleShowProducts}
-            loading={loading}
+            onComplete={handleFilterComplete}
+            onBack={handleFilterStepBack}
+            onClose={handleClose}
           />
         )}
         {step === 'products' && (
