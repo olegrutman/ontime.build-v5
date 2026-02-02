@@ -113,12 +113,33 @@ export function SupplierStep({ data, onChange, projectId }: SupplierStepProps) {
         </p>
       </div>
 
-      {/* Project Suppliers - Auto-suggested */}
-      {!search && projectSuppliers.length > 0 && (
+      {/* Single Project Supplier - Auto-selected confirmation */}
+      {!search && projectSuppliers.length === 1 && (
+        <div className="text-center py-4">
+          <p className="text-sm text-muted-foreground mb-3">
+            Project supplier auto-selected
+          </p>
+          <Card className="p-4 border-primary bg-primary/5 inline-block">
+            <div className="flex items-center gap-3">
+              <Check className="h-5 w-5 text-primary" />
+              <div className="text-left">
+                <p className="font-medium">{projectSuppliers[0].name}</p>
+                <p className="text-xs text-muted-foreground">{projectSuppliers[0].supplier_code}</p>
+              </div>
+            </div>
+          </Card>
+          <p className="text-xs text-muted-foreground mt-3">
+            Tap Next to continue, or search for a different supplier below
+          </p>
+        </div>
+      )}
+
+      {/* Multiple Project Suppliers */}
+      {!search && projectSuppliers.length > 1 && (
         <div>
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
             <Sparkles className="h-3 w-3" />
-            Project Supplier
+            Project Suppliers
           </p>
           <div className="grid grid-cols-1 gap-2">
             {projectSuppliers.map((supplier) => (
