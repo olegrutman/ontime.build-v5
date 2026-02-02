@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { Package, Eye, Edit, Download, Send, Loader2, Building2, FileText } from 'lucide-react';
+import { Package, Eye, Edit, Download, Send, Loader2, Building2, FileText, DollarSign, Lock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { POStatusBadge } from './POStatusBadge';
@@ -15,6 +15,7 @@ interface POCardProps {
   onSubmit?: (po: PurchaseOrder) => Promise<void>;
   canEdit?: boolean;
   canSubmit?: boolean;
+  canViewPricing?: boolean;
   isSupplier?: boolean;
 }
 
@@ -26,6 +27,7 @@ export function POCard({
   onSubmit,
   canEdit = false,
   canSubmit = false,
+  canViewPricing = false,
   isSupplier = false,
 }: POCardProps) {
   const [submitting, setSubmitting] = useState(false);
@@ -82,6 +84,13 @@ export function POCard({
   const showEditButton = canEdit && status === 'ACTIVE' && onEdit;
 
   const lineItemCount = po.line_items?.length || 0;
+  
+  // Calculate total from line items if user can view pricing
+  const total = canViewPricing && po.line_items 
+    ? po.line_items.reduce((sum, item) => sum + (item.line_total || 0), 0)
+    : null;
+  
+  const hasPricing = po.line_items?.some(item => item.unit_price !== null);
 
   return (
     <Card
@@ -124,6 +133,31 @@ export function POCard({
             </div>
           </div>
         </div>
+
+        {/* Pricing Display - Only if user can view pricing */}
+        {hasPricing && (
+          <div className="mt-3 pt-3 border-t">
+            {canViewPricing ? (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <DollarSign className="h-4 w-4" />
+                  <span className="text-xs">Total</span>
+                </div>
+                <span className="font-bold text-lg">
+                  {new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                  }).format(total || 0)}
+                </span>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Lock className="h-3.5 w-3.5" />
+                <span className="text-xs">Pricing managed by another party</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Quick Action Buttons */}
         {(showSubmitButton || showEditButton) && (

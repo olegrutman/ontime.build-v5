@@ -1309,6 +1309,7 @@ export type Database = {
           created_at: string
           description: string
           id: string
+          lead_time_days: number | null
           length_ft: number | null
           line_number: number
           line_total: number | null
@@ -1316,6 +1317,7 @@ export type Database = {
           pieces: number | null
           po_id: string
           quantity: number
+          supplier_notes: string | null
           supplier_sku: string | null
           unit_price: number | null
           uom: string
@@ -1326,6 +1328,7 @@ export type Database = {
           created_at?: string
           description: string
           id?: string
+          lead_time_days?: number | null
           length_ft?: number | null
           line_number: number
           line_total?: number | null
@@ -1333,6 +1336,7 @@ export type Database = {
           pieces?: number | null
           po_id: string
           quantity: number
+          supplier_notes?: string | null
           supplier_sku?: string | null
           unit_price?: number | null
           uom?: string
@@ -1343,6 +1347,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          lead_time_days?: number | null
           length_ft?: number | null
           line_number?: number
           line_total?: number | null
@@ -1350,6 +1355,7 @@ export type Database = {
           pieces?: number | null
           po_id?: string
           quantity?: number
+          supplier_notes?: string | null
           supplier_sku?: string | null
           unit_price?: number | null
           uom?: string
@@ -2255,6 +2261,7 @@ export type Database = {
       purchase_orders: {
         Row: {
           created_at: string
+          created_by_org_id: string | null
           delivered_at: string | null
           download_token: string | null
           id: string
@@ -2266,6 +2273,7 @@ export type Database = {
           po_number: string
           priced_at: string | null
           priced_by: string | null
+          pricing_owner_org_id: string | null
           project_id: string | null
           sent_at: string | null
           sent_by: string | null
@@ -2278,6 +2286,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by_org_id?: string | null
           delivered_at?: string | null
           download_token?: string | null
           id?: string
@@ -2289,6 +2298,7 @@ export type Database = {
           po_number: string
           priced_at?: string | null
           priced_by?: string | null
+          pricing_owner_org_id?: string | null
           project_id?: string | null
           sent_at?: string | null
           sent_by?: string | null
@@ -2301,6 +2311,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by_org_id?: string | null
           delivered_at?: string | null
           download_token?: string | null
           id?: string
@@ -2312,6 +2323,7 @@ export type Database = {
           po_number?: string
           priced_at?: string | null
           priced_by?: string | null
+          pricing_owner_org_id?: string | null
           project_id?: string | null
           sent_at?: string | null
           sent_by?: string | null
@@ -2324,6 +2336,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "purchase_orders_created_by_org_id_fkey"
+            columns: ["created_by_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "purchase_orders_material_order_id_fkey"
             columns: ["material_order_id"]
             isOneToOne: false
@@ -2333,6 +2352,13 @@ export type Database = {
           {
             foreignKeyName: "purchase_orders_organization_id_fkey"
             columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_pricing_owner_org_id_fkey"
+            columns: ["pricing_owner_org_id"]
             isOneToOne: false
             referencedRelation: "organizations"
             referencedColumns: ["id"]
@@ -3418,6 +3444,7 @@ export type Database = {
       }
       can_see_financials: { Args: { _user_id: string }; Returns: boolean }
       can_see_margins: { Args: { _user_id: string }; Returns: boolean }
+      can_view_po_pricing: { Args: { po_id: string }; Returns: boolean }
       check_org_setup_needed: { Args: never; Returns: Json }
       create_organization_and_set_admin: {
         Args: {
@@ -3683,6 +3710,7 @@ export type Database = {
         | "PRICED"
         | "ORDERED"
         | "DELIVERED"
+        | "FINALIZED"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3858,6 +3886,7 @@ export const Constants = {
         "PRICED",
         "ORDERED",
         "DELIVERED",
+        "FINALIZED",
       ],
     },
   },

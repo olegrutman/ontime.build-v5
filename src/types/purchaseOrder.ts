@@ -1,4 +1,4 @@
-export type POStatus = 'ACTIVE' | 'SUBMITTED' | 'PRICED' | 'ORDERED' | 'DELIVERED';
+export type POStatus = 'ACTIVE' | 'SUBMITTED' | 'PRICED' | 'ORDERED' | 'DELIVERED' | 'FINALIZED';
 
 export interface PurchaseOrder {
   id: string;
@@ -22,8 +22,12 @@ export interface PurchaseOrder {
   download_token?: string;
   created_at: string;
   updated_at: string;
+  // New fields for pricing visibility
+  created_by_org_id?: string | null;
+  pricing_owner_org_id?: string | null;
+  // Relations
   organization?: { name: string; org_code: string } | null;
-  supplier?: { id: string; name: string; supplier_code: string; contact_info?: string | null } | null;
+  supplier?: { id: string; name: string; supplier_code: string; contact_info?: string | null; organization_id?: string } | null;
   project?: { id: string; name: string } | null;
   work_item?: { id: string; title: string } | null;
   line_items?: POLineItem[];
@@ -44,6 +48,9 @@ export interface POLineItem {
   unit_price?: number | null;
   line_total?: number | null;
   notes?: string | null;
+  // New fields for supplier pricing
+  lead_time_days?: number | null;
+  supplier_notes?: string | null;
   created_at: string;
 }
 
@@ -53,6 +60,7 @@ export const PO_STATUS_LABELS: Record<POStatus, string> = {
   PRICED: 'Priced',
   ORDERED: 'Ordered',
   DELIVERED: 'Delivered',
+  FINALIZED: 'Finalized',
 };
 
 export const PO_STATUS_COLORS: Record<POStatus, string> = {
@@ -61,4 +69,5 @@ export const PO_STATUS_COLORS: Record<POStatus, string> = {
   PRICED: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
   ORDERED: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
   DELIVERED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  FINALIZED: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
 };

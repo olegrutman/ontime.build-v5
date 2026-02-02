@@ -3,7 +3,6 @@ import { format } from 'date-fns';
 import {
   ArrowLeft,
   Send,
-  Edit,
   Trash2,
   DollarSign,
   Loader2,
@@ -12,9 +11,12 @@ import {
   CheckCircle,
   Truck,
   Building2,
+  Clock,
+  Lock,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { usePOPricingVisibility } from '@/hooks/usePOPricingVisibility';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -59,6 +61,12 @@ interface PODetailProps {
   onUpdate: () => void;
 }
 
+interface PriceEdit {
+  unit_price: number;
+  lead_time_days: number | null;
+  supplier_notes: string;
+}
+
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -77,12 +85,23 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
   const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
   const [supplierEmail, setSupplierEmail] = useState('');
   const [editingPrices, setEditingPrices] = useState(false);
-  const [priceEdits, setPriceEdits] = useState<Record<string, number>>({});
+  const [priceEdits, setPriceEdits] = useState<Record<string, PriceEdit>>({});
 
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
-  const isSupplier = currentOrgType === 'SUPPLIER';
-  const canEdit = (currentRole === 'GC_PM' || currentRole === 'TC_PM') && !isSupplier;
+  
+  // Use the pricing visibility hook
+  const { canViewPricing, canEditPricing, canFinalize, isSupplier, isPricingOwner } = usePOPricingVisibility(
+    po,
+    currentOrgId || null
+  );
+  
+  // Fall back to legacy supplier check if needed (for backward compatibility)
+  const isSupplierOrg = currentOrgType === 'SUPPLIER';
+  const effectiveIsSupplier = isSupplier || isSupplierOrg;
+  
+  const canEdit = (currentRole === 'GC_PM' || currentRole === 'TC_PM' || currentRole === 'FC_PM') && !effectiveIsSupplier;
+  const canDelete = canEdit && po?.status === 'ACTIVE';
 
   useEffect(() => {
     fetchPO();
@@ -96,7 +115,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
         .select(
           `
           *,
-          supplier:suppliers(id, name, supplier_code, contact_info),
+          supplier:suppliers(id, name, supplier_code, contact_info, organization_id),
           project:projects(id, name),
           work_item:work_items(id, title)
         `
@@ -115,12 +134,10 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
       // Pre-fill supplier email from contact_info
       const contactInfo = poRes.data.supplier?.contact_info;
       if (contactInfo) {
-        // Try to extract email from contact_info (could be JSON or plain text)
         try {
           const parsed = JSON.parse(contactInfo);
           setSupplierEmail(parsed.email || '');
         } catch {
-          // If it looks like an email, use it
           if (contactInfo.includes('@')) {
             setSupplierEmail(contactInfo);
           }
@@ -220,21 +237,36 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
     }
   };
 
+  const initializePriceEdits = () => {
+    const edits: Record<string, PriceEdit> = {};
+    lineItems.forEach(item => {
+      edits[item.id] = {
+        unit_price: item.unit_price ?? 0,
+        lead_time_days: item.lead_time_days ?? null,
+        supplier_notes: item.supplier_notes ?? '',
+      };
+    });
+    setPriceEdits(edits);
+    setEditingPrices(true);
+  };
+
   const handleSavePrices = async () => {
     if (!user) return;
 
     setActionLoading(true);
     try {
-      // Update each line item with its price
-      for (const [itemId, price] of Object.entries(priceEdits)) {
+      // Update each line item with its price and lead time
+      for (const [itemId, edit] of Object.entries(priceEdits)) {
         const item = lineItems.find((li) => li.id === itemId);
         if (item) {
-          const lineTotal = price * item.quantity;
+          const lineTotal = edit.unit_price * item.quantity;
           await supabase
             .from('po_line_items')
             .update({
-              unit_price: price,
+              unit_price: edit.unit_price,
               line_total: lineTotal,
+              lead_time_days: edit.lead_time_days,
+              supplier_notes: edit.supplier_notes || null,
             })
             .eq('id', itemId);
         }
@@ -272,6 +304,10 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
     updatePOStatus('DELIVERED', { delivered_at: new Date().toISOString() });
   };
 
+  const handleFinalize = () => {
+    updatePOStatus('FINALIZED');
+  };
+
   const handleDownload = () => {
     if (!po?.download_token) {
       toast.error('Download not available');
@@ -305,6 +341,9 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
   const status = po.status as POStatus;
   const total = lineItems.reduce((sum, item) => sum + (item.line_total || 0), 0);
   const hasPricing = lineItems.some((item) => item.unit_price !== null);
+  
+  // Only show pricing columns if user can view pricing AND there is pricing data (or editing)
+  const showPricingColumns = canViewPricing && (hasPricing || editingPrices);
 
   return (
     <div className="space-y-6">
@@ -347,27 +386,41 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
           )}
 
           {/* SUBMITTED: Supplier can add pricing */}
-          {status === 'SUBMITTED' && isSupplier && (
-            <Button onClick={() => setEditingPrices(true)}>
+          {status === 'SUBMITTED' && canEditPricing && (
+            <Button onClick={initializePriceEdits}>
               <DollarSign className="h-4 w-4 mr-2" />
               Add Pricing
             </Button>
           )}
 
-          {/* PRICED: Supplier can mark ordered */}
-          {status === 'PRICED' && isSupplier && (
-            <Button onClick={handleMarkOrdered} disabled={actionLoading}>
-              {actionLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <CheckCircle className="h-4 w-4 mr-2" />
+          {/* PRICED: Pricing owner can finalize, Supplier can mark ordered */}
+          {status === 'PRICED' && (
+            <>
+              {canFinalize && (
+                <Button onClick={handleFinalize} disabled={actionLoading} variant="default">
+                  {actionLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Lock className="h-4 w-4 mr-2" />
+                  )}
+                  Finalize Order
+                </Button>
               )}
-              Mark Ordered
-            </Button>
+              {effectiveIsSupplier && (
+                <Button onClick={handleMarkOrdered} disabled={actionLoading}>
+                  {actionLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                  )}
+                  Mark Ordered
+                </Button>
+              )}
+            </>
           )}
 
           {/* ORDERED: Supplier can mark delivered */}
-          {status === 'ORDERED' && isSupplier && (
+          {status === 'ORDERED' && effectiveIsSupplier && (
             <Button onClick={handleMarkDelivered} disabled={actionLoading}>
               {actionLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -407,6 +460,20 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
         </CardContent>
       </Card>
 
+      {/* Pricing Visibility Notice */}
+      {!canViewPricing && hasPricing && (
+        <Card className="border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+              <Lock className="h-4 w-4" />
+              <p className="text-sm">
+                Pricing information is managed by another organization and is not visible to you.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Line Items */}
       <Card>
         <CardHeader>
@@ -424,18 +491,20 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
                 <TableHead>Description</TableHead>
                 <TableHead className="text-right">Qty</TableHead>
                 <TableHead>UOM</TableHead>
-                {(hasPricing || editingPrices) && (
+                {showPricingColumns && (
                   <>
                     <TableHead className="text-right">Unit Price</TableHead>
                     <TableHead className="text-right">Total</TableHead>
+                    {editingPrices && <TableHead className="text-center">Lead Time</TableHead>}
                   </>
                 )}
               </TableRow>
             </TableHeader>
             <TableBody>
               {lineItems.map((item) => {
-                const editPrice = priceEdits[item.id] ?? item.unit_price ?? 0;
-                const lineTotal = editPrice * item.quantity;
+                const edit = priceEdits[item.id];
+                const displayPrice = editingPrices ? (edit?.unit_price ?? 0) : (item.unit_price ?? 0);
+                const lineTotal = displayPrice * item.quantity;
 
                 return (
                   <TableRow key={item.id}>
@@ -452,11 +521,24 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
                         {item.notes && (
                           <p className="text-xs text-muted-foreground">{item.notes}</p>
                         )}
+                        {/* Show supplier notes if viewing and they exist */}
+                        {!editingPrices && item.supplier_notes && canViewPricing && (
+                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                            Supplier: {item.supplier_notes}
+                          </p>
+                        )}
+                        {/* Show lead time if viewing and it exists */}
+                        {!editingPrices && item.lead_time_days && canViewPricing && (
+                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                            <Clock className="h-3 w-3" />
+                            {item.lead_time_days} day lead time
+                          </p>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell className="text-right font-medium">{item.quantity}</TableCell>
                     <TableCell>{item.uom}</TableCell>
-                    {(hasPricing || editingPrices) && (
+                    {showPricingColumns && (
                       <>
                         <TableCell className="text-right">
                           {editingPrices ? (
@@ -464,11 +546,14 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
                               type="number"
                               step="0.01"
                               className="w-24 text-right"
-                              value={editPrice}
+                              value={edit?.unit_price ?? 0}
                               onChange={(e) =>
                                 setPriceEdits((prev) => ({
                                   ...prev,
-                                  [item.id]: parseFloat(e.target.value) || 0,
+                                  [item.id]: {
+                                    ...prev[item.id],
+                                    unit_price: parseFloat(e.target.value) || 0,
+                                  },
                                 }))
                               }
                             />
@@ -483,13 +568,34 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
                             ? formatCurrency(editingPrices ? lineTotal : (item.line_total || 0))
                             : '—'}
                         </TableCell>
+                        {editingPrices && (
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <Input
+                                type="number"
+                                placeholder="Days"
+                                className="w-20"
+                                value={edit?.lead_time_days ?? ''}
+                                onChange={(e) =>
+                                  setPriceEdits((prev) => ({
+                                    ...prev,
+                                    [item.id]: {
+                                      ...prev[item.id],
+                                      lead_time_days: e.target.value ? parseInt(e.target.value) : null,
+                                    },
+                                  }))
+                                }
+                              />
+                            </div>
+                          </TableCell>
+                        )}
                       </>
                     )}
                   </TableRow>
                 );
               })}
             </TableBody>
-            {(hasPricing || editingPrices) && (
+            {showPricingColumns && (
               <TableFooter>
                 <TableRow className="bg-muted/50">
                   <TableCell colSpan={5} className="text-right font-bold">
@@ -500,12 +606,13 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
                     {formatCurrency(
                       editingPrices
                         ? lineItems.reduce((sum, item) => {
-                            const price = priceEdits[item.id] ?? item.unit_price ?? 0;
+                            const price = priceEdits[item.id]?.unit_price ?? item.unit_price ?? 0;
                             return sum + price * item.quantity;
                           }, 0)
                         : total
                     )}
                   </TableCell>
+                  {editingPrices && <TableCell></TableCell>}
                 </TableRow>
               </TableFooter>
             )}
