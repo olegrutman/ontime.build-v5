@@ -1,303 +1,327 @@
 
 
-# Step-by-Step Spec Filters for Product Picker
+# Reorganize PO Wizard Categories for Construction Workflow
 
 ## Overview
 
-Transform the current "show all filters at once" approach into a **sequential step-by-step filter flow** where users select one specification at a time. This creates a guided "drilling down" experience that matches the lumber yard metaphor.
+Restructure the category tiles and filtering logic to match how construction crews think about materials. This involves:
+1. Creating logical product groupings with user-friendly display names
+2. Better secondary category names (e.g., "House Wrap & Tape" instead of "MOISTURE CONTROL")
+3. Adjusting filter sequences for specific product types (POST/TIMBER starts with Species)
+4. Adding UOM notes for engineered lumber
 
 ---
 
-## Current vs. Proposed Flow
+## Current Database Structure
 
-### Current Flow
-```text
-Category → Secondary → [ALL FILTERS SHOWN AT ONCE] → Products
-                           ↓
-              Dimension: [2x4] [2x6] [All]
-              Length:    [8ft] [12ft] [All]  
-              Species:   [SPF] [DF] [All]
-```
+The catalog uses a `category` field with values like "Other", "Hardware", "Engineered", "Decking" and a `secondary_category` for subtypes. Most lumber products are actually in the "Other" category with different secondary categories.
 
-### Proposed Step-by-Step Flow
-```text
-Category → Secondary → Dimension → Length → [Products]
-                         ↓            ↓
-                     Pick one     Pick one
-                     [2x4]        [12 ft.]
-                        ↓            ↓
-                   (auto-advance) (auto-advance)
-```
-
-Each spec selection auto-advances to the next filter step. Counts update dynamically to show only valid combinations.
+| DB Category | Secondary Categories |
+|-------------|---------------------|
+| Other | STUDS, DIMENSION, TREATED, WIDES, POST/TIMBER, SIDING, TRIM, SOFFIT, MOISTURE CONTROL, OSB, CDX, etc. |
+| Engineered | GLUELAM, I JOISTS, LSL, LVL, RIM BOARD |
+| Hardware | HANGER, TIE & STRAP, ANCHORS, POST HARDWARE, etc. |
+| Decking | DECK BOARDS, ACCESSORIES, POST CAP, etc. |
 
 ---
 
-## New UI Design
+## New Category Tile Structure
 
-### Step-by-Step Filter Screen
+### Main Tiles (2-column grid)
 
-```text
-┌────────────────────────────────────────────────────────────────┐
-│  ← Back              Select Dimension                      X  │
-├────────────────────────────────────────────────────────────────┤
-│  FRAMING LUMBER > STUDS                                        │
-│  Step 1 of 3                                                   │
-├────────────────────────────────────────────────────────────────┤
-│                                                                │
-│   ┌──────────────────────────────────────┐                     │
-│   │  2 in. x 4 in.                   18  │                     │
-│   └──────────────────────────────────────┘                     │
-│   ┌──────────────────────────────────────┐                     │
-│   │  2 in. x 6 in.                   18  │                     │
-│   └──────────────────────────────────────┘                     │
-│   ┌──────────────────────────────────────┐                     │
-│   │  2 in. x 8 in.                   12  │                     │
-│   └──────────────────────────────────────┘                     │
-│   ┌──────────────────────────────────────┐                     │
-│   │  2 in. x 10 in.                   8  │                     │
-│   └──────────────────────────────────────┘                     │
-│                                                                │
-├────────────────────────────────────────────────────────────────┤
-│          [ Skip - View All 56 Products ]                       │
-└────────────────────────────────────────────────────────────────┘
-```
-
-### After Selecting Dimension → Next Filter
-
-```text
-┌────────────────────────────────────────────────────────────────┐
-│  ← Back              Select Length                          X │
-├────────────────────────────────────────────────────────────────┤
-│  FRAMING LUMBER > STUDS > 2x4                                  │
-│  Step 2 of 3                                                   │
-├────────────────────────────────────────────────────────────────┤
-│                                                                │
-│   ┌──────────────────────────────────────┐                     │
-│   │  92-5/8 in.                       3  │                     │
-│   └──────────────────────────────────────┘                     │
-│   ┌──────────────────────────────────────┐                     │
-│   │  104-5/8 in.                      3  │                     │
-│   └──────────────────────────────────────┘                     │
-│   ┌──────────────────────────────────────┐                     │
-│   │  116-5/8 in.                      3  │                     │
-│   └──────────────────────────────────────┘                     │
-│                                                                │
-├────────────────────────────────────────────────────────────────┤
-│          [ Skip - View All 9 Products ]                        │
-└────────────────────────────────────────────────────────────────┘
-```
-
-### Final Step or Auto-Advance to Products
-
-When all filters are applied OR only 1 value remains for next filter, auto-advance to product list.
+| Tile Display | Maps To | Sub-Tiles |
+|--------------|---------|-----------|
+| LUMBER | Other (filtered) | Studs, Dimension, Treated, Wides |
+| SIDING & EXTERIOR | Other (filtered) | Lap Siding, Panels, Trim, Soffit |
+| HOUSE WRAP & TAPE | Other: MOISTURE CONTROL | Direct to products |
+| POST & TIMBER | Other: POST/TIMBER | Filter by Species first |
+| SHEATHING | Other (filtered) | OSB, CDX, ZIP |
+| HARDWARE | Hardware | HANGERS, STRAPS, ANCHORS, etc. |
+| ENGINEERED | Engineered | LVL, LSL, I-Joists, Glulam |
+| DECKING | Decking | Deck Boards, Railing, Accessories |
 
 ---
 
 ## Technical Implementation
 
-### 1. Update `SPEC_PRIORITY` with Complete Category Mapping
+### 1. Update Types (`src/types/poWizardV2.ts`)
 
-Expand the spec priority map to cover all categories with their specific filter sequences:
+Add a new display category system that groups database secondary_categories:
 
 ```typescript
-export const SPEC_PRIORITY: Record<string, string[]> = {
-  // Decking products
-  Decking: ['dimension', 'color', 'length', 'manufacturer'],
+// Virtual categories that map to multiple secondary_categories
+export interface VirtualCategory {
+  displayName: string;
+  icon: string;
+  dbCategory: string; // The actual database category
+  secondaryCategories: string[]; // Which secondary_categories to include
+}
+
+export const VIRTUAL_CATEGORIES: Record<string, VirtualCategory> = {
+  LUMBER: {
+    displayName: 'LUMBER',
+    icon: '🪵',
+    dbCategory: 'Other',
+    secondaryCategories: ['STUDS', 'DIMENSION', 'TREATED', 'WIDES'],
+  },
+  SIDING: {
+    displayName: 'SIDING & EXTERIOR',
+    icon: '🏠',
+    dbCategory: 'Other',
+    secondaryCategories: ['SIDING', 'SIDING ACCESSORIES', 'TRIM', 'SOFFIT'],
+  },
+  HOUSE_WRAP: {
+    displayName: 'HOUSE WRAP & TAPE',
+    icon: '🧻',
+    dbCategory: 'Other',
+    secondaryCategories: ['MOISTURE CONTROL'],
+  },
+  POST_TIMBER: {
+    displayName: 'POST & TIMBER',
+    icon: '🌲',
+    dbCategory: 'Other',
+    secondaryCategories: ['POST/TIMBER', 'COLUMN'],
+  },
+  SHEATHING: {
+    displayName: 'SHEATHING',
+    icon: '📦',
+    dbCategory: 'Other',
+    secondaryCategories: ['OSB', 'CDX', 'ZIP', 'T&G'],
+  },
+  HARDWARE: {
+    displayName: 'HARDWARE',
+    icon: '🔩',
+    dbCategory: 'Hardware',
+    secondaryCategories: [], // All hardware
+  },
+  ENGINEERED: {
+    displayName: 'ENGINEERED',
+    icon: '📐',
+    dbCategory: 'Engineered',
+    secondaryCategories: [], // All engineered
+  },
+  DECKING: {
+    displayName: 'DECKING',
+    icon: '🏡',
+    dbCategory: 'Decking',
+    secondaryCategories: [], // All decking
+  },
+};
+```
+
+### 2. Update Filter Sequences
+
+Add POST/TIMBER to start with wood_species and update other sequences:
+
+```typescript
+export const SPEC_PRIORITY: Record<string, string[] | Record<string, string[]>> = {
+  // ... existing entries ...
   
-  // Lumber - dimension-based
-  Dimensional: ['dimension', 'length', 'wood_species'],
-  
-  // Other category - depends heavily on secondary
+  // Update Other category with better sequences
   Other: {
     default: ['dimension', 'length'],
-    STUDS: ['dimension', 'length', 'wood_species'],
-    DIMENSION: ['dimension', 'length', 'wood_species'],
+    STUDS: ['dimension', 'length'],
+    DIMENSION: ['dimension', 'length'],
+    TREATED: ['dimension', 'length'],
+    WIDES: ['dimension', 'length'],
+    'POST/TIMBER': ['wood_species', 'dimension', 'length'], // Species FIRST
+    COLUMN: ['wood_species', 'dimension', 'length'],
+    SIDING: ['manufacturer', 'dimension'],
+    'SIDING ACCESSORIES': ['manufacturer'],
+    TRIM: ['dimension', 'length'],
+    SOFFIT: ['dimension'],
+    'MOISTURE CONTROL': ['manufacturer', 'dimension'], // Tyvek/Dow/Barricade
     OSB: ['thickness', 'dimension'],
     CDX: ['thickness', 'dimension'],
-    'INTERIOR DRYWALL': ['thickness', 'dimension'],
-    'EXTERIOR DRYWALL': ['thickness', 'dimension'],
-    SIDING: ['dimension', 'manufacturer'],
-    TREATED: ['dimension', 'length'],
+    ZIP: ['thickness', 'dimension'],
   },
   
-  // Engineered wood
-  Engineered: ['dimension', 'length'],
+  // Engineered - note about LF pricing
+  Engineered: {
+    default: ['dimension'],
+    LVL: ['dimension'],
+    LSL: ['dimension'],
+    'I JOISTS': ['dimension'],
+    GLUELAM: ['dimension'],
+    'RIM BOARD': ['dimension'],
+  },
+};
+```
+
+### 3. Update Secondary Category Display Names
+
+Add friendly names for secondary categories:
+
+```typescript
+export const SECONDARY_DISPLAY_NAMES: Record<string, string> = {
+  // Lumber
+  STUDS: 'Studs',
+  DIMENSION: 'Dimension Lumber',
+  TREATED: 'Treated Lumber',
+  WIDES: 'Wide Boards',
   
-  // Hardware - skip directly to products (no specs to filter)
-  Hardware: [],
+  // Siding
+  SIDING: 'Lap Siding & Panels',
+  'SIDING ACCESSORIES': 'Siding Accessories',
+  TRIM: 'Exterior Trim',
+  SOFFIT: 'Soffit',
   
-  // Exterior trim
-  Exterior: ['dimension', 'finish', 'manufacturer'],
+  // House Wrap
+  'MOISTURE CONTROL': 'House Wrap & Seam Tape',
+  
+  // Post/Timber
+  'POST/TIMBER': 'Posts & Timbers',
+  COLUMN: 'Columns',
   
   // Sheathing
-  Sheathing: ['thickness', 'dimension'],
+  OSB: 'OSB Sheathing',
+  CDX: 'CDX Plywood',
+  ZIP: 'ZIP System',
+  'T&G': 'Tongue & Groove',
   
-  // Structural steel - skip to products
-  Structural: [],
+  // Engineered
+  LVL: 'LVL Headers & Beams',
+  LSL: 'LSL Framing',
+  'I JOISTS': 'I-Joists',
+  GLUELAM: 'Glulam Beams',
+  'RIM BOARD': 'Rim Board',
 };
 ```
-
-### 2. Create New `StepByStepFilter.tsx` Component
-
-Replace the chip-based `SpecFilters.tsx` with a new step-by-step component:
-
-```typescript
-interface StepByStepFilterProps {
-  supplierId: string;
-  category: string;
-  secondaryCategory: string | null;
-  onComplete: (filters: Record<string, string>) => void;
-  onBack: () => void;
-}
-
-// State tracks:
-// - currentStep: number (0, 1, 2, ...)
-// - appliedFilters: Record<string, string> 
-// - availableValues: SpecValue[] for current step
-```
-
-### 3. Update ProductPicker Flow
-
-Modify `ProductPicker.tsx` to:
-- Replace `'specs'` step with `'filter-step'` 
-- Track filter step index
-- Handle auto-advance when only 1 option exists
-- Handle "Skip" action to go directly to products
-
-```typescript
-type PickerStep = 
-  | 'category' 
-  | 'secondary' 
-  | 'filter-step'  // New: replaces 'specs'
-  | 'products' 
-  | 'quantity';
-
-// Additional state:
-const [filterStepIndex, setFilterStepIndex] = useState(0);
-const [appliedFilters, setAppliedFilters] = useState<Record<string, string>>({});
-```
-
-### 4. Dynamic Filter Priority Lookup
-
-Create helper function to get filter sequence based on category and secondary:
-
-```typescript
-function getFilterSequence(category: string, secondary: string | null): string[] {
-  const categoryPriority = SPEC_PRIORITY[category];
-  
-  // Handle categories with secondary-specific priorities (like "Other")
-  if (typeof categoryPriority === 'object' && secondary) {
-    return categoryPriority[secondary] || categoryPriority.default || [];
-  }
-  
-  return Array.isArray(categoryPriority) ? categoryPriority : [];
-}
-```
-
-### 5. Count Query with Applied Filters
-
-Each step queries available values for the current filter field, applying all previously selected filters:
-
-```typescript
-const fetchFilterValues = async (filterField: string, appliedFilters: Record<string, string>) => {
-  const filterObj = {
-    supplier_id: supplierId,
-    category: category,
-    ...(secondaryCategory && { secondary_category: secondaryCategory }),
-    ...Object.fromEntries(
-      Object.entries(appliedFilters).filter(([_, v]) => v !== 'all')
-    ),
-  };
-
-  const { data } = await supabase
-    .from('catalog_items')
-    .select(filterField)
-    .match(filterObj);
-
-  // Count occurrences
-  const counts = {};
-  data?.forEach(item => {
-    const value = item[filterField];
-    if (value) counts[value] = (counts[value] || 0) + 1;
-  });
-
-  return Object.entries(counts)
-    .map(([value, count]) => ({ value, count }))
-    .sort((a, b) => b.count - a.count);
-};
-```
-
----
-
-## Files to Create
-
-### `src/components/po-wizard-v2/StepByStepFilter.tsx`
-
-New component for sequential filter selection with:
-- Breadcrumb showing category path and applied filters
-- Step indicator (Step 1 of 3)
-- Full-width tap targets for each filter value
-- Count badges on the right
-- "Skip - View All X Products" footer action
 
 ---
 
 ## Files to Modify
 
 ### `src/types/poWizardV2.ts`
-
-Update `SPEC_PRIORITY` to support secondary-category-specific filter sequences for the "Other" category.
+- Add `VirtualCategory` interface and `VIRTUAL_CATEGORIES` constant
+- Add `SECONDARY_DISPLAY_NAMES` for friendly sub-category labels
+- Update `SPEC_PRIORITY` with POST/TIMBER species-first and MOISTURE CONTROL manufacturer-first sequences
+- Add `FIELD_LABELS` entry for `wood_species: 'Species'`
 
 ### `src/components/po-wizard-v2/ProductPicker.tsx`
+- Update `fetchCategories()` to build virtual category counts by grouping secondary_categories
+- When a virtual category is selected, filter by the mapped secondary_categories
+- Pass the virtual category context through to secondary selection
 
-- Replace `SpecFilters` with `StepByStepFilter`
-- Update step type to include `filter-step`
-- Add filter step index state
-- Handle back navigation through filter steps
-- Handle skip action
+### `src/components/po-wizard-v2/CategoryGrid.tsx`
+- No structural changes needed (it receives categories as props)
+- Categories will now be virtual categories with proper display names
 
-### `src/components/po-wizard-v2/SpecFilters.tsx`
+### `src/components/po-wizard-v2/SecondaryCategoryList.tsx`
+- Use `SECONDARY_DISPLAY_NAMES` to show friendly labels instead of raw DB values
+- Sort by count descending as before
 
-This file will be replaced by `StepByStepFilter.tsx` and can be deleted or kept for reference.
-
----
-
-## Auto-Advance Rules
-
-1. **Single value**: If current filter step has only 1 option, auto-select and advance
-2. **No values**: If current filter field has no applicable values (all null), skip to next filter
-3. **End of filters**: When all filter steps are complete, auto-advance to products
-4. **Hardware/Structural**: Skip directly from secondary to products (empty filter sequence)
+### `src/components/po-wizard-v2/StepByStepFilter.tsx`
+- Use `FIELD_LABELS` to show "Species" instead of "wood_species"
+- Already handles dynamic filter sequences correctly
 
 ---
 
-## Back Navigation
+## Query Changes
 
-Pressing back during filter steps:
-- If on first filter step → go back to secondary (or category if no secondary)
-- If on subsequent filter steps → go back one filter step, clear that filter value
+### Fetch Virtual Category Counts
+
+Instead of grouping by `category`, group by `secondary_category` and aggregate into virtual categories:
+
+```typescript
+const fetchCategories = async () => {
+  const { data } = await supabase
+    .from('catalog_items')
+    .select('secondary_category')
+    .eq('supplier_id', supplierId);
+
+  // Count by secondary_category
+  const secondaryCounts: Record<string, number> = {};
+  data?.forEach(item => {
+    const sec = item.secondary_category || 'UNCATEGORIZED';
+    secondaryCounts[sec] = (secondaryCounts[sec] || 0) + 1;
+  });
+
+  // Build virtual category counts
+  const virtualCounts: CategoryCount[] = [];
+  Object.entries(VIRTUAL_CATEGORIES).forEach(([key, virtual]) => {
+    let count = 0;
+    if (virtual.secondaryCategories.length === 0) {
+      // Include all from that DB category - need separate query or filter
+    } else {
+      virtual.secondaryCategories.forEach(sec => {
+        count += secondaryCounts[sec] || 0;
+      });
+    }
+    if (count > 0) {
+      virtualCounts.push({
+        category: key, // Virtual key
+        count,
+        displayName: virtual.displayName,
+        icon: virtual.icon,
+      });
+    }
+  });
+
+  return virtualCounts;
+};
+```
+
+### Fetch Products for Virtual Category
+
+When a virtual category is selected:
+
+```typescript
+const { data } = await supabase
+  .from('catalog_items')
+  .select('*')
+  .eq('supplier_id', supplierId)
+  .eq('category', virtualCategory.dbCategory)
+  .in('secondary_category', virtualCategory.secondaryCategories);
+```
 
 ---
 
-## Mobile UX Details
+## UX Flow Examples
 
-- Full-width buttons for each filter value (44px min height)
-- Large count badges for easy readability
-- Sticky footer with "Skip" option always visible
-- Progress indicator showing current step
-- Animated transitions between filter steps
+### Example 1: Ordering 2x4 Studs
+
+1. Tap **LUMBER** tile
+2. See sub-tiles: Studs (18), Dimension (50), Treated (19), Wides (51)
+3. Tap **Studs**
+4. Select Dimension: "2 in. x 4 in."
+5. Select Length: "92-5/8 in." or "104-5/8 in."
+6. View products, select, add quantity
+
+### Example 2: Ordering Tyvek
+
+1. Tap **HOUSE WRAP & TAPE** tile
+2. Select Manufacturer: "TYVEK", "DOW", or "BARRICADE"
+3. Select Dimension/Size
+4. View products (house wraps and seam tape)
+
+### Example 3: Ordering Doug Fir Timbers
+
+1. Tap **POST & TIMBER** tile
+2. Select Species: "DOUG FIR" or "REDWOOD" (species FIRST)
+3. Select Dimension: "3 in. x 10 in.", "4 in. x 4 in.", etc.
+4. Select Length: "10 ft.", "12 ft.", etc.
+5. View products
+
+### Example 4: Ordering LVL Headers
+
+1. Tap **ENGINEERED** tile
+2. See sub-tiles: LVL (7), LSL (4), I-Joists (7), Glulam (49)
+3. Tap **LVL Headers & Beams**
+4. Select Dimension: "9 1/2", "11 7/8", "14", etc.
+5. View products (note: sold per piece, priced by LF)
 
 ---
 
-## Summary
+## Summary of Changes
 
-| Step | Action |
-|------|--------|
-| 1 | User taps category tile (e.g., "FRAMING LUMBER") |
-| 2 | User taps secondary category (e.g., "STUDS") |
-| 3 | **New**: User taps dimension (e.g., "2x4") → auto-advance |
-| 4 | **New**: User taps length (e.g., "12 ft.") → auto-advance |
-| 5 | Products list appears filtered to exact selection |
+| Change | Purpose |
+|--------|---------|
+| Virtual categories | Group secondary_categories into logical tiles |
+| LUMBER tile | Groups Studs, Dimension, Treated, Wides |
+| SIDING & EXTERIOR tile | Groups Siding, Trim, Soffit |
+| HOUSE WRAP & TAPE tile | Better name for MOISTURE CONTROL |
+| POST/TIMBER species-first | Construction crews think species first for timbers |
+| Friendly secondary names | "LVL Headers & Beams" instead of "LVL" |
+| Updated SPEC_PRIORITY | Right filter order for each product type |
 
-Users can "Skip" at any filter step to see all remaining products matching current filters.
