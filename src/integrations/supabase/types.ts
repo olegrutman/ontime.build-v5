@@ -1311,11 +1311,13 @@ export type Database = {
           id: string
           length_ft: number | null
           line_number: number
+          line_total: number | null
           notes: string | null
           pieces: number | null
           po_id: string
           quantity: number
           supplier_sku: string | null
+          unit_price: number | null
           uom: string
         }
         Insert: {
@@ -1326,11 +1328,13 @@ export type Database = {
           id?: string
           length_ft?: number | null
           line_number: number
+          line_total?: number | null
           notes?: string | null
           pieces?: number | null
           po_id: string
           quantity: number
           supplier_sku?: string | null
+          unit_price?: number | null
           uom?: string
         }
         Update: {
@@ -1341,11 +1345,13 @@ export type Database = {
           id?: string
           length_ft?: number | null
           line_number?: number
+          line_total?: number | null
           notes?: string | null
           pieces?: number | null
           po_id?: string
           quantity?: number
           supplier_sku?: string | null
+          unit_price?: number | null
           uom?: string
         }
         Relationships: [
@@ -2249,51 +2255,69 @@ export type Database = {
       purchase_orders: {
         Row: {
           created_at: string
+          delivered_at: string | null
           download_token: string | null
           id: string
           material_order_id: string | null
           notes: string | null
+          ordered_at: string | null
           organization_id: string
           po_name: string
           po_number: string
+          priced_at: string | null
+          priced_by: string | null
           project_id: string | null
           sent_at: string | null
           sent_by: string | null
           status: Database["public"]["Enums"]["po_status"]
+          submitted_at: string | null
+          submitted_by: string | null
           supplier_id: string
           updated_at: string
           work_item_id: string | null
         }
         Insert: {
           created_at?: string
+          delivered_at?: string | null
           download_token?: string | null
           id?: string
           material_order_id?: string | null
           notes?: string | null
+          ordered_at?: string | null
           organization_id: string
           po_name: string
           po_number: string
+          priced_at?: string | null
+          priced_by?: string | null
           project_id?: string | null
           sent_at?: string | null
           sent_by?: string | null
           status?: Database["public"]["Enums"]["po_status"]
+          submitted_at?: string | null
+          submitted_by?: string | null
           supplier_id: string
           updated_at?: string
           work_item_id?: string | null
         }
         Update: {
           created_at?: string
+          delivered_at?: string | null
           download_token?: string | null
           id?: string
           material_order_id?: string | null
           notes?: string | null
+          ordered_at?: string | null
           organization_id?: string
           po_name?: string
           po_number?: string
+          priced_at?: string | null
+          priced_by?: string | null
           project_id?: string | null
           sent_at?: string | null
           sent_by?: string | null
           status?: Database["public"]["Enums"]["po_status"]
+          submitted_at?: string | null
+          submitted_by?: string | null
           supplier_id?: string
           updated_at?: string
           work_item_id?: string | null
@@ -3651,7 +3675,14 @@ export type Database = {
         | "CANCELLED"
       org_type: "GC" | "TC" | "SUPPLIER" | "FC"
       pack_type: "LOOSE_MODIFIABLE" | "ENGINEERED_LOCKED"
-      po_status: "DRAFT" | "SENT"
+      po_status:
+        | "DRAFT"
+        | "SENT"
+        | "ACTIVE"
+        | "SUBMITTED"
+        | "PRICED"
+        | "ORDERED"
+        | "DELIVERED"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3819,7 +3850,15 @@ export const Constants = {
       ],
       org_type: ["GC", "TC", "SUPPLIER", "FC"],
       pack_type: ["LOOSE_MODIFIABLE", "ENGINEERED_LOCKED"],
-      po_status: ["DRAFT", "SENT"],
+      po_status: [
+        "DRAFT",
+        "SENT",
+        "ACTIVE",
+        "SUBMITTED",
+        "PRICED",
+        "ORDERED",
+        "DELIVERED",
+      ],
     },
   },
 } as const

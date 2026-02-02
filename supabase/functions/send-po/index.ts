@@ -145,7 +145,9 @@ const handler = async (req: Request): Promise<Response> => {
       await supabase
         .from("purchase_orders")
         .update({
-          status: "SENT",
+          status: "SUBMITTED",
+          submitted_at: new Date().toISOString(),
+          submitted_by: user?.id,
           sent_at: new Date().toISOString(),
           sent_by: user?.id,
         })
