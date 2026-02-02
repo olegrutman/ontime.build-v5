@@ -94,14 +94,65 @@ export const CATEGORY_DISPLAY: Record<string, { name: string; icon: string }> = 
   Structural: { name: 'STRUCTURAL STEEL', icon: '🔧' },
 };
 
-// Spec filter priority by category
-export const SPEC_PRIORITY: Record<string, string[]> = {
+// Field labels for display
+export const FIELD_LABELS: Record<string, string> = {
+  dimension: 'Dimension',
+  length: 'Length',
+  color: 'Color',
+  wood_species: 'Wood Species',
+  thickness: 'Thickness',
+  finish: 'Finish',
+  manufacturer: 'Manufacturer',
+};
+
+// Spec filter priority by category - supports secondary-specific sequences
+export const SPEC_PRIORITY: Record<string, string[] | Record<string, string[]>> = {
+  // Decking products
   Decking: ['dimension', 'color', 'length', 'manufacturer'],
+  
+  // Lumber - dimension-based
   Dimensional: ['dimension', 'length', 'wood_species'],
-  Engineered: ['dimension', 'thickness'],
-  Sheathing: ['thickness', 'dimension'],
-  Hardware: [], // Skip to product list
-  Other: ['secondary_category'],
+  
+  // Other category - depends heavily on secondary
+  Other: {
+    default: ['dimension', 'length'],
+    STUDS: ['dimension', 'length', 'wood_species'],
+    DIMENSION: ['dimension', 'length', 'wood_species'],
+    OSB: ['thickness', 'dimension'],
+    CDX: ['thickness', 'dimension'],
+    'INTERIOR DRYWALL': ['thickness', 'dimension'],
+    'EXTERIOR DRYWALL': ['thickness', 'dimension'],
+    SIDING: ['dimension', 'manufacturer'],
+    TREATED: ['dimension', 'length'],
+  },
+  
+  // Engineered wood
+  Engineered: ['dimension', 'length'],
+  
+  // Hardware - skip directly to products (no specs to filter)
+  Hardware: [],
+  
+  // Exterior trim
   Exterior: ['dimension', 'finish', 'manufacturer'],
+  
+  // Sheathing
+  Sheathing: ['thickness', 'dimension'],
+  
+  // Structural steel - skip to products
   Structural: [],
 };
+
+// Helper function to get filter sequence based on category and secondary
+export function getFilterSequence(category: string, secondary: string | null): string[] {
+  const categoryPriority = SPEC_PRIORITY[category];
+  
+  // Handle categories with secondary-specific priorities (like "Other")
+  if (categoryPriority && typeof categoryPriority === 'object' && !Array.isArray(categoryPriority)) {
+    if (secondary && categoryPriority[secondary]) {
+      return categoryPriority[secondary];
+    }
+    return categoryPriority.default || [];
+  }
+  
+  return Array.isArray(categoryPriority) ? categoryPriority : [];
+}

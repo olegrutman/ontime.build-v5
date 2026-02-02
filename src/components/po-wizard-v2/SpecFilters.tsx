@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronRight, RotateCcw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { SPEC_PRIORITY, SpecValue } from '@/types/poWizardV2';
+import { getFilterSequence, SpecValue, FIELD_LABELS } from '@/types/poWizardV2';
 
 interface SpecFiltersProps {
   supplierId: string | null;
@@ -21,16 +21,6 @@ interface SpecGroup {
   label: string;
   values: SpecValue[];
 }
-
-const FIELD_LABELS: Record<string, string> = {
-  dimension: 'Dimension',
-  length: 'Length',
-  color: 'Color',
-  wood_species: 'Wood Species',
-  thickness: 'Thickness',
-  finish: 'Finish',
-  manufacturer: 'Manufacturer',
-};
 
 export function SpecFilters({
   supplierId,
@@ -82,8 +72,8 @@ export function SpecFilters({
 
       setProductCount(data?.length || 0);
 
-      // Get priority fields for this category
-      const priorityFields = SPEC_PRIORITY[category] || [];
+      // Get priority fields for this category using the helper function
+      const priorityFields = getFilterSequence(category, secondaryCategory);
       
       // Build spec groups with counts
       const groups: SpecGroup[] = [];

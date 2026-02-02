@@ -5,6 +5,7 @@ export { ReviewScreen } from './ReviewScreen';
 export { ProductPicker } from './ProductPicker';
 export { CategoryGrid } from './CategoryGrid';
 export { SecondaryCategoryList } from './SecondaryCategoryList';
+export { StepByStepFilter } from './StepByStepFilter';
 export { SpecFilters } from './SpecFilters';
 export { ProductList } from './ProductList';
 export { QuantityPanel } from './QuantityPanel';
