@@ -1,44 +1,107 @@
 
-
-# Reorganize PO Wizard Categories for Construction Workflow
+# Dual Quantity Entry for Engineered Lumber + Smart Bundle/Pallet Logic
 
 ## Overview
 
-Restructure the category tiles and filtering logic to match how construction crews think about materials. This involves:
-1. Creating logical product groupings with user-friendly display names
-2. Better secondary category names (e.g., "House Wrap & Tape" instead of "MOISTURE CONTROL")
-3. Adjusting filter sequences for specific product types (POST/TIMBER starts with Species)
-4. Adding UOM notes for engineered lumber
+Two enhancements to the QuantityPanel for construction ordering:
+
+1. **Engineered Lumber**: Capture both **linear feet (LF)** and **pieces** since these products are priced by LF but ordered by piece count
+2. **Bundle/Pallet Smart Logic**: When selecting a bundle, pre-fill with bundle quantity, allow adjustment, and auto-switch to "EACH" if modified
 
 ---
 
-## Current Database Structure
+## Current Behavior
 
-The catalog uses a `category` field with values like "Other", "Hardware", "Engineered", "Decking" and a `secondary_category` for subtypes. Most lumber products are actually in the "Other" category with different secondary categories.
+```text
+Quantity Panel
+┌──────────────────────────────────────┐
+│  Product: LVL 11-7/8 Header          │
+│                                      │
+│  Quantity:  [ - ]  4  [ + ]          │
+│                                      │
+│  Unit: [Each (EA)] [Bundle (48)]     │
+└──────────────────────────────────────┘
+```
 
-| DB Category | Secondary Categories |
-|-------------|---------------------|
-| Other | STUDS, DIMENSION, TREATED, WIDES, POST/TIMBER, SIDING, TRIM, SOFFIT, MOISTURE CONTROL, OSB, CDX, etc. |
-| Engineered | GLUELAM, I JOISTS, LSL, LVL, RIM BOARD |
-| Hardware | HANGER, TIE & STRAP, ANCHORS, POST HARDWARE, etc. |
-| Decking | DECK BOARDS, ACCESSORIES, POST CAP, etc. |
+**Problems:**
+- Engineered lumber needs length entry (e.g., "4 pieces at 12 ft each = 48 LF")
+- Bundle button switches mode but doesn't pre-fill the bundle quantity
+- No way to order "48 pieces" without knowing if it's a full bundle
 
 ---
 
-## New Category Tile Structure
+## Proposed UX
 
-### Main Tiles (2-column grid)
+### For Engineered Lumber (LVL, LSL, I-Joists, Glulam, Rim Board)
 
-| Tile Display | Maps To | Sub-Tiles |
-|--------------|---------|-----------|
-| LUMBER | Other (filtered) | Studs, Dimension, Treated, Wides |
-| SIDING & EXTERIOR | Other (filtered) | Lap Siding, Panels, Trim, Soffit |
-| HOUSE WRAP & TAPE | Other: MOISTURE CONTROL | Direct to products |
-| POST & TIMBER | Other: POST/TIMBER | Filter by Species first |
-| SHEATHING | Other (filtered) | OSB, CDX, ZIP |
-| HARDWARE | Hardware | HANGERS, STRAPS, ANCHORS, etc. |
-| ENGINEERED | Engineered | LVL, LSL, I-Joists, Glulam |
-| DECKING | Decking | Deck Boards, Railing, Accessories |
+```text
+Quantity Panel
+┌──────────────────────────────────────┐
+│  LVL 11-7/8 Header /LF               │
+│  SKU: LVL1178                        │
+│                                      │
+│  How many pieces?                    │
+│         [ - ]   4   [ + ]            │
+│                                      │
+│  Length each (ft)                    │
+│         [ - ]  12   [ + ]            │
+│                                      │
+│  ┌──────────────────────────────┐    │
+│  │  Total: 48 LF (4 pcs @ 12')  │    │
+│  └──────────────────────────────┘    │
+│                                      │
+│  Notes (optional): ___________       │
+│                                      │
+│         [ Add to PO ]                │
+└──────────────────────────────────────┘
+```
+
+**Logic:**
+- Detect engineered products by `category === 'Engineered'`
+- Show dual entry: Pieces + Length (ft)
+- Display calculated total LF
+- Store: `quantity` = pieces, `length_ft` = length, `computed_lf` = total
+
+---
+
+### For Bundle/Pallet/Box Products
+
+**Current:** Two buttons "Each" vs "Bundle"
+
+**New:** Single smart flow
+
+```text
+Quantity Panel
+┌──────────────────────────────────────┐
+│  2x4x8 SPF Stud                      │
+│  SKU: 2480                           │
+│                                      │
+│  How do you want to order?           │
+│  ┌────────────────────────────────┐  │
+│  │  ● Bundle of 294               │  │
+│  └────────────────────────────────┘  │
+│  ┌────────────────────────────────┐  │
+│  │  ○ Individual Pieces           │  │
+│  └────────────────────────────────┘  │
+│                                      │
+│  Quantity:                           │
+│         [ - ]  294  [ + ]            │
+│                      ↑               │
+│              Pre-filled from bundle  │
+│                                      │
+│  ────────────────────────────────    │
+│  ⓘ Ordering as: Bundle (294 pcs)    │
+│  ────────────────────────────────    │
+│                                      │
+│         [ Add to PO ]                │
+└──────────────────────────────────────┘
+```
+
+**Smart Logic:**
+1. User selects "Bundle of 294" → quantity auto-fills to 294
+2. If user keeps 294 → save as `unit_mode: 'BUNDLE'`
+3. If user changes to 295 or 290 → auto-switch to `unit_mode: 'EACH'`
+4. Status message updates: "Ordering as: 295 pieces (modified from bundle)"
 
 ---
 
@@ -46,282 +109,239 @@ The catalog uses a `category` field with values like "Other", "Hardware", "Engin
 
 ### 1. Update Types (`src/types/poWizardV2.ts`)
 
-Add a new display category system that groups database secondary_categories:
+Add new fields to `POWizardV2LineItem`:
 
 ```typescript
-// Virtual categories that map to multiple secondary_categories
-export interface VirtualCategory {
-  displayName: string;
-  icon: string;
-  dbCategory: string; // The actual database category
-  secondaryCategories: string[]; // Which secondary_categories to include
+export interface POWizardV2LineItem {
+  id: string;
+  catalog_item_id: string;
+  supplier_sku: string;
+  name: string;
+  specs: string;
+  quantity: number;           // Pieces for engineered, total units otherwise
+  unit_mode: 'EACH' | 'BUNDLE';
+  bundle_count?: number;      // Only if unit_mode is BUNDLE
+  bundle_name?: string;       // "Bundle", "Pallet", "Box"
+  item_notes?: string;
+  uom: string;
+  
+  // NEW: For engineered lumber
+  length_ft?: number;         // Length per piece in feet
+  computed_lf?: number;       // Total linear feet (quantity * length_ft)
+  is_engineered?: boolean;    // Flag for display purposes
+}
+```
+
+### 2. Update `CatalogProduct` interface
+
+No changes needed - already has `category` for detection.
+
+### 3. Refactor `QuantityPanel.tsx`
+
+Major refactor to handle three modes:
+- **Standard mode**: Simple quantity stepper
+- **Engineered mode**: Pieces + Length dual entry
+- **Bundle mode**: Smart bundle/each toggle with auto-detection
+
+```typescript
+interface QuantityPanelProps {
+  product: CatalogProduct;
+  onAdd: (item: POWizardV2LineItem) => void;
+  onClose: () => void;
 }
 
-export const VIRTUAL_CATEGORIES: Record<string, VirtualCategory> = {
-  LUMBER: {
-    displayName: 'LUMBER',
-    icon: '🪵',
-    dbCategory: 'Other',
-    secondaryCategories: ['STUDS', 'DIMENSION', 'TREATED', 'WIDES'],
-  },
-  SIDING: {
-    displayName: 'SIDING & EXTERIOR',
-    icon: '🏠',
-    dbCategory: 'Other',
-    secondaryCategories: ['SIDING', 'SIDING ACCESSORIES', 'TRIM', 'SOFFIT'],
-  },
-  HOUSE_WRAP: {
-    displayName: 'HOUSE WRAP & TAPE',
-    icon: '🧻',
-    dbCategory: 'Other',
-    secondaryCategories: ['MOISTURE CONTROL'],
-  },
-  POST_TIMBER: {
-    displayName: 'POST & TIMBER',
-    icon: '🌲',
-    dbCategory: 'Other',
-    secondaryCategories: ['POST/TIMBER', 'COLUMN'],
-  },
-  SHEATHING: {
-    displayName: 'SHEATHING',
-    icon: '📦',
-    dbCategory: 'Other',
-    secondaryCategories: ['OSB', 'CDX', 'ZIP', 'T&G'],
-  },
-  HARDWARE: {
-    displayName: 'HARDWARE',
-    icon: '🔩',
-    dbCategory: 'Hardware',
-    secondaryCategories: [], // All hardware
-  },
-  ENGINEERED: {
-    displayName: 'ENGINEERED',
-    icon: '📐',
-    dbCategory: 'Engineered',
-    secondaryCategories: [], // All engineered
-  },
-  DECKING: {
-    displayName: 'DECKING',
-    icon: '🏡',
-    dbCategory: 'Decking',
-    secondaryCategories: [], // All decking
-  },
+// Detection
+const isEngineered = product.category === 'Engineered';
+const hasBundle = !!product.bundle_type && !!product.bundle_qty;
+
+// State for engineered
+const [pieces, setPieces] = useState(1);
+const [lengthFt, setLengthFt] = useState(12); // Default 12 ft
+const computedLf = pieces * lengthFt;
+
+// State for bundle
+const [orderMode, setOrderMode] = useState<'bundle' | 'each'>(hasBundle ? 'bundle' : 'each');
+const [quantity, setQuantity] = useState(hasBundle ? product.bundle_qty! : 1);
+const bundleQty = product.bundle_qty || 0;
+
+// Smart detection: if quantity matches bundle, it's a bundle
+const isFullBundle = hasBundle && quantity === bundleQty && orderMode === 'bundle';
+```
+
+### 4. Handle Add Logic
+
+```typescript
+const handleAdd = () => {
+  if (isEngineered) {
+    // Engineered lumber
+    const item: POWizardV2LineItem = {
+      id: crypto.randomUUID(),
+      catalog_item_id: product.id,
+      supplier_sku: product.supplier_sku,
+      name: product.name || product.description,
+      specs: formatSpecs(),
+      quantity: pieces,
+      unit_mode: 'EACH',
+      uom: 'EA',
+      length_ft: lengthFt,
+      computed_lf: computedLf,
+      is_engineered: true,
+      item_notes: notes || undefined,
+    };
+    onAdd(item);
+  } else {
+    // Standard or Bundle
+    const item: POWizardV2LineItem = {
+      id: crypto.randomUUID(),
+      catalog_item_id: product.id,
+      supplier_sku: product.supplier_sku,
+      name: product.name || product.description,
+      specs: formatSpecs(),
+      quantity,
+      unit_mode: isFullBundle ? 'BUNDLE' : 'EACH',
+      bundle_count: isFullBundle ? bundleQty : undefined,
+      bundle_name: isFullBundle ? product.bundle_type : undefined,
+      uom: product.uom_default,
+      item_notes: notes || undefined,
+    };
+    onAdd(item);
+  }
+  onClose();
 };
 ```
 
-### 2. Update Filter Sequences
+### 5. Update `ItemsScreen.tsx` Display
 
-Add POST/TIMBER to start with wood_species and update other sequences:
+Show engineered lumber with LF total:
 
 ```typescript
-export const SPEC_PRIORITY: Record<string, string[] | Record<string, string[]>> = {
-  // ... existing entries ...
-  
-  // Update Other category with better sequences
-  Other: {
-    default: ['dimension', 'length'],
-    STUDS: ['dimension', 'length'],
-    DIMENSION: ['dimension', 'length'],
-    TREATED: ['dimension', 'length'],
-    WIDES: ['dimension', 'length'],
-    'POST/TIMBER': ['wood_species', 'dimension', 'length'], // Species FIRST
-    COLUMN: ['wood_species', 'dimension', 'length'],
-    SIDING: ['manufacturer', 'dimension'],
-    'SIDING ACCESSORIES': ['manufacturer'],
-    TRIM: ['dimension', 'length'],
-    SOFFIT: ['dimension'],
-    'MOISTURE CONTROL': ['manufacturer', 'dimension'], // Tyvek/Dow/Barricade
-    OSB: ['thickness', 'dimension'],
-    CDX: ['thickness', 'dimension'],
-    ZIP: ['thickness', 'dimension'],
-  },
-  
-  // Engineered - note about LF pricing
-  Engineered: {
-    default: ['dimension'],
-    LVL: ['dimension'],
-    LSL: ['dimension'],
-    'I JOISTS': ['dimension'],
-    GLUELAM: ['dimension'],
-    'RIM BOARD': ['dimension'],
-  },
-};
+// In ItemsScreen item display
+<Badge variant="outline">
+  {item.is_engineered && item.length_ft
+    ? `${item.quantity} pcs @ ${item.length_ft}' = ${item.computed_lf} LF`
+    : `${item.quantity} ${item.unit_mode === 'BUNDLE' ? item.bundle_name || 'BDL' : item.uom}`
+  }
+</Badge>
 ```
 
-### 3. Update Secondary Category Display Names
+### 6. Update `ReviewScreen.tsx` Display
 
-Add friendly names for secondary categories:
+Same display logic for the review screen.
 
-```typescript
-export const SECONDARY_DISPLAY_NAMES: Record<string, string> = {
-  // Lumber
-  STUDS: 'Studs',
-  DIMENSION: 'Dimension Lumber',
-  TREATED: 'Treated Lumber',
-  WIDES: 'Wide Boards',
-  
-  // Siding
-  SIDING: 'Lap Siding & Panels',
-  'SIDING ACCESSORIES': 'Siding Accessories',
-  TRIM: 'Exterior Trim',
-  SOFFIT: 'Soffit',
-  
-  // House Wrap
-  'MOISTURE CONTROL': 'House Wrap & Seam Tape',
-  
-  // Post/Timber
-  'POST/TIMBER': 'Posts & Timbers',
-  COLUMN: 'Columns',
-  
-  // Sheathing
-  OSB: 'OSB Sheathing',
-  CDX: 'CDX Plywood',
-  ZIP: 'ZIP System',
-  'T&G': 'Tongue & Groove',
-  
-  // Engineered
-  LVL: 'LVL Headers & Beams',
-  LSL: 'LSL Framing',
-  'I JOISTS': 'I-Joists',
-  GLUELAM: 'Glulam Beams',
-  'RIM BOARD': 'Rim Board',
-};
+---
+
+## UI Component Breakdown
+
+### Engineered Lumber Panel
+
+```text
+┌────────────────────────────────────────────┐
+│ PRODUCT SUMMARY                            │
+├────────────────────────────────────────────┤
+│                                            │
+│ How many pieces?                           │
+│ ┌────────────────────────────────────────┐ │
+│ │   [ - ]        4         [ + ]         │ │
+│ └────────────────────────────────────────┘ │
+│                                            │
+│ Length per piece (ft)                      │
+│ ┌────────────────────────────────────────┐ │
+│ │   [ - ]       12         [ + ]         │ │
+│ └────────────────────────────────────────┘ │
+│                                            │
+│ ┌────────────────────────────────────────┐ │
+│ │ 📐 Total: 48 Linear Feet               │ │
+│ │    (4 pieces × 12 ft each)             │ │
+│ └────────────────────────────────────────┘ │
+│                                            │
+│ Notes (optional): ___________________      │
+│                                            │
+│ ┌────────────────────────────────────────┐ │
+│ │           ✓ Add to PO                  │ │
+│ └────────────────────────────────────────┘ │
+└────────────────────────────────────────────┘
+```
+
+### Bundle/Each Selection Panel
+
+```text
+┌────────────────────────────────────────────┐
+│ PRODUCT SUMMARY                            │
+├────────────────────────────────────────────┤
+│                                            │
+│ Order as:                                  │
+│ ┌────────────────────────────────────────┐ │
+│ │ ◉ Bundle of 294                        │ │
+│ └────────────────────────────────────────┘ │
+│ ┌────────────────────────────────────────┐ │
+│ │ ○ Individual Pieces                    │ │
+│ └────────────────────────────────────────┘ │
+│                                            │
+│ Quantity:                                  │
+│ ┌────────────────────────────────────────┐ │
+│ │   [ - ]       294        [ + ]         │ │
+│ └────────────────────────────────────────┘ │
+│                                            │
+│ ┌────────────────────────────────────────┐ │
+│ │ 📦 Ordering: 1 Bundle (294 pieces)     │ │
+│ └────────────────────────────────────────┘ │
+│                                 OR         │
+│ ┌────────────────────────────────────────┐ │
+│ │ ⚠️ Modified: 295 pieces (not a bundle) │ │
+│ └────────────────────────────────────────┘ │
+│                                            │
+│ Notes (optional): ___________________      │
+│                                            │
+│ ┌────────────────────────────────────────┐ │
+│ │           ✓ Add to PO                  │ │
+│ └────────────────────────────────────────┘ │
+└────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Files to Modify
 
-### `src/types/poWizardV2.ts`
-- Add `VirtualCategory` interface and `VIRTUAL_CATEGORIES` constant
-- Add `SECONDARY_DISPLAY_NAMES` for friendly sub-category labels
-- Update `SPEC_PRIORITY` with POST/TIMBER species-first and MOISTURE CONTROL manufacturer-first sequences
-- Add `FIELD_LABELS` entry for `wood_species: 'Species'`
-
-### `src/components/po-wizard-v2/ProductPicker.tsx`
-- Update `fetchCategories()` to build virtual category counts by grouping secondary_categories
-- When a virtual category is selected, filter by the mapped secondary_categories
-- Pass the virtual category context through to secondary selection
-
-### `src/components/po-wizard-v2/CategoryGrid.tsx`
-- No structural changes needed (it receives categories as props)
-- Categories will now be virtual categories with proper display names
-
-### `src/components/po-wizard-v2/SecondaryCategoryList.tsx`
-- Use `SECONDARY_DISPLAY_NAMES` to show friendly labels instead of raw DB values
-- Sort by count descending as before
-
-### `src/components/po-wizard-v2/StepByStepFilter.tsx`
-- Use `FIELD_LABELS` to show "Species" instead of "wood_species"
-- Already handles dynamic filter sequences correctly
+| File | Changes |
+|------|---------|
+| `src/types/poWizardV2.ts` | Add `length_ft`, `computed_lf`, `is_engineered` to `POWizardV2LineItem` |
+| `src/components/po-wizard-v2/QuantityPanel.tsx` | Complete rewrite with three modes |
+| `src/components/po-wizard-v2/ItemsScreen.tsx` | Update badge display for engineered items |
+| `src/components/po-wizard-v2/ReviewScreen.tsx` | Update item display for engineered items |
 
 ---
 
-## Query Changes
+## Validation Rules
 
-### Fetch Virtual Category Counts
+1. **Engineered lumber:**
+   - Pieces must be >= 1
+   - Length must be >= 1 ft
+   - Maximum length: 60 ft (reasonable beam length)
 
-Instead of grouping by `category`, group by `secondary_category` and aggregate into virtual categories:
+2. **Bundle mode:**
+   - If quantity differs from bundle_qty, auto-save as EACH
+   - Multiple bundles: If quantity is exact multiple of bundle_qty, calculate bundles count
 
-```typescript
-const fetchCategories = async () => {
-  const { data } = await supabase
-    .from('catalog_items')
-    .select('secondary_category')
-    .eq('supplier_id', supplierId);
-
-  // Count by secondary_category
-  const secondaryCounts: Record<string, number> = {};
-  data?.forEach(item => {
-    const sec = item.secondary_category || 'UNCATEGORIZED';
-    secondaryCounts[sec] = (secondaryCounts[sec] || 0) + 1;
-  });
-
-  // Build virtual category counts
-  const virtualCounts: CategoryCount[] = [];
-  Object.entries(VIRTUAL_CATEGORIES).forEach(([key, virtual]) => {
-    let count = 0;
-    if (virtual.secondaryCategories.length === 0) {
-      // Include all from that DB category - need separate query or filter
-    } else {
-      virtual.secondaryCategories.forEach(sec => {
-        count += secondaryCounts[sec] || 0;
-      });
-    }
-    if (count > 0) {
-      virtualCounts.push({
-        category: key, // Virtual key
-        count,
-        displayName: virtual.displayName,
-        icon: virtual.icon,
-      });
-    }
-  });
-
-  return virtualCounts;
-};
-```
-
-### Fetch Products for Virtual Category
-
-When a virtual category is selected:
-
-```typescript
-const { data } = await supabase
-  .from('catalog_items')
-  .select('*')
-  .eq('supplier_id', supplierId)
-  .eq('category', virtualCategory.dbCategory)
-  .in('secondary_category', virtualCategory.secondaryCategories);
-```
+3. **General:**
+   - Quantity must be >= 1
+   - Notes are optional
 
 ---
 
-## UX Flow Examples
+## Edge Cases
 
-### Example 1: Ordering 2x4 Studs
-
-1. Tap **LUMBER** tile
-2. See sub-tiles: Studs (18), Dimension (50), Treated (19), Wides (51)
-3. Tap **Studs**
-4. Select Dimension: "2 in. x 4 in."
-5. Select Length: "92-5/8 in." or "104-5/8 in."
-6. View products, select, add quantity
-
-### Example 2: Ordering Tyvek
-
-1. Tap **HOUSE WRAP & TAPE** tile
-2. Select Manufacturer: "TYVEK", "DOW", or "BARRICADE"
-3. Select Dimension/Size
-4. View products (house wraps and seam tape)
-
-### Example 3: Ordering Doug Fir Timbers
-
-1. Tap **POST & TIMBER** tile
-2. Select Species: "DOUG FIR" or "REDWOOD" (species FIRST)
-3. Select Dimension: "3 in. x 10 in.", "4 in. x 4 in.", etc.
-4. Select Length: "10 ft.", "12 ft.", etc.
-5. View products
-
-### Example 4: Ordering LVL Headers
-
-1. Tap **ENGINEERED** tile
-2. See sub-tiles: LVL (7), LSL (4), I-Joists (7), Glulam (49)
-3. Tap **LVL Headers & Beams**
-4. Select Dimension: "9 1/2", "11 7/8", "14", etc.
-5. View products (note: sold per piece, priced by LF)
+| Scenario | Behavior |
+|----------|----------|
+| User selects Bundle, then changes qty | Auto-switch to EACH, show warning |
+| User orders exactly 2x bundle qty | Could show "2 Bundles" - optional enhancement |
+| Engineered product with no length entered | Default to 12 ft, require confirmation |
+| Product has bundle but user picks EACH | Start with qty = 1, not bundle qty |
 
 ---
 
-## Summary of Changes
+## Summary
 
-| Change | Purpose |
-|--------|---------|
-| Virtual categories | Group secondary_categories into logical tiles |
-| LUMBER tile | Groups Studs, Dimension, Treated, Wides |
-| SIDING & EXTERIOR tile | Groups Siding, Trim, Soffit |
-| HOUSE WRAP & TAPE tile | Better name for MOISTURE CONTROL |
-| POST/TIMBER species-first | Construction crews think species first for timbers |
-| Friendly secondary names | "LVL Headers & Beams" instead of "LVL" |
-| Updated SPEC_PRIORITY | Right filter order for each product type |
-
+This enhancement enables:
+- **Engineered lumber ordering** with proper pieces + length tracking for accurate LF calculation
+- **Smart bundle detection** that pre-fills quantities and automatically tracks whether the order matches a full bundle
+- **Clear feedback** showing "Bundle" vs "Modified from bundle" vs "Individual pieces"
