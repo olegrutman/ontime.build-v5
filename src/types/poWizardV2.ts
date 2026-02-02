@@ -25,6 +25,11 @@ export interface POWizardV2LineItem {
   bundle_name?: string;
   item_notes?: string;
   uom: string;
+  
+  // For engineered lumber (LVL, LSL, I-Joists, Glulam, Rim Board)
+  length_ft?: number;         // Length per piece in feet
+  computed_lf?: number;       // Total linear feet (quantity * length_ft)
+  is_engineered?: boolean;    // Flag for display purposes
 }
 
 export interface ProjectSupplier {
