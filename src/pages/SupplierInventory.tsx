@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, Package, Trash2, Edit2, Plus, AlertCircle, FileSpreadsheet } from 'lucide-react';
+import { Upload, Package, FileSpreadsheet, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { TopBar } from '@/components/layout/TopBar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -27,25 +27,25 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { parseEnhancedInventoryCSV, EnhancedCatalogCSVRow, CatalogCategory } from '@/types/supplier';
 
 interface CatalogItem {
   id: string;
   supplier_sku: string;
+  name: string | null;
   description: string;
   category: string;
-  size_or_spec: string | null;
+  secondary_category: string | null;
+  manufacturer: string | null;
+  dimension: string | null;
+  thickness: string | null;
+  length: string | null;
+  color: string | null;
+  wood_species: string | null;
+  bundle_type: string | null;
+  bundle_qty: number | null;
   uom_default: string;
   created_at: string;
-}
-
-interface CSVPreviewRow {
-  sku: string;
-  description: string;
-  category: string;
-  size_or_spec: string;
-  uom: string;
 }
 
 export default function SupplierInventory() {
@@ -57,7 +57,7 @@ export default function SupplierInventory() {
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [csvPreview, setCsvPreview] = useState<CSVPreviewRow[]>([]);
+  const [csvPreview, setCsvPreview] = useState<EnhancedCatalogCSVRow[]>([]);
   const [showPreview, setShowPreview] = useState(false);
 
   const currentOrg = userOrgRoles[0]?.organization;
@@ -104,7 +104,7 @@ export default function SupplierInventory() {
       console.error('Error fetching catalog:', error);
       toast({ title: 'Error', description: 'Failed to load catalog', variant: 'destructive' });
     } else {
-      setItems(data || []);
+      setItems((data as CatalogItem[]) || []);
     }
     setLoading(false);
   };
@@ -122,36 +122,15 @@ export default function SupplierInventory() {
   };
 
   const parseCSV = (text: string) => {
-    const lines = text.split('\n').filter(line => line.trim());
-    if (lines.length < 2) {
-      toast({ title: 'Invalid CSV', description: 'File must have a header row and at least one data row', variant: 'destructive' });
+    const rows = parseEnhancedInventoryCSV(text);
+    
+    if (rows.length === 0) {
+      toast({ 
+        title: 'Invalid CSV', 
+        description: 'Could not parse CSV. Ensure it has SKU and Description columns.', 
+        variant: 'destructive' 
+      });
       return;
-    }
-
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-    const skuIdx = headers.findIndex(h => h.includes('sku'));
-    const descIdx = headers.findIndex(h => h.includes('desc'));
-    const catIdx = headers.findIndex(h => h.includes('cat'));
-    const sizeIdx = headers.findIndex(h => h.includes('size') || h.includes('spec'));
-    const uomIdx = headers.findIndex(h => h.includes('uom') || h.includes('unit'));
-
-    if (skuIdx === -1 || descIdx === -1) {
-      toast({ title: 'Invalid CSV', description: 'CSV must have SKU and Description columns', variant: 'destructive' });
-      return;
-    }
-
-    const rows: CSVPreviewRow[] = [];
-    for (let i = 1; i < lines.length; i++) {
-      const cols = lines[i].split(',').map(c => c.trim());
-      if (cols[skuIdx]) {
-        rows.push({
-          sku: cols[skuIdx] || '',
-          description: cols[descIdx] || '',
-          category: catIdx >= 0 ? cols[catIdx] || 'GENERAL' : 'GENERAL',
-          size_or_spec: sizeIdx >= 0 ? cols[sizeIdx] || '' : '',
-          uom: uomIdx >= 0 ? cols[uomIdx] || 'EA' : 'EA',
-        });
-      }
     }
 
     setCsvPreview(rows);
@@ -174,14 +153,27 @@ export default function SupplierInventory() {
         throw new Error('No supplier record found for this organization');
       }
 
-      // Upsert catalog items
+      // Prepare items for upsert with all enhanced columns
       const itemsToInsert = csvPreview.map(row => ({
         supplier_id: supplier.id,
-        supplier_sku: row.sku,
+        supplier_sku: row.supplier_sku,
+        name: row.name || null,
         description: row.description,
-        category: row.category.toUpperCase() as any,
+        category: row.category as CatalogCategory,
+        secondary_category: row.secondary_category || null,
+        manufacturer: row.manufacturer || null,
+        use_type: row.use_type || null,
+        product_type: row.product_type || null,
+        dimension: row.dimension || null,
+        thickness: row.thickness || null,
+        length: row.length || null,
+        color: row.color || null,
+        finish: row.finish || null,
+        wood_species: row.wood_species || null,
+        bundle_type: row.bundle_type || null,
+        bundle_qty: row.bundle_qty || null,
+        uom_default: row.uom_default,
         size_or_spec: row.size_or_spec || null,
-        uom_default: row.uom,
       }));
 
       const { error } = await supabase
@@ -204,6 +196,10 @@ export default function SupplierInventory() {
       }
     }
   };
+
+  // Count unique values
+  const uniqueCategories = new Set(items.map(i => i.category)).size;
+  const uniqueManufacturers = new Set(items.filter(i => i.manufacturer).map(i => i.manufacturer)).size;
 
   if (authLoading || (!isSupplier && loading)) {
     return (
@@ -276,15 +272,34 @@ export default function SupplierInventory() {
                       <FileSpreadsheet className="h-6 w-6 text-blue-500" />
                     </div>
                     <div>
-                      <p className="text-2xl font-bold">
-                        {new Set(items.map(i => i.category)).size}
-                      </p>
+                      <p className="text-2xl font-bold">{uniqueCategories}</p>
                       <p className="text-sm text-muted-foreground">Categories</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-lg bg-green-500/10">
+                      <Package className="h-6 w-6 text-green-500" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{uniqueManufacturers}</p>
+                      <p className="text-sm text-muted-foreground">Manufacturers</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
+
+            {/* CSV Format Help */}
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                CSV format: SKU, name, description, Main Category, Secondary Category, Manufacture, Dimension, Thickness, Length, Color, Wood Species, Bundle Name, Bundle Count, qtyType
+              </AlertDescription>
+            </Alert>
 
             {/* Catalog Table */}
             {loading ? (
@@ -306,66 +321,123 @@ export default function SupplierInventory() {
             ) : (
               <Card>
                 <CardContent className="p-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>SKU</TableHead>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Size/Spec</TableHead>
-                        <TableHead>UOM</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {items.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-mono text-sm">
-                            {item.supplier_sku}
-                          </TableCell>
-                          <TableCell>{item.description}</TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">{item.category}</Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {item.size_or_spec || '—'}
-                          </TableCell>
-                          <TableCell>{item.uom_default}</TableCell>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>SKU</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead>Specs</TableHead>
+                          <TableHead>Bundle</TableHead>
+                          <TableHead>UOM</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {items.slice(0, 100).map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell className="font-mono text-sm">
+                              {item.supplier_sku}
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium text-sm">{item.name || item.description}</p>
+                                {item.manufacturer && (
+                                  <p className="text-xs text-muted-foreground">{item.manufacturer}</p>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-1">
+                                <Badge variant="secondary">{item.category}</Badge>
+                                {item.secondary_category && (
+                                  <Badge variant="outline" className="text-xs">{item.secondary_category}</Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {[item.dimension, item.thickness, item.length, item.color, item.wood_species]
+                                .filter(Boolean)
+                                .join(' • ') || '—'}
+                            </TableCell>
+                            <TableCell>
+                              {item.bundle_type && item.bundle_qty ? (
+                                <span className="text-xs">
+                                  {item.bundle_type}: {item.bundle_qty}
+                                </span>
+                              ) : '—'}
+                            </TableCell>
+                            <TableCell>{item.uom_default}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  {items.length > 100 && (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Showing 100 of {items.length} items
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             )}
 
             {/* CSV Preview Dialog */}
             <Dialog open={showPreview} onOpenChange={setShowPreview}>
-              <DialogContent className="max-w-4xl max-h-[80vh] overflow-auto">
+              <DialogContent className="max-w-5xl max-h-[80vh] overflow-auto">
                 <DialogHeader>
                   <DialogTitle>Preview Import ({csvPreview.length} items)</DialogTitle>
                 </DialogHeader>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>SKU</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Size/Spec</TableHead>
-                      <TableHead>UOM</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {csvPreview.slice(0, 20).map((row, idx) => (
-                      <TableRow key={idx}>
-                        <TableCell className="font-mono text-sm">{row.sku}</TableCell>
-                        <TableCell>{row.description}</TableCell>
-                        <TableCell>{row.category}</TableCell>
-                        <TableCell>{row.size_or_spec || '—'}</TableCell>
-                        <TableCell>{row.uom}</TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>SKU</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Category</TableHead>
+                        <TableHead>Specs</TableHead>
+                        <TableHead>Bundle</TableHead>
+                        <TableHead>UOM</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {csvPreview.slice(0, 20).map((row, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell className="font-mono text-sm">{row.supplier_sku}</TableCell>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium text-sm">{row.name || row.description}</p>
+                              {row.manufacturer && (
+                                <p className="text-xs text-muted-foreground">{row.manufacturer}</p>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              <Badge variant="secondary">{row.category}</Badge>
+                              {row.secondary_category && (
+                                <Badge variant="outline" className="text-xs">{row.secondary_category}</Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {[row.dimension, row.thickness, row.length, row.color, row.wood_species]
+                              .filter(Boolean)
+                              .join(' • ') || '—'}
+                          </TableCell>
+                          <TableCell>
+                            {row.bundle_type && row.bundle_qty ? (
+                              <span className="text-xs">
+                                {row.bundle_type}: {row.bundle_qty}
+                              </span>
+                            ) : '—'}
+                          </TableCell>
+                          <TableCell>{row.uom_default}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
                 {csvPreview.length > 20 && (
                   <p className="text-sm text-muted-foreground text-center">
                     ... and {csvPreview.length - 20} more items

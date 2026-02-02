@@ -36,9 +36,42 @@ export interface CatalogItem {
   created_at: string;
   updated_at: string;
   supplier?: Supplier;
+  // Enhanced attributes
+  name?: string;
+  secondary_category?: string;
+  manufacturer?: string;
+  use_type?: string;
+  product_type?: string;
+  dimension?: string;
+  thickness?: string;
+  length?: string;
+  color?: string;
+  finish?: string;
+  wood_species?: string;
+  bundle_type?: string;
+  bundle_qty?: number;
+  min_length?: number;
+  max_length?: number;
+  attributes?: Record<string, unknown>;
 }
 
-export interface CatalogSearchResult extends Omit<CatalogItem, 'created_at' | 'updated_at' | 'supplier'> {
+export interface CatalogSearchResult {
+  id: string;
+  supplier_sku: string;
+  name: string | null;
+  description: string;
+  category: string;
+  secondary_category: string | null;
+  manufacturer: string | null;
+  dimension: string | null;
+  thickness: string | null;
+  length: string | null;
+  color: string | null;
+  uom_default: string;
+  size_or_spec: string | null;
+  bundle_type: string | null;
+  bundle_qty: number | null;
+  wood_species: string | null;
   rank: number;
 }
 
@@ -198,6 +231,98 @@ export interface InventoryCSVRow {
   secondary_category: string;
   qty_type: string;
   attributes_json?: string;
+}
+
+// Enhanced catalog item for new CSV format
+export interface EnhancedCatalogCSVRow {
+  supplier_sku: string;
+  name: string;
+  description: string;
+  category: string;
+  secondary_category?: string;
+  manufacturer?: string;
+  use_type?: string;
+  product_type?: string;
+  dimension?: string;
+  thickness?: string;
+  length?: string;
+  color?: string;
+  finish?: string;
+  wood_species?: string;
+  bundle_type?: string;
+  bundle_qty?: number;
+  uom_default: string;
+  size_or_spec?: string;
+}
+
+// Parse CSV with enhanced columns format
+export function parseEnhancedInventoryCSV(csvText: string): EnhancedCatalogCSVRow[] {
+  const lines = csvText.trim().split('\n');
+  if (lines.length < 2) return [];
+
+  const headers = lines[0].split(',').map(h => h.trim().toLowerCase().replace(/['"]/g, '').replace(/ /g, '_'));
+  
+  const items: EnhancedCatalogCSVRow[] = [];
+  
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseCSVLine(lines[i]);
+    if (values.length < 2) continue;
+
+    const row: Record<string, string> = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index]?.trim() || '';
+    });
+
+    // Get SKU - try multiple column names
+    const supplierSku = row.sku || row.supplier_sku || row.code || '';
+    if (!supplierSku) continue;
+
+    // Get name and description
+    const name = row.name || '';
+    const description = row.description || row.name || '';
+    if (!description) continue;
+
+    // Map main category to our enum
+    const mainCategory = row.main_category || row.category || '';
+    const mappedCategory = normalizeCategory(mainCategory);
+
+    // Map qtyType to UOM
+    const qtyType = row.qtytype || row.qty_type || 'count';
+    const uomMapping: Record<string, string> = {
+      'count': 'EA',
+      'each': 'EA',
+      'lf': 'LF',
+      'sf': 'SF',
+      'bf': 'BF',
+    };
+    const uom = uomMapping[qtyType.toLowerCase()] || 'EA';
+
+    // Parse bundle count
+    const bundleQty = row.bundle_count ? parseInt(row.bundle_count, 10) || undefined : undefined;
+
+    items.push({
+      supplier_sku: supplierSku,
+      name: name,
+      description: description,
+      category: mappedCategory,
+      secondary_category: row.secondary_category || undefined,
+      manufacturer: row.manufacture || row.manufacturer || undefined,
+      use_type: row.use || row.use_type || undefined,
+      product_type: row.type || row.product_type || undefined,
+      dimension: row.dimension || undefined,
+      thickness: row.thickness || undefined,
+      length: row.length || undefined,
+      color: row.color || undefined,
+      finish: row.finish || undefined,
+      wood_species: row.wood_species || undefined,
+      bundle_type: row.bundle_name || row.bundle_type || undefined,
+      bundle_qty: bundleQty,
+      uom_default: uom,
+      size_or_spec: row.size_or_spec || undefined,
+    });
+  }
+
+  return items;
 }
 
 export function parseInventoryCSV(csvText: string): CatalogCSVRow[] {
