@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Search, Check, Building2, Sparkles } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { POWizardData } from '@/types/poWizard';
 import { cn } from '@/lib/utils';
 
@@ -37,22 +38,23 @@ export function SupplierStep({ data, onChange, projectId }: SupplierStepProps) {
     // Fetch all suppliers
     const { data: suppliersData } = await supabase
       .from('suppliers')
-      .select('id, name, supplier_code')
+      .select('id, name, supplier_code, organization_id')
       .order('name');
     
-    const allSuppliers = suppliersData || [];
+    const allSuppliers = (suppliersData || []).map(s => ({
+      id: s.id,
+      name: s.name,
+      supplier_code: s.supplier_code,
+    }));
     
-    // If we have a project, find suppliers invited to it
+    // If we have a project, find suppliers on the team
     if (projectId) {
-      // Get organizations on this project that are SUPPLIER type
+      // Get team members with 'Supplier' role and their org_ids
       const { data: teamData } = await supabase
         .from('project_team')
-        .select(`
-          org_id,
-          organization:organizations!inner(id, type)
-        `)
+        .select('org_id')
         .eq('project_id', projectId)
-        .eq('organization.type', 'SUPPLIER');
+        .eq('role', 'Supplier');
       
       if (teamData && teamData.length > 0) {
         const supplierOrgIds = teamData.map(t => t.org_id).filter(Boolean);
@@ -65,7 +67,9 @@ export function SupplierStep({ data, onChange, projectId }: SupplierStepProps) {
             .in('organization_id', supplierOrgIds);
           
           const projSuppliers = (projectSuppliersData || []).map(s => ({
-            ...s,
+            id: s.id,
+            name: s.name,
+            supplier_code: s.supplier_code,
             isProjectSupplier: true,
           }));
           
@@ -92,16 +96,23 @@ export function SupplierStep({ data, onChange, projectId }: SupplierStepProps) {
     s.supplier_code.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Show project suppliers first, then recent
-  const recentSuppliers = suppliers.filter(s => 
+  // Show suppliers not on project team
+  const otherSuppliers = suppliers.filter(s => 
     !projectSuppliers.some(ps => ps.id === s.id)
-  ).slice(0, 4);
+  );
 
   const handleSelect = (supplier: Supplier) => {
     onChange({
       supplier_id: supplier.id,
       supplier_name: supplier.name,
     });
+  };
+
+  const handleDropdownChange = (supplierId: string) => {
+    const supplier = projectSuppliers.find(s => s.id === supplierId);
+    if (supplier) {
+      handleSelect(supplier);
+    }
   };
 
   return (
@@ -134,48 +145,42 @@ export function SupplierStep({ data, onChange, projectId }: SupplierStepProps) {
         </div>
       )}
 
-      {/* Multiple Project Suppliers */}
+      {/* Multiple Project Suppliers - Dropdown */}
       {!search && projectSuppliers.length > 1 && (
         <div>
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-1">
             <Sparkles className="h-3 w-3" />
-            Project Suppliers
+            Select Project Supplier
           </p>
-          <div className="grid grid-cols-1 gap-2">
-            {projectSuppliers.map((supplier) => (
-              <Card
-                key={supplier.id}
-                className={cn(
-                  'p-4 cursor-pointer transition-all touch-manipulation min-h-[72px] flex flex-col justify-center',
-                  'hover:border-primary/50 active:scale-[0.98]',
-                  'border-primary/30 bg-primary/5',
-                  data.supplier_id === supplier.id && 'border-primary bg-primary/10'
-                )}
-                onClick={() => handleSelect(supplier)}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="truncate flex-1">
-                    <p className="font-medium text-sm truncate">{supplier.name}</p>
-                    <p className="text-xs text-muted-foreground">{supplier.supplier_code}</p>
+          <Select 
+            value={data.supplier_id || ''} 
+            onValueChange={handleDropdownChange}
+          >
+            <SelectTrigger className="w-full h-14">
+              <SelectValue placeholder="Choose a supplier..." />
+            </SelectTrigger>
+            <SelectContent>
+              {projectSuppliers.map((supplier) => (
+                <SelectItem key={supplier.id} value={supplier.id}>
+                  <div className="flex flex-col items-start">
+                    <span className="font-medium">{supplier.name}</span>
+                    <span className="text-xs text-muted-foreground">{supplier.supplier_code}</span>
                   </div>
-                  {data.supplier_id === supplier.id && (
-                    <Check className="h-5 w-5 text-primary shrink-0 ml-2" />
-                  )}
-                </div>
-              </Card>
-            ))}
-          </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       )}
 
-      {/* Recent Suppliers */}
-      {!search && recentSuppliers.length > 0 && (
+      {/* No Project Suppliers - Show all with search */}
+      {!search && projectSuppliers.length === 0 && otherSuppliers.length > 0 && (
         <div>
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
-            Other Suppliers
+            Available Suppliers
           </p>
           <div className="grid grid-cols-2 gap-2">
-            {recentSuppliers.map((supplier) => (
+            {otherSuppliers.slice(0, 4).map((supplier) => (
               <Card
                 key={supplier.id}
                 className={cn(
