@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, Building } from 'lucide-react';
 import { POWizardData, INITIAL_PO_WIZARD_DATA } from '@/types/poWizard';
 import { WizardProgress } from './WizardProgress';
 import { SupplierStep } from './steps/SupplierStep';
@@ -10,8 +10,15 @@ import { ItemsStep } from './steps/ItemsStep';
 import { NotesStep } from './steps/NotesStep';
 import { ReviewStep } from './steps/ReviewStep';
 
-const STEPS = [
+const ALL_STEPS = [
   { title: 'Project', key: 'project' },
+  { title: 'Supplier', key: 'supplier' },
+  { title: 'Items', key: 'items' },
+  { title: 'Notes', key: 'notes' },
+  { title: 'Review', key: 'review' },
+];
+
+const STEPS_WITHOUT_PROJECT = [
   { title: 'Supplier', key: 'supplier' },
   { title: 'Items', key: 'items' },
   { title: 'Notes', key: 'notes' },
@@ -36,6 +43,12 @@ export function POWizard({
   initialProjectId = null,
   initialProjectName = null,
 }: POWizardProps) {
+  // Use different steps based on whether project is pre-selected
+  const steps = useMemo(() => 
+    initialProjectId ? STEPS_WITHOUT_PROJECT : ALL_STEPS, 
+    [initialProjectId]
+  );
+
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<POWizardData>(() => ({
     ...INITIAL_PO_WIZARD_DATA,
@@ -43,21 +56,24 @@ export function POWizard({
     project_name: initialProjectName || undefined,
   }));
 
+  // Get current step key for determining which component to show
+  const currentStepKey = steps[currentStep - 1]?.key;
+
   const handleChange = (updates: Partial<POWizardData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
   };
 
   const canGoNext = (): boolean => {
-    switch (currentStep) {
-      case 1: // Project - required
+    switch (currentStepKey) {
+      case 'project':
         return !!formData.project_id;
-      case 2: // Supplier - required
+      case 'supplier':
         return !!formData.supplier_id;
-      case 3: // Items - need at least one
+      case 'items':
         return formData.line_items.length > 0;
-      case 4: // Notes - optional
+      case 'notes':
         return true;
-      case 5: // Review - all required fields
+      case 'review':
         return !!formData.supplier_id && !!formData.project_id && formData.line_items.length > 0;
       default:
         return true;
@@ -65,7 +81,7 @@ export function POWizard({
   };
 
   const goNext = () => {
-    if (currentStep < STEPS.length && canGoNext()) {
+    if (currentStep < steps.length && canGoNext()) {
       setCurrentStep((s) => s + 1);
     }
   };
@@ -101,12 +117,21 @@ export function POWizard({
       <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden max-h-[90vh]">
         <WizardProgress
           currentStep={currentStep}
-          totalSteps={STEPS.length}
-          steps={STEPS}
+          totalSteps={steps.length}
+          steps={steps}
         />
 
+        {/* Context banner when project is pre-selected */}
+        {initialProjectId && (
+          <div className="px-6 py-2 bg-muted/50 border-b flex items-center gap-2 text-sm">
+            <Building className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Creating PO for:</span>
+            <span className="font-medium">{initialProjectName}</span>
+          </div>
+        )}
+
         <div className="p-6 min-h-[400px] max-h-[60vh] overflow-y-auto">
-          {currentStep === 1 && (
+          {currentStepKey === 'project' && (
             <ProjectStep
               data={formData}
               onChange={handleChange}
@@ -114,20 +139,20 @@ export function POWizard({
               initialProjectName={initialProjectName}
             />
           )}
-          {currentStep === 2 && (
+          {currentStepKey === 'supplier' && (
             <SupplierStep data={formData} onChange={handleChange} projectId={formData.project_id} />
           )}
-          {currentStep === 3 && (
+          {currentStepKey === 'items' && (
             <ItemsStep
               data={formData}
               onChange={handleChange}
               supplierId={formData.supplier_id}
             />
           )}
-          {currentStep === 4 && (
+          {currentStepKey === 'notes' && (
             <NotesStep data={formData} onChange={handleChange} />
           )}
-          {currentStep === 5 && (
+          {currentStepKey === 'review' && (
             <ReviewStep data={formData} />
           )}
         </div>
@@ -143,7 +168,7 @@ export function POWizard({
             Back
           </Button>
 
-          {currentStep < STEPS.length ? (
+          {currentStep < steps.length ? (
             <Button onClick={goNext} disabled={!canGoNext()}>
               Next
               <ChevronRight className="w-4 h-4 ml-1" />
