@@ -1,434 +1,303 @@
 
 
-# PO Wizard Redesign: Mobile-First, Zero-Typing Field Experience
+# Step-by-Step Spec Filters for Product Picker
 
 ## Overview
 
-Complete redesign of the Purchase Order wizard to match the "walking the lumber yard" experience. The new wizard eliminates required typing, enforces project-locked context, and provides a guided category-driven product picker instead of search-first browsing.
+Transform the current "show all filters at once" approach into a **sequential step-by-step filter flow** where users select one specification at a time. This creates a guided "drilling down" experience that matches the lumber yard metaphor.
 
 ---
 
-## Architecture Changes
+## Current vs. Proposed Flow
 
-### New 3-Screen Flow
-
+### Current Flow
 ```text
-┌────────────────────────────────────────────────────────────────────┐
-│                        SCREEN 1: PO HEADER                         │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │  📦 Project Name (locked, read-only)                         │  │
-│  │     Main Street Apartments                                   │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │  📍 Delivery Address (locked, read-only)                     │  │
-│  │     6986 South Odessa Street                                 │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │  🏢 Supplier                                                 │  │
-│  │     [Auto-selected if single] or [Dropdown if multiple]     │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │  📅 Requested Delivery Date                                  │  │
-│  │  🕐 Delivery Window: [ AM | PM | Any ]                       │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │  💬 Notes (optional, voice input)                            │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                                                                    │
-│             ┌─────────────────────────────────────┐                │
-│             │     Next - Add Items    →           │                │
-│             └─────────────────────────────────────┘                │
-└────────────────────────────────────────────────────────────────────┘
-
-┌────────────────────────────────────────────────────────────────────┐
-│                        SCREEN 2: ITEMS LIST                        │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │ Items (3)                                                    │  │
-│  ├──────────────────────────────────────────────────────────────┤  │
-│  │ 2x4x8 SPF Stud                    Qty: 100 EA    [Edit] [X]  │  │
-│  │ 1/2" OSB Sheathing 4x8            Qty: 50 EA     [Edit] [X]  │  │
-│  │ Simpson LUS28                     Qty: 24 EA     [Edit] [X]  │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                                                                    │
-│                ┌─────────────────────────┐                         │
-│                │      + Add Item         │                         │
-│                └─────────────────────────┘                         │
-│                                                                    │
-│             ┌─────────────────────────────────────┐                │
-│             │     Review PO    →                  │                │
-│             └─────────────────────────────────────┘                │
-└────────────────────────────────────────────────────────────────────┘
-
-┌────────────────────────────────────────────────────────────────────┐
-│                      SCREEN 3: REVIEW + SUBMIT                     │
-│  ┌──────────────────────────────────────────────────────────────┐  │
-│  │ Project: Main Street Apartments                              │  │
-│  │ Supplier: Supplier_Test                                      │  │
-│  │ Delivery: Jan 15, 2026 (AM)                                  │  │
-│  ├──────────────────────────────────────────────────────────────┤  │
-│  │ 3 Items                                          [Edit]      │  │
-│  │ • 2x4x8 SPF Stud - 100 EA                                    │  │
-│  │ • 1/2" OSB Sheathing - 50 EA                                 │  │
-│  │ • Simpson LUS28 - 24 EA                                      │  │
-│  └──────────────────────────────────────────────────────────────┘  │
-│                                                                    │
-│    ┌─────────────────┐   ┌──────────────────────────────────┐      │
-│    │  + Add More     │   │       Submit PO                  │      │
-│    └─────────────────┘   └──────────────────────────────────┘      │
-└────────────────────────────────────────────────────────────────────┘
+Category → Secondary → [ALL FILTERS SHOWN AT ONCE] → Products
+                           ↓
+              Dimension: [2x4] [2x6] [All]
+              Length:    [8ft] [12ft] [All]  
+              Species:   [SPF] [DF] [All]
 ```
 
-### Product Picker Flow (Modal/Sheet)
+### Proposed Step-by-Step Flow
+```text
+Category → Secondary → Dimension → Length → [Products]
+                         ↓            ↓
+                     Pick one     Pick one
+                     [2x4]        [12 ft.]
+                        ↓            ↓
+                   (auto-advance) (auto-advance)
+```
+
+Each spec selection auto-advances to the next filter step. Counts update dynamically to show only valid combinations.
+
+---
+
+## New UI Design
+
+### Step-by-Step Filter Screen
 
 ```text
-STEP A: Main Category (2-column tile grid)
-┌─────────────┐  ┌─────────────┐
-│  HARDWARE   │  │  FRAMING    │
-│   791 items │  │   LUMBER    │
-└─────────────┘  └─────────────┘
-┌─────────────┐  ┌─────────────┐
-│  DECKING    │  │ ENGINEERED  │
-│   104 items │  │   WOOD      │
-└─────────────┘  └─────────────┘
-       ↓ Tap → Auto-advance
+┌────────────────────────────────────────────────────────────────┐
+│  ← Back              Select Dimension                      X  │
+├────────────────────────────────────────────────────────────────┤
+│  FRAMING LUMBER > STUDS                                        │
+│  Step 1 of 3                                                   │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│   ┌──────────────────────────────────────┐                     │
+│   │  2 in. x 4 in.                   18  │                     │
+│   └──────────────────────────────────────┘                     │
+│   ┌──────────────────────────────────────┐                     │
+│   │  2 in. x 6 in.                   18  │                     │
+│   └──────────────────────────────────────┘                     │
+│   ┌──────────────────────────────────────┐                     │
+│   │  2 in. x 8 in.                   12  │                     │
+│   └──────────────────────────────────────┘                     │
+│   ┌──────────────────────────────────────┐                     │
+│   │  2 in. x 10 in.                   8  │                     │
+│   └──────────────────────────────────────┘                     │
+│                                                                │
+├────────────────────────────────────────────────────────────────┤
+│          [ Skip - View All 56 Products ]                       │
+└────────────────────────────────────────────────────────────────┘
+```
 
-STEP B: Secondary Category (vertical list)
-┌──────────────────────────────────────┐
-│ DECK BOARDS                      52  │
-│ RAILING                          28  │
-│ ACCESSORIES                      24  │
-└──────────────────────────────────────┘
-       ↓ Tap → Auto-advance
-       ↓ If only 1 option → auto-select
+### After Selecting Dimension → Next Filter
 
-STEP C: Spec Filters (chips with counts)
-┌──────────────────────────────────────┐
-│ Decking > Deck Boards            [X] │
-├──────────────────────────────────────┤
-│ Dimension                            │
-│ [1x6] [5/4x6] [2x6] [All]            │
-│                                      │
-│ Color                                │
-│ [Cedar] [Gray] [Teak] [All]          │
-│                                      │
-│ Length                               │
-│ [12ft] [16ft] [20ft] [All]           │
-└──────────────────────────────────────┘
-       ↓ Each chip tap → Refine products shown
+```text
+┌────────────────────────────────────────────────────────────────┐
+│  ← Back              Select Length                          X │
+├────────────────────────────────────────────────────────────────┤
+│  FRAMING LUMBER > STUDS > 2x4                                  │
+│  Step 2 of 3                                                   │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│   ┌──────────────────────────────────────┐                     │
+│   │  92-5/8 in.                       3  │                     │
+│   └──────────────────────────────────────┘                     │
+│   ┌──────────────────────────────────────┐                     │
+│   │  104-5/8 in.                      3  │                     │
+│   └──────────────────────────────────────┘                     │
+│   ┌──────────────────────────────────────┐                     │
+│   │  116-5/8 in.                      3  │                     │
+│   └──────────────────────────────────────┘                     │
+│                                                                │
+├────────────────────────────────────────────────────────────────┤
+│          [ Skip - View All 9 Products ]                        │
+└────────────────────────────────────────────────────────────────┘
+```
 
-STEP D: Product List
-┌──────────────────────────────────────┐
-│ 🔍 Search (collapsed, tap to open)   │
-├──────────────────────────────────────┤
-│ ┌────────────────────────────────┐   │
-│ │ Trex Select 1x6x12 Cedar       │   │
-│ │ SKU: TREX-1612-CED             │   │
-│ │ 1 in. x 6 in. | 12 ft.         │   │
-│ └────────────────────────────────┘   │
-│       ↓ Tap → Quantity Panel         │
-└──────────────────────────────────────┘
+### Final Step or Auto-Advance to Products
 
-QUANTITY PANEL (bottom sheet)
-┌──────────────────────────────────────┐
-│ Trex Select 1x6x12 Cedar             │
-│ 1 in. x 6 in. | 12 ft.               │
-├──────────────────────────────────────┤
-│         [ - ]   24   [ + ]           │
-│                                      │
-│      Unit: [EACH] / [BUNDLE]         │
-│                                      │
-│      Notes: ________________         │
-├──────────────────────────────────────┤
-│         [ Add to PO ]                │
-└──────────────────────────────────────┘
+When all filters are applied OR only 1 value remains for next filter, auto-advance to product list.
+
+---
+
+## Technical Implementation
+
+### 1. Update `SPEC_PRIORITY` with Complete Category Mapping
+
+Expand the spec priority map to cover all categories with their specific filter sequences:
+
+```typescript
+export const SPEC_PRIORITY: Record<string, string[]> = {
+  // Decking products
+  Decking: ['dimension', 'color', 'length', 'manufacturer'],
+  
+  // Lumber - dimension-based
+  Dimensional: ['dimension', 'length', 'wood_species'],
+  
+  // Other category - depends heavily on secondary
+  Other: {
+    default: ['dimension', 'length'],
+    STUDS: ['dimension', 'length', 'wood_species'],
+    DIMENSION: ['dimension', 'length', 'wood_species'],
+    OSB: ['thickness', 'dimension'],
+    CDX: ['thickness', 'dimension'],
+    'INTERIOR DRYWALL': ['thickness', 'dimension'],
+    'EXTERIOR DRYWALL': ['thickness', 'dimension'],
+    SIDING: ['dimension', 'manufacturer'],
+    TREATED: ['dimension', 'length'],
+  },
+  
+  // Engineered wood
+  Engineered: ['dimension', 'length'],
+  
+  // Hardware - skip directly to products (no specs to filter)
+  Hardware: [],
+  
+  // Exterior trim
+  Exterior: ['dimension', 'finish', 'manufacturer'],
+  
+  // Sheathing
+  Sheathing: ['thickness', 'dimension'],
+  
+  // Structural steel - skip to products
+  Structural: [],
+};
+```
+
+### 2. Create New `StepByStepFilter.tsx` Component
+
+Replace the chip-based `SpecFilters.tsx` with a new step-by-step component:
+
+```typescript
+interface StepByStepFilterProps {
+  supplierId: string;
+  category: string;
+  secondaryCategory: string | null;
+  onComplete: (filters: Record<string, string>) => void;
+  onBack: () => void;
+}
+
+// State tracks:
+// - currentStep: number (0, 1, 2, ...)
+// - appliedFilters: Record<string, string> 
+// - availableValues: SpecValue[] for current step
+```
+
+### 3. Update ProductPicker Flow
+
+Modify `ProductPicker.tsx` to:
+- Replace `'specs'` step with `'filter-step'` 
+- Track filter step index
+- Handle auto-advance when only 1 option exists
+- Handle "Skip" action to go directly to products
+
+```typescript
+type PickerStep = 
+  | 'category' 
+  | 'secondary' 
+  | 'filter-step'  // New: replaces 'specs'
+  | 'products' 
+  | 'quantity';
+
+// Additional state:
+const [filterStepIndex, setFilterStepIndex] = useState(0);
+const [appliedFilters, setAppliedFilters] = useState<Record<string, string>>({});
+```
+
+### 4. Dynamic Filter Priority Lookup
+
+Create helper function to get filter sequence based on category and secondary:
+
+```typescript
+function getFilterSequence(category: string, secondary: string | null): string[] {
+  const categoryPriority = SPEC_PRIORITY[category];
+  
+  // Handle categories with secondary-specific priorities (like "Other")
+  if (typeof categoryPriority === 'object' && secondary) {
+    return categoryPriority[secondary] || categoryPriority.default || [];
+  }
+  
+  return Array.isArray(categoryPriority) ? categoryPriority : [];
+}
+```
+
+### 5. Count Query with Applied Filters
+
+Each step queries available values for the current filter field, applying all previously selected filters:
+
+```typescript
+const fetchFilterValues = async (filterField: string, appliedFilters: Record<string, string>) => {
+  const filterObj = {
+    supplier_id: supplierId,
+    category: category,
+    ...(secondaryCategory && { secondary_category: secondaryCategory }),
+    ...Object.fromEntries(
+      Object.entries(appliedFilters).filter(([_, v]) => v !== 'all')
+    ),
+  };
+
+  const { data } = await supabase
+    .from('catalog_items')
+    .select(filterField)
+    .match(filterObj);
+
+  // Count occurrences
+  const counts = {};
+  data?.forEach(item => {
+    const value = item[filterField];
+    if (value) counts[value] = (counts[value] || 0) + 1;
+  });
+
+  return Object.entries(counts)
+    .map(([value, count]) => ({ value, count }))
+    .sort((a, b) => b.count - a.count);
+};
 ```
 
 ---
 
 ## Files to Create
 
-### 1. `src/components/po-wizard-v2/POWizardV2.tsx`
-Main dialog controller with 3-screen flow
+### `src/components/po-wizard-v2/StepByStepFilter.tsx`
 
-### 2. `src/components/po-wizard-v2/HeaderScreen.tsx`
-Screen 1: Project (read-only), address, supplier, delivery date/window, notes
-
-### 3. `src/components/po-wizard-v2/ItemsScreen.tsx`
-Screen 2: Items list with add/edit/remove actions
-
-### 4. `src/components/po-wizard-v2/ReviewScreen.tsx`
-Screen 3: Summary with submit action
-
-### 5. `src/components/po-wizard-v2/ProductPicker.tsx`
-Full-screen modal for category-guided product selection
-
-### 6. `src/components/po-wizard-v2/CategoryGrid.tsx`
-2-column tile grid for main categories
-
-### 7. `src/components/po-wizard-v2/SecondaryCategoryList.tsx`
-Vertical list with counts for secondary categories
-
-### 8. `src/components/po-wizard-v2/SpecFilters.tsx`
-Dynamic filter chips based on category
-
-### 9. `src/components/po-wizard-v2/ProductList.tsx`
-Product cards with optional search
-
-### 10. `src/components/po-wizard-v2/QuantityPanel.tsx`
-Bottom sheet for quantity selection
-
-### 11. `src/types/poWizardV2.ts`
-Updated types for new data structure
+New component for sequential filter selection with:
+- Breadcrumb showing category path and applied filters
+- Step indicator (Step 1 of 3)
+- Full-width tap targets for each filter value
+- Count badges on the right
+- "Skip - View All X Products" footer action
 
 ---
 
 ## Files to Modify
 
-### `src/components/project/PurchaseOrdersTab.tsx`
-- Update imports to use new `POWizardV2`
-- Pass `initialProjectAddress` from project data
+### `src/types/poWizardV2.ts`
+
+Update `SPEC_PRIORITY` to support secondary-category-specific filter sequences for the "Other" category.
+
+### `src/components/po-wizard-v2/ProductPicker.tsx`
+
+- Replace `SpecFilters` with `StepByStepFilter`
+- Update step type to include `filter-step`
+- Add filter step index state
+- Handle back navigation through filter steps
+- Handle skip action
+
+### `src/components/po-wizard-v2/SpecFilters.tsx`
+
+This file will be replaced by `StepByStepFilter.tsx` and can be deleted or kept for reference.
 
 ---
 
-## Data Model Updates
+## Auto-Advance Rules
 
-### Updated POWizardData Type
-
-```typescript
-export interface POWizardV2Data {
-  // Header (Screen 1)
-  project_id: string;           // Required, locked
-  project_name: string;         // Read-only display
-  delivery_address: string;     // Auto-filled from project
-  supplier_id: string | null;   // Auto-selected or dropdown
-  supplier_name?: string;
-  requested_delivery_date: Date | null;
-  delivery_window: 'AM' | 'PM' | 'ANY';
-  notes: string;
-
-  // Items (Screen 2)
-  line_items: POWizardV2LineItem[];
-}
-
-export interface POWizardV2LineItem {
-  catalog_item_id: string;
-  product_id?: string;
-  supplier_sku: string;
-  name: string;
-  specs: string;              // "1x6 | 12ft | Cedar"
-  quantity: number;
-  unit_mode: 'EACH' | 'BUNDLE';
-  bundle_count?: number;      // Only if bundle mode
-  item_notes?: string;
-}
-```
+1. **Single value**: If current filter step has only 1 option, auto-select and advance
+2. **No values**: If current filter field has no applicable values (all null), skip to next filter
+3. **End of filters**: When all filter steps are complete, auto-advance to products
+4. **Hardware/Structural**: Skip directly from secondary to products (empty filter sequence)
 
 ---
 
-## Category Mapping
+## Back Navigation
 
-Based on the spec, map database categories to display tiles:
-
-| Display Name | DB Category | Has Secondary? |
-|--------------|-------------|----------------|
-| HARDWARE | Hardware | Yes - skip to products |
-| FRAMING LUMBER | Dimensional | Yes (STUDS, DIMENSION, etc.) |
-| FINISH LUMBER | Dimensional | Yes (secondary_category filters) |
-| EXTERIOR TRIM | Exterior | Optional |
-| DECKING | Decking | Yes (DECK BOARDS, RAILING, etc.) |
-| ENGINEERED WOOD | Engineered | Yes (LVL, LSL, I-JOISTS, etc.) |
-| SHEATING & PLYWOOD | Sheathing | Yes (OSB, CDX, etc.) |
-| DRYWALL | Other | Filter by secondary |
-| STRUCTURAL STEEL | Structural | Skip to products |
-
-Note: Current catalog only has 4 categories with data (Hardware, Other, Decking, Engineered). The UI will only show tiles for categories with actual products.
+Pressing back during filter steps:
+- If on first filter step → go back to secondary (or category if no secondary)
+- If on subsequent filter steps → go back one filter step, clear that filter value
 
 ---
 
-## Spec Filter Priority by Category
+## Mobile UX Details
 
-Implement dynamic filter rendering based on category:
-
-```typescript
-const SPEC_PRIORITY: Record<string, string[]> = {
-  Decking: ['dimension', 'color', 'length'],
-  Dimensional: ['dimension', 'length', 'wood_species'],
-  Engineered: ['dimension'],
-  Sheathing: ['thickness', 'dimension'],
-  Hardware: [],  // Skip to product list
-};
-```
+- Full-width buttons for each filter value (44px min height)
+- Large count badges for easy readability
+- Sticky footer with "Skip" option always visible
+- Progress indicator showing current step
+- Animated transitions between filter steps
 
 ---
 
-## Supplier Handling Rules
+## Summary
 
-1. **0 suppliers on project**: Block wizard with error message
-2. **1 supplier on project**: Auto-select and lock (no dropdown)
-3. **Multiple suppliers**: Show dropdown with only project suppliers
+| Step | Action |
+|------|--------|
+| 1 | User taps category tile (e.g., "FRAMING LUMBER") |
+| 2 | User taps secondary category (e.g., "STUDS") |
+| 3 | **New**: User taps dimension (e.g., "2x4") → auto-advance |
+| 4 | **New**: User taps length (e.g., "12 ft.") → auto-advance |
+| 5 | Products list appears filtered to exact selection |
 
-```typescript
-// In HeaderScreen.tsx
-if (projectSuppliers.length === 0) {
-  return (
-    <Card className="border-destructive">
-      <AlertTriangle />
-      No supplier assigned to this project.
-      Contact your project manager.
-    </Card>
-  );
-}
-
-if (projectSuppliers.length === 1) {
-  // Auto-fill, show locked state
-  return <LockedSupplierCard supplier={projectSuppliers[0]} />;
-}
-
-// Multiple suppliers - show Select dropdown
-return <Select options={projectSuppliers} />;
-```
-
----
-
-## Mobile-First Design Requirements
-
-All interactive elements:
-- Minimum 44px touch targets
-- Large quantity steppers (+/-) at 48px
-- Category tiles: 100px height minimum
-- Bottom sticky actions for primary buttons
-- No horizontal scrolling
-- Sheet/modal transitions instead of page navigation
-- Voice input button for notes
-
----
-
-## Zero-Result Prevention
-
-1. **Category tiles**: Only render if `count > 0`
-2. **Secondary category list**: Filter out zero-count items
-3. **Spec filter chips**: Show counts, hide if 0
-4. **Fallback**: If filters result in 0 products, show "Clear Last Filter" button
-
-```typescript
-// In SpecFilters.tsx
-const availableFilters = specs.filter(spec => 
-  getProductCount(category, secondaryCategory, spec) > 0
-);
-```
-
----
-
-## Database Queries Needed
-
-### 1. Get category counts for tiles
-```sql
-SELECT category, COUNT(*) as count 
-FROM catalog_items 
-WHERE supplier_id = $supplier_id
-GROUP BY category
-```
-
-### 2. Get secondary category counts
-```sql
-SELECT secondary_category, COUNT(*) as count 
-FROM catalog_items 
-WHERE supplier_id = $supplier_id 
-  AND category = $category
-  AND secondary_category IS NOT NULL
-GROUP BY secondary_category
-ORDER BY count DESC
-```
-
-### 3. Get spec values with counts
-```sql
-SELECT dimension, COUNT(*) as count
-FROM catalog_items
-WHERE category = $category 
-  AND secondary_category = $secondary
-GROUP BY dimension
-```
-
----
-
-## Implementation Steps
-
-### Phase 1: Core Structure
-1. Create `src/components/po-wizard-v2/` folder
-2. Implement `POWizardV2.tsx` with 3-screen state machine
-3. Create `types/poWizardV2.ts` with updated interfaces
-4. Implement `HeaderScreen.tsx` with locked fields
-
-### Phase 2: Product Picker
-5. Create `ProductPicker.tsx` as full-screen modal
-6. Implement `CategoryGrid.tsx` with dynamic tiles
-7. Create `SecondaryCategoryList.tsx` with counts
-8. Build `SpecFilters.tsx` with chip-based filtering
-9. Create `ProductList.tsx` with search fallback
-10. Implement `QuantityPanel.tsx` as bottom sheet
-
-### Phase 3: Integration
-11. Implement `ItemsScreen.tsx` with edit/delete
-12. Create `ReviewScreen.tsx` with summary
-13. Update `PurchaseOrdersTab.tsx` to use new wizard
-14. Add project address to wizard props
-
-### Phase 4: Polish
-15. Add toast notifications ("Item added")
-16. Implement voice input for notes
-17. Add loading states and error handling
-18. Test on mobile viewport
-
----
-
-## Technical Details
-
-### Supabase Queries
-
-The wizard will use these queries:
-
-```typescript
-// Get project suppliers (existing RLS policy now allows this)
-const { data: teamData } = await supabase
-  .from('project_team')
-  .select('org_id')
-  .eq('project_id', projectId)
-  .eq('role', 'Supplier');
-
-const { data: suppliers } = await supabase
-  .from('suppliers')
-  .select('id, name, supplier_code')
-  .in('organization_id', orgIds);
-
-// Get categories with counts for tiles
-const { data: categories } = await supabase
-  .from('catalog_items')
-  .select('category')
-  .eq('supplier_id', supplierId);
-
-// Aggregate counts client-side for now (or create RPC)
-```
-
-### State Management
-
-Screen navigation with local state:
-
-```typescript
-type Screen = 'header' | 'items' | 'review';
-type PickerStep = 'category' | 'secondary' | 'specs' | 'products' | 'quantity';
-
-const [screen, setScreen] = useState<Screen>('header');
-const [pickerOpen, setPickerOpen] = useState(false);
-const [pickerStep, setPickerStep] = useState<PickerStep>('category');
-```
-
----
-
-## Validation Rules
-
-1. PO must have at least 1 item before submit
-2. Quantity must be > 0
-3. Bundle mode only allowed when `bundle_type` exists on product
-4. Supplier must be selected (auto or manual)
-5. Delivery date required
-
+Users can "Skip" at any filter step to see all remaining products matching current filters.
