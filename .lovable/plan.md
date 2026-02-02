@@ -1,211 +1,106 @@
 
 
-# Plan: Lock PO to Project Context and Auto-Select Project Supplier
+# Plan: Fix Supplier Auto-Selection by Adding RLS Policy
 
-## Problem
+## Root Cause Analysis
 
-When creating a PO from within a project (e.g., the Purchase Orders tab on a project page):
-1. The project selection step is still shown even though we already know the project
-2. Users have to manually confirm the supplier even when there's only one invited to the project
-3. The wizard should be smarter about skipping steps when context is already known
+The investigation revealed that the PO wizard correctly finds the supplier's organization from the project_team table, but the **RLS policy on the `suppliers` table** prevents the GC user from reading the supplier record.
+
+### What's Happening
+
+1. **Step 1 succeeds**: Query `project_team` with `role='Supplier'` returns org_id `12b5d7de-1bd1-431d-9601-93ba3d56870b`
+2. **Step 2 fails**: Query `suppliers` with `organization_id IN (...)` returns **empty array** due to RLS
+
+### Current RLS Policies on `suppliers` Table
+
+| Policy Name | Command | Condition |
+|-------------|---------|-----------|
+| Org members can view suppliers | SELECT | `user_in_org(auth.uid(), organization_id)` |
+| Supplier orgs can view own record | SELECT | User must be in supplier's org AND org type = 'SUPPLIER' |
+
+The GC user (in GC_Test org) is **not** in the Supplier_Test organization, so neither policy allows the read.
+
+---
 
 ## Solution
 
-**Streamline the wizard when opened from a project context:**
-1. Skip the Project step entirely when `initialProjectId` is provided (project is locked)
-2. Auto-select the single project supplier and skip to Items step if possible
-3. Show a locked project banner on subsequent steps for context
+Add a new RLS policy that allows users to view suppliers whose organization is on a project team that the user also has access to.
 
----
+### New RLS Policy
 
-## Changes
-
-### 1. Update `POWizard.tsx`
-
-**Modify step logic to skip when context is pre-filled:**
-
-```typescript
-// Determine starting step based on initial context
-const getStartingStep = () => {
-  // If project is pre-selected, skip project step
-  if (initialProjectId) {
-    return 2; // Start at Supplier step
-  }
-  return 1;
-};
-
-// Update STEPS to be conditional
-const getVisibleSteps = () => {
-  if (initialProjectId) {
-    // Skip project step when pre-filled
-    return [
-      { title: 'Supplier', key: 'supplier' },
-      { title: 'Items', key: 'items' },
-      { title: 'Notes', key: 'notes' },
-      { title: 'Review', key: 'review' },
-    ];
-  }
-  return [
-    { title: 'Project', key: 'project' },
-    { title: 'Supplier', key: 'supplier' },
-    { title: 'Items', key: 'items' },
-    { title: 'Notes', key: 'notes' },
-    { title: 'Review', key: 'review' },
-  ];
-};
-```
-
-**Add locked project context display:**
-
-When project is pre-selected, show a small banner at the top of the dialog:
-
-```tsx
-{initialProjectId && (
-  <div className="px-6 py-2 bg-muted/50 border-b flex items-center gap-2 text-sm">
-    <Building className="h-4 w-4 text-muted-foreground" />
-    <span className="text-muted-foreground">Creating PO for:</span>
-    <span className="font-medium">{initialProjectName}</span>
-  </div>
-)}
-```
-
-### 2. Update `SupplierStep.tsx`
-
-**Enhance auto-selection to also auto-advance when single supplier:**
-
-```typescript
-// After finding project suppliers
-if (projSuppliers.length === 1 && !data.supplier_id && !autoSelected) {
-  onChange({
-    supplier_id: projSuppliers[0].id,
-    supplier_name: projSuppliers[0].name,
-  });
-  setAutoSelected(true);
-  // Notify parent that supplier was auto-selected
-  // (Parent can decide to auto-advance)
-}
-```
-
-**Simplify UI when only one project supplier:**
-
-```tsx
-{projectSuppliers.length === 1 && (
-  <div className="text-center py-4">
-    <p className="text-sm text-muted-foreground mb-2">
-      Project supplier auto-selected
-    </p>
-    <Card className="p-4 border-primary bg-primary/5 inline-block">
-      <div className="flex items-center gap-3">
-        <Check className="h-5 w-5 text-primary" />
-        <div>
-          <p className="font-medium">{projectSuppliers[0].name}</p>
-          <p className="text-xs text-muted-foreground">{projectSuppliers[0].supplier_code}</p>
-        </div>
-      </div>
-    </Card>
-    <p className="text-xs text-muted-foreground mt-3">
-      Tap Next to continue, or search for a different supplier
-    </p>
-  </div>
-)}
-```
-
-### 3. Update `ProjectStep.tsx`
-
-**Show locked state when project is pre-selected:**
-
-When `initialProjectId` is provided and can't be changed, show a read-only view:
-
-```tsx
-if (initialProjectId && !allowChange) {
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold mb-1">Project</h2>
-        <p className="text-muted-foreground text-sm">
-          Creating PO for this project
-        </p>
-      </div>
-      <Card className="p-4 border-primary bg-primary/5">
-        <div className="flex items-center gap-3">
-          <Building className="h-5 w-5 text-primary" />
-          <div>
-            <p className="font-medium">{initialProjectName}</p>
-          </div>
-        </div>
-      </Card>
-      {/* Work Item selection still available */}
-    </div>
+```sql
+CREATE POLICY "Users can view suppliers on shared project teams"
+  ON suppliers
+  FOR SELECT
+  TO authenticated
+  USING (
+    organization_id IN (
+      SELECT pt.org_id 
+      FROM project_team pt
+      WHERE pt.org_id = suppliers.organization_id
+        AND (
+          -- User is a participant on the same project
+          user_is_project_participant(auth.uid(), pt.project_id)
+          OR 
+          -- User created the project
+          pt.project_id IN (SELECT id FROM projects WHERE created_by = auth.uid())
+        )
+    )
   );
-}
+```
+
+This allows a GC user to see supplier records when:
+- The supplier's organization is on a project team
+- The user is a participant on that same project (or created the project)
+
+---
+
+## Implementation Steps
+
+### 1. Add Database Migration
+
+Create migration to add the new RLS policy on the `suppliers` table.
+
+**SQL:**
+```sql
+-- Allow users to view suppliers that are on project teams they have access to
+CREATE POLICY "Users can view suppliers on shared project teams"
+  ON suppliers
+  FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1 
+      FROM project_team pt
+      WHERE pt.org_id = suppliers.organization_id
+        AND (
+          user_is_project_participant(auth.uid(), pt.project_id)
+          OR pt.project_id IN (SELECT id FROM projects WHERE created_by = auth.uid())
+        )
+    )
+  );
 ```
 
 ---
 
-## Files to Modify
+## Technical Notes
 
-| File | Change |
-|------|--------|
-| `src/components/po-wizard/POWizard.tsx` | Skip project step when `initialProjectId` provided, add context banner |
-| `src/components/po-wizard/steps/SupplierStep.tsx` | Improve auto-selection UX, simplify single-supplier view |
-| `src/components/po-wizard/steps/ProjectStep.tsx` | Show locked/read-only view when project is pre-selected |
+### Database Schema Reference
 
----
+**Tables involved:**
+- `suppliers`: Has `organization_id` linking to `organizations` table
+- `project_team`: Links projects to organizations via `org_id` and has `role` field
+- `projects`: Has `created_by` for project ownership
 
-## Result After Changes
+**Existing helper function:**
+- `user_is_project_participant(user_id, project_id)`: Checks if user is a participant on the project
 
-**When creating PO from Project Page:**
-```text
-1. User clicks "Create PO" on project
-2. Wizard opens showing:
-   - Context banner: "Creating PO for: Oak Ridge Townhomes"
-   - Step 1 (Supplier): Auto-selected to project's supplier
-   - "Tap Next to continue"
-3. User taps Next → Items step
-4. User adds items → Notes → Review → Create
-```
+### After Fix
 
-**When creating PO from /purchase-orders page (no context):**
-```text
-1. User clicks "New PO"
-2. Wizard opens showing:
-   - Step 1: Select Project (full list)
-   - Step 2: Select Supplier (project's suppliers highlighted)
-   - Step 3-5: Items, Notes, Review
-```
+When the PO wizard opens from Main Street Apartments:
 
----
-
-## Technical Flow
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                    POWizard Opens                           │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-         ┌────────────┴────────────┐
-         │                         │
-    [From Project]           [From /purchase-orders]
-         │                         │
-         ▼                         ▼
-┌─────────────────┐       ┌─────────────────────┐
-│ Skip Project    │       │ Show Project Step   │
-│ step (locked)   │       │ (user selects)      │
-│                 │       │                     │
-│ Show context    │       │                     │
-│ banner          │       │                     │
-└────────┬────────┘       └──────────┬──────────┘
-         │                           │
-         ▼                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│              Supplier Step                                   │
-│  • Find suppliers on project team                           │
-│  • If exactly 1: auto-select + show confirmation            │
-│  • If multiple: show project suppliers first                │
-│  • If none: show all suppliers with search                  │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-                      ▼
-            [Items → Notes → Review → Create]
-```
+1. Query `project_team` for suppliers returns org_id `12b5d7de-1bd1-431d-9601-93ba3d56870b`
+2. Query `suppliers` now succeeds because the new policy allows viewing suppliers on shared project teams
+3. Supplier "Supplier_Test" is auto-selected
+4. User sees confirmation: "Project supplier auto-selected"
 
