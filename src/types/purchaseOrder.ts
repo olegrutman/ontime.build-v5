@@ -1,4 +1,4 @@
-export type POStatus = 'DRAFT' | 'SENT';
+export type POStatus = 'ACTIVE' | 'SUBMITTED' | 'PRICED' | 'ORDERED' | 'DELIVERED';
 
 export interface PurchaseOrder {
   id: string;
@@ -9,10 +9,16 @@ export interface PurchaseOrder {
   supplier_id: string;
   po_number: string;
   po_name: string;
-  status: string;
+  status: POStatus;
   notes?: string | null;
   sent_at?: string | null;
   sent_by?: string | null;
+  submitted_at?: string | null;
+  submitted_by?: string | null;
+  priced_at?: string | null;
+  priced_by?: string | null;
+  ordered_at?: string | null;
+  delivered_at?: string | null;
   download_token?: string;
   created_at: string;
   updated_at: string;
@@ -35,11 +41,24 @@ export interface POLineItem {
   length_ft?: number | null;
   computed_bf?: number | null;
   computed_lf?: number | null;
+  unit_price?: number | null;
+  line_total?: number | null;
   notes?: string | null;
   created_at: string;
 }
 
 export const PO_STATUS_LABELS: Record<POStatus, string> = {
-  DRAFT: 'Draft',
-  SENT: 'Sent',
+  ACTIVE: 'Active',
+  SUBMITTED: 'Submitted',
+  PRICED: 'Priced',
+  ORDERED: 'Ordered',
+  DELIVERED: 'Delivered',
+};
+
+export const PO_STATUS_COLORS: Record<POStatus, string> = {
+  ACTIVE: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
+  SUBMITTED: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  PRICED: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+  ORDERED: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+  DELIVERED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
 };

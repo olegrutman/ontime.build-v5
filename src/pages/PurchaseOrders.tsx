@@ -14,7 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Plus, Send, FileText, Download, Trash2, Package } from 'lucide-react';
-import { PurchaseOrder, PO_STATUS_LABELS, POStatus } from '@/types/purchaseOrder';
+import { PurchaseOrder, PO_STATUS_LABELS, PO_STATUS_COLORS, POStatus } from '@/types/purchaseOrder';
 
 export default function PurchaseOrders() {
   const { user, userOrgRoles, currentRole, loading: authLoading } = useAuth();
@@ -78,7 +78,7 @@ export default function PurchaseOrders() {
       console.error('Error fetching POs:', error);
       return;
     }
-    setOrders(data || []);
+    setOrders((data || []) as unknown as PurchaseOrder[]);
   };
 
   const fetchSuppliers = async () => {
@@ -138,7 +138,7 @@ export default function PurchaseOrders() {
         work_item_id: selectedWorkItemId || null,
         material_order_id: selectedMaterialOrderId || null,
         notes: poNotes.trim() || null,
-        status: 'DRAFT',
+        status: 'ACTIVE',
       })
       .select()
       .single();
@@ -215,7 +215,7 @@ export default function PurchaseOrders() {
     setSupplierEmail('');
     fetchOrders();
     if (selectedPO) {
-      setSelectedPO(prev => prev ? { ...prev, status: 'SENT' } : null);
+      setSelectedPO(prev => prev ? { ...prev, status: 'SUBMITTED' as POStatus } : null);
     }
   };
 
@@ -239,6 +239,10 @@ export default function PurchaseOrders() {
   const getDownloadUrl = (format: 'pdf' | 'csv') => {
     if (!selectedPO?.download_token) return '';
     return `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?token=${selectedPO.download_token}&format=${format}`;
+  };
+
+  const getStatusBadgeClass = (status: POStatus) => {
+    return PO_STATUS_COLORS[status] || 'bg-gray-100 text-gray-800';
   };
 
   if (authLoading || loading) {
@@ -371,8 +375,7 @@ export default function PurchaseOrders() {
                         <CardTitle className="text-base font-mono">{po.po_number}</CardTitle>
                         <CardDescription className="truncate">{po.po_name}</CardDescription>
                       </div>
-                      <Badge variant={po.status === 'SENT' ? 'default' : 'secondary'} 
-                             className={po.status === 'SENT' ? 'bg-green-600' : ''}>
+                      <Badge className={getStatusBadgeClass(po.status as POStatus)}>
                         {PO_STATUS_LABELS[po.status as POStatus]}
                       </Badge>
                     </div>
@@ -396,7 +399,7 @@ export default function PurchaseOrders() {
                       <CardDescription>{selectedPO.po_name}</CardDescription>
                     </div>
                     <div className="flex gap-2">
-                      {selectedPO.status === 'DRAFT' && (
+                      {selectedPO.status === 'ACTIVE' && (
                         <>
                           <Button variant="outline" size="sm" onClick={() => handleDeletePO(selectedPO.id)}>
                             <Trash2 className="h-4 w-4" />
@@ -410,7 +413,7 @@ export default function PurchaseOrders() {
                           </Button>
                         </>
                       )}
-                      {selectedPO.status === 'SENT' && (
+                      {selectedPO.status !== 'ACTIVE' && (
                         <>
                           <Button variant="outline" size="sm" asChild>
                             <a href={getDownloadUrl('csv')} target="_blank" rel="noopener noreferrer">
@@ -439,10 +442,10 @@ export default function PurchaseOrders() {
                       <span className="text-muted-foreground">Project/Work Item:</span>
                       <p className="font-medium">{selectedPO.project?.name || selectedPO.work_item?.title}</p>
                     </div>
-                    {selectedPO.sent_at && (
+                    {selectedPO.submitted_at && (
                       <div>
-                        <span className="text-muted-foreground">Sent:</span>
-                        <p className="font-medium">{new Date(selectedPO.sent_at).toLocaleString()}</p>
+                        <span className="text-muted-foreground">Submitted:</span>
+                        <p className="font-medium">{new Date(selectedPO.submitted_at).toLocaleString()}</p>
                       </div>
                     )}
                     <div>
@@ -451,46 +454,49 @@ export default function PurchaseOrders() {
                     </div>
                   </div>
 
+                  {/* Line Items Table */}
                   {selectedPO.line_items && selectedPO.line_items.length > 0 ? (
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>#</TableHead>
+                          <TableHead className="w-12">#</TableHead>
                           <TableHead>SKU</TableHead>
                           <TableHead>Description</TableHead>
                           <TableHead className="text-right">Qty</TableHead>
                           <TableHead>UOM</TableHead>
-                          <TableHead>BF/LF</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {selectedPO.line_items.map(item => (
                           <TableRow key={item.id}>
-                            <TableCell>{item.line_number}</TableCell>
-                            <TableCell className="font-mono text-sm">{item.supplier_sku || '-'}</TableCell>
-                            <TableCell>{item.description}</TableCell>
+                            <TableCell className="text-muted-foreground">{item.line_number}</TableCell>
+                            <TableCell className="font-mono text-sm">{item.supplier_sku || '—'}</TableCell>
+                            <TableCell>
+                              <div>
+                                <p>{item.description}</p>
+                                {item.length_ft && item.computed_lf && (
+                                  <p className="text-xs text-muted-foreground">
+                                    {item.pieces || item.quantity} pcs @ {item.length_ft}' = {item.computed_lf} LF
+                                  </p>
+                                )}
+                              </div>
+                            </TableCell>
                             <TableCell className="text-right">{item.quantity}</TableCell>
                             <TableCell>{item.uom}</TableCell>
-                            <TableCell>
-                              {item.computed_bf && <span>{item.computed_bf} BF</span>}
-                              {item.computed_lf && <span>{item.computed_lf} LF</span>}
-                              {!item.computed_bf && !item.computed_lf && '-'}
-                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
                     </Table>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
-                      <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No line items yet</p>
-                      <p className="text-sm">Import from a material order when creating the PO</p>
+                      <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>No line items</p>
                     </div>
                   )}
 
                   {selectedPO.notes && (
-                    <div className="mt-4 p-3 bg-muted rounded-lg">
-                      <p className="text-sm font-medium">Notes:</p>
+                    <div className="mt-6 p-4 bg-muted/30 rounded-lg">
+                      <p className="text-sm font-medium mb-1">Notes</p>
                       <p className="text-sm text-muted-foreground">{selectedPO.notes}</p>
                     </div>
                   )}
@@ -499,25 +505,23 @@ export default function PurchaseOrders() {
             ) : (
               <Card>
                 <CardContent className="py-12 text-center text-muted-foreground">
-                  Select a purchase order to view details
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Select a purchase order to view details</p>
                 </CardContent>
               </Card>
             )}
           </div>
         </div>
 
-        {/* Send Dialog */}
+        {/* Send PO Dialog */}
         <Dialog open={sendDialogOpen} onOpenChange={setSendDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Send Purchase Order</DialogTitle>
+              <DialogTitle>Send PO to Supplier</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Send <strong>{selectedPO?.po_number}</strong> to the supplier. They will receive an email with download links for PDF and CSV.
-              </p>
               <div>
-                <Label>Supplier Email *</Label>
+                <Label>Supplier Email</Label>
                 <Input
                   type="email"
                   value={supplierEmail}
@@ -525,11 +529,13 @@ export default function PurchaseOrders() {
                   placeholder="supplier@example.com"
                 />
               </div>
+              <p className="text-sm text-muted-foreground">
+                The supplier will receive an email with download links for PDF and CSV.
+              </p>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setSendDialogOpen(false)}>Cancel</Button>
               <Button onClick={handleSendPO} disabled={sending}>
-                <Send className="h-4 w-4 mr-2" />
                 {sending ? 'Sending...' : 'Send PO'}
               </Button>
             </DialogFooter>
