@@ -48,6 +48,34 @@ interface CatalogItem {
   created_at: string;
 }
 
+// Helper function to ensure a supplier record exists for the SUPPLIER organization
+const ensureSupplierRecord = async (orgId: string, orgName: string): Promise<string> => {
+  // First try to fetch existing supplier
+  const { data: existingSupplier } = await supabase
+    .from('suppliers')
+    .select('id')
+    .eq('organization_id', orgId)
+    .maybeSingle();
+
+  if (existingSupplier) {
+    return existingSupplier.id;
+  }
+
+  // Create supplier record for this SUPPLIER organization
+  const { data: newSupplier, error: insertError } = await supabase
+    .from('suppliers')
+    .insert({
+      organization_id: orgId,
+      supplier_code: orgName.substring(0, 20).toUpperCase().replace(/\s+/g, '-'),
+      name: orgName,
+    })
+    .select('id')
+    .single();
+
+  if (insertError) throw insertError;
+  return newSupplier.id;
+};
+
 export default function SupplierInventory() {
   const navigate = useNavigate();
   const { userOrgRoles, loading: authLoading } = useAuth();
@@ -80,31 +108,32 @@ export default function SupplierInventory() {
   }, [authLoading, isSupplier, navigate]);
 
   const fetchCatalogItems = async () => {
-    // Get supplier linked to this org
-    const { data: supplier } = await supabase
-      .from('suppliers')
-      .select('id')
-      .eq('organization_id', currentOrg?.id)
-      .single();
-
-    if (!supplier) {
+    if (!currentOrg) {
       setItems([]);
       setLoading(false);
       return;
     }
 
-    const { data, error } = await supabase
-      .from('catalog_items')
-      .select('*')
-      .eq('supplier_id', supplier.id)
-      .order('category', { ascending: true })
-      .order('supplier_sku', { ascending: true });
+    try {
+      // Ensure supplier record exists, creating one if needed
+      const supplierId = await ensureSupplierRecord(currentOrg.id, currentOrg.name);
 
-    if (error) {
-      console.error('Error fetching catalog:', error);
-      toast({ title: 'Error', description: 'Failed to load catalog', variant: 'destructive' });
-    } else {
-      setItems((data as CatalogItem[]) || []);
+      const { data, error } = await supabase
+        .from('catalog_items')
+        .select('*')
+        .eq('supplier_id', supplierId)
+        .order('category', { ascending: true })
+        .order('supplier_sku', { ascending: true });
+
+      if (error) {
+        console.error('Error fetching catalog:', error);
+        toast({ title: 'Error', description: 'Failed to load catalog', variant: 'destructive' });
+      } else {
+        setItems((data as CatalogItem[]) || []);
+      }
+    } catch (err: any) {
+      console.error('Error ensuring supplier record:', err);
+      toast({ title: 'Error', description: err.message || 'Failed to initialize supplier', variant: 'destructive' });
     }
     setLoading(false);
   };
@@ -138,24 +167,16 @@ export default function SupplierInventory() {
   };
 
   const handleUploadConfirm = async () => {
-    if (csvPreview.length === 0) return;
+    if (csvPreview.length === 0 || !currentOrg) return;
     setUploading(true);
 
     try {
-      // Get supplier linked to this org
-      const { data: supplier } = await supabase
-        .from('suppliers')
-        .select('id')
-        .eq('organization_id', currentOrg?.id)
-        .single();
-
-      if (!supplier) {
-        throw new Error('No supplier record found for this organization');
-      }
+      // Ensure supplier record exists, creating one if needed
+      const supplierId = await ensureSupplierRecord(currentOrg.id, currentOrg.name);
 
       // Prepare items for upsert with all enhanced columns
       const itemsToInsert = csvPreview.map(row => ({
-        supplier_id: supplier.id,
+        supplier_id: supplierId,
         supplier_sku: row.supplier_sku,
         name: row.name || null,
         description: row.description,
