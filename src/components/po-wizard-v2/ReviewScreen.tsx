@@ -128,7 +128,10 @@ export function ReviewScreen({
                     <p className="text-xs text-muted-foreground truncate">{item.specs}</p>
                   </div>
                   <Badge variant="outline" className="shrink-0">
-                    {item.quantity} {item.unit_mode === 'BUNDLE' ? item.bundle_name || 'BDL' : item.uom}
+                    {item.is_engineered && item.length_ft
+                      ? `${item.quantity} pcs @ ${item.length_ft}' = ${item.computed_lf} LF`
+                      : `${item.quantity} ${item.unit_mode === 'BUNDLE' ? item.bundle_name || 'BDL' : item.uom}`
+                    }
                   </Badge>
                 </div>
               ))}
