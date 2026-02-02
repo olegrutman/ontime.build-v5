@@ -1,7 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+// Get and sanitize the API key (remove any whitespace/newlines that could break headers)
+const rawApiKey = Deno.env.get("RESEND_API_KEY");
+const RESEND_API_KEY = rawApiKey?.trim().replace(/[\r\n]/g, '');
+
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -21,6 +24,11 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Validate RESEND_API_KEY before proceeding
+    if (!RESEND_API_KEY) {
+      throw new Error("RESEND_API_KEY is not configured. Please add it in your backend secrets.");
+    }
+
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     const { po_id, supplier_email }: SendPORequest = await req.json();
 
