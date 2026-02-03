@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { Package, Eye, Edit, Download, Send, Loader2, Building2, FileText, DollarSign, Lock } from 'lucide-react';
+import { Package, Eye, Edit, Download, Send, Loader2, Building2, FileText, DollarSign, Lock, PackageCheck, Truck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { POStatusBadge } from './POStatusBadge';
@@ -154,6 +154,34 @@ export function POCard({
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Lock className="h-3.5 w-3.5" />
                 <span className="text-xs">Pricing managed by another party</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Delivery Tracking - Show for READY_FOR_DELIVERY and DELIVERED statuses */}
+        {(po.ready_for_delivery_at || po.delivered_at) && (
+          <div className="mt-3 pt-3 border-t space-y-2">
+            {po.ready_for_delivery_at && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <PackageCheck className="h-4 w-4 text-cyan-600" />
+                  <span>Ready for Delivery</span>
+                </div>
+                <span className="font-medium">
+                  {format(new Date(po.ready_for_delivery_at), 'MMM d, yyyy')}
+                </span>
+              </div>
+            )}
+            {po.delivered_at && (
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Truck className="h-4 w-4 text-green-600" />
+                  <span>Delivered</span>
+                </div>
+                <span className="font-medium text-green-600">
+                  {format(new Date(po.delivered_at), 'MMM d, yyyy')}
+                </span>
               </div>
             )}
           </div>
