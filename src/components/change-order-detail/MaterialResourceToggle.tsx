@@ -101,7 +101,7 @@ export function MaterialResourceToggle({
         org_id: currentOrgId,
       });
 
-      // Create PO with SUBMITTED status (auto-submit for work order context)
+      // Step 1: Create PO as ACTIVE (RLS requires ACTIVE status to insert line items)
       // Note: We do NOT set work_item_id here because changeOrder.id is from
       // change_order_projects, not work_items. The linkage is done via
       // change_order_projects.linked_po_id instead.
@@ -114,18 +114,18 @@ export function MaterialResourceToggle({
           supplier_id: data.supplier_id,
           project_id: data.project_id,
           notes: data.notes || null,
-          status: 'SUBMITTED', // Auto-submit to supplier
-          submitted_at: new Date().toISOString(),
-          submitted_by: user.id,
+          status: 'ACTIVE', // Start as ACTIVE so line items can be inserted
           created_by_org_id: currentOrgId,
           pricing_owner_org_id: pricingOwnerOrgId,
         })
         .select()
         .single();
 
-      if (poError) throw poError;
+      if (poError) {
+        throw { stage: 'po_create', ...poError };
+      }
 
-      // Insert line items
+      // Step 2: Insert line items (allowed because PO is ACTIVE)
       if (data.line_items.length > 0) {
         const lineItems = data.line_items.map((item, idx) => ({
           po_id: newPO.id,
@@ -141,7 +141,25 @@ export function MaterialResourceToggle({
         }));
 
         const { error: lineError } = await supabase.from('po_line_items').insert(lineItems);
-        if (lineError) throw lineError;
+        if (lineError) {
+          // Attempt cleanup of orphan PO
+          await supabase.from('purchase_orders').delete().eq('id', newPO.id);
+          throw { stage: 'line_items', ...lineError };
+        }
+      }
+
+      // Step 3: Update PO to SUBMITTED (auto-send to supplier)
+      const { error: submitError } = await supabase
+        .from('purchase_orders')
+        .update({
+          status: 'SUBMITTED',
+          submitted_at: new Date().toISOString(),
+          submitted_by: user.id,
+        })
+        .eq('id', newPO.id);
+
+      if (submitError) {
+        throw { stage: 'submit', ...submitError };
       }
 
       // Link PO to work order
@@ -153,12 +171,15 @@ export function MaterialResourceToggle({
       console.error('Error creating PO:', error);
       // Surface detailed error info for debugging (FK, RLS issues, etc.)
       let message = 'Unknown error';
+      let stageLabel = 'Failed to create PO';
       if (error && typeof error === 'object') {
-        const err = error as { message?: string; code?: string; details?: string };
+        const err = error as { message?: string; code?: string; details?: string; stage?: string };
+        if (err.stage === 'line_items') stageLabel = 'Failed to add line items';
+        else if (err.stage === 'submit') stageLabel = 'Failed to submit PO to supplier';
         message = err.details || err.message || message;
         if (err.code) message = `[${err.code}] ${message}`;
       }
-      toast.error('Failed to create PO: ' + message);
+      toast.error(`${stageLabel}: ${message}`);
     } finally {
       setIsSubmitting(false);
     }
