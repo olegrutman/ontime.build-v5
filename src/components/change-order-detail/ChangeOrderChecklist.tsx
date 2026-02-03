@@ -8,6 +8,7 @@ interface ChangeOrderChecklistProps {
   requiresMaterials: boolean;
   requiresEquipment: boolean;
   hasFCParticipant: boolean;
+  materialsPricingLocked?: boolean;
 }
 
 export function ChangeOrderChecklist({
@@ -15,7 +16,10 @@ export function ChangeOrderChecklist({
   requiresMaterials,
   requiresEquipment,
   hasFCParticipant,
+  materialsPricingLocked,
 }: ChangeOrderChecklistProps) {
+  // Derive materials_priced from the locked flag as source of truth
+  const effectiveMaterialsPriced = materialsPricingLocked || (checklist?.materials_priced ?? false);
   const items = [
     { key: 'location_complete', label: 'Location complete', required: true },
     { key: 'scope_complete', label: 'Scope complete', required: true },
@@ -42,8 +46,10 @@ export function ChangeOrderChecklist({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        {items.map((item) => {
-          const isComplete = checklist && checklist[item.key as keyof ChecklistType];
+      {items.map((item) => {
+          const isComplete = item.key === 'materials_priced'
+            ? effectiveMaterialsPriced
+            : (checklist && checklist[item.key as keyof ChecklistType]);
           return (
             <div
               key={item.key}
