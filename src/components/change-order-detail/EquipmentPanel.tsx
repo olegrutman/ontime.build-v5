@@ -5,7 +5,62 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Plus, Truck } from 'lucide-react';
+
+const EQUIPMENT_OPTIONS = [
+  {
+    category: 'Heavy Equipment',
+    items: [
+      'Forklift',
+      'Scissor Lift',
+      'Boom Lift / JLG',
+      'Crane (Mobile)',
+      'Crane (Tower)',
+      'Excavator',
+      'Skid Steer / Bobcat',
+      'Backhoe',
+    ],
+  },
+  {
+    category: 'Power Tools',
+    items: [
+      'Concrete Mixer',
+      'Concrete Saw',
+      'Generator',
+      'Compressor',
+      'Welder',
+      'Pressure Washer',
+    ],
+  },
+  {
+    category: 'Scaffolding & Access',
+    items: ['Scaffolding (per section)', 'Ladder (Extension)', 'Baker Scaffold'],
+  },
+  {
+    category: 'Transportation',
+    items: ['Dump Truck', 'Flatbed Trailer', 'Delivery Truck'],
+  },
+  {
+    category: 'Specialty',
+    items: [
+      'Dumpster / Roll-off Container',
+      'Portable Toilet',
+      'Temporary Fencing',
+      'Temporary Heating / HVAC',
+      'Water Pump',
+    ],
+  },
+];
 
 interface EquipmentPanelProps {
   equipment: ChangeOrderEquipment[];
@@ -29,11 +84,22 @@ export function EquipmentPanel({
 }: EquipmentPanelProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [description, setDescription] = useState('');
+  const [useCustomDescription, setUseCustomDescription] = useState(false);
   const [pricingType, setPricingType] = useState<'flat' | 'daily'>('flat');
   const [dailyRate, setDailyRate] = useState('');
   const [days, setDays] = useState('1');
   const [flatCost, setFlatCost] = useState('');
   const [notes, setNotes] = useState('');
+
+  const resetForm = () => {
+    setDescription('');
+    setUseCustomDescription(false);
+    setPricingType('flat');
+    setDailyRate('');
+    setDays('1');
+    setFlatCost('');
+    setNotes('');
+  };
 
   const handleSubmit = () => {
     onAddEquipment({
@@ -44,12 +110,12 @@ export function EquipmentPanel({
       flat_cost: pricingType === 'flat' ? parseFloat(flatCost) : undefined,
       notes: notes || undefined,
     });
-    setDescription('');
-    setPricingType('flat');
-    setDailyRate('');
-    setDays('1');
-    setFlatCost('');
-    setNotes('');
+    resetForm();
+    setShowAddForm(false);
+  };
+
+  const handleCancel = () => {
+    resetForm();
     setShowAddForm(false);
   };
 
@@ -113,14 +179,50 @@ export function EquipmentPanel({
             <h4 className="font-medium">Add Equipment</h4>
             <div className="space-y-3">
               <div>
-                <Label htmlFor="equip-description">Description *</Label>
-                <Input
-                  id="equip-description"
-                  placeholder="Equipment description..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
+                <Label>Equipment Type *</Label>
+                <Select
+                  value={useCustomDescription ? 'custom' : description}
+                  onValueChange={(value) => {
+                    if (value === 'custom') {
+                      setUseCustomDescription(true);
+                      setDescription('');
+                    } else {
+                      setUseCustomDescription(false);
+                      setDescription(value);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="bg-background">
+                    <SelectValue placeholder="Select equipment..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-popover z-50 max-h-80">
+                    {EQUIPMENT_OPTIONS.map((group) => (
+                      <SelectGroup key={group.category}>
+                        <SelectLabel>{group.category}</SelectLabel>
+                        {group.items.map((item) => (
+                          <SelectItem key={item} value={item}>
+                            {item}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    ))}
+                    <SelectSeparator />
+                    <SelectItem value="custom">Other (Custom)</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+
+              {useCustomDescription && (
+                <div>
+                  <Label htmlFor="equip-custom">Custom Description *</Label>
+                  <Input
+                    id="equip-custom"
+                    placeholder="Enter equipment description..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                  />
+                </div>
+              )}
 
               <div>
                 <Label>Pricing Type</Label>
@@ -196,7 +298,7 @@ export function EquipmentPanel({
               </div>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowAddForm(false)}>
+              <Button variant="outline" onClick={handleCancel}>
                 Cancel
               </Button>
               <Button
