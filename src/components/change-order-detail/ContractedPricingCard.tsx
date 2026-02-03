@@ -252,8 +252,20 @@ export function ContractedPricingCard({
   
   // Calculate totals
   const laborTotal = changeOrder.labor_total || 0;
-  const materialTotal = changeOrder.material_total || 0;
   const equipmentTotal = changeOrder.equipment_total || 0;
+
+  // Material total: recalculate from PO data if available (handles stale DB values)
+  // This matches the logic in TCPricingSummary for consistency
+  const baseMatTotal = linkedPO?.subtotal || 0;
+  const markupAmount = changeOrder.material_markup_type === 'percent'
+    ? baseMatTotal * ((changeOrder.material_markup_percent || 0) / 100)
+    : changeOrder.material_markup_type === 'lump_sum'
+      ? (changeOrder.material_markup_amount || 0)
+      : 0;
+  const materialTotal = baseMatTotal > 0 
+    ? baseMatTotal + markupAmount 
+    : (changeOrder.material_total || 0); // Fallback to DB value if no linked PO
+  
   const finalPrice = changeOrder.final_price || 0;
   
   // FC costs (what TC pays FC)
