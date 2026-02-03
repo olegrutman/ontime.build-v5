@@ -1,73 +1,183 @@
 
-# Fix: GC Can Only Create SOVs for Their Own Contracts
 
-## Problem Summary
+# Plan: Industry-Standard SOV Percentage Allocation
 
-When a GC views the SOV tab and clicks "Create SOVs from Template", the system creates SOVs for **all** contracts on the project - including FC-TC contracts where the GC is not a party. This causes errors because:
+## Overview
 
-1. The `useContractSOV` hook fetches ALL contracts for a project without filtering by the current user's organization
-2. The `createAllSOVs` function processes all contracts returned by the hook
-3. GC should only be able to create/manage SOVs for contracts where they are the payer (GC-TC contracts)
+Currently, when SOVs are created from templates, each line item receives an equal percentage (e.g., 19 items = ~5.26% each). This doesn't reflect actual construction cost distribution where some tasks (like wall framing) require significantly more labor and materials than others (like final punch).
+
+This plan introduces industry-standard default percentages for each SOV line item category, making the generated SOVs immediately more realistic and reducing manual adjustment work.
+
+---
+
+## Industry Research Summary
+
+Based on construction industry data for residential framing:
+- **Wall framing** (main structure): Largest labor component (~8-10% per floor)
+- **Sheathing**: Material-heavy, less labor (~4-5% per floor)
+- **Trusses/Roof**: Significant structural component (~8-10%)
+- **Exterior items** (siding, windows): Moderate (~4-6% each)
+- **Backout/blocking**: Smaller finish work (~2-3% per floor)
+- **Mobilization**: Setup costs (~2-3%)
+- **Final punch**: Completion items (~3-4%)
 
 ---
 
 ## Solution
 
-Filter the contracts in `useContractSOV.ts` to only include contracts where the current user's organization is either the `from_org_id` (contractor) or `to_org_id` (payer).
+Create a percentage mapping system that assigns industry-standard default percentages to each SOV item based on its category/name pattern.
+
+### Percentage Allocation Strategy
+
+The system will use pattern matching on item names to assign appropriate percentages:
+
+| Item Category | Percentage | Rationale |
+|--------------|------------|-----------|
+| **Mobilization** | 3% | Setup, equipment staging |
+| **Floor/Wall Framing** (per floor) | 9% | Major labor component |
+| **Wall Sheathing** (per floor) | 5% | Material + moderate labor |
+| **Sub-floor** (per floor) | 6% | Structural deck work |
+| **Trusses/Roof Framing** | 10% | Significant structural |
+| **Truss/Roof Sheathing** | 6% | Material-heavy |
+| **Backout/Blocking** (per floor) | 3% | Finish prep work |
+| **Fascia and Soffit** | 4% | Exterior trim |
+| **Siding** (per side or total) | 5-6% | Exterior cladding |
+| **Windows Installation** | 4% | Material + skilled labor |
+| **Doors Installation** | 3% | Similar to windows |
+| **Decorative Elements** | 3% | Variable extras |
+| **Decks** | 4% | Optional scope |
+| **Tyvek/WRB** | 2% | Material wrap |
+| **Hardware Installation** | 2% | Connectors, misc |
+| **Inspections** | 1% | Administrative milestone |
+| **Shim and Shave** | 2% | Quality control |
+| **Final Punch** | 4% | Completion/corrections |
 
 ---
 
-## Technical Changes
+## Technical Implementation
 
 ### File: `src/hooks/useContractSOV.ts`
 
-**Change 1: Import useAuth and get current org**
+**New Function**: `getDefaultPercentForItem(itemName: string): number`
 
-The hook needs access to the current user's organization to filter contracts:
+This function pattern-matches item names and returns the appropriate default percentage:
 
 ```typescript
-import { useAuth } from '@/hooks/useAuth';
-
-export function useContractSOV(projectId: string | undefined) {
-  const { userOrgRoles } = useAuth();
-  const currentOrgId = userOrgRoles[0]?.organization?.id;
+function getDefaultPercentForItem(itemName: string): number {
+  const lower = itemName.toLowerCase();
   
-  // ... rest of hook
+  // Mobilization
+  if (lower.includes('mobilization')) return 3;
+  
+  // Wall framing (highest value - labor intensive)
+  if (lower.includes('walls frame') || 
+      (lower.includes('walls') && !lower.includes('sheet') && !lower.includes('parapet'))) return 9;
+  
+  // Sheathing/sheeting
+  if (lower.includes('sheat') || lower.includes('sheet')) return 5;
+  
+  // Subfloor
+  if (lower.includes('sub-floor') || lower.includes('subfloor')) return 6;
+  
+  // Trusses (not sheathing)
+  if ((lower.includes('truss') && !lower.includes('sheat')) || 
+      lower.includes('roof framing')) return 10;
+  
+  // Backout/blocking
+  if (lower.includes('backout') || lower.includes('blocking')) return 3;
+  
+  // Fascia and Soffit
+  if (lower.includes('fascia') || lower.includes('soffit')) return 4;
+  
+  // Siding
+  if (lower.includes('siding')) return 5;
+  
+  // Windows
+  if (lower.includes('window')) return 4;
+  
+  // Doors
+  if (lower.includes('door')) return 3;
+  
+  // Decorative
+  if (lower.includes('decorative')) return 3;
+  
+  // Decks
+  if (lower.includes('deck')) return 4;
+  
+  // Tyvek/WRB
+  if (lower.includes('tyvek') || lower.includes('wrb')) return 2;
+  
+  // Hardware
+  if (lower.includes('hardware')) return 2;
+  
+  // Parapet/special structural
+  if (lower.includes('parapet')) return 3;
+  
+  // Inspections
+  if (lower.includes('inspection')) return 1;
+  
+  // Shim and shave
+  if (lower.includes('shim')) return 2;
+  
+  // Final punch
+  if (lower.includes('punch') || lower.includes('final')) return 4;
+  
+  // Basement framing
+  if (lower.includes('basement')) return 7;
+  
+  // Default fallback
+  return 5;
 }
 ```
 
-**Change 2: Filter contracts by current org in fetchData**
+**Modify**: `createAllSOVs` function
 
-After fetching contracts, filter to only those where the user's org is a party:
+Replace the equal distribution logic with intelligent percentage assignment:
 
 ```typescript
-// Map contracts with org names
-const fetchedContracts: ProjectContract[] = (contractsResult.data || [])
-  .map((c: any) => ({
-    // ... existing mapping
-  }))
-  // Filter to only contracts where current org is a party
-  .filter((c: ProjectContract) => 
-    c.from_org_id === currentOrgId || c.to_org_id === currentOrgId
-  );
+// Generate percents for each item
+const rawPercents = itemNames.map(name => getDefaultPercentForItem(name));
+const totalRaw = rawPercents.reduce((a, b) => a + b, 0);
+
+// Normalize to 100% while maintaining proportions
+const normalizedPercents = rawPercents.map((p, i) => {
+  if (i === itemNames.length - 1) {
+    // Last item gets remainder to ensure exactly 100%
+    const sumSoFar = normalizedPercents.slice(0, -1).reduce((a, b) => a + b, 0);
+    return parseFloat((100 - sumSoFar).toFixed(2));
+  }
+  return parseFloat((p / totalRaw * 100).toFixed(2));
+});
 ```
 
 ---
 
-## Verification
+## Example Output
 
-| Scenario | Before | After |
-|----------|--------|-------|
-| GC views SOV tab | Sees GC-TC + FC-TC contracts | Only sees GC-TC contracts |
-| GC creates SOVs | Creates for ALL contracts | Only creates for GC-TC contracts |
-| TC views SOV tab | Sees GC-TC + FC-TC contracts | Sees both (they are party to both) |
-| FC views SOV tab | Sees all contracts | Only sees FC-TC contracts |
+For a **Custom Home** template (19 items), instead of each getting ~5.26%:
 
----
-
-## Additional Consideration: Handle Null Org IDs
-
-Some contracts may have `null` for `from_org_id` or `to_org_id` when invitees haven't accepted yet. The filtering should still work since the comparison will be `null === currentOrgId` which is `false`.
+| Item | Current % | New % |
+|------|-----------|-------|
+| Mobilization | 5.26 | 2.8 |
+| Basement Walls | 5.26 | 8.4 |
+| First Sub-floor | 5.26 | 5.6 |
+| Main Level Walls | 5.26 | 8.4 |
+| Main Level Walls Sheeting | 5.26 | 4.7 |
+| Second Sub-Floor | 5.26 | 5.6 |
+| Second Floor Walls | 5.26 | 8.4 |
+| Second Floor Walls Sheeting | 5.26 | 4.7 |
+| Trusses | 5.26 | 9.3 |
+| Truss Sheeting | 5.26 | 4.7 |
+| Main Level Backout | 5.26 | 2.8 |
+| Second Floor Backout | 5.26 | 2.8 |
+| Fascia and Soffit | 5.26 | 3.7 |
+| Decorative Elements | 5.26 | 2.8 |
+| Windows Installation | 5.26 | 3.7 |
+| Patio Doors Installation | 5.26 | 2.8 |
+| Siding | 5.26 | 4.7 |
+| Decks | 5.26 | 3.7 |
+| Final Punch | 5.26 | 3.7 |
+| **Total** | 100% | 100% |
 
 ---
 
@@ -75,10 +185,23 @@ Some contracts may have `null` for `from_org_id` or `to_org_id` when invitees ha
 
 | File | Change |
 |------|--------|
-| `src/hooks/useContractSOV.ts` | Add org filtering to contract fetch |
+| `src/hooks/useContractSOV.ts` | Add `getDefaultPercentForItem()` function and update `createAllSOVs` |
 
 ---
 
-## Summary
+## Benefits
 
-This fix ensures that each organization can only view and manage SOVs for contracts where they are a party. This follows the existing RLS patterns used elsewhere in the codebase (e.g., in `EditProject.tsx` which already filters contracts by current org).
+1. **More Accurate Billing**: Contractors bill appropriate amounts for each phase
+2. **Reduced Manual Work**: Less time spent adjusting default percentages
+3. **Industry Alignment**: Matches real-world cost distribution expectations
+4. **Still Editable**: Users can still adjust percentages after creation
+
+---
+
+## Notes
+
+- Percentages are automatically normalized to ensure they always total 100%
+- The pattern matching is case-insensitive and flexible to handle variations
+- For story-generated templates (apartments), the same logic applies per-item
+- Users retain full ability to edit percentages after SOV creation
+
