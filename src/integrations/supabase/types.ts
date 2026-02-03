@@ -415,8 +415,12 @@ export type Database = {
           fixing_trade_notes: string | null
           id: string
           labor_total: number | null
+          linked_po_id: string | null
           location_data: Json | null
           material_cost_responsibility: string | null
+          material_markup_amount: number | null
+          material_markup_percent: number | null
+          material_markup_type: string | null
           material_total: number | null
           project_id: string
           reason: string | null
@@ -439,8 +443,12 @@ export type Database = {
           fixing_trade_notes?: string | null
           id?: string
           labor_total?: number | null
+          linked_po_id?: string | null
           location_data?: Json | null
           material_cost_responsibility?: string | null
+          material_markup_amount?: number | null
+          material_markup_percent?: number | null
+          material_markup_type?: string | null
           material_total?: number | null
           project_id: string
           reason?: string | null
@@ -463,8 +471,12 @@ export type Database = {
           fixing_trade_notes?: string | null
           id?: string
           labor_total?: number | null
+          linked_po_id?: string | null
           location_data?: Json | null
           material_cost_responsibility?: string | null
+          material_markup_amount?: number | null
+          material_markup_percent?: number | null
+          material_markup_type?: string | null
           material_total?: number | null
           project_id?: string
           reason?: string | null
@@ -477,6 +489,13 @@ export type Database = {
           work_type?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "change_order_projects_linked_po_id_fkey"
+            columns: ["linked_po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "change_order_projects_project_id_fkey"
             columns: ["project_id"]

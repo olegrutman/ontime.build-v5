@@ -13,3 +13,6 @@ export { TCApprovalPanel } from './TCApprovalPanel';
 export { ParticipantActivationPanel } from './ParticipantActivationPanel';
 export { GCLaborReviewPanel } from './GCLaborReviewPanel';
 export { ContractedPricingCard } from './ContractedPricingCard';
+export { MaterialResourceToggle } from './MaterialResourceToggle';
+export { LinkedPOCard } from './LinkedPOCard';
+export { MaterialMarkupEditor } from './MaterialMarkupEditor';

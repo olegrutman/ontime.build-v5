@@ -3,12 +3,24 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, DollarSign, Send } from 'lucide-react';
 import { ChangeOrderTCLabor, ChangeOrderMaterial, ChangeOrderEquipment } from '@/types/changeOrderProject';
 
+interface LinkedPOData {
+  id: string;
+  po_number: string;
+  status: string;
+  subtotal?: number;
+  itemCount?: number;
+}
+
 interface TCPricingSummaryProps {
   tcLabor: ChangeOrderTCLabor[];
   materials: ChangeOrderMaterial[];
   equipment: ChangeOrderEquipment[];
   requiresMaterials: boolean;
   requiresEquipment: boolean;
+  linkedPO?: LinkedPOData | null;
+  materialMarkupType?: 'percent' | 'lump_sum' | null;
+  materialMarkupPercent?: number;
+  materialMarkupAmount?: number;
   onSubmitPricing: () => void;
   isSubmitting?: boolean;
   isEditable: boolean;
@@ -20,22 +32,45 @@ export function TCPricingSummary({
   equipment,
   requiresMaterials,
   requiresEquipment,
+  linkedPO,
+  materialMarkupType,
+  materialMarkupPercent = 0,
+  materialMarkupAmount = 0,
   onSubmitPricing,
   isSubmitting,
   isEditable,
 }: TCPricingSummaryProps) {
   // Calculate totals
   const laborTotal = tcLabor.reduce((sum, l) => sum + (l.labor_total || 0), 0);
-  const materialsTotal = materials.reduce((sum, m) => sum + (m.final_price || m.line_total || 0), 0);
+  
+  // Materials total: use linked PO if available, otherwise use manual materials
+  const baseMatTotal = linkedPO 
+    ? (linkedPO.subtotal || 0)
+    : materials.reduce((sum, m) => sum + (m.final_price || m.line_total || 0), 0);
+  
+  // Calculate markup
+  const markupAmount = materialMarkupType === 'percent'
+    ? baseMatTotal * (materialMarkupPercent / 100)
+    : (materialMarkupType === 'lump_sum' ? materialMarkupAmount : 0);
+  
+  const materialsTotal = baseMatTotal + markupAmount;
   const equipmentTotal = equipment.reduce((sum, e) => sum + (e.total_cost || 0), 0);
   const grandTotal = laborTotal + materialsTotal + equipmentTotal;
 
   // Check completion status
   const hasLaborPricing = tcLabor.length > 0;
-  const allMaterialsPriced = !requiresMaterials || materials.length === 0 || materials.every(m => m.unit_cost && m.unit_cost > 0);
+  
+  // Materials are priced if:
+  // - Not required, OR
+  // - Linked PO exists and is priced, OR
+  // - All manual materials are priced
+  const hasMaterialsPriced = !requiresMaterials 
+    || (linkedPO && linkedPO.status !== 'ACTIVE' && linkedPO.status !== 'SUBMITTED')
+    || materials.every(m => m.unit_cost && m.unit_cost > 0);
+  
   const allEquipmentPriced = !requiresEquipment || equipment.length === 0 || equipment.every(e => e.total_cost && e.total_cost > 0);
   
-  const isComplete = hasLaborPricing && allMaterialsPriced && allEquipmentPriced;
+  const isComplete = hasLaborPricing && hasMaterialsPriced && allEquipmentPriced;
 
   return (
     <Card>
@@ -60,11 +95,20 @@ export function TCPricingSummary({
             <div className="flex justify-between items-center">
               <span className="flex items-center gap-2">
                 Materials
-                {allMaterialsPriced && materials.length > 0 && (
+                {hasMaterialsPriced && (
                   <CheckCircle className="w-3 h-3 text-green-500" />
                 )}
               </span>
               <span className="font-medium">${materialsTotal.toFixed(2)}</span>
+            </div>
+          )}
+
+          {requiresMaterials && markupAmount > 0 && (
+            <div className="flex justify-between items-center text-xs text-muted-foreground pl-4">
+              <span>
+                Markup ({materialMarkupType === 'percent' ? `${materialMarkupPercent}%` : 'lump sum'})
+              </span>
+              <span>+${markupAmount.toFixed(2)}</span>
             </div>
           )}
           
@@ -93,8 +137,8 @@ export function TCPricingSummary({
             <p className="font-medium mb-1">To submit pricing:</p>
             <ul className="space-y-0.5">
               {!hasLaborPricing && <li>• Add labor pricing</li>}
-              {requiresMaterials && !allMaterialsPriced && (
-                <li>• Price all materials</li>
+              {requiresMaterials && !hasMaterialsPriced && (
+                <li>• {linkedPO ? 'Wait for PO pricing' : 'Price all materials'}</li>
               )}
               {requiresEquipment && !allEquipmentPriced && (
                 <li>• Add equipment costs</li>

@@ -19,6 +19,7 @@ import { TCApprovalPanel } from './TCApprovalPanel';
 import { ParticipantActivationPanel } from './ParticipantActivationPanel';
 import { GCLaborReviewPanel } from './GCLaborReviewPanel';
 import { ContractedPricingCard } from './ContractedPricingCard';
+import { MaterialResourceToggle } from './MaterialResourceToggle';
 
 export function ChangeOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +34,7 @@ export function ChangeOrderDetailPage() {
     materials,
     equipment,
     checklist,
+    linkedPO,
     isLoading,
     availableFieldCrews,
     availableSuppliers,
@@ -52,6 +54,11 @@ export function ChangeOrderDetailPage() {
     isLockingFCHours,
     updateChangeOrder,
     isUpdatingChangeOrder,
+    toggleMaterials,
+    toggleEquipment,
+    linkPO,
+    updateMarkup,
+    isLinkingPO,
   } = useChangeOrder(id || null);
 
   // Get updateStatus from useChangeOrderProject
@@ -174,6 +181,26 @@ export function ChangeOrderDetailPage() {
 
           {/* Sidebar */}
           <div className="space-y-6">
+            {/* Material Resource Toggle - TC and FC can manage materials/equipment */}
+            {(isTC || isFC) && isTCEditable && (
+              <MaterialResourceToggle
+                changeOrder={changeOrder}
+                projectId={changeOrder.project_id}
+                projectName={changeOrder.project?.name}
+                projectAddress={changeOrder.project?.address || ''}
+                isTC={isTC}
+                isFC={isFC}
+                onUpdateMaterialsNeeded={toggleMaterials}
+                onUpdateEquipmentNeeded={toggleEquipment}
+                onPOCreated={linkPO}
+                onUpdateMarkup={(type, percent, amount) => updateMarkup({ markupType: type, markupPercent: percent, markupAmount: amount })}
+                linkedPO={linkedPO}
+                isEditable={isTCEditable}
+                isCreatingPO={isLinkingPO}
+                canViewPricing={isTC || (isGC && changeOrder.material_cost_responsibility === 'GC')}
+              />
+            )}
+
             {/* Contracted Pricing - visible to all roles */}
             <ContractedPricingCard
               changeOrder={changeOrder}
@@ -193,6 +220,10 @@ export function ChangeOrderDetailPage() {
                 equipment={equipment}
                 requiresMaterials={changeOrder.requires_materials}
                 requiresEquipment={changeOrder.requires_equipment}
+                linkedPO={linkedPO}
+                materialMarkupType={changeOrder.material_markup_type as 'percent' | 'lump_sum' | null}
+                materialMarkupPercent={changeOrder.material_markup_percent ?? 0}
+                materialMarkupAmount={changeOrder.material_markup_amount ?? 0}
                 onSubmitPricing={() => updateStatus({ 
                   id: changeOrder.id, 
                   status: 'ready_for_approval' 

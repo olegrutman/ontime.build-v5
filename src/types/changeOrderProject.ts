@@ -54,10 +54,19 @@ export interface ChangeOrderProject {
   created_at: string;
   updated_at: string;
   
+  // Linked PO for materials
+  linked_po_id?: string | null;
+  
+  // Material markup (when TC is cost-responsible)
+  material_markup_type?: 'percent' | 'lump_sum' | null;
+  material_markup_percent?: number;
+  material_markup_amount?: number;
+  
   // Joined data
   project?: {
     id: string;
     name: string;
+    address?: string;
   };
 }
 
