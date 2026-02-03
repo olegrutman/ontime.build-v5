@@ -75,6 +75,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingPrices, setEditingPrices] = useState(false);
   const [priceEdits, setPriceEdits] = useState<Record<string, PriceEdit>>({});
+  const [salesTaxPercent, setSalesTaxPercent] = useState<number>(0);
 
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
@@ -216,6 +217,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
       };
     });
     setPriceEdits(edits);
+    setSalesTaxPercent(po?.sales_tax_percent ?? 0);
     setEditingPrices(true);
   };
 
@@ -241,11 +243,12 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
         }
       }
 
-      // Update PO status to PRICED
+      // Update PO status to PRICED with sales tax
       await supabase
         .from('purchase_orders')
         .update({
           status: 'PRICED',
+          sales_tax_percent: salesTaxPercent,
           priced_at: new Date().toISOString(),
           priced_by: user.id,
         })
@@ -568,27 +571,84 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
                 );
               })}
             </TableBody>
-            {showPricingColumns && (
-              <TableFooter>
-                <TableRow className="bg-muted/50">
-                  <TableCell colSpan={5} className="text-right font-bold">
-                    Total
-                  </TableCell>
-                  <TableCell></TableCell>
-                  <TableCell className="text-right font-bold text-lg">
-                    {formatCurrency(
-                      editingPrices
-                        ? lineItems.reduce((sum, item) => {
-                            const price = priceEdits[item.id]?.unit_price ?? item.unit_price ?? 0;
-                            return sum + price * item.quantity;
-                          }, 0)
-                        : total
-                    )}
-                  </TableCell>
-                  {editingPrices && <TableCell></TableCell>}
-                </TableRow>
-              </TableFooter>
-            )}
+            {showPricingColumns && (() => {
+              const subtotal = editingPrices
+                ? lineItems.reduce((sum, item) => {
+                    const price = priceEdits[item.id]?.unit_price ?? item.unit_price ?? 0;
+                    return sum + price * item.quantity;
+                  }, 0)
+                : total;
+              const taxPercent = editingPrices ? salesTaxPercent : (po.sales_tax_percent ?? 0);
+              const taxAmount = subtotal * (taxPercent / 100);
+              const grandTotal = subtotal + taxAmount;
+
+              return (
+                <TableFooter>
+                  {/* Subtotal row - only show if tax exists or editing */}
+                  {(taxPercent > 0 || editingPrices) && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-right font-medium">
+                        Subtotal
+                      </TableCell>
+                      <TableCell></TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(subtotal)}
+                      </TableCell>
+                      {editingPrices && <TableCell></TableCell>}
+                    </TableRow>
+                  )}
+                  
+                  {/* Tax row */}
+                  {editingPrices ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-right font-medium">
+                        Sales Tax
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center justify-end gap-1">
+                          <Input
+                            type="number"
+                            step="0.001"
+                            min="0"
+                            max="100"
+                            className="w-20 text-right"
+                            value={salesTaxPercent}
+                            onChange={(e) => setSalesTaxPercent(parseFloat(e.target.value) || 0)}
+                          />
+                          <span className="text-muted-foreground">%</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(taxAmount)}
+                      </TableCell>
+                      <TableCell></TableCell>
+                    </TableRow>
+                  ) : taxPercent > 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-right font-medium">
+                        Sales Tax ({taxPercent}%)
+                      </TableCell>
+                      <TableCell></TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(taxAmount)}
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
+                  
+                  {/* Grand Total row */}
+                  <TableRow className="bg-muted/50">
+                    <TableCell colSpan={5} className="text-right font-bold">
+                      {taxPercent > 0 || editingPrices ? 'Grand Total' : 'Total'}
+                    </TableCell>
+                    <TableCell></TableCell>
+                    <TableCell className="text-right font-bold text-lg">
+                      {formatCurrency(grandTotal)}
+                    </TableCell>
+                    {editingPrices && <TableCell></TableCell>}
+                  </TableRow>
+                </TableFooter>
+              );
+            })()}
           </Table>
         </CardContent>
       </Card>

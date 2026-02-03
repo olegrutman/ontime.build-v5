@@ -2275,6 +2275,7 @@ export type Database = {
           priced_by: string | null
           pricing_owner_org_id: string | null
           project_id: string | null
+          sales_tax_percent: number | null
           sent_at: string | null
           sent_by: string | null
           status: Database["public"]["Enums"]["po_status"]
@@ -2300,6 +2301,7 @@ export type Database = {
           priced_by?: string | null
           pricing_owner_org_id?: string | null
           project_id?: string | null
+          sales_tax_percent?: number | null
           sent_at?: string | null
           sent_by?: string | null
           status?: Database["public"]["Enums"]["po_status"]
@@ -2325,6 +2327,7 @@ export type Database = {
           priced_by?: string | null
           pricing_owner_org_id?: string | null
           project_id?: string | null
+          sales_tax_percent?: number | null
           sent_at?: string | null
           sent_by?: string | null
           status?: Database["public"]["Enums"]["po_status"]

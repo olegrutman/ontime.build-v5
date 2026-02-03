@@ -20,6 +20,7 @@ export interface PurchaseOrder {
   ordered_at?: string | null;
   delivered_at?: string | null;
   download_token?: string;
+  sales_tax_percent?: number | null;
   created_at: string;
   updated_at: string;
   // New fields for pricing visibility
