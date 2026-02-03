@@ -41,10 +41,10 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
   // Check SOV readiness - gates work order creation
   const sovReadiness = useSOVReadiness(projectId);
 
-  // Refetch SOV status on mount to ensure fresh data after tab navigation
+  // Refetch SOV status when tab becomes visible or projectId changes
   useEffect(() => {
     sovReadiness.refetch();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [projectId]); // Refetch when projectId changes or component mounts
 
   // GC and TC can create work orders with full wizard; FC uses simplified dialog
   const isFC = currentRole === 'FC_PM';
