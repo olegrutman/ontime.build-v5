@@ -42,15 +42,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { POStatusBadge } from './POStatusBadge';
 import { PurchaseOrder, POLineItem, POStatus } from '@/types/purchaseOrder';
 
@@ -82,8 +73,6 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
-  const [supplierEmail, setSupplierEmail] = useState('');
   const [editingPrices, setEditingPrices] = useState(false);
   const [priceEdits, setPriceEdits] = useState<Record<string, PriceEdit>>({});
 
@@ -131,18 +120,6 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
 
     if (poRes.data) {
       setPO(poRes.data as unknown as PurchaseOrder);
-      // Pre-fill supplier email from contact_info
-      const contactInfo = poRes.data.supplier?.contact_info;
-      if (contactInfo) {
-        try {
-          const parsed = JSON.parse(contactInfo);
-          setSupplierEmail(parsed.email || '');
-        } catch {
-          if (contactInfo.includes('@')) {
-            setSupplierEmail(contactInfo);
-          }
-        }
-      }
     }
     if (lineItemsRes.data) setLineItems(lineItemsRes.data as POLineItem[]);
     setLoading(false);
@@ -176,36 +153,28 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
   };
 
   const handleSubmitToSupplier = async () => {
-    if (!supplierEmail || !supplierEmail.includes('@')) {
-      toast.error('Please enter a valid supplier email');
-      return;
-    }
+    if (!user || !po) return;
 
     setActionLoading(true);
     try {
-      const { error } = await supabase.functions.invoke('send-po', {
-        body: { po_id: poId, supplier_email: supplierEmail },
-      });
-
-      if (error) throw error;
-
-      // Update status to SUBMITTED
-      await supabase
+      // Update status to SUBMITTED - supplier will see it on their project page
+      const { error } = await supabase
         .from('purchase_orders')
         .update({
           status: 'SUBMITTED',
           submitted_at: new Date().toISOString(),
-          submitted_by: user?.id,
+          submitted_by: user.id,
         })
         .eq('id', poId);
 
-      toast.success('PO sent to supplier');
-      setSubmitDialogOpen(false);
+      if (error) throw error;
+
+      toast.success('PO submitted to supplier for pricing');
       fetchPO();
       onUpdate();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to send PO';
-      console.error('Error sending PO:', error);
+      const message = error instanceof Error ? error.message : 'Failed to submit PO';
+      console.error('Error submitting PO:', error);
       toast.error(message);
     } finally {
       setActionLoading(false);
@@ -378,8 +347,12 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
                 <Trash2 className="h-4 w-4 mr-2" />
                 Delete
               </Button>
-              <Button onClick={() => setSubmitDialogOpen(true)}>
-                <Send className="h-4 w-4 mr-2" />
+              <Button onClick={handleSubmitToSupplier} disabled={actionLoading}>
+                {actionLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
                 Submit to Supplier
               </Button>
             </>
@@ -670,50 +643,6 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Submit to Supplier Dialog */}
-      <Dialog open={submitDialogOpen} onOpenChange={setSubmitDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Submit to Supplier</DialogTitle>
-            <DialogDescription>
-              Send this purchase order to the supplier for pricing and fulfillment.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="supplier-email">Supplier Email</Label>
-              <Input
-                id="supplier-email"
-                type="email"
-                placeholder="supplier@example.com"
-                value={supplierEmail}
-                onChange={(e) => setSupplierEmail(e.target.value)}
-              />
-            </div>
-            <div className="text-sm text-muted-foreground">
-              <p>The supplier will receive:</p>
-              <ul className="list-disc list-inside mt-1">
-                <li>Email with PO details</li>
-                <li>PDF download link</li>
-                <li>CSV download for ERP import</li>
-              </ul>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSubmitDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmitToSupplier} disabled={actionLoading}>
-              {actionLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Send className="h-4 w-4 mr-2" />
-              )}
-              Send to Supplier
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
