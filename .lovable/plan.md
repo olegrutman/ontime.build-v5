@@ -1,105 +1,208 @@
 
 
-# Fix: Supplier Cannot See Purchase Orders
+# Add Sales Tax to Purchase Orders
 
-## Problem
+## Overview
 
-Suppliers cannot see any Purchase Orders on their project page because the RLS (Row-Level Security) SELECT policies only check if the user belongs to the organization that **created** the PO, not the supplier organization.
-
-**Current Policy:**
-```sql
--- purchase_orders SELECT
-user_in_org(auth.uid(), organization_id)  -- Only checks PO creator org
-```
-
-**Result:** Supplier org (`12b5d7de-...`) ≠ PO creator org (`96a802b8-...`) → Access Denied
-
-## Solution
-
-Update the SELECT policies for `purchase_orders` and `po_line_items` to also grant access to suppliers.
+Allow suppliers to add a sales tax percentage to POs during pricing, with automatic calculation of the total including tax.
 
 ---
 
-## Database Migration
+## Part 1: Database Schema Changes
 
-### 1. Update `purchase_orders` SELECT Policy
+### 1.1 Add `sales_tax_percent` to `purchase_orders`
 
-Drop the old policy and create a new one that allows:
-- Organization members who created the PO
-- Suppliers who are assigned to the PO
+Store the tax percentage at the PO level (not per line item, since tax typically applies to the whole order).
 
 ```sql
-DROP POLICY IF EXISTS "Org members can view POs" ON purchase_orders;
-
-CREATE POLICY "Project participants and suppliers can view POs" 
-ON purchase_orders FOR SELECT
-USING (
-  -- Creator org can view
-  user_in_org(auth.uid(), organization_id)
-  OR
-  -- Supplier assigned to PO can view
-  EXISTS (
-    SELECT 1 FROM suppliers s
-    WHERE s.id = purchase_orders.supplier_id
-      AND user_in_org(auth.uid(), s.organization_id)
-  )
-);
+ALTER TABLE purchase_orders 
+ADD COLUMN IF NOT EXISTS sales_tax_percent numeric(5,3) DEFAULT 0;
 ```
 
-### 2. Update `po_line_items` SELECT Policy
+**Notes:**
+- `numeric(5,3)` allows values like `8.250` (max 99.999%)
+- Default of 0 means no tax by default
+- Stored at PO level since most jurisdictions apply a single tax rate to the whole order
 
-Similarly update line items visibility:
+---
 
-```sql
-DROP POLICY IF EXISTS "Users can view PO line items" ON po_line_items;
+## Part 2: Type Updates
 
-CREATE POLICY "PO participants can view line items"
-ON po_line_items FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM purchase_orders po
-    WHERE po.id = po_line_items.po_id
-    AND (
-      -- Creator org can view
-      user_in_org(auth.uid(), po.organization_id)
-      OR
-      -- Supplier can view
-      EXISTS (
-        SELECT 1 FROM suppliers s
-        WHERE s.id = po.supplier_id
-          AND user_in_org(auth.uid(), s.organization_id)
-      )
-    )
-  )
-);
+### 2.1 Update `src/types/purchaseOrder.ts`
+
+Add the new field to the PurchaseOrder interface:
+
+```typescript
+export interface PurchaseOrder {
+  // ... existing fields
+  sales_tax_percent?: number | null;
+}
 ```
 
 ---
 
-## No Frontend Changes Required
+## Part 3: Frontend - PODetail.tsx Updates
 
-The frontend code in `PurchaseOrdersTab.tsx` is already correctly set up:
-- It filters by `supplier_id` for supplier users (lines 61-74)
-- But the query returns empty because the database blocks access at RLS level
+### 3.1 Add State for Tax Percentage
 
-Once the RLS policies are fixed, the existing frontend logic will work.
+When supplier is editing prices, also allow editing the tax percentage:
+
+```typescript
+const [salesTaxPercent, setSalesTaxPercent] = useState<number>(0);
+```
+
+Initialize from PO data when entering edit mode:
+
+```typescript
+const initializePriceEdits = () => {
+  // ... existing code
+  setSalesTaxPercent(po?.sales_tax_percent ?? 0);
+  setEditingPrices(true);
+};
+```
+
+### 3.2 Add Tax Input Field
+
+Show a tax percentage input in the table footer when editing:
+
+```typescript
+{editingPrices && (
+  <TableRow>
+    <TableCell colSpan={5} className="text-right">
+      Sales Tax
+    </TableCell>
+    <TableCell>
+      <div className="flex items-center gap-1">
+        <Input
+          type="number"
+          step="0.001"
+          min="0"
+          max="100"
+          className="w-20 text-right"
+          value={salesTaxPercent}
+          onChange={(e) => setSalesTaxPercent(parseFloat(e.target.value) || 0)}
+        />
+        <span>%</span>
+      </div>
+    </TableCell>
+    <TableCell className="text-right">
+      {formatCurrency(subtotal * (salesTaxPercent / 100))}
+    </TableCell>
+  </TableRow>
+)}
+```
+
+### 3.3 Update Table Footer Display
+
+Show subtotal, tax, and grand total:
+
+```typescript
+// When viewing (not editing)
+{showPricingColumns && !editingPrices && po.sales_tax_percent > 0 && (
+  <>
+    <TableRow>
+      <TableCell colSpan={5} className="text-right">Subtotal</TableCell>
+      <TableCell></TableCell>
+      <TableCell className="text-right">{formatCurrency(subtotal)}</TableCell>
+    </TableRow>
+    <TableRow>
+      <TableCell colSpan={5} className="text-right">
+        Sales Tax ({po.sales_tax_percent}%)
+      </TableCell>
+      <TableCell></TableCell>
+      <TableCell className="text-right">
+        {formatCurrency(subtotal * (po.sales_tax_percent / 100))}
+      </TableCell>
+    </TableRow>
+    <TableRow className="bg-muted/50">
+      <TableCell colSpan={5} className="text-right font-bold">Total</TableCell>
+      <TableCell></TableCell>
+      <TableCell className="text-right font-bold text-lg">
+        {formatCurrency(subtotal * (1 + po.sales_tax_percent / 100))}
+      </TableCell>
+    </TableRow>
+  </>
+)}
+```
+
+### 3.4 Update handleSavePrices
+
+Save the tax percentage when supplier saves pricing:
+
+```typescript
+const handleSavePrices = async () => {
+  // ... existing line item updates
+
+  // Update PO status and tax
+  await supabase
+    .from('purchase_orders')
+    .update({
+      status: 'PRICED',
+      sales_tax_percent: salesTaxPercent,
+      priced_at: new Date().toISOString(),
+      priced_by: user.id,
+    })
+    .eq('id', poId);
+};
+```
 
 ---
 
-## Expected Behavior After Fix
+## Part 4: Visual Design
 
-| User Type | Can See POs |
-|-----------|-------------|
-| GC/TC (creator org) | ✅ All POs they created |
-| Supplier | ✅ POs where they are assigned as supplier |
-| FC | Only if they created the PO |
+### Footer Layout (When Viewing Priced PO)
+
+| Description | Unit Price | Total |
+|-------------|-----------|-------|
+| ... items ... | | |
+| **Subtotal** | | $1,234.56 |
+| Sales Tax (8.25%) | | $101.85 |
+| **Grand Total** | | **$1,336.41** |
+
+### Footer Layout (When Editing Prices)
+
+| Description | Unit Price | Total | Lead Time |
+|-------------|-----------|-------|-----------|
+| ... items with inputs ... | | | |
+| **Subtotal** | | $1,234.56 | |
+| Sales Tax | [8.25] % | $101.85 | |
+| **Grand Total** | | **$1,336.41** | |
 
 ---
 
-## Technical Summary
+## Implementation Steps
 
-| Table | Action | Fix |
-|-------|--------|-----|
-| `purchase_orders` | SELECT | Add `OR EXISTS (supplier.organization_id = user org)` |
-| `po_line_items` | SELECT | Add same supplier check via join |
+```text
+1. Database Migration
+   └── Add sales_tax_percent column to purchase_orders
+
+2. Type Updates
+   └── Add sales_tax_percent to PurchaseOrder interface
+
+3. PODetail.tsx Updates
+   ├── Add salesTaxPercent state
+   ├── Initialize from PO data when editing
+   ├── Add tax input row in edit mode
+   ├── Show subtotal/tax/total breakdown when viewing
+   └── Save tax with handleSavePrices
+```
+
+---
+
+## Security Considerations
+
+- Only suppliers can edit tax (when PO status is SUBMITTED)
+- Tax percentage is visible to pricing owner and supplier (follows same visibility rules)
+- No special RLS needed - uses existing PO update policies
+
+---
+
+## Summary
+
+| Feature | Implementation |
+|---------|----------------|
+| Storage | `sales_tax_percent` on `purchase_orders` table |
+| Input | Number input (0-100%) shown when supplier adds pricing |
+| Display | Subtotal → Tax → Total breakdown in footer |
+| Permissions | Same as unit price visibility/editability |
 
