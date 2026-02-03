@@ -110,7 +110,7 @@ export function MaterialResourceToggle({
           po_name: `Materials for ${changeOrder.title}`,
           supplier_id: data.supplier_id,
           project_id: data.project_id,
-          work_order_id: changeOrder.id,
+          work_item_id: changeOrder.id,
           notes: data.notes || null,
           status: 'SUBMITTED', // Auto-submit to supplier
           submitted_at: new Date().toISOString(),
