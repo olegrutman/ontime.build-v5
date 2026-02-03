@@ -1,199 +1,87 @@
 
+# Plan: Fix Material Total Display in ContractedPricingCard
 
-# Plan: Fix TC Work Order Pricing Display and GC Material Visibility
+## Problem
 
-## Problem Analysis
+The "Materials (to GC)" line in the Work Order Pricing tile shows `$0.00` even though materials are priced and locked. This affects the TC view specifically.
 
-After analyzing the codebase, I identified several interconnected issues:
+## Root Cause
 
-### Issue 1: TC's ContractedPricingCard Shows Incorrect Material Costs
+The `ContractedPricingCard` component reads `materialTotal` directly from `changeOrder.material_total` (database column):
 
-In `ContractedPricingCard.tsx` (line 240), the TC view calculates `materialCost` from the legacy `materials` array:
 ```typescript
-const materialCost = materials.reduce((sum, m) => sum + ((m.unit_cost || 0) * m.quantity), 0);
+// Line 255 in ContractedPricingCard.tsx
+const materialTotal = changeOrder.material_total || 0;
 ```
 
-But the new workflow uses **linked POs** (`po_line_items`), not `change_order_materials`. So `materialCost` is always `0` when using the PO flow, causing:
-- "Materials (Base Cost)" to show $0.00
-- Profit calculation to be incorrect
+However, the database column is `0.00` because:
+1. Materials pricing was locked before the code fix that calculates and stores `material_total`
+2. The existing work order has stale data
 
-### Issue 2: TC's ContractedPricingCard Shows Wrong Material Revenue
+Meanwhile, the `TCPricingSummary` sidebar card shows correct values because it **recalculates** the total from `linkedPO.subtotal` + markup:
 
-Line 112 shows "Materials Markup" as `materialTotal`:
 ```typescript
-<PricingRow label="Materials Markup" value={materialTotal} />
+// TCPricingSummary.tsx - lines 47-56
+const baseMatTotal = linkedPO ? (linkedPO.subtotal || 0) : ...;
+const markupAmount = materialMarkupType === 'percent'
+  ? baseMatTotal * (materialMarkupPercent / 100)
+  : (materialMarkupType === 'lump_sum' ? materialMarkupAmount : 0);
+const materialsTotal = baseMatTotal + markupAmount;
 ```
-
-But `materialTotal` comes from `changeOrder.material_total`, which is the **total with markup**, not just the markup amount. The label is misleading.
-
-### Issue 3: WorkOrderMaterialsPanel Shows Incorrect Data After Locking
-
-When materials pricing is locked:
-- The locked indicator shows, but prices still display correctly
-- However, the `TCPricingSummary` sidebar card doesn't receive the correct subtotal because `linkedPO.subtotal` might be 0 if the query isn't properly calculating it from line items
-
-### Issue 4: GC Cannot See Base Cost When Not Cost-Responsible
-
-Currently, if `material_cost_responsibility = 'TC'`, the GC only sees the marked-up total. According to the memory note:
-> "when gc gets work order back to finalize it they can see material list and marked up price but not base price if they are not responsible for the material cost"
-
-This is **correct behavior** per privacy rules - GC shouldn't see TC's costs.
-
----
 
 ## Solution
 
-### Part 1: Fix ContractedPricingCard for TC View
+Update `ContractedPricingCard` to recalculate `materialTotal` from linked PO data when available, matching how `TCPricingSummary` handles it. This ensures the UI always displays accurate values regardless of whether the database column was updated.
 
-Update the TC view to properly calculate material base cost from the linked PO:
+## Implementation
 
-**Current flow:**
-- `materialCost` is calculated from `materials` array (legacy, empty when using POs)
+### File: `src/components/change-order-detail/ContractedPricingCard.tsx`
 
-**New flow:**
-- Pass `linkedPO` data to `ContractedPricingCard`
-- Calculate `materialCost` from `linkedPO.subtotal` (base cost before markup)
-- Calculate markup as `materialTotal - materialCost`
-
-### Part 2: Fix Label "Materials Markup" → Show Both
-
-For TC revenue breakdown, show:
-- "Materials (to GC)" = full materialTotal (what GC pays)
-- Under Costs: "Materials (Base Cost)" = linkedPO.subtotal
-
-### Part 3: Update WorkOrderMaterialsPanel After Lock
-
-Ensure the panel shows the locked pricing summary even when `canViewPricing` is false in certain conditions.
-
----
-
-## Implementation Details
-
-### File 1: `src/components/change-order-detail/ChangeOrderDetailPage.tsx`
-
-Pass `linkedPO` to `ContractedPricingCard`:
-
+**Current code (lines 253-256):**
 ```typescript
-<ContractedPricingCard
-  changeOrder={changeOrder}
-  fcHours={fcHours}
-  tcLabor={tcLabor}
-  materials={materials}
-  equipment={equipment}
-  participants={participants}
-  currentRole={currentRole}
-  linkedPO={linkedPO}  // NEW PROP
-/>
-```
-
-### File 2: `src/components/change-order-detail/ContractedPricingCard.tsx`
-
-Update interface to accept `linkedPO`:
-
-```typescript
-interface ContractedPricingCardProps {
-  // ... existing props
-  linkedPO?: {
-    id: string;
-    po_number: string;
-    status: string;
-    subtotal?: number;
-    itemCount?: number;
-    items?: any[];
-  } | null;
-}
-```
-
-Update TC view's cost calculation:
-
-```typescript
-// Material base cost (from linked PO if using PO workflow, otherwise from materials array)
-const materialCost = linkedPO?.subtotal 
-  ?? materials.reduce((sum, m) => sum + ((m.unit_cost || 0) * m.quantity), 0);
-```
-
-Update `TCPricingView` to show:
-- Revenue section: "Materials" = materialTotal (full amount to GC)
-- Costs section: "Materials (Supplier Cost)" = materialCost (base from PO)
-
-### File 3: Update Profit Calculation
-
-```typescript
-// TC profit calculation
+// Calculate totals
+const laborTotal = changeOrder.labor_total || 0;
 const materialTotal = changeOrder.material_total || 0;
-const materialCost = linkedPO?.subtotal || 0;
-const profit = revenue - fcCost - materialCost;
+const equipmentTotal = changeOrder.equipment_total || 0;
 ```
 
----
+**Updated code:**
+```typescript
+// Calculate totals
+const laborTotal = changeOrder.labor_total || 0;
+const equipmentTotal = changeOrder.equipment_total || 0;
 
-## Data Flow Summary
-
-```text
-Supplier prices PO items
-    ↓
-po_line_items.line_total calculated
-    ↓
-linkedPO.subtotal = sum of line_totals ($7,350)
-    ↓
-TC sets markup (15%)
-    ↓
-TC locks pricing → lockMaterialsPricingMutation
-    ↓
-Calculates: 
-  - subtotal = $7,350 (from PO)
-  - markup = $1,102.50 (15%)
-  - materialTotal = $8,452.50
-    ↓
-Stores on change_order_projects:
-  - material_total = $8,452.50
-    ↓
-ContractedPricingCard reads:
-  - For TC: materialCost = linkedPO.subtotal ($7,350)
-  - For TC: materialTotal = changeOrder.material_total ($8,452.50)
-  - For TC: markup = $8,452.50 - $7,350 = $1,102.50
-  - Profit = revenue - fcCost - materialCost
+// Material total: recalculate from PO data if available (handles stale DB values)
+// This matches the logic in TCPricingSummary for consistency
+const baseMatTotal = linkedPO?.subtotal || 0;
+const markupAmount = changeOrder.material_markup_type === 'percent'
+  ? baseMatTotal * ((changeOrder.material_markup_percent || 0) / 100)
+  : changeOrder.material_markup_type === 'lump_sum'
+    ? (changeOrder.material_markup_amount || 0)
+    : 0;
+const materialTotal = baseMatTotal > 0 
+  ? baseMatTotal + markupAmount 
+  : (changeOrder.material_total || 0); // Fallback to DB value if no linked PO
 ```
 
----
-
-## GC Visibility (Confirmed Correct)
-
-GC should see:
-- Materials list (item descriptions, quantities) 
-- Marked-up total ($8,452.50)
-- Should NOT see: supplier pricing, base cost, or markup breakdown
-
-This preserves TC's margin privacy when TC is cost-responsible.
-
----
+This approach:
+- Uses the linked PO subtotal + configured markup when a PO exists
+- Falls back to the database column when there's no linked PO (for legacy manual materials)
+- Ensures the TC view shows accurate revenue figures
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/components/change-order-detail/ChangeOrderDetailPage.tsx` | Pass `linkedPO` to ContractedPricingCard |
-| `src/components/change-order-detail/ContractedPricingCard.tsx` | Add `linkedPO` prop, fix material cost calculation for TC view |
+| `src/components/change-order-detail/ContractedPricingCard.tsx` | Recalculate `materialTotal` from `linkedPO` data |
 
----
+## Expected Result
 
-## Testing Steps
-
-After implementation:
-
-1. **TC View Test:**
-   - Open work order with locked materials pricing
-   - Verify "Work Order Pricing" card shows:
-     - Revenue section: correct materialTotal
-     - Costs section: correct base cost from PO
-     - Correct profit calculation
-
-2. **GC View Test:**
-   - Open same work order as GC
-   - Verify "Materials" shows marked-up total only
-   - Verify no base cost or markup breakdown visible
-
-3. **Summary Card Test:**
-   - For TC: Verify TCPricingSummary shows correct breakdown
-   - Verify materials line shows total with markup indicator
-
+After this change:
+- TC's "Work Order Pricing" card will show:
+  - **Revenue section:** "Materials (to GC)" = $8,452.50 (subtotal $7,350 + 15% markup $1,102.50)
+  - **Costs section:** "Materials (Supplier Cost)" = $7,350
+  - **Materials Markup:** $1,102.50
+  - **Profit:** Correctly calculated including material profit
+- GC's view will also show correct material totals
+- Both views stay consistent with the TCPricingSummary sidebar
