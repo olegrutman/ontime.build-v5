@@ -441,17 +441,32 @@ export function useContractSOV(projectId: string | undefined) {
     return [];
   }, [templates]);
 
-  // Create SOVs for all contracts (only for contracts with a price > 0 AND not work order contracts)
+  // Helper to check if contract is a work order
+  const isWorkOrderContract = useCallback((c: ProjectContract) => 
+    c.trade === 'Work Order' || c.trade === 'Work Order Labor', []);
+
+  // Calculate contracts that need SOVs (current org is payer, has value, no SOV yet)
+  const contractsMissingSOVs = (() => {
+    const contractsWithSOVs = new Set(sovs.map(s => s.contract_id).filter(Boolean));
+    
+    return contracts.filter(c => 
+      (c.contract_sum || 0) > 0 &&
+      !isWorkOrderContract(c) &&
+      c.to_org_id === currentOrgId &&  // Current org is payer
+      !contractsWithSOVs.has(c.id)     // No SOV exists
+    );
+  })();
+
+  // Create SOVs for all contracts (only for contracts where current org is PAYER)
   const createAllSOVs = useCallback(async () => {
     if (!projectId || contracts.length === 0) return;
     
     // Filter to only PRIMARY contracts (not work orders) with a contract_sum > 0
-    // Work order contracts have trade = 'Work Order' or 'Work Order Labor'
-    const isWorkOrderContract = (c: ProjectContract) => 
-      c.trade === 'Work Order' || c.trade === 'Work Order Labor';
-    
+    // AND where the current org is the PAYER (to_org_id)
     const contractsWithValue = contracts.filter(c => 
-      (c.contract_sum || 0) > 0 && !isWorkOrderContract(c)
+      (c.contract_sum || 0) > 0 && 
+      !isWorkOrderContract(c) &&
+      c.to_org_id === currentOrgId  // Only payer can create SOV
     );
     
     if (contractsWithValue.length === 0) {
@@ -574,7 +589,130 @@ export function useContractSOV(projectId: string | undefined) {
     } finally {
       setSaving(false);
     }
-  }, [projectId, contracts, sovs, generateItemsFromTemplate, fetchData]);
+  }, [projectId, contracts, sovs, generateItemsFromTemplate, fetchData, currentOrgId, isWorkOrderContract]);
+
+  // Create SOV for a single contract
+  const createSOVForContract = useCallback(async (contractId: string) => {
+    const contract = contracts.find(c => c.id === contractId);
+    if (!contract || !projectId) return;
+    
+    // Verify current org is the payer
+    if (contract.to_org_id !== currentOrgId) {
+      toast({
+        title: 'Cannot Create SOV',
+        description: 'Only the payer organization can create an SOV for this contract.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    // Check if SOV already exists
+    if (sovs.find(s => s.contract_id === contractId)) {
+      toast({
+        title: 'SOV Already Exists',
+        description: 'An SOV already exists for this contract.',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
+    setSaving(true);
+    
+    try {
+      // Get project details
+      const { data: project } = await supabase
+        .from('projects')
+        .select('project_type')
+        .eq('id', projectId)
+        .single();
+      
+      if (!project) throw new Error('Project not found');
+      
+      // Get scope details
+      const { data: scope } = await supabase
+        .from('project_scope_details')
+        .select('*')
+        .eq('project_id', projectId)
+        .maybeSingle();
+      
+      const scopeDetails = scope as ProjectScopeDetails | null;
+      const stories = scopeDetails?.stories || scopeDetails?.floors || 2;
+      const homeType = scopeDetails?.home_type || null;
+      const templateKey = getTemplateKeyForProject(project.project_type, homeType);
+      
+      // Generate item list
+      const itemNames = await generateItemsFromTemplate(templateKey, stories, scopeDetails);
+      
+      // Calculate industry-standard percentages for each item
+      const rawPercents = itemNames.map(name => getDefaultPercentForItem(name));
+      const totalRaw = rawPercents.reduce((a, b) => a + b, 0);
+      
+      // Normalize to 100% while maintaining proportions
+      const normalizedPercents: number[] = [];
+      for (let i = 0; i < rawPercents.length; i++) {
+        if (i === rawPercents.length - 1) {
+          const sumSoFar = normalizedPercents.reduce((a, b) => a + b, 0);
+          normalizedPercents.push(parseFloat((100 - sumSoFar).toFixed(2)));
+        } else {
+          normalizedPercents.push(parseFloat(((rawPercents[i] / totalRaw) * 100).toFixed(2)));
+        }
+      }
+      
+      const sovName = getContractDisplayName(contract.from_role, contract.to_role, contract.from_org_name, contract.to_org_name);
+      
+      // Create SOV record
+      const { data: newSov, error: sovError } = await supabase
+        .from('project_sov')
+        .insert({
+          project_id: projectId,
+          contract_id: contract.id,
+          sov_name: sovName,
+          created_from_template_key: templateKey
+        })
+        .select()
+        .single();
+      
+      if (sovError) throw sovError;
+      
+      // Create SOV items with industry-standard percentages
+      const itemsToInsert = itemNames.map((name, index) => {
+        const percent = normalizedPercents[index];
+        const value = Math.round((contract.contract_sum * percent / 100) * 100) / 100;
+        
+        return {
+          project_id: projectId,
+          sov_id: newSov.id,
+          sort_order: index,
+          item_name: name,
+          percent_of_contract: percent,
+          value_amount: value,
+          source: 'template' as const
+        };
+      });
+      
+      const { error: itemsError } = await supabase
+        .from('project_sov_items')
+        .insert(itemsToInsert);
+      
+      if (itemsError) throw itemsError;
+      
+      toast({
+        title: 'SOV Created',
+        description: `Created SOV with ${itemNames.length} items for ${sovName}.`
+      });
+      
+      await fetchData();
+    } catch (error: any) {
+      console.error('Error creating SOV:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create SOV',
+        variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
+    }
+  }, [projectId, contracts, sovs, currentOrgId, generateItemsFromTemplate, fetchData]);
 
   // Update item percent (and recalculate value)
   const updateItemPercent = useCallback(async (
@@ -892,7 +1030,9 @@ export function useContractSOV(projectId: string | undefined) {
     loading,
     saving,
     hasSOVs: sovs.length > 0,
+    contractsMissingSOVs,
     createAllSOVs,
+    createSOVForContract,
     updateItemPercent,
     updateItemName,
     addItem,
