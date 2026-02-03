@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 // Contract types
 export interface ProjectContract {
@@ -226,6 +227,9 @@ function generateStaticListItems(
 }
 
 export function useContractSOV(projectId: string | undefined) {
+  const { userOrgRoles } = useAuth();
+  const currentOrgId = userOrgRoles[0]?.organization?.id;
+  
   const [contracts, setContracts] = useState<ProjectContract[]>([]);
   const [sovs, setSovs] = useState<ContractSOV[]>([]);
   const [sovItems, setSovItems] = useState<Record<string, ContractSOVItem[]>>({});
@@ -261,23 +265,28 @@ export function useContractSOV(projectId: string | undefined) {
           .order('display_name')
       ]);
       
-      // Map contracts with org names
-      const fetchedContracts: ProjectContract[] = (contractsResult.data || []).map((c: any) => ({
-        id: c.id,
-        project_id: c.project_id,
-        from_role: c.from_role,
-        to_role: c.to_role,
-        trade: c.trade,
-        contract_sum: c.contract_sum,
-        retainage_percent: c.retainage_percent,
-        allow_mobilization_line_item: c.allow_mobilization_line_item,
-        status: c.status,
-        to_project_team_id: c.to_project_team_id,
-        from_org_id: c.from_org_id,
-        to_org_id: c.to_org_id,
-        from_org_name: c.from_org?.name || null,
-        to_org_name: c.to_org?.name || null,
-      }));
+      // Map contracts with org names and filter to only contracts where current org is a party
+      const fetchedContracts: ProjectContract[] = (contractsResult.data || [])
+        .map((c: any) => ({
+          id: c.id,
+          project_id: c.project_id,
+          from_role: c.from_role,
+          to_role: c.to_role,
+          trade: c.trade,
+          contract_sum: c.contract_sum,
+          retainage_percent: c.retainage_percent,
+          allow_mobilization_line_item: c.allow_mobilization_line_item,
+          status: c.status,
+          to_project_team_id: c.to_project_team_id,
+          from_org_id: c.from_org_id,
+          to_org_id: c.to_org_id,
+          from_org_name: c.from_org?.name || null,
+          to_org_name: c.to_org?.name || null,
+        }))
+        // Filter to only contracts where current user's org is a party
+        .filter((c: ProjectContract) => 
+          c.from_org_id === currentOrgId || c.to_org_id === currentOrgId
+        );
       const fetchedSovs = (sovsResult.data || []) as ContractSOV[];
       
       setContracts(fetchedContracts);
@@ -322,7 +331,7 @@ export function useContractSOV(projectId: string | undefined) {
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [projectId, currentOrgId]);
 
   useEffect(() => {
     fetchData();
