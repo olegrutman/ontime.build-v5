@@ -12,7 +12,6 @@ import { ChangeOrderChecklist } from './ChangeOrderChecklist';
 import { FieldCrewHoursPanel } from './FieldCrewHoursPanel';
 import { TCPricingPanel } from './TCPricingPanel';
 import { TCPricingSummary } from './TCPricingSummary';
-import { MaterialsPanel } from './MaterialsPanel';
 import { EquipmentPanel } from './EquipmentPanel';
 import { ApprovalPanel } from './ApprovalPanel';
 import { TCApprovalPanel } from './TCApprovalPanel';
@@ -20,6 +19,7 @@ import { ParticipantActivationPanel } from './ParticipantActivationPanel';
 import { GCLaborReviewPanel } from './GCLaborReviewPanel';
 import { ContractedPricingCard } from './ContractedPricingCard';
 import { MaterialResourceToggle } from './MaterialResourceToggle';
+import { WorkOrderMaterialsPanel } from './WorkOrderMaterialsPanel';
 
 export function ChangeOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -59,6 +59,8 @@ export function ChangeOrderDetailPage() {
     linkPO,
     updateMarkup,
     isLinkingPO,
+    lockMaterialsPricing,
+    isLockingMaterialsPricing,
   } = useChangeOrder(id || null);
 
   // Get updateStatus from useChangeOrderProject
@@ -154,7 +156,21 @@ export function ChangeOrderDetailPage() {
               <GCLaborReviewPanel tcLabor={tcLabor} />
             )}
 
-            {/* Materials are now managed exclusively via the Product Picker in MaterialResourceToggle */}
+            {/* Materials from linked PO - visible to TC, GC, and FC */}
+            {changeOrder.requires_materials && linkedPO && linkedPO.items && linkedPO.items.length > 0 && (isTC || isGC || isFC) && (
+              <WorkOrderMaterialsPanel
+                linkedPO={linkedPO}
+                materialMarkupType={changeOrder.material_markup_type as 'percent' | 'lump_sum' | null}
+                materialMarkupPercent={changeOrder.material_markup_percent ?? 0}
+                materialMarkupAmount={changeOrder.material_markup_amount ?? 0}
+                onUpdateMarkup={updateMarkup}
+                onLockPricing={lockMaterialsPricing}
+                isLocked={changeOrder.materials_pricing_locked}
+                canViewPricing={isTC || (isGC && changeOrder.material_cost_responsibility === 'GC')}
+                isEditable={isTCEditable && isTC}
+                isLocking={isLockingMaterialsPricing}
+              />
+            )}
 
             {/* Equipment */}
             {changeOrder.requires_equipment && (isTC || isGC) && (
