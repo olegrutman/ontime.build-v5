@@ -1,124 +1,127 @@
 
-# Plan: Fix GC Material Visibility in Work Order
+# Plan: Fix SOV Readiness Check for GC Work Order Creation
 
-## Problem Summary
+## Problem
 
-The user reports two issues:
-1. **"Materials to GC" not showing correctly in pricing tile** - Need to verify the `ContractedPricingCard` shows the correct material total for GC
-2. **GC cannot see materials list and marked-up total** - The `WorkOrderMaterialsPanel` hides all pricing info when GC is not cost-responsible
+The GC sees an "SOV Setup Required" warning on the Work Orders tab even when the SOV between TC and GC has been created. This incorrectly blocks the GC from creating new work orders.
 
-## Root Cause Analysis
+## Root Cause
 
-### Issue 1: ContractedPricingCard - Already Fixed
-The previous changes to `ContractedPricingCard.tsx` calculate `materialTotal` from `linkedPO.subtotal + markup`. This should be working correctly for both TC and GC views.
+The `useSOVReadiness` hook checks ALL contracts visible to the user, rather than only the contracts **the user's organization is responsible for managing**.
 
-### Issue 2: WorkOrderMaterialsPanel - GC Visibility Broken
-In `ChangeOrderDetailPage.tsx` line 169:
-```typescript
-canViewPricing={isTC || (isGC && changeOrder.material_cost_responsibility === 'GC')}
+### Current Flawed Logic
+
+```
+Contracts visible to GC → [GC-TC Contract, TC-FC Contract] (if GC is project creator)
+SOVs visible → [GC-TC SOV, TC-FC SOV] (both visible via participant RLS)
+Check: Do ALL visible contracts have SOVs?
 ```
 
-When `material_cost_responsibility = 'TC'`:
-- `canViewPricing = false` for GC
-- The entire pricing section (lines 133-193) is hidden from GC
-- GC can see item list but **cannot see the marked-up total they're paying**
+If the TC-FC contract doesn't have an SOV yet, the GC is incorrectly blocked - even though the TC-FC SOV is the **TC's responsibility**, not the GC's.
 
-This violates the requirement: GC should see the marked-up total (their cost) without seeing the base cost or markup breakdown.
+### How It Should Work
+
+According to the system design, **SOVs are created and managed exclusively by the payer organization** (`to_org_id` on the contract). The readiness check should only verify SOVs for contracts where the current user's organization is the payer.
+
+```
+User's organization → GC_Test
+Contracts where GC is payer → [GC-TC Contract] (to_org_id = GC_Test)
+Check: Does the GC-TC contract have an SOV? → Yes
+Result: isReady = true ✓
+```
 
 ## Solution
 
-### Part 1: Add GC-Specific Total View to WorkOrderMaterialsPanel
+Update `useSOVReadiness` to filter contracts by the user's organization, only checking contracts where the user's org is the `to_org_id` (payer/client side).
 
-Create a new visibility tier for GC:
-- `canViewPricing` (TC or cost-responsible GC): Full breakdown (subtotal, markup %, total)
-- `canViewMarkedUpTotal` (GC not cost-responsible): Only the final marked-up total (no base cost)
-- Neither: Just item count
+## Implementation
 
-### Part 2: Update ChangeOrderDetailPage Props
+### File: `src/hooks/useSOVReadiness.ts`
 
-Pass a new prop to distinguish between:
-- Full pricing visibility (TC, cost-responsible GC)
-- Marked-up total only (GC not cost-responsible)
+**Changes Required:**
 
-## Implementation Details
-
-### File 1: `src/components/change-order-detail/WorkOrderMaterialsPanel.tsx`
-
-Add new prop and GC-specific total view:
+1. **Add user's organization ID to the hook** - Need to know which org the user belongs to
+2. **Fetch contracts with `to_org_id`** - Include this field in the query
+3. **Filter contracts to only those the user's org is responsible for** - Only check contracts where `to_org_id` matches user's org
 
 ```typescript
-interface WorkOrderMaterialsPanelProps {
-  // ... existing props
-  canViewPricing: boolean;
-  canViewMarkedUpTotal?: boolean;  // NEW: For GC when not cost-responsible
-  // ...
+interface Contract {
+  id: string;
+  contract_sum: number | null;
+  trade: string | null;
+  to_org_id: string | null;  // NEW: needed to filter by payer
 }
+
+// In fetchData:
+supabase
+  .from('project_contracts')
+  .select('id, contract_sum, trade, to_org_id')  // Add to_org_id
+  .eq('project_id', projectId)
+
+// In readiness calculation:
+const primaryContracts = contracts.filter(
+  c => (c.contract_sum || 0) > 0 
+    && !isWorkOrderContract(c)
+    && c.to_org_id === userOrgId  // NEW: Only contracts where user's org is payer
+);
 ```
 
-Add section for GC marked-up total (after the `canViewPricing && isPriced` block):
+### Getting User's Organization
+
+The hook will need access to the user's current organization ID. This can be obtained from:
+- The `useAuth` hook which provides `currentRole` and user context
+- Or pass it as a parameter to `useSOVReadiness`
+
+**Recommended approach:** Pass `userOrgId` as a parameter since the hook is already being called from `WorkOrdersTab` which has access to auth context.
+
+### Updated Hook Signature
 
 ```typescript
-{/* GC View - marked-up total only (when materials are locked) */}
-{!canViewPricing && canViewMarkedUpTotal && isLocked && (
-  <>
-    <Separator />
-    <div className="flex justify-between font-medium">
-      <span>Materials Total</span>
-      <span>${materialsTotal.toFixed(2)}</span>
-    </div>
-    <div className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground bg-muted/50 rounded-lg">
-      <Lock className="w-4 h-4" />
-      Materials pricing locked
-    </div>
-  </>
-)}
+export function useSOVReadiness(
+  projectId: string | undefined,
+  userOrgId: string | undefined  // NEW parameter
+): SOVReadiness & { refetch: () => void }
 ```
 
-### File 2: `src/components/change-order-detail/ChangeOrderDetailPage.tsx`
+### File: `src/components/project/WorkOrdersTab.tsx`
 
-Update the `WorkOrderMaterialsPanel` invocation:
+**Update the hook call to include user's org ID:**
 
 ```typescript
-<WorkOrderMaterialsPanel
-  linkedPO={linkedPO}
-  materialMarkupType={changeOrder.material_markup_type as 'percent' | 'lump_sum' | null}
-  materialMarkupPercent={changeOrder.material_markup_percent ?? 0}
-  materialMarkupAmount={changeOrder.material_markup_amount ?? 0}
-  onUpdateMarkup={updateMarkup}
-  onLockPricing={lockMaterialsPricing}
-  isLocked={changeOrder.materials_pricing_locked}
-  canViewPricing={isTC || (isGC && changeOrder.material_cost_responsibility === 'GC')}
-  canViewMarkedUpTotal={isGC}  // NEW: GC can always see the total they're paying
-  isEditable={isTCEditable && isTC}
-  isLocking={isLockingMaterialsPricing}
-/>
+const { userOrganizationId } = useAuth();  // Get user's org
+const sovReadiness = useSOVReadiness(projectId, userOrganizationId);
 ```
 
-## Visibility Matrix After Fix
+### Checking useAuth for Organization Access
 
-| User Role | Cost Responsibility | Materials List | Base Cost | Markup % | Marked-Up Total |
-|-----------|-------------------|----------------|-----------|----------|-----------------|
-| TC        | Either            | Yes            | Yes       | Yes      | Yes             |
-| GC        | GC                | Yes            | Yes       | Yes      | Yes             |
-| GC        | TC                | Yes            | **No**    | **No**   | **Yes** (fixed) |
-| FC        | Either            | Yes            | No        | No       | No              |
+Need to verify that `useAuth` provides the user's organization ID. If not, we may need to:
+- Add it to the auth context
+- Or fetch it separately in the hook using the user's ID
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/components/change-order-detail/WorkOrderMaterialsPanel.tsx` | Add `canViewMarkedUpTotal` prop and GC-specific total section |
-| `src/components/change-order-detail/ChangeOrderDetailPage.tsx` | Pass `canViewMarkedUpTotal={isGC}` to WorkOrderMaterialsPanel |
+| `src/hooks/useSOVReadiness.ts` | Add `userOrgId` parameter, include `to_org_id` in query, filter contracts by payer org |
+| `src/components/project/WorkOrdersTab.tsx` | Pass user's organization ID to the hook |
+| `src/hooks/useAuth.tsx` | Verify org ID is available (may need to add if missing) |
+
+## Alternative Consideration
+
+If getting the user's org ID is complex, an alternative approach is to check if the user **can manage** the SOV for each contract. However, filtering by `to_org_id` is cleaner and aligns with the defined responsibility model.
 
 ## Expected Behavior After Fix
 
-For GC when TC is cost-responsible:
-1. **Materials panel** shows:
-   - Item list (descriptions, quantities, UOM) - no individual prices
-   - "Materials Total: $X,XXX.XX" (marked-up amount)
-   - "Materials pricing locked" indicator
-2. **Work Order Pricing card** shows:
-   - "Materials: $X,XXX.XX" (same marked-up total)
-   - Total contracted price includes materials
+**For GC:**
+- Only the GC-TC contract is evaluated for SOV readiness
+- If GC-TC SOV exists → `isReady = true`
+- GC can create work orders regardless of TC-FC SOV status
 
-This maintains privacy (GC doesn't see supplier costs or markup %) while providing transparency (GC knows exactly what they're paying for materials).
+**For TC:**
+- Both GC-TC and TC-FC contracts are evaluated (TC is payer on TC-FC)
+- If TC-FC SOV is missing → `isReady = false` with message
+- If both SOVs exist → `isReady = true`
+
+**For FC:**
+- FCs are already exempt from the SOV check (`isFC` bypass in WorkOrdersTab)
+- No change needed
