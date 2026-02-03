@@ -102,6 +102,9 @@ export function MaterialResourceToggle({
       });
 
       // Create PO with SUBMITTED status (auto-submit for work order context)
+      // Note: We do NOT set work_item_id here because changeOrder.id is from
+      // change_order_projects, not work_items. The linkage is done via
+      // change_order_projects.linked_po_id instead.
       const { data: newPO, error: poError } = await supabase
         .from('purchase_orders')
         .insert({
@@ -110,7 +113,6 @@ export function MaterialResourceToggle({
           po_name: `Materials for ${changeOrder.title}`,
           supplier_id: data.supplier_id,
           project_id: data.project_id,
-          work_item_id: changeOrder.id,
           notes: data.notes || null,
           status: 'SUBMITTED', // Auto-submit to supplier
           submitted_at: new Date().toISOString(),
@@ -148,8 +150,14 @@ export function MaterialResourceToggle({
       toast.success(`PO ${poNumber} created and sent to supplier for pricing`);
       setPOWizardOpen(false);
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
       console.error('Error creating PO:', error);
+      // Surface detailed error info for debugging (FK, RLS issues, etc.)
+      let message = 'Unknown error';
+      if (error && typeof error === 'object') {
+        const err = error as { message?: string; code?: string; details?: string };
+        message = err.details || err.message || message;
+        if (err.code) message = `[${err.code}] ${message}`;
+      }
       toast.error('Failed to create PO: ' + message);
     } finally {
       setIsSubmitting(false);
