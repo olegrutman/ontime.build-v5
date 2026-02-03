@@ -1,97 +1,124 @@
 
+# Plan: Fix GC Material Visibility in Work Order
 
-# Plan: Fix Materials Priced Display in Ready for Approval Checklist
+## Problem Summary
 
-## Problem
+The user reports two issues:
+1. **"Materials to GC" not showing correctly in pricing tile** - Need to verify the `ContractedPricingCard` shows the correct material total for GC
+2. **GC cannot see materials list and marked-up total** - The `WorkOrderMaterialsPanel` hides all pricing info when GC is not cost-responsible
 
-When materials pricing is locked, the "Materials priced" checkbox in the "Ready for Approval" tile remains unchecked. Investigation shows:
+## Root Cause Analysis
 
-- `materials_pricing_locked: true` on `change_order_projects` (set at 15:37)
-- `materials_priced: false` in `change_order_checklist` (last updated at 14:55)
+### Issue 1: ContractedPricingCard - Already Fixed
+The previous changes to `ContractedPricingCard.tsx` calculate `materialTotal` from `linkedPO.subtotal + markup`. This should be working correctly for both TC and GC views.
 
-The database checklist update is failing silently because it's a secondary operation that doesn't throw on failure.
+### Issue 2: WorkOrderMaterialsPanel - GC Visibility Broken
+In `ChangeOrderDetailPage.tsx` line 169:
+```typescript
+canViewPricing={isTC || (isGC && changeOrder.material_cost_responsibility === 'GC')}
+```
 
-## Root Cause
+When `material_cost_responsibility = 'TC'`:
+- `canViewPricing = false` for GC
+- The entire pricing section (lines 133-193) is hidden from GC
+- GC can see item list but **cannot see the marked-up total they're paying**
 
-The `lockMaterialsPricingMutation` in `useChangeOrderProject.ts` attempts to update the checklist table, but:
-1. The update may be blocked by RLS policies
-2. Supabase returns "success" with 0 rows affected when RLS blocks an update
-3. The error handling only logs to console, doesn't retry or use alternative approaches
+This violates the requirement: GC should see the marked-up total (their cost) without seeing the base cost or markup breakdown.
 
 ## Solution
 
-Rather than relying solely on the database checklist table, update the `ChangeOrderChecklist` component to derive `materials_priced` status from the authoritative source: `changeOrder.materials_pricing_locked`.
+### Part 1: Add GC-Specific Total View to WorkOrderMaterialsPanel
 
-This approach:
-- Provides immediate UI feedback when materials are locked
-- Works even if the database checklist update fails
-- Uses the source of truth (the locked flag) rather than a derived copy
+Create a new visibility tier for GC:
+- `canViewPricing` (TC or cost-responsible GC): Full breakdown (subtotal, markup %, total)
+- `canViewMarkedUpTotal` (GC not cost-responsible): Only the final marked-up total (no base cost)
+- Neither: Just item count
 
-## Implementation
+### Part 2: Update ChangeOrderDetailPage Props
 
-### File: `src/components/change-order-detail/ChangeOrderChecklist.tsx`
+Pass a new prop to distinguish between:
+- Full pricing visibility (TC, cost-responsible GC)
+- Marked-up total only (GC not cost-responsible)
 
-Add a prop to receive the change order's locked status and use it to override the checklist value for materials_priced.
+## Implementation Details
 
-**Current interface:**
+### File 1: `src/components/change-order-detail/WorkOrderMaterialsPanel.tsx`
+
+Add new prop and GC-specific total view:
+
 ```typescript
-interface ChangeOrderChecklistProps {
-  checklist: ChecklistType | null;
-  requiresMaterials: boolean;
-  requiresEquipment: boolean;
-  hasFCParticipant: boolean;
+interface WorkOrderMaterialsPanelProps {
+  // ... existing props
+  canViewPricing: boolean;
+  canViewMarkedUpTotal?: boolean;  // NEW: For GC when not cost-responsible
+  // ...
 }
 ```
 
-**Updated interface:**
+Add section for GC marked-up total (after the `canViewPricing && isPriced` block):
+
 ```typescript
-interface ChangeOrderChecklistProps {
-  checklist: ChecklistType | null;
-  requiresMaterials: boolean;
-  requiresEquipment: boolean;
-  hasFCParticipant: boolean;
-  materialsPricingLocked?: boolean;  // NEW: derive from changeOrder.materials_pricing_locked
-}
+{/* GC View - marked-up total only (when materials are locked) */}
+{!canViewPricing && canViewMarkedUpTotal && isLocked && (
+  <>
+    <Separator />
+    <div className="flex justify-between font-medium">
+      <span>Materials Total</span>
+      <span>${materialsTotal.toFixed(2)}</span>
+    </div>
+    <div className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground bg-muted/50 rounded-lg">
+      <Lock className="w-4 h-4" />
+      Materials pricing locked
+    </div>
+  </>
+)}
 ```
 
-**Updated logic:**
-```typescript
-// Derive materials_priced from the locked flag as source of truth
-const effectiveMaterialsPriced = materialsPricingLocked || 
-  (checklist?.materials_priced ?? false);
+### File 2: `src/components/change-order-detail/ChangeOrderDetailPage.tsx`
 
-// Use effectiveMaterialsPriced when checking the materials_priced item
-const isComplete = item.key === 'materials_priced'
-  ? effectiveMaterialsPriced
-  : (checklist && checklist[item.key as keyof ChecklistType]);
-```
-
-### File: `src/components/change-order-detail/ChangeOrderDetailPage.tsx`
-
-Pass the new prop to `ChangeOrderChecklist`:
+Update the `WorkOrderMaterialsPanel` invocation:
 
 ```typescript
-<ChangeOrderChecklist
-  checklist={checklist}
-  requiresMaterials={changeOrder.requires_materials}
-  requiresEquipment={changeOrder.requires_equipment}
-  hasFCParticipant={hasFCParticipant}
-  materialsPricingLocked={changeOrder.materials_pricing_locked}  // NEW
+<WorkOrderMaterialsPanel
+  linkedPO={linkedPO}
+  materialMarkupType={changeOrder.material_markup_type as 'percent' | 'lump_sum' | null}
+  materialMarkupPercent={changeOrder.material_markup_percent ?? 0}
+  materialMarkupAmount={changeOrder.material_markup_amount ?? 0}
+  onUpdateMarkup={updateMarkup}
+  onLockPricing={lockMaterialsPricing}
+  isLocked={changeOrder.materials_pricing_locked}
+  canViewPricing={isTC || (isGC && changeOrder.material_cost_responsibility === 'GC')}
+  canViewMarkedUpTotal={isGC}  // NEW: GC can always see the total they're paying
+  isEditable={isTCEditable && isTC}
+  isLocking={isLockingMaterialsPricing}
 />
 ```
+
+## Visibility Matrix After Fix
+
+| User Role | Cost Responsibility | Materials List | Base Cost | Markup % | Marked-Up Total |
+|-----------|-------------------|----------------|-----------|----------|-----------------|
+| TC        | Either            | Yes            | Yes       | Yes      | Yes             |
+| GC        | GC                | Yes            | Yes       | Yes      | Yes             |
+| GC        | TC                | Yes            | **No**    | **No**   | **Yes** (fixed) |
+| FC        | Either            | Yes            | No        | No       | No              |
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
-| `src/components/change-order-detail/ChangeOrderChecklist.tsx` | Add `materialsPricingLocked` prop and derive `materials_priced` status from it |
-| `src/components/change-order-detail/ChangeOrderDetailPage.tsx` | Pass `materials_pricing_locked` to `ChangeOrderChecklist` |
+| `src/components/change-order-detail/WorkOrderMaterialsPanel.tsx` | Add `canViewMarkedUpTotal` prop and GC-specific total section |
+| `src/components/change-order-detail/ChangeOrderDetailPage.tsx` | Pass `canViewMarkedUpTotal={isGC}` to WorkOrderMaterialsPanel |
 
-## Expected Result
+## Expected Behavior After Fix
 
-After this change:
-- When `materials_pricing_locked = true`, the "Materials priced" item shows as complete (green checkmark)
-- Works immediately without relying on the database checklist update
-- The checklist count updates correctly (e.g., "5 / 6" becomes "6 / 6")
-- GC can finalize the work order
+For GC when TC is cost-responsible:
+1. **Materials panel** shows:
+   - Item list (descriptions, quantities, UOM) - no individual prices
+   - "Materials Total: $X,XXX.XX" (marked-up amount)
+   - "Materials pricing locked" indicator
+2. **Work Order Pricing card** shows:
+   - "Materials: $X,XXX.XX" (same marked-up total)
+   - Total contracted price includes materials
 
+This maintains privacy (GC doesn't see supplier costs or markup %) while providing transparency (GC knows exactly what they're paying for materials).
