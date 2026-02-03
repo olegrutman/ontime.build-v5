@@ -268,6 +268,7 @@ export function ChangeOrderDetailPage() {
               requiresMaterials={changeOrder.requires_materials}
               requiresEquipment={changeOrder.requires_equipment}
               hasFCParticipant={hasFCParticipant}
+              materialsPricingLocked={changeOrder.materials_pricing_locked}
             />
 
             {isGC && (
