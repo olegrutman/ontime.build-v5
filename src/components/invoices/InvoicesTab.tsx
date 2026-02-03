@@ -46,12 +46,12 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [invoiceDirection, setInvoiceDirection] = useState<'sent' | 'received'>('sent');
 
-  // Check SOV readiness - gates invoice creation
-  const sovReadiness = useSOVReadiness(projectId);
-
   // Get current user's organization ID and type
   const currentOrgId = userOrgRoles[0]?.organization?.id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
+
+  // Check SOV readiness - gates invoice creation (only checks contracts where user's org is payer)
+  const sovReadiness = useSOVReadiness(projectId, currentOrgId);
 
   // TC has both sent and received invoices
   const isTCWithDualView = currentOrgType === 'TC';

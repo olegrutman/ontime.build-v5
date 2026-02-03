@@ -12,6 +12,7 @@ interface Contract {
   id: string;
   contract_sum: number | null;
   trade: string | null;
+  to_org_id: string | null;
 }
 
 interface SOV {
@@ -19,7 +20,10 @@ interface SOV {
   contract_id: string | null;
 }
 
-export function useSOVReadiness(projectId: string | undefined): SOVReadiness & { refetch: () => void } {
+export function useSOVReadiness(
+  projectId: string | undefined,
+  userOrgId: string | undefined
+): SOVReadiness & { refetch: () => void } {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [sovs, setSovs] = useState<SOV[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,7 +39,7 @@ export function useSOVReadiness(projectId: string | undefined): SOVReadiness & {
       const [contractsResult, sovsResult] = await Promise.all([
         supabase
           .from('project_contracts')
-          .select('id, contract_sum, trade')
+          .select('id, contract_sum, trade, to_org_id')
           .eq('project_id', projectId),
         supabase
           .from('project_sov')
@@ -68,11 +72,14 @@ export function useSOVReadiness(projectId: string | undefined): SOVReadiness & {
     }
 
     // Filter to primary contracts only (exclude Work Order trades) with contract_sum > 0
+    // AND where the user's org is the payer (to_org_id) - SOVs are managed by the payer
     const isWorkOrderContract = (c: Contract) =>
       c.trade === 'Work Order' || c.trade === 'Work Order Labor';
 
     const primaryContracts = contracts.filter(
-      c => (c.contract_sum || 0) > 0 && !isWorkOrderContract(c)
+      c => (c.contract_sum || 0) > 0 && 
+           !isWorkOrderContract(c) &&
+           (!userOrgId || c.to_org_id === userOrgId) // Only check contracts where user's org is payer
     );
 
     // Edge case: No primary contracts with value - SOV is ready (nothing to configure)
