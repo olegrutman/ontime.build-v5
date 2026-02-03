@@ -1155,22 +1155,52 @@ export function useChangeOrder(changeOrderId: string | null) {
   });
 
   // Lock materials pricing (TC locks in their markup before submitting to GC)
+  // Also calculates and stores material_total and updates final_price
   const lockMaterialsPricingMutation = useMutation({
     mutationFn: async () => {
-      if (!changeOrderId) throw new Error('Invalid state');
+      if (!changeOrderId || !changeOrder?.linked_po_id) {
+        throw new Error('Invalid state: missing change order or linked PO');
+      }
 
-      // Update the change order to lock materials pricing
+      // 1. Fetch PO line items to calculate subtotal
+      const { data: items, error: itemsError } = await supabase
+        .from('po_line_items')
+        .select('line_total')
+        .eq('po_id', changeOrder.linked_po_id);
+
+      if (itemsError) throw itemsError;
+
+      const subtotal = (items || []).reduce(
+        (sum, item) => sum + (item.line_total || 0),
+        0
+      );
+
+      // 2. Calculate markup based on type
+      const markup = changeOrder.material_markup_type === 'percent'
+        ? subtotal * ((changeOrder.material_markup_percent || 0) / 100)
+        : (changeOrder.material_markup_amount || 0);
+
+      const materialTotal = subtotal + markup;
+
+      // 3. Calculate new final_price
+      const laborTotal = changeOrder.labor_total || 0;
+      const equipmentTotal = changeOrder.equipment_total || 0;
+      const finalPrice = laborTotal + materialTotal + equipmentTotal;
+
+      // 4. Update change_order_projects with pricing locked and totals
       const { error } = await supabase
         .from('change_order_projects')
-        .update({ 
+        .update({
           materials_pricing_locked: true,
           materials_locked_at: new Date().toISOString(),
+          material_total: materialTotal,
+          final_price: finalPrice,
         })
         .eq('id', changeOrderId);
 
       if (error) throw error;
 
-      // Also mark materials_priced in the checklist
+      // 5. Mark materials_priced in the checklist
       const { error: checklistError } = await supabase
         .from('change_order_checklist')
         .update({ materials_priced: true })
@@ -1184,6 +1214,7 @@ export function useChangeOrder(changeOrderId: string | null) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['change-order', changeOrderId] });
       queryClient.invalidateQueries({ queryKey: ['change-order-checklist', changeOrderId] });
+      queryClient.invalidateQueries({ queryKey: ['linked-po', changeOrder?.linked_po_id] });
       toast({ title: 'Materials pricing locked' });
     },
     onError: (error) => {
