@@ -2278,6 +2278,7 @@ export type Database = {
           priced_by: string | null
           pricing_owner_org_id: string | null
           project_id: string | null
+          ready_for_delivery_at: string | null
           sales_tax_percent: number | null
           sent_at: string | null
           sent_by: string | null
@@ -2304,6 +2305,7 @@ export type Database = {
           priced_by?: string | null
           pricing_owner_org_id?: string | null
           project_id?: string | null
+          ready_for_delivery_at?: string | null
           sales_tax_percent?: number | null
           sent_at?: string | null
           sent_by?: string | null
@@ -2330,6 +2332,7 @@ export type Database = {
           priced_by?: string | null
           pricing_owner_org_id?: string | null
           project_id?: string | null
+          ready_for_delivery_at?: string | null
           sales_tax_percent?: number | null
           sent_at?: string | null
           sent_by?: string | null
@@ -3717,6 +3720,7 @@ export type Database = {
         | "ORDERED"
         | "DELIVERED"
         | "FINALIZED"
+        | "READY_FOR_DELIVERY"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3893,6 +3897,7 @@ export const Constants = {
         "ORDERED",
         "DELIVERED",
         "FINALIZED",
+        "READY_FOR_DELIVERY",
       ],
     },
   },
