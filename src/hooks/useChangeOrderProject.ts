@@ -1006,10 +1006,10 @@ export function useChangeOrder(changeOrderId: string | null) {
     },
   });
 
-  // Toggle materials requirement
+  // Toggle materials requirement with auto-activate supplier
   const toggleMaterialsMutation = useMutation({
     mutationFn: async (requiresMaterials: boolean) => {
-      if (!changeOrderId) throw new Error('Invalid state');
+      if (!changeOrderId || !user) throw new Error('Invalid state');
 
       const { error } = await supabase
         .from('change_order_projects')
@@ -1017,10 +1017,42 @@ export function useChangeOrder(changeOrderId: string | null) {
         .eq('id', changeOrderId);
 
       if (error) throw error;
+
+      // Auto-activate supplier when materials are enabled
+      if (requiresMaterials && availableSuppliers.length > 0) {
+        // Check if a supplier is already active
+        const existingSupplierParticipant = participants.find(
+          p => p.role === 'SUPPLIER' && p.is_active
+        );
+        
+        if (!existingSupplierParticipant) {
+          // Activate the first available supplier
+          const { error: activateError } = await supabase
+            .from('change_order_participants')
+            .upsert({
+              change_order_id: changeOrderId,
+              organization_id: availableSuppliers[0].id,
+              role: 'SUPPLIER',
+              is_active: true,
+              invited_by: user.id,
+            });
+
+          if (activateError) {
+            console.error('Failed to auto-activate supplier:', activateError);
+            // Don't throw - just log the error
+          }
+        }
+      }
     },
-    onSuccess: () => {
+    onSuccess: (_, requiresMaterials) => {
       queryClient.invalidateQueries({ queryKey: ['change-order', changeOrderId] });
-      toast({ title: 'Materials requirement updated' });
+      queryClient.invalidateQueries({ queryKey: ['change-order-participants', changeOrderId] });
+      
+      if (requiresMaterials) {
+        toast({ title: 'Materials enabled - Supplier activated' });
+      } else {
+        toast({ title: 'Materials requirement updated' });
+      }
     },
     onError: (error) => {
       toast({
