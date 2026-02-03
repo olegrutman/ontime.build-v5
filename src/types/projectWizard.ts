@@ -51,6 +51,8 @@ export interface ProjectContract {
   retainagePercent: number;
   allowMobilization: boolean;
   notes?: string;
+  // Who is responsible for material costs (GC or TC)
+  materialResponsibility?: 'GC' | 'TC';
 }
 
 export interface ProjectBasics {

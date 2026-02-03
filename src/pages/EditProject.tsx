@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { TeamMember, ProjectContract, TEAM_ROLES, TRADES, TeamRole, Trade } from '@/types/projectWizard';
 
 interface ExistingTeamMember {
@@ -40,6 +41,7 @@ interface ExistingContract {
   allow_mobilization_line_item: boolean;
   notes: string | null;
   to_project_team_id: string | null;
+  material_responsibility: string | null;
 }
 
 export default function EditProject() {
@@ -296,6 +298,7 @@ export default function EditProject() {
           retainage_percent: updates.retainage_percent,
           allow_mobilization_line_item: updates.allow_mobilization_line_item,
           notes: updates.notes,
+          material_responsibility: updates.material_responsibility,
         })
         .eq('id', contractId);
 
@@ -661,6 +664,29 @@ export default function EditProject() {
                           })}
                         />
                       </div>
+
+                      {/* Material Responsibility - only show for TC contracts */}
+                      {(contract.from_role === 'Trade Contractor' || contract.to_role === 'Trade Contractor') && (
+                        <div className="space-y-2">
+                          <Label>Material Responsibility</Label>
+                          <p className="text-xs text-muted-foreground">Who provides and pays for materials?</p>
+                          <ToggleGroup
+                            type="single"
+                            value={editingData.material_responsibility || 'TC'}
+                            onValueChange={(value) => {
+                              if (value) updateContract(contract.id, { material_responsibility: value });
+                            }}
+                            className="justify-start"
+                          >
+                            <ToggleGroupItem value="GC" aria-label="GC provides materials" className="px-4">
+                              GC
+                            </ToggleGroupItem>
+                            <ToggleGroupItem value="TC" aria-label="TC provides materials" className="px-4">
+                              TC
+                            </ToggleGroupItem>
+                          </ToggleGroup>
+                        </div>
+                      )}
 
                       <div className="space-y-2">
                         <Label>Notes (Optional)</Label>
