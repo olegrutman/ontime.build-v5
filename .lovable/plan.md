@@ -1,184 +1,130 @@
 
-# Fix: TC Can Create SOVs for FC-TC Contracts + Add "Create SOV" for Individual Contracts
+
+# Add Material Responsibility to New Project Wizard and Manage Contracts
 
 ## Problem Summary
 
-Two related issues with SOV creation:
+Two missing features related to supplier and material management:
 
-1. **TC can't create SOV for FC-TC contracts**: When a TC adds a new FC-TC contract, they cannot create an SOV for it. The current `createAllSOVs` function creates SOVs for ALL visible contracts, but doesn't respect who should be creating the SOV (the payer/client).
+1. **New Project Wizard (`ContractsStep`)**: No field to specify who is responsible for materials (GC or TC) for each contract. This is critical because `material_responsibility` determines who becomes the `pricing_owner_org_id` for Purchase Orders and who can view supplier pricing.
 
-2. **No way to recreate deleted SOVs**: If an SOV is deleted from the SOV page, there's no UI to create a new one for that specific contract. The "Create SOVs from Template" button only appears when NO SOVs exist.
+2. **Manage Contracts (EditProject.tsx)**: When adding a new contract or editing existing ones, there's no way to assign supplier relationships or set material responsibility. The old wizard (`PartiesStep`) has this functionality with toggles for:
+   - Material Responsibility (GC vs TC) for Trade Contractors
+   - Material Buyer (who can order from suppliers)
+   - PO Requires Upstream Approval
 
-## Business Rule
+## Business Context
 
-**SOVs are created by the payer (to_org)** - the organization receiving invoices:
-- GC-TC contract: GC (to_org) creates the SOV
-- FC-TC contract: TC (to_org) creates the SOV
-
-This means:
-- GC can create SOVs for contracts where they are `to_org`
-- TC can create SOVs for contracts where they are `to_org` (FC-TC contracts)
-
----
-
-## Solution
-
-### Change 1: Filter SOV creation by payer role
-
-Update `createAllSOVs` in `useContractSOV.ts` to only create SOVs for contracts where the current organization is the **payer** (`to_org_id`).
-
-**Current Logic (wrong)**:
-```typescript
-// Creates SOVs for ALL visible contracts (where org is from_org OR to_org)
-const contractsWithValue = contracts.filter(c => 
-  (c.contract_sum || 0) > 0 && !isWorkOrderContract(c)
-);
-```
-
-**New Logic (correct)**:
-```typescript
-// Only create SOVs for contracts where current org is the PAYER (to_org)
-const contractsWithValue = contracts.filter(c => 
-  (c.contract_sum || 0) > 0 && 
-  !isWorkOrderContract(c) &&
-  c.to_org_id === currentOrgId  // Only payer can create SOV
-);
-```
-
-### Change 2: Add function to create SOV for a single contract
-
-Add a new function `createSOVForContract(contractId: string)` to create an SOV for a specific contract. This will be used for:
-- Creating SOV for newly added contracts
-- Recreating a deleted SOV
-
-### Change 3: Update UI to show "Contracts Missing SOVs" section
-
-Update `ContractSOVEditor.tsx` to:
-1. Calculate which contracts need SOVs (where current org is payer and no SOV exists)
-2. Show a "Contracts Pending SOV" section with a button to create SOV for each
-3. This section appears even when other SOVs exist
+Based on the memory provided:
+- `material_responsibility` determines which organization (GC or TC) is the `pricing_owner_org_id`
+- The pricing owner has exclusive rights to:
+  - View supplier pricing
+  - Finalize orders
+  - Delegate ordering permissions to Field Crews
 
 ---
 
-## Technical Implementation
+## Solution Overview
 
-### File: `src/hooks/useContractSOV.ts`
+### Part 1: Update Type Definition
 
-**Add `createSOVForContract` function**:
+Add `material_responsibility` to the `ProjectContract` interface:
+
+**File: `src/types/projectWizard.ts`**
+
 ```typescript
-const createSOVForContract = useCallback(async (contractId: string) => {
-  const contract = contracts.find(c => c.id === contractId);
-  if (!contract) return;
-  
-  // Verify current org is the payer
-  if (contract.to_org_id !== currentOrgId) {
-    toast({
-      title: 'Cannot Create SOV',
-      description: 'Only the payer organization can create an SOV for this contract.',
-      variant: 'destructive'
-    });
-    return;
-  }
-  
-  // Check if SOV already exists
-  if (sovs.find(s => s.contract_id === contractId)) {
-    toast({
-      title: 'SOV Already Exists',
-      description: 'An SOV already exists for this contract.',
-      variant: 'destructive'
-    });
-    return;
-  }
-  
-  setSaving(true);
-  try {
-    // Get project details and generate items...
-    // Same logic as createAllSOVs but for single contract
-  }
-});
+export interface ProjectContract {
+  toTeamMemberId: string;
+  contractSum: number;
+  retainagePercent: number;
+  allowMobilization: boolean;
+  notes?: string;
+  // NEW: Who is responsible for material costs
+  materialResponsibility?: 'GC' | 'TC';
+}
 ```
 
-**Modify `createAllSOVs` to filter by payer**:
-```typescript
-const contractsWithValue = contracts.filter(c => 
-  (c.contract_sum || 0) > 0 && 
-  !isWorkOrderContract(c) &&
-  c.to_org_id === currentOrgId  // Only payer can create
-);
+### Part 2: Update ContractsStep (New Project Wizard)
+
+Add a Material Responsibility toggle to the `ContractCard` component when the contract is with a Trade Contractor.
+
+**File: `src/components/project-wizard-new/ContractsStep.tsx`**
+
+Changes:
+1. Add `materialResponsibility` field to default contract creation
+2. Add a toggle in `ContractCard` for Trade Contractor contracts:
+   - Label: "Material Responsibility"
+   - Options: GC | TC (toggle switch)
+   - Default: TC (Trade Contractor provides their own materials)
+
+UI Example:
+```
+┌─────────────────────────────────────────────────────┐
+│ Contract with ABC Framing (Framer)                  │
+├─────────────────────────────────────────────────────┤
+│ Contract Sum: $50,000    Retainage: 5%              │
+│                                                     │
+│ Allow Mobilization?                    [Toggle]     │
+│                                                     │
+│ Material Responsibility                             │
+│   GC ○────────────● TC                              │
+│   (Who provides and pays for materials)             │
+│                                                     │
+│ Notes: [                                      ]     │
+└─────────────────────────────────────────────────────┘
 ```
 
-**Add `contractsMissingSOVs` computed value**:
-```typescript
-// Calculate contracts that need SOVs (current org is payer, has value, no SOV yet)
-const contractsMissingSOVs = useMemo(() => {
-  const isWorkOrderContract = (c: ProjectContract) => 
-    c.trade === 'Work Order' || c.trade === 'Work Order Labor';
-    
-  const contractsWithSOVs = new Set(sovs.map(s => s.contract_id).filter(Boolean));
-  
-  return contracts.filter(c => 
-    (c.contract_sum || 0) > 0 &&
-    !isWorkOrderContract(c) &&
-    c.to_org_id === currentOrgId &&  // Current org is payer
-    !contractsWithSOVs.has(c.id)     // No SOV exists
-  );
-}, [contracts, sovs, currentOrgId]);
-```
+### Part 3: Save Material Responsibility
 
-### File: `src/components/sov/ContractSOVEditor.tsx`
+Update `CreateProjectNew.tsx` to save `material_responsibility` to the database.
 
-**Add "Missing SOVs" section**:
-After the existing SOVs are rendered, add a section showing contracts that need SOVs:
+**File: `src/pages/CreateProjectNew.tsx`**
 
-```jsx
-{contractsMissingSOVs.length > 0 && !isFC && (
-  <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
-    <CardHeader>
-      <CardTitle className="text-base flex items-center gap-2">
-        <AlertCircle className="h-4 w-4 text-amber-600" />
-        Contracts Missing SOV
-      </CardTitle>
-      <CardDescription>
-        The following contracts need a Schedule of Values before you can bill against them.
-      </CardDescription>
-    </CardHeader>
-    <CardContent className="space-y-2">
-      {contractsMissingSOVs.map(contract => (
-        <div key={contract.id} className="flex items-center justify-between p-3 rounded-lg bg-background border">
-          <div>
-            <span className="font-medium">
-              {getContractDisplayName(contract.from_role, contract.to_role, contract.from_org_name, contract.to_org_name)}
-            </span>
-            <span className="text-muted-foreground ml-2">
-              {formatCurrency(contract.contract_sum)}
-            </span>
-          </div>
-          <Button 
-            size="sm"
-            onClick={() => createSOVForContract(contract.id)}
-            disabled={saving}
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            Create SOV
-          </Button>
-        </div>
-      ))}
-    </CardContent>
-  </Card>
-)}
-```
+In the `saveContracts` function:
+1. After creating the contract, update `project_participants` or `project_relationships` with the `material_responsibility` value
+2. Use the existing pattern from `CreateProject.tsx` that calls `invite_org_to_project_by_id` RPC
+
+### Part 4: Update AddTeamMemberDialog
+
+Add supplier relationship options when adding a Supplier to the project.
+
+**File: `src/components/project/AddTeamMemberDialog.tsx`**
+
+When role is "Supplier", show additional fields:
+1. **Material Buyer**: Toggle (GC | TC) - who can create POs with this supplier
+2. **PO Requires Approval**: Toggle - whether POs need upstream approval
+
+These values should be saved to `project_participants.material_responsibility` and `project_participants.po_requires_approval`.
+
+### Part 5: Update EditProject.tsx (Manage Contracts)
+
+Add ability to edit material responsibility on existing contracts.
+
+**File: `src/pages/EditProject.tsx`**
+
+In the Contracts tab:
+1. For Trade Contractor contracts, add Material Responsibility toggle
+2. For Supplier relationships, add Material Buyer and PO Approval toggles
+3. These should update `project_participants` when saved
 
 ---
 
-## UI Behavior After Fix
+## Technical Details
 
-| Scenario | Before | After |
-|----------|--------|-------|
-| GC views SOV tab with GC-TC contract | Sees contract, can create SOV | Same (GC is payer) |
-| TC views SOV tab with GC-TC contract | Sees contract, can create SOV (wrong!) | Sees contract but cannot create SOV (TC is not payer) |
-| TC views SOV tab with FC-TC contract | Cannot see or create SOV | Can see and create SOV (TC is payer) |
-| Any user deletes SOV | No way to recreate | "Create SOV" button appears for that contract |
-| TC adds new FC-TC contract | No way to create SOV | "Contracts Missing SOV" section shows the contract |
+### Database Fields Used
+
+| Table | Column | Purpose |
+|-------|--------|---------|
+| `project_participants` | `material_responsibility` | Who is the pricing owner (GC or TC) |
+| `project_participants` | `po_requires_approval` | Whether POs need upstream approval |
+| `project_relationships` | `material_responsibility` | Relationship-level material responsibility |
+
+### Data Flow
+
+1. **New Project Wizard**: ContractsStep collects `materialResponsibility` per contract
+2. **Save**: `CreateProjectNew.tsx` saves to `project_participants` when inviting parties
+3. **Edit**: `EditProject.tsx` can update `project_participants.material_responsibility`
+4. **Use**: `usePOPricingVisibility` hook uses `pricing_owner_org_id` (set based on material_responsibility) to control pricing visibility
 
 ---
 
@@ -186,14 +132,71 @@ After the existing SOVs are rendered, add a section showing contracts that need 
 
 | File | Changes |
 |------|---------|
-| `src/hooks/useContractSOV.ts` | Add `createSOVForContract`, filter `createAllSOVs` by payer, add `contractsMissingSOVs` |
-| `src/components/sov/ContractSOVEditor.tsx` | Add "Contracts Missing SOV" section with per-contract create buttons |
+| `src/types/projectWizard.ts` | Add `materialResponsibility` to `ProjectContract` interface |
+| `src/components/project-wizard-new/ContractsStep.tsx` | Add Material Responsibility toggle in ContractCard for TC contracts |
+| `src/pages/CreateProjectNew.tsx` | Save `material_responsibility` to `project_participants` in `saveContracts` |
+| `src/components/project/AddTeamMemberDialog.tsx` | Add Material Buyer and PO Approval fields for Supplier role |
+| `src/pages/EditProject.tsx` | Add Material Responsibility editing in Contracts tab |
 
 ---
 
-## Benefits
+## UI Mockups
 
-1. **Correct Permission Model**: Only the payer can create/manage SOVs
-2. **Self-Service SOV Creation**: TCs can create SOVs for FC-TC contracts independently
-3. **Recovery from Deletion**: Users can recreate SOVs if accidentally deleted
-4. **Clear Visibility**: Pending contracts are shown prominently with action buttons
+### ContractsStep - Trade Contractor Card
+```
+┌──────────────────────────────────────────────────────────────┐
+│ 💲 ABC Framing LLC (Framer)                                  │
+├──────────────────────────────────────────────────────────────┤
+│ ┌─────────────────────┐  ┌─────────────────────┐             │
+│ │ Contract Sum        │  │ Retainage %         │             │
+│ │ $ [50,000.00    ]   │  │ [5         ] %      │             │
+│ └─────────────────────┘  └─────────────────────┘             │
+│                                                              │
+│ Allow Mobilization as a line item?           [ ○──────● ]    │
+│                                                              │
+│ Material Responsibility                                      │
+│ Who provides and pays for materials?                         │
+│   GC [ ○─────────● ] TC                                      │
+│                                                              │
+│ Notes (Optional)                                             │
+│ ┌────────────────────────────────────────────────────┐       │
+│ │                                                    │       │
+│ └────────────────────────────────────────────────────┘       │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### AddTeamMemberDialog - Supplier Selected
+```
+┌──────────────────────────────────────────────────────────────┐
+│ 🏢 Acme Lumber Supply                                        │
+│    📧 orders@acmelumber.com                                  │
+│    [Change selection]                                        │
+├──────────────────────────────────────────────────────────────┤
+│ Role on this project                                         │
+│ ┌──────────────────────────────────────────────────────┐     │
+│ │ Supplier                                         ▼   │     │
+│ └──────────────────────────────────────────────────────┘     │
+│                                                              │
+│ Material Buyer                                               │
+│ Who can order from this supplier?                            │
+│   GC [ ●─────────○ ] TC                                      │
+│                                                              │
+│ PO Requires Upstream Approval?               [ ●─────○ ]     │
+│                                                              │
+│ ┌────────────────────────────────────────────────────────┐   │
+│ │                   Add to Project                       │   │
+│ └────────────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Summary
+
+This plan adds the missing `material_responsibility` field to the new project wizard and manage contracts screen, ensuring that:
+
+1. GC can specify who is responsible for materials when contracting with TCs
+2. When adding suppliers, the contract creator can specify who the "buyer" is (GC or TC)
+3. PO approval requirements can be set for supplier relationships
+4. All data is saved to `project_participants` for proper downstream use in pricing visibility
+
