@@ -1,250 +1,270 @@
 
+# Work Order Materials Display and Auto-Submit Flow
 
-# Work Order Materials and Equipment Refinements
+## Summary
 
-## Summary of Changes
+This plan implements three key improvements to the Work Order materials workflow:
 
-This plan addresses three specific improvements to the work order page:
-
-1. **Use only the Product Picker for materials** - Remove the manual materials entry panel since materials should only be added via the linked PO (Product Picker)
-2. **Add "Equipment Priced" indicator** - When TC adds equipment with pricing, show a visual checkmark badge
-3. **Auto-activate supplier** - When the "Materials Needed" toggle is turned ON, automatically activate the supplier as a participant
-
----
-
-## Changes
-
-### 1. Remove Manual MaterialsPanel from Work Order Page
-
-**File: `src/components/change-order-detail/ChangeOrderDetailPage.tsx`**
-
-Remove the `MaterialsPanel` component from the main content area. Since materials now come exclusively through the Product Picker (linked PO), there's no need for manual material entry.
-
-**Current code (lines 157-169):**
-```tsx
-{/* Materials */}
-{changeOrder.requires_materials && (isTC || isSupplier || isGC) && (
-  <MaterialsPanel
-    materials={materials}
-    isEditable={isEditable}
-    canViewCosts={isTC || isGC}
-    isTC={isTC}
-    isSupplier={isSupplier}
-    onAddMaterial={addMaterial}
-    onUpdateMaterial={updateMaterial}
-    onLockSupplierPricing={lockSupplierPricing}
-  />
-)}
-```
-
-**Action:** Remove this entire block. The `MaterialResourceToggle` component in the sidebar already handles material management via the Product Picker.
+1. **Display material items on work order page** - Create a new "Materials" panel that shows all line items from the linked PO
+2. **Auto-submit PO to supplier** - When TC completes the Product Picker, automatically set PO status to SUBMITTED
+3. **Show pricing and lock markup** - When supplier prices the PO, display the pricing on the work order page with a "Lock Materials Pricing" button
 
 ---
 
-### 2. Add "Equipment Priced" Badge and Checklist Update
+## Changes Overview
 
-**File: `src/components/change-order-detail/EquipmentPanel.tsx`**
+### 1. New Component: WorkOrderMaterialsPanel
 
-Add a "Priced" badge to equipment items that have pricing entered (matching the style used elsewhere).
+A new panel that displays all material line items from the linked PO.
 
-**Current code (lines 147-164):**
-```tsx
-{equipment.map((item) => (
-  <div
-    key={item.id}
-    className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
-  >
-    <div className="flex-1">
-      <p className="font-medium text-sm">{item.description}</p>
-      <p className="text-xs text-muted-foreground">
-        {item.pricing_type === 'daily'
-          ? `${item.days} day(s) @ $${item.daily_rate}/day`
-          : 'Flat rate'}
-      </p>
-    </div>
-    {canViewCosts && (
-      <span className="font-medium">${(item.total_cost || 0).toFixed(2)}</span>
-    )}
-  </div>
-))}
+**File**: `src/components/change-order-detail/WorkOrderMaterialsPanel.tsx`
+
+**Features**:
+- Shows a table/list of all line items from the linked PO
+- Displays: description, quantity, UOM, length (if applicable)
+- Pricing columns (unit price, line total) only visible to pricing-authorized users
+- Status badge showing PO status (SUBMITTED, PRICED, etc.)
+- When PO is PRICED: shows subtotal, markup editor, and "Lock Materials Pricing" button
+- FC sees items but no pricing columns
+
+**Visual Design**:
 ```
-
-**New code:**
-```tsx
-{equipment.map((item) => {
-  const isPriced = item.total_cost && item.total_cost > 0;
-  return (
-    <div
-      key={item.id}
-      className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
-    >
-      <div className="flex-1">
-        <div className="flex items-center gap-2">
-          <p className="font-medium text-sm">{item.description}</p>
-          {isPriced && (
-            <Badge variant="secondary" className="gap-1">
-              <Check className="w-3 h-3" />
-              Priced
-            </Badge>
-          )}
-        </div>
-        <p className="text-xs text-muted-foreground">
-          {item.pricing_type === 'daily'
-            ? `${item.days} day(s) @ $${item.daily_rate}/day`
-            : 'Flat rate'}
-        </p>
-      </div>
-      {canViewCosts && (
-        <span className="font-medium">${(item.total_cost || 0).toFixed(2)}</span>
-      )}
-    </div>
-  );
-})}
+┌─────────────────────────────────────────────────────────┐
+│ Materials                                    PO-001234  │
+│ ┌────────────────────────────────────┬──────┬─────────┐ │
+│ │ Description                        │ Qty  │ Total   │ │
+│ ├────────────────────────────────────┼──────┼─────────┤ │
+│ │ 2x4 SPF #2 Stud 8'                 │ 50   │ $175.00 │ │
+│ │ 2x6 SPF #2 16'                     │ 25   │ $262.50 │ │
+│ │ OSB 7/16" 4x8                      │ 10   │ $89.00  │ │
+│ └────────────────────────────────────┴──────┴─────────┘ │
+│                                                         │
+│ Subtotal                                      $526.50   │
+│ Markup (15%)                                  +$78.98   │
+│ ─────────────────────────────────────────────────────── │
+│ Materials Total                               $605.48   │
+│                                                         │
+│                          [✓ Lock Materials Pricing]     │
+└─────────────────────────────────────────────────────────┘
 ```
-
-Also add imports for `Badge` and `Check` icon.
 
 ---
 
-### 3. Auto-Activate Supplier When Materials Toggle is ON
+### 2. Update Hook: Fetch Full PO Line Items
 
-**File: `src/hooks/useChangeOrderProject.ts`**
+Modify the `linkedPO` query to fetch all line item details, not just totals.
 
-Modify the `toggleMaterialsMutation` to automatically activate the first available supplier when materials are enabled.
+**File**: `src/hooks/useChangeOrderProject.ts`
 
-**Current code (lines 1009-1032):**
+**Changes**:
+- Expand the `po_line_items` select to include: `id, line_number, description, quantity, uom, length_ft, unit_price, line_total`
+- Return items array in the linkedPO data structure
+
+**Updated Query**:
 ```typescript
-// Toggle materials requirement
-const toggleMaterialsMutation = useMutation({
-  mutationFn: async (requiresMaterials: boolean) => {
+// Get line items with full details
+const { data: lineItems, error: itemsError } = await supabase
+  .from('po_line_items')
+  .select('id, line_number, description, quantity, uom, length_ft, unit_price, line_total')
+  .eq('po_id', changeOrder.linked_po_id)
+  .order('line_number');
+```
+
+**Updated Return Type**:
+```typescript
+return {
+  id: poData.id,
+  po_number: poData.po_number,
+  status: poData.status,
+  subtotal,
+  itemCount,
+  items: lineItems || [],  // NEW: Full line item data
+};
+```
+
+---
+
+### 3. Auto-Submit PO to Supplier
+
+When the PO is created from the Product Picker, automatically set its status to SUBMITTED so the supplier can price it.
+
+**File**: `src/components/project/PurchaseOrdersTab.tsx` (for reference pattern)
+
+**File to Modify**: The PO creation logic in the POWizardV2's completion handler
+
+**Approach**: When creating a PO with a `work_order_id` (linked to a work order), automatically set:
+- `status: 'SUBMITTED'` instead of `'ACTIVE'`
+- `submitted_at: new Date().toISOString()`
+- `submitted_by: user.id`
+
+This ensures the supplier immediately sees the PO for pricing.
+
+---
+
+### 4. Add "Lock Materials Pricing" Mutation
+
+Add a mutation to lock the materials pricing once TC is satisfied with the markup.
+
+**File**: `src/hooks/useChangeOrderProject.ts`
+
+**New Mutation**:
+```typescript
+const lockMaterialsPricingMutation = useMutation({
+  mutationFn: async () => {
     if (!changeOrderId) throw new Error('Invalid state');
 
     const { error } = await supabase
       .from('change_order_projects')
-      .update({ requires_materials: requiresMaterials })
+      .update({ 
+        materials_pricing_locked: true,
+        materials_locked_at: new Date().toISOString(),
+      })
       .eq('id', changeOrderId);
 
     if (error) throw error;
   },
   onSuccess: () => {
     queryClient.invalidateQueries({ queryKey: ['change-order', changeOrderId] });
-    toast({ title: 'Materials requirement updated' });
+    toast({ title: 'Materials pricing locked' });
   },
-  ...
-});
-```
-
-**New code:**
-```typescript
-// Toggle materials requirement
-const toggleMaterialsMutation = useMutation({
-  mutationFn: async (requiresMaterials: boolean) => {
-    if (!changeOrderId || !user) throw new Error('Invalid state');
-
-    const { error } = await supabase
-      .from('change_order_projects')
-      .update({ requires_materials: requiresMaterials })
-      .eq('id', changeOrderId);
-
-    if (error) throw error;
-
-    // Auto-activate supplier when materials are enabled
-    if (requiresMaterials && availableSuppliers.length > 0) {
-      // Check if a supplier is already active
-      const existingSupplierParticipant = participants.find(
-        p => p.role === 'SUPPLIER' && p.is_active
-      );
-      
-      if (!existingSupplierParticipant) {
-        // Activate the first available supplier
-        const { error: activateError } = await supabase
-          .from('change_order_participants')
-          .upsert({
-            change_order_id: changeOrderId,
-            organization_id: availableSuppliers[0].id,
-            role: 'SUPPLIER',
-            is_active: true,
-            invited_by: user.id,
-          });
-
-        if (activateError) {
-          console.error('Failed to auto-activate supplier:', activateError);
-          // Don't throw - just log the error
-        }
-      }
-    }
-  },
-  onSuccess: (_, requiresMaterials) => {
-    queryClient.invalidateQueries({ queryKey: ['change-order', changeOrderId] });
-    queryClient.invalidateQueries({ queryKey: ['change-order-participants', changeOrderId] });
-    
-    if (requiresMaterials) {
-      toast({ title: 'Materials enabled - Supplier activated' });
-    } else {
-      toast({ title: 'Materials requirement updated' });
-    }
-  },
-  ...
 });
 ```
 
 ---
+
+### 5. Database Migration
+
+Add a column to track if materials pricing is locked.
+
+**SQL**:
+```sql
+ALTER TABLE change_order_projects
+ADD COLUMN materials_pricing_locked BOOLEAN DEFAULT false,
+ADD COLUMN materials_locked_at TIMESTAMPTZ;
+```
+
+---
+
+### 6. Update ChangeOrderDetailPage
+
+Add the new `WorkOrderMaterialsPanel` to the main content area.
+
+**File**: `src/components/change-order-detail/ChangeOrderDetailPage.tsx`
+
+**Add in main content area** (between FC Hours and Equipment):
+```tsx
+{/* Materials from linked PO */}
+{changeOrder.requires_materials && linkedPO && linkedPO.items && linkedPO.items.length > 0 && (
+  <WorkOrderMaterialsPanel
+    linkedPO={linkedPO}
+    materialMarkupType={changeOrder.material_markup_type}
+    materialMarkupPercent={changeOrder.material_markup_percent ?? 0}
+    materialMarkupAmount={changeOrder.material_markup_amount ?? 0}
+    onUpdateMarkup={updateMarkup}
+    onLockPricing={lockMaterialsPricing}
+    isLocked={changeOrder.materials_pricing_locked}
+    canViewPricing={isTC || (isGC && changeOrder.material_cost_responsibility === 'GC')}
+    isEditable={isTCEditable && isTC}
+    projectId={changeOrder.project_id}
+  />
+)}
+```
+
+---
+
+### 7. Update Type Definitions
+
+**File**: `src/types/changeOrderProject.ts`
+
+Add new fields:
+```typescript
+export interface ChangeOrderProject {
+  // ... existing fields ...
+  materials_pricing_locked?: boolean;
+  materials_locked_at?: string | null;
+}
+```
+
+Update linked PO type:
+```typescript
+export interface LinkedPOData {
+  id: string;
+  po_number: string;
+  status: string;
+  subtotal?: number;
+  itemCount?: number;
+  items?: Array<{
+    id: string;
+    line_number: number;
+    description: string;
+    quantity: number;
+    uom: string;
+    length_ft?: number | null;
+    unit_price?: number | null;
+    line_total?: number | null;
+  }>;
+}
+```
+
+---
+
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `src/components/change-order-detail/WorkOrderMaterialsPanel.tsx` | Display materials list from linked PO with pricing and lock button |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/change-order-detail/ChangeOrderDetailPage.tsx` | Remove the `MaterialsPanel` component rendering (lines 157-169) |
-| `src/components/change-order-detail/EquipmentPanel.tsx` | Add "Priced" badge with checkmark icon to priced equipment items |
-| `src/hooks/useChangeOrderProject.ts` | Update `toggleMaterialsMutation` to auto-activate supplier when materials enabled |
+| `supabase/migrations/` | Add `materials_pricing_locked` column |
+| `src/types/changeOrderProject.ts` | Add new fields and LinkedPOData interface |
+| `src/hooks/useChangeOrderProject.ts` | Expand linked PO query, add lock mutation |
+| `src/components/change-order-detail/ChangeOrderDetailPage.tsx` | Add WorkOrderMaterialsPanel |
+| `src/components/project/PurchaseOrdersTab.tsx` | Auto-submit PO when linked to work order |
+| `src/components/change-order-detail/MaterialResourceToggle.tsx` | Update to handle auto-submit on PO create |
+| `src/components/change-order-detail/index.ts` | Export new component |
 
 ---
 
-## Visual Result
+## Flow Summary
 
-### Equipment Panel with "Priced" Badge
 ```
-┌─────────────────────────────────────────────────────┐
-│ Equipment / Machinery                    [+ Add]    │
-├─────────────────────────────────────────────────────┤
-│ ┌─────────────────────────────────────────────────┐ │
-│ │ Scissor Lift  [✓ Priced]              $450.00  │ │
-│ │ 3 day(s) @ $150/day                            │ │
-│ └─────────────────────────────────────────────────┘ │
-│ ┌─────────────────────────────────────────────────┐ │
-│ │ Generator     [✓ Priced]              $200.00  │ │
-│ │ Flat rate                                       │ │
-│ └─────────────────────────────────────────────────┘ │
-│                                                     │
-│ Total Equipment                         $650.00    │
-└─────────────────────────────────────────────────────┘
-```
-
-### Materials Flow (Product Picker Only)
-```
-Resource Requirements Card (Sidebar)
-┌─────────────────────────────────────────────────────┐
-│ 📦 Materials Needed              [Toggle Switch]   │
-│    GC pays for materials                           │
-│                                                     │
-│  [+ Add Materials via Product Picker]              │
-│  ─or─                                              │
-│  ┌───────────────────────────────────────────────┐ │
-│  │ Linked PO: PO-001234    Status: PRICED        │ │
-│  │ 5 items • $1,234.50                           │ │
-│  └───────────────────────────────────────────────┘ │
-│                                                     │
-│ 🔧 Equipment Needed              [Toggle Switch]   │
-│    TC pays for equipment                           │
-└─────────────────────────────────────────────────────┘
+TC toggles "Materials Needed" ON
+   └─> Supplier auto-activated
+   └─> "Add Materials" button appears
+         │
+         ▼
+TC opens Product Picker, selects items
+   └─> Creates PO with status = SUBMITTED (auto-submitted)
+   └─> Links PO to Work Order
+         │
+         ▼
+Work Order page shows Materials Panel
+   └─> Items listed (no pricing yet)
+   └─> Status: "Submitted - Awaiting Supplier Pricing"
+         │
+         ▼
+Supplier prices the PO (status → PRICED)
+   └─> Pricing flows to Work Order
+         │
+         ▼
+TC sees Materials Panel with pricing
+   └─> Can adjust markup (% or lump sum)
+   └─> Clicks "Lock Materials Pricing"
+         │
+         ▼
+Pricing locked, shown in TC Pricing Summary
+   └─> TC can submit pricing to GC
 ```
 
 ---
 
 ## Benefits
 
-1. **Simplified UI** - Removes duplicate material entry options, making the workflow clearer
-2. **Consistent data source** - All materials come from the structured Product Picker / PO system
-3. **Visual feedback** - Users can clearly see when equipment has been priced
-4. **Automatic workflow** - Supplier is ready to receive POs as soon as materials are needed
-
+1. **Visibility**: TC can see exactly what materials are on the work order
+2. **Automated Flow**: No manual "Submit to Supplier" step - PO goes straight to supplier
+3. **Clear Status**: Materials panel shows current PO status
+4. **Controlled Pricing**: TC can lock in markup before submitting to GC
+5. **FC Transparency**: FC can see what materials are needed (just not pricing)
