@@ -1,172 +1,191 @@
 
 
-# Add Equipment Dropdown Menu with Predefined Equipment List
+# Work Order Materials and Equipment Refinements
 
-## Overview
+## Summary of Changes
 
-Currently, when adding equipment to a work order, users must manually type in the equipment description. This plan adds a predefined list of common construction equipment with a dropdown selector, making it faster and more consistent to add equipment entries.
+This plan addresses three specific improvements to the work order page:
 
----
-
-## Predefined Equipment List
-
-Based on common construction equipment needs, we'll add these categories:
-
-### Heavy Equipment / Machinery
-- Forklift
-- Scissor Lift
-- Boom Lift / JLG
-- Crane (Mobile)
-- Crane (Tower)
-- Excavator
-- Skid Steer / Bobcat
-- Backhoe
-
-### Power Tools / Equipment
-- Concrete Mixer
-- Concrete Saw
-- Generator
-- Compressor
-- Welder
-- Pressure Washer
-
-### Scaffolding & Access
-- Scaffolding (per section)
-- Ladder (Extension)
-- Baker Scaffold
-
-### Transportation
-- Dump Truck
-- Flatbed Trailer
-- Delivery Truck
-
-### Specialty Equipment
-- Dumpster / Roll-off Container
-- Portable Toilet
-- Temporary Fencing
-- Temporary Heating / HVAC
-- Water Pump
+1. **Use only the Product Picker for materials** - Remove the manual materials entry panel since materials should only be added via the linked PO (Product Picker)
+2. **Add "Equipment Priced" indicator** - When TC adds equipment with pricing, show a visual checkmark badge
+3. **Auto-activate supplier** - When the "Materials Needed" toggle is turned ON, automatically activate the supplier as a participant
 
 ---
 
-## UI Changes
+## Changes
 
-### File: `src/components/change-order-detail/EquipmentPanel.tsx`
+### 1. Remove Manual MaterialsPanel from Work Order Page
 
-**Current Flow:**
-1. Click "Add Equipment"
-2. Type description manually
-3. Select pricing type (flat/daily)
-4. Enter pricing
-5. Submit
+**File: `src/components/change-order-detail/ChangeOrderDetailPage.tsx`**
 
-**New Flow:**
-1. Click "Add Equipment"
-2. **Select from dropdown** OR type custom description
-3. Select pricing type (flat/daily)
-4. Enter pricing
-5. Submit
+Remove the `MaterialsPanel` component from the main content area. Since materials now come exclusively through the Product Picker (linked PO), there's no need for manual material entry.
 
-### Implementation Details
-
-1. **Add equipment options constant** at the top of the file:
-```typescript
-const EQUIPMENT_OPTIONS = [
-  { category: 'Heavy Equipment', items: [
-    'Forklift',
-    'Scissor Lift',
-    'Boom Lift / JLG',
-    'Crane (Mobile)',
-    'Crane (Tower)',
-    'Excavator',
-    'Skid Steer / Bobcat',
-    'Backhoe',
-  ]},
-  { category: 'Power Tools', items: [
-    'Concrete Mixer',
-    'Concrete Saw',
-    'Generator',
-    'Compressor',
-    'Welder',
-    'Pressure Washer',
-  ]},
-  { category: 'Scaffolding & Access', items: [
-    'Scaffolding (per section)',
-    'Ladder (Extension)',
-    'Baker Scaffold',
-  ]},
-  { category: 'Transportation', items: [
-    'Dump Truck',
-    'Flatbed Trailer',
-    'Delivery Truck',
-  ]},
-  { category: 'Specialty', items: [
-    'Dumpster / Roll-off Container',
-    'Portable Toilet',
-    'Temporary Fencing',
-    'Temporary Heating / HVAC',
-    'Water Pump',
-  ]},
-];
-```
-
-2. **Replace the text input with a Select dropdown** that includes:
-   - Grouped options by category using `SelectGroup` and `SelectLabel`
-   - An "Other (Custom)" option at the end
-   - When "Other" is selected, show a text input for custom description
-
-3. **Add state for custom description mode:**
-```typescript
-const [useCustomDescription, setUseCustomDescription] = useState(false);
-```
-
-4. **Update the form section:**
+**Current code (lines 157-169):**
 ```tsx
-<div>
-  <Label>Equipment Type *</Label>
-  <Select
-    value={useCustomDescription ? 'custom' : description}
-    onValueChange={(value) => {
-      if (value === 'custom') {
-        setUseCustomDescription(true);
-        setDescription('');
-      } else {
-        setUseCustomDescription(false);
-        setDescription(value);
-      }
-    }}
-  >
-    <SelectTrigger className="bg-background">
-      <SelectValue placeholder="Select equipment..." />
-    </SelectTrigger>
-    <SelectContent className="bg-popover z-50 max-h-80">
-      {EQUIPMENT_OPTIONS.map((group) => (
-        <SelectGroup key={group.category}>
-          <SelectLabel>{group.category}</SelectLabel>
-          {group.items.map((item) => (
-            <SelectItem key={item} value={item}>
-              {item}
-            </SelectItem>
-          ))}
-        </SelectGroup>
-      ))}
-      <SelectSeparator />
-      <SelectItem value="custom">Other (Custom)</SelectItem>
-    </SelectContent>
-  </Select>
-</div>
-
-{useCustomDescription && (
-  <div>
-    <Label htmlFor="equip-custom">Custom Description *</Label>
-    <Input
-      id="equip-custom"
-      placeholder="Enter equipment description..."
-      value={description}
-      onChange={(e) => setDescription(e.target.value)}
-    />
-  </div>
+{/* Materials */}
+{changeOrder.requires_materials && (isTC || isSupplier || isGC) && (
+  <MaterialsPanel
+    materials={materials}
+    isEditable={isEditable}
+    canViewCosts={isTC || isGC}
+    isTC={isTC}
+    isSupplier={isSupplier}
+    onAddMaterial={addMaterial}
+    onUpdateMaterial={updateMaterial}
+    onLockSupplierPricing={lockSupplierPricing}
+  />
 )}
+```
+
+**Action:** Remove this entire block. The `MaterialResourceToggle` component in the sidebar already handles material management via the Product Picker.
+
+---
+
+### 2. Add "Equipment Priced" Badge and Checklist Update
+
+**File: `src/components/change-order-detail/EquipmentPanel.tsx`**
+
+Add a "Priced" badge to equipment items that have pricing entered (matching the style used elsewhere).
+
+**Current code (lines 147-164):**
+```tsx
+{equipment.map((item) => (
+  <div
+    key={item.id}
+    className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+  >
+    <div className="flex-1">
+      <p className="font-medium text-sm">{item.description}</p>
+      <p className="text-xs text-muted-foreground">
+        {item.pricing_type === 'daily'
+          ? `${item.days} day(s) @ $${item.daily_rate}/day`
+          : 'Flat rate'}
+      </p>
+    </div>
+    {canViewCosts && (
+      <span className="font-medium">${(item.total_cost || 0).toFixed(2)}</span>
+    )}
+  </div>
+))}
+```
+
+**New code:**
+```tsx
+{equipment.map((item) => {
+  const isPriced = item.total_cost && item.total_cost > 0;
+  return (
+    <div
+      key={item.id}
+      className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+    >
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
+          <p className="font-medium text-sm">{item.description}</p>
+          {isPriced && (
+            <Badge variant="secondary" className="gap-1">
+              <Check className="w-3 h-3" />
+              Priced
+            </Badge>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          {item.pricing_type === 'daily'
+            ? `${item.days} day(s) @ $${item.daily_rate}/day`
+            : 'Flat rate'}
+        </p>
+      </div>
+      {canViewCosts && (
+        <span className="font-medium">${(item.total_cost || 0).toFixed(2)}</span>
+      )}
+    </div>
+  );
+})}
+```
+
+Also add imports for `Badge` and `Check` icon.
+
+---
+
+### 3. Auto-Activate Supplier When Materials Toggle is ON
+
+**File: `src/hooks/useChangeOrderProject.ts`**
+
+Modify the `toggleMaterialsMutation` to automatically activate the first available supplier when materials are enabled.
+
+**Current code (lines 1009-1032):**
+```typescript
+// Toggle materials requirement
+const toggleMaterialsMutation = useMutation({
+  mutationFn: async (requiresMaterials: boolean) => {
+    if (!changeOrderId) throw new Error('Invalid state');
+
+    const { error } = await supabase
+      .from('change_order_projects')
+      .update({ requires_materials: requiresMaterials })
+      .eq('id', changeOrderId);
+
+    if (error) throw error;
+  },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['change-order', changeOrderId] });
+    toast({ title: 'Materials requirement updated' });
+  },
+  ...
+});
+```
+
+**New code:**
+```typescript
+// Toggle materials requirement
+const toggleMaterialsMutation = useMutation({
+  mutationFn: async (requiresMaterials: boolean) => {
+    if (!changeOrderId || !user) throw new Error('Invalid state');
+
+    const { error } = await supabase
+      .from('change_order_projects')
+      .update({ requires_materials: requiresMaterials })
+      .eq('id', changeOrderId);
+
+    if (error) throw error;
+
+    // Auto-activate supplier when materials are enabled
+    if (requiresMaterials && availableSuppliers.length > 0) {
+      // Check if a supplier is already active
+      const existingSupplierParticipant = participants.find(
+        p => p.role === 'SUPPLIER' && p.is_active
+      );
+      
+      if (!existingSupplierParticipant) {
+        // Activate the first available supplier
+        const { error: activateError } = await supabase
+          .from('change_order_participants')
+          .upsert({
+            change_order_id: changeOrderId,
+            organization_id: availableSuppliers[0].id,
+            role: 'SUPPLIER',
+            is_active: true,
+            invited_by: user.id,
+          });
+
+        if (activateError) {
+          console.error('Failed to auto-activate supplier:', activateError);
+          // Don't throw - just log the error
+        }
+      }
+    }
+  },
+  onSuccess: (_, requiresMaterials) => {
+    queryClient.invalidateQueries({ queryKey: ['change-order', changeOrderId] });
+    queryClient.invalidateQueries({ queryKey: ['change-order-participants', changeOrderId] });
+    
+    if (requiresMaterials) {
+      toast({ title: 'Materials enabled - Supplier activated' });
+    } else {
+      toast({ title: 'Materials requirement updated' });
+    }
+  },
+  ...
+});
 ```
 
 ---
@@ -175,62 +194,48 @@ const [useCustomDescription, setUseCustomDescription] = useState(false);
 
 | File | Changes |
 |------|---------|
-| `src/components/change-order-detail/EquipmentPanel.tsx` | Add equipment options constant, import Select components, replace text input with dropdown, add custom description fallback |
-
----
-
-## Technical Notes
-
-1. **Select Component Styling**: The `SelectContent` must have `bg-popover` and `z-50` classes to ensure proper background and layering per project guidelines.
-
-2. **Form Reset**: When canceling or submitting, reset both `description` and `useCustomDescription` states.
-
-3. **Validation**: The submit button should remain disabled if:
-   - No equipment selected (or empty custom description)
-   - Pricing not properly filled out
+| `src/components/change-order-detail/ChangeOrderDetailPage.tsx` | Remove the `MaterialsPanel` component rendering (lines 157-169) |
+| `src/components/change-order-detail/EquipmentPanel.tsx` | Add "Priced" badge with checkmark icon to priced equipment items |
+| `src/hooks/useChangeOrderProject.ts` | Update `toggleMaterialsMutation` to auto-activate supplier when materials enabled |
 
 ---
 
 ## Visual Result
 
+### Equipment Panel with "Priced" Badge
 ```
 ┌─────────────────────────────────────────────────────┐
-│ Add Equipment                                       │
+│ Equipment / Machinery                    [+ Add]    │
 ├─────────────────────────────────────────────────────┤
-│ Equipment Type *                                    │
 │ ┌─────────────────────────────────────────────────┐ │
-│ │ ▾ Select equipment...                           │ │
+│ │ Scissor Lift  [✓ Priced]              $450.00  │ │
+│ │ 3 day(s) @ $150/day                            │ │
 │ └─────────────────────────────────────────────────┘ │
-│                                                     │
-│ ┌─ Dropdown Open ─────────────────────────────────┐ │
-│ │ HEAVY EQUIPMENT                                 │ │
-│ │   Forklift                                      │ │
-│ │   Scissor Lift                                  │ │
-│ │   Boom Lift / JLG                               │ │
-│ │   Crane (Mobile)                                │ │
-│ │   ...                                           │ │
-│ │ POWER TOOLS                                     │ │
-│ │   Concrete Mixer                                │ │
-│ │   Generator                                     │ │
-│ │   ...                                           │ │
-│ │ ─────────────────────────────────────────────── │ │
-│ │   Other (Custom)                                │ │
-│ └─────────────────────────────────────────────────┘ │
-│                                                     │
-│ Pricing Type                                        │
-│   (○) Flat Rate    (●) Daily Rate                   │
-│                                                     │
-│ Daily Rate *          Days *                        │
-│ ┌───────────────┐     ┌───────────────┐             │
-│ │ 150.00        │     │ 3             │             │
-│ └───────────────┘     └───────────────┘             │
-│                                                     │
-│ Notes                                               │
 │ ┌─────────────────────────────────────────────────┐ │
-│ │ Optional notes...                               │ │
+│ │ Generator     [✓ Priced]              $200.00  │ │
+│ │ Flat rate                                       │ │
 │ └─────────────────────────────────────────────────┘ │
 │                                                     │
-│              [Cancel]    [Add Equipment]            │
+│ Total Equipment                         $650.00    │
+└─────────────────────────────────────────────────────┘
+```
+
+### Materials Flow (Product Picker Only)
+```
+Resource Requirements Card (Sidebar)
+┌─────────────────────────────────────────────────────┐
+│ 📦 Materials Needed              [Toggle Switch]   │
+│    GC pays for materials                           │
+│                                                     │
+│  [+ Add Materials via Product Picker]              │
+│  ─or─                                              │
+│  ┌───────────────────────────────────────────────┐ │
+│  │ Linked PO: PO-001234    Status: PRICED        │ │
+│  │ 5 items • $1,234.50                           │ │
+│  └───────────────────────────────────────────────┘ │
+│                                                     │
+│ 🔧 Equipment Needed              [Toggle Switch]   │
+│    TC pays for equipment                           │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -238,8 +243,8 @@ const [useCustomDescription, setUseCustomDescription] = useState(false);
 
 ## Benefits
 
-1. **Faster Entry**: Users can quickly select from common equipment types
-2. **Consistency**: Standardized equipment names across all work orders
-3. **Flexibility**: Custom option still available for unique equipment needs
-4. **Organized**: Equipment grouped by category for easy browsing
+1. **Simplified UI** - Removes duplicate material entry options, making the workflow clearer
+2. **Consistent data source** - All materials come from the structured Product Picker / PO system
+3. **Visual feedback** - Users can clearly see when equipment has been priced
+4. **Automatic workflow** - Supplier is ready to receive POs as soon as materials are needed
 
