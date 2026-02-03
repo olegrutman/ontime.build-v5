@@ -1,208 +1,151 @@
 
+# Plan: Add TC-FC Contract Management
 
-# Add Sales Tax to Purchase Orders
+## Problem Summary
 
-## Overview
+When a GC creates a project with a TC but no FC, and the TC later invites FC members to the project, the TC has no way to set contract values for those FC relationships. This happens because:
 
-Allow suppliers to add a sales tax percentage to POs during pricing, with automatic calculation of the total including tax.
-
----
-
-## Part 1: Database Schema Changes
-
-### 1.1 Add `sales_tax_percent` to `purchase_orders`
-
-Store the tax percentage at the PO level (not per line item, since tax typically applies to the whole order).
-
-```sql
-ALTER TABLE purchase_orders 
-ADD COLUMN IF NOT EXISTS sales_tax_percent numeric(5,3) DEFAULT 0;
-```
-
-**Notes:**
-- `numeric(5,3)` allows values like `8.250` (max 99.999%)
-- Default of 0 means no tax by default
-- Stored at PO level since most jurisdictions apply a single tax rate to the whole order
+1. The "Invite by Email" flow doesn't create contracts (only "Search Existing" does)
+2. There's no link from the project overview to edit contracts
+3. The existing EditProject contracts tab doesn't properly filter contracts to show only relevant ones to the current user
 
 ---
 
-## Part 2: Type Updates
+## Solution Overview
 
-### 2.1 Update `src/types/purchaseOrder.ts`
+### Part 1: Fix Contract Creation for Email Invites
 
-Add the new field to the PurchaseOrder interface:
+When TC invites FC by email, create the contract record (just like "Search Existing" does).
+
+**File**: `src/components/project/AddTeamMemberDialog.tsx`
+
+**Changes**:
+- In `handleInviteByEmail`, after creating the project_team and project_invites records, also create a project_contracts record
+- Use the same logic as `handleAddExisting` to determine contract direction
+- The contract will be created with `contract_sum: 0` initially (can be edited later)
+
+---
+
+### Part 2: Add Edit Link to ProjectContractsSection
+
+Add a way for users to navigate to edit their contracts from the project overview.
+
+**File**: `src/components/project/ProjectContractsSection.tsx`
+
+**Changes**:
+- Add a "Manage Contracts" button in the card header (visible only to GC_PM and TC_PM roles)
+- Link to `/project/{id}/edit?step=contracts`
+- Allow inline editing for contract values (contract sum, retainage, mobilization)
+
+---
+
+### Part 3: Filter Contracts in EditProject
+
+Ensure the EditProject page only shows contracts relevant to the current user's organization.
+
+**File**: `src/pages/EditProject.tsx`
+
+**Changes**:
+- Filter existing contracts to only show those where the current org is either `from_org_id` or `to_org_id`
+- This respects the existing RLS but adds UI-level filtering for clarity
+
+---
+
+## Technical Details
+
+### Part 1: handleInviteByEmail Contract Creation
 
 ```typescript
-export interface PurchaseOrder {
-  // ... existing fields
-  sales_tax_percent?: number | null;
+// After creating project_team and project_invites...
+
+// Create contract if applicable (not for Suppliers)
+if (inviteForm.role !== 'Supplier') {
+  const isCreatorUpstream = 
+    (currentOrgType === 'GC') ||
+    (currentOrgType === 'TC' && inviteForm.role === 'Field Crew');
+
+  const contractPayload = isCreatorUpstream ? {
+    project_id: projectId,
+    from_org_id: null, // Invitee org not known yet
+    from_role: inviteForm.role,
+    to_org_id: currentOrgId,
+    to_role: creatorRoleLabel,
+    trade: inviteForm.trade || null,
+    to_project_team_id: teamMember.id,
+    contract_sum: 0,
+    retainage_percent: 0,
+    created_by_user_id: user.id,
+  } : {
+    // Creator is worker, invitee is payer
+    project_id: projectId,
+    from_org_id: currentOrgId,
+    from_role: creatorRoleLabel,
+    to_org_id: null,
+    to_role: inviteForm.role,
+    trade: inviteForm.trade || null,
+    to_project_team_id: teamMember.id,
+    contract_sum: 0,
+    retainage_percent: 0,
+    created_by_user_id: user.id,
+  };
+
+  await supabase.from('project_contracts').insert(contractPayload);
 }
 ```
 
----
+### Part 2: ProjectContractsSection Edit Capability
 
-## Part 3: Frontend - PODetail.tsx Updates
-
-### 3.1 Add State for Tax Percentage
-
-When supplier is editing prices, also allow editing the tax percentage:
+Add a "Manage" button and inline editing:
 
 ```typescript
-const [salesTaxPercent, setSalesTaxPercent] = useState<number>(0);
+// In CardHeader
+<div className="flex items-center gap-2">
+  <CardTitle>Contract Summary</CardTitle>
+  {canManageContracts && (
+    <Button size="sm" variant="outline" asChild>
+      <Link to={`/project/${projectId}/edit?step=contracts`}>
+        <Settings className="h-3 w-3 mr-1" />
+        Manage
+      </Link>
+    </Button>
+  )}
+</div>
 ```
 
-Initialize from PO data when entering edit mode:
+### Part 3: Filter Contracts in EditProject
 
 ```typescript
-const initializePriceEdits = () => {
-  // ... existing code
-  setSalesTaxPercent(po?.sales_tax_percent ?? 0);
-  setEditingPrices(true);
-};
-```
-
-### 3.2 Add Tax Input Field
-
-Show a tax percentage input in the table footer when editing:
-
-```typescript
-{editingPrices && (
-  <TableRow>
-    <TableCell colSpan={5} className="text-right">
-      Sales Tax
-    </TableCell>
-    <TableCell>
-      <div className="flex items-center gap-1">
-        <Input
-          type="number"
-          step="0.001"
-          min="0"
-          max="100"
-          className="w-20 text-right"
-          value={salesTaxPercent}
-          onChange={(e) => setSalesTaxPercent(parseFloat(e.target.value) || 0)}
-        />
-        <span>%</span>
-      </div>
-    </TableCell>
-    <TableCell className="text-right">
-      {formatCurrency(subtotal * (salesTaxPercent / 100))}
-    </TableCell>
-  </TableRow>
-)}
-```
-
-### 3.3 Update Table Footer Display
-
-Show subtotal, tax, and grand total:
-
-```typescript
-// When viewing (not editing)
-{showPricingColumns && !editingPrices && po.sales_tax_percent > 0 && (
-  <>
-    <TableRow>
-      <TableCell colSpan={5} className="text-right">Subtotal</TableCell>
-      <TableCell></TableCell>
-      <TableCell className="text-right">{formatCurrency(subtotal)}</TableCell>
-    </TableRow>
-    <TableRow>
-      <TableCell colSpan={5} className="text-right">
-        Sales Tax ({po.sales_tax_percent}%)
-      </TableCell>
-      <TableCell></TableCell>
-      <TableCell className="text-right">
-        {formatCurrency(subtotal * (po.sales_tax_percent / 100))}
-      </TableCell>
-    </TableRow>
-    <TableRow className="bg-muted/50">
-      <TableCell colSpan={5} className="text-right font-bold">Total</TableCell>
-      <TableCell></TableCell>
-      <TableCell className="text-right font-bold text-lg">
-        {formatCurrency(subtotal * (1 + po.sales_tax_percent / 100))}
-      </TableCell>
-    </TableRow>
-  </>
-)}
-```
-
-### 3.4 Update handleSavePrices
-
-Save the tax percentage when supplier saves pricing:
-
-```typescript
-const handleSavePrices = async () => {
-  // ... existing line item updates
-
-  // Update PO status and tax
-  await supabase
-    .from('purchase_orders')
-    .update({
-      status: 'PRICED',
-      sales_tax_percent: salesTaxPercent,
-      priced_at: new Date().toISOString(),
-      priced_by: user.id,
-    })
-    .eq('id', poId);
-};
+// When fetching contracts
+const visibleContracts = (contracts || []).filter(c => 
+  c.from_org_id === currentOrg?.id || c.to_org_id === currentOrg?.id
+);
+setExistingContracts(visibleContracts as ExistingContract[]);
 ```
 
 ---
 
-## Part 4: Visual Design
+## Files to Modify
 
-### Footer Layout (When Viewing Priced PO)
-
-| Description | Unit Price | Total |
-|-------------|-----------|-------|
-| ... items ... | | |
-| **Subtotal** | | $1,234.56 |
-| Sales Tax (8.25%) | | $101.85 |
-| **Grand Total** | | **$1,336.41** |
-
-### Footer Layout (When Editing Prices)
-
-| Description | Unit Price | Total | Lead Time |
-|-------------|-----------|-------|-----------|
-| ... items with inputs ... | | | |
-| **Subtotal** | | $1,234.56 | |
-| Sales Tax | [8.25] % | $101.85 | |
-| **Grand Total** | | **$1,336.41** | |
+| File | Change |
+|------|--------|
+| `src/components/project/AddTeamMemberDialog.tsx` | Add contract creation to `handleInviteByEmail` |
+| `src/components/project/ProjectContractsSection.tsx` | Add "Manage Contracts" button |
+| `src/pages/EditProject.tsx` | Filter contracts by user's org |
 
 ---
 
-## Implementation Steps
+## Expected Behavior After Fix
 
-```text
-1. Database Migration
-   └── Add sales_tax_percent column to purchase_orders
-
-2. Type Updates
-   └── Add sales_tax_percent to PurchaseOrder interface
-
-3. PODetail.tsx Updates
-   ├── Add salesTaxPercent state
-   ├── Initialize from PO data when editing
-   ├── Add tax input row in edit mode
-   ├── Show subtotal/tax/total breakdown when viewing
-   └── Save tax with handleSavePrices
-```
+| Scenario | Before | After |
+|----------|--------|-------|
+| TC invites FC by email | No contract created | Contract created with $0 sum |
+| TC views project overview | No way to edit contracts | "Manage" button links to edit page |
+| TC opens Edit Project → Contracts | Sees all project contracts | Only sees TC-GC and TC-FC contracts |
 
 ---
 
-## Security Considerations
+## Permissions
 
-- Only suppliers can edit tax (when PO status is SUBMITTED)
-- Tax percentage is visible to pricing owner and supplier (follows same visibility rules)
-- No special RLS needed - uses existing PO update policies
-
----
-
-## Summary
-
-| Feature | Implementation |
-|---------|----------------|
-| Storage | `sales_tax_percent` on `purchase_orders` table |
-| Input | Number input (0-100%) shown when supplier adds pricing |
-| Display | Subtotal → Tax → Total breakdown in footer |
-| Permissions | Same as unit price visibility/editability |
-
+- Only users with `canInviteMembers` permission can create contracts
+- Contract editing is available to the org that is party to the contract
+- RLS policies on `project_contracts` already enforce this at the database level
