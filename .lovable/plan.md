@@ -1,56 +1,62 @@
 
+# Fix: TC Can Create SOVs for FC-TC Contracts + Add "Create SOV" for Individual Contracts
 
-# Plan: Industry-Standard SOV Percentage Allocation
+## Problem Summary
 
-## Overview
+Two related issues with SOV creation:
 
-Currently, when SOVs are created from templates, each line item receives an equal percentage (e.g., 19 items = ~5.26% each). This doesn't reflect actual construction cost distribution where some tasks (like wall framing) require significantly more labor and materials than others (like final punch).
+1. **TC can't create SOV for FC-TC contracts**: When a TC adds a new FC-TC contract, they cannot create an SOV for it. The current `createAllSOVs` function creates SOVs for ALL visible contracts, but doesn't respect who should be creating the SOV (the payer/client).
 
-This plan introduces industry-standard default percentages for each SOV line item category, making the generated SOVs immediately more realistic and reducing manual adjustment work.
+2. **No way to recreate deleted SOVs**: If an SOV is deleted from the SOV page, there's no UI to create a new one for that specific contract. The "Create SOVs from Template" button only appears when NO SOVs exist.
 
----
+## Business Rule
 
-## Industry Research Summary
+**SOVs are created by the payer (to_org)** - the organization receiving invoices:
+- GC-TC contract: GC (to_org) creates the SOV
+- FC-TC contract: TC (to_org) creates the SOV
 
-Based on construction industry data for residential framing:
-- **Wall framing** (main structure): Largest labor component (~8-10% per floor)
-- **Sheathing**: Material-heavy, less labor (~4-5% per floor)
-- **Trusses/Roof**: Significant structural component (~8-10%)
-- **Exterior items** (siding, windows): Moderate (~4-6% each)
-- **Backout/blocking**: Smaller finish work (~2-3% per floor)
-- **Mobilization**: Setup costs (~2-3%)
-- **Final punch**: Completion items (~3-4%)
+This means:
+- GC can create SOVs for contracts where they are `to_org`
+- TC can create SOVs for contracts where they are `to_org` (FC-TC contracts)
 
 ---
 
 ## Solution
 
-Create a percentage mapping system that assigns industry-standard default percentages to each SOV item based on its category/name pattern.
+### Change 1: Filter SOV creation by payer role
 
-### Percentage Allocation Strategy
+Update `createAllSOVs` in `useContractSOV.ts` to only create SOVs for contracts where the current organization is the **payer** (`to_org_id`).
 
-The system will use pattern matching on item names to assign appropriate percentages:
+**Current Logic (wrong)**:
+```typescript
+// Creates SOVs for ALL visible contracts (where org is from_org OR to_org)
+const contractsWithValue = contracts.filter(c => 
+  (c.contract_sum || 0) > 0 && !isWorkOrderContract(c)
+);
+```
 
-| Item Category | Percentage | Rationale |
-|--------------|------------|-----------|
-| **Mobilization** | 3% | Setup, equipment staging |
-| **Floor/Wall Framing** (per floor) | 9% | Major labor component |
-| **Wall Sheathing** (per floor) | 5% | Material + moderate labor |
-| **Sub-floor** (per floor) | 6% | Structural deck work |
-| **Trusses/Roof Framing** | 10% | Significant structural |
-| **Truss/Roof Sheathing** | 6% | Material-heavy |
-| **Backout/Blocking** (per floor) | 3% | Finish prep work |
-| **Fascia and Soffit** | 4% | Exterior trim |
-| **Siding** (per side or total) | 5-6% | Exterior cladding |
-| **Windows Installation** | 4% | Material + skilled labor |
-| **Doors Installation** | 3% | Similar to windows |
-| **Decorative Elements** | 3% | Variable extras |
-| **Decks** | 4% | Optional scope |
-| **Tyvek/WRB** | 2% | Material wrap |
-| **Hardware Installation** | 2% | Connectors, misc |
-| **Inspections** | 1% | Administrative milestone |
-| **Shim and Shave** | 2% | Quality control |
-| **Final Punch** | 4% | Completion/corrections |
+**New Logic (correct)**:
+```typescript
+// Only create SOVs for contracts where current org is the PAYER (to_org)
+const contractsWithValue = contracts.filter(c => 
+  (c.contract_sum || 0) > 0 && 
+  !isWorkOrderContract(c) &&
+  c.to_org_id === currentOrgId  // Only payer can create SOV
+);
+```
+
+### Change 2: Add function to create SOV for a single contract
+
+Add a new function `createSOVForContract(contractId: string)` to create an SOV for a specific contract. This will be used for:
+- Creating SOV for newly added contracts
+- Recreating a deleted SOV
+
+### Change 3: Update UI to show "Contracts Missing SOVs" section
+
+Update `ContractSOVEditor.tsx` to:
+1. Calculate which contracts need SOVs (where current org is payer and no SOV exists)
+2. Show a "Contracts Pending SOV" section with a button to create SOV for each
+3. This section appears even when other SOVs exist
 
 ---
 
@@ -58,150 +64,136 @@ The system will use pattern matching on item names to assign appropriate percent
 
 ### File: `src/hooks/useContractSOV.ts`
 
-**New Function**: `getDefaultPercentForItem(itemName: string): number`
-
-This function pattern-matches item names and returns the appropriate default percentage:
-
+**Add `createSOVForContract` function**:
 ```typescript
-function getDefaultPercentForItem(itemName: string): number {
-  const lower = itemName.toLowerCase();
+const createSOVForContract = useCallback(async (contractId: string) => {
+  const contract = contracts.find(c => c.id === contractId);
+  if (!contract) return;
   
-  // Mobilization
-  if (lower.includes('mobilization')) return 3;
+  // Verify current org is the payer
+  if (contract.to_org_id !== currentOrgId) {
+    toast({
+      title: 'Cannot Create SOV',
+      description: 'Only the payer organization can create an SOV for this contract.',
+      variant: 'destructive'
+    });
+    return;
+  }
   
-  // Wall framing (highest value - labor intensive)
-  if (lower.includes('walls frame') || 
-      (lower.includes('walls') && !lower.includes('sheet') && !lower.includes('parapet'))) return 9;
+  // Check if SOV already exists
+  if (sovs.find(s => s.contract_id === contractId)) {
+    toast({
+      title: 'SOV Already Exists',
+      description: 'An SOV already exists for this contract.',
+      variant: 'destructive'
+    });
+    return;
+  }
   
-  // Sheathing/sheeting
-  if (lower.includes('sheat') || lower.includes('sheet')) return 5;
-  
-  // Subfloor
-  if (lower.includes('sub-floor') || lower.includes('subfloor')) return 6;
-  
-  // Trusses (not sheathing)
-  if ((lower.includes('truss') && !lower.includes('sheat')) || 
-      lower.includes('roof framing')) return 10;
-  
-  // Backout/blocking
-  if (lower.includes('backout') || lower.includes('blocking')) return 3;
-  
-  // Fascia and Soffit
-  if (lower.includes('fascia') || lower.includes('soffit')) return 4;
-  
-  // Siding
-  if (lower.includes('siding')) return 5;
-  
-  // Windows
-  if (lower.includes('window')) return 4;
-  
-  // Doors
-  if (lower.includes('door')) return 3;
-  
-  // Decorative
-  if (lower.includes('decorative')) return 3;
-  
-  // Decks
-  if (lower.includes('deck')) return 4;
-  
-  // Tyvek/WRB
-  if (lower.includes('tyvek') || lower.includes('wrb')) return 2;
-  
-  // Hardware
-  if (lower.includes('hardware')) return 2;
-  
-  // Parapet/special structural
-  if (lower.includes('parapet')) return 3;
-  
-  // Inspections
-  if (lower.includes('inspection')) return 1;
-  
-  // Shim and shave
-  if (lower.includes('shim')) return 2;
-  
-  // Final punch
-  if (lower.includes('punch') || lower.includes('final')) return 4;
-  
-  // Basement framing
-  if (lower.includes('basement')) return 7;
-  
-  // Default fallback
-  return 5;
-}
+  setSaving(true);
+  try {
+    // Get project details and generate items...
+    // Same logic as createAllSOVs but for single contract
+  }
+});
 ```
 
-**Modify**: `createAllSOVs` function
-
-Replace the equal distribution logic with intelligent percentage assignment:
-
+**Modify `createAllSOVs` to filter by payer**:
 ```typescript
-// Generate percents for each item
-const rawPercents = itemNames.map(name => getDefaultPercentForItem(name));
-const totalRaw = rawPercents.reduce((a, b) => a + b, 0);
+const contractsWithValue = contracts.filter(c => 
+  (c.contract_sum || 0) > 0 && 
+  !isWorkOrderContract(c) &&
+  c.to_org_id === currentOrgId  // Only payer can create
+);
+```
 
-// Normalize to 100% while maintaining proportions
-const normalizedPercents = rawPercents.map((p, i) => {
-  if (i === itemNames.length - 1) {
-    // Last item gets remainder to ensure exactly 100%
-    const sumSoFar = normalizedPercents.slice(0, -1).reduce((a, b) => a + b, 0);
-    return parseFloat((100 - sumSoFar).toFixed(2));
-  }
-  return parseFloat((p / totalRaw * 100).toFixed(2));
-});
+**Add `contractsMissingSOVs` computed value**:
+```typescript
+// Calculate contracts that need SOVs (current org is payer, has value, no SOV yet)
+const contractsMissingSOVs = useMemo(() => {
+  const isWorkOrderContract = (c: ProjectContract) => 
+    c.trade === 'Work Order' || c.trade === 'Work Order Labor';
+    
+  const contractsWithSOVs = new Set(sovs.map(s => s.contract_id).filter(Boolean));
+  
+  return contracts.filter(c => 
+    (c.contract_sum || 0) > 0 &&
+    !isWorkOrderContract(c) &&
+    c.to_org_id === currentOrgId &&  // Current org is payer
+    !contractsWithSOVs.has(c.id)     // No SOV exists
+  );
+}, [contracts, sovs, currentOrgId]);
+```
+
+### File: `src/components/sov/ContractSOVEditor.tsx`
+
+**Add "Missing SOVs" section**:
+After the existing SOVs are rendered, add a section showing contracts that need SOVs:
+
+```jsx
+{contractsMissingSOVs.length > 0 && !isFC && (
+  <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+    <CardHeader>
+      <CardTitle className="text-base flex items-center gap-2">
+        <AlertCircle className="h-4 w-4 text-amber-600" />
+        Contracts Missing SOV
+      </CardTitle>
+      <CardDescription>
+        The following contracts need a Schedule of Values before you can bill against them.
+      </CardDescription>
+    </CardHeader>
+    <CardContent className="space-y-2">
+      {contractsMissingSOVs.map(contract => (
+        <div key={contract.id} className="flex items-center justify-between p-3 rounded-lg bg-background border">
+          <div>
+            <span className="font-medium">
+              {getContractDisplayName(contract.from_role, contract.to_role, contract.from_org_name, contract.to_org_name)}
+            </span>
+            <span className="text-muted-foreground ml-2">
+              {formatCurrency(contract.contract_sum)}
+            </span>
+          </div>
+          <Button 
+            size="sm"
+            onClick={() => createSOVForContract(contract.id)}
+            disabled={saving}
+          >
+            <Plus className="mr-1 h-4 w-4" />
+            Create SOV
+          </Button>
+        </div>
+      ))}
+    </CardContent>
+  </Card>
+)}
 ```
 
 ---
 
-## Example Output
+## UI Behavior After Fix
 
-For a **Custom Home** template (19 items), instead of each getting ~5.26%:
-
-| Item | Current % | New % |
-|------|-----------|-------|
-| Mobilization | 5.26 | 2.8 |
-| Basement Walls | 5.26 | 8.4 |
-| First Sub-floor | 5.26 | 5.6 |
-| Main Level Walls | 5.26 | 8.4 |
-| Main Level Walls Sheeting | 5.26 | 4.7 |
-| Second Sub-Floor | 5.26 | 5.6 |
-| Second Floor Walls | 5.26 | 8.4 |
-| Second Floor Walls Sheeting | 5.26 | 4.7 |
-| Trusses | 5.26 | 9.3 |
-| Truss Sheeting | 5.26 | 4.7 |
-| Main Level Backout | 5.26 | 2.8 |
-| Second Floor Backout | 5.26 | 2.8 |
-| Fascia and Soffit | 5.26 | 3.7 |
-| Decorative Elements | 5.26 | 2.8 |
-| Windows Installation | 5.26 | 3.7 |
-| Patio Doors Installation | 5.26 | 2.8 |
-| Siding | 5.26 | 4.7 |
-| Decks | 5.26 | 3.7 |
-| Final Punch | 5.26 | 3.7 |
-| **Total** | 100% | 100% |
+| Scenario | Before | After |
+|----------|--------|-------|
+| GC views SOV tab with GC-TC contract | Sees contract, can create SOV | Same (GC is payer) |
+| TC views SOV tab with GC-TC contract | Sees contract, can create SOV (wrong!) | Sees contract but cannot create SOV (TC is not payer) |
+| TC views SOV tab with FC-TC contract | Cannot see or create SOV | Can see and create SOV (TC is payer) |
+| Any user deletes SOV | No way to recreate | "Create SOV" button appears for that contract |
+| TC adds new FC-TC contract | No way to create SOV | "Contracts Missing SOV" section shows the contract |
 
 ---
 
 ## Files to Modify
 
-| File | Change |
-|------|--------|
-| `src/hooks/useContractSOV.ts` | Add `getDefaultPercentForItem()` function and update `createAllSOVs` |
+| File | Changes |
+|------|---------|
+| `src/hooks/useContractSOV.ts` | Add `createSOVForContract`, filter `createAllSOVs` by payer, add `contractsMissingSOVs` |
+| `src/components/sov/ContractSOVEditor.tsx` | Add "Contracts Missing SOV" section with per-contract create buttons |
 
 ---
 
 ## Benefits
 
-1. **More Accurate Billing**: Contractors bill appropriate amounts for each phase
-2. **Reduced Manual Work**: Less time spent adjusting default percentages
-3. **Industry Alignment**: Matches real-world cost distribution expectations
-4. **Still Editable**: Users can still adjust percentages after creation
-
----
-
-## Notes
-
-- Percentages are automatically normalized to ensure they always total 100%
-- The pattern matching is case-insensitive and flexible to handle variations
-- For story-generated templates (apartments), the same logic applies per-item
-- Users retain full ability to edit percentages after SOV creation
-
+1. **Correct Permission Model**: Only the payer can create/manage SOVs
+2. **Self-Service SOV Creation**: TCs can create SOVs for FC-TC contracts independently
+3. **Recovery from Deletion**: Users can recreate SOVs if accidentally deleted
+4. **Clear Visibility**: Pending contracts are shown prominently with action buttons
