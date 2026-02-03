@@ -214,6 +214,7 @@ export function ChangeOrderDetailPage() {
               equipment={equipment}
               participants={participants}
               currentRole={currentRole}
+              linkedPO={linkedPO}
             />
 
             {/* TC Pricing Summary - TC only */}

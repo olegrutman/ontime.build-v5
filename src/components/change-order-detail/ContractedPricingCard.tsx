@@ -12,6 +12,15 @@ import type {
 
 type AppRole = 'GC_PM' | 'TC_PM' | 'FC_PM' | 'FS' | 'SUPPLIER' | null;
 
+interface LinkedPO {
+  id: string;
+  po_number: string;
+  status: string;
+  subtotal?: number;
+  itemCount?: number;
+  items?: any[];
+}
+
 interface ContractedPricingCardProps {
   changeOrder: ChangeOrderProject;
   fcHours: ChangeOrderFCHours[];
@@ -20,6 +29,7 @@ interface ContractedPricingCardProps {
   equipment: ChangeOrderEquipment[];
   participants: ChangeOrderParticipant[];
   currentRole: AppRole;
+  linkedPO?: LinkedPO | null;
 }
 
 function formatCurrency(amount: number): string {
@@ -90,6 +100,7 @@ function TCPricingView({
   revenue,
   fcCost,
   materialCost,
+  materialMarkup,
   profit,
   fcName,
 }: {
@@ -99,6 +110,7 @@ function TCPricingView({
   revenue: number;
   fcCost: number;
   materialCost: number;
+  materialMarkup: number;
   profit: number;
   fcName?: string;
 }) {
@@ -108,7 +120,7 @@ function TCPricingView({
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Revenue (from GC)</p>
         <div className="space-y-2 pl-2">
           <PricingRow label="TC Labor" value={laborTotal} />
-          <PricingRow label="Materials Markup" value={materialTotal} />
+          <PricingRow label="Materials (to GC)" value={materialTotal} />
           <PricingRow label="Equipment" value={equipmentTotal} />
         </div>
         <div className="mt-2">
@@ -122,12 +134,22 @@ function TCPricingView({
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Costs</p>
         <div className="space-y-2 pl-2">
           <PricingRow label={fcName ? `Field Crew (${fcName})` : 'Field Crew'} value={fcCost} />
-          <PricingRow label="Materials (Base Cost)" value={materialCost} />
+          <PricingRow label="Materials (Supplier Cost)" value={materialCost} />
         </div>
         <div className="mt-2">
           <PricingRow label="Total Costs" value={fcCost + materialCost} isBold />
         </div>
       </div>
+      
+      {materialMarkup > 0 && (
+        <>
+          <Separator />
+          <div className="text-sm text-muted-foreground">
+            <span>Materials Markup: </span>
+            <span className="text-foreground">{formatCurrency(materialMarkup)}</span>
+          </div>
+        </>
+      )}
       
       <Separator />
       
@@ -218,6 +240,7 @@ export function ContractedPricingCard({
   equipment,
   participants,
   currentRole,
+  linkedPO,
 }: ContractedPricingCardProps) {
   const isGC = currentRole === 'GC_PM';
   const isTC = currentRole === 'TC_PM';
@@ -236,8 +259,12 @@ export function ContractedPricingCard({
   // FC costs (what TC pays FC)
   const fcCost = fcHours.reduce((sum, h) => sum + (h.labor_total || 0), 0);
   
-  // Material base cost (before markup)
-  const materialCost = materials.reduce((sum, m) => sum + ((m.unit_cost || 0) * m.quantity), 0);
+  // Material base cost (from linked PO if using PO workflow, otherwise from materials array)
+  const materialCost = linkedPO?.subtotal 
+    ?? materials.reduce((sum, m) => sum + ((m.unit_cost || 0) * m.quantity), 0);
+  
+  // Material markup (difference between what GC pays and supplier cost)
+  const materialMarkup = materialTotal - materialCost;
   
   // TC profit
   const revenue = finalPrice;
@@ -287,6 +314,7 @@ export function ContractedPricingCard({
           revenue={revenue}
           fcCost={fcCost}
           materialCost={materialCost}
+          materialMarkup={materialMarkup}
           profit={profit}
           fcName={fcParticipant?.organization?.name}
         />
