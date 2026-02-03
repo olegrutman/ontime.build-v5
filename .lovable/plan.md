@@ -1,245 +1,95 @@
 
 
-# Add Delivery Tracking After PO is Finalized
+# Show Delivery Tracking Info on PO Cards
 
-## Overview
+## Problem
 
-After a Purchase Order is finalized (confirmed by the buyer), suppliers need the ability to:
-1. Mark the PO as "Ready for Delivery" with an expected delivery date
-2. Mark the PO as "Delivered" when materials arrive on site
-
-This adds supply chain visibility for all parties on the project.
+After a PO is marked "Ready for Delivery" or "Delivered" by the supplier, GCs and TCs cannot see this information on the PO card list view. They have to click into each PO detail to see the delivery status. This makes it hard to quickly scan which materials are ready or have arrived.
 
 ---
 
-## Current Status Flow
+## Solution
 
-```text
-ACTIVE → SUBMITTED → PRICED → ORDERED → DELIVERED → FINALIZED
-```
+Add a delivery tracking section to the `POCard` component that displays:
+1. **Ready for Delivery date** - when the PO status is `READY_FOR_DELIVERY` or `DELIVERED`
+2. **Delivered date** - when the PO status is `DELIVERED`
 
-The current flow has DELIVERED before FINALIZED, which doesn't match the real-world process where:
-1. Buyer confirms/finalizes the order
-2. Supplier prepares materials
-3. Supplier schedules delivery
-4. Materials are delivered
+This provides at-a-glance visibility for GCs and TCs to track material deliveries.
 
 ---
 
-## New Status Flow
+## Changes
 
-```text
-ACTIVE → SUBMITTED → PRICED → FINALIZED → READY_FOR_DELIVERY → DELIVERED
-```
+### File: `src/components/purchase-orders/POCard.tsx`
 
-| Status | Who Acts | Description |
-|--------|----------|-------------|
-| ACTIVE | Buyer | PO created, being edited |
-| SUBMITTED | System | Sent to supplier for pricing |
-| PRICED | Supplier | Pricing added by supplier |
-| FINALIZED | Buyer | Order confirmed and locked |
-| READY_FOR_DELIVERY | Supplier | Materials ready, delivery scheduled |
-| DELIVERED | Supplier | Materials delivered to job site |
+Add a delivery tracking section that appears when the PO has delivery dates:
 
----
-
-## Database Changes
-
-### Add New Column
-
-Add `ready_for_delivery_at` timestamp to track when materials are ready:
-
-```sql
-ALTER TABLE purchase_orders 
-ADD COLUMN ready_for_delivery_at TIMESTAMPTZ;
-```
-
-### Add New Status to Enum
-
-Add `READY_FOR_DELIVERY` to the `po_status` enum:
-
-```sql
-ALTER TYPE po_status ADD VALUE 'READY_FOR_DELIVERY' AFTER 'FINALIZED';
-```
-
----
-
-## TypeScript Changes
-
-### File: `src/types/purchaseOrder.ts`
-
-Update the status type, labels, and colors:
-
+**1. Add new icon imports:**
 ```typescript
-export type POStatus = 
-  | 'ACTIVE' 
-  | 'SUBMITTED' 
-  | 'PRICED' 
-  | 'FINALIZED' 
-  | 'READY_FOR_DELIVERY' 
-  | 'DELIVERED'
-  | 'ORDERED';  // Keep for backward compatibility
-
-export const PO_STATUS_LABELS: Record<POStatus, string> = {
-  ACTIVE: 'Active',
-  SUBMITTED: 'Submitted',
-  PRICED: 'Priced',
-  ORDERED: 'Ordered',  // Legacy
-  FINALIZED: 'Finalized',
-  READY_FOR_DELIVERY: 'Ready for Delivery',
-  DELIVERED: 'Delivered',
-};
-
-export const PO_STATUS_COLORS: Record<POStatus, string> = {
-  // ... existing colors ...
-  READY_FOR_DELIVERY: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
-};
+import { Truck, PackageCheck } from 'lucide-react';
 ```
 
-Also add the new field to the interface:
-
-```typescript
-export interface PurchaseOrder {
-  // ... existing fields ...
-  ready_for_delivery_at?: string | null;
-}
-```
-
----
-
-## UI Changes
-
-### File: `src/components/purchase-orders/PODetail.tsx`
-
-#### 1. Add "Ready for Delivery" Dialog
-
-Create a dialog that allows supplier to:
-- Select an expected delivery date
-- Optionally add delivery notes
-
-```typescript
-// New state
-const [readyDialogOpen, setReadyDialogOpen] = useState(false);
-const [expectedDeliveryDate, setExpectedDeliveryDate] = useState<Date | undefined>();
-
-// New handler
-const handleMarkReadyForDelivery = async () => {
-  if (!expectedDeliveryDate) {
-    toast.error('Please select an expected delivery date');
-    return;
-  }
-  
-  setActionLoading(true);
-  try {
-    await supabase
-      .from('purchase_orders')
-      .update({
-        status: 'READY_FOR_DELIVERY',
-        ready_for_delivery_at: new Date().toISOString(),
-        // Store expected delivery date in a notes field or new column
-      })
-      .eq('id', poId);
-    
-    toast.success('Marked ready for delivery');
-    fetchPO();
-    onUpdate();
-  } finally {
-    setActionLoading(false);
-    setReadyDialogOpen(false);
-  }
-};
-```
-
-#### 2. Update Action Buttons Section
-
-Add new buttons for suppliers when PO is FINALIZED:
+**2. Add delivery tracking section after the pricing display:**
 
 ```tsx
-{/* FINALIZED: Supplier can mark ready for delivery */}
-{status === 'FINALIZED' && effectiveIsSupplier && (
-  <Button onClick={() => setReadyDialogOpen(true)} disabled={actionLoading}>
-    <Package className="h-4 w-4 mr-2" />
-    Ready for Delivery
-  </Button>
-)}
-
-{/* READY_FOR_DELIVERY: Supplier can mark delivered */}
-{status === 'READY_FOR_DELIVERY' && effectiveIsSupplier && (
-  <Button onClick={handleMarkDelivered} disabled={actionLoading}>
-    <Truck className="h-4 w-4 mr-2" />
-    Mark Delivered
-  </Button>
-)}
-```
-
-#### 3. Add Ready for Delivery Dialog
-
-```tsx
-<Dialog open={readyDialogOpen} onOpenChange={setReadyDialogOpen}>
-  <DialogContent>
-    <DialogHeader>
-      <DialogTitle>Ready for Delivery</DialogTitle>
-      <DialogDescription>
-        Confirm that materials are ready and provide the expected delivery date.
-      </DialogDescription>
-    </DialogHeader>
-    <div className="space-y-4 py-4">
-      <div>
-        <Label>Expected Delivery Date *</Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="w-full justify-start">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {expectedDeliveryDate ? format(expectedDeliveryDate, 'PPP') : 'Select date'}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent>
-            <Calendar
-              mode="single"
-              selected={expectedDeliveryDate}
-              onSelect={setExpectedDeliveryDate}
-              disabled={(date) => date < new Date()}
-            />
-          </PopoverContent>
-        </Popover>
+{/* Delivery Tracking - Show for READY_FOR_DELIVERY and DELIVERED statuses */}
+{(po.ready_for_delivery_at || po.delivered_at) && (
+  <div className="mt-3 pt-3 border-t space-y-2">
+    {po.ready_for_delivery_at && (
+      <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <PackageCheck className="h-4 w-4 text-cyan-600" />
+          <span>Ready for Delivery</span>
+        </div>
+        <span className="font-medium">
+          {format(new Date(po.ready_for_delivery_at), 'MMM d, yyyy')}
+        </span>
       </div>
-    </div>
-    <DialogFooter>
-      <Button variant="outline" onClick={() => setReadyDialogOpen(false)}>
-        Cancel
-      </Button>
-      <Button onClick={handleMarkReadyForDelivery} disabled={actionLoading || !expectedDeliveryDate}>
-        {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-        Confirm Ready
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+    )}
+    {po.delivered_at && (
+      <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Truck className="h-4 w-4 text-green-600" />
+          <span>Delivered</span>
+        </div>
+        <span className="font-medium text-green-600">
+          {format(new Date(po.delivered_at), 'MMM d, yyyy')}
+        </span>
+      </div>
+    )}
+  </div>
+)}
 ```
 
-#### 4. Show Delivery Status in Info Card
+---
 
-Update the info card to show delivery tracking info:
+## Visual Result
 
-```tsx
-{po.ready_for_delivery_at && (
-  <div>
-    <p className="text-xs text-muted-foreground">Ready for Delivery</p>
-    <p className="font-medium flex items-center gap-1">
-      <Package className="h-4 w-4" />
-      {format(new Date(po.ready_for_delivery_at), 'MMM d, yyyy')}
-    </p>
-  </div>
-)}
-{po.delivered_at && (
-  <div>
-    <p className="text-xs text-muted-foreground">Delivered</p>
-    <p className="font-medium flex items-center gap-1 text-green-600">
-      <Truck className="h-4 w-4" />
-      {format(new Date(po.delivered_at), 'MMM d, yyyy')}
-    </p>
-  </div>
-)}
+**PO Card with "Ready for Delivery" status:**
+```
+┌────────────────────────────────────────────┐
+│ 📦 PO-0045                    [Ready]      │
+│    Feb 1, 2026                             │
+├────────────────────────────────────────────┤
+│ 🏢 Supplier: Acme Lumber                   │
+│ 📄 Items: 12 line items                    │
+├────────────────────────────────────────────┤
+│ ✅ Ready for Delivery      Feb 3, 2026    │
+└────────────────────────────────────────────┘
+```
+
+**PO Card with "Delivered" status:**
+```
+┌────────────────────────────────────────────┐
+│ 📦 PO-0045                   [Delivered]   │
+│    Feb 1, 2026                             │
+├────────────────────────────────────────────┤
+│ 🏢 Supplier: Acme Lumber                   │
+│ 📄 Items: 12 line items                    │
+├────────────────────────────────────────────┤
+│ ✅ Ready for Delivery      Feb 3, 2026    │
+│ 🚚 Delivered               Feb 4, 2026    │
+└────────────────────────────────────────────┘
 ```
 
 ---
@@ -248,16 +98,14 @@ Update the info card to show delivery tracking info:
 
 | File | Changes |
 |------|---------|
-| Database | Add `ready_for_delivery_at` column, add `READY_FOR_DELIVERY` to enum |
-| `src/types/purchaseOrder.ts` | Add new status, labels, colors, and interface field |
-| `src/components/purchase-orders/PODetail.tsx` | Add delivery dialog, update action buttons, show delivery info |
+| `src/components/purchase-orders/POCard.tsx` | Add `Truck` and `PackageCheck` icons, add delivery tracking section |
 
 ---
 
 ## Benefits
 
-1. **Supply Chain Visibility**: Buyers know when materials are ready and scheduled
-2. **Delivery Tracking**: Clear record of delivery dates for project management
-3. **Supplier Control**: Suppliers can update status as materials move through their system
-4. **Audit Trail**: Timestamps for each status change provide accountability
+1. **Quick Visibility**: GCs and TCs can scan the PO list to see delivery status at a glance
+2. **No Extra Clicks**: Delivery dates visible without opening the detail view
+3. **Consistent Design**: Follows existing card section patterns with border separators
+4. **Color Coding**: Cyan for "ready", green for "delivered" matches the status badge colors
 
