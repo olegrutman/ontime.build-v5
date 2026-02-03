@@ -99,11 +99,14 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
           return;
         }
 
-        // Get work order statuses
+        // Get work order statuses - filter by current project
         const { data: workOrders } = await supabase
           .from('change_order_projects')
           .select('id, status')
+          .eq('project_id', projectId)
           .in('id', participatedWOIds);
+        
+        const projectWorkOrderIds = (workOrders || []).map(wo => wo.id);
 
         let approvedCount = 0;
         let pendingCount = 0;
@@ -116,13 +119,13 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
           }
         }
 
-        // For FC: also calculate their labor earnings
+        // For FC: also calculate their labor earnings using filtered project IDs
         let fcEarnings = 0;
-        if (isFCView) {
+        if (isFCView && projectWorkOrderIds.length > 0) {
           const { data: fcHours } = await supabase
             .from('change_order_fc_hours')
             .select('change_order_id, hours, hourly_rate, labor_total')
-            .in('change_order_id', participatedWOIds);
+            .in('change_order_id', projectWorkOrderIds);
 
           fcEarnings = (fcHours || []).reduce((sum, fc) => {
             return sum + (fc.labor_total || (fc.hours * (fc.hourly_rate || 0)));
@@ -135,7 +138,7 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
           fcEarnings,
           approvedCount,
           pendingCount,
-          totalCount: participatedWOIds.length,
+          totalCount: projectWorkOrderIds.length,
         });
         setLoading(false);
         return;
