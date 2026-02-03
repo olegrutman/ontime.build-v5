@@ -401,6 +401,16 @@ export function AddTeamMemberDialog({
 
     setSaving(true);
     try {
+      // Get current user's org info for contract creation
+      const { data: userOrgData } = await supabase
+        .from('user_org_roles')
+        .select('organization_id, organizations:organization_id (type)')
+        .eq('user_id', user.id)
+        .single();
+      
+      const currentOrgId = userOrgData?.organization_id;
+      const currentOrgType = (userOrgData?.organizations as any)?.type;
+
       // Insert into project_team with status = Invited
       const { data: teamMember, error: teamError } = await supabase
         .from('project_team')
@@ -430,6 +440,45 @@ export function AddTeamMemberDialog({
         invited_org_name: inviteForm.companyName,
         invited_by_user_id: user.id,
       });
+
+      // Create contract if applicable (not for Suppliers)
+      // Use the same logic as handleAddExisting to determine contract direction
+      if (inviteForm.role !== 'Supplier' && currentOrgId) {
+        const creatorRoleLabel = currentOrgType === 'GC' ? 'General Contractor' 
+          : currentOrgType === 'TC' ? 'Trade Contractor' : null;
+        
+        const isCreatorUpstream = 
+          (currentOrgType === 'GC') ||
+          (currentOrgType === 'TC' && inviteForm.role === 'Field Crew');
+
+        const contractPayload = isCreatorUpstream ? {
+          // Invitee is worker, creator is payer
+          project_id: projectId,
+          from_org_id: null, // Invitee org not known yet
+          from_role: inviteForm.role,
+          to_org_id: currentOrgId,
+          to_role: creatorRoleLabel,
+          trade: inviteForm.trade || null,
+          to_project_team_id: teamMember.id,
+          contract_sum: 0,
+          retainage_percent: 0,
+          created_by_user_id: user.id,
+        } : {
+          // Creator is worker, invitee is payer (e.g., TC inviting GC)
+          project_id: projectId,
+          from_org_id: currentOrgId,
+          from_role: creatorRoleLabel,
+          to_org_id: null,
+          to_role: inviteForm.role,
+          trade: inviteForm.trade || null,
+          to_project_team_id: teamMember.id,
+          contract_sum: 0,
+          retainage_percent: 0,
+          created_by_user_id: user.id,
+        };
+
+        await supabase.from('project_contracts').insert(contractPayload);
+      }
 
       // Log activity
       await supabase.from('project_activity').insert({

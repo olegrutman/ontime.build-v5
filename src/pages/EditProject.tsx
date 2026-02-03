@@ -102,19 +102,23 @@ export default function EditProject() {
       
       setExistingTeam((team || []) as ExistingTeamMember[]);
 
-      // Fetch contracts
+      // Fetch contracts - filter to only show those where user's org is involved
       const { data: contracts } = await supabase
         .from('project_contracts')
         .select('*')
         .eq('project_id', id);
       
-      setExistingContracts((contracts || []) as ExistingContract[]);
+      // Filter contracts to only show those where current org is either from_org_id or to_org_id
+      const visibleContracts = (contracts || []).filter(c => 
+        c.from_org_id === currentOrg?.id || c.to_org_id === currentOrg?.id
+      );
+      setExistingContracts(visibleContracts as ExistingContract[]);
       
       setLoading(false);
     };
 
     fetchData();
-  }, [id]);
+  }, [id, currentOrg?.id]);
 
   // Filter available roles based on creator
   const availableRoles = TEAM_ROLES.filter(role => {
