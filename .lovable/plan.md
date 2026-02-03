@@ -1,111 +1,72 @@
 
 
-# Show Delivery Tracking Info on PO Cards
+# Fix SOV Detection After SOV Deletion and Recreation
 
 ## Problem
 
-After a PO is marked "Ready for Delivery" or "Delivered" by the supplier, GCs and TCs cannot see this information on the PO card list view. They have to click into each PO detail to see the delivery status. This makes it hard to quickly scan which materials are ready or have arrived.
+When a GC deletes an SOV and creates a new one, then navigates back to the Work Orders tab, the system still shows "SOV Setup Required" and blocks work order creation. The new SOV is not detected because:
+
+1. The `useEffect` in `WorkOrdersTab.tsx` has an empty dependency array `[]`
+2. This means `refetch()` only runs on initial component mount
+3. Tab switching doesn't remount the component - it just shows/hides it
+4. The stale cached data from `useSOVReadiness` persists
 
 ---
 
 ## Solution
 
-Add a delivery tracking section to the `POCard` component that displays:
-1. **Ready for Delivery date** - when the PO status is `READY_FOR_DELIVERY` or `DELIVERED`
-2. **Delivered date** - when the PO status is `DELIVERED`
-
-This provides at-a-glance visibility for GCs and TCs to track material deliveries.
+Add `projectId` as a dependency to the refetch `useEffect` so it triggers on meaningful changes. Additionally, we should expose a way to trigger refetch when the tab becomes visible. The simplest reliable fix is to remove the empty dependency array and let the effect re-run when the component re-renders after tab switch.
 
 ---
 
 ## Changes
 
-### File: `src/components/purchase-orders/POCard.tsx`
+### File: `src/components/project/WorkOrdersTab.tsx`
 
-Add a delivery tracking section that appears when the PO has delivery dates:
-
-**1. Add new icon imports:**
+**Current Code (lines 44-47):**
 ```typescript
-import { Truck, PackageCheck } from 'lucide-react';
+// Refetch SOV status on mount to ensure fresh data after tab navigation
+useEffect(() => {
+  sovReadiness.refetch();
+}, []); // eslint-disable-line react-hooks/exhaustive-deps
 ```
 
-**2. Add delivery tracking section after the pricing display:**
-
-```tsx
-{/* Delivery Tracking - Show for READY_FOR_DELIVERY and DELIVERED statuses */}
-{(po.ready_for_delivery_at || po.delivered_at) && (
-  <div className="mt-3 pt-3 border-t space-y-2">
-    {po.ready_for_delivery_at && (
-      <div className="flex items-center justify-between text-sm">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <PackageCheck className="h-4 w-4 text-cyan-600" />
-          <span>Ready for Delivery</span>
-        </div>
-        <span className="font-medium">
-          {format(new Date(po.ready_for_delivery_at), 'MMM d, yyyy')}
-        </span>
-      </div>
-    )}
-    {po.delivered_at && (
-      <div className="flex items-center justify-between text-sm">
-        <div className="flex items-center gap-2 text-muted-foreground">
-          <Truck className="h-4 w-4 text-green-600" />
-          <span>Delivered</span>
-        </div>
-        <span className="font-medium text-green-600">
-          {format(new Date(po.delivered_at), 'MMM d, yyyy')}
-        </span>
-      </div>
-    )}
-  </div>
-)}
+**Updated Code:**
+```typescript
+// Refetch SOV status when tab becomes visible or projectId changes
+// Using projectId as dependency ensures fresh data after any SOV changes
+useEffect(() => {
+  sovReadiness.refetch();
+}, [projectId]); // Refetch when projectId changes or component mounts
 ```
+
+This change ensures:
+1. Fresh data is fetched when switching to the Work Orders tab
+2. The `projectId` dependency is stable for a given project, preventing excessive refetches
+3. If the user navigates to a different project, the data is refreshed
 
 ---
 
-## Visual Result
+## Why This Works
 
-**PO Card with "Ready for Delivery" status:**
-```
-┌────────────────────────────────────────────┐
-│ 📦 PO-0045                    [Ready]      │
-│    Feb 1, 2026                             │
-├────────────────────────────────────────────┤
-│ 🏢 Supplier: Acme Lumber                   │
-│ 📄 Items: 12 line items                    │
-├────────────────────────────────────────────┤
-│ ✅ Ready for Delivery      Feb 3, 2026    │
-└────────────────────────────────────────────┘
-```
+The `useSOVReadiness` hook queries `project_sov` and `project_contracts` tables. When a user:
+1. Goes to SOV tab → Deletes SOV
+2. Creates new SOV
+3. Returns to Work Orders tab
 
-**PO Card with "Delivered" status:**
-```
-┌────────────────────────────────────────────┐
-│ 📦 PO-0045                   [Delivered]   │
-│    Feb 1, 2026                             │
-├────────────────────────────────────────────┤
-│ 🏢 Supplier: Acme Lumber                   │
-│ 📄 Items: 12 line items                    │
-├────────────────────────────────────────────┤
-│ ✅ Ready for Delivery      Feb 3, 2026    │
-│ 🚚 Delivered               Feb 4, 2026    │
-└────────────────────────────────────────────┘
-```
+The `refetch()` call will re-query the database and get the updated SOV list, correctly detecting that the new SOV exists.
 
 ---
 
 ## Files to Modify
 
-| File | Changes |
-|------|---------|
-| `src/components/purchase-orders/POCard.tsx` | Add `Truck` and `PackageCheck` icons, add delivery tracking section |
+| File | Change |
+|------|--------|
+| `src/components/project/WorkOrdersTab.tsx` | Add `projectId` to the dependency array of the refetch `useEffect` |
 
 ---
 
-## Benefits
+## Note on GC Invoice Creation
 
-1. **Quick Visibility**: GCs and TCs can scan the PO list to see delivery status at a glance
-2. **No Extra Clicks**: Delivery dates visible without opening the detail view
-3. **Consistent Design**: Follows existing card section patterns with border separators
-4. **Color Coding**: Cyan for "ready", green for "delivered" matches the status badge colors
+Per your clarification, GC invoice creation will **not** be enabled in this version. The existing restrictions on GC creating invoices will remain in place.
 
