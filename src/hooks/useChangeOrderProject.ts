@@ -1159,6 +1159,7 @@ export function useChangeOrder(changeOrderId: string | null) {
     mutationFn: async () => {
       if (!changeOrderId) throw new Error('Invalid state');
 
+      // Update the change order to lock materials pricing
       const { error } = await supabase
         .from('change_order_projects')
         .update({ 
@@ -1168,6 +1169,17 @@ export function useChangeOrder(changeOrderId: string | null) {
         .eq('id', changeOrderId);
 
       if (error) throw error;
+
+      // Also mark materials_priced in the checklist
+      const { error: checklistError } = await supabase
+        .from('change_order_checklist')
+        .update({ materials_priced: true })
+        .eq('change_order_id', changeOrderId);
+
+      if (checklistError) {
+        console.error('Failed to update checklist:', checklistError);
+        // Don't throw - the main operation succeeded
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['change-order', changeOrderId] });
