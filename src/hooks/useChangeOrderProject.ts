@@ -584,6 +584,47 @@ export function useChangeOrder(changeOrderId: string | null) {
     enabled: !!changeOrderId,
   });
 
+  // Fetch linked PO
+  const { data: linkedPO } = useQuery({
+    queryKey: ['linked-po', changeOrderId, changeOrder?.linked_po_id],
+    queryFn: async () => {
+      if (!changeOrder?.linked_po_id) return null;
+
+      const { data: poData, error: poError } = await supabase
+        .from('purchase_orders')
+        .select('id, po_number, status')
+        .eq('id', changeOrder.linked_po_id)
+        .single();
+
+      if (poError) {
+        console.error('Error fetching linked PO:', poError);
+        return null;
+      }
+
+      // Get line items to calculate subtotal and count
+      const { data: lineItems, error: itemsError } = await supabase
+        .from('po_line_items')
+        .select('line_total')
+        .eq('po_id', changeOrder.linked_po_id);
+
+      if (itemsError) {
+        console.error('Error fetching PO line items:', itemsError);
+      }
+
+      const subtotal = (lineItems || []).reduce((sum, item) => sum + (item.line_total || 0), 0);
+      const itemCount = (lineItems || []).length;
+
+      return {
+        id: poData.id,
+        po_number: poData.po_number,
+        status: poData.status,
+        subtotal,
+        itemCount,
+      };
+    },
+    enabled: !!changeOrder?.linked_po_id,
+  });
+
   // ===== Mutations =====
 
   // Add/Update FC Hours
@@ -965,6 +1006,119 @@ export function useChangeOrder(changeOrderId: string | null) {
     },
   });
 
+  // Toggle materials requirement
+  const toggleMaterialsMutation = useMutation({
+    mutationFn: async (requiresMaterials: boolean) => {
+      if (!changeOrderId) throw new Error('Invalid state');
+
+      const { error } = await supabase
+        .from('change_order_projects')
+        .update({ requires_materials: requiresMaterials })
+        .eq('id', changeOrderId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['change-order', changeOrderId] });
+      toast({ title: 'Materials requirement updated' });
+    },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to update materials requirement',
+        description: error.message,
+      });
+    },
+  });
+
+  // Toggle equipment requirement
+  const toggleEquipmentMutation = useMutation({
+    mutationFn: async (requiresEquipment: boolean) => {
+      if (!changeOrderId) throw new Error('Invalid state');
+
+      const { error } = await supabase
+        .from('change_order_projects')
+        .update({ requires_equipment: requiresEquipment })
+        .eq('id', changeOrderId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['change-order', changeOrderId] });
+      toast({ title: 'Equipment requirement updated' });
+    },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to update equipment requirement',
+        description: error.message,
+      });
+    },
+  });
+
+  // Link PO to work order
+  const linkPOMutation = useMutation({
+    mutationFn: async (poId: string) => {
+      if (!changeOrderId) throw new Error('Invalid state');
+
+      const { error } = await supabase
+        .from('change_order_projects')
+        .update({ linked_po_id: poId })
+        .eq('id', changeOrderId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['change-order', changeOrderId] });
+      queryClient.invalidateQueries({ queryKey: ['linked-po', changeOrderId] });
+      toast({ title: 'Materials PO linked to Work Order' });
+    },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to link PO',
+        description: error.message,
+      });
+    },
+  });
+
+  // Update material markup
+  const updateMarkupMutation = useMutation({
+    mutationFn: async ({ 
+      markupType, 
+      markupPercent, 
+      markupAmount 
+    }: { 
+      markupType: 'percent' | 'lump_sum' | null; 
+      markupPercent: number; 
+      markupAmount: number; 
+    }) => {
+      if (!changeOrderId) throw new Error('Invalid state');
+
+      const { error } = await supabase
+        .from('change_order_projects')
+        .update({
+          material_markup_type: markupType,
+          material_markup_percent: markupPercent,
+          material_markup_amount: markupAmount,
+        })
+        .eq('id', changeOrderId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['change-order', changeOrderId] });
+      toast({ title: 'Material markup updated' });
+    },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to update markup',
+        description: error.message,
+      });
+    },
+  });
+
   return {
     changeOrder,
     participants,
@@ -973,6 +1127,7 @@ export function useChangeOrder(changeOrderId: string | null) {
     materials,
     equipment,
     checklist,
+    linkedPO,
     isLoading: isLoadingChangeOrder || isLoading,
     currentRole,
     
@@ -1002,9 +1157,18 @@ export function useChangeOrder(changeOrderId: string | null) {
     deactivateParticipant: deactivateParticipantMutation.mutateAsync,
     isActivatingParticipant: activateFCMutation.isPending || activateSupplierMutation.isPending || deactivateParticipantMutation.isPending,
     
+    // Materials/Equipment toggles
+    toggleMaterials: toggleMaterialsMutation.mutate,
+    toggleEquipment: toggleEquipmentMutation.mutate,
+    
+    // PO linking
+    linkPO: linkPOMutation.mutateAsync,
+    updateMarkup: updateMarkupMutation.mutate,
+    
     // Loading states
     isAddingFCHours: addFCHoursMutation.isPending,
     isLockingFCHours: lockFCHoursMutation.isPending,
+    isLinkingPO: linkPOMutation.isPending,
   };
 }
 

@@ -25,6 +25,10 @@ interface POWizardV2Props {
   projectAddress: string;
   onComplete: (data: POWizardV2Data) => Promise<void>;
   isSubmitting?: boolean;
+  // Work Order context (optional)
+  workOrderId?: string;
+  workOrderTitle?: string;
+  onPOCreated?: (poId: string) => Promise<void>;
 }
 
 export function POWizardV2({
@@ -35,6 +39,9 @@ export function POWizardV2({
   projectAddress,
   onComplete,
   isSubmitting = false,
+  workOrderId,
+  workOrderTitle,
+  onPOCreated,
 }: POWizardV2Props) {
   const isMobile = useIsMobile();
   const [screen, setScreen] = useState<Screen>('header');
@@ -119,9 +126,11 @@ export function POWizardV2({
         project_id: projectId,
         project_name: projectName,
         delivery_address: projectAddress,
+        work_order_id: workOrderId,
+        work_order_title: workOrderTitle,
       });
     }
-  }, [open, projectId, projectName, projectAddress]);
+  }, [open, projectId, projectName, projectAddress, workOrderId, workOrderTitle]);
 
   const handleChange = useCallback((updates: Partial<POWizardV2Data>) => {
     setFormData(prev => ({ ...prev, ...updates }));
@@ -182,6 +191,7 @@ export function POWizardV2({
           onChange={handleChange}
           onNext={() => setScreen('items')}
           canAdvance={canAdvanceFromHeader}
+          workOrderTitle={workOrderTitle}
         />
       )}
       {screen === 'items' && (

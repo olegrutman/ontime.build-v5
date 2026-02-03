@@ -11,6 +11,10 @@ export interface POWizardV2Data {
 
   // Items (Screen 2)
   line_items: POWizardV2LineItem[];
+
+  // Work Order context (optional)
+  work_order_id?: string;
+  work_order_title?: string;
 }
 
 export interface POWizardV2LineItem {
@@ -190,6 +194,8 @@ export const INITIAL_PO_WIZARD_V2_DATA: POWizardV2Data = {
   delivery_window: 'ANY',
   notes: '',
   line_items: [],
+  work_order_id: undefined,
+  work_order_title: undefined,
 };
 
 // Map database categories to display names and icons (legacy - use VIRTUAL_CATEGORIES)

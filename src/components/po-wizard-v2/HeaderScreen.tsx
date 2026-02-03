@@ -35,6 +35,7 @@ interface HeaderScreenProps {
   onChange: (updates: Partial<POWizardV2Data>) => void;
   onNext: () => void;
   canAdvance: boolean;
+  workOrderTitle?: string;
 }
 
 export function HeaderScreen({
@@ -44,6 +45,7 @@ export function HeaderScreen({
   onChange,
   onNext,
   canAdvance,
+  workOrderTitle,
 }: HeaderScreenProps) {
   const singleSupplier = suppliers.length === 1;
   const noSuppliers = suppliers.length === 0 && !loadingSuppliers;
@@ -52,8 +54,12 @@ export function HeaderScreen({
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="px-4 py-3 border-b bg-muted/30">
-        <h2 className="text-lg font-semibold">Create Purchase Order</h2>
-        <p className="text-sm text-muted-foreground">Step 1 of 3 • PO Details</p>
+        <h2 className="text-lg font-semibold">
+          {workOrderTitle ? `Materials for ${workOrderTitle}` : 'Create Purchase Order'}
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Step 1 of 3 • {workOrderTitle ? 'Work Order Materials' : 'PO Details'}
+        </p>
       </div>
 
       {/* Scrollable Content */}
