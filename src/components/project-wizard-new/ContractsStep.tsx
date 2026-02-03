@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { ProjectContract } from '@/types/projectWizard';
 import { DollarSign, ArrowUp, ArrowDown, Building2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -111,12 +112,19 @@ export function ContractsStep({ projectId, contracts, onChange, creatorRole }: C
     // Create default contracts for missing members
     if (missingMemberIds.length > 0) {
       console.log('Creating contracts for missing members:', missingMemberIds);
-      const newContracts: ProjectContract[] = missingMemberIds.map(memberId => ({
-        toTeamMemberId: memberId,
-        contractSum: 0,
-        retainagePercent: 0,
-        allowMobilization: false,
-      }));
+      const newContracts: ProjectContract[] = missingMemberIds.map(memberId => {
+        // Find the team member to determine if it's a TC contract (needs material responsibility)
+        const member = [...downstreamMembers, upstreamGC].find(m => m?.id === memberId);
+        const isTCContract = member?.role === 'Trade Contractor';
+        return {
+          toTeamMemberId: memberId,
+          contractSum: 0,
+          retainagePercent: 0,
+          allowMobilization: false,
+          // Default to TC for material responsibility on TC contracts
+          materialResponsibility: isTCContract ? 'TC' as const : undefined,
+        };
+      });
       // Merge with existing, ensuring no duplicates
       const merged = [...contracts, ...newContracts];
       onChange(merged);
@@ -125,12 +133,13 @@ export function ContractsStep({ projectId, contracts, onChange, creatorRole }: C
   // The Set comparison above handles the actual check
   }, [loading, teamMembers.length, upstreamGCId, downstreamMemberIds, contracts.length, onChange]);
 
-  const getContract = (memberId: string): ProjectContract => {
+  const getContract = (memberId: string, isTCContract: boolean = false): ProjectContract => {
     return contracts.find(c => c.toTeamMemberId === memberId) || {
       toTeamMemberId: memberId,
       contractSum: 0,
       retainagePercent: 0,
       allowMobilization: false,
+      materialResponsibility: isTCContract ? 'TC' : undefined,
     };
   };
 
@@ -256,8 +265,9 @@ export function ContractsStep({ projectId, contracts, onChange, creatorRole }: C
             <ContractCard
               key={member.id}
               member={member}
-              contract={getContract(member.id)}
+              contract={getContract(member.id, member.role === 'Trade Contractor')}
               onUpdate={(updates) => updateContract(member.id, updates)}
+              showMaterialResponsibility={member.role === 'Trade Contractor'}
             />
           ))}
         </div>
@@ -271,9 +281,10 @@ interface ContractCardProps {
   contract: ProjectContract;
   onUpdate: (updates: Partial<ProjectContract>) => void;
   description?: string;
+  showMaterialResponsibility?: boolean;
 }
 
-function ContractCard({ member, contract, onUpdate, description }: ContractCardProps) {
+function ContractCard({ member, contract, onUpdate, description, showMaterialResponsibility }: ContractCardProps) {
   const tradeName = member.trade === 'Other' ? member.trade_custom : member.trade;
   
   return (
@@ -333,6 +344,29 @@ function ContractCard({ member, contract, onUpdate, description }: ContractCardP
             onCheckedChange={(checked) => onUpdate({ allowMobilization: checked })}
           />
         </div>
+
+        {/* Material Responsibility toggle - only for TC contracts */}
+        {showMaterialResponsibility && (
+          <div className="space-y-2">
+            <Label>Material Responsibility</Label>
+            <p className="text-xs text-muted-foreground">Who provides and pays for materials?</p>
+            <ToggleGroup
+              type="single"
+              value={contract.materialResponsibility || 'TC'}
+              onValueChange={(value) => {
+                if (value) onUpdate({ materialResponsibility: value as 'GC' | 'TC' });
+              }}
+              className="justify-start"
+            >
+              <ToggleGroupItem value="GC" aria-label="GC provides materials" className="px-4">
+                GC
+              </ToggleGroupItem>
+              <ToggleGroupItem value="TC" aria-label="TC provides materials" className="px-4">
+                TC
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label>Notes (Optional)</Label>

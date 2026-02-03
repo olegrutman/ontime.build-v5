@@ -342,6 +342,7 @@ export default function CreateProjectNew() {
           retainage_percent: contract?.retainagePercent ?? 0,
           allow_mobilization_line_item: contract?.allowMobilization ?? false,
           notes: contract?.notes ?? null,
+          material_responsibility: contract?.materialResponsibility ?? null,
           created_by_user_id: user?.id,
         } : {
           // Creator is worker, invitee is payer (e.g., TC inviting GC)
@@ -356,6 +357,7 @@ export default function CreateProjectNew() {
           retainage_percent: contract?.retainagePercent ?? 0,
           allow_mobilization_line_item: contract?.allowMobilization ?? false,
           notes: contract?.notes ?? null,
+          material_responsibility: contract?.materialResponsibility ?? null,
           created_by_user_id: user?.id,
         };
 

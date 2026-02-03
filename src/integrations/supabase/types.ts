@@ -1474,6 +1474,7 @@ export type Database = {
           from_org_id: string | null
           from_role: string
           id: string
+          material_responsibility: string | null
           notes: string | null
           project_id: string
           retainage_percent: number | null
@@ -1492,6 +1493,7 @@ export type Database = {
           from_org_id?: string | null
           from_role: string
           id?: string
+          material_responsibility?: string | null
           notes?: string | null
           project_id: string
           retainage_percent?: number | null
@@ -1510,6 +1512,7 @@ export type Database = {
           from_org_id?: string | null
           from_role?: string
           id?: string
+          material_responsibility?: string | null
           notes?: string | null
           project_id?: string
           retainage_percent?: number | null
