@@ -1,69 +1,196 @@
 
-# Plan: Mark Materials Priced When Locking Materials Pricing
 
-## Problem
+# Fix: GC Cannot See Materials and Finalize Work Order
 
-When the Trade Contractor locks materials pricing on the work order page (via the "Lock Materials Pricing" button), the system:
-- Sets `materials_pricing_locked = true` on `change_order_projects`
-- Shows "Materials pricing locked" indicator
+## Root Cause Analysis
 
-But it does **not** update the `materials_priced` field in the `change_order_checklist` table, which means:
-- The "Ready for Approval" checklist still shows "Materials priced" as incomplete
-- This blocks the work order from being ready for approval
+Three interconnected issues were identified:
 
-## Root Cause
+### Issue 1: RLS Policy Blocks GC from Seeing PO Line Items
 
-The existing database trigger only watches the legacy `change_order_materials` table. The new work order flow uses linked Purchase Orders (`purchase_orders` + `po_line_items`) for material management, bypassing that trigger.
+The current `po_line_items` SELECT policy only allows:
+- Users in the same organization as the PO owner
+- Users in the supplier's organization
 
-When materials pricing is locked, the checklist should be updated manually since the locking action serves as confirmation that all material pricing is finalized.
+Since the PO is owned by the Trade Contractor (TC), the General Contractor (GC) cannot read the line items. This is why the Materials panel shows nothing for the GC.
+
+**Database state:**
+- PO `5545e311-2049-4589-a47a-db0c7237c1e3` has `organization_id = TC (ab07e031-...)`
+- GC user is in `organization_id = GC (96a802b8-...)`
+- RLS check `user_in_org(auth.uid(), po.organization_id)` returns FALSE for GC
+
+### Issue 2: Checklist `materials_priced` Still False
+
+The checklist shows `materials_priced: false` even though materials pricing was locked. The code change I made hasn't been executed yet because:
+- Materials were locked before the code was deployed
+- A manual fix is needed for this work order
+
+### Issue 3: `material_total` Not Calculated
+
+The `change_order_projects.material_total` is `0.00` even though:
+- The linked PO has priced items ($7,350 subtotal)
+- 15% markup is configured ($1,102.50)
+- Expected total: $8,452.50
+
+The `lockMaterialsPricing` mutation should calculate and store the final materials total.
+
+---
 
 ## Solution
 
-Modify the `lockMaterialsPricingMutation` in the hook to also update the checklist's `materials_priced` field to `true` when locking materials pricing.
+### Step 1: Fix RLS Policy for `po_line_items` SELECT
 
-## Implementation
+Allow project team members (GC) to see line items for POs linked to work orders they can access.
 
-### File: `src/hooks/useChangeOrderProject.ts`
+```sql
+-- Drop existing SELECT policy
+DROP POLICY IF EXISTS "PO participants can view line items" ON po_line_items;
 
-Update the `lockMaterialsPricingMutation` to:
-
-1. Update `change_order_projects` with:
-   - `materials_pricing_locked: true`
-   - `materials_locked_at: timestamp`
-
-2. Also update `change_order_checklist` with:
-   - `materials_priced: true`
-
-```text
-Current behavior:
-  UPDATE change_order_projects SET materials_pricing_locked = true ...
-
-New behavior:
-  UPDATE change_order_projects SET materials_pricing_locked = true ...
-  UPDATE change_order_checklist SET materials_priced = true ...
+-- Create new policy that includes project participants via work order links
+CREATE POLICY "PO participants can view line items" ON po_line_items
+  FOR SELECT TO public
+  USING (
+    EXISTS (
+      SELECT 1 FROM purchase_orders po
+      WHERE po.id = po_line_items.po_id
+      AND (
+        -- Original: user in PO's org
+        user_in_org(auth.uid(), po.organization_id)
+        -- Original: supplier
+        OR EXISTS (
+          SELECT 1 FROM suppliers s
+          WHERE s.id = po.supplier_id
+          AND user_in_org(auth.uid(), s.organization_id)
+        )
+        -- NEW: project team members for POs linked to work orders
+        OR EXISTS (
+          SELECT 1 FROM change_order_projects cop
+          JOIN project_team pt ON pt.project_id = cop.project_id
+          WHERE cop.linked_po_id = po.id
+          AND pt.user_id = auth.uid()
+        )
+      )
+    )
+  );
 ```
 
-### Changes Required
+### Step 2: Update `lockMaterialsPricingMutation` to Calculate and Store Material Total
 
-The mutation will execute two database updates:
-1. Lock the pricing on `change_order_projects`
-2. Mark `materials_priced = true` on `change_order_checklist`
+Modify the mutation to:
+1. Fetch the linked PO subtotal
+2. Calculate markup based on type (percent or lump sum)
+3. Store the final `material_total` on `change_order_projects`
+4. Mark `materials_priced = true` in checklist
 
-Both queries use the same `changeOrderId`, so they can be executed sequentially or the checklist update can be added after the main update.
+**File:** `src/hooks/useChangeOrderProject.ts`
 
-## Files to Modify
+```text
+Current flow:
+  1. Set materials_pricing_locked = true
+  2. Set materials_priced = true in checklist
 
-| File | Change |
-|------|--------|
-| `src/hooks/useChangeOrderProject.ts` | Add checklist update in `lockMaterialsPricingMutation` |
+New flow:
+  1. Fetch linked PO's subtotal
+  2. Calculate markup (percent or lump_sum)
+  3. Calculate total = subtotal + markup
+  4. Update change_order_projects with:
+     - materials_pricing_locked = true
+     - materials_locked_at
+     - material_total = calculated total
+  5. Set materials_priced = true in checklist
+```
 
-## Verification
+### Step 3: Update `final_price` Calculation
 
-After the change:
-1. Open a work order with a linked, priced PO
-2. Apply markup if desired
-3. Click "Lock Materials Pricing"
-4. Verify:
-   - Materials panel shows "Materials pricing locked"
-   - Checklist shows "Materials priced" as complete (green checkmark)
-   - Work order can proceed to approval if other items are complete
+The `final_price` should be recalculated when materials are locked. Ensure the update also sets:
+```sql
+final_price = labor_total + material_total + equipment_total
+```
+
+---
+
+## Implementation Files
+
+| Type | File | Change |
+|------|------|--------|
+| Database | Migration | Update RLS policy for `po_line_items` to allow project team access |
+| Code | `src/hooks/useChangeOrderProject.ts` | Calculate `material_total` in `lockMaterialsPricingMutation` |
+
+---
+
+## Technical Details
+
+### Updated `lockMaterialsPricingMutation` Logic
+
+```typescript
+mutationFn: async () => {
+  if (!changeOrderId || !changeOrder?.linked_po_id) 
+    throw new Error('Invalid state');
+
+  // 1. Fetch PO line items to calculate subtotal
+  const { data: items } = await supabase
+    .from('po_line_items')
+    .select('line_total')
+    .eq('po_id', changeOrder.linked_po_id);
+
+  const subtotal = (items || []).reduce(
+    (sum, i) => sum + (i.line_total || 0), 
+    0
+  );
+
+  // 2. Calculate markup
+  const markup = changeOrder.material_markup_type === 'percent'
+    ? subtotal * (changeOrder.material_markup_percent || 0) / 100
+    : (changeOrder.material_markup_amount || 0);
+
+  const materialTotal = subtotal + markup;
+
+  // 3. Get current totals for final_price calculation
+  const laborTotal = changeOrder.labor_total || 0;
+  const equipmentTotal = changeOrder.equipment_total || 0;
+  const finalPrice = laborTotal + materialTotal + equipmentTotal;
+
+  // 4. Update change_order_projects
+  await supabase
+    .from('change_order_projects')
+    .update({ 
+      materials_pricing_locked: true,
+      materials_locked_at: new Date().toISOString(),
+      material_total: materialTotal,
+      final_price: finalPrice,
+    })
+    .eq('id', changeOrderId);
+
+  // 5. Mark materials_priced in checklist
+  await supabase
+    .from('change_order_checklist')
+    .update({ materials_priced: true })
+    .eq('change_order_id', changeOrderId);
+};
+```
+
+---
+
+## Verification Steps
+
+After deploying:
+
+1. **GC View Test:**
+   - Log in as GC
+   - Navigate to the work order page
+   - Verify the Materials panel shows the line items with pricing
+   - Verify the checklist shows "Materials priced" as complete
+
+2. **Pricing Total Test:**
+   - Confirm `material_total` shows $8,452.50 (or correct calculated value)
+   - Confirm `final_price` includes the material total
+   - Confirm GC can click "Finalize Work Order" button
+
+3. **New Lock Test:**
+   - Create a new work order with materials
+   - Add materials via Product Picker
+   - Price materials as supplier
+   - Lock pricing as TC
+   - Verify material_total is calculated and stored
+   - Verify checklist updates automatically
+
