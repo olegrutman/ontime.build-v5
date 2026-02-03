@@ -39,7 +39,9 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
     loading,
     saving,
     hasSOVs,
+    contractsMissingSOVs,
     createAllSOVs,
+    createSOVForContract,
     updateItemPercent,
     updateItemName,
     addItem,
@@ -689,6 +691,43 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
           </Card>
         );
       })}
+
+      {/* Contracts Missing SOV Section */}
+      {contractsMissingSOVs.length > 0 && !isFC && (
+        <Card className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-600" />
+              Contracts Missing SOV
+            </CardTitle>
+            <CardDescription>
+              The following contracts need a Schedule of Values before you can bill against them.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {contractsMissingSOVs.map(contract => (
+              <div key={contract.id} className="flex items-center justify-between p-3 rounded-lg bg-background border">
+                <div>
+                  <span className="font-medium">
+                    {getContractDisplayName(contract.from_role, contract.to_role, contract.from_org_name, contract.to_org_name)}
+                  </span>
+                  <span className="text-muted-foreground ml-2">
+                    {formatCurrency(contract.contract_sum)}
+                  </span>
+                </div>
+                <Button 
+                  size="sm"
+                  onClick={() => createSOVForContract(contract.id)}
+                  disabled={saving}
+                >
+                  <Plus className="mr-1 h-4 w-4" />
+                  Create SOV
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
     </div>
   );
