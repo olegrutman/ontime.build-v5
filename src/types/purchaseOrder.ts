@@ -1,4 +1,4 @@
-export type POStatus = 'ACTIVE' | 'SUBMITTED' | 'PRICED' | 'ORDERED' | 'DELIVERED' | 'FINALIZED';
+export type POStatus = 'ACTIVE' | 'SUBMITTED' | 'PRICED' | 'ORDERED' | 'DELIVERED' | 'FINALIZED' | 'READY_FOR_DELIVERY';
 
 export interface PurchaseOrder {
   id: string;
@@ -19,6 +19,7 @@ export interface PurchaseOrder {
   priced_by?: string | null;
   ordered_at?: string | null;
   delivered_at?: string | null;
+  ready_for_delivery_at?: string | null;
   download_token?: string;
   sales_tax_percent?: number | null;
   created_at: string;
@@ -60,8 +61,9 @@ export const PO_STATUS_LABELS: Record<POStatus, string> = {
   SUBMITTED: 'Submitted',
   PRICED: 'Priced',
   ORDERED: 'Ordered',
-  DELIVERED: 'Delivered',
   FINALIZED: 'Finalized',
+  READY_FOR_DELIVERY: 'Ready for Delivery',
+  DELIVERED: 'Delivered',
 };
 
 export const PO_STATUS_COLORS: Record<POStatus, string> = {
@@ -69,6 +71,7 @@ export const PO_STATUS_COLORS: Record<POStatus, string> = {
   SUBMITTED: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
   PRICED: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
   ORDERED: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-  DELIVERED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
   FINALIZED: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+  READY_FOR_DELIVERY: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
+  DELIVERED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
 };

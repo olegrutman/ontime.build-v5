@@ -13,6 +13,7 @@ import {
   Building2,
   Clock,
   Lock,
+  CalendarIcon,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,6 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import {
   Table,
   TableBody,
@@ -42,6 +44,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { POStatusBadge } from './POStatusBadge';
 import { PurchaseOrder, POLineItem, POStatus } from '@/types/purchaseOrder';
 
@@ -76,6 +88,8 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
   const [editingPrices, setEditingPrices] = useState(false);
   const [priceEdits, setPriceEdits] = useState<Record<string, PriceEdit>>({});
   const [salesTaxPercent, setSalesTaxPercent] = useState<number>(0);
+  const [readyDialogOpen, setReadyDialogOpen] = useState(false);
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState<Date | undefined>();
 
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
@@ -280,6 +294,41 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
     updatePOStatus('FINALIZED');
   };
 
+  const handleMarkReadyForDelivery = async () => {
+    if (!expectedDeliveryDate) {
+      toast.error('Please select an expected delivery date');
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      const { error } = await supabase
+        .from('purchase_orders')
+        .update({
+          status: 'READY_FOR_DELIVERY',
+          ready_for_delivery_at: new Date().toISOString(),
+          notes: po?.notes 
+            ? `${po.notes}\n\nExpected Delivery: ${format(expectedDeliveryDate, 'PPP')}`
+            : `Expected Delivery: ${format(expectedDeliveryDate, 'PPP')}`,
+        })
+        .eq('id', poId);
+
+      if (error) throw error;
+
+      toast.success('Marked ready for delivery');
+      fetchPO();
+      onUpdate();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to update PO';
+      console.error('Error updating PO:', error);
+      toast.error(message);
+    } finally {
+      setActionLoading(false);
+      setReadyDialogOpen(false);
+      setExpectedDeliveryDate(undefined);
+    }
+  };
+
   const handleDownload = () => {
     if (!po?.download_token) {
       toast.error('Download not available');
@@ -395,8 +444,28 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
             </>
           )}
 
-          {/* ORDERED: Supplier can mark delivered */}
+          {/* ORDERED: Supplier can mark delivered (legacy support) */}
           {status === 'ORDERED' && effectiveIsSupplier && (
+            <Button onClick={handleMarkDelivered} disabled={actionLoading}>
+              {actionLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Truck className="h-4 w-4 mr-2" />
+              )}
+              Mark Delivered
+            </Button>
+          )}
+
+          {/* FINALIZED: Supplier can mark ready for delivery */}
+          {status === 'FINALIZED' && effectiveIsSupplier && (
+            <Button onClick={() => setReadyDialogOpen(true)} disabled={actionLoading}>
+              <Package className="h-4 w-4 mr-2" />
+              Ready for Delivery
+            </Button>
+          )}
+
+          {/* READY_FOR_DELIVERY: Supplier can mark delivered */}
+          {status === 'READY_FOR_DELIVERY' && effectiveIsSupplier && (
             <Button onClick={handleMarkDelivered} disabled={actionLoading}>
               {actionLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -432,6 +501,24 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
               <p className="text-xs text-muted-foreground">Created</p>
               <p className="font-medium">{format(new Date(po.created_at), 'MMM d, yyyy')}</p>
             </div>
+            {po.ready_for_delivery_at && (
+              <div>
+                <p className="text-xs text-muted-foreground">Ready for Delivery</p>
+                <p className="font-medium flex items-center gap-1">
+                  <Package className="h-4 w-4" />
+                  {format(new Date(po.ready_for_delivery_at), 'MMM d, yyyy')}
+                </p>
+              </div>
+            )}
+            {po.delivered_at && (
+              <div>
+                <p className="text-xs text-muted-foreground">Delivered</p>
+                <p className="font-medium flex items-center gap-1 text-green-600 dark:text-green-400">
+                  <Truck className="h-4 w-4" />
+                  {format(new Date(po.delivered_at), 'MMM d, yyyy')}
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -702,6 +789,49 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Ready for Delivery Dialog */}
+      <Dialog open={readyDialogOpen} onOpenChange={setReadyDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ready for Delivery</DialogTitle>
+            <DialogDescription>
+              Confirm that materials are ready and provide the expected delivery date.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Expected Delivery Date *</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-left font-normal">
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {expectedDeliveryDate ? format(expectedDeliveryDate, 'PPP') : 'Select date'}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={expectedDeliveryDate}
+                    onSelect={setExpectedDeliveryDate}
+                    disabled={(date) => date < new Date()}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReadyDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleMarkReadyForDelivery} disabled={actionLoading || !expectedDeliveryDate}>
+              {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Confirm Ready
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
