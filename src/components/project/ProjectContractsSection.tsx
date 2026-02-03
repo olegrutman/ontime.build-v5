@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
-import { FileText, DollarSign, ClipboardList, Receipt } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { FileText, DollarSign, ClipboardList, Receipt, Settings } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
-
+import { usePermission } from '@/components/auth/RequirePermission';
 interface Contract {
   id: string;
   from_role: string;
@@ -167,13 +169,13 @@ function ContractCard({ contract, currentOrgId, teamMembers, showWorkOrdersColum
 
 export function ProjectContractsSection({ projectId }: ProjectContractsSectionProps) {
   const { userOrgRoles } = useAuth();
+  const canManageContracts = usePermission('canInviteMembers');
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Get current user's organization ID
   const currentOrgId = userOrgRoles[0]?.organization?.id;
-
   useEffect(() => {
     const fetchData = async () => {
       const [contractsResult, teamResult] = await Promise.all([
@@ -263,11 +265,19 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-base flex items-center gap-2">
           <FileText className="h-4 w-4" />
           Contract Summary
         </CardTitle>
+        {canManageContracts && (
+          <Button size="sm" variant="outline" asChild>
+            <Link to={`/project/${projectId}/edit?step=contracts`}>
+              <Settings className="h-3 w-3 mr-1" />
+              Manage
+            </Link>
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
