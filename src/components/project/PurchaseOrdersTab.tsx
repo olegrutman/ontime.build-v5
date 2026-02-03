@@ -89,6 +89,33 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: Pu
     
     setIsSubmitting(true);
     try {
+      // Determine pricing owner based on material_responsibility from project contracts
+      let pricingOwnerOrgId: string | null = null;
+      
+      // Query the project's contracts to find material_responsibility setting
+      const { data: contracts } = await supabase
+        .from('project_contracts')
+        .select('material_responsibility, from_org_id, to_org_id')
+        .eq('project_id', data.project_id)
+        .not('material_responsibility', 'is', null);
+      
+      if (contracts && contracts.length > 0) {
+        // Find the contract where material_responsibility is set
+        const contractWithMR = contracts.find(c => c.material_responsibility);
+        if (contractWithMR) {
+          // If GC is responsible, to_org_id is the GC (payer)
+          // If TC is responsible, from_org_id is the TC (contractor)
+          pricingOwnerOrgId = contractWithMR.material_responsibility === 'GC' 
+            ? contractWithMR.to_org_id 
+            : contractWithMR.from_org_id;
+        }
+      }
+      
+      // Fallback: if no material_responsibility set, current org is pricing owner
+      if (!pricingOwnerOrgId) {
+        pricingOwnerOrgId = currentOrgId;
+      }
+      
       const { data: poNumber } = await supabase.rpc('generate_po_number', {
         org_id: currentOrgId,
       });
@@ -103,6 +130,8 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: Pu
           project_id: data.project_id,
           notes: data.notes || null,
           status: 'ACTIVE',
+          created_by_org_id: currentOrgId,
+          pricing_owner_org_id: pricingOwnerOrgId,
         })
         .select()
         .single();
