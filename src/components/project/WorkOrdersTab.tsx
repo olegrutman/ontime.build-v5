@@ -38,8 +38,12 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
     isCreatingFC,
   } = useChangeOrderProject(projectId);
 
-  // Check SOV readiness - gates work order creation
-  const sovReadiness = useSOVReadiness(projectId);
+  // Get user's organization ID from auth context
+  const { userOrgRoles } = useAuth();
+  const userOrgId = userOrgRoles.length > 0 ? userOrgRoles[0].organization_id : undefined;
+
+  // Check SOV readiness - gates work order creation (only checks contracts where user's org is payer)
+  const sovReadiness = useSOVReadiness(projectId, userOrgId);
 
   // Refetch SOV status when tab becomes visible or projectId changes
   useEffect(() => {
