@@ -154,19 +154,7 @@ export function ChangeOrderDetailPage() {
               <GCLaborReviewPanel tcLabor={tcLabor} />
             )}
 
-            {/* Materials */}
-            {changeOrder.requires_materials && (isTC || isSupplier || isGC) && (
-              <MaterialsPanel
-                materials={materials}
-                isEditable={isEditable}
-                canViewCosts={isTC || isGC}
-                isTC={isTC}
-                isSupplier={isSupplier}
-                onAddMaterial={addMaterial}
-                onUpdateMaterial={updateMaterial}
-                onLockSupplierPricing={lockSupplierPricing}
-              />
-            )}
+            {/* Materials are now managed exclusively via the Product Picker in MaterialResourceToggle */}
 
             {/* Equipment */}
             {changeOrder.requires_equipment && (isTC || isGC) && (

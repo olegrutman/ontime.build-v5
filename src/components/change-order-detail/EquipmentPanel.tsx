@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -15,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Truck } from 'lucide-react';
+import { Check, Plus, Truck } from 'lucide-react';
 
 const EQUIPMENT_OPTIONS = [
   {
@@ -144,24 +145,35 @@ export function EquipmentPanel({
           </p>
         ) : (
           <div className="space-y-3">
-            {equipment.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
-              >
-                <div className="flex-1">
-                  <p className="font-medium text-sm">{item.description}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {item.pricing_type === 'daily'
-                      ? `${item.days} day(s) @ $${item.daily_rate}/day`
-                      : 'Flat rate'}
-                  </p>
+            {equipment.map((item) => {
+              const isPriced = item.total_cost && item.total_cost > 0;
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm">{item.description}</p>
+                      {isPriced && (
+                        <Badge variant="secondary" className="gap-1">
+                          <Check className="w-3 h-3" />
+                          Priced
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {item.pricing_type === 'daily'
+                        ? `${item.days} day(s) @ $${item.daily_rate}/day`
+                        : 'Flat rate'}
+                    </p>
+                  </div>
+                  {canViewCosts && (
+                    <span className="font-medium">${(item.total_cost || 0).toFixed(2)}</span>
+                  )}
                 </div>
-                {canViewCosts && (
-                  <span className="font-medium">${(item.total_cost || 0).toFixed(2)}</span>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
