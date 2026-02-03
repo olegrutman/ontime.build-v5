@@ -149,6 +149,73 @@ function getOrdinal(n: number): string {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
+// Industry-standard percentage weights for SOV items
+function getDefaultPercentForItem(itemName: string): number {
+  const lower = itemName.toLowerCase();
+  
+  // Mobilization
+  if (lower.includes('mobilization')) return 3;
+  
+  // Wall framing (highest value - labor intensive)
+  if (lower.includes('walls frame') || 
+      (lower.includes('walls') && !lower.includes('sheet') && !lower.includes('parapet'))) return 9;
+  
+  // Sheathing/sheeting
+  if (lower.includes('sheat') || lower.includes('sheet')) return 5;
+  
+  // Subfloor
+  if (lower.includes('sub-floor') || lower.includes('subfloor')) return 6;
+  
+  // Trusses (not sheathing)
+  if ((lower.includes('truss') && !lower.includes('sheat') && !lower.includes('sheet')) || 
+      lower.includes('roof framing')) return 10;
+  
+  // Backout/blocking
+  if (lower.includes('backout') || lower.includes('blocking')) return 3;
+  
+  // Fascia and Soffit
+  if (lower.includes('fascia') || lower.includes('soffit')) return 4;
+  
+  // Siding
+  if (lower.includes('siding')) return 5;
+  
+  // Windows
+  if (lower.includes('window')) return 4;
+  
+  // Doors
+  if (lower.includes('door')) return 3;
+  
+  // Decorative
+  if (lower.includes('decorative')) return 3;
+  
+  // Decks
+  if (lower.includes('deck')) return 4;
+  
+  // Tyvek/WRB
+  if (lower.includes('tyvek') || lower.includes('wrb')) return 2;
+  
+  // Hardware
+  if (lower.includes('hardware')) return 2;
+  
+  // Parapet/special structural
+  if (lower.includes('parapet')) return 3;
+  
+  // Inspections
+  if (lower.includes('inspection')) return 1;
+  
+  // Shim and shave
+  if (lower.includes('shim')) return 2;
+  
+  // Final punch
+  if (lower.includes('punch') || lower.includes('final')) return 4;
+  
+  // Basement framing
+  if (lower.includes('basement')) return 7;
+  
+  // Default fallback
+  return 5;
+}
+
 function generateStoryBasedItems(
   rules: StoryGeneratorRules,
   stories: number,
@@ -423,10 +490,21 @@ export function useContractSOV(projectId: string | undefined) {
       // Generate master item list
       const itemNames = await generateItemsFromTemplate(templateKey, stories, scopeDetails);
       
-      // Calculate default percent (even distribution)
-      const defaultPercent = parseFloat((100 / itemNames.length).toFixed(2));
-      // Adjust last item to ensure total = 100
-      const lastItemPercent = parseFloat((100 - (defaultPercent * (itemNames.length - 1))).toFixed(2));
+      // Calculate industry-standard percentages for each item
+      const rawPercents = itemNames.map(name => getDefaultPercentForItem(name));
+      const totalRaw = rawPercents.reduce((a, b) => a + b, 0);
+      
+      // Normalize to 100% while maintaining proportions
+      const normalizedPercents: number[] = [];
+      for (let i = 0; i < rawPercents.length; i++) {
+        if (i === rawPercents.length - 1) {
+          // Last item gets remainder to ensure exactly 100%
+          const sumSoFar = normalizedPercents.reduce((a, b) => a + b, 0);
+          normalizedPercents.push(parseFloat((100 - sumSoFar).toFixed(2)));
+        } else {
+          normalizedPercents.push(parseFloat(((rawPercents[i] / totalRaw) * 100).toFixed(2)));
+        }
+      }
       
       // Delete only PRIMARY contract SOVs for this project (not work order SOVs)
       // Work order SOVs are managed separately by the work order finalization process
@@ -457,9 +535,9 @@ export function useContractSOV(projectId: string | undefined) {
         
         if (sovError) throw sovError;
         
-        // Create SOV items with percentages
+        // Create SOV items with industry-standard percentages
         const itemsToInsert = itemNames.map((name, index) => {
-          const percent = index === itemNames.length - 1 ? lastItemPercent : defaultPercent;
+          const percent = normalizedPercents[index];
           const value = Math.round((contract.contract_sum * percent / 100) * 100) / 100;
           
           return {
