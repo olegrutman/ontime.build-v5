@@ -584,7 +584,7 @@ export function useChangeOrder(changeOrderId: string | null) {
     enabled: !!changeOrderId,
   });
 
-  // Fetch linked PO
+  // Fetch linked PO with full line item details
   const { data: linkedPO } = useQuery({
     queryKey: ['linked-po', changeOrderId, changeOrder?.linked_po_id],
     queryFn: async () => {
@@ -601,18 +601,20 @@ export function useChangeOrder(changeOrderId: string | null) {
         return null;
       }
 
-      // Get line items to calculate subtotal and count
+      // Get line items with full details for display
       const { data: lineItems, error: itemsError } = await supabase
         .from('po_line_items')
-        .select('line_total')
-        .eq('po_id', changeOrder.linked_po_id);
+        .select('id, line_number, description, quantity, uom, length_ft, unit_price, line_total')
+        .eq('po_id', changeOrder.linked_po_id)
+        .order('line_number');
 
       if (itemsError) {
         console.error('Error fetching PO line items:', itemsError);
       }
 
-      const subtotal = (lineItems || []).reduce((sum, item) => sum + (item.line_total || 0), 0);
-      const itemCount = (lineItems || []).length;
+      const items = lineItems || [];
+      const subtotal = items.reduce((sum, item) => sum + (item.line_total || 0), 0);
+      const itemCount = items.length;
 
       return {
         id: poData.id,
@@ -620,6 +622,7 @@ export function useChangeOrder(changeOrderId: string | null) {
         status: poData.status,
         subtotal,
         itemCount,
+        items, // Full line item data for display
       };
     },
     enabled: !!changeOrder?.linked_po_id,
@@ -1151,6 +1154,35 @@ export function useChangeOrder(changeOrderId: string | null) {
     },
   });
 
+  // Lock materials pricing (TC locks in their markup before submitting to GC)
+  const lockMaterialsPricingMutation = useMutation({
+    mutationFn: async () => {
+      if (!changeOrderId) throw new Error('Invalid state');
+
+      const { error } = await supabase
+        .from('change_order_projects')
+        .update({ 
+          materials_pricing_locked: true,
+          materials_locked_at: new Date().toISOString(),
+        })
+        .eq('id', changeOrderId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['change-order', changeOrderId] });
+      queryClient.invalidateQueries({ queryKey: ['change-order-checklist', changeOrderId] });
+      toast({ title: 'Materials pricing locked' });
+    },
+    onError: (error) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to lock materials pricing',
+        description: error.message,
+      });
+    },
+  });
+
   return {
     changeOrder,
     participants,
@@ -1196,11 +1228,13 @@ export function useChangeOrder(changeOrderId: string | null) {
     // PO linking
     linkPO: linkPOMutation.mutateAsync,
     updateMarkup: updateMarkupMutation.mutate,
+    lockMaterialsPricing: lockMaterialsPricingMutation.mutate,
     
     // Loading states
     isAddingFCHours: addFCHoursMutation.isPending,
     isLockingFCHours: lockFCHoursMutation.isPending,
     isLinkingPO: linkPOMutation.isPending,
+    isLockingMaterialsPricing: lockMaterialsPricingMutation.isPending,
   };
 }
 

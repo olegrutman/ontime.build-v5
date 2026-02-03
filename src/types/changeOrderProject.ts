@@ -62,6 +62,10 @@ export interface ChangeOrderProject {
   material_markup_percent?: number;
   material_markup_amount?: number;
   
+  // Materials pricing lock (TC locks in their markup)
+  materials_pricing_locked?: boolean;
+  materials_locked_at?: string | null;
+  
   // Joined data
   project?: {
     id: string;
@@ -175,6 +179,27 @@ export interface ChangeOrderChecklist {
   materials_priced: boolean;
   equipment_priced: boolean;
   updated_at: string;
+}
+
+// Linked PO data with full line items
+export interface LinkedPOLineItem {
+  id: string;
+  line_number: number;
+  description: string;
+  quantity: number;
+  uom: string;
+  length_ft?: number | null;
+  unit_price?: number | null;
+  line_total?: number | null;
+}
+
+export interface LinkedPOData {
+  id: string;
+  po_number: string;
+  status: string;
+  subtotal?: number;
+  itemCount?: number;
+  items?: LinkedPOLineItem[];
 }
 
 // Wizard form data

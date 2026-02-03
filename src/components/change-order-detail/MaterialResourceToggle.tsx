@@ -9,6 +9,9 @@ import { POWizardV2 } from '@/components/po-wizard-v2/POWizardV2';
 import { LinkedPOCard } from './LinkedPOCard';
 import { MaterialMarkupEditor } from './MaterialMarkupEditor';
 import { POWizardV2Data } from '@/types/poWizardV2';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from 'sonner';
 
 interface MaterialResourceToggleProps {
   changeOrder: ChangeOrderProject;
@@ -49,7 +52,11 @@ export function MaterialResourceToggle({
   isCreatingPO,
   canViewPricing,
 }: MaterialResourceToggleProps) {
+  const { userOrgRoles, user } = useAuth();
   const [poWizardOpen, setPOWizardOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const currentOrgId = userOrgRoles[0]?.organization_id;
 
   const handleMaterialsToggle = (checked: boolean) => {
     onUpdateMaterialsNeeded(checked);
@@ -59,10 +66,94 @@ export function MaterialResourceToggle({
     onUpdateEquipmentNeeded(checked);
   };
 
-  const handlePOComplete = async (_data: POWizardV2Data) => {
-    // This callback will be handled by the parent which creates the PO
-    // For now we just close the wizard - parent handles the actual creation
-    setPOWizardOpen(false);
+  // Create PO with auto-submit for work order context
+  const handlePOComplete = async (data: POWizardV2Data) => {
+    if (!currentOrgId || !user) {
+      toast.error('Not authenticated');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      // Determine pricing owner based on material_responsibility from project contracts
+      let pricingOwnerOrgId: string | null = null;
+      
+      const { data: contracts } = await supabase
+        .from('project_contracts')
+        .select('material_responsibility, from_org_id, to_org_id')
+        .eq('project_id', data.project_id)
+        .not('material_responsibility', 'is', null);
+      
+      if (contracts && contracts.length > 0) {
+        const contractWithMR = contracts.find(c => c.material_responsibility);
+        if (contractWithMR) {
+          pricingOwnerOrgId = contractWithMR.material_responsibility === 'GC' 
+            ? contractWithMR.to_org_id 
+            : contractWithMR.from_org_id;
+        }
+      }
+      
+      if (!pricingOwnerOrgId) {
+        pricingOwnerOrgId = currentOrgId;
+      }
+      
+      const { data: poNumber } = await supabase.rpc('generate_po_number', {
+        org_id: currentOrgId,
+      });
+
+      // Create PO with SUBMITTED status (auto-submit for work order context)
+      const { data: newPO, error: poError } = await supabase
+        .from('purchase_orders')
+        .insert({
+          organization_id: currentOrgId,
+          po_number: poNumber,
+          po_name: `Materials for ${changeOrder.title}`,
+          supplier_id: data.supplier_id,
+          project_id: data.project_id,
+          work_order_id: changeOrder.id,
+          notes: data.notes || null,
+          status: 'SUBMITTED', // Auto-submit to supplier
+          submitted_at: new Date().toISOString(),
+          submitted_by: user.id,
+          created_by_org_id: currentOrgId,
+          pricing_owner_org_id: pricingOwnerOrgId,
+        })
+        .select()
+        .single();
+
+      if (poError) throw poError;
+
+      // Insert line items
+      if (data.line_items.length > 0) {
+        const lineItems = data.line_items.map((item, idx) => ({
+          po_id: newPO.id,
+          line_number: idx + 1,
+          supplier_sku: item.supplier_sku,
+          description: item.name,
+          quantity: item.quantity,
+          uom: item.uom,
+          pieces: item.unit_mode === 'BUNDLE' ? item.bundle_count : null,
+          length_ft: item.length_ft || null,
+          computed_lf: item.computed_lf || null,
+          notes: item.item_notes || null,
+        }));
+
+        const { error: lineError } = await supabase.from('po_line_items').insert(lineItems);
+        if (lineError) throw lineError;
+      }
+
+      // Link PO to work order
+      await onPOCreated(newPO.id);
+      
+      toast.success(`PO ${poNumber} created and sent to supplier for pricing`);
+      setPOWizardOpen(false);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error creating PO:', error);
+      toast.error('Failed to create PO: ' + message);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const isTCCostResponsible = changeOrder.material_cost_responsibility === 'TC';
@@ -115,7 +206,7 @@ export function MaterialResourceToggle({
               variant="outline"
               className="w-full"
               onClick={() => setPOWizardOpen(true)}
-              disabled={isCreatingPO}
+              disabled={isCreatingPO || isSubmitting}
             >
               <Plus className="w-4 h-4 mr-2" />
               Add Materials via Product Picker
@@ -198,8 +289,7 @@ export function MaterialResourceToggle({
         workOrderId={changeOrder.id}
         workOrderTitle={changeOrder.title}
         onComplete={handlePOComplete}
-        onPOCreated={onPOCreated}
-        isSubmitting={isCreatingPO}
+        isSubmitting={isSubmitting}
       />
     </>
   );

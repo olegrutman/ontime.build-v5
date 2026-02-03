@@ -422,6 +422,8 @@ export type Database = {
           material_markup_percent: number | null
           material_markup_type: string | null
           material_total: number | null
+          materials_locked_at: string | null
+          materials_pricing_locked: boolean | null
           project_id: string
           reason: string | null
           rejection_notes: string | null
@@ -450,6 +452,8 @@ export type Database = {
           material_markup_percent?: number | null
           material_markup_type?: string | null
           material_total?: number | null
+          materials_locked_at?: string | null
+          materials_pricing_locked?: boolean | null
           project_id: string
           reason?: string | null
           rejection_notes?: string | null
@@ -478,6 +482,8 @@ export type Database = {
           material_markup_percent?: number | null
           material_markup_type?: string | null
           material_total?: number | null
+          materials_locked_at?: string | null
+          materials_pricing_locked?: boolean | null
           project_id?: string
           reason?: string | null
           rejection_notes?: string | null
