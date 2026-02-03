@@ -34,6 +34,7 @@ interface WorkOrderMaterialsPanelProps {
   onLockPricing: () => void;
   isLocked?: boolean;
   canViewPricing: boolean;
+  canViewMarkedUpTotal?: boolean;
   isEditable: boolean;
   isLocking?: boolean;
 }
@@ -56,6 +57,7 @@ export function WorkOrderMaterialsPanel({
   onLockPricing,
   isLocked = false,
   canViewPricing,
+  canViewMarkedUpTotal = false,
   isEditable,
   isLocking,
 }: WorkOrderMaterialsPanelProps) {
@@ -193,6 +195,21 @@ export function WorkOrderMaterialsPanel({
           </>
         )}
 
+        {/* GC View - marked-up total only (when materials are locked) */}
+        {!canViewPricing && canViewMarkedUpTotal && isPriced && isLocked && (
+          <>
+            <Separator />
+            <div className="flex justify-between font-medium">
+              <span>Materials Total</span>
+              <span>${materialsTotal.toFixed(2)}</span>
+            </div>
+            <div className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground bg-muted/50 rounded-lg">
+              <Lock className="w-4 h-4" />
+              Materials pricing locked
+            </div>
+          </>
+        )}
+
         {/* Awaiting pricing message */}
         {linkedPO.status === 'SUBMITTED' && (
           <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
@@ -202,7 +219,7 @@ export function WorkOrderMaterialsPanel({
         )}
 
         {/* FC message - can see items but not pricing */}
-        {!canViewPricing && items.length > 0 && (
+        {!canViewPricing && !canViewMarkedUpTotal && items.length > 0 && (
           <p className="text-xs text-muted-foreground text-center">
             {items.length} item(s) on order
           </p>

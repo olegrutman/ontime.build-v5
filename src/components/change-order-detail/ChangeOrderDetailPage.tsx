@@ -167,6 +167,7 @@ export function ChangeOrderDetailPage() {
                 onLockPricing={lockMaterialsPricing}
                 isLocked={changeOrder.materials_pricing_locked}
                 canViewPricing={isTC || (isGC && changeOrder.material_cost_responsibility === 'GC')}
+                canViewMarkedUpTotal={isGC}
                 isEditable={isTCEditable && isTC}
                 isLocking={isLockingMaterialsPricing}
               />
