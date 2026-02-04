@@ -360,7 +360,7 @@ export function ProductPicker({
   const dbCategory = selectedVirtualCategory ? VIRTUAL_CATEGORIES[selectedVirtualCategory]?.dbCategory : null;
 
   const content = (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/30">
         {step !== 'category' && (
@@ -432,7 +432,7 @@ export function ProductPicker({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden max-h-[85vh]">
+      <DialogContent className="flex flex-col h-[85vh] min-h-0 max-w-lg p-0 gap-0 overflow-hidden">
         {content}
       </DialogContent>
     </Dialog>
