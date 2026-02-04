@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ChevronLeft, X, ShieldCheck } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -22,6 +23,12 @@ import { QuantityPanel } from './QuantityPanel';
 
 type PickerStep = 'category' | 'secondary' | 'filter-step' | 'products' | 'quantity';
 
+interface RestrictToEstimate {
+  projectId: string;
+  estimateId: string;
+  estimateName?: string;
+}
+
 interface ProductPickerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -30,6 +37,8 @@ interface ProductPickerProps {
   onUpdateItem?: (item: POWizardV2LineItem) => void;
   editingItem: POWizardV2LineItem | null;
   onClearEdit: () => void;
+  // New: Restrict product selection to estimate-approved items
+  restrictToEstimate?: RestrictToEstimate;
 }
 
 export function ProductPicker({
@@ -40,6 +49,7 @@ export function ProductPicker({
   onUpdateItem,
   editingItem,
   onClearEdit,
+  restrictToEstimate,
 }: ProductPickerProps) {
   const isMobile = useIsMobile();
   const [step, setStep] = useState<PickerStep>('category');
@@ -51,6 +61,34 @@ export function ProductPicker({
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null);
   const [loading, setLoading] = useState(false);
+  
+  // Restricted mode: allowed catalog item IDs from estimate
+  const [allowedCatalogIds, setAllowedCatalogIds] = useState<Set<string> | null>(null);
+  
+  // Fetch allowed catalog IDs when in restricted mode
+  useEffect(() => {
+    if (!restrictToEstimate) {
+      setAllowedCatalogIds(null);
+      return;
+    }
+    
+    const fetchAllowedIds = async () => {
+      const { data, error } = await supabase
+        .from('estimate_catalog_mapping')
+        .select('catalog_item_id')
+        .eq('estimate_id', restrictToEstimate.estimateId)
+        .eq('project_id', restrictToEstimate.projectId);
+      
+      if (error) {
+        console.error('Error fetching allowed catalog items:', error);
+        setAllowedCatalogIds(new Set());
+      } else {
+        setAllowedCatalogIds(new Set(data?.map(d => d.catalog_item_id) || []));
+      }
+    };
+    
+    fetchAllowedIds();
+  }, [restrictToEstimate]);
 
   // Get the actual DB category for queries
   const getDbCategory = useCallback(() => {
@@ -87,17 +125,59 @@ export function ProductPicker({
       fetchEditingProduct();
     } else if (open && !editingItem) {
       // Normal open - reset state
-      setStep('category');
+      setStep(restrictToEstimate ? 'products' : 'category');
       setSelectedVirtualCategory(null);
       setSelectedSecondary(null);
       setAppliedFilters({});
       setProducts([]);
       setSelectedProduct(null);
-      if (supplierId) {
+      
+      if (restrictToEstimate) {
+        // In restricted mode, fetch all estimate products directly
+        fetchEstimateProducts();
+      } else if (supplierId) {
         fetchCategories();
       }
     }
-  }, [open, supplierId, editingItem]);
+  }, [open, supplierId, editingItem, restrictToEstimate]);
+
+  // Fetch products restricted to estimate catalog mapping
+  const fetchEstimateProducts = async () => {
+    if (!restrictToEstimate) return;
+    
+    setLoading(true);
+    try {
+      // First get allowed catalog item IDs
+      const { data: mappings, error: mappingError } = await supabase
+        .from('estimate_catalog_mapping')
+        .select('catalog_item_id')
+        .eq('estimate_id', restrictToEstimate.estimateId)
+        .eq('project_id', restrictToEstimate.projectId);
+      
+      if (mappingError) throw mappingError;
+      
+      if (!mappings || mappings.length === 0) {
+        setProducts([]);
+        return;
+      }
+      
+      const catalogIds = mappings.map(m => m.catalog_item_id);
+      
+      // Fetch all catalog items that are in the estimate
+      const { data, error } = await supabase
+        .from('catalog_items')
+        .select('*')
+        .in('id', catalogIds);
+      
+      if (error) throw error;
+      
+      setProducts((data || []) as CatalogProduct[]);
+    } catch (error) {
+      console.error('Error fetching estimate products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchCategories = async () => {
     if (!supplierId) return;
@@ -379,6 +459,14 @@ export function ProductPicker({
   };
 
   const getTitle = () => {
+  const getTitle = () => {
+    // In restricted mode, show a different title
+    if (restrictToEstimate) {
+      if (step === 'products') return 'Select from Estimate';
+      if (step === 'quantity') return 'Add to PO';
+      return 'Select Product';
+    }
+    
     const virtual = selectedVirtualCategory ? VIRTUAL_CATEGORIES[selectedVirtualCategory] : null;
     
     switch (step) {
@@ -402,12 +490,25 @@ export function ProductPicker({
     <div className="flex flex-col h-full">
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/30">
-        {step !== 'category' && (
+        {step !== 'category' && !restrictToEstimate && (
           <Button variant="ghost" size="icon" className="h-10 w-10" onClick={handleBack}>
             <ChevronLeft className="h-5 w-5" />
           </Button>
         )}
-        <h2 className="text-lg font-semibold flex-1">{getTitle()}</h2>
+        {restrictToEstimate && step === 'quantity' && (
+          <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => setStep('products')}>
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+        )}
+        <div className="flex-1">
+          <h2 className="text-lg font-semibold">{getTitle()}</h2>
+          {restrictToEstimate && (
+            <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+              <ShieldCheck className="h-3 w-3" />
+              <span>Estimate-approved products only</span>
+            </div>
+          )}
+        </div>
         <Button variant="ghost" size="icon" className="h-10 w-10" onClick={handleClose}>
           <X className="h-5 w-5" />
         </Button>
