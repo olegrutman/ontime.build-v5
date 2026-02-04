@@ -16,6 +16,8 @@ interface POTotals {
   totalCount: number;
   totalSpend: number;
   pendingPricingCount: number;
+  baseCost: number;
+  markupTotal: number;
 }
 
 function formatCurrency(amount: number): string {
@@ -38,6 +40,8 @@ export function POSummaryCard({ projectId }: POSummaryCardProps) {
     totalCount: 0,
     totalSpend: 0,
     pendingPricingCount: 0,
+    baseCost: 0,
+    markupTotal: 0,
   });
 
   useEffect(() => {
@@ -115,14 +119,44 @@ export function POSummaryCard({ projectId }: POSummaryCardProps) {
 
       // Fetch line items for pricing calculation (only if can view pricing)
       let totalSpend = 0;
+      let baseCost = 0;
+      let markupTotal = 0;
+      
       if (!isFCView && filteredPOs.length > 0) {
         const poIds = filteredPOs.map(p => p.id);
         const { data: lineItems } = await supabase
           .from('po_line_items')
-          .select('line_total')
+          .select('po_id, line_total')
           .in('po_id', poIds);
         
         totalSpend = (lineItems || []).reduce((sum, item) => sum + (item.line_total || 0), 0);
+        baseCost = totalSpend;
+        
+        // For TC view, fetch linked work orders to calculate markup
+        if (isTCView) {
+          const { data: workOrders } = await supabase
+            .from('change_order_projects')
+            .select('linked_po_id, material_markup_type, material_markup_percent, material_markup_amount')
+            .eq('project_id', projectId)
+            .in('linked_po_id', poIds);
+          
+          if (workOrders && workOrders.length > 0) {
+            // Calculate markup for each linked PO
+            const poLineMap = new Map<string, number>();
+            (lineItems || []).forEach(item => {
+              const current = poLineMap.get(item.po_id) || 0;
+              poLineMap.set(item.po_id, current + (item.line_total || 0));
+            });
+            
+            workOrders.forEach(wo => {
+              const poCost = poLineMap.get(wo.linked_po_id!) || 0;
+              const markup = wo.material_markup_type === 'percent'
+                ? poCost * ((wo.material_markup_percent || 0) / 100)
+                : (wo.material_markup_amount || 0);
+              markupTotal += markup;
+            });
+          }
+        }
       }
 
       setTotals({
@@ -132,6 +166,8 @@ export function POSummaryCard({ projectId }: POSummaryCardProps) {
         totalCount: filteredPOs.length,
         totalSpend,
         pendingPricingCount,
+        baseCost,
+        markupTotal,
       });
       setLoading(false);
     };
@@ -209,8 +245,26 @@ export function POSummaryCard({ projectId }: POSummaryCardProps) {
               <span className="text-lg font-bold">{totals.totalCount}</span>
             </div>
           </div>
-        ) : (isTCView || isGCView) && canViewPricing ? (
-          /* TC and GC see total spend */
+        ) : isTCView && canViewPricing ? (
+          /* TC sees cost breakdown with markup */
+          <div className="pt-3 border-t space-y-1">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Supplier Cost</span>
+              <span>{formatCurrency(totals.baseCost)}</span>
+            </div>
+            {totals.markupTotal > 0 && (
+              <div className="flex justify-between text-sm text-green-600">
+                <span>Markup</span>
+                <span>+{formatCurrency(totals.markupTotal)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-medium pt-1 border-t">
+              <span className="text-sm">Total Revenue</span>
+              <span>{formatCurrency(totals.baseCost + totals.markupTotal)}</span>
+            </div>
+          </div>
+        ) : isGCView && canViewPricing ? (
+          /* GC sees only final spend */
           <div className="pt-3 border-t">
             <div className="flex justify-between items-center">
               <span className="text-sm text-muted-foreground">PO Spend</span>
