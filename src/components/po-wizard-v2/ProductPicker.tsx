@@ -11,8 +11,6 @@ import {
   CategoryCount,
   SecondaryCount,
   VIRTUAL_CATEGORIES,
-  VirtualCategory,
-  getFilterSequence,
 } from '@/types/poWizardV2';
 import { CategoryGrid } from './CategoryGrid';
 import { SecondaryCategoryList } from './SecondaryCategoryList';
@@ -267,50 +265,21 @@ export function ProductPicker({
       // Multiple sub-categories - show selection
       setStep('secondary');
     } else if (secondaries && secondaries.length === 1) {
-      // Auto-select single secondary
+      // Auto-select single secondary, then go to filter-step
       const secondary = secondaries[0].secondary_category;
       setSelectedSecondary(secondary);
-      
-      // Check if we need filter steps
-      const filterSeq = getFilterSequence(virtual.dbCategory, secondary);
-      if (filterSeq.length > 0) {
-        setStep('filter-step');
-      } else {
-        // No filters needed - go directly to products
-        fetchProducts(virtualKey, secondary, {});
-        setStep('products');
-      }
+      setStep('filter-step'); // ALWAYS go to filter-step for dynamic discovery
     } else {
-      // No secondary categories (or empty array for "all of category")
-      const filterSeq = getFilterSequence(virtual.dbCategory, null);
-      if (filterSeq.length > 0) {
-        setStep('filter-step');
-      } else {
-        fetchProducts(virtualKey, null, {});
-        setStep('products');
-      }
+      // No secondary categories - go to filter-step
+      setStep('filter-step'); // ALWAYS go to filter-step for dynamic discovery
     }
   }, [supplierId]);
 
   const handleSecondarySelect = useCallback((secondary: string) => {
     setSelectedSecondary(secondary);
     setAppliedFilters({});
-    
-    const virtual = selectedVirtualCategory ? VIRTUAL_CATEGORIES[selectedVirtualCategory] : null;
-    if (!virtual) return;
-    
-    // Check if we need filter steps
-    const filterSeq = getFilterSequence(virtual.dbCategory, secondary);
-    if (filterSeq.length > 0) {
-      setStep('filter-step');
-    } else {
-      // No filters needed - go directly to products
-      if (selectedVirtualCategory) {
-        fetchProducts(selectedVirtualCategory, secondary, {});
-      }
-      setStep('products');
-    }
-  }, [selectedVirtualCategory, supplierId]);
+    setStep('filter-step'); // ALWAYS go to filter-step for dynamic discovery
+  }, []);
 
   const handleFilterComplete = useCallback((filters: Record<string, string>) => {
     setAppliedFilters(filters);
@@ -355,16 +324,8 @@ export function ProductPicker({
         setAppliedFilters({});
         break;
       case 'products':
-        // Go back to filter-step if there are filters, otherwise to secondary/category
-        const filterSeq = getFilterSequence(virtual?.dbCategory || '', selectedSecondary);
-        if (filterSeq.length > 0) {
-          setStep('filter-step');
-        } else if (secondaryCategories.length > 1) {
-          setStep('secondary');
-        } else {
-          setStep('category');
-          setSelectedVirtualCategory(null);
-        }
+        // Always go back to filter-step
+        setStep('filter-step');
         break;
       case 'quantity':
         setStep('products');
