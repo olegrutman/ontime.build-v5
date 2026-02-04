@@ -1,79 +1,107 @@
 
-# Plan: Skip Filter Steps with Null Values
+# Plan: Enable Scrolling for Long Lists in Product Picker
 
-## Summary
+## Problem
 
-Modify the filter logic to **automatically skip** steps where all database values are null (i.e., no selectable options exist). This will only skip steps that have no data - steps with 1+ values will still be shown for explicit confirmation.
+When the list of categories or secondary categories is longer than the visible area, users cannot scroll to see all items. This affects `CategoryGrid` and `SecondaryCategoryList` components.
 
----
+## Root Cause
 
-## Key Change
+The parent `ProductPicker` has proper scroll setup (`<div className="flex-1 overflow-y-auto">`), but the child components don't fill the container height properly:
 
-After fetching filter values for a step, if the result is empty (all null), automatically advance to the next step instead of showing "No options available."
+| Component | Current Structure | Issue |
+|-----------|------------------|-------|
+| `CategoryGrid` | `<div className="grid ... p-4">` | No height constraints, doesn't fill parent |
+| `SecondaryCategoryList` | `<div className="p-4 space-y-2">` | No height constraints, doesn't fill parent |
+| `ProductList` | `<div className="flex flex-col h-full">` with `flex-1 overflow-y-auto` | Correct |
+| `StepByStepFilter` | `<div className="flex flex-col h-full">` with `flex-1 overflow-y-auto` | Correct |
 
----
+Since the parent already has `overflow-y-auto`, the child components just need to not interfere with that scrolling.
 
-## File to Modify
+## Solution
+
+The simplest fix is to ensure the child content flows naturally within the scrollable parent. The current structure should work because `overflow-y-auto` on the parent container should scroll all content inside it.
+
+However, looking more closely at the nesting:
+
+```
+ProductPicker content wrapper: flex flex-col h-full
+├── Header: fixed height
+└── Content area: flex-1 overflow-y-auto  ← This should scroll
+    └── CategoryGrid/SecondaryCategoryList  ← These just need proper content
+```
+
+The issue is likely that the child components are rendering their own internal scroll containers OR the grid layout is causing height calculation issues.
+
+## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/po-wizard-v2/StepByStepFilter.tsx` | Add auto-skip when `availableValues` is empty after fetch |
+| `src/components/po-wizard-v2/CategoryGrid.tsx` | Wrap content in proper scroll container |
+| `src/components/po-wizard-v2/SecondaryCategoryList.tsx` | Wrap content in proper scroll container |
 
 ---
 
 ## Technical Changes
 
-### `src/components/po-wizard-v2/StepByStepFilter.tsx`
+### 1. `src/components/po-wizard-v2/CategoryGrid.tsx`
 
-**Update `fetchFilterValues` (around line 162)**
-
-After setting `availableValues`, check if empty and auto-advance:
-
+**Current** (line 29-43):
 ```typescript
-// Current code (line 162):
-setAvailableValues(values);
-// No auto-advance - always show the step so user confirms each selection
-
-// New code:
-setAvailableValues(values);
-
-// Auto-skip if all values are null (no selectable options)
-if (values.length === 0) {
-  // Skip to next step or complete if last step
-  if (currentStepIndex >= totalSteps - 1) {
-    onComplete(appliedFilters);
-  } else {
-    setCurrentStepIndex(prev => prev + 1);
-  }
-  return; // Exit early, don't set loading to false yet
-}
+return (
+  <div className="grid grid-cols-2 gap-3 p-4">
+    {categories.map(category => (
+      // ... buttons
+    ))}
+  </div>
+);
 ```
+
+**Updated**:
+```typescript
+return (
+  <div className="h-full overflow-y-auto">
+    <div className="grid grid-cols-2 gap-3 p-4">
+      {categories.map(category => (
+        // ... buttons
+      ))}
+    </div>
+  </div>
+);
+```
+
+Also update the loading state (lines 12-18) with the same wrapper.
+
+### 2. `src/components/po-wizard-v2/SecondaryCategoryList.tsx`
+
+**Current** (line 30-53):
+```typescript
+return (
+  <div className="p-4 space-y-2">
+    {categories.map(category => (
+      // ... buttons
+    ))}
+  </div>
+);
+```
+
+**Updated**:
+```typescript
+return (
+  <div className="h-full overflow-y-auto">
+    <div className="p-4 space-y-2">
+      {categories.map(category => (
+        // ... buttons
+      ))}
+    </div>
+  </div>
+);
+```
+
+Also update the loading state (lines 12-19) and empty state (lines 22-27) with the same wrapper.
 
 ---
 
-## Updated Flow
+## Summary
 
-```text
-User selects: EXTERIOR TRIM → SIDING
-
-Step 1: Manufacturer (HARDIE - 48) → User selects
-Step 2: Use Type (all null) → AUTO-SKIP ✓
-Step 3: Product Type (LAP, PANEL...) → User selects
-Step 4: Finish (SMOOTH, WDGRN...) → User selects
-Step 5: Color (all null) → AUTO-SKIP ✓
-Step 6: Dimension → User selects
-Step 7: Length → User selects
-→ Product List
-```
-
----
-
-## Logic Summary
-
-| Scenario | Behavior |
-|----------|----------|
-| Field has 2+ values | Show step, user must select |
-| Field has 1 value | Show step, user confirms by tapping |
-| Field has 0 values (all null) | **Auto-skip to next step** |
-
-This keeps the explicit confirmation for steps with data while efficiently skipping empty steps.
+Add `h-full overflow-y-auto` wrapper to `CategoryGrid` and `SecondaryCategoryList` to ensure they properly fill the scrollable parent container and allow scrolling when content exceeds the viewport.
