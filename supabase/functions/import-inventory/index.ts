@@ -8,28 +8,75 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Category normalization mapping
+// Enhanced category normalization mapping with fallback variants
 const CATEGORY_MAP: Record<string, string> = {
+  // Decking
   "decking": "Decking",
+  
+  // Drywall
   "drywall": "Drywall",
+  
+  // Engineered Wood
   "engineered wood": "Engineered",
   "engineered": "Engineered",
+  "engineeredwood": "Engineered",
+  
+  // Exterior Trim
   "exterior trim": "Exterior",
   "exterior": "Exterior",
+  "exteriortrim": "Exterior",
+  
+  // Framing Accessories  
   "framing accessories": "FramingAccessories",
+  "framingaccessories": "FramingAccessories",
+  "framing_accessories": "FramingAccessories",
+  
+  // Framing Lumber
   "framing lumber": "FramingLumber",
+  "framinglumber": "FramingLumber",
+  "framing_lumber": "FramingLumber",
+  
+  // Hardware
   "hardware": "Hardware",
+  
+  // Sheathing (handle typo in file)
   "sheating and plywood": "Sheathing",
-  "sheathing and plywood": "Sheathing",
+  "sheathing and plywood": "Sheathing", 
   "sheathing": "Sheathing",
+  "sheatingandplywood": "Sheathing",
+  "sheating": "Sheathing",
+  
+  // Structural Steel
   "structural steel": "Structural",
   "structural": "Structural",
+  "structuralsteel": "Structural",
 };
 
 function normalizeCategory(category: string | undefined): string {
   if (!category) return "Other";
-  const normalized = category.toLowerCase().trim();
-  return CATEGORY_MAP[normalized] || "Other";
+  
+  // Remove all non-printable characters and normalize whitespace
+  const cleaned = category
+    .replace(/[^\x20-\x7E]/g, ' ')  // Replace non-ASCII with space
+    .replace(/\s+/g, ' ')           // Collapse multiple spaces
+    .toLowerCase()
+    .trim();
+  
+  // Try direct lookup first
+  if (CATEGORY_MAP[cleaned]) {
+    return CATEGORY_MAP[cleaned];
+  }
+  
+  // Try without spaces
+  const noSpaces = cleaned.replace(/\s/g, '');
+  if (CATEGORY_MAP[noSpaces]) {
+    return CATEGORY_MAP[noSpaces];
+  }
+  
+  // Log unrecognized categories for debugging
+  console.log(`Unrecognized category: "${category}" -> cleaned: "${cleaned}"`);
+  
+  return "Other";
 }
 
 // UOM mapping
