@@ -98,7 +98,7 @@ export const VIRTUAL_CATEGORIES: Record<string, VirtualCategory> = {
     displayName: 'HARDWARE',
     icon: '🔩',
     dbCategory: 'Hardware',
-    secondaryCategories: [], // All hardware secondaries
+    secondaryCategories: [' ANCHORS ', ' ANGLE ', ' COLUMN HARDWARE ', ' HANGER ', ' HOLD DOWN ', ' OTHER ', ' PLATES CONNECTORS AND CLIPS ', ' POST HARDWARE ', ' TIE & STRAP '],
   },
   ENGINEERED: {
     displayName: 'ENGINEERED WOOD',
@@ -116,7 +116,7 @@ export const VIRTUAL_CATEGORIES: Record<string, VirtualCategory> = {
     displayName: 'EXTERIOR TRIM',
     icon: '🏠',
     dbCategory: 'Exterior',
-    secondaryCategories: ['SIDING', 'CORNER TRIM', 'STARTER STRIPS', 'WINDOW/DOOR TRIM'],
+    secondaryCategories: ['SIDING', 'TRIM', 'SOFFIT ', 'METAL FLASHING', 'MOISTURE CONTROL', 'SIDING ACCESSORIES'],
   },
   DECKING: {
     displayName: 'DECKING',
@@ -142,6 +142,12 @@ export const VIRTUAL_CATEGORIES: Record<string, VirtualCategory> = {
     dbCategory: 'Structural',
     secondaryCategories: ['COLUMN', 'I-BEAM', 'STEEL ANGLE'],
   },
+  OTHER: {
+    displayName: 'OTHER LUMBER',
+    icon: '📦',
+    dbCategory: 'Other',
+    secondaryCategories: ['DECK BOARDS'],
+  },
 };
 
 // Friendly display names for secondary categories
@@ -154,15 +160,16 @@ export const SECONDARY_DISPLAY_NAMES: Record<string, string> = {
   TREATED: 'Treated Lumber',
   'THIN BOARDS': 'Thin Boards (1x)',
   
-  // Hardware
-  HANGER: 'Joist Hangers',
-  'TIE & STRAP': 'Ties & Straps',
-  ANCHORS: 'Anchors',
-  'POST HARDWARE': 'Post Hardware',
-  'COLUMN HARDWARE': 'Column Hardware',
-  'HOLD DOWN': 'Hold Downs',
-  ANGLE: 'Angles',
-  'PLATES CONNECTORS AND CLIPS': 'Plates & Connectors',
+  // Hardware - actual database values with spaces
+  ' ANCHORS ': 'Anchors',
+  ' ANGLE ': 'Angles',
+  ' COLUMN HARDWARE ': 'Column Hardware',
+  ' HANGER ': 'Joist Hangers',
+  ' HOLD DOWN ': 'Hold Downs',
+  ' OTHER ': 'Other Hardware',
+  ' PLATES CONNECTORS AND CLIPS ': 'Plates & Connectors',
+  ' POST HARDWARE ': 'Post Hardware',
+  ' TIE & STRAP ': 'Ties & Straps',
   
   // Engineered
   LVL: 'LVL Headers & Beams',
@@ -181,11 +188,13 @@ export const SECONDARY_DISPLAY_NAMES: Record<string, string> = {
   SPECIALTY: 'Specialty',
   CLIPS: 'Sheathing Clips',
   
-  // Exterior Trim
+  // Exterior Trim - actual database values
   SIDING: 'Siding',
-  'CORNER TRIM': 'Corner Trim',
-  'STARTER STRIPS': 'Starter Strips',
-  'WINDOW/DOOR TRIM': 'Window/Door Trim',
+  TRIM: 'Trim Boards',
+  'SOFFIT ': 'Soffit',
+  'METAL FLASHING': 'Metal Flashing',
+  'MOISTURE CONTROL': 'Moisture Control',
+  'SIDING ACCESSORIES': 'Siding Accessories',
   
   // Decking
   'DECK BOARDS': 'Deck Boards',
@@ -196,7 +205,6 @@ export const SECONDARY_DISPLAY_NAMES: Record<string, string> = {
   // Framing Accessories
   FASTENERS: 'Fasteners',
   ADHESIVES: 'Adhesives',
-  'MOISTURE CONTROL': 'Moisture Control',
   NAILS: 'Nails',
   
   // Drywall
@@ -246,13 +254,15 @@ export const FIELD_LABELS: Record<string, string> = {
   thickness: 'Thickness',
   finish: 'Finish',
   manufacturer: 'Manufacturer',
+  use_type: 'Use Type',
+  product_type: 'Product Type',
 };
 
 // Spec filter priority by category - supports secondary-specific sequences
 export const SPEC_PRIORITY: Record<string, string[] | Record<string, string[]>> = {
-  // Framing Lumber - dimension-based
+  // Framing Lumber - fully populated
   FramingLumber: {
-    default: ['dimension', 'length'],
+    default: ['wood_species', 'dimension', 'length'],
     STUDS: ['dimension', 'length'],
     DIMENSION: ['dimension', 'length'],
     WIDES: ['dimension', 'length'],
@@ -261,41 +271,39 @@ export const SPEC_PRIORITY: Record<string, string[] | Record<string, string[]>> 
     'THIN BOARDS': ['dimension', 'length'],
   },
   
-  // Hardware - skip filters, go directly to products
-  Hardware: [],
+  // Hardware - use thickness filter (sparse data)
+  Hardware: ['thickness'],
   
-  // Engineered wood
+  // Engineered wood - use available fields
   Engineered: {
-    default: ['dimension'],
-    LVL: ['dimension'],
-    LSL: ['dimension'],
-    'I JOISTS': ['dimension'],
-    GLUELAM: ['dimension'],
-    'RIM BOARD': ['dimension'],
+    default: ['use_type', 'product_type', 'length'],
+    LVL: ['use_type', 'product_type'],
+    LSL: ['use_type', 'product_type'],
+    'I JOISTS': ['use_type', 'product_type'],
+    GLUELAM: ['use_type', 'product_type'],
+    'RIM BOARD': ['use_type', 'product_type'],
   },
   
   // Sheathing
-  Sheathing: ['thickness', 'dimension'],
+  Sheathing: ['thickness', 'dimension', 'product_type'],
   
-  // Exterior trim
-  Exterior: ['manufacturer', 'dimension', 'color'],
+  // Exterior trim - manufacturer → use_type → product_type
+  Exterior: ['manufacturer', 'use_type', 'product_type'],
   
-  // Decking products
-  Decking: ['dimension', 'color', 'length', 'manufacturer'],
+  // Decking products - fully populated
+  Decking: ['manufacturer', 'dimension', 'color', 'length'],
   
-  // Framing Accessories - skip filters
-  FramingAccessories: [],
+  // Framing Accessories - use dimension filter (sparse data)
+  FramingAccessories: ['dimension'],
   
   // Drywall
-  Drywall: ['thickness', 'dimension'],
+  Drywall: ['dimension', 'product_type'],
   
-  // Structural steel - skip filters
-  Structural: [],
+  // Structural steel
+  Structural: ['dimension', 'product_type', 'thickness'],
   
-  // Other/legacy
-  Other: {
-    default: ['dimension', 'length'],
-  },
+  // Other (cedar/hemlock) - fully populated
+  Other: ['wood_species', 'dimension', 'length'],
 };
 
 // Helper function to get filter sequence based on category and secondary
