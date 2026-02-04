@@ -10,7 +10,7 @@ const corsHeaders = {
 interface ParseRequest {
   estimate_id: string;
   file_path: string;
-  supplier_id: string;
+  supplier_org_id: string;
 }
 
 interface ParsedLineItem {
@@ -47,11 +47,11 @@ serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const body: ParseRequest = await req.json();
-    const { estimate_id, file_path, supplier_id } = body;
+    const { estimate_id, file_path, supplier_org_id } = body;
 
-    if (!estimate_id || !file_path || !supplier_id) {
+    if (!estimate_id || !file_path || !supplier_org_id) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: estimate_id, file_path, supplier_id" }),
+        JSON.stringify({ error: "Missing required fields: estimate_id, file_path, supplier_org_id" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -75,11 +75,17 @@ serve(async (req) => {
       new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
     );
 
-    // Fetch catalog items for matching
+    // Fetch catalog items for matching - join through suppliers table using org_id
+    const { data: supplierData } = await supabase
+      .from("suppliers")
+      .select("id")
+      .eq("organization_id", supplier_org_id)
+      .single();
+
     const { data: catalogItems } = await supabase
       .from("catalog_items")
       .select("id, supplier_sku, description, dimension, wood_species, length, category")
-      .eq("supplier_id", supplier_id)
+      .eq("supplier_id", supplierData?.id || "")
       .limit(1000);
 
     const catalogContext = catalogItems && catalogItems.length > 0

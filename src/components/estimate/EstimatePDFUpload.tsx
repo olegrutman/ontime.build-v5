@@ -16,7 +16,7 @@ interface PDFUpload {
 
 interface EstimatePDFUploadProps {
   estimateId: string;
-  supplierId: string;
+  supplierOrgId: string;
   existingUpload: PDFUpload | null;
   onUploadComplete: () => void;
   onParseComplete: (stats: { total_items: number; matched: number; needs_review: number }) => void;
@@ -25,7 +25,7 @@ interface EstimatePDFUploadProps {
 
 export function EstimatePDFUpload({
   estimateId,
-  supplierId,
+  supplierOrgId,
   existingUpload,
   onUploadComplete,
   onParseComplete,
@@ -96,7 +96,7 @@ export function EstimatePDFUpload({
         body: {
           estimate_id: estimateId,
           file_path: filePath,
-          supplier_id: supplierId,
+          supplier_org_id: supplierOrgId,
         },
       });
 
