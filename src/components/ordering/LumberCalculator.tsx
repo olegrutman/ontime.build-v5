@@ -11,7 +11,7 @@ import {
 } from '@/types/materialOrder';
 
 interface LumberCalculatorProps {
-  category: 'Dimensional' | 'Engineered';
+  category: 'FramingLumber' | 'Engineered';
   onChange: (data: {
     pieces: number;
     lengthFt: number;
@@ -30,7 +30,7 @@ export function LumberCalculator({ category, onChange }: LumberCalculatorProps) 
   const [lengthFt, setLengthFt] = useState(8);
   const [customLength, setCustomLength] = useState('');
 
-  const isDimensional = category === 'Dimensional';
+  const isDimensional = category === 'FramingLumber';
   const sizeInfo = DIMENSIONAL_SIZES.find(s => s.nominal === selectedSize);
 
   useEffect(() => {

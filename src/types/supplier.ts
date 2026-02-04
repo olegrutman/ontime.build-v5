@@ -1,18 +1,14 @@
 export type CatalogCategory = 
-  | 'Adhesives'
-  | 'Concrete'
   | 'Decking'
-  | 'Dimensional'
+  | 'Drywall'
   | 'Engineered'
   | 'Exterior'
-  | 'Fasteners'
+  | 'FramingAccessories'
+  | 'FramingLumber'
   | 'Hardware'
-  | 'Insulation'
-  | 'Interior'
-  | 'Other'
-  | 'Roofing'
   | 'Sheathing'
-  | 'Structural';
+  | 'Structural'
+  | 'Other';
 
 export interface Supplier {
   id: string;
@@ -77,37 +73,29 @@ export interface CatalogSearchResult {
 }
 
 export const CATALOG_CATEGORIES: CatalogCategory[] = [
-  'Adhesives',
-  'Concrete',
   'Decking',
-  'Dimensional',
+  'Drywall',
   'Engineered',
   'Exterior',
-  'Fasteners',
+  'FramingAccessories',
+  'FramingLumber',
   'Hardware',
-  'Insulation',
-  'Interior',
-  'Other',
-  'Roofing',
   'Sheathing',
   'Structural',
+  'Other',
 ];
 
 export const CATEGORY_LABELS: Record<CatalogCategory, string> = {
-  Adhesives: 'Adhesives & Sealants',
-  Concrete: 'Concrete & Masonry',
   Decking: 'Decking',
-  Dimensional: 'Dimensional Lumber',
+  Drywall: 'Drywall',
   Engineered: 'Engineered Wood',
-  Exterior: 'Exterior',
-  Fasteners: 'Fasteners',
+  Exterior: 'Exterior Trim',
+  FramingAccessories: 'Framing Accessories',
+  FramingLumber: 'Framing Lumber',
   Hardware: 'Hardware',
-  Insulation: 'Insulation',
-  Interior: 'Interior',
+  Sheathing: 'Sheathing & Plywood',
+  Structural: 'Structural Steel',
   Other: 'Other',
-  Roofing: 'Roofing',
-  Sheathing: 'Sheathing',
-  Structural: 'Structural',
 };
 
 export const UOM_OPTIONS = [
@@ -192,32 +180,26 @@ function parseCSVLine(line: string): string[] {
 function normalizeCategory(category: string): CatalogCategory {
   const normalized = category.toLowerCase().trim();
   const mapping: Record<string, CatalogCategory> = {
-    // Original mappings
-    'dimensional': 'Dimensional',
-    'lumber': 'Dimensional',
-    'engineered': 'Engineered',
-    'engineered wood': 'Engineered',
-    'sheathing': 'Sheathing',
-    'hardware': 'Hardware',
-    'fasteners': 'Fasteners',
-    'fastener': 'Fasteners',
-    'other': 'Other',
-    // New category mappings
+    // New inventory categories
     'decking': 'Decking',
-    'deck boards': 'Decking',
-    'railing': 'Decking',
+    'drywall': 'Drywall',
+    'engineered wood': 'Engineered',
+    'engineered': 'Engineered',
+    'exterior trim': 'Exterior',
     'exterior': 'Exterior',
-    'siding': 'Exterior',
-    'trim': 'Exterior',
-    'interior': 'Interior',
-    'roofing': 'Roofing',
+    'framing accessories': 'FramingAccessories',
+    'framing lumber': 'FramingLumber',
+    'hardware': 'Hardware',
+    'sheating and plywood': 'Sheathing',
+    'sheathing': 'Sheathing',
+    'structural steel': 'Structural',
     'structural': 'Structural',
-    'adhesives': 'Adhesives',
-    'adhesive': 'Adhesives',
-    'sealants': 'Adhesives',
-    'insulation': 'Insulation',
-    'concrete': 'Concrete',
-    'masonry': 'Concrete',
+    // Legacy mappings
+    'dimensional': 'FramingLumber',
+    'lumber': 'FramingLumber',
+    'fasteners': 'FramingAccessories',
+    'fastener': 'FramingAccessories',
+    'other': 'Other',
   };
   return mapping[normalized] || 'Other';
 }

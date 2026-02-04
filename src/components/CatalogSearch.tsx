@@ -14,12 +14,12 @@ interface CatalogSearchProps {
 // Category chips for quick filtering
 const CATEGORY_CHIPS: { label: string; value: CatalogCategory | null }[] = [
   { label: 'All', value: null },
-  { label: 'Lumber', value: 'Dimensional' },
+  { label: 'Lumber', value: 'FramingLumber' },
   { label: 'Sheathing', value: 'Sheathing' },
   { label: 'Hardware', value: 'Hardware' },
   { label: 'Decking', value: 'Decking' },
   { label: 'Engineered', value: 'Engineered' },
-  { label: 'Fasteners', value: 'Fasteners' },
+  { label: 'Accessories', value: 'FramingAccessories' },
   { label: 'Exterior', value: 'Exterior' },
   { label: 'Structural', value: 'Structural' },
 ];
