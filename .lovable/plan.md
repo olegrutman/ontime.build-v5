@@ -1,89 +1,99 @@
 
-Goal: Fix why you “can’t upload a PDF” by ensuring the Estimates page is actually accessible for Supplier users (right now it’s immediately showing an “Access Denied” toast and redirecting, so the upload UI/flow never gets a chance to run).
 
-What I found (root cause)
-- On `/estimates`, `SupplierProjectEstimates.tsx` runs this logic:
+# Fix: PDF Parsing Fails Due to Truncated AI Response
 
-  - `currentOrg = userOrgRoles[0]?.organization`
-  - `isSupplier = currentOrg?.type === 'SUPPLIER'`
-  - In `useEffect`, if `!authLoading && !isSupplier`, it shows the “Access Denied” toast and navigates away.
+## Problem Identified
 
-- In practice, this can incorrectly fire even for Supplier users when:
-  1) `userOrgRoles` is still empty/not populated at the moment `authLoading` flips to false, or
-  2) the supplier org is not at index 0 (multi-org users), so `userOrgRoles[0]` is not the supplier org.
+The AI response is being **truncated** because it exceeds the token limit. The PDF contains many line items across multiple sections (Basement, Garden Level Framing, 1st Floor Framing, etc.), and the current `max_tokens: 8000` setting is insufficient.
 
-Evidence
-- Your screenshot shows the user is clearly in a Supplier org (left rail shows SUPPLIER and the user card says Supplier), yet the page still throws “Access Denied”. That strongly indicates the page’s “isSupplier” detection is wrong or running before roles are ready.
+Evidence from logs:
+```json
+{
+  "pack_name": "1st Floor Framing & Sub-Floor Sheeting",
+  "description": "MIT11.88",
+  "quantity": 4,
+  "uom": "EA",
+  "supplier_sku": "zz_NSBLDMT_99687",
+....[truncated]
+```
 
-Plan to fix (implementation)
-1) Make Supplier-org detection reliable
-   - Update `SupplierProjectEstimates.tsx` to find a Supplier org from all roles, not just `[0]`.
-   - Example approach:
-     - `const supplierRole = userOrgRoles.find(r => r.organization?.type === 'SUPPLIER')`
-     - `const currentOrg = supplierRole?.organization`
-     - `const isSupplier = !!currentOrg`
-   - This solves the “wrong org at index 0” problem.
+The JSON is cut off mid-object, so it never closes with `}]}` and the closing ` ``` ` markdown fence. This means:
+1. The regex for extracting JSON from markdown fails (no closing fence found)
+2. Even if it matched, `JSON.parse()` would fail on incomplete JSON
 
-2) Don’t deny access until roles are actually loaded
-   - Adjust the access-guard `useEffect` to wait until role data is present (or we’re sure it won’t be).
-   - Practical guard logic:
-     - If `authLoading` is true: do nothing.
-     - If `user` is missing: redirect to `/auth` (or existing auth flow).
-     - If `userOrgRoles` is still empty: show loading state (keep skeleton) and do not show “Access Denied” yet.
-     - Only show “Access Denied” when:
-       - roles are present AND none are Supplier.
+## Solution
 
-3) Use the Supplier org consistently for data fetching
-   - Replace existing uses of `currentOrg?.id` with the supplier org id derived above.
-   - Ensure `fetchProjects()` / `fetchEstimates()` only run when `currentOrg` is defined.
+### 1. Increase Token Limit (Primary Fix)
+Increase `max_tokens` from 8000 to 32000 or higher to accommodate large estimates with many items.
 
-4) Fix the next “hidden blocker” after access: Review tab still depends on legacy `supplierId`
-   - In `SupplierProjectEstimates.tsx`, the “Review Items” tab currently renders the table only when `supplierId && (...)`.
-   - That means: even if the PDF parses successfully, the review UI might not show (and it will look like parsing/upload “did nothing”).
-   - Update `EstimateReviewTable` to accept `supplierOrgId` (or derive what it needs internally), and remove the `supplierId &&` gating similar to what we did for the upload component.
-   - If `EstimateReviewTable` truly requires a `supplierId` for catalog matching, derive it from `supplier_org_id` in the backend function (already done for parsing) or do a safer lookup in the UI with clear error messaging if missing.
+### 2. Add Truncation Detection (Safety Net)
+Check if the AI response appears truncated and return a helpful error message to the user.
 
-5) Add concrete error feedback for upload failures (so we can diagnose next time quickly)
-   - In `EstimatePDFUpload.tsx`, when `uploadError` or `recordError` happens, show the actual error message in the toast (sanitized) and log the full error.
-   - Common failure cases this will reveal:
-     - Storage policy rejecting INSERT (RLS/policy mismatch)
-     - Bucket missing or misconfigured
-     - File type mismatch (PDFs sometimes come as `application/octet-stream` depending on OS/browser)
+### 3. Improve Regex Fallback (Defense in Depth)
+If the closing fence is missing, try to repair the JSON by:
+- Detecting incomplete JSON structure
+- Closing any open arrays/objects
+- Or at minimum, inform the user that the PDF is too large
 
-6) Verify end-to-end
-   - Manual test path:
-     1) Log in as the Supplier user
-     2) Go to `/estimates`
-     3) Create a new estimate (must be DRAFT)
-     4) Open it → Upload tab → click “Upload PDF Estimate”
-     5) Confirm:
-        - Upload spinner appears
-        - A row is created in `estimate_pdf_uploads`
-        - Parsing runs (function log exists)
-        - Review tab shows extracted items (even if no legacy supplier record exists)
+---
 
-Files that will be changed
-- `src/pages/SupplierProjectEstimates.tsx`
-  - Fix supplier org detection
-  - Fix access guard timing
-  - Remove fragile dependency on `userOrgRoles[0]`
-  - (Likely) remove/replace `supplierId` gating in Review tab
+## Implementation
 
-- `src/components/estimate/EstimateReviewTable.tsx` (and any related estimate components)
-  - Accept `supplierOrgId` or remove need for `supplierId`
-  - Ensure review UI is reachable after parsing
+### File: `supabase/functions/parse-estimate-pdf/index.ts`
 
-- `src/components/estimate/EstimatePDFUpload.tsx`
-  - Improve error messages surfaced to the user for upload/insert/parse failures
+**Change 1: Increase Token Limit (line 159)**
+```typescript
+// Before
+max_tokens: 8000,
 
-Risks / edge cases to handle
-- Multi-organization users: choose Supplier org for this page deterministically.
-- Roles truly not loaded: page should not incorrectly deny access (show loading).
-- Supplier org exists but there is no legacy `suppliers` table record: upload and parsing should still work; review UI should not disappear.
+// After
+max_tokens: 32000,
+```
 
-Acceptance criteria
-- A Supplier user can visit `/estimates` without seeing “Access Denied”.
-- Upload card is clickable in the Upload tab for DRAFT estimates.
-- Uploading a PDF results in a stored file + DB record + parse attempt.
-- Parse success populates line items and the Review UI is visible to review/match items.
+**Change 2: Add Truncation Detection (after line 185)**
+```typescript
+const content = aiResponse.choices?.[0]?.message?.content?.trim();
+
+// Check if response appears truncated (no closing markdown fence or JSON bracket)
+const finishReason = aiResponse.choices?.[0]?.finish_reason;
+if (finishReason === 'length') {
+  console.error("AI response was truncated due to token limit");
+  throw new Error("The PDF contains too many items. Please split into smaller sections or contact support.");
+}
+```
+
+**Change 3: Add JSON Repair Attempt (in catch block around line 217)**
+```typescript
+// Before throwing, try to repair truncated JSON
+if (!jsonStr.endsWith('}')) {
+  console.log("Attempting to repair truncated JSON");
+  // Find last complete item by looking for last complete object
+  const lastCompleteItem = jsonStr.lastIndexOf('},');
+  if (lastCompleteItem > 0) {
+    jsonStr = jsonStr.substring(0, lastCompleteItem + 1) + ']}';
+    console.log("Repaired JSON, attempting parse again");
+    try {
+      parsed = JSON.parse(jsonStr);
+      // Continue with partial results
+    } catch {
+      // Still failed, throw original error
+    }
+  }
+}
+```
+
+---
+
+## Summary
+
+| Change | Purpose |
+|--------|---------|
+| Increase `max_tokens` to 32000 | Allow large PDFs with many items to be fully processed |
+| Detect `finish_reason: 'length'` | Provide user-friendly error when response is truncated |
+| JSON repair attempt | Salvage partial results from truncated responses |
+
+After these changes:
+- Most PDFs will parse completely (32K tokens is enough for 200+ line items)
+- If still truncated, user gets clear feedback instead of cryptic error
+- Partially parsed results can be salvaged in edge cases
 
