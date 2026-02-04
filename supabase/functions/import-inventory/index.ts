@@ -1,5 +1,5 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { read, utils } from 'https://esm.sh/xlsx@0.18.5?target=deno';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { read, utils } from "https://esm.sh/xlsx@0.18.5";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
