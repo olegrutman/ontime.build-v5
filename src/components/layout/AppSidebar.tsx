@@ -2,20 +2,13 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Building2,
   Home,
-  Briefcase,
-  FileText,
-  Receipt,
-  Package,
-  Boxes,
-  ShoppingCart,
-  Truck,
-  CheckSquare,
-  Users,
   Handshake,
+  Boxes,
+  Truck,
   Settings,
   LogOut,
   ChevronDown,
-  UserCircle,
+  FileText,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { NavLink } from '@/components/NavLink';
@@ -43,15 +36,7 @@ import { cn } from '@/lib/utils';
 
 const mainNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: Home },
-  { title: 'Work Items', url: '/work-items', icon: Briefcase },
-  { title: 'SOV Dashboard', url: '/sov', icon: Receipt },
-];
-
-const materialsNavItems = [
-  { title: 'Product Catalog', url: '/catalog', icon: Package },
-  { title: 'Material Orders', url: '/orders', icon: ShoppingCart },
-  { title: 'Purchase Orders', url: '/purchase-orders', icon: FileText },
-  { title: 'Project Estimates', url: '/estimates', icon: FileText },
+  { title: 'Partners', url: '/partners', icon: Handshake },
 ];
 
 // Supplier-only nav items
@@ -60,13 +45,7 @@ const supplierNavItems = [
   { title: 'My Estimates', url: '/supplier/estimates', icon: FileText },
 ];
 
-const approvalNavItems = [
-  { title: 'Estimate Approvals', url: '/approvals/estimates', icon: CheckSquare },
-  { title: 'Order Approvals', url: '/approvals/orders', icon: CheckSquare },
-];
-
 const adminNavItems = [
-  { title: 'Partner Directory', url: '/partners', icon: Handshake },
   { title: 'Manage Suppliers', url: '/admin/suppliers', icon: Truck },
 ];
 
@@ -79,6 +58,7 @@ export function AppSidebar() {
 
   const currentOrg = userOrgRoles.length > 0 ? userOrgRoles[0].organization : null;
   const isSupplier = currentOrg?.type === 'SUPPLIER';
+  const canManageSuppliers = currentRole === 'GC_PM' || currentRole === 'TC_PM';
 
   const getInitials = (name?: string | null) => {
     if (!name) return 'U';
@@ -146,47 +126,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Materials Section */}
-        <SidebarGroup>
-          <Collapsible defaultOpen={isInGroup(materialsNavItems)} className="group/collapsible">
-            <CollapsibleTrigger asChild>
-              <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent rounded-md px-2 py-1.5 justify-between">
-                {!collapsed && (
-                  <>
-                    <span>Materials</span>
-                    <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
-                  </>
-                )}
-                {collapsed && <Package className="h-4 w-4 mx-auto" />}
-              </SidebarGroupLabel>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {materialsNavItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive(item.url)}
-                        tooltip={collapsed ? item.title : undefined}
-                      >
-                        <NavLink
-                          to={item.url}
-                          className="gap-3"
-                          activeClassName="nav-active"
-                        >
-                          <item.icon className="h-4 w-4 shrink-0" />
-                          {!collapsed && <span>{item.title}</span>}
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </SidebarGroup>
-
         {/* Supplier Section - Only for Supplier orgs */}
         {isSupplier && (
           <SidebarGroup>
@@ -230,25 +169,25 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
 
-        {/* Approvals Section - Only for GC_PM */}
-        {currentRole === 'GC_PM' && (
+        {/* Admin Section - GC_PM and TC_PM only */}
+        {canManageSuppliers && (
           <SidebarGroup>
-            <Collapsible defaultOpen={isInGroup(approvalNavItems)} className="group/collapsible">
+            <Collapsible defaultOpen={isInGroup(adminNavItems)} className="group/collapsible">
               <CollapsibleTrigger asChild>
                 <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent rounded-md px-2 py-1.5 justify-between">
                   {!collapsed && (
                     <>
-                      <span>Approvals</span>
+                      <span>Admin</span>
                       <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
                     </>
                   )}
-                  {collapsed && <CheckSquare className="h-4 w-4 mx-auto" />}
+                  {collapsed && <Settings className="h-4 w-4 mx-auto" />}
                 </SidebarGroupLabel>
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    {approvalNavItems.map((item) => (
+                    {adminNavItems.map((item) => (
                       <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton
                           asChild
@@ -272,47 +211,6 @@ export function AppSidebar() {
             </Collapsible>
           </SidebarGroup>
         )}
-
-        {/* Admin Section */}
-        <SidebarGroup>
-          <Collapsible defaultOpen={isInGroup(adminNavItems)} className="group/collapsible">
-            <CollapsibleTrigger asChild>
-              <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent rounded-md px-2 py-1.5 justify-between">
-                {!collapsed && (
-                  <>
-                    <span>Admin</span>
-                    <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
-                  </>
-                )}
-                {collapsed && <Settings className="h-4 w-4 mx-auto" />}
-              </SidebarGroupLabel>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {adminNavItems.map((item) => (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive(item.url)}
-                        tooltip={collapsed ? item.title : undefined}
-                      >
-                        <NavLink
-                          to={item.url}
-                          className="gap-3"
-                          activeClassName="nav-active"
-                        >
-                          <item.icon className="h-4 w-4 shrink-0" />
-                          {!collapsed && <span>{item.title}</span>}
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </CollapsibleContent>
-          </Collapsible>
-        </SidebarGroup>
       </SidebarContent>
 
       {/* Footer with User */}
