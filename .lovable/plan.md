@@ -1,143 +1,144 @@
 
-# Plan: Never Skip Filter Steps - Use All Available Fields
+# Plan: Fix Filter Steps Not Being Applied
 
-## Summary
+## Root Cause
 
-Modify the filter logic to **never skip steps** and **use every field with data** to narrow down product selection as much as possible. The picker should continue filtering until the product count is small enough to browse.
+The picker has **two conflicting filter systems**:
 
----
+1. **Old system (`getFilterSequence` + `SPEC_PRIORITY`)**: Hardcoded list of 3 fields per category
+2. **New system (dynamic discovery in `StepByStepFilter`)**: Discovers ALL fields with data
 
-## Key Changes
+The problem: `ProductPicker.tsx` uses the **old** `getFilterSequence()` function to decide whether to show the filter-step screen. This means:
 
-### 1. Remove the "2+ values" requirement
+- If a category isn't in `SPEC_PRIORITY`, it skips directly to products (no filtering)
+- Even for Exterior, it only knows about 3 fields (`manufacturer`, `use_type`, `product_type`) - missing `finish`, `dimension`, `length`, `color`, etc.
 
-**Current behavior**: Only shows filter steps for fields with 2 or more distinct values.
+## Current Broken Flow
 
-**New behavior**: Show filter steps for ALL fields that have any non-null values, even if there's only 1 option. This ensures users see every attribute of the products they're selecting.
+```text
+User selects: EXTERIOR TRIM → SIDING
 
-### 2. Remove auto-advance/auto-skip logic
+ProductPicker checks: getFilterSequence('Exterior', 'SIDING')
+                     → Returns: ['manufacturer', 'use_type', 'product_type']
+                     → Goes to StepByStepFilter
 
-**Current behavior**: If a field has 0 values, skip to next step. If 1 value, auto-select and skip.
+StepByStepFilter runs: discoverFilterSequence()
+                     → Discovers: manufacturer, use_type, product_type, 
+                                  finish, dimension, length, color...
+                     → BUT the old SPEC_PRIORITY is used elsewhere
+```
 
-**New behavior**: Always show the step. If there's only 1 option, show it as a confirmation step - user must tap to proceed. If 0 values, show that step with a "Continue" option.
-
-### 3. Keep filtering until products are manageable
-
-Instead of stopping after a few filters, continue through ALL applicable fields to get the product count as low as possible.
-
----
+The dynamic discovery IS working, but the old system is limiting what fields are discovered initially OR `ProductPicker` is bypassing filter-step entirely for some categories.
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/po-wizard-v2/StepByStepFilter.tsx` | Remove skip logic, include all fields with data |
+| `src/components/po-wizard-v2/ProductPicker.tsx` | Remove `getFilterSequence` checks - always go to filter-step |
+| `src/types/poWizardV2.ts` | Keep `SPEC_PRIORITY` and `getFilterSequence` for now (can deprecate later) |
 
 ---
 
 ## Technical Changes
 
-### `src/components/po-wizard-v2/StepByStepFilter.tsx`
+### `src/components/po-wizard-v2/ProductPicker.tsx`
 
-**1. Update `discoverFilterSequence` function (lines 57-60)**
+**1. Remove import of `getFilterSequence` (line 15)**
 
-Change from requiring 2+ values to requiring 1+ values:
+Remove it from the imports since we won't use it anymore.
 
-```typescript
-// Before: filter to fields with 2+ distinct values
-.filter(field => fieldCounts[field].size >= 2)
+**2. Update `handleCategorySelect` (lines 269-292)**
 
-// After: include ALL fields with any data
-.filter(field => fieldCounts[field].size >= 1)
-```
-
-**2. Remove auto-advance logic (lines 160-167)**
-
-Remove the automatic skipping of steps with 0 or 1 values:
+Always go to `filter-step` after selecting secondary (or if single secondary):
 
 ```typescript
-// Before: auto-skips steps
-if (values.length === 0) {
-  handleAdvanceToNextStep();
-} else if (values.length === 1) {
-  handleSelectValue(values[0].value);
-}
-
-// After: always show the step - no auto-skipping
-// (remove these lines entirely)
+const handleCategorySelect = useCallback(async (virtualKey: string) => {
+  setSelectedVirtualCategory(virtualKey);
+  setAppliedFilters({});
+  
+  const virtual = VIRTUAL_CATEGORIES[virtualKey];
+  if (!virtual) return;
+  
+  // Fetch secondary categories for this virtual category
+  const secondaries = await fetchSecondaryCategories(virtualKey);
+  
+  if (secondaries && secondaries.length > 1) {
+    // Multiple sub-categories - show selection
+    setStep('secondary');
+  } else if (secondaries && secondaries.length === 1) {
+    // Auto-select single secondary, then go to filter-step
+    const secondary = secondaries[0].secondary_category;
+    setSelectedSecondary(secondary);
+    setStep('filter-step'); // ALWAYS go to filter-step
+  } else {
+    // No secondary categories - go to filter-step
+    setStep('filter-step'); // ALWAYS go to filter-step
+  }
+}, [supplierId]);
 ```
 
-**3. Handle single-value steps gracefully**
+**3. Update `handleSecondarySelect` (lines 295-313)**
 
-When there's only 1 option, still show it as a selectable button so the user confirms their selection explicitly.
+Always go to `filter-step`:
+
+```typescript
+const handleSecondarySelect = useCallback((secondary: string) => {
+  setSelectedSecondary(secondary);
+  setAppliedFilters({});
+  setStep('filter-step'); // ALWAYS go to filter-step
+}, [selectedVirtualCategory, supplierId]);
+```
+
+**4. Update `handleBack` case for 'products' (lines 357-367)**
+
+Always go back to filter-step from products:
+
+```typescript
+case 'products':
+  // Always go back to filter-step
+  setStep('filter-step');
+  break;
+```
 
 ---
 
-## Updated Flow Example: Exterior > SIDING
+## Updated Flow
 
 ```text
 User selects: EXTERIOR TRIM
 └── Secondary: SIDING (48 items)
-
-Step 1: Manufacturer
-├── HARDIE (48)
-└── User selects HARDIE
-
-Step 2: Use Type  
-├── FIBER CEMENT (48)
-└── User selects FIBER CEMENT (confirms)
-
-Step 3: Product Type
-├── LAP (23)
-├── PANEL (15)
-├── SHINGLE (6)
-└── BEADED (4)
-└── User selects LAP (23 items remaining)
-
-Step 4: Finish
-├── PRIMED (12)
-├── CEDAR MILL (8)
-├── SMOOTH (3)
-└── User selects PRIMED (12 items)
-
-Step 5: Dimension
-├── 5/16"x8-1/4" (6)
-├── 5/16"x6-1/4" (4)
-├── 5/16"x12" (2)
-└── User selects 5/16"x8-1/4" (6 items)
-
-Step 6: Length
-├── 12ft (4)
-├── 16ft (2)
-└── User selects 12ft (4 items)
-
-→ Product List (4 products to choose from)
+    └── ALWAYS → StepByStepFilter (dynamic discovery)
+        └── Step 1: Manufacturer (HARDIE)
+            └── Step 2: Use Type (FIBER CEMENT)
+                └── Step 3: Product Type (LAP, PANEL, BEADED...)
+                    └── Step 4: Finish (PRIMED, CEDAR MILL...)
+                        └── Step 5: Dimension (5/16"x8-1/4"...)
+                            └── Step 6: Length (12ft, 16ft...)
+                                └── Step 7: Color (if any)
+                                    └── Product List
 ```
 
 ---
 
-## Same Approach for All Categories
+## StepByStepFilter Already Works Correctly
 
-This logic applies universally:
+The `StepByStepFilter` component already has the correct logic:
 
-| Category | Filter Sequence (all available fields in priority order) |
-|----------|-----------------------------------------------------------|
-| Exterior | manufacturer → use_type → product_type → finish → dimension → length → depth |
-| Decking | manufacturer → color → dimension → length |
-| FramingLumber | wood_species → dimension → length → finish |
-| Engineered | use_type → product_type → depth → width → length |
-| Hardware | thickness → length |
-| Sheathing | use_type → product_type → thickness → dimension |
-| Structural | product_type → depth → width → thickness → dimension |
+1. `discoverFilterSequence()` - Finds ALL fields with `size >= 1`
+2. Sorts by `FILTER_PRIORITY` (manufacturer first, then use_type, etc.)
+3. Shows every step (no auto-skipping)
 
-The dynamic discovery ensures that whatever fields have data will be included - no manual configuration needed per category.
+The only fix needed is to make `ProductPicker` **always** route to `StepByStepFilter`.
 
 ---
 
-## Benefits
+## Summary of Changes
 
-1. **No skipped steps**: Users see every filter, confirming each attribute
-2. **Maximum narrowing**: Continue filtering until product list is small
-3. **Explicit confirmation**: Even single-option steps require a tap
-4. **Works for all categories**: Same logic applies everywhere
-5. **Data-driven**: Automatically adapts when catalog data changes
+Remove these 4 occurrences of the old `getFilterSequence` check in `ProductPicker.tsx`:
+
+| Location | Current Code | New Code |
+|----------|--------------|----------|
+| Line 275-282 | Check `filterSeq.length > 0` | Always `setStep('filter-step')` |
+| Line 285-291 | Check `filterSeq.length > 0` | Always `setStep('filter-step')` |
+| Line 303-312 | Check `filterSeq.length > 0` | Always `setStep('filter-step')` |
+| Line 359-367 | Check `filterSeq.length > 0` | Always `setStep('filter-step')` |
