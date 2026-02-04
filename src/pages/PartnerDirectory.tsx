@@ -1,155 +1,158 @@
-import { useState, useEffect } from 'react';
-import { Search, Plus, Trash2, Building, Check, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Search, Building2, Wrench, HardHat, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { AppLayout } from '@/components/layout';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from 'sonner';
 
-interface TrustedPartner {
-  id: string;
-  partner_org_id: string;
-  notes: string | null;
-  created_at: string;
-  organization: {
-    id: string;
-    org_code: string;
-    name: string;
-    type: string;
-  };
+interface PartnerOrg {
+  org_id: string;
+  org_code: string;
+  name: string;
+  type: string;
+  project_count: number;
 }
+
+const ORG_TYPE_ORDER = ['GC', 'TC', 'FC', 'SUPPLIER'] as const;
+
+const ORG_TYPE_CONFIG: Record<string, { label: string; icon: typeof Building2; color: string }> = {
+  GC: { label: 'General Contractors', icon: Building2, color: 'text-blue-600' },
+  TC: { label: 'Trade Contractors', icon: Wrench, color: 'text-orange-600' },
+  FC: { label: 'Field Crews', icon: HardHat, color: 'text-green-600' },
+  SUPPLIER: { label: 'Suppliers', icon: Package, color: 'text-purple-600' },
+};
 
 export default function PartnerDirectory() {
   const { user, userOrgRoles } = useAuth();
-  const [orgCode, setOrgCode] = useState('');
-  const [searching, setSearching] = useState(false);
-  const [searchResult, setSearchResult] = useState<{
-    id: string;
-    org_code: string;
-    name: string;
-    type: string;
-  } | null>(null);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [partners, setPartners] = useState<TrustedPartner[]>([]);
+  const [partners, setPartners] = useState<PartnerOrg[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const currentOrg = userOrgRoles[0]?.organization;
 
   useEffect(() => {
-    fetchPartners();
-  }, [userOrgRoles]);
+    if (currentOrg?.id) {
+      fetchPartners();
+    }
+  }, [currentOrg?.id]);
 
   const fetchPartners = async () => {
     if (!currentOrg?.id) return;
 
-    const { data, error } = await supabase
-      .from('trusted_partners')
-      .select(`
-        id,
-        partner_org_id,
-        notes,
-        created_at,
-        organization:partner_org_id (id, org_code, name, type)
-      `)
-      .eq('organization_id', currentOrg.id)
-      .order('created_at', { ascending: false });
+    setLoading(true);
 
-    if (error) {
-      console.error('Error fetching partners:', error);
-    } else {
-      setPartners((data || []) as unknown as TrustedPartner[]);
+    // Get all projects where current org is a team member
+    const { data: myProjects, error: projectsError } = await supabase
+      .from('project_team')
+      .select('project_id')
+      .eq('org_id', currentOrg.id)
+      .eq('status', 'active');
+
+    if (projectsError || !myProjects?.length) {
+      setPartners([]);
+      setLoading(false);
+      return;
     }
+
+    const projectIds = myProjects.map((p) => p.project_id);
+
+    // Get all orgs from those projects (excluding current org)
+    const { data: teamMembers, error: teamError } = await supabase
+      .from('project_team')
+      .select(`
+        org_id,
+        project_id,
+        organizations!inner (
+          id,
+          org_code,
+          name,
+          type
+        )
+      `)
+      .in('project_id', projectIds)
+      .neq('org_id', currentOrg.id)
+      .eq('status', 'active');
+
+    if (teamError) {
+      console.error('Error fetching team members:', teamError);
+      setPartners([]);
+      setLoading(false);
+      return;
+    }
+
+    // Aggregate by org_id and count unique projects
+    const orgMap = new Map<string, PartnerOrg>();
+
+    teamMembers?.forEach((member) => {
+      const org = member.organizations as unknown as { id: string; org_code: string; name: string; type: string };
+      if (!org) return;
+
+      if (orgMap.has(org.id)) {
+        const existing = orgMap.get(org.id)!;
+        // Check if this project is already counted
+        existing.project_count = existing.project_count;
+        // We need to track unique projects - use a Set approach
+      } else {
+        orgMap.set(org.id, {
+          org_id: org.id,
+          org_code: org.org_code,
+          name: org.name,
+          type: org.type,
+          project_count: 0,
+        });
+      }
+    });
+
+    // Count unique projects per org
+    const projectsByOrg = new Map<string, Set<string>>();
+    teamMembers?.forEach((member) => {
+      const org = member.organizations as unknown as { id: string };
+      if (!org) return;
+      
+      if (!projectsByOrg.has(org.id)) {
+        projectsByOrg.set(org.id, new Set());
+      }
+      projectsByOrg.get(org.id)!.add(member.project_id);
+    });
+
+    // Update counts
+    projectsByOrg.forEach((projects, orgId) => {
+      const partner = orgMap.get(orgId);
+      if (partner) {
+        partner.project_count = projects.size;
+      }
+    });
+
+    setPartners(Array.from(orgMap.values()));
     setLoading(false);
   };
 
-  const searchOrg = async () => {
-    if (!orgCode.trim()) return;
+  // Filter partners by search query
+  const filteredPartners = useMemo(() => {
+    if (!searchQuery.trim()) return partners;
+    const query = searchQuery.toLowerCase();
+    return partners.filter(
+      (p) =>
+        p.name.toLowerCase().includes(query) ||
+        p.org_code.toLowerCase().includes(query)
+    );
+  }, [partners, searchQuery]);
 
-    setSearching(true);
-    setSearchError(null);
-    setSearchResult(null);
-
-    const { data: org, error } = await supabase
-      .from('organizations')
-      .select('id, org_code, name, type')
-      .eq('org_code', orgCode.toUpperCase().trim())
-      .maybeSingle();
-
-    setSearching(false);
-
-    if (error || !org) {
-      setSearchError('Organization not found. Please check the code and try again.');
-      return;
-    }
-
-    // Check if it's their own org
-    if (org.id === currentOrg?.id) {
-      setSearchError('You cannot add your own organization as a partner.');
-      return;
-    }
-
-    // Check if already a partner
-    if (partners.some((p) => p.partner_org_id === org.id)) {
-      setSearchError('This organization is already in your trusted partners list.');
-      return;
-    }
-
-    setSearchResult(org);
-  };
-
-  const addPartner = async () => {
-    if (!searchResult || !currentOrg?.id) return;
-
-    const { error } = await supabase.from('trusted_partners').insert({
-      organization_id: currentOrg.id,
-      partner_org_id: searchResult.id,
+  // Group partners by type
+  const groupedPartners = useMemo(() => {
+    const groups: Record<string, PartnerOrg[]> = {};
+    
+    ORG_TYPE_ORDER.forEach((type) => {
+      groups[type] = filteredPartners
+        .filter((p) => p.type === type)
+        .sort((a, b) => b.project_count - a.project_count);
     });
 
-    if (error) {
-      toast.error('Failed to add partner');
-      console.error(error);
-      return;
-    }
-
-    toast.success(`${searchResult.name} added to trusted partners`);
-    setOrgCode('');
-    setSearchResult(null);
-    fetchPartners();
-  };
-
-  const removePartner = async (partnerId: string, partnerName: string) => {
-    const { error } = await supabase
-      .from('trusted_partners')
-      .delete()
-      .eq('id', partnerId);
-
-    if (error) {
-      toast.error('Failed to remove partner');
-      console.error(error);
-      return;
-    }
-
-    toast.success(`${partnerName} removed from trusted partners`);
-    fetchPartners();
-  };
-
-  const getOrgTypeLabel = (type: string) => {
-    switch (type) {
-      case 'GC':
-        return 'General Contractor';
-      case 'TC':
-        return 'Trade Contractor';
-      case 'SUPPLIER':
-        return 'Supplier';
-      default:
-        return type;
-    }
-  };
+    return groups;
+  }, [filteredPartners]);
 
   if (!user) {
     return (
@@ -166,120 +169,99 @@ export default function PartnerDirectory() {
   }
 
   return (
-    <AppLayout title="Partner Directory" subtitle="Look up organizations by their code">
+    <AppLayout title="Partner Directory" subtitle="Everyone you've worked with on projects">
       <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-        {/* Search Card */}
-        <Card>
-          <CardHeader className="pb-2 sm:pb-4">
-            <CardTitle className="text-base">Look Up Organization</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Input
-                placeholder="Enter org code (e.g., ABC123)"
-                value={orgCode}
-                onChange={(e) => setOrgCode(e.target.value.toUpperCase())}
-                onKeyDown={(e) => e.key === 'Enter' && searchOrg()}
-                className="flex-1"
-              />
-              <Button onClick={searchOrg} disabled={searching || !orgCode.trim()} className="shrink-0">
-                <Search className="mr-2 h-4 w-4" />
-                {searching ? 'Searching...' : 'Search'}
-              </Button>
-            </div>
+        {/* Search */}
+        <div className="relative max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Filter by name or org code..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
 
-            {searchError && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{searchError}</AlertDescription>
-              </Alert>
-            )}
-
-            {searchResult && (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-muted rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 shrink-0">
-                    <Building className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{searchResult.name}</p>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant="outline">{searchResult.org_code}</Badge>
-                      <span className="text-sm text-muted-foreground">
-                        {getOrgTypeLabel(searchResult.type)}
-                      </span>
-                    </div>
-                  </div>
+        {loading ? (
+          <div className="space-y-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="space-y-3">
+                <Skeleton className="h-6 w-40" />
+                <div className="space-y-2">
+                  {[1, 2].map((j) => (
+                    <Skeleton key={j} className="h-16 w-full" />
+                  ))}
                 </div>
-                <Button onClick={addPartner} className="w-full sm:w-auto">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add to Partners
-                </Button>
               </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Trusted Partners List */}
-        <Card>
-          <CardHeader className="pb-2 sm:pb-4">
-            <CardTitle className="text-base">
-              Trusted Partners ({partners.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {loading ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-16 w-full" />
-                ))}
-              </div>
-            ) : partners.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">
-                No trusted partners yet. Search for organizations by their code to add them.
+            ))}
+          </div>
+        ) : partners.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Building2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground/50" />
+              <p className="text-muted-foreground">No project collaborators yet.</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Partners will appear here once you work together on projects.
               </p>
-            ) : (
-              <div className="space-y-3">
-                {partners.map((partner) => (
-                  <div
-                    key={partner.id}
-                    className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 border rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary shrink-0">
-                        <Building className="h-5 w-5 text-secondary-foreground" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-medium truncate">{partner.organization.name}</p>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant="outline">{partner.organization.org_code}</Badge>
-                          <span className="text-sm text-muted-foreground">
-                            {getOrgTypeLabel(partner.organization.type)}
-                          </span>
+            </CardContent>
+          </Card>
+        ) : filteredPartners.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Search className="w-12 h-12 mx-auto mb-3 text-muted-foreground/50" />
+              <p className="text-muted-foreground">No partners match your search.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {ORG_TYPE_ORDER.map((type) => {
+              const typePartners = groupedPartners[type];
+              if (!typePartners || typePartners.length === 0) return null;
+
+              const config = ORG_TYPE_CONFIG[type];
+              const Icon = config.icon;
+
+              return (
+                <Card key={type}>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      <Icon className={`h-4 w-4 ${config.color}`} />
+                      {config.label}
+                      <Badge variant="secondary" className="ml-auto">
+                        {typePartners.length}
+                      </Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="space-y-2">
+                      {typePartners.map((partner) => (
+                        <div
+                          key={partner.org_id}
+                          className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className={`flex h-9 w-9 items-center justify-center rounded-full bg-muted shrink-0`}>
+                              <Icon className={`h-4 w-4 ${config.color}`} />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm truncate">{partner.name}</p>
+                              <Badge variant="outline" className="text-xs font-mono">
+                                {partner.org_code}
+                              </Badge>
+                            </div>
+                          </div>
+                          <p className="text-xs text-muted-foreground whitespace-nowrap ml-3">
+                            {partner.project_count} project{partner.project_count !== 1 ? 's' : ''} together
+                          </p>
                         </div>
-                      </div>
+                      ))}
                     </div>
-                    <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-                      <div className="flex items-center gap-1.5">
-                        <Check className="h-4 w-4 text-green-600" />
-                        <span className="text-sm text-green-600">Trusted</span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() =>
-                          removePartner(partner.id, partner.organization.name)
-                        }
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </div>
     </AppLayout>
   );

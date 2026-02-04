@@ -43,7 +43,7 @@ export default function AdminSuppliers() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const isAdmin = currentRole === 'GC_PM';
+  const isAdmin = currentRole === 'GC_PM' || currentRole === 'TC_PM';
   const orgId = userOrgRoles.length > 0 ? userOrgRoles[0].organization_id : null;
 
   useEffect(() => {
@@ -55,7 +55,7 @@ export default function AdminSuppliers() {
       toast({
         variant: 'destructive',
         title: 'Access Denied',
-        description: 'Only GC Project Managers can manage suppliers.',
+        description: 'Only GC and TC managers can manage suppliers.',
       });
       navigate('/');
       return;
