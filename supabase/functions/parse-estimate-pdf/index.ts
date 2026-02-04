@@ -193,10 +193,26 @@ Common pack/section names in construction estimates:
     try {
       // Extract JSON from potential markdown code blocks
       let jsonStr = content;
-      const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
-      if (jsonMatch) {
-        jsonStr = jsonMatch[1].trim();
+      
+      // Try multiple patterns to extract JSON
+      // Pattern 1: ```json ... ```
+      const jsonBlockMatch = content.match(/```json\s*([\s\S]*?)```/);
+      if (jsonBlockMatch) {
+        jsonStr = jsonBlockMatch[1].trim();
+      } else {
+        // Pattern 2: ``` ... ``` (no language specifier)
+        const codeBlockMatch = content.match(/```\s*([\s\S]*?)```/);
+        if (codeBlockMatch) {
+          jsonStr = codeBlockMatch[1].trim();
+        } else {
+          // Pattern 3: Try to find JSON object directly
+          const jsonObjectMatch = content.match(/\{[\s\S]*"line_items"[\s\S]*\}/);
+          if (jsonObjectMatch) {
+            jsonStr = jsonObjectMatch[0];
+          }
+        }
       }
+      
       parsed = JSON.parse(jsonStr);
     } catch (parseError) {
       console.error("Failed to parse AI response as JSON:", content);
