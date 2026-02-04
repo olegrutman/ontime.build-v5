@@ -156,7 +156,7 @@ Common pack/section names in construction estimates:
               ],
             },
           ],
-          max_tokens: 8000,
+          max_tokens: 32000,
           temperature: 0.2,
         }),
       }
@@ -184,6 +184,13 @@ Common pack/section names in construction estimates:
     const aiResponse = await response.json();
     const content = aiResponse.choices?.[0]?.message?.content?.trim();
 
+    // Check if response was truncated due to token limit
+    const finishReason = aiResponse.choices?.[0]?.finish_reason;
+    if (finishReason === 'length') {
+      console.error("AI response was truncated due to token limit");
+      throw new Error("The PDF contains too many items to process at once. Please try a smaller estimate or contact support.");
+    }
+
     if (!content) {
       throw new Error("Empty response from AI");
     }
@@ -205,15 +212,37 @@ Common pack/section names in construction estimates:
         if (codeBlockMatch) {
           jsonStr = codeBlockMatch[1].trim();
         } else {
-          // Pattern 3: Try to find JSON object directly
-          const jsonObjectMatch = content.match(/\{[\s\S]*"line_items"[\s\S]*\}/);
+          // Pattern 3: Try to find JSON object directly (may be truncated)
+          const jsonObjectMatch = content.match(/\{[\s\S]*"line_items"[\s\S]*/);
           if (jsonObjectMatch) {
             jsonStr = jsonObjectMatch[0];
           }
         }
       }
       
-      parsed = JSON.parse(jsonStr);
+      // First attempt: parse as-is
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch (firstParseError) {
+        // JSON might be truncated - attempt repair
+        console.log("Initial JSON parse failed, attempting repair...");
+        
+        // Try to repair truncated JSON by finding last complete item
+        const lastCompleteItem = jsonStr.lastIndexOf('},');
+        if (lastCompleteItem > 0) {
+          const repairedJson = jsonStr.substring(0, lastCompleteItem + 1) + ']}';
+          console.log("Attempting to parse repaired JSON (truncated after item)");
+          try {
+            parsed = JSON.parse(repairedJson);
+            console.log(`Successfully parsed ${parsed.line_items?.length || 0} items from repaired JSON`);
+          } catch (repairError) {
+            // Repair failed, throw original error
+            throw firstParseError;
+          }
+        } else {
+          throw firstParseError;
+        }
+      }
     } catch (parseError) {
       console.error("Failed to parse AI response as JSON:", content);
       throw new Error("Failed to parse AI response");
