@@ -160,7 +160,16 @@ export function StepByStepFilter({
         .sort((a, b) => b.count - a.count);
 
       setAvailableValues(values);
-      // No auto-advance - always show the step so user confirms each selection
+
+      // Auto-skip if all values are null (no selectable options)
+      if (values.length === 0) {
+        if (currentStepIndex >= totalSteps - 1) {
+          onComplete(appliedFilters);
+        } else {
+          setCurrentStepIndex(prev => prev + 1);
+        }
+        return; // Exit early, don't set loading to false yet
+      }
     } catch (error) {
       console.error('Error fetching filter values:', error);
     } finally {
