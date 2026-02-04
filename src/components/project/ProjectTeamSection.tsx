@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, RefreshCw, Mail, CheckCircle, UserPlus, ChevronDown } from 'lucide-react';
+import { Users, RefreshCw, Mail, CheckCircle, UserPlus, ChevronDown, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,11 +36,18 @@ const ROLE_ORDER: Record<string, number> = {
   'Supplier': 4,
 };
 
-const roleColors: Record<string, string> = {
-  'General Contractor': 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  'Trade Contractor': 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
-  'Field Crew': 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-  'Supplier': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+const roleDotColors: Record<string, string> = {
+  'General Contractor': 'bg-blue-500',
+  'Trade Contractor': 'bg-emerald-500',
+  'Field Crew': 'bg-purple-500',
+  'Supplier': 'bg-amber-500',
+};
+
+const roleAbbreviations: Record<string, string> = {
+  'General Contractor': 'GC',
+  'Trade Contractor': 'TC',
+  'Field Crew': 'FC',
+  'Supplier': 'SUP',
 };
 
 export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
@@ -49,7 +56,7 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
   const [loading, setLoading] = useState(true);
   const [resending, setResending] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
 
   // Get current user's org type and permissions
   const currentOrg = userOrgRoles[0]?.organization;
@@ -84,7 +91,6 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
   const handleResendInvite = async (member: TeamMember) => {
     setResending(member.id);
     try {
-      // Get the invite token and resend
       const { data: invite } = await supabase
         .from('project_invites')
         .select('token')
@@ -93,7 +99,6 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
         .single();
 
       if (invite) {
-        // TODO: Call edge function to resend email
         toast.success(`Invite resent to ${member.invited_email}`);
       } else {
         toast.error('No pending invite found');
@@ -104,171 +109,159 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
     setResending(null);
   };
 
+  // Group team by role
+  const groupedTeam = team.reduce((acc, member) => {
+    const role = member.role;
+    if (!acc[role]) acc[role] = [];
+    acc[role].push(member);
+    return acc;
+  }, {} as Record<string, TeamMember[]>);
+
+  const acceptedCount = team.filter(m => m.status === 'Accepted').length;
+  const pendingCount = team.filter(m => m.status === 'Invited').length;
+
   if (loading) {
     return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Project Team
-          </CardTitle>
+      <Card className="overflow-hidden">
+        <CardHeader className="bg-muted/30 py-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Users className="h-4 w-4 text-primary" />
+              Team
+            </CardTitle>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-3">
-          {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
-          ))}
+        <CardContent className="p-4">
+          <div className="space-y-2">
+            {[...Array(3)].map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
         </CardContent>
       </Card>
     );
   }
 
-  if (team.length === 0) {
-    return (
-      <>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Project Team
-            </CardTitle>
-            {canInviteMembers && (
-              <Button size="sm" onClick={() => setAddDialogOpen(true)}>
-                <UserPlus className="h-4 w-4 mr-2" />
-                Add Team Member
-              </Button>
-            )}
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              No team members have been added to this project yet.
-            </p>
-          </CardContent>
-        </Card>
-        <AddTeamMemberDialog
-          open={addDialogOpen}
-          onOpenChange={setAddDialogOpen}
-          projectId={projectId}
-          creatorOrgType={currentOrgType || null}
-          onMemberAdded={fetchTeam}
-        />
-      </>
-    );
-  }
-
   return (
     <>
-      <Card>
+      <Card className="overflow-hidden">
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           <CollapsibleTrigger asChild>
-            <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                Project Team ({team.length})
-              </CardTitle>
-              <div className="flex items-center gap-2">
+            <CardHeader className="bg-muted/30 py-3 cursor-pointer hover:bg-muted/50 transition-colors">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    {isOpen ? (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <Users className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-medium">Team</CardTitle>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {acceptedCount} active{pendingCount > 0 && ` • ${pendingCount} pending`}
+                    </p>
+                  </div>
+                </div>
                 {canInviteMembers && (
                   <Button 
                     size="sm" 
+                    variant="ghost"
+                    className="h-8 text-xs"
                     onClick={(e) => {
                       e.stopPropagation();
                       setAddDialogOpen(true);
                     }}
                   >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Add Team Member
+                    <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+                    Add
                   </Button>
                 )}
-                <ChevronDown className={cn(
-                  "h-4 w-4 text-muted-foreground transition-transform duration-200",
-                  isOpen && "rotate-180"
-                )} />
               </div>
             </CardHeader>
           </CollapsibleTrigger>
+          
           <CollapsibleContent>
-            <CardContent>
-              <div className="space-y-3">
-                {team.map((member) => {
-                  const isInvited = member.status === 'Invited';
-                  const trade = member.trade_custom || member.trade;
-                  const showTrade = member.role === 'Trade Contractor' || member.role === 'Field Crew';
-
-                  return (
-                    <div
-                      key={member.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <span className="font-medium text-sm truncate">
-                            {member.invited_org_name || 'Unknown Company'}
+            <CardContent className="p-0">
+              {team.length === 0 ? (
+                <p className="text-sm text-muted-foreground p-4">
+                  No team members added yet.
+                </p>
+              ) : (
+                <div className="divide-y divide-border">
+                  {Object.entries(groupedTeam)
+                    .sort(([a], [b]) => (ROLE_ORDER[a] || 99) - (ROLE_ORDER[b] || 99))
+                    .map(([role, members]) => (
+                      <div key={role} className="p-3">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className={cn("h-2 w-2 rounded-full", roleDotColors[role])} />
+                          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                            {role}
                           </span>
-                          <Badge 
-                            variant="outline" 
-                            className={roleColors[member.role] || ''}
-                          >
-                            {member.role}
-                          </Badge>
-                          {showTrade && trade && (
-                            <Badge variant="secondary" className="text-xs">
-                              {trade}
-                            </Badge>
-                          )}
+                          <span className="text-xs text-muted-foreground">({members.length})</span>
                         </div>
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                          <span>{member.invited_name || 'No contact name'}</span>
-                          <span className="flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {member.invited_email}
-                          </span>
+                        <div className="space-y-2 pl-4">
+                          {members.map((member) => {
+                            const isInvited = member.status === 'Invited';
+                            const trade = member.trade_custom || member.trade;
+
+                            return (
+                              <div
+                                key={member.id}
+                                className="flex items-center justify-between py-1.5"
+                              >
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium truncate">
+                                      {member.invited_org_name || 'Unknown'}
+                                    </span>
+                                    {trade && (
+                                      <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+                                        {trade}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-muted-foreground truncate">
+                                    {member.invited_name || member.invited_email}
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2 ml-2">
+                                  {isInvited ? (
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-xs text-amber-600">Pending</span>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => handleResendInvite(member)}
+                                        disabled={resending === member.id}
+                                        className="h-6 px-2 text-xs"
+                                      >
+                                        {resending === member.id ? (
+                                          <RefreshCw className="h-3 w-3 animate-spin" />
+                                        ) : (
+                                          <RefreshCw className="h-3 w-3" />
+                                        )}
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <CheckCircle className="h-4 w-4 text-green-500" />
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
-
-                      <div className="flex items-center gap-2 ml-4">
-                        {isInvited ? (
-                          <>
-                            <Badge variant="outline" className="text-amber-600 border-amber-300">
-                              Invited
-                            </Badge>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleResendInvite(member)}
-                              disabled={resending === member.id}
-                              className="h-8"
-                            >
-                              {resending === member.id ? (
-                                <RefreshCw className="h-3 w-3 animate-spin" />
-                              ) : (
-                                <>
-                                  <RefreshCw className="h-3 w-3 mr-1" />
-                                  Resend Invite
-                                </>
-                              )}
-                            </Button>
-                          </>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="text-green-600 border-green-300">
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Accepted
-                            </Badge>
-                            {member.accepted_at && (
-                              <span className="text-xs text-muted-foreground">
-                                on {format(new Date(member.accepted_at), 'MMM d, yyyy')}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    ))}
+                </div>
+              )}
             </CardContent>
           </CollapsibleContent>
         </Collapsible>
       </Card>
+      
       <AddTeamMemberDialog
         open={addDialogOpen}
         onOpenChange={setAddDialogOpen}

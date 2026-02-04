@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, DollarSign, ClipboardList, Receipt, Settings } from 'lucide-react';
+import { FileText, DollarSign, ClipboardList, Receipt, Settings, ChevronDown, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermission } from '@/components/auth/RequirePermission';
+import { cn } from '@/lib/utils';
+
 interface Contract {
   id: string;
   from_role: string;
@@ -54,115 +57,67 @@ function isChangeOrderContract(contract: Contract): boolean {
 }
 
 function getContractTitle(contract: Contract, currentOrgId: string | undefined): string {
-  // Show "Contract with [other party]" - the viewer sees who they're contracting WITH
   const isFromOrg = currentOrgId && contract.from_org_id === currentOrgId;
   const isToOrg = currentOrgId && contract.to_org_id === currentOrgId;
   
-  // Determine the "other party" name
   let otherPartyName: string;
   if (isFromOrg) {
-    // User is the client/payer, show the contractor they hired
     otherPartyName = contract.to_org_name || contract.to_role;
   } else if (isToOrg) {
-    // User is the contractor, show who hired them
     otherPartyName = contract.from_org_name || contract.from_role;
   } else {
-    // Fallback: show both parties
     const fromName = contract.from_org_name || contract.from_role;
     const toName = contract.to_org_name || contract.to_role;
     otherPartyName = `${fromName} → ${toName}`;
   }
   
-  const displayTrade = formatTrade(contract.trade);
-  if (displayTrade) {
-    return `Contract with ${otherPartyName} (${displayTrade})`;
-  }
-  return `Contract with ${otherPartyName}`;
+  return otherPartyName;
 }
 
-interface ContractCardProps {
+interface ContractRowProps {
   contract: Contract;
   currentOrgId: string | undefined;
   teamMembers: TeamMember[];
-  showWorkOrdersColumn: boolean;
 }
 
-function ContractCard({ contract, currentOrgId, teamMembers, showWorkOrdersColumn }: ContractCardProps) {
-  // Find related team member to check status
+function ContractRow({ contract, currentOrgId, teamMembers }: ContractRowProps) {
   const relatedMember = teamMembers.find(m => m.id === contract.to_project_team_id);
   const isPending = relatedMember?.status === 'Invited';
+  const displayTrade = formatTrade(contract.trade);
+  const retainageAmount = (contract.contract_sum || 0) * ((contract.retainage_percent || 0) / 100);
 
   return (
-    <div className="p-4 rounded-lg bg-muted/50 border border-border/50">
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <h4 className="font-medium text-sm">
+    <div className="flex items-center justify-between py-3 border-b border-border/50 last:border-0">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium truncate">
             {getContractTitle(contract, currentOrgId)}
-          </h4>
-          {/* Show role as secondary badge */}
-          <div className="flex items-center gap-2 mt-1">
-            <Badge variant="outline" className="text-xs">
-              {contract.from_role} → {contract.to_role}
+          </span>
+          {displayTrade && (
+            <Badge variant="secondary" className="text-[10px] h-5 px-1.5 shrink-0">
+              {displayTrade}
             </Badge>
-          </div>
+          )}
+          {isPending && (
+            <Badge variant="outline" className="text-[10px] h-5 px-1.5 text-amber-600 border-amber-300 shrink-0">
+              Pending
+            </Badge>
+          )}
         </div>
-        <Badge variant={isPending ? 'outline' : 'default'} className={isPending ? 'text-amber-600 border-amber-300' : ''}>
-          {isPending ? 'Pending Acceptance' : 'Active'}
-        </Badge>
-      </div>
-
-      <div className={`grid gap-3 ${showWorkOrdersColumn ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-3'}`}>
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded bg-primary/10">
-            <DollarSign className="h-3.5 w-3.5 text-primary" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Contract Sum</p>
-            <p className="text-sm font-medium">{formatCurrency(contract.contract_sum)}</p>
-          </div>
-        </div>
-
-        {showWorkOrdersColumn && (
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded bg-orange-100 dark:bg-orange-900/20">
-              <ClipboardList className="h-3.5 w-3.5 text-orange-600" />
-            </div>
-            <div>
-              <p className="text-xs text-muted-foreground">Change Orders</p>
-              <p className="text-sm font-medium">$0</p>
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded bg-green-100 dark:bg-green-900/20">
-            <Receipt className="h-3.5 w-3.5 text-green-600" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Invoiced</p>
-            <p className="text-sm font-medium">$0</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded bg-muted">
-            <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Retainage</p>
-            <p className="text-sm font-medium">
-              {formatCurrency((contract.contract_sum || 0) * ((contract.retainage_percent || 0) / 100))}
-            </p>
-            <p className="text-xs text-muted-foreground">({contract.retainage_percent || 0}%)</p>
-          </div>
-        </div>
-      </div>
-
-      {contract.notes && (
-        <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
-          {contract.notes}
+        <p className="text-xs text-muted-foreground mt-0.5">
+          {contract.from_role} → {contract.to_role}
         </p>
-      )}
+      </div>
+      <div className="flex items-center gap-4 ml-4">
+        <div className="text-right">
+          <p className="text-sm font-semibold">{formatCurrency(contract.contract_sum)}</p>
+          {contract.retainage_percent ? (
+            <p className="text-[10px] text-muted-foreground">
+              {contract.retainage_percent}% ret. ({formatCurrency(retainageAmount)})
+            </p>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }
@@ -173,9 +128,10 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
 
-  // Get current user's organization ID
   const currentOrgId = userOrgRoles[0]?.organization?.id;
+
   useEffect(() => {
     const fetchData = async () => {
       const [contractsResult, teamResult] = await Promise.all([
@@ -196,8 +152,6 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
       if (contractsResult.error) {
         console.error('Error fetching contracts:', contractsResult.error);
       } else {
-        // Filter contracts to only show those where user's org is involved
-        // This provides UI-level filtering on top of RLS
         const allContracts = (contractsResult.data || []).map((c: any) => ({
           ...c,
           from_org_name: c.from_org?.name || null,
@@ -223,101 +177,122 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
     fetchData();
   }, [projectId, currentOrgId]);
 
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Contract Summary
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {[...Array(2)].map((_, i) => (
-            <Skeleton key={i} className="h-24 w-full" />
-          ))}
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (contracts.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Contract Summary
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            No contracts have been created for this project yet.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // Separate contracts into main and change order contracts
   const mainContracts = contracts.filter(c => !isChangeOrderContract(c));
   const changeOrderContracts = contracts.filter(c => isChangeOrderContract(c));
+  const totalContractValue = contracts.reduce((sum, c) => sum + (c.contract_sum || 0), 0);
+
+  if (loading) {
+    return (
+      <Card className="overflow-hidden">
+        <CardHeader className="bg-muted/30 py-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              Contracts
+            </CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent className="p-4">
+          <div className="space-y-2">
+            {[...Array(2)].map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-base flex items-center gap-2">
-          <FileText className="h-4 w-4" />
-          Contract Summary
-        </CardTitle>
-        {canManageContracts && (
-          <Button size="sm" variant="outline" asChild>
-            <Link to={`/project/${projectId}/edit?step=contracts`}>
-              <Settings className="h-3 w-3 mr-1" />
-              Manage
-            </Link>
-          </Button>
-        )}
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          {/* Main Contracts Section */}
-          {mainContracts.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-muted-foreground">Main Contracts</h3>
-              <div className="space-y-4">
-                {mainContracts.map((contract) => (
-                  <ContractCard
-                    key={contract.id}
-                    contract={contract}
-                    currentOrgId={currentOrgId}
-                    teamMembers={teamMembers}
-                    showWorkOrdersColumn={true}
-                  />
-                ))}
+    <Card className="overflow-hidden">
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="bg-muted/30 py-3 cursor-pointer hover:bg-muted/50 transition-colors">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  {isOpen ? (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <FileText className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-medium">Contracts</CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {contracts.length} contract{contracts.length !== 1 ? 's' : ''} • {formatCurrency(totalContractValue)}
+                  </p>
+                </div>
               </div>
+              {canManageContracts && (
+                <Button 
+                  size="sm" 
+                  variant="ghost" 
+                  className="h-8 text-xs"
+                  asChild
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Link to={`/project/${projectId}/edit?step=contracts`}>
+                    <Settings className="h-3.5 w-3.5 mr-1.5" />
+                    Manage
+                  </Link>
+                </Button>
+              )}
             </div>
-          )}
+          </CardHeader>
+        </CollapsibleTrigger>
 
-          {/* Change Order Contracts Section */}
-          {changeOrderContracts.length > 0 && (
-            <div className="space-y-3">
-              <h3 className="text-sm font-medium text-muted-foreground">Change Order Contracts</h3>
+        <CollapsibleContent>
+          <CardContent className="p-4 pt-2">
+            {contracts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No contracts created yet.
+              </p>
+            ) : (
               <div className="space-y-4">
-                {changeOrderContracts.map((contract) => (
-                  <ContractCard
-                    key={contract.id}
-                    contract={contract}
-                    currentOrgId={currentOrgId}
-                    teamMembers={teamMembers}
-                    showWorkOrdersColumn={false}
-                  />
-                ))}
+                {/* Main Contracts */}
+                {mainContracts.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                      Main Contracts
+                    </h4>
+                    <div className="bg-muted/30 rounded-lg px-3">
+                      {mainContracts.map((contract) => (
+                        <ContractRow
+                          key={contract.id}
+                          contract={contract}
+                          currentOrgId={currentOrgId}
+                          teamMembers={teamMembers}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Change Order Contracts */}
+                {changeOrderContracts.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                      Change Order Contracts
+                    </h4>
+                    <div className="bg-muted/30 rounded-lg px-3">
+                      {changeOrderContracts.map((contract) => (
+                        <ContractRow
+                          key={contract.id}
+                          contract={contract}
+                          currentOrgId={currentOrgId}
+                          teamMembers={teamMembers}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-        </div>
-      </CardContent>
+            )}
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   );
 }

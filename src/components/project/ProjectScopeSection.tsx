@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList, Edit, Home, Building2, ArrowUpDown, Layers, ChevronDown } from 'lucide-react';
+import { ClipboardList, Edit, Home, Building2, ArrowUpDown, Layers, ChevronDown, ChevronRight, Check, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -56,24 +56,56 @@ interface ProjectScopeSectionProps {
   projectType: string;
 }
 
-function ScopeItem({ label, value }: { label: string; value: React.ReactNode }) {
+function ScopeRow({ label, value }: { label: string; value: React.ReactNode }) {
   if (!value) return null;
   return (
-    <div className="flex justify-between py-2 border-b border-border/50 last:border-0">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-sm font-medium">{value}</span>
+    <div className="flex justify-between py-2 text-sm">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium text-right">{value}</span>
     </div>
   );
 }
 
-function BooleanItem({ label, value }: { label: string; value: boolean | null }) {
+function BooleanIndicator({ value }: { value: boolean | null }) {
   if (value === null || value === undefined) return null;
+  return value ? (
+    <Check className="h-4 w-4 text-green-500" />
+  ) : (
+    <X className="h-4 w-4 text-muted-foreground/50" />
+  );
+}
+
+function InclusionBadges({ scope }: { scope: ScopeDetails }) {
+  const inclusions = [
+    { label: 'Siding', included: scope.siding_included },
+    { label: 'Fascia', included: scope.fascia_included },
+    { label: 'Soffit', included: scope.soffit_included },
+    { label: 'Windows', included: scope.windows_included },
+    { label: 'WRB', included: scope.wrb_included },
+    { label: 'Ext. Doors', included: scope.ext_doors_included },
+    { label: 'Decking', included: scope.decking_included },
+    { label: 'Decorative', included: scope.decorative_included },
+  ].filter(item => item.included !== null);
+
+  if (inclusions.length === 0) return null;
+
   return (
-    <div className="flex justify-between py-2 border-b border-border/50 last:border-0">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <Badge variant={value ? 'default' : 'secondary'} className="text-xs">
-        {value ? 'Yes' : 'No'}
-      </Badge>
+    <div className="flex flex-wrap gap-1.5">
+      {inclusions.map(item => (
+        <Badge 
+          key={item.label}
+          variant={item.included ? 'default' : 'secondary'}
+          className={cn(
+            "text-[10px] h-5 px-1.5",
+            item.included 
+              ? "bg-primary/10 text-primary border-primary/20" 
+              : "bg-muted text-muted-foreground"
+          )}
+        >
+          {item.included ? <Check className="h-2.5 w-2.5 mr-0.5" /> : null}
+          {item.label}
+        </Badge>
+      ))}
     </div>
   );
 }
@@ -103,50 +135,11 @@ export function ProjectScopeSection({ projectId, projectType }: ProjectScopeSect
     fetchScope();
   }, [projectId]);
 
-  if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <ClipboardList className="h-4 w-4" />
-            Scope & Project Details
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {[...Array(6)].map((_, i) => (
-            <Skeleton key={i} className="h-8 w-full" />
-          ))}
-        </CardContent>
-      </Card>
-    );
-  }
-
-  if (!scope) {
-    return (
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            <ClipboardList className="h-4 w-4" />
-            Scope & Project Details
-          </CardTitle>
-          <Button size="sm" variant="outline" onClick={() => navigate(`/projects/${projectId}/scope`)}>
-            <Edit className="h-3 w-3 mr-1" />
-            Add Scope
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            No scope details have been added to this project yet.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
   const isSingleFamily = ['Single Family Home', 'Townhomes', 'Duplex', 'residential'].includes(projectType);
   const isMultiFamily = ['Apartments/Condos', 'Hotels', 'commercial', 'mixed_use'].includes(projectType);
 
   const getSidingMaterials = () => {
+    if (!scope) return null;
     const materials = scope.siding_materials || [];
     if (scope.siding_material_other) {
       materials.push(scope.siding_material_other);
@@ -155,6 +148,7 @@ export function ProjectScopeSection({ projectId, projectType }: ProjectScopeSect
   };
 
   const getDecorativeItems = () => {
+    if (!scope) return null;
     const items = scope.decorative_items || [];
     if (scope.decorative_item_other) {
       items.push(scope.decorative_item_other);
@@ -162,137 +156,180 @@ export function ProjectScopeSection({ projectId, projectType }: ProjectScopeSect
     return items.length > 0 ? items.join(', ') : null;
   };
 
-  const getDeckingType = () => {
-    if (!scope.decking_included) return null;
-    return scope.decking_type_other || scope.decking_type || 'Yes';
+  // Build summary stats
+  const buildSummary = () => {
+    if (!scope) return [];
+    const items: string[] = [];
+    
+    if (isSingleFamily) {
+      if (scope.home_type) items.push(scope.home_type);
+      if (scope.floors) items.push(`${scope.floors} floor${scope.floors > 1 ? 's' : ''}`);
+    } else if (isMultiFamily) {
+      if (scope.num_buildings) items.push(`${scope.num_buildings} building${scope.num_buildings > 1 ? 's' : ''}`);
+      if (scope.stories) items.push(`${scope.stories} stories`);
+      if (scope.num_units) items.push(`${scope.num_units} units`);
+    }
+    
+    return items;
   };
 
-  const getConstructionType = () => {
-    return scope.construction_type_other || scope.construction_type;
-  };
-
-  return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <Card>
-        <CollapsibleTrigger asChild>
-          <CardHeader className="flex flex-row items-center justify-between cursor-pointer hover:bg-muted/50 transition-colors">
-            <CardTitle className="text-base flex items-center gap-2">
-              <ClipboardList className="h-4 w-4" />
-              Scope & Project Details
-              <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", isOpen && "rotate-180")} />
+  if (loading) {
+    return (
+      <Card className="overflow-hidden">
+        <CardHeader className="bg-muted/30 py-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <ClipboardList className="h-4 w-4 text-primary" />
+              Scope
             </CardTitle>
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/projects/${projectId}/scope`);
-              }}
-            >
-              <Edit className="h-3 w-3 mr-1" />
-              Edit Scope
-            </Button>
-          </CardHeader>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <CardContent>
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Structure Section */}
-          <div className="space-y-1">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1 mb-2">
-              <Building2 className="h-3 w-3" />
-              Structure
-            </h4>
-            {isSingleFamily && (
-              <>
-                <ScopeItem label="Home Type" value={scope.home_type} />
-                <ScopeItem label="Floors" value={scope.floors} />
-                <ScopeItem label="Foundation Type" value={scope.foundation_type} />
-                {scope.basement_type && (
-                  <>
-                    <ScopeItem label="Basement Type" value={scope.basement_type} />
-                    <ScopeItem label="Basement Finish" value={scope.basement_finish} />
-                  </>
-                )}
-              </>
-            )}
-            {isMultiFamily && (
-              <>
-                <ScopeItem label="Number of Buildings" value={scope.num_buildings} />
-                <ScopeItem label="Stories" value={scope.stories} />
-                <ScopeItem label="Construction Type" value={getConstructionType()} />
-                <ScopeItem label="Number of Units" value={scope.num_units} />
-                <ScopeItem label="Stories per Unit" value={scope.stories_per_unit} />
-                <BooleanItem label="Shared Walls" value={scope.has_shared_walls} />
-              </>
-            )}
           </div>
-
-          {/* Vertical Access Section */}
-          <div className="space-y-1">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1 mb-2">
-              <ArrowUpDown className="h-3 w-3" />
-              Vertical Access
-            </h4>
-            <ScopeItem label="Stairs Type" value={scope.stairs_type} />
-            <BooleanItem label="Elevator" value={scope.has_elevator} />
-            {scope.has_elevator && (
-              <>
-                <ScopeItem label="Shaft Type" value={scope.shaft_type} />
-                <ScopeItem label="Shaft Notes" value={scope.shaft_type_notes} />
-              </>
-            )}
-          </div>
-
-          {/* Roof & Outdoor Section */}
-          <div className="space-y-1">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1 mb-2">
-              <Home className="h-3 w-3" />
-              Roof & Outdoor
-            </h4>
-            <ScopeItem label="Roof Type" value={scope.roof_type} />
-            <BooleanItem label="Roof Deck" value={scope.has_roof_deck} />
-            {scope.has_roof_deck && (
-              <ScopeItem label="Roof Deck Type" value={scope.roof_deck_type} />
-            )}
-            <BooleanItem label="Covered Porches" value={scope.has_covered_porches} />
-            <BooleanItem label="Balconies" value={scope.has_balconies} />
-            {scope.has_balconies && (
-              <ScopeItem label="Balcony Type" value={scope.balcony_type} />
-            )}
-            {scope.decking_included && (
-              <ScopeItem label="Decking Type" value={getDeckingType()} />
-            )}
-          </div>
-
-          {/* Exterior Section */}
-          <div className="space-y-1">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1 mb-2">
-              <Layers className="h-3 w-3" />
-              Exterior Scope
-            </h4>
-            {scope.siding_included && (
-              <ScopeItem label="Siding Materials" value={getSidingMaterials()} />
-            )}
-            <BooleanItem label="Fascia Included" value={scope.fascia_included} />
-            <BooleanItem label="Soffit Included" value={scope.soffit_included} />
-            {(scope.fascia_included || scope.soffit_included) && (
-              <ScopeItem 
-                label="Fascia/Soffit Material" 
-                value={scope.fascia_soffit_material_other || scope.fascia_soffit_material} 
-              />
-            )}
-            {scope.decorative_included && (
-              <ScopeItem label="Decorative Items" value={getDecorativeItems()} />
-            )}
-            <BooleanItem label="Windows Included" value={scope.windows_included} />
-            <BooleanItem label="WRB / Tyvek Included" value={scope.wrb_included} />
-            <BooleanItem label="Exterior Doors Included" value={scope.ext_doors_included} />
-          </div>
+        </CardHeader>
+        <CardContent className="p-4">
+          <div className="space-y-2">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-8 w-full" />
+            ))}
           </div>
         </CardContent>
-      </CollapsibleContent>
+      </Card>
+    );
+  }
+
+  const summaryItems = buildSummary();
+
+  return (
+    <Card className="overflow-hidden">
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="bg-muted/30 py-3 cursor-pointer hover:bg-muted/50 transition-colors">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  {isOpen ? (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <ClipboardList className="h-4 w-4 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-sm font-medium">Scope</CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {scope ? summaryItems.join(' • ') || 'Details configured' : 'Not configured'}
+                  </p>
+                </div>
+              </div>
+              <Button 
+                size="sm" 
+                variant="ghost"
+                className="h-8 text-xs"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate(`/projects/${projectId}/scope`);
+                }}
+              >
+                <Edit className="h-3.5 w-3.5 mr-1.5" />
+                {scope ? 'Edit' : 'Add'}
+              </Button>
+            </div>
+          </CardHeader>
+        </CollapsibleTrigger>
+
+        <CollapsibleContent>
+          <CardContent className="p-4 pt-2">
+            {!scope ? (
+              <p className="text-sm text-muted-foreground">
+                No scope details added yet.
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {/* Inclusions Summary */}
+                <div>
+                  <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                    Scope Inclusions
+                  </h4>
+                  <InclusionBadges scope={scope} />
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {/* Structure */}
+                  <div className="bg-muted/30 rounded-lg p-3">
+                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 mb-2">
+                      <Building2 className="h-3 w-3" />
+                      Structure
+                    </h4>
+                    <div className="divide-y divide-border/50">
+                      {isSingleFamily && (
+                        <>
+                          <ScopeRow label="Type" value={scope.home_type} />
+                          <ScopeRow label="Floors" value={scope.floors} />
+                          <ScopeRow label="Foundation" value={scope.foundation_type} />
+                          {scope.basement_type && (
+                            <ScopeRow label="Basement" value={`${scope.basement_type}${scope.basement_finish ? ` (${scope.basement_finish})` : ''}`} />
+                          )}
+                        </>
+                      )}
+                      {isMultiFamily && (
+                        <>
+                          <ScopeRow label="Buildings" value={scope.num_buildings} />
+                          <ScopeRow label="Stories" value={scope.stories} />
+                          <ScopeRow label="Construction" value={scope.construction_type_other || scope.construction_type} />
+                          <ScopeRow label="Units" value={scope.num_units} />
+                        </>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Roof & Outdoor */}
+                  <div className="bg-muted/30 rounded-lg p-3">
+                    <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 mb-2">
+                      <Home className="h-3 w-3" />
+                      Roof & Outdoor
+                    </h4>
+                    <div className="divide-y divide-border/50">
+                      <ScopeRow label="Roof Type" value={scope.roof_type} />
+                      {scope.has_roof_deck && <ScopeRow label="Roof Deck" value={scope.roof_deck_type || 'Yes'} />}
+                      {scope.has_balconies && <ScopeRow label="Balconies" value={scope.balcony_type || 'Yes'} />}
+                      {scope.decking_included && <ScopeRow label="Decking" value={scope.decking_type_other || scope.decking_type || 'Yes'} />}
+                    </div>
+                  </div>
+
+                  {/* Exterior Materials */}
+                  {(getSidingMaterials() || getDecorativeItems()) && (
+                    <div className="bg-muted/30 rounded-lg p-3 sm:col-span-2">
+                      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 mb-2">
+                        <Layers className="h-3 w-3" />
+                        Materials
+                      </h4>
+                      <div className="divide-y divide-border/50">
+                        <ScopeRow label="Siding" value={getSidingMaterials()} />
+                        <ScopeRow label="Fascia/Soffit" value={scope.fascia_soffit_material_other || scope.fascia_soffit_material} />
+                        <ScopeRow label="Decorative" value={getDecorativeItems()} />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Vertical Access */}
+                  {(scope.stairs_type || scope.has_elevator) && (
+                    <div className="bg-muted/30 rounded-lg p-3 sm:col-span-2">
+                      <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide flex items-center gap-1.5 mb-2">
+                        <ArrowUpDown className="h-3 w-3" />
+                        Vertical Access
+                      </h4>
+                      <div className="divide-y divide-border/50">
+                        <ScopeRow label="Stairs" value={scope.stairs_type} />
+                        {scope.has_elevator && (
+                          <ScopeRow label="Elevator Shaft" value={scope.shaft_type || 'Yes'} />
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
-  </Collapsible>
   );
 }
