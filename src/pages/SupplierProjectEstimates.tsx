@@ -636,16 +636,14 @@ export default function SupplierProjectEstimates() {
 
                       {/* Upload Tab - PDF Upload */}
                       <TabsContent value="upload" className="space-y-4">
-                        {supplierId && (
-                          <EstimatePDFUpload
-                            estimateId={selectedEstimate.id}
-                            supplierId={supplierId}
-                            existingUpload={pdfUpload}
-                            onUploadComplete={handlePDFUploadComplete}
-                            onParseComplete={handleParseComplete}
-                            disabled={selectedEstimate.status !== 'DRAFT'}
-                          />
-                        )}
+                        <EstimatePDFUpload
+                          estimateId={selectedEstimate.id}
+                          supplierOrgId={selectedEstimate.supplier_org_id}
+                          existingUpload={pdfUpload}
+                          onUploadComplete={handlePDFUploadComplete}
+                          onParseComplete={handleParseComplete}
+                          disabled={selectedEstimate.status !== 'DRAFT'}
+                        />
                         
                         {/* Fallback CSV upload */}
                         {selectedEstimate.status === 'DRAFT' && (
