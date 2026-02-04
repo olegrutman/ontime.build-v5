@@ -1,223 +1,387 @@
 
-# Supplier-Only PDF Estimate Upload → Project Estimate Catalog + Packs
+# Plan: Replace Catalog with New Inventory Data
 
 ## Summary
 
-I will build a feature that allows **only Suppliers** to upload a PDF estimate into a project. The system will:
-1. Store the PDF file
-2. Parse it into line items grouped by "Packs" (sections)
-3. Let the Supplier review and match items to the product catalog
-4. Create a **restricted product selection** so that when creating POs, users can only pick from estimate-approved products
-5. Allow selecting a Pack to auto-populate a draft PO
-
-**Primary Goal**: Prevent users from ordering the wrong product by restricting selection to estimate-approved products.
+This plan will import the new inventory file (`Builders_Inventory_for_Lovable-2.xlsx`) containing **~1,700 products** into the `catalog_items` table, replacing the existing catalog data for the supplier. The product picker flow (Main Category → Secondary Category → Spec Filters → Products) will be updated to match the new category structure.
 
 ---
 
-## Step-by-Step Implementation
+## New Inventory Structure Analysis
 
-### Step 1: Database Schema
+### Main Categories in New File (10 categories)
 
-Create new tables to support PDF uploads, parsed line items, and catalog mapping:
+| Main Category | Secondary Categories | Product Count |
+|--------------|---------------------|---------------|
+| **DECKING** | DECK BOARDS, ACCESSORIES, POST CAP, POST SKIRT | ~110 |
+| **DRYWALL** | SHAFTWALL, SHAFTWALL HARDWARE, EXTERIOR DRYWALL, INTERIOR DRYWALL, ACCESSORIES | ~25 |
+| **ENGINEERED WOOD** | LVL, LSL, I JOISTS, RIM BOARD, GLUELAM | ~70 |
+| **EXTERIOR TRIM** | SIDING, CORNER TRIM, STARTER STRIPS, WINDOW/DOOR TRIM | ~115 |
+| **FRAMING ACCESSORIES** | FASTENERS, ADHESIVES, MOISTURE CONTROL, NAILS | ~120 |
+| **FRAMING LUMBER** | STUDS, DIMENSION, WIDES, POST/TIMBER, TREATED, THIN BOARDS | ~480 |
+| **HARDWARE** | HANGER, TIE & STRAP, ANCHORS, POST HARDWARE, COLUMN HARDWARE, HOLD DOWN, ANGLE, PLATES CONNECTORS AND CLIPS | ~780 |
+| **SHEATING AND PLYWOOD** | OSB, CDX, ZIP, T&G, FIRE TREATED, HARDBOARD, SPECIALTY, CLIPS | ~30 |
+| **STRUCTURAL STEEL** | COLUMN, I-BEAM, STEEL ANGLE | ~60 |
+| **(No Category)** | Uncategorized cedar/hemlock items | ~50 |
 
-**Table: `estimate_pdf_uploads`**
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| estimate_id | uuid | FK to supplier_estimates |
-| file_path | text | Storage path to PDF |
-| file_name | text | Original file name |
-| file_size | integer | File size in bytes |
-| uploaded_by | uuid | User who uploaded |
-| uploaded_at | timestamptz | Upload timestamp |
+### Column Mapping (Excel → Database)
 
-**Table: `estimate_line_items`** (parsed from PDF)
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| estimate_id | uuid | FK to supplier_estimates |
-| raw_text_line | text | Original text from PDF |
-| description | text | Cleaned description |
-| quantity | numeric (nullable) | Parsed quantity |
-| uom | text (nullable) | Unit of measure |
-| pack_name | text | Section heading (default: "Loose Estimate Items") |
-| status | text | 'imported', 'needs_review', 'matched', 'unmatched' |
-| catalog_item_id | uuid (nullable) | FK to catalog_items when matched |
-| sort_order | integer | Display order |
-
-**Table: `estimate_catalog_mapping`** (finalized approved products)
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| estimate_id | uuid | FK to supplier_estimates |
-| project_id | uuid | FK to projects |
-| catalog_item_id | uuid | FK to catalog_items |
-| line_item_id | uuid | FK to estimate_line_items |
-| created_at | timestamptz | When mapping was created |
-
-**Storage bucket**: `estimate-pdfs` for storing uploaded PDF files
-
----
-
-### Step 2: PDF Upload UI (Supplier-Only)
-
-**Location**: Within `SupplierProjectEstimates.tsx` detail sheet
-
-**Changes**:
-- Add "Upload PDF Estimate" button visible only to Supplier users
-- Use Supabase Storage to upload PDF to `estimate-pdfs` bucket
-- Create record in `estimate_pdf_uploads` table
-- Display uploaded file info: name, upload date, uploaded by
-
-**Permission check**: Already handled - `SupplierProjectEstimates.tsx` redirects non-suppliers at line 108
+| Excel Column | Database Column | Notes |
+|--------------|-----------------|-------|
+| `code` | `supplier_sku` | Primary identifier |
+| `name` | `name` | Product name |
+| `description` | `description` | Full description |
+| `Main Category` | `category` | Mapped to enum |
+| `Secondary Category` | `secondary_category` | Subcategory |
+| `Manufacture` | `manufacturer` | Brand (HARDIE, FIBERON, etc.) |
+| `Use` | `use_type` | Use context |
+| `Type` | `product_type` | Product type |
+| `Edge` | `edge_type` | Edge style |
+| `Dimension` | `dimension` | Size (e.g., "2 in. x 4 in.") |
+| `Thickness` | `thickness` | Thickness |
+| `Depth` | `depth` | Depth measurement |
+| `Width` | `width` | Width measurement |
+| `Length` | `length` | Fixed length |
+| `Minimum Length` | `min_length` | Variable length min |
+| `Maximum Length` | `max_length` | Variable length max |
+| `Length Increment` | `length_increment` | Step (e.g., 1 ft) |
+| `Length Unit` | `length_unit` | Unit (ft, in) |
+| `Color` | `color` | Color |
+| `Finish` | `finish` | Finish type |
+| `Bundle Name` | `bundle_type` | Bundle/Pallet/Box |
+| `Bundle Count` | `bundle_qty` | Units per bundle |
+| `Wood Species` | `wood_species` | Species |
+| `Manufacture` | `manufacturer` | Manufacturer |
+| `qtyType` | `uom_default` | "count" → "EA", "lf" → "LF" |
 
 ---
 
-### Step 3: Edge Function for PDF Parsing
+## Implementation Steps
 
-**New edge function**: `parse-estimate-pdf`
+### Step 1: Update Category Enum and Types
 
-**Logic**:
-1. Receive PDF file path and estimate_id
-2. Download PDF from storage
-3. Use Lovable AI (gemini-3-flash) to extract structured data:
-   - Detect section headings (pack names)
-   - Extract line items with description, quantity, unit
-   - Flag uncertain items as `needs_review`
-4. Insert parsed items into `estimate_line_items` table
-5. Attempt catalog matching for each item:
-   - **Priority 1**: Exact match on supplier_sku (if SKU text detected)
-   - **Priority 2**: Fuzzy match on description + dimension fields
-   - Mark as `matched` or `unmatched`
+**File: `src/types/supplier.ts`**
 
-**Pack Detection Rules**:
-- Headings like "Basement", "1st Floor Framing", "Garden Level" become pack_name
-- Items following a heading belong to that pack until next heading
-- If no heading detected, default to "Loose Estimate Items"
+Update `CatalogCategory` enum to support new main categories:
 
----
+```typescript
+export type CatalogCategory = 
+  | 'Decking'
+  | 'Drywall'
+  | 'Engineered'      // Maps to "ENGINEERED WOOD"
+  | 'Exterior'        // Maps to "EXTERIOR TRIM"
+  | 'FramingAccessories' // NEW - Maps to "FRAMING ACCESSORIES"
+  | 'FramingLumber'   // NEW - Maps to "FRAMING LUMBER"
+  | 'Hardware'
+  | 'Sheathing'       // Maps to "SHEATING AND PLYWOOD"
+  | 'Structural'      // Maps to "STRUCTURAL STEEL"
+  | 'Other';          // Fallback for uncategorized
+```
 
-### Step 4: Supplier Review Screen
+Update `normalizeCategory()` function to map new Excel category names:
 
-**New component**: `EstimateReviewTable.tsx`
-
-**Features**:
-- Editable table showing all parsed line items
-- Columns: Pack Name, Description, Qty, Unit, Matched Product, Status
-- Pack name dropdown (editable, can reassign)
-- Description inline edit
-- Qty/Unit inline edit
-- Matched Product: catalog search picker to manually match
-- Status badges: Imported, Needs Review, Matched, Unmatched
-- "Finalize Estimate" button
-
-**Finalize action**:
-- Validates all items are matched or explicitly marked
-- Creates records in `estimate_catalog_mapping` for all matched items
-- Updates estimate status to 'SUBMITTED' or 'APPROVED' (supplier side ready)
+```typescript
+const mapping: Record<string, CatalogCategory> = {
+  'decking': 'Decking',
+  'drywall': 'Drywall',
+  'engineered wood': 'Engineered',
+  'exterior trim': 'Exterior',
+  'framing accessories': 'FramingAccessories',
+  'framing lumber': 'FramingLumber',
+  'hardware': 'Hardware',
+  'sheating and plywood': 'Sheathing',
+  'structural steel': 'Structural',
+  // ... legacy mappings
+};
+```
 
 ---
 
-### Step 5: Restricted Product Picker ("Pick from Estimate" Mode)
+### Step 2: Create Excel Import Edge Function
 
-**Modified component**: `ProductPicker.tsx`
+**New File: `supabase/functions/import-inventory-xlsx/index.ts`**
 
-**Changes**:
-- Add new prop: `restrictToEstimate?: { projectId: string; estimateId: string }`
-- When prop is provided:
-  - Query `estimate_catalog_mapping` for allowed product IDs
-  - Filter catalog queries to only show those products
-  - Show header: "Picking from Estimate: [Estimate Name]"
-  - Remove category navigation (show flat list of approved products)
+Edge function to:
+1. Accept XLSX file upload via Supabase Storage path
+2. Parse Excel data using a lightweight parser
+3. Map columns to database schema
+4. Perform bulk insert (batch of 500)
 
-**This is the key safety feature**: When in estimate-restricted mode, the picker physically cannot show non-approved products.
-
----
-
-### Step 6: Pack-Based PO Creation
-
-**New component**: `EstimatePackList.tsx`
-
-**Location**: Within estimate detail sheet (Supplier view) or project PO tab
-
-**Features**:
-- List unique pack_name values from `estimate_line_items`
-- Show item count and status per pack
-- "Create PO from Pack" button per pack
-- Opens POWizardV2 pre-populated with:
-  - All line items from that pack
-  - Notes field: "Pack Order: [Pack Name]"
-  - supplier_id auto-set from estimate's supplier
-
-**PO data includes**:
-- New fields on `purchase_orders` table: `source_pack_name`, `source_estimate_id`
+**Key mapping logic:**
+- `qtyType: "count"` → `uom_default: "EA"`
+- `qtyType: "lf"` → `uom_default: "LF"`
+- `Bundle Count` → `bundle_qty` (parse integer)
+- Category normalization as defined above
 
 ---
 
-### Step 7: Update PO Wizard to Support Estimate Mode
+### Step 3: Update Database Schema (if needed)
 
-**Modified component**: `POWizardV2.tsx`
+**New columns already exist** based on schema analysis:
+- `edge_type`, `depth`, `width`, `diameter`, `length_unit`, `length_increment` ✓
+- `min_length`, `max_length` ✓
 
-**New props**:
-- `estimateId?: string` - When provided, restricts product selection
-- `packName?: string` - Pre-populate from pack
-- `initialItems?: POWizardV2LineItem[]` - Pre-fill items from pack
-
-**Changes to ItemsScreen**:
-- Pass `restrictToEstimate` to ProductPicker
-- Show "Adding from Estimate" indicator
-- User can still edit quantities, delete items, add extra items (from estimate catalog only)
+No migration needed - schema is already compatible.
 
 ---
 
-## File Changes Summary
+### Step 4: Update Product Picker Virtual Categories
+
+**File: `src/types/poWizardV2.ts`**
+
+Replace `VIRTUAL_CATEGORIES` to match new inventory structure:
+
+```typescript
+export const VIRTUAL_CATEGORIES: Record<string, VirtualCategory> = {
+  FRAMING_LUMBER: {
+    displayName: 'FRAMING LUMBER',
+    icon: '🪵',
+    dbCategory: 'FramingLumber',
+    secondaryCategories: ['STUDS', 'DIMENSION', 'WIDES', 'POST/TIMBER', 'TREATED', 'THIN BOARDS'],
+  },
+  HARDWARE: {
+    displayName: 'HARDWARE',
+    icon: '🔩',
+    dbCategory: 'Hardware',
+    secondaryCategories: [], // All hardware secondaries
+  },
+  ENGINEERED: {
+    displayName: 'ENGINEERED WOOD',
+    icon: '📐',
+    dbCategory: 'Engineered',
+    secondaryCategories: ['LVL', 'LSL', 'I JOISTS', 'GLUELAM', 'RIM BOARD'],
+  },
+  SHEATHING: {
+    displayName: 'SHEATHING & PLYWOOD',
+    icon: '📦',
+    dbCategory: 'Sheathing',
+    secondaryCategories: ['OSB', 'CDX', 'ZIP', 'T&G', 'FIRE TREATED', 'HARDBOARD', 'SPECIALTY'],
+  },
+  EXTERIOR: {
+    displayName: 'EXTERIOR TRIM',
+    icon: '🏠',
+    dbCategory: 'Exterior',
+    secondaryCategories: ['SIDING', 'CORNER TRIM', 'STARTER STRIPS', 'WINDOW/DOOR TRIM'],
+  },
+  DECKING: {
+    displayName: 'DECKING',
+    icon: '🏡',
+    dbCategory: 'Decking',
+    secondaryCategories: ['DECK BOARDS', 'ACCESSORIES', 'POST CAP', 'POST SKIRT'],
+  },
+  FRAMING_ACCESSORIES: {
+    displayName: 'FRAMING ACCESSORIES',
+    icon: '🔧',
+    dbCategory: 'FramingAccessories',
+    secondaryCategories: ['FASTENERS', 'ADHESIVES', 'MOISTURE CONTROL', 'NAILS'],
+  },
+  DRYWALL: {
+    displayName: 'DRYWALL',
+    icon: '📋',
+    dbCategory: 'Drywall',
+    secondaryCategories: ['EXTERIOR DRYWALL', 'INTERIOR DRYWALL', 'SHAFTWALL', 'ACCESSORIES'],
+  },
+  STRUCTURAL: {
+    displayName: 'STRUCTURAL STEEL',
+    icon: '🔧',
+    dbCategory: 'Structural',
+    secondaryCategories: ['COLUMN', 'I-BEAM', 'STEEL ANGLE'],
+  },
+};
+```
+
+Update `SECONDARY_DISPLAY_NAMES` with friendly names for new secondaries.
+
+Update `SPEC_PRIORITY` to define filter sequences for new categories:
+
+```typescript
+export const SPEC_PRIORITY: Record<string, string[] | Record<string, string[]>> = {
+  FramingLumber: {
+    default: ['dimension', 'length'],
+    STUDS: ['dimension', 'length'],
+    DIMENSION: ['dimension', 'length'],
+    WIDES: ['dimension', 'length'],
+    TREATED: ['dimension', 'length'],
+    'POST/TIMBER': ['wood_species', 'dimension', 'length'],
+    'THIN BOARDS': ['dimension', 'length'],
+  },
+  Hardware: [], // Skip filters, go directly to products
+  Engineered: {
+    default: ['dimension'],
+    LVL: ['dimension'],
+    LSL: ['dimension'],
+    'I JOISTS': ['dimension'],
+    GLUELAM: ['dimension'],
+    'RIM BOARD': ['dimension'],
+  },
+  Sheathing: ['thickness', 'dimension'],
+  Exterior: ['manufacturer', 'dimension', 'color'],
+  Decking: ['dimension', 'color', 'length', 'manufacturer'],
+  FramingAccessories: [], // Skip filters
+  Drywall: ['thickness', 'dimension'],
+  Structural: [], // Skip filters, complex specs
+};
+```
+
+---
+
+### Step 5: Update Supplier Inventory Page
+
+**File: `src/pages/SupplierInventory.tsx`**
+
+Add XLSX upload support alongside CSV:
+1. Accept `.xlsx` files in addition to `.csv`
+2. For XLSX files, upload to Supabase Storage first
+3. Call the new `import-inventory-xlsx` edge function
+4. Handle progress/completion notifications
+
+```typescript
+const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  
+  if (extension === 'xlsx' || extension === 'xls') {
+    handleExcelUpload(file);
+  } else if (extension === 'csv') {
+    // Existing CSV handling
+    handleCSVUpload(file);
+  }
+};
+
+const handleExcelUpload = async (file: File) => {
+  // 1. Upload to storage
+  // 2. Call edge function
+  // 3. Handle response
+};
+```
+
+Update file input to accept both formats:
+```html
+<input type="file" accept=".csv,.xlsx,.xls" ... />
+```
+
+---
+
+### Step 6: Update ProductPicker Component
+
+**File: `src/components/po-wizard-v2/ProductPicker.tsx`**
+
+Minor updates to handle new category structure:
+- Update category fetching to work with new `dbCategory` values
+- Ensure filter sequences use new `SPEC_PRIORITY` config
+- Test navigation flow: Category → Secondary → Filters → Products
+
+---
+
+### Step 7: CategoryGrid Display Update
+
+**File: `src/components/po-wizard-v2/CategoryGrid.tsx`**
+
+No changes needed - component already renders from `VIRTUAL_CATEGORIES` dynamically.
+
+---
+
+## Import Strategy
+
+### Option A: Full Replace (Recommended)
+1. Delete all existing `catalog_items` for the supplier
+2. Insert all new items from the Excel file
+3. Clean slate with consistent data
+
+### Option B: Upsert
+1. Match by `supplier_id` + `supplier_sku`
+2. Update existing, insert new
+3. Risk of orphaned old SKUs
+
+**Recommendation: Option A** - The new file is a complete inventory replacement.
+
+---
+
+## Files to Modify
 
 | File | Action | Description |
 |------|--------|-------------|
-| `supabase/migrations/XXXXX_estimate_pdf_tables.sql` | Create | New tables + storage bucket |
-| `supabase/functions/parse-estimate-pdf/index.ts` | Create | PDF parsing edge function |
-| `src/components/estimate/EstimatePDFUpload.tsx` | Create | Upload button + file info display |
-| `src/components/estimate/EstimateReviewTable.tsx` | Create | Review/edit parsed line items |
-| `src/components/estimate/EstimatePackList.tsx` | Create | Pack listing with PO creation |
-| `src/components/estimate/CatalogItemPicker.tsx` | Create | Search picker for manual matching |
-| `src/pages/SupplierProjectEstimates.tsx` | Modify | Add PDF upload + review UI in sheet |
-| `src/components/po-wizard-v2/ProductPicker.tsx` | Modify | Add estimate restriction mode |
-| `src/components/po-wizard-v2/POWizardV2.tsx` | Modify | Add estimate/pack props |
-| `src/types/estimate.ts` | Modify | Add new type definitions |
+| `src/types/supplier.ts` | Modify | Update `CatalogCategory` enum and `normalizeCategory()` |
+| `src/types/poWizardV2.ts` | Modify | Update `VIRTUAL_CATEGORIES`, `SECONDARY_DISPLAY_NAMES`, `SPEC_PRIORITY` |
+| `src/pages/SupplierInventory.tsx` | Modify | Add XLSX upload support |
+| `supabase/functions/import-inventory-xlsx/index.ts` | Create | Excel parsing edge function |
+| `src/components/po-wizard-v2/ProductPicker.tsx` | Modify | Minor adjustments for new categories |
 
 ---
 
-## RLS Policies
+## Product Picker Flow After Update
 
-**estimate_pdf_uploads**:
-- Supplier org can INSERT/SELECT/DELETE own uploads
-- Project participants can SELECT
-
-**estimate_line_items**:
-- Supplier org can INSERT/UPDATE/DELETE own items
-- Project participants can SELECT
-
-**estimate_catalog_mapping**:
-- Supplier org can INSERT/DELETE own mappings
-- Project participants can SELECT (needed for restricted picking)
+```text
+Category Grid (9 tiles)
+├── FRAMING LUMBER 🪵
+│   ├── Studs
+│   ├── Dimension Lumber
+│   ├── Wide Boards (2x8, 2x10, 2x12)
+│   ├── Posts & Timbers
+│   ├── Treated Lumber
+│   └── Thin Boards (1x)
+├── HARDWARE 🔩
+│   ├── Joist Hangers
+│   ├── Ties & Straps
+│   ├── Anchors
+│   ├── Post Hardware
+│   ├── Column Hardware
+│   ├── Hold Downs
+│   ├── Angles
+│   └── Plates & Connectors
+├── ENGINEERED WOOD 📐
+│   ├── LVL Headers & Beams
+│   ├── LSL Framing
+│   ├── I-Joists
+│   ├── Glulam Beams
+│   └── Rim Board
+├── SHEATHING & PLYWOOD 📦
+│   ├── OSB
+│   ├── CDX Plywood
+│   ├── ZIP System
+│   ├── Tongue & Groove
+│   ├── Fire Treated
+│   └── Specialty
+├── EXTERIOR TRIM 🏠
+│   ├── Siding
+│   ├── Corner Trim
+│   ├── Starter Strips
+│   └── Window/Door Trim
+├── DECKING 🏡
+│   ├── Deck Boards
+│   ├── Accessories
+│   ├── Post Caps
+│   └── Post Skirts
+├── FRAMING ACCESSORIES 🔧
+│   ├── Fasteners
+│   ├── Adhesives
+│   ├── Moisture Control
+│   └── Nails
+├── DRYWALL 📋
+│   ├── Exterior Drywall
+│   ├── Interior Drywall
+│   ├── Shaftwall
+│   └── Accessories
+└── STRUCTURAL STEEL 🔧
+    ├── Columns
+    ├── I-Beams
+    └── Steel Angles
+```
 
 ---
 
 ## Technical Notes
 
-1. **PDF Parsing**: Uses Lovable AI gateway with gemini-3-flash model (already used in `generate-work-order-description`)
-2. **Storage**: Files stored in Supabase Storage, not database (per file storage policy)
-3. **Matching Algorithm**: Will use `catalog_items.supplier_sku` and text similarity on `description` field
-4. **Performance**: Catalog restriction query uses join on `estimate_catalog_mapping` to filter products
+1. **XLSX Parsing**: Will use a lightweight XLSX parser in the edge function (xlsx-parse-json or similar Deno-compatible library)
 
----
+2. **Batch Insert**: Insert in batches of 500 to avoid transaction timeouts
 
-## Acceptance Test Coverage
+3. **SKU Deduplication**: Excel file has some duplicate SKUs (same SKU, different lengths) - will keep the last occurrence
 
-| Test | Implementation |
-|------|----------------|
-| A) Supplier uploads PDF and sees it attached | PDF stored in storage, metadata in `estimate_pdf_uploads`, shown in UI |
-| B) PDF imports line items with pack grouping | Edge function parses, creates `estimate_line_items` with pack_name |
-| C) Supplier can correct items and match to catalog | `EstimateReviewTable` with inline editing and catalog picker |
-| D) "Pick from Estimate" mode never shows non-estimate products | ProductPicker `restrictToEstimate` prop filters to mapping table |
-| E) Selecting pack auto-populates PO and remains editable | `EstimatePackList` creates draft with items, user edits in wizard |
+4. **Uncategorized Items**: Items at the end of the file without Main Category will be mapped to `'Other'` with their wood species in secondary_category
+
+5. **Search Vector**: The existing trigger will automatically update `search_vector` on insert
+
+6. **RLS**: No changes needed - existing policies allow supplier to manage their own items
