@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { DollarSign, TrendingUp, Receipt, Percent, BarChart3, AlertCircle, Plus, Pencil, Check, X, ClipboardList } from 'lucide-react';
+import { DollarSign, TrendingUp, Receipt, Percent, BarChart3, AlertCircle, Plus, Pencil, Check, X, ClipboardList, Package } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -57,6 +58,15 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
   const [newContractValue, setNewContractValue] = useState<number>(0);
   const [newContractRetainage, setNewContractRetainage] = useState<number>(0);
   const [selectedFcOrgId, setSelectedFcOrgId] = useState<string>('');
+  
+  // Material costs state (TC view)
+  const [materialCosts, setMaterialCosts] = useState<{
+    supplierCost: number;
+    markupAmount: number;
+    revenueTotal: number;
+    avgMarkupPercent: number;
+    workOrderCount: number;
+  }>({ supplierCost: 0, markupAmount: 0, revenueTotal: 0, avgMarkupPercent: 0, workOrderCount: 0 });
 
   const fetchData = async () => {
     setLoading(true);
@@ -136,6 +146,57 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
       org_name: p.organizations?.name || 'Unknown',
     }));
     setFcParticipants(fcList);
+    
+    // Fetch material costs from work orders with linked POs
+    const { data: workOrdersWithPO } = await supabase
+      .from('change_order_projects')
+      .select('id, linked_po_id, material_markup_type, material_markup_percent, material_markup_amount, material_total')
+      .eq('project_id', projectId)
+      .not('linked_po_id', 'is', null);
+
+    if (workOrdersWithPO && workOrdersWithPO.length > 0) {
+      const poIds = workOrdersWithPO.map(wo => wo.linked_po_id).filter(Boolean) as string[];
+      
+      // Fetch PO line item totals
+      const { data: poItems } = await supabase
+        .from('po_line_items')
+        .select('po_id, line_total')
+        .in('po_id', poIds);
+      
+      // Sum by PO
+      const poSubtotals = new Map<string, number>();
+      (poItems || []).forEach(item => {
+        const current = poSubtotals.get(item.po_id) || 0;
+        poSubtotals.set(item.po_id, current + (item.line_total || 0));
+      });
+      
+      // Calculate totals
+      let supplierCost = 0;
+      let markupAmount = 0;
+      let revenueTotal = 0;
+      
+      workOrdersWithPO.forEach(wo => {
+        const baseCost = poSubtotals.get(wo.linked_po_id!) || 0;
+        supplierCost += baseCost;
+        
+        const markup = wo.material_markup_type === 'percent'
+          ? baseCost * ((wo.material_markup_percent || 0) / 100)
+          : (wo.material_markup_amount || 0);
+        
+        markupAmount += markup;
+        revenueTotal += baseCost + markup;
+      });
+      
+      const avgMarkupPercent = supplierCost > 0 ? (markupAmount / supplierCost) * 100 : 0;
+      
+      setMaterialCosts({ 
+        supplierCost, 
+        markupAmount, 
+        revenueTotal, 
+        avgMarkupPercent,
+        workOrderCount: workOrdersWithPO.length
+      });
+    }
     
     setLoading(false);
   };
@@ -618,6 +679,39 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
                 </div>
               </CardContent>
             </Card>
+
+            {/* Material Costs Summary - TC Only */}
+            {materialCosts.supplierCost > 0 && (
+              <Card className="border-l-4 border-l-teal-500">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-100 dark:bg-teal-900/20">
+                      <Package className="h-5 w-5 text-teal-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Material Costs</p>
+                      <p className="text-xs text-muted-foreground">From {materialCosts.workOrderCount} work order{materialCosts.workOrderCount > 1 ? 's' : ''}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Supplier Costs</span>
+                      <span>{formatCurrency(materialCosts.supplierCost)}</span>
+                    </div>
+                    <div className="flex justify-between text-green-600">
+                      <span>Markup ({materialCosts.avgMarkupPercent.toFixed(1)}%)</span>
+                      <span>+{formatCurrency(materialCosts.markupAmount)}</span>
+                    </div>
+                    <Separator className="my-2" />
+                    <div className="flex justify-between font-semibold">
+                      <span>Material Revenue</span>
+                      <span>{formatCurrency(materialCosts.revenueTotal)}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </>
         )}
 
