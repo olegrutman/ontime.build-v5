@@ -1,133 +1,118 @@
 
-# Plan: Update All Category Filter Sequences + Add Other to Picker
+# Plan: Dynamic Filter Discovery for Product Picker
 
 ## Summary
 
-Update the product picker configuration so that:
-1. **All categories use step-by-step filters** - no more empty filter arrays that skip directly to products
-2. **Include "Other" category in the picker** - so users can browse the ~142 uncategorized items (cedar/hemlock lumber)
+Replace the hardcoded `SPEC_PRIORITY` configuration with dynamic field discovery. The picker will query the database to find which `catalog_items` fields actually have values for the current category/secondary combination, then present those as sequential filter steps.
 
 ---
 
-## Current Data Analysis
+## Problem Statement
 
-Based on the database, here are the spec fields that are actually populated for each category:
+Currently, the `StepByStepFilter` component uses a hardcoded `SPEC_PRIORITY` configuration that pre-defines which fields to filter by for each category. This approach:
 
-| Category | Best Filter Fields (by coverage) |
-|----------|----------------------------------|
-| **Decking** | dimension (100%), color (100%), manufacturer (100%), length (91%) |
-| **Drywall** | dimension (64%), product_type (64%) |
-| **Engineered** | use_type (13%), product_type (10%), length (7%) |
-| **Exterior** | product_type (92%), use_type (89%), dimension (91%), manufacturer (49%), length (45%) |
-| **FramingAccessories** | dimension (2%) - Very limited spec data |
-| **FramingLumber** | dimension (100%), length (100%), wood_species (73%) |
-| **Hardware** | thickness (1%), length (1%) - Very limited spec data |
-| **Other** | dimension (100%), length (100%), wood_species (100%) |
-| **Sheathing** | dimension (78%), thickness (65%), product_type (13%) |
-| **Structural** | dimension (14%), product_type (14%), thickness (14%) |
+1. **Misses available data** - Some fields with values are not included in the filter sequence
+2. **Shows empty filters** - Some configured fields have no data for certain secondaries
+3. **Requires manual maintenance** - Every time data changes, the config needs updating
 
 ---
 
-## Proposed Changes
+## Proposed Solution
 
-### File: `src/types/poWizardV2.ts`
+Create a **dynamic filter discovery** system that:
 
-#### 1. Add "OTHER" to VIRTUAL_CATEGORIES
+1. Queries the database to find which filterable fields have non-null values
+2. Orders the fields by coverage (most populated first) or by a priority ranking
+3. Presents each field as a sequential filter step
+4. Skips fields that have no values or only one value (auto-select)
 
-```typescript
-OTHER: {
-  displayName: 'OTHER LUMBER',
-  icon: '📦',
-  dbCategory: 'Other',
-  secondaryCategories: ['DECK BOARDS'], // Plus null items shown as "General"
-},
+---
+
+## Filterable Fields from `catalog_items`
+
+Based on the database schema, these are the filterable specification fields:
+
+| Field | Description |
+|-------|-------------|
+| `dimension` | Size spec (e.g., 2x4, 1x6) |
+| `length` | Length (e.g., 8ft, 12ft) |
+| `color` | Color option |
+| `wood_species` | Species (e.g., Cedar, Hemlock) |
+| `thickness` | Thickness spec |
+| `finish` | Finish type |
+| `manufacturer` | Brand/manufacturer |
+| `use_type` | Use type classification |
+| `product_type` | Product type |
+| `edge_type` | Edge type |
+| `depth` | Depth measurement |
+| `width` | Width measurement |
+| `diameter` | Diameter (for round products) |
+
+---
+
+## Implementation Approach
+
+### Option A: Fully Dynamic Discovery (Recommended)
+
+The `StepByStepFilter` component will:
+
+1. **On mount**, query the database for field coverage within the filtered product set
+2. **Build a dynamic filter sequence** based on which fields have multiple distinct values
+3. **Order by priority** using a simple ranking (user-facing fields first, technical fields last)
+4. **Present each step** allowing the user to select a value
+
+```text
+Flow Example: Exterior > SIDING
+1. Query discovers: use_type(48), product_type(48), manufacturer(40), finish(42), dimension(48), length(29)
+2. Priority order applied: manufacturer → use_type → product_type → finish → dimension → length
+3. User steps through each filter that has >1 distinct value
 ```
 
-#### 2. Update SECONDARY_DISPLAY_NAMES
+### File Changes
 
-Add entries for Other category and update Exterior to match actual database values:
+**1. `src/types/poWizardV2.ts`**
 
-```typescript
-// Other
-'DECK BOARDS': 'Deck Boards',  // Already exists, reuse
-
-// Exterior Trim - actual database values
-SIDING: 'Siding',
-TRIM: 'Trim Boards',
-'SOFFIT ': 'Soffit',  // Note: trailing space in DB
-'METAL FLASHING': 'Metal Flashing',
-'MOISTURE CONTROL': 'Moisture Control',
-'SIDING ACCESSORIES': 'Siding Accessories',
-```
-
-#### 3. Update All SPEC_PRIORITY to Include Meaningful Filters
+- Remove `SPEC_PRIORITY` (or keep as fallback)
+- Add `FILTERABLE_FIELDS` constant listing all possible filter fields
+- Add `FILTER_PRIORITY` ordering for consistent UX
+- Update `FIELD_LABELS` to include all new fields
 
 ```typescript
-export const SPEC_PRIORITY: Record<string, string[] | Record<string, string[]>> = {
-  // Framing Lumber - fully populated
-  FramingLumber: {
-    default: ['wood_species', 'dimension', 'length'],
-    STUDS: ['dimension', 'length'],
-    DIMENSION: ['dimension', 'length'],
-    WIDES: ['dimension', 'length'],
-    TREATED: ['dimension', 'length'],
-    'POST/TIMBER': ['wood_species', 'dimension', 'length'],
-    'THIN BOARDS': ['dimension', 'length'],
-  },
-  
-  // Hardware - use secondary_category only (specs are sparse)
-  // Leave with minimal filters since only 9/791 have specs
-  Hardware: ['thickness'],
-  
-  // Engineered wood - use available fields
-  Engineered: {
-    default: ['use_type', 'product_type', 'length'],
-    LVL: ['use_type', 'product_type'],
-    LSL: ['use_type', 'product_type'],
-    'I JOISTS': ['use_type', 'product_type'],
-    GLUELAM: ['use_type', 'product_type'],
-    'RIM BOARD': ['use_type', 'product_type'],
-  },
-  
-  // Sheathing
-  Sheathing: ['thickness', 'dimension', 'product_type'],
-  
-  // Exterior trim - user requested sequence
-  Exterior: ['manufacturer', 'use_type', 'product_type'],
-  
-  // Decking products - fully populated
-  Decking: ['manufacturer', 'dimension', 'color', 'length'],
-  
-  // Framing Accessories - very sparse data, use what's available
-  FramingAccessories: ['dimension'],
-  
-  // Drywall
-  Drywall: ['dimension', 'product_type'],
-  
-  // Structural steel
-  Structural: ['dimension', 'product_type', 'thickness'],
-  
-  // Other (cedar/hemlock) - fully populated
-  Other: ['wood_species', 'dimension', 'length'],
+// All possible filterable fields from catalog_items
+export const FILTERABLE_FIELDS = [
+  'manufacturer',
+  'use_type', 
+  'product_type',
+  'wood_species',
+  'dimension',
+  'length',
+  'color',
+  'thickness',
+  'finish',
+  'depth',
+  'width',
+  'edge_type',
+  'diameter',
+] as const;
+
+// Priority order for filter display (higher priority = shown first)
+export const FILTER_PRIORITY: Record<string, number> = {
+  manufacturer: 100,
+  use_type: 90,
+  product_type: 80,
+  wood_species: 70,
+  dimension: 60,
+  length: 50,
+  color: 45,
+  thickness: 40,
+  finish: 35,
+  depth: 30,
+  width: 25,
+  edge_type: 20,
+  diameter: 10,
 };
-```
 
-#### 4. Update VIRTUAL_CATEGORIES.EXTERIOR.secondaryCategories
-
-Match the actual database values:
-
-```typescript
-EXTERIOR: {
-  displayName: 'EXTERIOR TRIM',
-  icon: '🏠',
-  dbCategory: 'Exterior',
-  secondaryCategories: ['SIDING', 'TRIM', 'SOFFIT ', 'METAL FLASHING', 'MOISTURE CONTROL', 'SIDING ACCESSORIES'],
-},
-```
-
-#### 5. Add FIELD_LABELS for new fields
-
-```typescript
+// Updated field labels
 export const FIELD_LABELS: Record<string, string> = {
   dimension: 'Dimension',
   length: 'Length',
@@ -136,76 +121,74 @@ export const FIELD_LABELS: Record<string, string> = {
   thickness: 'Thickness',
   finish: 'Finish',
   manufacturer: 'Manufacturer',
-  use_type: 'Use Type',      // NEW
-  product_type: 'Product Type', // NEW
+  use_type: 'Use Type',
+  product_type: 'Product Type',
+  edge_type: 'Edge Type',
+  depth: 'Depth',
+  width: 'Width',
+  diameter: 'Diameter',
 };
 ```
 
-#### 6. Update SECONDARY_DISPLAY_NAMES for Hardware
+**2. `src/components/po-wizard-v2/StepByStepFilter.tsx`**
 
-Match actual database values (note leading spaces in some):
+- Add `discoverFilterSequence` function that queries the database
+- Replace static `getFilterSequence` call with dynamic discovery
+- Cache the discovered sequence to avoid re-querying on each step
 
 ```typescript
-// Hardware - actual database values
-' ANCHORS ': 'Anchors',
-' ANGLE ': 'Angles',
-' COLUMN HARDWARE ': 'Column Hardware',
-' HANGER ': 'Joist Hangers',
-' HOLD DOWN ': 'Hold Downs',
-' OTHER ': 'Other Hardware',
-' PLATES CONNECTORS AND CLIPS ': 'Plates & Connectors',
-' POST HARDWARE ': 'Post Hardware',
-' TIE & STRAP ': 'Ties & Straps',
+// New function to discover available filters dynamically
+const discoverFilterSequence = async (
+  supplierId: string,
+  category: string,
+  secondaryCategory: string | null
+): Promise<string[]> => {
+  // Query to count non-null values for each filterable field
+  const { data, error } = await supabase
+    .from('catalog_items')
+    .select(FILTERABLE_FIELDS.join(','))
+    .eq('supplier_id', supplierId)
+    .eq('category', category)
+    .match(secondaryCategory ? { secondary_category: secondaryCategory } : {});
+
+  if (error || !data) return [];
+
+  // Count distinct non-null values per field
+  const fieldCounts: Record<string, Set<string>> = {};
+  FILTERABLE_FIELDS.forEach(field => {
+    fieldCounts[field] = new Set();
+  });
+
+  data.forEach(item => {
+    FILTERABLE_FIELDS.forEach(field => {
+      const value = (item as any)[field];
+      if (value) fieldCounts[field].add(value);
+    });
+  });
+
+  // Filter to fields with 2+ distinct values, sort by priority
+  return FILTERABLE_FIELDS
+    .filter(field => fieldCounts[field].size >= 2)
+    .sort((a, b) => (FILTER_PRIORITY[b] || 0) - (FILTER_PRIORITY[a] || 0));
+};
 ```
 
 ---
 
-## Updated Category Grid (10 tiles)
+## Updated Filter Flow
 
 ```text
 Category Grid
-├── FRAMING LUMBER 🪵 (292 items)
-├── HARDWARE 🔩 (791 items)
-├── ENGINEERED WOOD 📐 (72 items)
-├── SHEATHING & PLYWOOD 📦 (23 items)
-├── EXTERIOR TRIM 🏠 (148 items)
-├── DECKING 🏡 (98 items)
-├── FRAMING ACCESSORIES 🔧 (56 items)
-├── DRYWALL 📋 (14 items)
-├── STRUCTURAL STEEL 🏗️ (64 items)
-└── OTHER LUMBER 📦 (142 items)  ← NEW
-```
-
----
-
-## Flow After Update
-
-**Example: Exterior Trim Flow**
-```text
-EXTERIOR TRIM 🏠
-└── [Secondary Category]
-    ├── Siding (48)
-    ├── Trim Boards (38)
-    ├── Soffit (18)
-    ├── Metal Flashing (17)
-    ├── Moisture Control (15)
-    └── Siding Accessories (12)
-        └── [Manufacturer] → HARDIE, etc.
-            └── [Use Type] → FIBER CEMENT, LAP, etc.
-                └── [Product Type] → specific types
-                    └── Product List
-```
-
-**Example: Other Flow**
-```text
-OTHER LUMBER 📦
-└── [Secondary Category]
-    ├── Deck Boards (1)
-    └── General (141)
-        └── [Species] → CEDAR, HEMLOCK
-            └── [Dimension] → 1x4, 1x6, etc.
-                └── [Length] → 8ft, 10ft, etc.
-                    └── Product List
+└── EXTERIOR TRIM 🏠
+    └── [Secondary: SIDING]
+        └── [Dynamic Discovery: finds manufacturer, use_type, product_type, finish, dimension, length]
+            └── Step 1: Manufacturer (HARDIE, LP, ALLURA)
+                └── Step 2: Use Type (LAP, VERTICAL, PANEL)
+                    └── Step 3: Product Type (SIDING, PRIMED SIDING, ...)
+                        └── Step 4: Finish (PRIMED, CEDAR MILL, ...)
+                            └── Step 5: Dimension (5/16"x8-1/4", ...)
+                                └── Step 6: Length (12ft, 16ft)
+                                    └── Product List
 ```
 
 ---
@@ -214,14 +197,32 @@ OTHER LUMBER 📦
 
 | File | Changes |
 |------|---------|
-| `src/types/poWizardV2.ts` | Update VIRTUAL_CATEGORIES, SPEC_PRIORITY, SECONDARY_DISPLAY_NAMES, FIELD_LABELS |
+| `src/types/poWizardV2.ts` | Add `FILTERABLE_FIELDS`, `FILTER_PRIORITY`, update `FIELD_LABELS`, optionally deprecate `SPEC_PRIORITY` |
+| `src/components/po-wizard-v2/StepByStepFilter.tsx` | Add dynamic discovery logic, replace static filter sequence |
 
 ---
 
-## Technical Notes
+## Technical Considerations
 
-1. **Hardware & FramingAccessories** - These categories have very sparse spec data, so filters may show limited options. The step-by-step filter will auto-skip fields with no values available.
+1. **Performance**: The discovery query runs once when entering filter-step mode. Results are cached for the session.
 
-2. **Database trailing spaces** - Some Hardware secondary categories have leading spaces (e.g., " HANGER "). The SECONDARY_DISPLAY_NAMES will need to match these exactly or the picker should trim values before lookup.
+2. **Auto-advance**: If a field has only 1 distinct value, it's auto-selected and skipped (current behavior preserved).
 
-3. **Null secondary categories** - For "Other" category, 141 items have NULL secondary_category. The picker should handle this by showing them as "General" or similar.
+3. **Skip fields with 0 values**: Fields with no data for the current filter set are automatically excluded.
+
+4. **Consistent ordering**: `FILTER_PRIORITY` ensures manufacturer always comes before use_type, etc., for a predictable UX.
+
+5. **Backward compatibility**: The `SPEC_PRIORITY` can be kept as a fallback if dynamic discovery fails.
+
+---
+
+## Example: Engineered > GLUELAM
+
+Database shows:
+- `depth`: 49 items (100%)
+- `width`: 49 items (100%) 
+- `wood_species`: 2 items (4%)
+
+Dynamic discovery would produce: `['depth', 'width', 'wood_species']`
+
+Since wood_species only has 2 items, it would be included as a valid filter step.
