@@ -655,122 +655,6 @@ export type Database = {
           },
         ]
       }
-      estimate_catalog_mapping: {
-        Row: {
-          catalog_item_id: string
-          created_at: string
-          estimate_id: string
-          id: string
-          line_item_id: string
-          project_id: string
-        }
-        Insert: {
-          catalog_item_id: string
-          created_at?: string
-          estimate_id: string
-          id?: string
-          line_item_id: string
-          project_id: string
-        }
-        Update: {
-          catalog_item_id?: string
-          created_at?: string
-          estimate_id?: string
-          id?: string
-          line_item_id?: string
-          project_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "estimate_catalog_mapping_catalog_item_id_fkey"
-            columns: ["catalog_item_id"]
-            isOneToOne: false
-            referencedRelation: "catalog_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "estimate_catalog_mapping_estimate_id_fkey"
-            columns: ["estimate_id"]
-            isOneToOne: false
-            referencedRelation: "supplier_estimates"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "estimate_catalog_mapping_line_item_id_fkey"
-            columns: ["line_item_id"]
-            isOneToOne: false
-            referencedRelation: "estimate_line_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "estimate_catalog_mapping_project_id_fkey"
-            columns: ["project_id"]
-            isOneToOne: false
-            referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      estimate_line_items: {
-        Row: {
-          catalog_item_id: string | null
-          created_at: string
-          description: string
-          estimate_id: string
-          id: string
-          pack_name: string
-          quantity: number | null
-          raw_text_line: string | null
-          sort_order: number
-          status: string
-          uom: string | null
-          updated_at: string
-        }
-        Insert: {
-          catalog_item_id?: string | null
-          created_at?: string
-          description: string
-          estimate_id: string
-          id?: string
-          pack_name?: string
-          quantity?: number | null
-          raw_text_line?: string | null
-          sort_order?: number
-          status?: string
-          uom?: string | null
-          updated_at?: string
-        }
-        Update: {
-          catalog_item_id?: string | null
-          created_at?: string
-          description?: string
-          estimate_id?: string
-          id?: string
-          pack_name?: string
-          quantity?: number | null
-          raw_text_line?: string | null
-          sort_order?: number
-          status?: string
-          uom?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "estimate_line_items_catalog_item_id_fkey"
-            columns: ["catalog_item_id"]
-            isOneToOne: false
-            referencedRelation: "catalog_items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "estimate_line_items_estimate_id_fkey"
-            columns: ["estimate_id"]
-            isOneToOne: false
-            referencedRelation: "supplier_estimates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       estimate_packs: {
         Row: {
           created_at: string
@@ -805,44 +689,6 @@ export type Database = {
             columns: ["estimate_id"]
             isOneToOne: false
             referencedRelation: "project_estimates"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      estimate_pdf_uploads: {
-        Row: {
-          estimate_id: string
-          file_name: string
-          file_path: string
-          file_size: number
-          id: string
-          uploaded_at: string
-          uploaded_by: string
-        }
-        Insert: {
-          estimate_id: string
-          file_name: string
-          file_path: string
-          file_size: number
-          id?: string
-          uploaded_at?: string
-          uploaded_by: string
-        }
-        Update: {
-          estimate_id?: string
-          file_name?: string
-          file_path?: string
-          file_size?: number
-          id?: string
-          uploaded_at?: string
-          uploaded_by?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "estimate_pdf_uploads_estimate_id_fkey"
-            columns: ["estimate_id"]
-            isOneToOne: false
-            referencedRelation: "supplier_estimates"
             referencedColumns: ["id"]
           },
         ]
@@ -2461,8 +2307,6 @@ export type Database = {
           sales_tax_percent: number | null
           sent_at: string | null
           sent_by: string | null
-          source_estimate_id: string | null
-          source_pack_name: string | null
           status: Database["public"]["Enums"]["po_status"]
           submitted_at: string | null
           submitted_by: string | null
@@ -2490,8 +2334,6 @@ export type Database = {
           sales_tax_percent?: number | null
           sent_at?: string | null
           sent_by?: string | null
-          source_estimate_id?: string | null
-          source_pack_name?: string | null
           status?: Database["public"]["Enums"]["po_status"]
           submitted_at?: string | null
           submitted_by?: string | null
@@ -2519,8 +2361,6 @@ export type Database = {
           sales_tax_percent?: number | null
           sent_at?: string | null
           sent_by?: string | null
-          source_estimate_id?: string | null
-          source_pack_name?: string | null
           status?: Database["public"]["Enums"]["po_status"]
           submitted_at?: string | null
           submitted_by?: string | null
@@ -2562,13 +2402,6 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "purchase_orders_source_estimate_id_fkey"
-            columns: ["source_estimate_id"]
-            isOneToOne: false
-            referencedRelation: "supplier_estimates"
             referencedColumns: ["id"]
           },
           {

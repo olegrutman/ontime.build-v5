@@ -24,7 +24,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
   TableBody,
@@ -61,7 +60,6 @@ import {
   ESTIMATE_STATUS_COLORS,
   SupplierEstimateStatus
 } from '@/types/supplierEstimate';
-import { EstimatePDFUpload, EstimateReviewTable, EstimatePackList } from '@/components/estimate';
 
 interface Project {
   id: string;
@@ -75,32 +73,6 @@ interface CSVLineItem {
   uom: string;
   unit_price: number;
   notes: string;
-}
-
-interface PDFUpload {
-  id: string;
-  file_name: string;
-  file_size: number;
-  uploaded_at: string;
-  uploaded_by: string;
-}
-
-interface EstimateLineItem {
-  id: string;
-  estimate_id: string;
-  raw_text_line: string | null;
-  description: string;
-  quantity: number | null;
-  uom: string | null;
-  pack_name: string;
-  status: 'imported' | 'needs_review' | 'matched' | 'unmatched';
-  catalog_item_id: string | null;
-  sort_order: number;
-  catalog_item?: {
-    id: string;
-    description: string;
-    supplier_sku: string | null;
-  } | null;
 }
 
 export default function SupplierProjectEstimates() {
@@ -129,33 +101,11 @@ export default function SupplierProjectEstimates() {
   const [csvPreview, setCsvPreview] = useState<CSVLineItem[]>([]);
   const [showCsvPreview, setShowCsvPreview] = useState(false);
 
-  // PDF upload and line items
-  const [pdfUpload, setPdfUpload] = useState<PDFUpload | null>(null);
-  const [lineItems, setLineItems] = useState<EstimateLineItem[]>([]);
-  const [loadingLineItems, setLoadingLineItems] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>('items');
-
-  // Find supplier org from all roles, not just index 0
-  const supplierRole = userOrgRoles.find(r => r.organization?.type === 'SUPPLIER');
-  const currentOrg = supplierRole?.organization;
-  const isSupplier = !!currentOrg;
-  const rolesLoaded = userOrgRoles.length > 0;
+  const currentOrg = userOrgRoles[0]?.organization;
+  const isSupplier = currentOrg?.type === 'SUPPLIER';
 
   useEffect(() => {
-    // Don't check access until auth is done AND roles are loaded
-    if (authLoading) return;
-    
-    // If no user, redirect to auth
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
-    
-    // Wait for roles to load before denying access
-    if (!rolesLoaded) return;
-    
-    // Now we have roles - check if any is a supplier
-    if (!isSupplier) {
+    if (!authLoading && !isSupplier) {
       toast({
         title: 'Access Denied',
         description: 'This page is only available to Supplier organizations.',
@@ -165,10 +115,11 @@ export default function SupplierProjectEstimates() {
       return;
     }
 
-    // Fetch data when supplier org is confirmed
-    fetchProjects();
-    fetchEstimates();
-  }, [authLoading, user, rolesLoaded, isSupplier, currentOrg]);
+    if (isSupplier && currentOrg) {
+      fetchProjects();
+      fetchEstimates();
+    }
+  }, [authLoading, isSupplier, currentOrg]);
 
   const fetchProjects = async () => {
     // Get projects where this org is a participant
@@ -228,41 +179,6 @@ export default function SupplierProjectEstimates() {
     setLoadingItems(false);
   };
 
-  const fetchPDFUpload = async (estimateId: string) => {
-    const { data, error } = await supabase
-      .from('estimate_pdf_uploads')
-      .select('*')
-      .eq('estimate_id', estimateId)
-      .order('uploaded_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (!error && data) {
-      setPdfUpload(data as PDFUpload);
-    } else {
-      setPdfUpload(null);
-    }
-  };
-
-  const fetchLineItems = async (estimateId: string) => {
-    setLoadingLineItems(true);
-    const { data, error } = await supabase
-      .from('estimate_line_items')
-      .select(`
-        *,
-        catalog_item:catalog_items(id, description, supplier_sku)
-      `)
-      .eq('estimate_id', estimateId)
-      .order('sort_order');
-
-    if (error) {
-      console.error('Error fetching line items:', error);
-    } else {
-      setLineItems((data || []) as unknown as EstimateLineItem[]);
-    }
-    setLoadingLineItems(false);
-  };
-
   const handleCreateEstimate = async () => {
     if (!newEstimateName.trim() || !newEstimateProjectId) {
       toast({ title: 'Error', description: 'Name and project are required', variant: 'destructive' });
@@ -296,66 +212,8 @@ export default function SupplierProjectEstimates() {
 
   const handleOpenEstimate = (estimate: SupplierProjectEstimate) => {
     setSelectedEstimate(estimate);
-    setActiveTab('items');
     fetchEstimateItems(estimate.id);
-    fetchPDFUpload(estimate.id);
-    fetchLineItems(estimate.id);
   };
-
-  const handlePDFUploadComplete = () => {
-    if (selectedEstimate) {
-      fetchPDFUpload(selectedEstimate.id);
-    }
-  };
-
-  const handleParseComplete = (stats: { total_items: number; matched: number; needs_review: number }) => {
-    if (selectedEstimate) {
-      fetchLineItems(selectedEstimate.id);
-      setActiveTab('review');
-    }
-  };
-
-  const handleLineItemsChange = () => {
-    if (selectedEstimate) {
-      fetchLineItems(selectedEstimate.id);
-    }
-  };
-
-  const handleFinalizeEstimate = async () => {
-    if (!selectedEstimate) return;
-    // Update status
-    await supabase
-      .from('supplier_estimates')
-      .update({ status: 'SUBMITTED', submitted_at: new Date().toISOString() })
-      .eq('id', selectedEstimate.id);
-    
-    setSelectedEstimate({ ...selectedEstimate, status: 'SUBMITTED' });
-    fetchEstimates();
-  };
-
-  const handleCreatePOFromPack = (packName: string, packItems: EstimateLineItem[]) => {
-    // TODO: Open POWizardV2 with pack items pre-populated
-    toast({ 
-      title: 'Create PO from Pack', 
-      description: `Would create PO for "${packName}" with ${packItems.length} items` 
-    });
-  };
-
-  // Get supplier ID for the current org
-  const [supplierId, setSupplierId] = useState<string | null>(null);
-  
-  useEffect(() => {
-    const fetchSupplierId = async () => {
-      if (!currentOrg) return;
-      const { data } = await supabase
-        .from('suppliers')
-        .select('id')
-        .eq('organization_id', currentOrg.id)
-        .single();
-      if (data) setSupplierId(data.id);
-    };
-    fetchSupplierId();
-  }, [currentOrg]);
 
   const handleSubmitEstimate = async () => {
     if (!selectedEstimate) return;
@@ -618,7 +476,7 @@ export default function SupplierProjectEstimates() {
 
             {/* Estimate Detail Sheet */}
             <Sheet open={!!selectedEstimate} onOpenChange={() => setSelectedEstimate(null)}>
-              <SheetContent className="w-full sm:max-w-4xl overflow-auto">
+              <SheetContent className="w-full sm:max-w-2xl overflow-auto">
                 <SheetHeader>
                   <SheetTitle>{selectedEstimate?.name}</SheetTitle>
                 </SheetHeader>
@@ -640,165 +498,84 @@ export default function SupplierProjectEstimates() {
                       </p>
                     </div>
 
-                    {/* Tabs for different sections */}
-                    <Tabs value={activeTab} onValueChange={setActiveTab}>
-                      <TabsList className="grid w-full grid-cols-4">
-                        <TabsTrigger value="upload">Upload</TabsTrigger>
-                        <TabsTrigger value="review">Review Items</TabsTrigger>
-                        <TabsTrigger value="packs">Packs</TabsTrigger>
-                        <TabsTrigger value="items">Pricing</TabsTrigger>
-                      </TabsList>
-
-                      {/* Upload Tab - PDF Upload */}
-                      <TabsContent value="upload" className="space-y-4">
-                        <EstimatePDFUpload
-                          estimateId={selectedEstimate.id}
-                          supplierOrgId={selectedEstimate.supplier_org_id}
-                          existingUpload={pdfUpload}
-                          onUploadComplete={handlePDFUploadComplete}
-                          onParseComplete={handleParseComplete}
-                          disabled={selectedEstimate.status !== 'DRAFT'}
+                    {/* Actions */}
+                    {selectedEstimate.status === 'DRAFT' && (
+                      <div className="flex items-center gap-2">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept=".csv"
+                          onChange={handleFileSelect}
+                          className="hidden"
                         />
-                        
-                        {/* Fallback CSV upload */}
-                        {selectedEstimate.status === 'DRAFT' && (
-                          <div className="pt-4 border-t">
-                            <p className="text-sm text-muted-foreground mb-3">
-                              Or upload pricing data via CSV:
-                            </p>
-                            <div className="flex items-center gap-2">
-                              <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept=".csv"
-                                onChange={handleFileSelect}
-                                className="hidden"
-                              />
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => fileInputRef.current?.click()}
-                              >
-                                <Upload className="h-4 w-4 mr-2" />
-                                Upload CSV
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </TabsContent>
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Upload CSV
+                        </Button>
+                        <Button 
+                          size="sm"
+                          onClick={handleSubmitEstimate}
+                          disabled={estimateItems.length === 0}
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          Submit for Review
+                        </Button>
+                      </div>
+                    )}
 
-                      {/* Review Tab - Line Items from PDF */}
-                      <TabsContent value="review" className="space-y-4">
-                        {loadingLineItems ? (
-                          <Skeleton className="h-32 w-full" />
-                        ) : lineItems.length === 0 ? (
-                          <Card>
-                            <CardContent className="flex flex-col items-center justify-center py-8">
-                              <Package className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                              <p className="text-sm text-muted-foreground text-center">
-                                No items parsed yet. Upload a PDF estimate to get started.
-                              </p>
-                            </CardContent>
-                          </Card>
-                        ) : (
-                          <EstimateReviewTable
-                            estimateId={selectedEstimate.id}
-                            supplierOrgId={selectedEstimate.supplier_org_id}
-                            projectId={selectedEstimate.project_id}
-                            items={lineItems}
-                            onItemsChange={handleLineItemsChange}
-                            onFinalize={handleFinalizeEstimate}
-                            disabled={selectedEstimate.status !== 'DRAFT'}
-                          />
-                        )}
-                      </TabsContent>
-
-                      {/* Packs Tab - Create PO from Pack */}
-                      <TabsContent value="packs" className="space-y-4">
-                        {lineItems.length === 0 ? (
-                          <Card>
-                            <CardContent className="flex flex-col items-center justify-center py-8">
-                              <Package className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                              <p className="text-sm text-muted-foreground text-center">
-                                Packs will appear after parsing a PDF estimate.
-                              </p>
-                            </CardContent>
-                          </Card>
-                        ) : (
-                          <EstimatePackList
-                            items={lineItems}
-                            onCreatePO={handleCreatePOFromPack}
-                            disabled={selectedEstimate.status === 'DRAFT'}
-                          />
-                        )}
-                      </TabsContent>
-
-                      {/* Items Tab - Traditional Pricing */}
-                      <TabsContent value="items" className="space-y-4">
-                        {selectedEstimate.status === 'DRAFT' && (
-                          <div className="flex items-center gap-2">
-                            <Button 
-                              size="sm"
-                              onClick={handleSubmitEstimate}
-                              disabled={estimateItems.length === 0 && lineItems.length === 0}
-                            >
-                              <Send className="h-4 w-4 mr-2" />
-                              Submit for Review
-                            </Button>
-                          </div>
-                        )}
-
-                        {/* Line Items */}
-                        {loadingItems ? (
-                          <Skeleton className="h-32 w-full" />
-                        ) : estimateItems.length === 0 ? (
-                          <Card>
-                            <CardContent className="flex flex-col items-center justify-center py-8">
-                              <Package className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                              <p className="text-sm text-muted-foreground">
-                                No pricing items yet. Upload a CSV to add line items with pricing.
-                              </p>
-                            </CardContent>
-                          </Card>
-                        ) : (
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Description</TableHead>
-                                <TableHead className="text-right">Qty</TableHead>
-                                <TableHead>UOM</TableHead>
-                                <TableHead className="text-right">Unit Price</TableHead>
-                                <TableHead className="text-right">Total</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {estimateItems.map((item) => (
-                                <TableRow key={item.id}>
-                                  <TableCell>
-                                    <div>
-                                      <p>{item.description}</p>
-                                      {item.supplier_sku && (
-                                        <p className="text-xs text-muted-foreground font-mono">
-                                          {item.supplier_sku}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </TableCell>
-                                  <TableCell className="text-right">{item.quantity}</TableCell>
-                                  <TableCell>{item.uom}</TableCell>
-                                  <TableCell className="text-right">
-                                    ${item.unit_price.toFixed(2)}
-                                  </TableCell>
-                                  <TableCell className="text-right font-medium">
-                                    ${item.line_total.toFixed(2)}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        )}
-                      </TabsContent>
-                    </Tabs>
+                    {/* Line Items */}
+                    {loadingItems ? (
+                      <Skeleton className="h-32 w-full" />
+                    ) : estimateItems.length === 0 ? (
+                      <Card>
+                        <CardContent className="flex flex-col items-center justify-center py-8">
+                          <Package className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                          <p className="text-sm text-muted-foreground">
+                            No items yet. Upload a CSV to add line items.
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Description</TableHead>
+                            <TableHead className="text-right">Qty</TableHead>
+                            <TableHead>UOM</TableHead>
+                            <TableHead className="text-right">Unit Price</TableHead>
+                            <TableHead className="text-right">Total</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {estimateItems.map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell>
+                                <div>
+                                  <p>{item.description}</p>
+                                  {item.supplier_sku && (
+                                    <p className="text-xs text-muted-foreground font-mono">
+                                      {item.supplier_sku}
+                                    </p>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right">{item.quantity}</TableCell>
+                              <TableCell>{item.uom}</TableCell>
+                              <TableCell className="text-right">
+                                ${item.unit_price.toFixed(2)}
+                              </TableCell>
+                              <TableCell className="text-right font-medium">
+                                ${item.line_total.toFixed(2)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
                   </div>
                 )}
               </SheetContent>
