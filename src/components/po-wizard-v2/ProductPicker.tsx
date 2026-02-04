@@ -459,7 +459,6 @@ export function ProductPicker({
   };
 
   const getTitle = () => {
-  const getTitle = () => {
     // In restricted mode, show a different title
     if (restrictToEstimate) {
       if (step === 'products') return 'Select from Estimate';
