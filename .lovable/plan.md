@@ -1,127 +1,220 @@
 
 
-# Plan: Replace Recent Activity with Purchase Order Summary Card
+# Plan: Simplify Sidebar Navigation and Enhance Partner Directory
 
-## Overview
+## Summary
 
-Replace `ProjectActivitySection` with a new `POSummaryCard` in the "Needs Attention" section, giving users a quick snapshot of Purchase Order status within the project.
-
----
-
-## New Component: `POSummaryCard`
-
-### File: `src/components/project/POSummaryCard.tsx`
-
-Create a new summary card following the same pattern as `WorkOrderSummaryCard` and `InvoiceSummaryCard`:
-
-**Structure:**
-```tsx
-export function POSummaryCard({ projectId }: { projectId: string }) {
-  // Fetches POs for this project
-  // Calculates counts by status
-  // Displays role-aware financial info
-}
-```
-
-**Status Counts (3-column grid):**
-| Column | Label | Meaning |
-|--------|-------|---------|
-| Awaiting | Amber | SUBMITTED (waiting on supplier pricing) |
-| In Transit | Blue | ORDERED + READY_FOR_DELIVERY |
-| Delivered | Green | DELIVERED |
-
-**Role-Specific Financial Display:**
-
-| Role | What They See |
-|------|---------------|
-| Supplier | "Purchase Orders Awaiting Pricing" count only (no totals) |
-| Trade Contractor | Total PO spend, breakdown by status |
-| General Contractor | Total PO cost |
-| Field Crew | PO count only (they don't interact with POs financially) |
-
-**Data Fetched:**
-- All POs for this project (filtered by supplier if user is a supplier)
-- Aggregate line_items totals where unit_price exists
+Streamline the sidebar by removing unused sections and enhance the Partner Directory to show all collaborators from any project, grouped by their role/designation.
 
 ---
 
-## Update Project Index Export
+## What is "Manage Suppliers"?
 
-### File: `src/components/project/index.ts`
+The **Manage Suppliers** page (`/admin/suppliers`) allows users to:
+1. **Create supplier records** - Add suppliers with code, name, and contact info
+2. **Upload product catalogs** - Import CSV files to populate a supplier's catalog items (SKU, category, description, UOM)
+3. **Delete suppliers** - Remove suppliers and their associated catalog items
+4. **View catalog items** - Browse all products for each supplier
 
-Add export for new component:
-```tsx
-export { POSummaryCard } from './POSummaryCard';
+Currently restricted to `GC_PM` only, but will be updated to include `TC_PM` as well.
+
+---
+
+## Current Sidebar Structure
+
+```text
+Navigation
+├── Dashboard
+├── Work Items          ← REMOVE
+└── SOV Dashboard       ← REMOVE
+
+Materials (collapsible) ← REMOVE ENTIRE SECTION
+├── Product Catalog
+├── Material Orders
+├── Purchase Orders
+└── Project Estimates
+
+My Business (Supplier only)
+├── My Inventory
+└── My Estimates
+
+Approvals (GC_PM only)  ← REMOVE ENTIRE SECTION
+├── Estimate Approvals
+└── Order Approvals
+
+Admin (collapsible)
+├── Partner Directory
+└── Manage Suppliers
 ```
 
 ---
 
-## Update Project Overview Layout
+## New Sidebar Structure
 
-### File: `src/pages/ProjectHome.tsx`
+```text
+Navigation
+├── Dashboard
+└── Partners            ← Promoted from Admin
 
-**Import Change:**
-```tsx
-// Remove:
-import { ProjectActivitySection } from '@/components/project';
+My Business (Supplier only - unchanged)
+├── My Inventory
+└── My Estimates
 
-// Add:
-import { POSummaryCard } from '@/components/project';
+Admin (GC_PM and TC_PM only)
+└── Manage Suppliers
 ```
 
-**Layout Change (Lines ~211-215):**
+---
 
-Current:
-```tsx
-<div className="grid gap-4 lg:grid-cols-3">
-  <WorkOrderSummaryCard projectId={id!} />
-  <InvoiceSummaryCard projectId={id!} />
-  <ProjectActivitySection projectId={id!} />
-</div>
+## Technical Changes
+
+### File 1: `src/components/layout/AppSidebar.tsx`
+
+**Changes:**
+
+1. **Remove from `mainNavItems`:**
+   - Work Items (`/work-items`)
+   - SOV Dashboard (`/sov`)
+
+2. **Add to `mainNavItems`:**
+   - Partner Directory (`/partners`) with Handshake icon
+
+3. **Remove entire sections:**
+   - `materialsNavItems` array and its collapsible group
+   - `approvalNavItems` array and its collapsible group
+
+4. **Update `adminNavItems`:**
+   - Keep only "Manage Suppliers"
+   - Show for both `GC_PM` AND `TC_PM` roles
+
+**Updated nav arrays:**
+```typescript
+const mainNavItems = [
+  { title: 'Dashboard', url: '/dashboard', icon: Home },
+  { title: 'Partners', url: '/partners', icon: Handshake },
+];
+
+const adminNavItems = [
+  { title: 'Manage Suppliers', url: '/admin/suppliers', icon: Truck },
+];
+
+// Show admin section for GC_PM or TC_PM
+{(currentRole === 'GC_PM' || currentRole === 'TC_PM') && (
+  <SidebarGroup>
+    ...adminNavItems
+  </SidebarGroup>
+)}
+```
+
+---
+
+### File 2: `src/pages/AdminSuppliers.tsx`
+
+**Update access control to allow TC_PM:**
+
+Current (line 46):
+```typescript
+const isAdmin = currentRole === 'GC_PM';
 ```
 
 Updated:
-```tsx
-<div className="grid gap-4 lg:grid-cols-3">
-  <WorkOrderSummaryCard projectId={id!} />
-  <InvoiceSummaryCard projectId={id!} />
-  <POSummaryCard projectId={id!} />
-</div>
+```typescript
+const isAdmin = currentRole === 'GC_PM' || currentRole === 'TC_PM';
+```
+
+Also update the error message (lines 55-60):
+```typescript
+if (!authLoading && !isAdmin) {
+  toast({
+    variant: 'destructive',
+    title: 'Access Denied',
+    description: 'Only GC and TC managers can manage suppliers.',
+  });
+  navigate('/');
+  return;
+}
 ```
 
 ---
 
-## POSummaryCard Component Details
+### File 3: `src/pages/PartnerDirectory.tsx`
 
-### Visual Layout
+**Complete Redesign - Show All Project Collaborators**
+
+Instead of showing "Trusted Partners" from a manual list, show everyone the user has worked with on any project.
+
+**Data Source:**
+Query `project_team` table to find all organizations that appear on any project where the current user's organization is also a team member.
+
+**Query Logic:**
+```sql
+-- Get all orgs from projects where current user's org is a participant
+SELECT DISTINCT pt2.org_id, o.name, o.org_code, o.type, COUNT(DISTINCT pt1.project_id) as project_count
+FROM project_team pt1
+JOIN project_team pt2 ON pt1.project_id = pt2.project_id
+JOIN organizations o ON o.id = pt2.org_id
+WHERE pt1.org_id = current_user_org_id
+  AND pt2.org_id != current_user_org_id
+  AND pt2.status = 'active'
+GROUP BY pt2.org_id, o.name, o.org_code, o.type
+ORDER BY o.type, project_count DESC
+```
+
+**New UI Structure:**
 
 ```text
-┌─────────────────────────────────────────┐
-│ 📦 Purchase Orders                      │
-├─────────────────────────────────────────┤
-│  [3]        [2]         [5]             │
-│ Awaiting   In Transit  Delivered        │
-├─────────────────────────────────────────┤
-│ PO Spend          $12,450              │
-│ Pending Pricing   $3,200               │
-└─────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│ Partner Directory                                            │
+│ Everyone you've worked with on projects                      │
+├──────────────────────────────────────────────────────────────┤
+│ [Search input: Filter by name or org code...]               │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│ GENERAL CONTRACTORS (2)                                      │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ 🏢 ABC Builders           GC123    3 projects together  │ │
+│ │ 🏢 Metro Construction     MC456    1 project together   │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                              │
+│ TRADE CONTRACTORS (4)                                        │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ 🔧 Elite Framing          EF789    5 projects together  │ │
+│ │ 🔧 Pro Plumbing           PP321    2 projects together  │ │
+│ │ 🔧 Superior Electric      SE654    2 projects together  │ │
+│ │ 🔧 Custom Drywall         CD987    1 project together   │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                              │
+│ FIELD CREWS (1)                                              │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ 👷 Johnson Crew           JC111    3 projects together  │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                              │
+│ SUPPLIERS (3)                                                │
+│ ┌─────────────────────────────────────────────────────────┐ │
+│ │ 📦 Lumber Depot           LD222    4 projects together  │ │
+│ │ 📦 Hardware Supply        HS333    2 projects together  │ │
+│ │ 📦 Steel Source           SS444    1 project together   │ │
+│ └─────────────────────────────────────────────────────────┘ │
+│                                                              │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-### Icon
-Uses `Package` from lucide-react (consistent with PO tab empty state)
+**Grouping Order (by designation):**
+1. General Contractors (GC)
+2. Trade Contractors (TC)
+3. Field Crews (FC)
+4. Suppliers (SUPPLIER)
 
-### Status Mapping
-```tsx
-const awaiting = pos.filter(p => p.status === 'SUBMITTED').length;
-const inTransit = pos.filter(p => ['ORDERED', 'READY_FOR_DELIVERY'].includes(p.status)).length;
-const delivered = pos.filter(p => p.status === 'DELIVERED').length;
-```
+**Each card shows:**
+- Organization icon (based on type)
+- Organization name
+- Org code badge
+- Project count (how many projects worked together)
 
-### Pricing Calculation
-```tsx
-// Sum line_total from po_line_items where priced
-const totalSpend = lineItems.reduce((sum, item) => sum + (item.line_total || 0), 0);
-```
+**Remove from current page:**
+- Manual "Add Partner" search functionality
+- "Trusted Partners" concept
+- The `trusted_partners` table dependency
 
 ---
 
@@ -129,13 +222,29 @@ const totalSpend = lineItems.reduce((sum, item) => sum + (item.line_total || 0),
 
 | File | Change |
 |------|--------|
-| `src/components/project/POSummaryCard.tsx` | **NEW** - Purchase Order summary card |
-| `src/components/project/index.ts` | Add export for POSummaryCard |
-| `src/pages/ProjectHome.tsx` | Replace ProjectActivitySection with POSummaryCard |
+| `src/components/layout/AppSidebar.tsx` | Remove Work Items, SOV Dashboard, Materials section, Approvals section. Add Partners to main nav. Show Admin for GC_PM + TC_PM. |
+| `src/pages/AdminSuppliers.tsx` | Update access control to allow TC_PM in addition to GC_PM |
+| `src/pages/PartnerDirectory.tsx` | Complete redesign to show project collaborators grouped by designation |
 
 ---
 
-## Note: Activity Section Preserved
+## Role-Specific Sidebar Summary
 
-`ProjectActivitySection` is not deleted—it's just removed from the "Needs Attention" grid. It can be added elsewhere later (e.g., at the bottom of the overview or in a dedicated Activity tab).
+| Role | Navigation | Admin |
+|------|------------|-------|
+| **GC_PM** | Dashboard, Partners | Manage Suppliers |
+| **TC_PM** | Dashboard, Partners | Manage Suppliers |
+| **FC_PM** | Dashboard, Partners | - |
+| **FS** | Dashboard, Partners | - |
+| **SUPPLIER** | Dashboard, Partners, My Business | - |
+
+---
+
+## Partner Directory Features
+
+- **Automatic Population**: No manual adding required - shows everyone from shared projects
+- **Grouped by Role**: General Contractors, Trade Contractors, Field Crews, Suppliers
+- **Project Count**: Shows how many projects you've collaborated on together
+- **Search/Filter**: Filter partners by name or org code
+- **Clean UI**: Consistent card design with role-based icons and colors
 
