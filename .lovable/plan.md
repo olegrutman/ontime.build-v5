@@ -1,140 +1,100 @@
 
-# Plan: Fix Product Picker Scrolling on Desktop
+## What I found (why desktop still doesn’t scroll)
 
-## Problem
+On desktop, the Product Picker renders inside a **Radix Dialog**:
 
-The Product Picker has **nested scroll containers** that conflict with each other. The parent container in `ProductPicker.tsx` (line 378) has `overflow-y-auto`, and several child components also have their own `overflow-y-auto` containers. This creates competing scroll contexts where neither works properly.
+- `ProductPicker.tsx` uses `<DialogContent className="... max-h-[85vh] overflow-hidden ...">`
+- The shared `DialogContent` component (`src/components/ui/dialog.tsx`) renders with `display: grid` by default and **does not set an explicit height** (only `max-w-*` etc.)
+- Inside the dialog, the picker content expects a real height so its children can do `h-full` / `flex-1 min-h-0` and then scroll.
 
-### Current Structure (Problematic)
+On desktop, because the dialog container is only `max-height` constrained (not an explicit height) and uses grid layout, **the inner “Products” list never gets a concrete height**, so `overflow-y-auto` has nothing to “overflow” within. Result: “No scroll at all” on the Products screen.
 
-```text
-ProductPicker content wrapper
-├── Header (fixed)
-└── Content area: flex-1 overflow-y-auto  ← SCROLL 1
-    └── ProductList: flex flex-col h-full
-        ├── Search bar (fixed)
-        └── Products: flex-1 overflow-y-auto  ← SCROLL 2 (conflicts!)
-```
+This matches your report: desktop + Products screen + no scrolling despite wheel/touchpad input.
 
-The conflict arises because:
-- Parent has `overflow-y-auto` but contains a child with `h-full`
-- Child also has `overflow-y-auto` creating nested scroll
-- Browser cannot determine which container should scroll
+## Goal
 
-## Solution
-
-**Simplify to single scroll context:** Remove scroll handling from parent and let each child component manage its own scrolling internally.
-
-### Updated Structure
-
-```text
-ProductPicker content wrapper
-├── Header (fixed)
-└── Content area: flex-1 min-h-0  ← NO overflow, just sizing
-    └── ProductList: h-full flex flex-col
-        ├── Search bar (fixed)
-        └── Products: flex-1 overflow-y-auto min-h-0  ← SINGLE scroll
-```
-
-**Key insight:** Using `min-h-0` on flex children allows them to shrink below their content size, enabling proper overflow behavior.
+Make the desktop Product Picker dialog provide a stable height + flex column layout so each step (Categories, Secondary, Filters, Products, Quantity) can reliably scroll inside its own scroll container.
 
 ---
 
-## Files to Modify
+## Implementation approach (desktop-specific, minimal changes)
 
-| File | Change |
-|------|--------|
-| `src/components/po-wizard-v2/ProductPicker.tsx` | Replace `overflow-y-auto` with `min-h-0` on content area |
-| `src/components/po-wizard-v2/ProductList.tsx` | Add `min-h-0` to internal scroll container |
-| `src/components/po-wizard-v2/CategoryGrid.tsx` | Already has scroll - just verify it works |
-| `src/components/po-wizard-v2/SecondaryCategoryList.tsx` | Already has scroll - just verify it works |
-| `src/components/po-wizard-v2/StepByStepFilter.tsx` | Add `min-h-0` to ensure proper sizing |
-| `src/components/po-wizard-v2/QuantityPanel.tsx` | Already has scroll - just verify it works |
+### 1) Fix the desktop Dialog container sizing for ProductPicker
 
----
+**File:** `src/components/po-wizard-v2/ProductPicker.tsx`
 
-## Technical Changes
+Change the desktop `<DialogContent />` className so that:
 
-### 1. `src/components/po-wizard-v2/ProductPicker.tsx`
+- The dialog becomes a **flex column** container (overrides the base `grid`)
+- The dialog has an **explicit height** (not just `max-h`)
+- Children can safely use `h-full` and `min-h-0`
 
-**Line 378 - Remove overflow from parent, add min-h-0:**
+**Proposed className update (conceptual):**
+- Add: `flex flex-col h-[85vh] min-h-0`
+- Keep: `max-w-lg p-0 gap-0 overflow-hidden`
 
-Current:
-```typescript
-<div className="flex-1 overflow-y-auto">
-```
+Why:
+- `h-[85vh]` gives a real height so internal flex children can compute `flex-1` correctly.
+- `flex flex-col` ensures the picker’s header + content area behave predictably.
+- `min-h-0` is the flexbox “allow children to shrink” requirement for overflow containers.
 
-Updated:
-```typescript
-<div className="flex-1 min-h-0">
-```
+### 2) Ensure the picker’s internal root also allows shrinking
 
-This lets the parent size correctly without creating a scroll context, allowing children to handle their own scrolling.
+**File:** `src/components/po-wizard-v2/ProductPicker.tsx`
 
-### 2. `src/components/po-wizard-v2/ProductList.tsx`
-
-**Line 47 - Add min-h-0 to wrapper:**
-
-Current:
-```typescript
+Inside `content`, the root is currently:
+```tsx
 <div className="flex flex-col h-full">
 ```
 
-Updated:
-```typescript
-<div className="flex flex-col h-full min-h-0">
-```
+Update to:
+- `flex flex-col h-full min-h-0`
 
-**Line 85 - Add min-h-0 to scroll container:**
+Why:
+- This prevents the header/content layout from forcing “auto min height” behavior that can block scrolling.
 
-Current:
-```typescript
-<div className="flex-1 overflow-y-auto p-4 space-y-2">
-```
+### 3) Keep “single scroll owner” behavior on each step
 
-Updated:
-```typescript
-<div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-2">
-```
+You already added `min-h-0` and/or `overflow-y-auto` in:
+- `ProductList.tsx` (products list scroll area)
+- `StepByStepFilter.tsx` (options scroll area)
+- `CategoryGrid.tsx`, `SecondaryCategoryList.tsx`, `QuantityPanel.tsx` (wrappers)
 
-### 3. `src/components/po-wizard-v2/StepByStepFilter.tsx`
-
-**Add min-h-0 to main wrapper (around line 78):**
-
-Current:
-```typescript
-<div className="flex flex-col h-full">
-```
-
-Updated:
-```typescript
-<div className="flex flex-col h-full min-h-0">
-```
-
-**Add min-h-0 to options scroll area:**
-
-Ensure the options container has `min-h-0` alongside its scroll class.
+After step (1) & (2), these should begin working consistently on desktop because they’ll finally have a measurable height to overflow within.
 
 ---
 
-## Why This Works
+## Verification checklist (desktop)
 
-1. **`min-h-0`**: In flexbox, children default to `min-height: auto` which prevents shrinking below content size. Adding `min-h-0` allows flex items to shrink, enabling overflow to work correctly.
+On desktop viewport (e.g., 1366×768 and 1920×1080), test the Product Picker in this order:
 
-2. **Single scroll context**: Each component manages its own scroll independently, avoiding conflicts.
+1. Open a project → Purchase Orders tab → open PO Wizard v2 → go to Items → “Add item” (opens Product Picker).
+2. **Categories screen:** if there are many categories, wheel/trackpad scroll works.
+3. **Secondary screen:** wheel/trackpad scroll works.
+4. **Filters screen:** wheel/trackpad scroll works and you can reach the bottom options.
+5. **Products screen (your reported failure):**
+   - Ensure there are enough products (or search results) to exceed the viewport.
+   - Confirm wheel/trackpad scroll moves the list.
+   - Confirm the dialog remains fixed and the background page does not scroll.
+6. **Quantity screen:** confirm notes/controls can be scrolled to bottom.
 
-3. **Consistent pattern**: All picker screens use the same structure: outer wrapper with `h-full min-h-0`, inner scroll area with `flex-1 overflow-y-auto min-h-0`.
+Success criteria:
+- You can reach and click the last visible product card and the last controls in Quantity screen without resizing the window.
+- No “dead scrolling” (wheel events doing nothing) on Products screen.
 
 ---
 
-## Testing
+## If it still fails after this (fallback plan)
 
-After implementation, verify scrolling works on:
+If the dialog still captures wheel events incorrectly, we’ll add an explicit scroll container inside the dialog and route all steps through it:
 
-| Screen | Expected Behavior |
-|--------|-------------------|
-| Category Grid | Scroll if more than 8 categories |
-| Secondary List | Scroll if more than 6 items |
-| Filter Steps | Scroll if many options |
-| Product List | Scroll through 40+ products |
-| Quantity Panel | Scroll on small screens with notes expanded |
+- Add a single `div` wrapper in ProductPicker: `flex-1 min-h-0 overflow-y-auto`
+- Remove per-step `overflow-y-auto` (except where necessary), so there is only one scroll surface.
+
+But we should try the height + flex override first, because it’s the cleanest fix and aligns with your existing per-step scroll design.
+
+---
+
+## Files that will be changed
+
+- `src/components/po-wizard-v2/ProductPicker.tsx` (desktop DialogContent sizing + internal `min-h-0`)
