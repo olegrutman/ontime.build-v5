@@ -109,9 +109,10 @@ export function EstimatePDFUpload({
       } else if (data?.error) {
         toast.error(data.error);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error);
-      toast.error('Failed to upload PDF');
+      const message = error?.message || 'Failed to upload PDF';
+      toast.error(message.includes('policy') ? 'Storage access denied. Check bucket policies.' : message);
     } finally {
       setUploading(false);
       setParsing(false);
