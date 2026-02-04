@@ -203,26 +203,40 @@ export default function ProjectHome() {
 
               {/* Overview Tab */}
               {activeTab === 'overview' && (
-                <div className="space-y-6">
-                  {/* Financial Summary Cards */}
-                  <ProjectFinancialsSectionNew projectId={id!} />
-
-                  {/* Two Column Layout */}
-                  <div className="grid gap-6 lg:grid-cols-2">
-                    {/* Left Column */}
-                    <div className="space-y-6">
+                <div className="space-y-8">
+                  {/* Section 1: Needs Attention - 3 columns on desktop */}
+                  <section>
+                    <h2 className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-wide">
+                      Needs Attention
+                    </h2>
+                    <div className="grid gap-4 lg:grid-cols-3">
                       <WorkOrderSummaryCard projectId={id!} />
                       <InvoiceSummaryCard projectId={id!} />
-                      <ProjectTeamSection projectId={id!} />
-                      <ProjectContractsSection projectId={id!} />
-                    </div>
-
-                    {/* Right Column */}
-                    <div className="space-y-6">
-                      <ProjectScopeSection projectId={id!} projectType={project.project_type} />
                       <ProjectActivitySection projectId={id!} />
                     </div>
-                  </div>
+                  </section>
+
+                  {/* Section 2: Financial Snapshot */}
+                  <section>
+                    <h2 className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-wide">
+                      Financial Snapshot
+                    </h2>
+                    <ProjectFinancialsSectionNew projectId={id!} />
+                  </section>
+
+                  {/* Section 3: Project Details - 2 columns */}
+                  <section>
+                    <h2 className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-wide">
+                      Project Details
+                    </h2>
+                    <div className="grid gap-6 lg:grid-cols-2">
+                      <div className="space-y-6">
+                        <ProjectTeamSection projectId={id!} />
+                        <ProjectContractsSection projectId={id!} />
+                      </div>
+                      <ProjectScopeSection projectId={id!} projectType={project.project_type} />
+                    </div>
+                  </section>
                 </div>
               )}
 
