@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, Package, FileSpreadsheet, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Upload, Package, FileSpreadsheet, AlertCircle, AlertTriangle, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -87,6 +87,7 @@ export default function SupplierInventory() {
   const [uploading, setUploading] = useState(false);
   const [csvPreview, setCsvPreview] = useState<EnhancedCatalogCSVRow[]>([]);
   const [showPreview, setShowPreview] = useState(false);
+  const [xlsxUploading, setXlsxUploading] = useState(false);
 
   const currentOrg = userOrgRoles[0]?.organization;
   const isSupplier = currentOrg?.type === 'SUPPLIER';
@@ -138,16 +139,83 @@ export default function SupplierInventory() {
     setLoading(false);
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result as string;
-      parseCSV(text);
-    };
-    reader.readAsText(file);
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    
+    if (extension === 'xlsx' || extension === 'xls') {
+      await handleExcelUpload(file);
+    } else if (extension === 'csv') {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const text = event.target?.result as string;
+        parseCSV(text);
+      };
+      reader.readAsText(file);
+    } else {
+      toast({ 
+        title: 'Invalid File', 
+        description: 'Please upload a CSV or Excel (.xlsx) file.', 
+        variant: 'destructive' 
+      });
+    }
+  };
+
+  const handleExcelUpload = async (file: File) => {
+    if (!currentOrg) return;
+    
+    setXlsxUploading(true);
+    
+    try {
+      // Ensure supplier record exists
+      const supplierId = await ensureSupplierRecord(currentOrg.id, currentOrg.name);
+      
+      // Read file as base64
+      const arrayBuffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(arrayBuffer);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      const base64 = btoa(binary);
+      
+      // Call edge function
+      const { data, error } = await supabase.functions.invoke('import-inventory', {
+        body: {
+          fileData: base64,
+          supplierId,
+          fileName: file.name,
+        },
+      });
+      
+      if (error) throw error;
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      toast({ 
+        title: 'Import Complete', 
+        description: `${data.insertedCount} items imported successfully${data.duplicatesRemoved > 0 ? ` (${data.duplicatesRemoved} duplicates merged)` : ''}` 
+      });
+      
+      // Refresh catalog
+      fetchCatalogItems();
+    } catch (err: any) {
+      console.error('Excel upload error:', err);
+      toast({ 
+        title: 'Import Failed', 
+        description: err.message || 'Failed to import Excel file', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setXlsxUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const parseCSV = (text: string) => {
@@ -278,16 +346,26 @@ export default function SupplierInventory() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".csv"
+                  accept=".csv,.xlsx,.xls"
                   onChange={handleFileSelect}
                   className="hidden"
                 />
                 <Button
                   variant="outline"
                   onClick={() => fileInputRef.current?.click()}
+                  disabled={xlsxUploading}
                 >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload CSV
+                  {xlsxUploading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Importing...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload CSV/Excel
+                    </>
+                  )}
                 </Button>
               </div>
             </div>
@@ -335,11 +413,11 @@ export default function SupplierInventory() {
               </Card>
             </div>
 
-            {/* CSV Format Help */}
+            {/* File Format Help */}
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                CSV format: SKU, name, description, Main Category, Secondary Category, Manufacture, Dimension, Thickness, Length, Color, Wood Species, Bundle Name, Bundle Count, qtyType
+                Supports Excel (.xlsx) or CSV upload. Excel format: code, name, description, Main Category, Secondary Category, Manufacture, Dimension, Thickness, Length, Color, Wood Species, Bundle Name, Bundle Count, qtyType
               </AlertDescription>
             </Alert>
 

@@ -17,7 +17,7 @@ interface CatalogSearchResult {
   id: string;
   supplier_id: string;
   supplier_sku: string;
-  category: CatalogCategory;
+  category: string; // Keep as string to avoid type conflicts with DB enum
   description: string;
   uom_default: string;
   size_or_spec?: string;
@@ -52,20 +52,16 @@ export function ItemPicker({ onAddItem, onClose }: ItemPickerProps) {
   } | null>(null);
 
   const categoryIcons: Record<CatalogCategory, React.ReactNode> = {
-    Adhesives: <Package className="h-5 w-5" />,
-    Concrete: <Package className="h-5 w-5" />,
     Decking: <Layers className="h-5 w-5" />,
-    Dimensional: <Ruler className="h-5 w-5" />,
+    Drywall: <Package className="h-5 w-5" />,
     Engineered: <Layers className="h-5 w-5" />,
     Exterior: <Package className="h-5 w-5" />,
-    Fasteners: <Package className="h-5 w-5" />,
+    FramingAccessories: <Package className="h-5 w-5" />,
+    FramingLumber: <Ruler className="h-5 w-5" />,
     Hardware: <Hammer className="h-5 w-5" />,
-    Insulation: <Package className="h-5 w-5" />,
-    Interior: <Package className="h-5 w-5" />,
-    Other: <Package className="h-5 w-5" />,
-    Roofing: <Package className="h-5 w-5" />,
     Sheathing: <Package className="h-5 w-5" />,
     Structural: <Layers className="h-5 w-5" />,
+    Other: <Package className="h-5 w-5" />,
   };
 
   const handleCategorySelect = (category: CatalogCategory) => {
@@ -110,7 +106,7 @@ export function ItemPicker({ onAddItem, onClose }: ItemPickerProps) {
   const handleAddToOrder = () => {
     if (!selectedItem) return;
 
-    const isLumber = selectedCategory === 'Dimensional' || selectedCategory === 'Engineered';
+    const isLumber = selectedCategory === 'FramingLumber' || selectedCategory === 'Engineered';
     
     const orderItem: Omit<OrderItem, 'id' | 'order_id' | 'created_at' | 'updated_at'> = {
       catalog_item_id: selectedItem.id,
@@ -259,7 +255,7 @@ export function ItemPicker({ onAddItem, onClose }: ItemPickerProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Lumber calculator for Dimensional/Engineered */}
-              {(selectedCategory === 'Dimensional' || selectedCategory === 'Engineered') ? (
+              {(selectedCategory === 'FramingLumber' || selectedCategory === 'Engineered') ? (
                 <LumberCalculator 
                   category={selectedCategory} 
                   onChange={handleLumberChange}

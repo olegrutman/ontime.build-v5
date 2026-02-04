@@ -88,82 +88,81 @@ export interface VirtualCategory {
 }
 
 export const VIRTUAL_CATEGORIES: Record<string, VirtualCategory> = {
-  LUMBER: {
-    displayName: 'LUMBER',
+  FRAMING_LUMBER: {
+    displayName: 'FRAMING LUMBER',
     icon: '🪵',
-    dbCategory: 'Other',
-    secondaryCategories: ['STUDS', 'DIMENSION', 'TREATED', 'WIDES'],
-  },
-  SIDING: {
-    displayName: 'SIDING & EXTERIOR',
-    icon: '🏠',
-    dbCategory: 'Other',
-    secondaryCategories: ['SIDING', 'SIDING ACCESSORIES', 'TRIM', 'SOFFIT'],
-  },
-  HOUSE_WRAP: {
-    displayName: 'HOUSE WRAP & TAPE',
-    icon: '🧻',
-    dbCategory: 'Other',
-    secondaryCategories: ['MOISTURE CONTROL'],
-  },
-  POST_TIMBER: {
-    displayName: 'POST & TIMBER',
-    icon: '🌲',
-    dbCategory: 'Other',
-    secondaryCategories: ['POST/TIMBER', 'COLUMN'],
-  },
-  SHEATHING: {
-    displayName: 'SHEATHING',
-    icon: '📦',
-    dbCategory: 'Other',
-    secondaryCategories: ['OSB', 'CDX', 'ZIP', 'T&G'],
+    dbCategory: 'FramingLumber',
+    secondaryCategories: ['STUDS', 'DIMENSION', 'WIDES', 'POST/TIMBER', 'TREATED', 'THIN BOARDS'],
   },
   HARDWARE: {
     displayName: 'HARDWARE',
     icon: '🔩',
     dbCategory: 'Hardware',
-    secondaryCategories: [], // All hardware
+    secondaryCategories: [], // All hardware secondaries
   },
   ENGINEERED: {
-    displayName: 'ENGINEERED',
+    displayName: 'ENGINEERED WOOD',
     icon: '📐',
     dbCategory: 'Engineered',
-    secondaryCategories: [], // All engineered
+    secondaryCategories: ['LVL', 'LSL', 'I JOISTS', 'GLUELAM', 'RIM BOARD'],
+  },
+  SHEATHING: {
+    displayName: 'SHEATHING & PLYWOOD',
+    icon: '📦',
+    dbCategory: 'Sheathing',
+    secondaryCategories: ['OSB', 'CDX', 'ZIP', 'T&G', 'FIRE TREATED', 'HARDBOARD', 'SPECIALTY', 'CLIPS'],
+  },
+  EXTERIOR: {
+    displayName: 'EXTERIOR TRIM',
+    icon: '🏠',
+    dbCategory: 'Exterior',
+    secondaryCategories: ['SIDING', 'CORNER TRIM', 'STARTER STRIPS', 'WINDOW/DOOR TRIM'],
   },
   DECKING: {
     displayName: 'DECKING',
     icon: '🏡',
     dbCategory: 'Decking',
-    secondaryCategories: [], // All decking
+    secondaryCategories: ['DECK BOARDS', 'ACCESSORIES', 'POST CAP', 'POST SKIRT'],
+  },
+  FRAMING_ACCESSORIES: {
+    displayName: 'FRAMING ACCESSORIES',
+    icon: '🔧',
+    dbCategory: 'FramingAccessories',
+    secondaryCategories: ['FASTENERS', 'ADHESIVES', 'MOISTURE CONTROL', 'NAILS'],
+  },
+  DRYWALL: {
+    displayName: 'DRYWALL',
+    icon: '📋',
+    dbCategory: 'Drywall',
+    secondaryCategories: ['EXTERIOR DRYWALL', 'INTERIOR DRYWALL', 'SHAFTWALL', 'SHAFTWALL HARDWARE', 'ACCESSORIES'],
+  },
+  STRUCTURAL: {
+    displayName: 'STRUCTURAL STEEL',
+    icon: '🏗️',
+    dbCategory: 'Structural',
+    secondaryCategories: ['COLUMN', 'I-BEAM', 'STEEL ANGLE'],
   },
 };
 
 // Friendly display names for secondary categories
 export const SECONDARY_DISPLAY_NAMES: Record<string, string> = {
-  // Lumber
+  // Framing Lumber
   STUDS: 'Studs',
   DIMENSION: 'Dimension Lumber',
-  TREATED: 'Treated Lumber',
   WIDES: 'Wide Boards',
-  
-  // Siding
-  SIDING: 'Lap Siding & Panels',
-  'SIDING ACCESSORIES': 'Siding Accessories',
-  TRIM: 'Exterior Trim',
-  SOFFIT: 'Soffit',
-  
-  // House Wrap
-  'MOISTURE CONTROL': 'House Wrap & Seam Tape',
-  
-  // Post/Timber
   'POST/TIMBER': 'Posts & Timbers',
-  COLUMN: 'Columns',
+  TREATED: 'Treated Lumber',
+  'THIN BOARDS': 'Thin Boards (1x)',
   
-  // Sheathing
-  OSB: 'OSB Sheathing',
-  CDX: 'CDX Plywood',
-  ZIP: 'ZIP System',
-  'T&G': 'Tongue & Groove',
+  // Hardware
+  HANGER: 'Joist Hangers',
+  'TIE & STRAP': 'Ties & Straps',
+  ANCHORS: 'Anchors',
+  'POST HARDWARE': 'Post Hardware',
+  'COLUMN HARDWARE': 'Column Hardware',
+  'HOLD DOWN': 'Hold Downs',
+  ANGLE: 'Angles',
+  'PLATES CONNECTORS AND CLIPS': 'Plates & Connectors',
   
   // Engineered
   LVL: 'LVL Headers & Beams',
@@ -172,16 +171,44 @@ export const SECONDARY_DISPLAY_NAMES: Record<string, string> = {
   GLUELAM: 'Glulam Beams',
   'RIM BOARD': 'Rim Board',
   
-  // Hardware
-  HANGER: 'Joist Hangers',
-  'TIE & STRAP': 'Ties & Straps',
-  ANCHORS: 'Anchors',
-  'POST HARDWARE': 'Post Hardware',
+  // Sheathing
+  OSB: 'OSB Sheathing',
+  CDX: 'CDX Plywood',
+  ZIP: 'ZIP System',
+  'T&G': 'Tongue & Groove',
+  'FIRE TREATED': 'Fire Treated',
+  HARDBOARD: 'Hardboard',
+  SPECIALTY: 'Specialty',
+  CLIPS: 'Sheathing Clips',
+  
+  // Exterior Trim
+  SIDING: 'Siding',
+  'CORNER TRIM': 'Corner Trim',
+  'STARTER STRIPS': 'Starter Strips',
+  'WINDOW/DOOR TRIM': 'Window/Door Trim',
   
   // Decking
   'DECK BOARDS': 'Deck Boards',
   ACCESSORIES: 'Accessories',
   'POST CAP': 'Post Caps',
+  'POST SKIRT': 'Post Skirts',
+  
+  // Framing Accessories
+  FASTENERS: 'Fasteners',
+  ADHESIVES: 'Adhesives',
+  'MOISTURE CONTROL': 'Moisture Control',
+  NAILS: 'Nails',
+  
+  // Drywall
+  'EXTERIOR DRYWALL': 'Exterior Drywall',
+  'INTERIOR DRYWALL': 'Interior Drywall',
+  SHAFTWALL: 'Shaftwall',
+  'SHAFTWALL HARDWARE': 'Shaftwall Hardware',
+  
+  // Structural Steel
+  COLUMN: 'Columns',
+  'I-BEAM': 'I-Beams',
+  'STEEL ANGLE': 'Steel Angles',
 };
 
 export const INITIAL_PO_WIZARD_V2_DATA: POWizardV2Data = {
@@ -223,31 +250,19 @@ export const FIELD_LABELS: Record<string, string> = {
 
 // Spec filter priority by category - supports secondary-specific sequences
 export const SPEC_PRIORITY: Record<string, string[] | Record<string, string[]>> = {
-  // Decking products
-  Decking: ['dimension', 'color', 'length', 'manufacturer'],
-  
-  // Lumber - dimension-based (legacy)
-  Dimensional: ['dimension', 'length', 'wood_species'],
-  
-  // Other category - depends heavily on secondary
-  Other: {
+  // Framing Lumber - dimension-based
+  FramingLumber: {
     default: ['dimension', 'length'],
     STUDS: ['dimension', 'length'],
     DIMENSION: ['dimension', 'length'],
-    TREATED: ['dimension', 'length'],
     WIDES: ['dimension', 'length'],
-    'POST/TIMBER': ['wood_species', 'dimension', 'length'], // Species FIRST
-    COLUMN: ['wood_species', 'dimension', 'length'],
-    SIDING: ['manufacturer', 'dimension'],
-    'SIDING ACCESSORIES': ['manufacturer'],
-    TRIM: ['dimension', 'length'],
-    SOFFIT: ['dimension'],
-    'MOISTURE CONTROL': ['manufacturer', 'dimension'], // Tyvek/Dow/Barricade
-    OSB: ['thickness', 'dimension'],
-    CDX: ['thickness', 'dimension'],
-    ZIP: ['thickness', 'dimension'],
-    'T&G': ['thickness', 'dimension'],
+    TREATED: ['dimension', 'length'],
+    'POST/TIMBER': ['wood_species', 'dimension', 'length'],
+    'THIN BOARDS': ['dimension', 'length'],
   },
+  
+  // Hardware - skip filters, go directly to products
+  Hardware: [],
   
   // Engineered wood
   Engineered: {
@@ -259,17 +274,28 @@ export const SPEC_PRIORITY: Record<string, string[] | Record<string, string[]>> 
     'RIM BOARD': ['dimension'],
   },
   
-  // Hardware - skip directly to products (no specs to filter)
-  Hardware: [],
-  
-  // Exterior trim
-  Exterior: ['dimension', 'finish', 'manufacturer'],
-  
   // Sheathing
   Sheathing: ['thickness', 'dimension'],
   
-  // Structural steel - skip to products
+  // Exterior trim
+  Exterior: ['manufacturer', 'dimension', 'color'],
+  
+  // Decking products
+  Decking: ['dimension', 'color', 'length', 'manufacturer'],
+  
+  // Framing Accessories - skip filters
+  FramingAccessories: [],
+  
+  // Drywall
+  Drywall: ['thickness', 'dimension'],
+  
+  // Structural steel - skip filters
   Structural: [],
+  
+  // Other/legacy
+  Other: {
+    default: ['dimension', 'length'],
+  },
 };
 
 // Helper function to get filter sequence based on category and secondary
