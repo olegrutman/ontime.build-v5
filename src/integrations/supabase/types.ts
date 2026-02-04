@@ -3900,6 +3900,9 @@ export type Database = {
         | "Adhesives"
         | "Insulation"
         | "Concrete"
+        | "FramingLumber"
+        | "Drywall"
+        | "FramingAccessories"
       estimate_status: "DRAFT" | "SUBMITTED" | "APPROVED" | "REJECTED"
       notification_type:
         | "PROJECT_INVITE"
@@ -4074,6 +4077,9 @@ export const Constants = {
         "Adhesives",
         "Insulation",
         "Concrete",
+        "FramingLumber",
+        "Drywall",
+        "FramingAccessories",
       ],
       estimate_status: ["DRAFT", "SUBMITTED", "APPROVED", "REJECTED"],
       notification_type: [
