@@ -15,13 +15,13 @@ import {
   ProjectTeamSection, 
   ProjectScopeSection, 
   ProjectContractsSection, 
-  ProjectActivitySection,
   ProjectFinancialsSectionNew,
   ProjectTopBar,
   WorkOrderSummaryCard,
   WorkOrdersTab,
   InvoiceSummaryCard,
-  PurchaseOrdersTab
+  PurchaseOrdersTab,
+  POSummaryCard
 } from '@/components/project';
 import { InvoicesTab } from '@/components/invoices';
 import { ContractSOVEditor } from '@/components/sov';
@@ -212,7 +212,7 @@ export default function ProjectHome() {
                     <div className="grid gap-4 lg:grid-cols-3">
                       <WorkOrderSummaryCard projectId={id!} />
                       <InvoiceSummaryCard projectId={id!} />
-                      <ProjectActivitySection projectId={id!} />
+                      <POSummaryCard projectId={id!} />
                     </div>
                   </section>
 
