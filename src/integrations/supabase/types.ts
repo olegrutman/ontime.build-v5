@@ -22,11 +22,16 @@ export type Database = {
           category: Database["public"]["Enums"]["catalog_category"]
           color: string | null
           created_at: string
+          depth: string | null
           description: string
+          diameter: string | null
           dimension: string | null
+          edge_type: string | null
           finish: string | null
           id: string
           length: string | null
+          length_increment: number | null
+          length_unit: string | null
           manufacturer: string | null
           max_length: number | null
           min_length: number | null
@@ -42,6 +47,7 @@ export type Database = {
           uom_default: string
           updated_at: string
           use_type: string | null
+          width: string | null
           wood_species: string | null
         }
         Insert: {
@@ -51,11 +57,16 @@ export type Database = {
           category?: Database["public"]["Enums"]["catalog_category"]
           color?: string | null
           created_at?: string
+          depth?: string | null
           description: string
+          diameter?: string | null
           dimension?: string | null
+          edge_type?: string | null
           finish?: string | null
           id?: string
           length?: string | null
+          length_increment?: number | null
+          length_unit?: string | null
           manufacturer?: string | null
           max_length?: number | null
           min_length?: number | null
@@ -71,6 +82,7 @@ export type Database = {
           uom_default?: string
           updated_at?: string
           use_type?: string | null
+          width?: string | null
           wood_species?: string | null
         }
         Update: {
@@ -80,11 +92,16 @@ export type Database = {
           category?: Database["public"]["Enums"]["catalog_category"]
           color?: string | null
           created_at?: string
+          depth?: string | null
           description?: string
+          diameter?: string | null
           dimension?: string | null
+          edge_type?: string | null
           finish?: string | null
           id?: string
           length?: string | null
+          length_increment?: number | null
+          length_unit?: string | null
           manufacturer?: string | null
           max_length?: number | null
           min_length?: number | null
@@ -100,6 +117,7 @@ export type Database = {
           uom_default?: string
           updated_at?: string
           use_type?: string | null
+          width?: string | null
           wood_species?: string | null
         }
         Relationships: [
