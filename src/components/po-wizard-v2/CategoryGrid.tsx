@@ -31,7 +31,7 @@ export function CategoryGrid({ categories, loading, onSelect }: CategoryGridProp
   }
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto min-h-0">
       <div className="grid grid-cols-2 gap-3 p-4">
         {categories.map(category => (
           <button

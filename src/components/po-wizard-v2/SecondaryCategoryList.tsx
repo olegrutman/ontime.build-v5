@@ -32,7 +32,7 @@ export function SecondaryCategoryList({ categories, loading, onSelect }: Seconda
   }
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto min-h-0">
       <div className="p-4 space-y-2">
         {categories.map(category => {
           const displayName = SECONDARY_DISPLAY_NAMES[category.secondary_category] || category.secondary_category;

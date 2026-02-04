@@ -255,7 +255,7 @@ export function StepByStepFilter({
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       {/* Header with breadcrumb and current filter label */}
       <div className="px-4 py-3 bg-muted/50 border-b">
         <p className="text-sm text-muted-foreground truncate">
@@ -274,7 +274,7 @@ export function StepByStepFilter({
       </div>
 
       {/* Filter options */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-2">
         {availableValues.length === 0 ? (
           <p className="text-center text-muted-foreground py-8">
             No options available. Tap below to view products.

@@ -128,7 +128,7 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem }
   const decrementQty = () => setQuantity(q => Math.max(1, q - 1));
 
   return (
-    <div className="h-full overflow-y-auto">
+    <div className="h-full overflow-y-auto min-h-0">
       <div className="p-4 space-y-4">
       {/* Product Summary */}
       <Card className="bg-muted/30">
