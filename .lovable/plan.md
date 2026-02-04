@@ -1,100 +1,204 @@
 
-## What I found (why desktop still doesn’t scroll)
 
-On desktop, the Product Picker renders inside a **Radix Dialog**:
+# Plan: Reorganize Project Overview Layout
 
-- `ProductPicker.tsx` uses `<DialogContent className="... max-h-[85vh] overflow-hidden ...">`
-- The shared `DialogContent` component (`src/components/ui/dialog.tsx`) renders with `display: grid` by default and **does not set an explicit height** (only `max-w-*` etc.)
-- Inside the dialog, the picker content expects a real height so its children can do `h-full` / `flex-1 min-h-0` and then scroll.
+## Current State Analysis
 
-On desktop, because the dialog container is only `max-height` constrained (not an explicit height) and uses grid layout, **the inner “Products” list never gets a concrete height**, so `overflow-y-auto` has nothing to “overflow” within. Result: “No scroll at all” on the Products screen.
+The Project Overview tab currently has a **two-column layout** with sections scattered between operational data and project information:
 
-This matches your report: desktop + Products screen + no scrolling despite wheel/touchpad input.
-
-## Goal
-
-Make the desktop Product Picker dialog provide a stable height + flex column layout so each step (Categories, Secondary, Filters, Products, Quantity) can reliably scroll inside its own scroll container.
-
----
-
-## Implementation approach (desktop-specific, minimal changes)
-
-### 1) Fix the desktop Dialog container sizing for ProductPicker
-
-**File:** `src/components/po-wizard-v2/ProductPicker.tsx`
-
-Change the desktop `<DialogContent />` className so that:
-
-- The dialog becomes a **flex column** container (overrides the base `grid`)
-- The dialog has an **explicit height** (not just `max-h`)
-- Children can safely use `h-full` and `min-h-0`
-
-**Proposed className update (conceptual):**
-- Add: `flex flex-col h-[85vh] min-h-0`
-- Keep: `max-w-lg p-0 gap-0 overflow-hidden`
-
-Why:
-- `h-[85vh]` gives a real height so internal flex children can compute `flex-1` correctly.
-- `flex flex-col` ensures the picker’s header + content area behave predictably.
-- `min-h-0` is the flexbox “allow children to shrink” requirement for overflow containers.
-
-### 2) Ensure the picker’s internal root also allows shrinking
-
-**File:** `src/components/po-wizard-v2/ProductPicker.tsx`
-
-Inside `content`, the root is currently:
-```tsx
-<div className="flex flex-col h-full">
+```text
+┌──────────────────────────────────────────────────────────────┐
+│                Financial Summary Cards (full width)          │
+├─────────────────────────────┬────────────────────────────────┤
+│    LEFT COLUMN              │    RIGHT COLUMN                │
+│  - Work Order Summary       │  - Scope & Project Details     │
+│  - Invoice Summary          │  - Recent Activity             │
+│  - Project Team             │                                │
+│  - Contract Summary         │                                │
+└─────────────────────────────┴────────────────────────────────┘
 ```
 
-Update to:
-- `flex flex-col h-full min-h-0`
-
-Why:
-- This prevents the header/content layout from forcing “auto min height” behavior that can block scrolling.
-
-### 3) Keep “single scroll owner” behavior on each step
-
-You already added `min-h-0` and/or `overflow-y-auto` in:
-- `ProductList.tsx` (products list scroll area)
-- `StepByStepFilter.tsx` (options scroll area)
-- `CategoryGrid.tsx`, `SecondaryCategoryList.tsx`, `QuantityPanel.tsx` (wrappers)
-
-After step (1) & (2), these should begin working consistently on desktop because they’ll finally have a measurable height to overflow within.
+**Problem:** Project information (Team, Contracts, Scope) is mixed with operational summaries (Work Orders, Invoices), making it harder to find "project details" vs "what needs attention."
 
 ---
 
-## Verification checklist (desktop)
+## Proposed Layout
 
-On desktop viewport (e.g., 1366×768 and 1920×1080), test the Product Picker in this order:
+Reorganize into three logical sections that answer distinct questions:
 
-1. Open a project → Purchase Orders tab → open PO Wizard v2 → go to Items → “Add item” (opens Product Picker).
-2. **Categories screen:** if there are many categories, wheel/trackpad scroll works.
-3. **Secondary screen:** wheel/trackpad scroll works.
-4. **Filters screen:** wheel/trackpad scroll works and you can reach the bottom options.
-5. **Products screen (your reported failure):**
-   - Ensure there are enough products (or search results) to exceed the viewport.
-   - Confirm wheel/trackpad scroll moves the list.
-   - Confirm the dialog remains fixed and the background page does not scroll.
-6. **Quantity screen:** confirm notes/controls can be scrolled to bottom.
+### Section 1: "Needs Attention" (Top Priority)
+What requires action right now?
 
-Success criteria:
-- You can reach and click the last visible product card and the last controls in Quantity screen without resizing the window.
-- No “dead scrolling” (wheel events doing nothing) on Products screen.
+### Section 2: "Financial Snapshot"  
+Where does the money stand?
+
+### Section 3: "Project Details" (Collapsible)
+Who's involved and what's the scope?
 
 ---
 
-## If it still fails after this (fallback plan)
+## New Layout Structure
 
-If the dialog still captures wheel events incorrectly, we’ll add an explicit scroll container inside the dialog and route all steps through it:
-
-- Add a single `div` wrapper in ProductPicker: `flex-1 min-h-0 overflow-y-auto`
-- Remove per-step `overflow-y-auto` (except where necessary), so there is only one scroll surface.
-
-But we should try the height + flex override first, because it’s the cleanest fix and aligns with your existing per-step scroll design.
+```text
+┌──────────────────────────────────────────────────────────────┐
+│                    NEEDS ATTENTION                           │
+│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐  │
+│  │ Work Orders    │  │ Invoices       │  │ Recent Activity│  │
+│  │ Summary        │  │ Summary        │  │                │  │
+│  └────────────────┘  └────────────────┘  └────────────────┘  │
+├──────────────────────────────────────────────────────────────┤
+│                  FINANCIAL SNAPSHOT                          │
+│         (ProjectFinancialsSectionNew - existing)             │
+├──────────────────────────────────────────────────────────────┤
+│                   PROJECT DETAILS                            │
+│  ┌─────────────────────────────┬─────────────────────────────┤
+│  │  Team & Contracts           │   Scope & Structure         │
+│  │  (Team Section)             │   (Scope Section)           │
+│  │  (Contract Summary)         │                             │
+│  └─────────────────────────────┴─────────────────────────────┘
+└──────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-## Files that will be changed
+## Desktop Layout (lg screens)
 
-- `src/components/po-wizard-v2/ProductPicker.tsx` (desktop DialogContent sizing + internal `min-h-0`)
+```text
+ROW 1: 3-column grid for "Needs Attention"
+  [Work Orders]  [Invoices]  [Activity]
+
+ROW 2: Full width Financial Cards
+
+ROW 3: 2-column grid for "Project Details"
+  [Team + Contracts stacked]  [Scope]
+```
+
+---
+
+## Mobile Layout (stacked)
+
+All sections stack vertically with logical ordering:
+1. Alert banner (if pending approvals)
+2. Work Order Summary
+3. Invoice Summary  
+4. Financial Snapshot
+5. Team (collapsible)
+6. Contracts (collapsible)
+7. Scope (collapsible)
+8. Activity
+
+---
+
+## Technical Changes
+
+### File: `src/pages/ProjectHome.tsx`
+
+**Lines 204-227** - Reorganize the Overview tab content:
+
+Current structure:
+```tsx
+{activeTab === 'overview' && (
+  <div className="space-y-6">
+    <ProjectFinancialsSectionNew projectId={id!} />
+    <div className="grid gap-6 lg:grid-cols-2">
+      <div className="space-y-6">
+        <WorkOrderSummaryCard ... />
+        <InvoiceSummaryCard ... />
+        <ProjectTeamSection ... />
+        <ProjectContractsSection ... />
+      </div>
+      <div className="space-y-6">
+        <ProjectScopeSection ... />
+        <ProjectActivitySection ... />
+      </div>
+    </div>
+  </div>
+)}
+```
+
+New structure:
+```tsx
+{activeTab === 'overview' && (
+  <div className="space-y-8">
+    {/* Section 1: Needs Attention - 3 columns on desktop */}
+    <section>
+      <h2 className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-wide">
+        Needs Attention
+      </h2>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <WorkOrderSummaryCard projectId={id!} />
+        <InvoiceSummaryCard projectId={id!} />
+        <ProjectActivitySection projectId={id!} />
+      </div>
+    </section>
+
+    {/* Section 2: Financial Snapshot */}
+    <section>
+      <h2 className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-wide">
+        Financial Snapshot
+      </h2>
+      <ProjectFinancialsSectionNew projectId={id!} />
+    </section>
+
+    {/* Section 3: Project Details - 2 columns */}
+    <section>
+      <h2 className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-wide">
+        Project Details
+      </h2>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
+          <ProjectTeamSection projectId={id!} />
+          <ProjectContractsSection projectId={id!} />
+        </div>
+        <ProjectScopeSection projectId={id!} projectType={project.project_type} />
+      </div>
+    </section>
+  </div>
+)}
+```
+
+---
+
+## Additional Enhancements
+
+### Add Section Headers with Icons
+
+Each section gets a clear header label to improve scannability:
+
+| Section | Label | Icon (optional) |
+|---------|-------|-----------------|
+| Row 1 | "Needs Attention" | AlertTriangle or none |
+| Row 2 | "Financial Snapshot" | DollarSign or none |
+| Row 3 | "Project Details" | Building2 or none |
+
+### Consistent Card Heights
+
+The "Needs Attention" cards (Work Orders, Invoices, Activity) will be in a 3-column grid, ensuring visual alignment.
+
+### Keep Collapsible Behavior
+
+Team, Contracts, and Scope sections already have collapsible behavior - this is preserved.
+
+---
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| `src/pages/ProjectHome.tsx` | Reorganize Overview tab into 3 logical sections |
+
+---
+
+## Visual Comparison
+
+**Before:**
+- Financial cards at top
+- Mixed operational + project info in 2 columns
+
+**After:**
+- "Needs Attention" (Work Orders, Invoices, Activity) at top - 3 columns
+- Financial snapshot below
+- "Project Details" (Team, Contracts, Scope) grouped together - 2 columns
+
+This reorganization answers the user's request to make **Contracts, Team, and Project Details** more prominent and logically grouped, while keeping operational summaries at the top for quick action.
+
