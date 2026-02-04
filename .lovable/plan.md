@@ -1,183 +1,127 @@
 
 
-# Plan: Reorganize Project Overview Layout
+# Plan: Replace Recent Activity with Purchase Order Summary Card
 
-## Current State Analysis
+## Overview
 
-The Project Overview tab currently has a **two-column layout** with sections scattered between operational data and project information:
+Replace `ProjectActivitySection` with a new `POSummaryCard` in the "Needs Attention" section, giving users a quick snapshot of Purchase Order status within the project.
 
-```text
-┌──────────────────────────────────────────────────────────────┐
-│                Financial Summary Cards (full width)          │
-├─────────────────────────────┬────────────────────────────────┤
-│    LEFT COLUMN              │    RIGHT COLUMN                │
-│  - Work Order Summary       │  - Scope & Project Details     │
-│  - Invoice Summary          │  - Recent Activity             │
-│  - Project Team             │                                │
-│  - Contract Summary         │                                │
-└─────────────────────────────┴────────────────────────────────┘
+---
+
+## New Component: `POSummaryCard`
+
+### File: `src/components/project/POSummaryCard.tsx`
+
+Create a new summary card following the same pattern as `WorkOrderSummaryCard` and `InvoiceSummaryCard`:
+
+**Structure:**
+```tsx
+export function POSummaryCard({ projectId }: { projectId: string }) {
+  // Fetches POs for this project
+  // Calculates counts by status
+  // Displays role-aware financial info
+}
 ```
 
-**Problem:** Project information (Team, Contracts, Scope) is mixed with operational summaries (Work Orders, Invoices), making it harder to find "project details" vs "what needs attention."
+**Status Counts (3-column grid):**
+| Column | Label | Meaning |
+|--------|-------|---------|
+| Awaiting | Amber | SUBMITTED (waiting on supplier pricing) |
+| In Transit | Blue | ORDERED + READY_FOR_DELIVERY |
+| Delivered | Green | DELIVERED |
+
+**Role-Specific Financial Display:**
+
+| Role | What They See |
+|------|---------------|
+| Supplier | "Purchase Orders Awaiting Pricing" count only (no totals) |
+| Trade Contractor | Total PO spend, breakdown by status |
+| General Contractor | Total PO cost |
+| Field Crew | PO count only (they don't interact with POs financially) |
+
+**Data Fetched:**
+- All POs for this project (filtered by supplier if user is a supplier)
+- Aggregate line_items totals where unit_price exists
 
 ---
 
-## Proposed Layout
+## Update Project Index Export
 
-Reorganize into three logical sections that answer distinct questions:
+### File: `src/components/project/index.ts`
 
-### Section 1: "Needs Attention" (Top Priority)
-What requires action right now?
-
-### Section 2: "Financial Snapshot"  
-Where does the money stand?
-
-### Section 3: "Project Details" (Collapsible)
-Who's involved and what's the scope?
-
----
-
-## New Layout Structure
-
-```text
-┌──────────────────────────────────────────────────────────────┐
-│                    NEEDS ATTENTION                           │
-│  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐  │
-│  │ Work Orders    │  │ Invoices       │  │ Recent Activity│  │
-│  │ Summary        │  │ Summary        │  │                │  │
-│  └────────────────┘  └────────────────┘  └────────────────┘  │
-├──────────────────────────────────────────────────────────────┤
-│                  FINANCIAL SNAPSHOT                          │
-│         (ProjectFinancialsSectionNew - existing)             │
-├──────────────────────────────────────────────────────────────┤
-│                   PROJECT DETAILS                            │
-│  ┌─────────────────────────────┬─────────────────────────────┤
-│  │  Team & Contracts           │   Scope & Structure         │
-│  │  (Team Section)             │   (Scope Section)           │
-│  │  (Contract Summary)         │                             │
-│  └─────────────────────────────┴─────────────────────────────┘
-└──────────────────────────────────────────────────────────────┘
+Add export for new component:
+```tsx
+export { POSummaryCard } from './POSummaryCard';
 ```
 
 ---
 
-## Desktop Layout (lg screens)
-
-```text
-ROW 1: 3-column grid for "Needs Attention"
-  [Work Orders]  [Invoices]  [Activity]
-
-ROW 2: Full width Financial Cards
-
-ROW 3: 2-column grid for "Project Details"
-  [Team + Contracts stacked]  [Scope]
-```
-
----
-
-## Mobile Layout (stacked)
-
-All sections stack vertically with logical ordering:
-1. Alert banner (if pending approvals)
-2. Work Order Summary
-3. Invoice Summary  
-4. Financial Snapshot
-5. Team (collapsible)
-6. Contracts (collapsible)
-7. Scope (collapsible)
-8. Activity
-
----
-
-## Technical Changes
+## Update Project Overview Layout
 
 ### File: `src/pages/ProjectHome.tsx`
 
-**Lines 204-227** - Reorganize the Overview tab content:
-
-Current structure:
+**Import Change:**
 ```tsx
-{activeTab === 'overview' && (
-  <div className="space-y-6">
-    <ProjectFinancialsSectionNew projectId={id!} />
-    <div className="grid gap-6 lg:grid-cols-2">
-      <div className="space-y-6">
-        <WorkOrderSummaryCard ... />
-        <InvoiceSummaryCard ... />
-        <ProjectTeamSection ... />
-        <ProjectContractsSection ... />
-      </div>
-      <div className="space-y-6">
-        <ProjectScopeSection ... />
-        <ProjectActivitySection ... />
-      </div>
-    </div>
-  </div>
-)}
+// Remove:
+import { ProjectActivitySection } from '@/components/project';
+
+// Add:
+import { POSummaryCard } from '@/components/project';
 ```
 
-New structure:
+**Layout Change (Lines ~211-215):**
+
+Current:
 ```tsx
-{activeTab === 'overview' && (
-  <div className="space-y-8">
-    {/* Section 1: Needs Attention - 3 columns on desktop */}
-    <section>
-      <h2 className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-wide">
-        Needs Attention
-      </h2>
-      <div className="grid gap-4 lg:grid-cols-3">
-        <WorkOrderSummaryCard projectId={id!} />
-        <InvoiceSummaryCard projectId={id!} />
-        <ProjectActivitySection projectId={id!} />
-      </div>
-    </section>
+<div className="grid gap-4 lg:grid-cols-3">
+  <WorkOrderSummaryCard projectId={id!} />
+  <InvoiceSummaryCard projectId={id!} />
+  <ProjectActivitySection projectId={id!} />
+</div>
+```
 
-    {/* Section 2: Financial Snapshot */}
-    <section>
-      <h2 className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-wide">
-        Financial Snapshot
-      </h2>
-      <ProjectFinancialsSectionNew projectId={id!} />
-    </section>
-
-    {/* Section 3: Project Details - 2 columns */}
-    <section>
-      <h2 className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-wide">
-        Project Details
-      </h2>
-      <div className="grid gap-6 lg:grid-cols-2">
-        <div className="space-y-6">
-          <ProjectTeamSection projectId={id!} />
-          <ProjectContractsSection projectId={id!} />
-        </div>
-        <ProjectScopeSection projectId={id!} projectType={project.project_type} />
-      </div>
-    </section>
-  </div>
-)}
+Updated:
+```tsx
+<div className="grid gap-4 lg:grid-cols-3">
+  <WorkOrderSummaryCard projectId={id!} />
+  <InvoiceSummaryCard projectId={id!} />
+  <POSummaryCard projectId={id!} />
+</div>
 ```
 
 ---
 
-## Additional Enhancements
+## POSummaryCard Component Details
 
-### Add Section Headers with Icons
+### Visual Layout
 
-Each section gets a clear header label to improve scannability:
+```text
+┌─────────────────────────────────────────┐
+│ 📦 Purchase Orders                      │
+├─────────────────────────────────────────┤
+│  [3]        [2]         [5]             │
+│ Awaiting   In Transit  Delivered        │
+├─────────────────────────────────────────┤
+│ PO Spend          $12,450              │
+│ Pending Pricing   $3,200               │
+└─────────────────────────────────────────┘
+```
 
-| Section | Label | Icon (optional) |
-|---------|-------|-----------------|
-| Row 1 | "Needs Attention" | AlertTriangle or none |
-| Row 2 | "Financial Snapshot" | DollarSign or none |
-| Row 3 | "Project Details" | Building2 or none |
+### Icon
+Uses `Package` from lucide-react (consistent with PO tab empty state)
 
-### Consistent Card Heights
+### Status Mapping
+```tsx
+const awaiting = pos.filter(p => p.status === 'SUBMITTED').length;
+const inTransit = pos.filter(p => ['ORDERED', 'READY_FOR_DELIVERY'].includes(p.status)).length;
+const delivered = pos.filter(p => p.status === 'DELIVERED').length;
+```
 
-The "Needs Attention" cards (Work Orders, Invoices, Activity) will be in a 3-column grid, ensuring visual alignment.
-
-### Keep Collapsible Behavior
-
-Team, Contracts, and Scope sections already have collapsible behavior - this is preserved.
+### Pricing Calculation
+```tsx
+// Sum line_total from po_line_items where priced
+const totalSpend = lineItems.reduce((sum, item) => sum + (item.line_total || 0), 0);
+```
 
 ---
 
@@ -185,20 +129,13 @@ Team, Contracts, and Scope sections already have collapsible behavior - this is 
 
 | File | Change |
 |------|--------|
-| `src/pages/ProjectHome.tsx` | Reorganize Overview tab into 3 logical sections |
+| `src/components/project/POSummaryCard.tsx` | **NEW** - Purchase Order summary card |
+| `src/components/project/index.ts` | Add export for POSummaryCard |
+| `src/pages/ProjectHome.tsx` | Replace ProjectActivitySection with POSummaryCard |
 
 ---
 
-## Visual Comparison
+## Note: Activity Section Preserved
 
-**Before:**
-- Financial cards at top
-- Mixed operational + project info in 2 columns
-
-**After:**
-- "Needs Attention" (Work Orders, Invoices, Activity) at top - 3 columns
-- Financial snapshot below
-- "Project Details" (Team, Contracts, Scope) grouped together - 2 columns
-
-This reorganization answers the user's request to make **Contracts, Team, and Project Details** more prominent and logically grouped, while keeping operational summaries at the top for quick action.
+`ProjectActivitySection` is not deleted—it's just removed from the "Needs Attention" grid. It can be added elsewhere later (e.g., at the bottom of the overview or in a dedicated Activity tab).
 
