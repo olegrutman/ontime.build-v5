@@ -54,9 +54,9 @@ async function discoverFilterSequence(
     });
   });
 
-  // Filter to fields with 2+ distinct values, sort by priority
+  // Include ALL fields with any data (no skipping), sort by priority
   return [...FILTERABLE_FIELDS]
-    .filter(field => fieldCounts[field].size >= 2)
+    .filter(field => fieldCounts[field].size >= 1)
     .sort((a, b) => (FILTER_PRIORITY[b] || 0) - (FILTER_PRIORITY[a] || 0));
 }
 
@@ -156,15 +156,7 @@ export function StepByStepFilter({
         .sort((a, b) => b.count - a.count);
 
       setAvailableValues(values);
-
-      // Auto-advance rules
-      if (values.length === 0) {
-        // No values for this field - skip to next step or complete
-        handleAdvanceToNextStep();
-      } else if (values.length === 1) {
-        // Only one option - auto-select and advance
-        handleSelectValue(values[0].value);
-      }
+      // No auto-advance - always show the step so user confirms each selection
     } catch (error) {
       console.error('Error fetching filter values:', error);
     } finally {
