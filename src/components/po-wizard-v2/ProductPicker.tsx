@@ -375,7 +375,7 @@ export function ProductPicker({
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-0">
         {step === 'category' && (
           <CategoryGrid
             categories={categories}
