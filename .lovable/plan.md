@@ -1,111 +1,89 @@
 
-# Fix: PDF Upload Button Not Appearing in Estimate Detail
+Goal: Fix why you “can’t upload a PDF” by ensuring the Estimates page is actually accessible for Supplier users (right now it’s immediately showing an “Access Denied” toast and redirecting, so the upload UI/flow never gets a chance to run).
 
-## Problem Identified
+What I found (root cause)
+- On `/estimates`, `SupplierProjectEstimates.tsx` runs this logic:
 
-The PDF upload button is conditionally rendered based on `supplierId` being available. Looking at the code (lines 639-648 of `SupplierProjectEstimates.tsx`):
+  - `currentOrg = userOrgRoles[0]?.organization`
+  - `isSupplier = currentOrg?.type === 'SUPPLIER'`
+  - In `useEffect`, if `!authLoading && !isSupplier`, it shows the “Access Denied” toast and navigates away.
 
-```typescript
-{supplierId && (
-  <EstimatePDFUpload
-    estimateId={selectedEstimate.id}
-    supplierId={supplierId}
-    ...
-  />
-)}
-```
+- In practice, this can incorrectly fire even for Supplier users when:
+  1) `userOrgRoles` is still empty/not populated at the moment `authLoading` flips to false, or
+  2) the supplier org is not at index 0 (multi-org users), so `userOrgRoles[0]` is not the supplier org.
 
-The `supplierId` is fetched in a `useEffect` hook (lines 332-343), which queries the `suppliers` table looking for a record matching the current organization. If this query fails or returns no data, `supplierId` remains `null` and the PDF upload component doesn't render.
+Evidence
+- Your screenshot shows the user is clearly in a Supplier org (left rail shows SUPPLIER and the user card says Supplier), yet the page still throws “Access Denied”. That strongly indicates the page’s “isSupplier” detection is wrong or running before roles are ready.
 
-## Root Cause
+Plan to fix (implementation)
+1) Make Supplier-org detection reliable
+   - Update `SupplierProjectEstimates.tsx` to find a Supplier org from all roles, not just `[0]`.
+   - Example approach:
+     - `const supplierRole = userOrgRoles.find(r => r.organization?.type === 'SUPPLIER')`
+     - `const currentOrg = supplierRole?.organization`
+     - `const isSupplier = !!currentOrg`
+   - This solves the “wrong org at index 0” problem.
 
-The current implementation requires a record in the `suppliers` table that matches the organization. This is a data issue - if there's no supplier record for the user's organization, the PDF upload won't show.
+2) Don’t deny access until roles are actually loaded
+   - Adjust the access-guard `useEffect` to wait until role data is present (or we’re sure it won’t be).
+   - Practical guard logic:
+     - If `authLoading` is true: do nothing.
+     - If `user` is missing: redirect to `/auth` (or existing auth flow).
+     - If `userOrgRoles` is still empty: show loading state (keep skeleton) and do not show “Access Denied” yet.
+     - Only show “Access Denied” when:
+       - roles are present AND none are Supplier.
 
-## Current User Flow
-1. User logs in as a Supplier organization user
-2. User navigates to `/estimates`
-3. User clicks "New Estimate" to create an estimate
-4. User clicks on an estimate card to open the detail sheet
-5. The "Upload" tab should show the PDF upload component
-6. **BUT** if `supplierId` is null, the component doesn't render - only the CSV fallback shows
+3) Use the Supplier org consistently for data fetching
+   - Replace existing uses of `currentOrg?.id` with the supplier org id derived above.
+   - Ensure `fetchProjects()` / `fetchEstimates()` only run when `currentOrg` is defined.
 
-## Solution
+4) Fix the next “hidden blocker” after access: Review tab still depends on legacy `supplierId`
+   - In `SupplierProjectEstimates.tsx`, the “Review Items” tab currently renders the table only when `supplierId && (...)`.
+   - That means: even if the PDF parses successfully, the review UI might not show (and it will look like parsing/upload “did nothing”).
+   - Update `EstimateReviewTable` to accept `supplierOrgId` (or derive what it needs internally), and remove the `supplierId &&` gating similar to what we did for the upload component.
+   - If `EstimateReviewTable` truly requires a `supplierId` for catalog matching, derive it from `supplier_org_id` in the backend function (already done for parsing) or do a safer lookup in the UI with clear error messaging if missing.
 
-### Option A: Make supplierId Optional (Recommended)
+5) Add concrete error feedback for upload failures (so we can diagnose next time quickly)
+   - In `EstimatePDFUpload.tsx`, when `uploadError` or `recordError` happens, show the actual error message in the toast (sanitized) and log the full error.
+   - Common failure cases this will reveal:
+     - Storage policy rejecting INSERT (RLS/policy mismatch)
+     - Bucket missing or misconfigured
+     - File type mismatch (PDFs sometimes come as `application/octet-stream` depending on OS/browser)
 
-Modify the `EstimatePDFUpload` component to work without requiring a `supplierId`. Since the supplier ID is only used when calling the edge function for parsing, we can:
-1. Make the prop optional
-2. Fetch the supplier ID inside the component OR pass it to the edge function differently
-3. Show the upload button regardless
+6) Verify end-to-end
+   - Manual test path:
+     1) Log in as the Supplier user
+     2) Go to `/estimates`
+     3) Create a new estimate (must be DRAFT)
+     4) Open it → Upload tab → click “Upload PDF Estimate”
+     5) Confirm:
+        - Upload spinner appears
+        - A row is created in `estimate_pdf_uploads`
+        - Parsing runs (function log exists)
+        - Review tab shows extracted items (even if no legacy supplier record exists)
 
-**Changes Required:**
-- `src/components/estimate/EstimatePDFUpload.tsx` - Make `supplierId` optional, derive it from the estimate's supplier_org_id if needed
-- `src/pages/SupplierProjectEstimates.tsx` - Remove the conditional wrapper around `EstimatePDFUpload`
+Files that will be changed
+- `src/pages/SupplierProjectEstimates.tsx`
+  - Fix supplier org detection
+  - Fix access guard timing
+  - Remove fragile dependency on `userOrgRoles[0]`
+  - (Likely) remove/replace `supplierId` gating in Review tab
 
-### Option B: Ensure Supplier Record Exists (Data Fix)
+- `src/components/estimate/EstimateReviewTable.tsx` (and any related estimate components)
+  - Accept `supplierOrgId` or remove need for `supplierId`
+  - Ensure review UI is reachable after parsing
 
-Add logic to create a `suppliers` record automatically when a SUPPLIER organization is created, or create it on-demand when accessing the estimates page.
+- `src/components/estimate/EstimatePDFUpload.tsx`
+  - Improve error messages surfaced to the user for upload/insert/parse failures
 
-**Changes Required:**
-- Add migration or trigger to auto-create supplier records
-- OR add fallback creation logic in the page component
+Risks / edge cases to handle
+- Multi-organization users: choose Supplier org for this page deterministically.
+- Roles truly not loaded: page should not incorrectly deny access (show loading).
+- Supplier org exists but there is no legacy `suppliers` table record: upload and parsing should still work; review UI should not disappear.
 
-### Option C: Use Organization ID Instead of Supplier ID
+Acceptance criteria
+- A Supplier user can visit `/estimates` without seeing “Access Denied”.
+- Upload card is clickable in the Upload tab for DRAFT estimates.
+- Uploading a PDF results in a stored file + DB record + parse attempt.
+- Parse success populates line items and the Review UI is visible to review/match items.
 
-The edge function could use `supplier_org_id` (which is already available on the estimate) instead of requiring a separate `suppliers` table lookup.
-
-**Changes Required:**
-- `supabase/functions/parse-estimate-pdf/index.ts` - Accept `supplier_org_id` instead of `supplier_id`
-- `src/components/estimate/EstimatePDFUpload.tsx` - Pass organization ID instead
-
----
-
-## Recommended Implementation: Option A + C Hybrid
-
-1. **Remove the supplierId conditional** in `SupplierProjectEstimates.tsx` (line 639)
-2. **Make supplierId optional** in `EstimatePDFUpload.tsx`
-3. **Pass supplierOrgId** to the component (available from `selectedEstimate.supplier_org_id`)
-4. **Update the edge function** to accept either `supplier_id` or `supplier_org_id`
-
-### Files to Modify
-
-| File | Change |
-|------|--------|
-| `src/pages/SupplierProjectEstimates.tsx` | Remove `{supplierId && ...}` wrapper; pass `supplierOrgId` instead |
-| `src/components/estimate/EstimatePDFUpload.tsx` | Accept `supplierOrgId` as optional prop; use it for edge function call |
-| `supabase/functions/parse-estimate-pdf/index.ts` | Handle `supplier_org_id` as fallback for catalog matching |
-
-### Code Changes
-
-**SupplierProjectEstimates.tsx (lines 637-649):**
-```typescript
-// Before:
-{supplierId && (
-  <EstimatePDFUpload
-    estimateId={selectedEstimate.id}
-    supplierId={supplierId}
-    ...
-  />
-)}
-
-// After:
-<EstimatePDFUpload
-  estimateId={selectedEstimate.id}
-  supplierOrgId={selectedEstimate.supplier_org_id}
-  ...
-/>
-```
-
-**EstimatePDFUpload.tsx:**
-- Change prop from `supplierId: string` to `supplierOrgId: string`
-- Update edge function call to pass `supplier_org_id` instead
-
-**parse-estimate-pdf/index.ts:**
-- Accept `supplier_org_id` parameter
-- Look up catalog items by organization instead of supplier ID
-
----
-
-## Technical Notes
-
-The `suppliers` table is a legacy concept that may not always have records. The organization ID is more reliable since it's always available through the auth context. This change makes the system more robust and removes the dependency on the `suppliers` table for basic functionality.
