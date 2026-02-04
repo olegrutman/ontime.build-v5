@@ -138,86 +138,16 @@ export default function SupplierInventory() {
     setLoading(false);
   };
 
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const isXLSX = file.name.endsWith('.xlsx') || file.name.endsWith('.xls');
-    
-    if (isXLSX) {
-      // Handle XLSX via edge function
-      await handleXLSXUpload(file);
-    } else {
-      // Handle CSV as before
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const text = event.target?.result as string;
-        parseCSV(text);
-      };
-      reader.readAsText(file);
-    }
-  };
-
-  const handleXLSXUpload = async (file: File) => {
-    if (!currentOrg) return;
-    
-    setUploading(true);
-    try {
-      // Ensure supplier record exists
-      const supplierId = await ensureSupplierRecord(currentOrg.id, currentOrg.name);
-      
-      // Convert file to base64
-      const arrayBuffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
-      let binary = '';
-      for (let i = 0; i < bytes.length; i++) {
-        binary += String.fromCharCode(bytes[i]);
-      }
-      const base64 = btoa(binary);
-      
-      // Call edge function
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/import-inventory?supplier_id=${supplierId}`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${session?.access_token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            supplier_id: supplierId,
-            file_base64: base64,
-          }),
-        }
-      );
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Import failed');
-      }
-      
-      toast({
-        title: 'Import Complete',
-        description: `Imported ${result.inserted} items. ${result.skipped?.duplicates || 0} duplicates merged.`,
-      });
-      
-      fetchCatalogItems();
-    } catch (err: any) {
-      console.error('XLSX upload error:', err);
-      toast({
-        title: 'Import Failed',
-        description: err.message || 'Failed to import Excel file',
-        variant: 'destructive',
-      });
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      parseCSV(text);
+    };
+    reader.readAsText(file);
   };
 
   const parseCSV = (text: string) => {
@@ -348,17 +278,16 @@ export default function SupplierInventory() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".csv,.xlsx,.xls"
+                  accept=".csv"
                   onChange={handleFileSelect}
                   className="hidden"
                 />
                 <Button
                   variant="outline"
                   onClick={() => fileInputRef.current?.click()}
-                  disabled={uploading}
                 >
                   <Upload className="h-4 w-4 mr-2" />
-                  {uploading ? 'Importing...' : 'Upload File'}
+                  Upload CSV
                 </Button>
               </div>
             </div>
@@ -406,11 +335,11 @@ export default function SupplierInventory() {
               </Card>
             </div>
 
-            {/* File Format Help */}
+            {/* CSV Format Help */}
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
-                Supports CSV or Excel (.xlsx) files. Expected columns: code (SKU), name, description, Main Category, Secondary Category, Manufacture, Dimension, Thickness, Length, Color, Wood Species, Bundle Name, Bundle Count, qtyType
+                CSV format: SKU, name, description, Main Category, Secondary Category, Manufacture, Dimension, Thickness, Length, Color, Wood Species, Bundle Name, Bundle Count, qtyType
               </AlertDescription>
             </Alert>
 
