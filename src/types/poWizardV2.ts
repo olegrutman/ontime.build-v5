@@ -245,6 +245,42 @@ export const CATEGORY_DISPLAY: Record<string, { name: string; icon: string }> = 
   Structural: { name: 'STRUCTURAL STEEL', icon: '🔧' },
 };
 
+// All possible filterable fields from catalog_items
+export const FILTERABLE_FIELDS = [
+  'manufacturer',
+  'use_type',
+  'product_type',
+  'wood_species',
+  'dimension',
+  'length',
+  'color',
+  'thickness',
+  'finish',
+  'depth',
+  'width',
+  'edge_type',
+  'diameter',
+] as const;
+
+export type FilterableField = typeof FILTERABLE_FIELDS[number];
+
+// Priority order for filter display (higher priority = shown first)
+export const FILTER_PRIORITY: Record<string, number> = {
+  manufacturer: 100,
+  use_type: 90,
+  product_type: 80,
+  wood_species: 70,
+  dimension: 60,
+  length: 50,
+  color: 45,
+  thickness: 40,
+  finish: 35,
+  depth: 30,
+  width: 25,
+  edge_type: 20,
+  diameter: 10,
+};
+
 // Field labels for display
 export const FIELD_LABELS: Record<string, string> = {
   dimension: 'Dimension',
@@ -256,6 +292,10 @@ export const FIELD_LABELS: Record<string, string> = {
   manufacturer: 'Manufacturer',
   use_type: 'Use Type',
   product_type: 'Product Type',
+  edge_type: 'Edge Type',
+  depth: 'Depth',
+  width: 'Width',
+  diameter: 'Diameter',
 };
 
 // Spec filter priority by category - supports secondary-specific sequences

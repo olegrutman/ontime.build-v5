@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { SpecValue, getFilterSequence, FIELD_LABELS } from '@/types/poWizardV2';
+import { SpecValue, FILTERABLE_FIELDS, FILTER_PRIORITY, FIELD_LABELS } from '@/types/poWizardV2';
 
 interface StepByStepFilterProps {
   supplierId: string | null;
@@ -13,6 +13,51 @@ interface StepByStepFilterProps {
   onComplete: (filters: Record<string, string>) => void;
   onBack: () => void;
   onClose: () => void;
+}
+
+// Dynamically discover which fields have filterable values
+async function discoverFilterSequence(
+  supplierId: string,
+  category: string,
+  secondaryCategory: string | null
+): Promise<string[]> {
+  // Build match object
+  const matchObj: Record<string, string> = {
+    supplier_id: supplierId,
+    category: category,
+  };
+  if (secondaryCategory) {
+    matchObj.secondary_category = secondaryCategory;
+  }
+
+  // Query all filterable fields
+  const selectFields = FILTERABLE_FIELDS.join(',');
+  const { data, error } = await supabase
+    .from('catalog_items')
+    .select(selectFields)
+    .match(matchObj);
+
+  if (error || !data || data.length === 0) return [];
+
+  // Count distinct non-null values per field
+  const fieldCounts: Record<string, Set<string>> = {};
+  FILTERABLE_FIELDS.forEach(field => {
+    fieldCounts[field] = new Set();
+  });
+
+  data.forEach(item => {
+    FILTERABLE_FIELDS.forEach(field => {
+      const value = item[field as keyof typeof item];
+      if (value && typeof value === 'string') {
+        fieldCounts[field].add(value);
+      }
+    });
+  });
+
+  // Filter to fields with 2+ distinct values, sort by priority
+  return [...FILTERABLE_FIELDS]
+    .filter(field => fieldCounts[field].size >= 2)
+    .sort((a, b) => (FILTER_PRIORITY[b] || 0) - (FILTER_PRIORITY[a] || 0));
 }
 
 export function StepByStepFilter({
@@ -28,11 +73,32 @@ export function StepByStepFilter({
   const [availableValues, setAvailableValues] = useState<SpecValue[]>([]);
   const [productCount, setProductCount] = useState(0);
   const [loading, setLoading] = useState(true);
-
-  // Get the filter sequence for this category/secondary
-  const filterSequence = category ? getFilterSequence(category, secondaryCategory) : [];
+  
+  // Dynamic filter sequence discovered from database
+  const [filterSequence, setFilterSequence] = useState<string[]>([]);
+  const discoveryDone = useRef(false);
+  
   const currentField = filterSequence[currentStepIndex];
   const totalSteps = filterSequence.length;
+
+  // Discover filter sequence on mount
+  useEffect(() => {
+    if (!supplierId || !category || discoveryDone.current) return;
+    
+    discoveryDone.current = true;
+    discoverFilterSequence(supplierId, category, secondaryCategory)
+      .then(sequence => {
+        if (sequence.length === 0) {
+          // No filters available, go directly to products
+          onComplete({});
+        } else {
+          setFilterSequence(sequence);
+        }
+      })
+      .catch(() => {
+        onComplete({});
+      });
+  }, [supplierId, category, secondaryCategory, onComplete]);
 
   // Fetch available values for current filter step
   const fetchFilterValues = useCallback(async () => {
@@ -181,14 +247,21 @@ export function StepByStepFilter({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header with breadcrumb */}
+      {/* Header with breadcrumb and current filter label */}
       <div className="px-4 py-3 bg-muted/50 border-b">
         <p className="text-sm text-muted-foreground truncate">
           {buildBreadcrumb()}
         </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          Step {currentStepIndex + 1} of {totalSteps}
-        </p>
+        <div className="flex items-center justify-between mt-1">
+          <p className="text-xs text-muted-foreground">
+            Step {currentStepIndex + 1} of {totalSteps}
+          </p>
+          {currentField && (
+            <p className="text-sm font-medium">
+              Select {FIELD_LABELS[currentField] || currentField}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Filter options */}
