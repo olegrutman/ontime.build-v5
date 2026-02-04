@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -76,16 +76,22 @@ export function StepByStepFilter({
   
   // Dynamic filter sequence discovered from database
   const [filterSequence, setFilterSequence] = useState<string[]>([]);
-  const discoveryDone = useRef(false);
+  const [discoveryComplete, setDiscoveryComplete] = useState(false);
   
   const currentField = filterSequence[currentStepIndex];
   const totalSteps = filterSequence.length;
 
-  // Discover filter sequence on mount
+  // Discover filter sequence on mount or when category changes
   useEffect(() => {
-    if (!supplierId || !category || discoveryDone.current) return;
+    if (!supplierId || !category) return;
     
-    discoveryDone.current = true;
+    // Reset state for new category selection
+    setDiscoveryComplete(false);
+    setCurrentStepIndex(0);
+    setAppliedFilters({});
+    setFilterSequence([]);
+    setLoading(true);
+    
     discoverFilterSequence(supplierId, category, secondaryCategory)
       .then(sequence => {
         if (sequence.length === 0) {
@@ -93,6 +99,7 @@ export function StepByStepFilter({
           onComplete({});
         } else {
           setFilterSequence(sequence);
+          setDiscoveryComplete(true);
         }
       })
       .catch(() => {
@@ -102,11 +109,8 @@ export function StepByStepFilter({
 
   // Fetch available values for current filter step
   const fetchFilterValues = useCallback(async () => {
-    if (!supplierId || !category || !currentField) {
-      // No filters needed - go directly to products
-      if (filterSequence.length === 0) {
-        onComplete({});
-      }
+    // Don't run until discovery is complete
+    if (!discoveryComplete || !supplierId || !category || !currentField) {
       return;
     }
 
@@ -162,11 +166,14 @@ export function StepByStepFilter({
     } finally {
       setLoading(false);
     }
-  }, [supplierId, category, secondaryCategory, currentField, appliedFilters]);
+  }, [discoveryComplete, supplierId, category, secondaryCategory, currentField, appliedFilters]);
 
+  // Only fetch filter values after discovery is complete
   useEffect(() => {
-    fetchFilterValues();
-  }, [fetchFilterValues]);
+    if (discoveryComplete && currentField) {
+      fetchFilterValues();
+    }
+  }, [discoveryComplete, currentField, fetchFilterValues]);
 
   const handleSelectValue = useCallback((value: string) => {
     const newFilters = { ...appliedFilters, [currentField]: value };
@@ -221,7 +228,8 @@ export function StepByStepFilter({
     return parts.join(' › ');
   };
 
-  if (loading) {
+  // Show loading while discovery or fetching is in progress
+  if (loading || !discoveryComplete) {
     return (
       <div className="flex flex-col h-full">
         <div className="px-4 py-3 bg-muted/50 border-b">
