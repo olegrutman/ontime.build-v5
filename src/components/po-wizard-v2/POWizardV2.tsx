@@ -175,9 +175,7 @@ export function POWizardV2({
     onOpenChange(false);
   };
 
-  const canAdvanceFromHeader = 
-    !!formData.supplier_id && 
-    !!formData.requested_delivery_date;
+  const canAdvanceFromHeader = !!formData.supplier_id;
 
   const canAdvanceFromItems = formData.line_items.length > 0;
 
