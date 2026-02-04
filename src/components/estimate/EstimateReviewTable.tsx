@@ -53,7 +53,7 @@ interface CatalogItem {
 
 interface EstimateReviewTableProps {
   estimateId: string;
-  supplierId: string;
+  supplierOrgId: string;
   projectId: string;
   items: LineItem[];
   onItemsChange: () => void;
@@ -72,13 +72,14 @@ const UOM_OPTIONS = ['EA', 'BF', 'LF', 'SF', 'PC', 'BD', 'BAG', 'BOX', 'ROLL', '
 
 export function EstimateReviewTable({
   estimateId,
-  supplierId,
+  supplierOrgId,
   projectId,
   items,
   onItemsChange,
   onFinalize,
   disabled = false,
 }: EstimateReviewTableProps) {
+  const [supplierId, setSupplierId] = useState<string | null>(null);
   const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null);
   const [searchingItem, setSearchingItem] = useState<string | null>(null);
   const [catalogSearch, setCatalogSearch] = useState('');
@@ -89,9 +90,23 @@ export function EstimateReviewTable({
   // Get unique pack names
   const packNames = [...new Set(items.map(i => i.pack_name))];
 
+  // Fetch supplierId from organization
+  useEffect(() => {
+    const fetchSupplierId = async () => {
+      if (!supplierOrgId) return;
+      const { data } = await supabase
+        .from('suppliers')
+        .select('id')
+        .eq('organization_id', supplierOrgId)
+        .single();
+      if (data) setSupplierId(data.id);
+    };
+    fetchSupplierId();
+  }, [supplierOrgId]);
+
   // Search catalog
   useEffect(() => {
-    if (!catalogSearch || catalogSearch.length < 2 || !searchingItem) {
+    if (!catalogSearch || catalogSearch.length < 2 || !searchingItem || !supplierId) {
       setCatalogResults([]);
       return;
     }

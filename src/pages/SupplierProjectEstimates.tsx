@@ -135,11 +135,27 @@ export default function SupplierProjectEstimates() {
   const [loadingLineItems, setLoadingLineItems] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('items');
 
-  const currentOrg = userOrgRoles[0]?.organization;
-  const isSupplier = currentOrg?.type === 'SUPPLIER';
+  // Find supplier org from all roles, not just index 0
+  const supplierRole = userOrgRoles.find(r => r.organization?.type === 'SUPPLIER');
+  const currentOrg = supplierRole?.organization;
+  const isSupplier = !!currentOrg;
+  const rolesLoaded = userOrgRoles.length > 0;
 
   useEffect(() => {
-    if (!authLoading && !isSupplier) {
+    // Don't check access until auth is done AND roles are loaded
+    if (authLoading) return;
+    
+    // If no user, redirect to auth
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+    
+    // Wait for roles to load before denying access
+    if (!rolesLoaded) return;
+    
+    // Now we have roles - check if any is a supplier
+    if (!isSupplier) {
       toast({
         title: 'Access Denied',
         description: 'This page is only available to Supplier organizations.',
@@ -149,11 +165,10 @@ export default function SupplierProjectEstimates() {
       return;
     }
 
-    if (isSupplier && currentOrg) {
-      fetchProjects();
-      fetchEstimates();
-    }
-  }, [authLoading, isSupplier, currentOrg]);
+    // Fetch data when supplier org is confirmed
+    fetchProjects();
+    fetchEstimates();
+  }, [authLoading, user, rolesLoaded, isSupplier, currentOrg]);
 
   const fetchProjects = async () => {
     // Get projects where this org is a participant
@@ -685,10 +700,10 @@ export default function SupplierProjectEstimates() {
                               </p>
                             </CardContent>
                           </Card>
-                        ) : supplierId && (
+                        ) : (
                           <EstimateReviewTable
                             estimateId={selectedEstimate.id}
-                            supplierId={supplierId}
+                            supplierOrgId={selectedEstimate.supplier_org_id}
                             projectId={selectedEstimate.project_id}
                             items={lineItems}
                             onItemsChange={handleLineItemsChange}
