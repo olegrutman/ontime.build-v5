@@ -86,7 +86,7 @@ export function NeedsAttentionTile({ items, pendingInvitesCount }: NeedsAttentio
   };
 
   return (
-    <Card className={cn(totalCount > 0 && "border-amber-500/50")}>
+    <Card className={cn("h-full flex flex-col", totalCount > 0 && "border-amber-500/50")}>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center justify-between text-base">
           <div className="flex items-center gap-2">
@@ -98,7 +98,7 @@ export function NeedsAttentionTile({ items, pendingInvitesCount }: NeedsAttentio
           )}
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1">
         {totalCount === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">
             All caught up! ✨
