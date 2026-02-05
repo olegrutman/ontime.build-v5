@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -159,26 +158,31 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Create admin Supabase client to access storage
+    // Download PDF from storage using direct fetch (no SDK needed)
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // ── Download PDF from storage ────────────────────────────────────
     console.log(`Downloading PDF: ${filePath}`);
-    const { data: fileData, error: downloadError } = await supabase.storage
-      .from("estimate-pdfs")
-      .download(filePath);
+    const storageResponse = await fetch(
+      `${supabaseUrl}/storage/v1/object/estimate-pdfs/${encodeURIComponent(filePath)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${supabaseServiceKey}`,
+          apikey: supabaseServiceKey,
+        },
+      }
+    );
 
-    if (downloadError || !fileData) {
-      console.error("Download error:", downloadError);
+    if (!storageResponse.ok) {
+      console.error("Download error:", storageResponse.status, await storageResponse.text());
       return new Response(
         JSON.stringify({ error: "Failed to download PDF from storage" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const arrayBuffer = await fileData.arrayBuffer();
+    const arrayBuffer = await storageResponse.arrayBuffer();
     const base64Pdf = btoa(
       new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), "")
     );
