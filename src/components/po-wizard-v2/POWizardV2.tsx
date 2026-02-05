@@ -14,6 +14,7 @@ import { HeaderScreen } from './HeaderScreen';
 import { ItemsScreen } from './ItemsScreen';
 import { ReviewScreen } from './ReviewScreen';
 import { ProductPicker } from './ProductPicker';
+import { UnmatchedItemEditor } from './UnmatchedItemEditor';
 
 type Screen = 'header' | 'items' | 'review';
 
@@ -73,6 +74,7 @@ export function POWizardV2({
   const [screen, setScreen] = useState<Screen>('header');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<POWizardV2LineItem | null>(null);
+  const [unmatchedEditorOpen, setUnmatchedEditorOpen] = useState(false);
   const [suppliers, setSuppliers] = useState<ProjectSupplier[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState(true);
   const [hasApprovedEstimate, setHasApprovedEstimate] = useState(false);
@@ -248,8 +250,13 @@ export function POWizardV2({
           items={formData.line_items}
           onAddItem={() => setPickerOpen(true)}
           onEditItem={(item) => {
+            const isUnmatched = !item.catalog_item_id;
             setEditingItem(item);
-            setPickerOpen(true);
+            if (isUnmatched) {
+              setUnmatchedEditorOpen(true);
+            } else {
+              setPickerOpen(true);
+            }
           }}
           onRemoveItem={handleRemoveItem}
           onBack={() => setScreen('header')}
@@ -285,6 +292,20 @@ export function POWizardV2({
         editingItem={editingItem}
         onClearEdit={() => setEditingItem(null)}
       />
+
+      {/* Unmatched Item Editor */}
+      {editingItem && !editingItem.catalog_item_id && (
+        <UnmatchedItemEditor
+          open={unmatchedEditorOpen}
+          onOpenChange={(open) => {
+            setUnmatchedEditorOpen(open);
+            if (!open) setEditingItem(null);
+          }}
+          item={editingItem}
+          onUpdate={handleUpdateItem}
+          onRemove={handleRemoveItem}
+        />
+      )}
     </div>
   );
 
@@ -301,7 +322,7 @@ export function POWizardV2({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden max-h-[90vh]">
+      <DialogContent className="flex flex-col h-[90vh] min-h-0 max-w-lg p-0 gap-0 overflow-hidden">
         {content}
       </DialogContent>
     </Dialog>
