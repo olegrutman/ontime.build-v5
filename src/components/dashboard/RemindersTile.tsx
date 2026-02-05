@@ -34,7 +34,7 @@ export function RemindersTile({ reminders, onComplete, onAdd }: RemindersTilePro
     .slice(0, 5);
   
   return (
-    <Card>
+    <Card className="h-full flex flex-col">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center justify-between text-base">
           <div className="flex items-center gap-2">
@@ -46,7 +46,7 @@ export function RemindersTile({ reminders, onComplete, onAdd }: RemindersTilePro
           </Button>
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="flex-1">
         {upcomingReminders.length === 0 ? (
           <div className="text-center py-4">
             <p className="text-sm text-muted-foreground mb-2">

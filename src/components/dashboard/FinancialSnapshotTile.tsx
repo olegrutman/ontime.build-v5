@@ -33,14 +33,14 @@ export function FinancialSnapshotTile({
   totalCosts 
 }: FinancialSnapshotTileProps) {
   return (
-    <Card>
+    <Card className="h-full flex flex-col">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <DollarSign className="h-5 w-5 text-green-600" />
           Financial Snapshot
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="flex-1 space-y-3">
         {/* Total Contracts */}
         <div className="flex justify-between items-center">
           <span className="text-sm text-muted-foreground">Total Contracts</span>
