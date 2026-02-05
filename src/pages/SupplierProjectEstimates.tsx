@@ -14,6 +14,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { EstimateUploadWizard } from '@/components/estimate-upload';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { TopBar } from '@/components/layout/TopBar';
@@ -75,6 +76,13 @@ interface CSVLineItem {
   notes: string;
 }
 
+// State for estimate upload wizard
+interface UploadWizardState {
+  open: boolean;
+  estimateId: string;
+  supplierId: string;
+}
+
 export default function SupplierProjectEstimates() {
   const navigate = useNavigate();
   const { user, userOrgRoles, loading: authLoading } = useAuth();
@@ -97,9 +105,16 @@ export default function SupplierProjectEstimates() {
   const [estimateItems, setEstimateItems] = useState<SupplierEstimateItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
 
-  // CSV upload
+  // CSV upload (legacy)
   const [csvPreview, setCsvPreview] = useState<CSVLineItem[]>([]);
   const [showCsvPreview, setShowCsvPreview] = useState(false);
+
+  // Pack-aware upload wizard
+  const [uploadWizard, setUploadWizard] = useState<UploadWizardState>({
+    open: false,
+    estimateId: '',
+    supplierId: '',
+  });
 
   const currentOrg = userOrgRoles[0]?.organization;
   const isSupplier = currentOrg?.type === 'SUPPLIER';
@@ -501,17 +516,23 @@ export default function SupplierProjectEstimates() {
                     {/* Actions */}
                     {selectedEstimate.status === 'DRAFT' && (
                       <div className="flex items-center gap-2">
-                        <input
-                          ref={fileInputRef}
-                          type="file"
-                          accept=".csv"
-                          onChange={handleFileSelect}
-                          className="hidden"
-                        />
                         <Button 
                           variant="outline" 
                           size="sm"
-                          onClick={() => fileInputRef.current?.click()}
+                          onClick={async () => {
+                            // Get supplier_id from suppliers table for this org
+                            const { data: suppliers } = await supabase
+                              .from('suppliers')
+                              .select('id')
+                              .eq('organization_id', currentOrg?.id)
+                              .limit(1);
+                            const sid = suppliers?.[0]?.id || '';
+                            setUploadWizard({
+                              open: true,
+                              estimateId: selectedEstimate.id,
+                              supplierId: sid,
+                            });
+                          }}
                         >
                           <Upload className="h-4 w-4 mr-2" />
                           Upload CSV
@@ -540,41 +561,67 @@ export default function SupplierProjectEstimates() {
                         </CardContent>
                       </Card>
                     ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Description</TableHead>
-                            <TableHead className="text-right">Qty</TableHead>
-                            <TableHead>UOM</TableHead>
-                            <TableHead className="text-right">Unit Price</TableHead>
-                            <TableHead className="text-right">Total</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {estimateItems.map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell>
-                                <div>
-                                  <p>{item.description}</p>
-                                  {item.supplier_sku && (
-                                    <p className="text-xs text-muted-foreground font-mono">
-                                      {item.supplier_sku}
-                                    </p>
+                      <>
+                        {/* Group items by pack_name */}
+                        {(() => {
+                          const grouped = new Map<string, SupplierEstimateItem[]>();
+                          for (const item of estimateItems) {
+                            const key = item.pack_name || 'Ungrouped';
+                            if (!grouped.has(key)) grouped.set(key, []);
+                            grouped.get(key)!.push(item);
+                          }
+                          const hasMultiplePacks = grouped.size > 1 || (grouped.size === 1 && !grouped.has('Ungrouped'));
+
+                          return (
+                            <div className="space-y-4">
+                              {Array.from(grouped.entries()).map(([packName, packItems]) => (
+                                <div key={packName}>
+                                  {hasMultiplePacks && (
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <Package className="h-4 w-4 text-muted-foreground" />
+                                      <span className="text-sm font-medium">{packName}</span>
+                                      <Badge variant="outline" className="text-xs">
+                                        {packItems.length} items
+                                      </Badge>
+                                    </div>
                                   )}
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>SKU</TableHead>
+                                        <TableHead>Description</TableHead>
+                                        <TableHead className="text-right">Qty</TableHead>
+                                        <TableHead>UOM</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {packItems.map((item) => (
+                                        <TableRow key={item.id}>
+                                          <TableCell className="font-mono text-xs">
+                                            {item.supplier_sku || '—'}
+                                          </TableCell>
+                                          <TableCell>
+                                            <div>
+                                              <p className="text-sm">{item.description}</p>
+                                              {item.catalog_item_id && (
+                                                <Badge variant="outline" className="text-[10px] mt-0.5 bg-green-50 border-green-200 text-green-700 dark:bg-green-950/20 dark:border-green-800 dark:text-green-400">
+                                                  Catalog matched
+                                                </Badge>
+                                              )}
+                                            </div>
+                                          </TableCell>
+                                          <TableCell className="text-right">{item.quantity}</TableCell>
+                                          <TableCell>{item.uom}</TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
                                 </div>
-                              </TableCell>
-                              <TableCell className="text-right">{item.quantity}</TableCell>
-                              <TableCell>{item.uom}</TableCell>
-                              <TableCell className="text-right">
-                                ${item.unit_price.toFixed(2)}
-                              </TableCell>
-                              <TableCell className="text-right font-medium">
-                                ${item.line_total.toFixed(2)}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </>
                     )}
                   </div>
                 )}
@@ -624,6 +671,20 @@ export default function SupplierProjectEstimates() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+
+            {/* Pack-Aware Upload Wizard */}
+            <EstimateUploadWizard
+              open={uploadWizard.open}
+              onOpenChange={(open) => setUploadWizard(prev => ({ ...prev, open }))}
+              estimateId={uploadWizard.estimateId}
+              supplierId={uploadWizard.supplierId}
+              onComplete={() => {
+                if (selectedEstimate) {
+                  fetchEstimateItems(selectedEstimate.id);
+                }
+                fetchEstimates();
+              }}
+            />
           </main>
         </SidebarInset>
       </div>

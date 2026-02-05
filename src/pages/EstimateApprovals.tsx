@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Check, X, FileText, Eye, Loader2 } from 'lucide-react';
+import { Check, X, FileText, Eye, Loader2, Package } from 'lucide-react';
 
 interface SupplierEstimate {
   id: string;
@@ -38,6 +38,8 @@ interface EstimateLineItem {
   unit_price: number | null;
   line_total: number | null;
   notes: string | null;
+  pack_name: string | null;
+  catalog_item_id: string | null;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -354,34 +356,58 @@ export default function EstimateApprovals() {
                       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                     </div>
                   ) : lineItems.length > 0 ? (
-                    <div className="border rounded-lg overflow-hidden">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>SKU</TableHead>
-                            <TableHead>Description</TableHead>
-                            <TableHead className="text-right">Qty</TableHead>
-                            <TableHead>UOM</TableHead>
-                            <TableHead className="text-right">Unit Price</TableHead>
-                            <TableHead className="text-right">Line Total</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {lineItems.map(item => (
-                            <TableRow key={item.id}>
-                              <TableCell className="font-mono text-sm">
-                                {item.supplier_sku || '-'}
-                              </TableCell>
-                              <TableCell>{item.description}</TableCell>
-                              <TableCell className="text-right">{item.quantity ?? '-'}</TableCell>
-                              <TableCell>{item.uom || '-'}</TableCell>
-                              <TableCell className="text-right">{formatCurrency(item.unit_price)}</TableCell>
-                              <TableCell className="text-right font-medium">{formatCurrency(item.line_total)}</TableCell>
-                            </TableRow>
+                    (() => {
+                      // Group items by pack_name
+                      const grouped = new Map<string, EstimateLineItem[]>();
+                      for (const item of lineItems) {
+                        const key = item.pack_name || 'Ungrouped';
+                        if (!grouped.has(key)) grouped.set(key, []);
+                        grouped.get(key)!.push(item);
+                      }
+                      const hasMultiplePacks = grouped.size > 1 || (grouped.size === 1 && !grouped.has('Ungrouped'));
+
+                      return (
+                        <div className="space-y-4">
+                          {Array.from(grouped.entries()).map(([packName, packItems]) => (
+                            <div key={packName}>
+                              {hasMultiplePacks && (
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Package className="h-4 w-4 text-muted-foreground" />
+                                  <span className="text-sm font-semibold">{packName}</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {packItems.length} items
+                                  </Badge>
+                                </div>
+                              )}
+                              <div className="border rounded-lg overflow-hidden">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>SKU</TableHead>
+                                      <TableHead>Description</TableHead>
+                                      <TableHead className="text-right">Qty</TableHead>
+                                      <TableHead>UOM</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {packItems.map(item => (
+                                      <TableRow key={item.id}>
+                                        <TableCell className="font-mono text-sm">
+                                          {item.supplier_sku || '-'}
+                                        </TableCell>
+                                        <TableCell>{item.description}</TableCell>
+                                        <TableCell className="text-right">{item.quantity ?? '-'}</TableCell>
+                                        <TableCell>{item.uom || '-'}</TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            </div>
                           ))}
-                        </TableBody>
-                      </Table>
-                    </div>
+                        </div>
+                      );
+                    })()
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
                       <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />

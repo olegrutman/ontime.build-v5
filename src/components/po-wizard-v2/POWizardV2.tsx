@@ -140,6 +140,8 @@ export function POWizardV2({
     setFormData(prev => ({
       ...prev,
       line_items: [...prev.line_items, item],
+      // If we had a pack loaded, mark as modified
+      pack_modified: prev.source_pack_name ? true : prev.pack_modified,
     }));
     setPickerOpen(false);
     toast.success('Item added');
@@ -151,6 +153,7 @@ export function POWizardV2({
       line_items: prev.line_items.map(item =>
         item.id === updatedItem.id ? updatedItem : item
       ),
+      pack_modified: prev.source_pack_name ? true : prev.pack_modified,
     }));
     setPickerOpen(false);
     setEditingItem(null);
@@ -161,8 +164,20 @@ export function POWizardV2({
     setFormData(prev => ({
       ...prev,
       line_items: prev.line_items.filter(item => item.id !== itemId),
+      pack_modified: prev.source_pack_name ? true : prev.pack_modified,
     }));
     toast.success('Item removed');
+  }, []);
+
+  const handleLoadPack = useCallback((items: POWizardV2LineItem[], estimateId: string, packName: string) => {
+    setFormData(prev => ({
+      ...prev,
+      line_items: items,
+      source_estimate_id: estimateId,
+      source_pack_name: packName,
+      pack_modified: false,
+    }));
+    toast.success(`Pack "${packName}" loaded with ${items.length} items`);
   }, []);
 
   const handleSubmit = async () => {
@@ -204,6 +219,9 @@ export function POWizardV2({
           onBack={() => setScreen('header')}
           onNext={() => setScreen('review')}
           canAdvance={canAdvanceFromItems}
+          projectId={projectId}
+          supplierId={formData.supplier_id}
+          onLoadPack={handleLoadPack}
         />
       )}
       {screen === 'review' && (

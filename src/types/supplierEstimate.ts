@@ -29,6 +29,8 @@ export interface SupplierEstimateItem {
   unit_price: number;
   line_total: number;
   notes?: string | null;
+  pack_name?: string | null;
+  catalog_item_id?: string | null;
   created_at: string;
 }
 
