@@ -1,11 +1,16 @@
 import { useState } from 'react';
-import { FileText, ChevronDown, ChevronUp } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { FileText, ChevronDown, ChevronUp, Plus } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 interface SupplierEstimatesSectionProps {
   projectId: string;
@@ -28,6 +33,10 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierEstimatesSectionProps) {
   const [isOpen, setIsOpen] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [newEstimateName, setNewEstimateName] = useState('');
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const { data: estimates, isLoading } = useQuery({
     queryKey: ['supplier-project-estimates', projectId, supplierOrgId],
@@ -43,6 +52,34 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
       return data;
     },
     enabled: !!projectId && !!supplierOrgId,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const { data, error } = await supabase
+        .from('supplier_estimates')
+        .insert({
+          supplier_org_id: supplierOrgId,
+          project_id: projectId,
+          name: name.trim(),
+          status: 'DRAFT',
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      toast({ title: 'Success', description: 'Estimate created' });
+      setShowCreate(false);
+      setNewEstimateName('');
+      queryClient.invalidateQueries({ 
+        queryKey: ['supplier-project-estimates', projectId, supplierOrgId] 
+      });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to create estimate', variant: 'destructive' });
+    },
   });
 
   if (isLoading) {
@@ -61,24 +98,36 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
   return (
     <Card className="overflow-hidden">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CollapsibleTrigger asChild>
-          <CardHeader className="bg-muted/30 py-3 px-4 cursor-pointer hover:bg-muted/50 transition-colors">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-sm font-medium">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                My Estimates
-              </CardTitle>
+        <CardHeader className="bg-muted/30 py-3 px-4">
+          <div className="flex items-center justify-between">
+            <CollapsibleTrigger asChild>
+              <div className="flex-1 cursor-pointer hover:opacity-80 transition-opacity">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  My Estimates
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {estimates?.length || 0} estimate{estimates?.length !== 1 ? 's' : ''}
+                </p>
+              </div>
+            </CollapsibleTrigger>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6"
+                onClick={(e) => { e.stopPropagation(); setShowCreate(true); }}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
               {isOpen ? (
                 <ChevronUp className="h-4 w-4 text-muted-foreground" />
               ) : (
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
               )}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {estimates?.length || 0} estimate{estimates?.length !== 1 ? 's' : ''}
-            </p>
-          </CardHeader>
-        </CollapsibleTrigger>
+          </div>
+        </CardHeader>
         <CollapsibleContent>
           <CardContent className="p-4 space-y-2">
             {estimates && estimates.length > 0 ? (
@@ -101,6 +150,35 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
           </CardContent>
         </CollapsibleContent>
       </Collapsible>
+
+      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Estimate</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Estimate Name</Label>
+              <Input
+                placeholder="e.g., Phase 1 Materials"
+                value={newEstimateName}
+                onChange={(e) => setNewEstimateName(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreate(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => createMutation.mutate(newEstimateName)}
+              disabled={!newEstimateName.trim() || createMutation.isPending}
+            >
+              {createMutation.isPending ? 'Creating...' : 'Create'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
