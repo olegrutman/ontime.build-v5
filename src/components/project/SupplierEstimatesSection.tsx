@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { FileText, ChevronDown, ChevronUp, Plus } from 'lucide-react';
+import { FileText, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -8,6 +8,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -35,6 +45,7 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
   const [isOpen, setIsOpen] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [newEstimateName, setNewEstimateName] = useState('');
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -79,6 +90,27 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
     },
     onError: () => {
       toast({ title: 'Error', description: 'Failed to create estimate', variant: 'destructive' });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (estimateId: string) => {
+      const { error } = await supabase
+        .from('supplier_estimates')
+        .delete()
+        .eq('id', estimateId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({ title: 'Deleted', description: 'Estimate deleted' });
+      setDeleteConfirmId(null);
+      queryClient.invalidateQueries({
+        queryKey: ['supplier-project-estimates', projectId, supplierOrgId],
+      });
+    },
+    onError: () => {
+      toast({ title: 'Error', description: 'Failed to delete estimate', variant: 'destructive' });
+      setDeleteConfirmId(null);
     },
   });
 
@@ -142,6 +174,19 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
                       {STATUS_LABELS[estimate.status] || estimate.status}
                     </Badge>
                   </div>
+                  {estimate.status === 'DRAFT' && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteConfirmId(estimate.id);
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </div>
               ))
             ) : (
@@ -179,6 +224,26 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Estimate</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure? This will permanently delete this estimate and all its line items. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteConfirmId && deleteMutation.mutate(deleteConfirmId)}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
