@@ -18,6 +18,7 @@ interface ProjectTopBarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
   onStatusChange?: (status: string) => void;
+  isSupplier?: boolean;
 }
 
 const STATUS_OPTIONS = [
@@ -49,6 +50,7 @@ export function ProjectTopBar({
   activeTab,
   onTabChange,
   onStatusChange,
+  isSupplier = false,
 }: ProjectTopBarProps) {
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
@@ -104,18 +106,30 @@ export function ProjectTopBar({
             >
               Overview
             </TabsTrigger>
-            <TabsTrigger
-              value="sov"
-              className="h-8 px-3 data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md"
-            >
-              SOV
-            </TabsTrigger>
-            <TabsTrigger
-              value="work-orders"
-              className="h-8 px-3 data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md"
-            >
-              Work Orders
-            </TabsTrigger>
+            {!isSupplier && (
+              <TabsTrigger
+                value="sov"
+                className="h-8 px-3 data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md"
+              >
+                SOV
+              </TabsTrigger>
+            )}
+            {!isSupplier && (
+              <TabsTrigger
+                value="work-orders"
+                className="h-8 px-3 data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md"
+              >
+                Work Orders
+              </TabsTrigger>
+            )}
+            {isSupplier && (
+              <TabsTrigger
+                value="estimates"
+                className="h-8 px-3 data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md"
+              >
+                Estimates
+              </TabsTrigger>
+            )}
             <TabsTrigger
               value="invoices"
               className="h-8 px-3 data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md"
@@ -128,13 +142,15 @@ export function ProjectTopBar({
             >
               POs
             </TabsTrigger>
-            <TabsTrigger
-              value="documents"
-              className="h-8 px-3 data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md"
-              disabled
-            >
-              Documents
-            </TabsTrigger>
+            {!isSupplier && (
+              <TabsTrigger
+                value="documents"
+                className="h-8 px-3 data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md"
+                disabled
+              >
+                Documents
+              </TabsTrigger>
+            )}
           </TabsList>
         </Tabs>
       </div>

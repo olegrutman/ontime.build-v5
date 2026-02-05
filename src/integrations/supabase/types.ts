@@ -951,6 +951,7 @@ export type Database = {
           invoice_number: string
           notes: string | null
           paid_at: string | null
+          po_id: string | null
           project_id: string
           rejected_at: string | null
           rejected_by: string | null
@@ -976,6 +977,7 @@ export type Database = {
           invoice_number: string
           notes?: string | null
           paid_at?: string | null
+          po_id?: string | null
           project_id: string
           rejected_at?: string | null
           rejected_by?: string | null
@@ -1001,6 +1003,7 @@ export type Database = {
           invoice_number?: string
           notes?: string | null
           paid_at?: string | null
+          po_id?: string | null
           project_id?: string
           rejected_at?: string | null
           rejected_by?: string | null
@@ -1020,6 +1023,13 @@ export type Database = {
             columns: ["contract_id"]
             isOneToOne: false
             referencedRelation: "project_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
             referencedColumns: ["id"]
           },
           {
