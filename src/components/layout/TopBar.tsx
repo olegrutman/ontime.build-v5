@@ -1,6 +1,5 @@
-import { Search, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import { NotificationSheet } from '@/components/notifications';
@@ -27,7 +26,7 @@ export function TopBar({
 
       {/* Page Title */}
       {title && (
-        <div className="hidden md:block min-w-0">
+        <div className="min-w-0">
           <h1 className="text-sm font-semibold truncate">{title}</h1>
           {subtitle && (
             <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
@@ -35,39 +34,14 @@ export function TopBar({
         </div>
       )}
 
-      {/* Search - hidden on mobile, visible on tablet+ */}
-      <div className="hidden sm:flex flex-1 max-w-md">
-        <div className="relative w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Search..."
-            className="w-full pl-9 h-9 bg-muted/50"
-          />
-        </div>
-      </div>
-
-      {/* Mobile title - visible only on mobile */}
-      {title && (
-        <div className="flex-1 md:hidden min-w-0">
-          <h1 className="text-sm font-semibold truncate">{title}</h1>
-        </div>
-      )}
-
-      {/* Spacer for desktop when no title */}
-      {!title && <div className="flex-1" />}
+      <div className="flex-1" />
 
       {/* Actions */}
-      <div className="flex items-center gap-1 sm:gap-2 ml-auto shrink-0">
-        {/* Mobile search button */}
-        <Button variant="ghost" size="icon" className="h-9 w-9 sm:hidden">
-          <Search className="h-4 w-4" />
-        </Button>
-        
-        {/* Notification Bell with Sheet */}
+      <div className="flex items-center gap-2 ml-auto shrink-0">
         <NotificationSheet />
         
         {showNewButton && (
-          <Button size="sm" onClick={onNewClick} className="gap-1.5 h-9 px-2 sm:px-3">
+          <Button size="sm" onClick={onNewClick} className="gap-1.5 h-9">
             <Plus className="h-4 w-4" />
             <span className="hidden sm:inline">{newButtonLabel}</span>
           </Button>

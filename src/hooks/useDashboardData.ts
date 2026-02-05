@@ -42,6 +42,22 @@ interface PendingInvite {
   role: string;
 }
 
+interface Reminder {
+  id: string;
+  title: string;
+  due_date: string;
+  project_id: string | null;
+  project_name: string | null;
+  completed: boolean;
+}
+
+interface FinancialSummary {
+  totalContracts: number;
+  totalRevenue: number;
+  totalCosts: number;
+  profitMargin: number;
+}
+
 interface DashboardData {
   projects: ProjectWithDetails[];
   statusCounts: {
@@ -65,6 +81,8 @@ interface DashboardData {
     outstandingToCollect: number;
     profit: number;
   };
+  financials: FinancialSummary;
+  reminders: Reminder[];
   thisMonth: {
     invoices: number;
     changeOrders: number;
@@ -78,6 +96,13 @@ export function useDashboardData(): DashboardData {
   const [projects, setProjects] = useState<ProjectWithDetails[]>([]);
   const [attentionItems, setAttentionItems] = useState<AttentionItem[]>([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [financials, setFinancials] = useState<FinancialSummary>({
+    totalContracts: 0,
+    totalRevenue: 0,
+    totalCosts: 0,
+    profitMargin: 0,
+  });
   const [billing, setBilling] = useState({
     invoicesReceived: 0,
     invoicesSent: 0,
@@ -417,6 +442,73 @@ export function useDashboardData(): DashboardData {
         changeOrders: thisMonthCOs,
       });
 
+      // 7. Calculate financial summary for TC
+      const totalContractValue = contracts.reduce((sum, c) => {
+        // For TC, sum contracts where they are the receiver
+        if (orgType === 'TC' && c.to_org_id === currentOrg.id) {
+          return sum + (c.contract_sum || 0);
+        }
+        // For GC, sum contracts where they are the payer
+        if (orgType === 'GC' && c.from_org_id === currentOrg.id) {
+          return sum + (c.contract_sum || 0);
+        }
+        return sum;
+      }, 0);
+
+      // TC profit calculation: revenue from upstream - costs to downstream
+      let totalRevenue = 0;
+      let totalCosts = 0;
+      if (orgType === 'TC') {
+        contracts.forEach(c => {
+          if (c.to_org_id === currentOrg.id) {
+            totalRevenue += c.contract_sum || 0;
+          }
+          if (c.from_org_id === currentOrg.id) {
+            totalCosts += c.contract_sum || 0;
+          }
+        });
+      }
+
+      const profitMargin = totalRevenue > 0 
+        ? ((totalRevenue - totalCosts) / totalRevenue) * 100 
+        : 0;
+
+      setFinancials({
+        totalContracts: totalContractValue,
+        totalRevenue,
+        totalCosts,
+        profitMargin,
+      });
+
+      // 8. Fetch reminders
+      if (user?.id) {
+        const { data: remindersData } = await supabase
+          .from('reminders')
+          .select(`
+            id,
+            title,
+            due_date,
+            project_id,
+            completed,
+            projects:project_id (name)
+          `)
+          .eq('user_id', user.id)
+          .eq('completed', false)
+          .order('due_date', { ascending: true })
+          .limit(10);
+
+        const remindersList: Reminder[] = (remindersData || []).map((r: any) => ({
+          id: r.id,
+          title: r.title,
+          due_date: r.due_date,
+          project_id: r.project_id,
+          project_name: r.projects?.name || null,
+          completed: r.completed,
+        }));
+
+        setReminders(remindersList);
+      }
+
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
@@ -452,6 +544,8 @@ export function useDashboardData(): DashboardData {
     attentionItems,
     pendingInvites,
     billing: { ...billing, role: billingRole },
+    financials,
+    reminders,
     thisMonth,
     loading,
     refetch: fetchData,
