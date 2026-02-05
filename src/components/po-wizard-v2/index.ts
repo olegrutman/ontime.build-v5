@@ -9,3 +9,5 @@ export { StepByStepFilter } from './StepByStepFilter';
 export { SpecFilters } from './SpecFilters';
 export { ProductList } from './ProductList';
 export { QuantityPanel } from './QuantityPanel';
+export { OrderingModeToggle } from './OrderingModeToggle';
+export { PackSelector } from './PackSelector';

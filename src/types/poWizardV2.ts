@@ -15,6 +15,11 @@ export interface POWizardV2Data {
   // Work Order context (optional)
   work_order_id?: string;
   work_order_title?: string;
+
+  // Estimate/Pack context (optional)
+  source_estimate_id?: string;
+  source_pack_name?: string;
+  pack_modified?: boolean;
 }
 
 export interface POWizardV2LineItem {
@@ -231,6 +236,9 @@ export const INITIAL_PO_WIZARD_V2_DATA: POWizardV2Data = {
   line_items: [],
   work_order_id: undefined,
   work_order_title: undefined,
+  source_estimate_id: undefined,
+  source_pack_name: undefined,
+  pack_modified: false,
 };
 
 // Map database categories to display names and icons (legacy - use VIRTUAL_CATEGORIES)

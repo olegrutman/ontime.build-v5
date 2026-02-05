@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +11,23 @@ import {
   Package,
 } from 'lucide-react';
 import { POWizardV2LineItem } from '@/types/poWizardV2';
+import { OrderingModeToggle, OrderingMode } from './OrderingModeToggle';
+import { PackSelector } from './PackSelector';
+
+interface EstimatePackItem {
+  id: string;
+  supplier_sku: string | null;
+  description: string;
+  quantity: number;
+  uom: string;
+  catalog_item_id: string | null;
+  pack_name: string | null;
+}
+
+interface EstimatePack {
+  name: string;
+  items: EstimatePackItem[];
+}
 
 interface ItemsScreenProps {
   items: POWizardV2LineItem[];
@@ -19,6 +37,9 @@ interface ItemsScreenProps {
   onBack: () => void;
   onNext: () => void;
   canAdvance: boolean;
+  projectId: string;
+  supplierId: string | null;
+  onLoadPack: (items: POWizardV2LineItem[], estimateId: string, packName: string) => void;
 }
 
 export function ItemsScreen({
@@ -29,11 +50,36 @@ export function ItemsScreen({
   onBack,
   onNext,
   canAdvance,
+  projectId,
+  supplierId,
+  onLoadPack,
 }: ItemsScreenProps) {
+  const [mode, setMode] = useState<OrderingMode>('estimate');
+
+  const handleSelectPack = (pack: EstimatePack, estimateId: string) => {
+    // Convert estimate pack items to PO line items
+    const lineItems: POWizardV2LineItem[] = pack.items.map((item, idx) => ({
+      id: `pack-${idx}-${Date.now()}`,
+      catalog_item_id: item.catalog_item_id || '',
+      supplier_sku: item.supplier_sku || '',
+      name: item.description,
+      specs: item.supplier_sku || '',
+      quantity: item.quantity,
+      unit_mode: 'EACH' as const,
+      uom: item.uom,
+      item_notes: item.catalog_item_id ? undefined : '⚠ Not in catalog',
+    }));
+
+    onLoadPack(lineItems, estimateId, pack.name);
+  };
+
+  // Show pack selector when in estimate mode and no items loaded yet
+  const showPackSelector = mode === 'estimate' && items.length === 0;
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-4 py-3 border-b bg-muted/30">
+      <div className="px-4 py-3 border-b bg-muted/30 space-y-2">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-lg font-semibold">Items</h2>
@@ -45,11 +91,23 @@ export function ItemsScreen({
             </Badge>
           )}
         </div>
+        <OrderingModeToggle
+          mode={mode}
+          onChange={setMode}
+          hasEstimate={true}
+        />
       </div>
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {items.length === 0 ? (
+        {showPackSelector ? (
+          <PackSelector
+            projectId={projectId}
+            supplierId={supplierId}
+            onSelectPack={handleSelectPack}
+            onSwitchToCatalog={() => setMode('catalog')}
+          />
+        ) : items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="p-4 rounded-full bg-muted mb-4">
               <Package className="h-8 w-8 text-muted-foreground" />

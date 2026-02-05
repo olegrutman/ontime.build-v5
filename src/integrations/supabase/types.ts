@@ -2479,6 +2479,7 @@ export type Database = {
           notes: string | null
           ordered_at: string | null
           organization_id: string
+          pack_modified: boolean | null
           po_name: string
           po_number: string
           priced_at: string | null
@@ -2508,6 +2509,7 @@ export type Database = {
           notes?: string | null
           ordered_at?: string | null
           organization_id: string
+          pack_modified?: boolean | null
           po_name: string
           po_number: string
           priced_at?: string | null
@@ -2537,6 +2539,7 @@ export type Database = {
           notes?: string | null
           ordered_at?: string | null
           organization_id?: string
+          pack_modified?: boolean | null
           po_name?: string
           po_number?: string
           priced_at?: string | null
@@ -2698,42 +2701,55 @@ export type Database = {
       }
       supplier_estimate_items: {
         Row: {
+          catalog_item_id: string | null
           created_at: string | null
           description: string
           estimate_id: string
           id: string
           line_total: number | null
           notes: string | null
+          pack_name: string | null
           quantity: number
           supplier_sku: string | null
           unit_price: number
           uom: string
         }
         Insert: {
+          catalog_item_id?: string | null
           created_at?: string | null
           description: string
           estimate_id: string
           id?: string
           line_total?: number | null
           notes?: string | null
+          pack_name?: string | null
           quantity?: number
           supplier_sku?: string | null
           unit_price?: number
           uom?: string
         }
         Update: {
+          catalog_item_id?: string | null
           created_at?: string | null
           description?: string
           estimate_id?: string
           id?: string
           line_total?: number | null
           notes?: string | null
+          pack_name?: string | null
           quantity?: number
           supplier_sku?: string | null
           unit_price?: number
           uom?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "supplier_estimate_items_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "catalog_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "supplier_estimate_items_estimate_id_fkey"
             columns: ["estimate_id"]
