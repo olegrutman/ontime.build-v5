@@ -119,17 +119,23 @@ export default function EstimateApprovals() {
   };
 
   const handleApprove = async (estimateId: string) => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('supplier_estimates')
       .update({ 
         status: 'APPROVED',
         approved_at: new Date().toISOString(),
         approved_by: user?.id,
       })
-      .eq('id', estimateId);
+      .eq('id', estimateId)
+      .select();
 
     if (error) {
       toast.error('Failed to approve estimate: ' + error.message);
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      toast.error('Unable to approve estimate — you may not have permission');
       return;
     }
 
@@ -143,16 +149,22 @@ export default function EstimateApprovals() {
   const handleReject = async () => {
     if (!estimateToReject) return;
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('supplier_estimates')
       .update({ 
         status: 'REJECTED',
         notes: rejectReason,
       })
-      .eq('id', estimateToReject);
+      .eq('id', estimateToReject)
+      .select();
 
     if (error) {
       toast.error('Failed to reject estimate: ' + error.message);
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      toast.error('Unable to reject estimate — you may not have permission');
       return;
     }
 
