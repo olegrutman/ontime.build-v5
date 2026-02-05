@@ -72,7 +72,6 @@ export function PackSelector({
       .from('supplier_estimate_items')
       .select('id, supplier_sku, description, quantity, uom, catalog_item_id, pack_name')
       .eq('estimate_id', estimate.id)
-      .not('pack_name', 'is', null)
       .order('created_at');
 
     if (items) {

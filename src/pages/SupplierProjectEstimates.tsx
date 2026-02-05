@@ -84,6 +84,7 @@ interface CSVLineItem {
   uom: string;
   unit_price: number;
   notes: string;
+  pack_name: string;
 }
 
 // State for estimate upload wizard
@@ -305,6 +306,7 @@ export default function SupplierProjectEstimates() {
     const uomIdx = headers.findIndex(h => h.includes('uom') || h.includes('unit'));
     const priceIdx = headers.findIndex(h => h.includes('price') || h.includes('cost'));
     const notesIdx = headers.findIndex(h => h.includes('note'));
+    const packIdx = headers.findIndex(h => h.includes('pack'));
 
     if (descIdx === -1) {
       toast({ title: 'Invalid CSV', description: 'CSV must have a Description column', variant: 'destructive' });
@@ -322,6 +324,7 @@ export default function SupplierProjectEstimates() {
           uom: uomIdx >= 0 ? cols[uomIdx] || 'EA' : 'EA',
           unit_price: priceIdx >= 0 ? parseFloat(cols[priceIdx]) || 0 : 0,
           notes: notesIdx >= 0 ? cols[notesIdx] || '' : '',
+          pack_name: packIdx >= 0 ? cols[packIdx] || '' : '',
         });
       }
     }
@@ -341,6 +344,7 @@ export default function SupplierProjectEstimates() {
       uom: row.uom,
       unit_price: row.unit_price,
       notes: row.notes || null,
+      pack_name: row.pack_name || null,
     }));
 
     const { error } = await supabase
