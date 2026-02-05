@@ -1,8 +1,10 @@
-export { QuickActions } from './QuickActions';
-export { SummaryCards } from './SummaryCards';
-export { ProjectListFilters, type ProjectStatusFilter } from './ProjectListFilters';
+export { StatusMenu, type ProjectStatusFilter } from './StatusMenu';
+export { FinancialSnapshotTile } from './FinancialSnapshotTile';
+export { NeedsAttentionTile, type AttentionItem, type PendingInvite } from './NeedsAttentionTile';
+export { RemindersTile, type Reminder } from './RemindersTile';
+export { AddReminderDialog } from './AddReminderDialog';
 export { ProjectRow } from './ProjectRow';
-export { NeedsAttentionPanel, type AttentionItem } from './NeedsAttentionPanel';
-export { PendingInvitesPanel, type PendingInvite } from './PendingInvitesPanel';
+export { NeedsAttentionPanel } from './NeedsAttentionPanel';
+export { PendingInvitesPanel } from './PendingInvitesPanel';
 export { ArchiveProjectDialog } from './ArchiveProjectDialog';
 export { CompleteProjectDialog } from './CompleteProjectDialog';
