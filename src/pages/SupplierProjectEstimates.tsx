@@ -48,6 +48,16 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   Sheet,
   SheetContent,
   SheetHeader,
@@ -115,6 +125,9 @@ export default function SupplierProjectEstimates() {
     estimateId: '',
     supplierId: '',
   });
+
+  // Delete confirmation
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const currentOrg = userOrgRoles[0]?.organization;
   const isSupplier = currentOrg?.type === 'SUPPLIER';
@@ -228,6 +241,22 @@ export default function SupplierProjectEstimates() {
   const handleOpenEstimate = (estimate: SupplierProjectEstimate) => {
     setSelectedEstimate(estimate);
     fetchEstimateItems(estimate.id);
+  };
+
+  const handleDeleteEstimate = async (estimateId: string) => {
+    const { error } = await supabase
+      .from('supplier_estimates')
+      .delete()
+      .eq('id', estimateId);
+
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to delete estimate', variant: 'destructive' });
+    } else {
+      toast({ title: 'Deleted', description: 'Estimate has been deleted' });
+      setSelectedEstimate(null);
+      fetchEstimates();
+    }
+    setDeleteConfirmId(null);
   };
 
   const handleSubmitEstimate = async () => {
@@ -545,6 +574,14 @@ export default function SupplierProjectEstimates() {
                           <Send className="h-4 w-4 mr-2" />
                           Submit for Review
                         </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => setDeleteConfirmId(selectedEstimate.id)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </Button>
                       </div>
                     )}
 
@@ -671,6 +708,27 @@ export default function SupplierProjectEstimates() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+
+            {/* Delete Confirmation */}
+            <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Estimate</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure? This will permanently delete this estimate and all its line items. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    onClick={() => deleteConfirmId && handleDeleteEstimate(deleteConfirmId)}
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
             {/* Pack-Aware Upload Wizard */}
             <EstimateUploadWizard
