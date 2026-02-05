@@ -1,0 +1,106 @@
+import { useState } from 'react';
+import { FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Skeleton } from '@/components/ui/skeleton';
+
+interface SupplierEstimatesSectionProps {
+  projectId: string;
+  supplierOrgId: string;
+}
+
+const STATUS_COLORS: Record<string, string> = {
+  DRAFT: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
+  SUBMITTED: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  APPROVED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  REJECTED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  DRAFT: 'Draft',
+  SUBMITTED: 'Submitted',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
+};
+
+export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierEstimatesSectionProps) {
+  const [isOpen, setIsOpen] = useState(true);
+
+  const { data: estimates, isLoading } = useQuery({
+    queryKey: ['supplier-project-estimates', projectId, supplierOrgId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('supplier_estimates')
+        .select('id, name, status, total_amount, created_at')
+        .eq('project_id', projectId)
+        .eq('supplier_org_id', supplierOrgId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!projectId && !!supplierOrgId,
+  });
+
+  if (isLoading) {
+    return (
+      <Card className="overflow-hidden">
+        <CardHeader className="bg-muted/30 py-3 px-4">
+          <Skeleton className="h-5 w-32" />
+        </CardHeader>
+        <CardContent className="p-4">
+          <Skeleton className="h-16 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="overflow-hidden">
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="bg-muted/30 py-3 px-4 cursor-pointer hover:bg-muted/50 transition-colors">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                My Estimates
+              </CardTitle>
+              {isOpen ? (
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {estimates?.length || 0} estimate{estimates?.length !== 1 ? 's' : ''}
+            </p>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="p-4 space-y-2">
+            {estimates && estimates.length > 0 ? (
+              estimates.map((estimate) => (
+                <div
+                  key={estimate.id}
+                  className="flex justify-between items-center py-2 border-b last:border-0"
+                >
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium">{estimate.name}</p>
+                    <Badge className={STATUS_COLORS[estimate.status] || STATUS_COLORS.DRAFT}>
+                      {STATUS_LABELS[estimate.status] || estimate.status}
+                    </Badge>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-4">No estimates yet</p>
+            )}
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
+    </Card>
+  );
+}

@@ -6,7 +6,6 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
@@ -21,7 +20,12 @@ import {
   WorkOrdersTab,
   InvoiceSummaryCard,
   PurchaseOrdersTab,
-  POSummaryCard
+  POSummaryCard,
+  // Supplier-specific components
+  SupplierContractsSection,
+  SupplierPOSummaryCard,
+  SupplierFinancialsSummaryCard,
+  SupplierEstimatesSection
 } from '@/components/project';
 import { InvoicesTab } from '@/components/invoices';
 import { ContractSOVEditor } from '@/components/sov';
@@ -58,11 +62,16 @@ export default function ProjectHome() {
   const { id } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userOrgRoles } = useAuth();
   const { toast } = useToast();
   const [project, setProject] = useState<Project | null>(null);
   const [summary, setSummary] = useState<WorkItemSummary | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Detect if current org is a supplier
+  const currentOrg = userOrgRoles[0]?.organization;
+  const isSupplier = currentOrg?.type === 'SUPPLIER';
+  const supplierOrgId = isSupplier ? currentOrg?.id : null;
 
   // Get active tab from URL or default to 'overview'
   const activeTab = searchParams.get('tab') || 'overview';
@@ -186,6 +195,7 @@ export default function ProjectHome() {
             activeTab={activeTab}
             onTabChange={handleTabChange}
             onStatusChange={handleStatusChange}
+            isSupplier={isSupplier}
           />
 
           {/* Scrollable content */}
@@ -211,7 +221,11 @@ export default function ProjectHome() {
                     </h2>
                     <div className="grid gap-6 lg:grid-cols-3">
                       <ProjectTeamSection projectId={id!} />
-                      <ProjectContractsSection projectId={id!} />
+                      {isSupplier && supplierOrgId ? (
+                        <SupplierContractsSection projectId={id!} supplierOrgId={supplierOrgId} />
+                      ) : (
+                        <ProjectContractsSection projectId={id!} />
+                      )}
                       <ProjectScopeSection projectId={id!} projectType={project.project_type} />
                     </div>
                   </section>
@@ -222,30 +236,47 @@ export default function ProjectHome() {
                       Needs Attention
                     </h2>
                     <div className="grid gap-4 lg:grid-cols-3">
-                      <WorkOrderSummaryCard projectId={id!} />
-                      <InvoiceSummaryCard projectId={id!} />
-                      <POSummaryCard projectId={id!} />
+                      {isSupplier && supplierOrgId ? (
+                        <>
+                          <SupplierPOSummaryCard projectId={id!} supplierOrgId={supplierOrgId} />
+                          <InvoiceSummaryCard projectId={id!} />
+                          <SupplierFinancialsSummaryCard projectId={id!} supplierOrgId={supplierOrgId} />
+                        </>
+                      ) : (
+                        <>
+                          <WorkOrderSummaryCard projectId={id!} />
+                          <InvoiceSummaryCard projectId={id!} />
+                          <POSummaryCard projectId={id!} />
+                        </>
+                      )}
                     </div>
                   </section>
 
-                  {/* Section 3: Financial Snapshot */}
-                  <section>
-                    <h2 className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-wide">
-                      Financial Snapshot
-                    </h2>
-                    <ProjectFinancialsSectionNew projectId={id!} />
-                  </section>
+                  {/* Section 3: Financial Snapshot - hide for suppliers */}
+                  {!isSupplier && (
+                    <section>
+                      <h2 className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-wide">
+                        Financial Snapshot
+                      </h2>
+                      <ProjectFinancialsSectionNew projectId={id!} />
+                    </section>
+                  )}
                 </div>
               )}
 
-              {/* SOV Tab */}
-              {activeTab === 'sov' && (
+              {/* SOV Tab - hide for suppliers */}
+              {activeTab === 'sov' && !isSupplier && (
                 <ContractSOVEditor projectId={id!} />
               )}
 
-              {/* Work Orders Tab */}
-              {activeTab === 'work-orders' && (
+              {/* Work Orders Tab - hide for suppliers */}
+              {activeTab === 'work-orders' && !isSupplier && (
                 <WorkOrdersTab projectId={id!} projectName={project.name} />
+              )}
+
+              {/* Estimates Tab - suppliers only */}
+              {activeTab === 'estimates' && isSupplier && supplierOrgId && (
+                <SupplierEstimatesSection projectId={id!} supplierOrgId={supplierOrgId} />
               )}
 
               {/* Invoices Tab */}
@@ -269,8 +300,8 @@ export default function ProjectHome() {
                 />
               )}
 
-              {/* Documents Tab (placeholder) */}
-              {activeTab === 'documents' && (
+              {/* Documents Tab (placeholder) - hide for suppliers */}
+              {activeTab === 'documents' && !isSupplier && (
                 <div className="flex flex-col items-center justify-center py-12 text-center border rounded-lg bg-muted/20">
                   <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
                   <h3 className="text-lg font-medium mb-2">Documents</h3>
