@@ -14,6 +14,8 @@ interface PartnerOrg {
   name: string;
   type: string;
   project_count: number;
+  most_recent_project: string | null;
+  most_recent_date: string | null;
 }
 
 const ORG_TYPE_ORDER = ['GC', 'TC', 'FC', 'SUPPLIER'] as const;
@@ -59,12 +61,17 @@ export default function PartnerDirectory() {
 
     const projectIds = myProjects.map((p) => p.project_id);
 
-    // Get all orgs from those projects (excluding current org)
+    // Get all orgs from those projects with project info (excluding current org)
     const { data: teamMembers, error: teamError } = await supabase
       .from('project_team')
       .select(`
         org_id,
         project_id,
+        projects!inner (
+          id,
+          name,
+          updated_at
+        ),
         organizations!inner (
           id,
           org_code,
@@ -83,46 +90,52 @@ export default function PartnerDirectory() {
       return;
     }
 
-    // Aggregate by org_id and count unique projects
+    // Build org map and track projects with dates
     const orgMap = new Map<string, PartnerOrg>();
+    const projectsByOrg = new Map<string, { 
+      projectIds: Set<string>; 
+      mostRecent: { name: string; date: string } | null;
+    }>();
 
     teamMembers?.forEach((member) => {
       const org = member.organizations as unknown as { id: string; org_code: string; name: string; type: string };
-      if (!org) return;
+      const project = member.projects as unknown as { id: string; name: string; updated_at: string };
+      if (!org || !project) return;
 
-      if (orgMap.has(org.id)) {
-        const existing = orgMap.get(org.id)!;
-        // Check if this project is already counted
-        existing.project_count = existing.project_count;
-        // We need to track unique projects - use a Set approach
-      } else {
+      // Initialize org entry if needed
+      if (!orgMap.has(org.id)) {
         orgMap.set(org.id, {
           org_id: org.id,
           org_code: org.org_code,
           name: org.name,
           type: org.type,
           project_count: 0,
+          most_recent_project: null,
+          most_recent_date: null,
         });
       }
-    });
 
-    // Count unique projects per org
-    const projectsByOrg = new Map<string, Set<string>>();
-    teamMembers?.forEach((member) => {
-      const org = member.organizations as unknown as { id: string };
-      if (!org) return;
-      
+      // Track projects per org
       if (!projectsByOrg.has(org.id)) {
-        projectsByOrg.set(org.id, new Set());
+        projectsByOrg.set(org.id, { projectIds: new Set(), mostRecent: null });
       }
-      projectsByOrg.get(org.id)!.add(member.project_id);
+
+      const entry = projectsByOrg.get(org.id)!;
+      entry.projectIds.add(member.project_id);
+
+      // Check if this is the most recent project
+      if (!entry.mostRecent || new Date(project.updated_at) > new Date(entry.mostRecent.date)) {
+        entry.mostRecent = { name: project.name, date: project.updated_at };
+      }
     });
 
-    // Update counts
-    projectsByOrg.forEach((projects, orgId) => {
+    // Update counts and most recent project info
+    projectsByOrg.forEach((data, orgId) => {
       const partner = orgMap.get(orgId);
       if (partner) {
-        partner.project_count = projects.size;
+        partner.project_count = data.projectIds.size;
+        partner.most_recent_project = data.mostRecent?.name || null;
+        partner.most_recent_date = data.mostRecent?.date || null;
       }
     });
 
@@ -137,7 +150,8 @@ export default function PartnerDirectory() {
     return partners.filter(
       (p) =>
         p.name.toLowerCase().includes(query) ||
-        p.org_code.toLowerCase().includes(query)
+        p.org_code.toLowerCase().includes(query) ||
+        (p.most_recent_project && p.most_recent_project.toLowerCase().includes(query))
     );
   }, [partners, searchQuery]);
 
@@ -148,7 +162,15 @@ export default function PartnerDirectory() {
     ORG_TYPE_ORDER.forEach((type) => {
       groups[type] = filteredPartners
         .filter((p) => p.type === type)
-        .sort((a, b) => b.project_count - a.project_count);
+        .sort((a, b) => {
+          // Sort by most recent date first
+          if (a.most_recent_date && b.most_recent_date) {
+            return new Date(b.most_recent_date).getTime() - new Date(a.most_recent_date).getTime();
+          }
+          if (a.most_recent_date) return -1;
+          if (b.most_recent_date) return 1;
+          return b.project_count - a.project_count;
+        });
     });
 
     return groups;
@@ -175,7 +197,7 @@ export default function PartnerDirectory() {
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Filter by name or org code..."
+            placeholder="Filter by name, org code, or project..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9"
@@ -240,18 +262,25 @@ export default function PartnerDirectory() {
                           className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <div className={`flex h-9 w-9 items-center justify-center rounded-full bg-muted shrink-0`}>
+                            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted shrink-0">
                               <Icon className={`h-4 w-4 ${config.color}`} />
                             </div>
-                            <div className="min-w-0">
-                              <p className="font-medium text-sm truncate">{partner.name}</p>
-                              <Badge variant="outline" className="text-xs font-mono">
-                                {partner.org_code}
-                              </Badge>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-sm truncate">{partner.name}</p>
+                                <Badge variant="outline" className="text-xs font-mono shrink-0">
+                                  {partner.org_code}
+                                </Badge>
+                              </div>
+                              {partner.most_recent_project && (
+                                <p className="text-xs text-muted-foreground truncate">
+                                  Last: {partner.most_recent_project}
+                                </p>
+                              )}
                             </div>
                           </div>
                           <p className="text-xs text-muted-foreground whitespace-nowrap ml-3">
-                            {partner.project_count} project{partner.project_count !== 1 ? 's' : ''} together
+                            {partner.project_count} project{partner.project_count !== 1 ? 's' : ''}
                           </p>
                         </div>
                       ))}
