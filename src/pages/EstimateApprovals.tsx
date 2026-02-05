@@ -11,21 +11,51 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Check, X, Package, Lock, Unlock, Eye } from 'lucide-react';
-import { 
-  ProjectEstimate, 
-  EstimatePack, 
-  ESTIMATE_STATUS_LABELS,
-  EstimateStatus
-} from '@/types/estimate';
+import { Check, X, FileText, Eye, Loader2 } from 'lucide-react';
+
+interface SupplierEstimate {
+  id: string;
+  name: string;
+  status: string;
+  total_amount: number | null;
+  notes: string | null;
+  submitted_at: string | null;
+  approved_at: string | null;
+  approved_by: string | null;
+  created_at: string;
+  project_id: string;
+  supplier_org_id: string;
+  project?: { id: string; name: string } | null;
+  supplier_org?: { id: string; name: string; org_code: string } | null;
+}
+
+interface EstimateLineItem {
+  id: string;
+  supplier_sku: string | null;
+  description: string;
+  quantity: number | null;
+  uom: string | null;
+  unit_price: number | null;
+  line_total: number | null;
+  notes: string | null;
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  DRAFT: 'Draft',
+  SUBMITTED: 'Submitted',
+  APPROVED: 'Approved',
+  REJECTED: 'Rejected',
+};
 
 export default function EstimateApprovals() {
   const { user, currentRole, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   
-  const [estimates, setEstimates] = useState<ProjectEstimate[]>([]);
-  const [selectedEstimate, setSelectedEstimate] = useState<ProjectEstimate | null>(null);
+  const [estimates, setEstimates] = useState<SupplierEstimate[]>([]);
+  const [selectedEstimate, setSelectedEstimate] = useState<SupplierEstimate | null>(null);
+  const [lineItems, setLineItems] = useState<EstimateLineItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingDetails, setLoadingDetails] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [estimateToReject, setEstimateToReject] = useState<string | null>(null);
@@ -35,7 +65,7 @@ export default function EstimateApprovals() {
       navigate('/auth');
     } else if (!authLoading && currentRole !== 'GC_PM') {
       toast.error('Only GC Project Managers can approve estimates');
-      navigate('/');
+      navigate('/dashboard');
     }
   }, [user, currentRole, authLoading, navigate]);
 
@@ -48,17 +78,18 @@ export default function EstimateApprovals() {
   const fetchEstimates = async () => {
     setLoading(true);
     const { data, error } = await supabase
-      .from('project_estimates')
+      .from('supplier_estimates')
       .select(`
         *,
         project:projects(id, name),
-        supplier:suppliers(id, name, supplier_code)
+        supplier_org:organizations!supplier_estimates_supplier_org_id_fkey(id, name, org_code)
       `)
       .in('status', ['SUBMITTED', 'APPROVED', 'REJECTED'])
       .order('submitted_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching estimates:', error);
+      toast.error('Failed to load estimates');
       setLoading(false);
       return;
     }
@@ -66,44 +97,28 @@ export default function EstimateApprovals() {
     setLoading(false);
   };
 
-  const fetchEstimateDetails = async (estimateId: string) => {
-    const { data: packs, error: packsError } = await supabase
-      .from('estimate_packs')
+  const fetchEstimateDetails = async (estimate: SupplierEstimate) => {
+    setSelectedEstimate(estimate);
+    setLoadingDetails(true);
+    
+    const { data: items, error } = await supabase
+      .from('supplier_estimate_items')
       .select('*')
-      .eq('estimate_id', estimateId)
-      .order('sort_order');
+      .eq('estimate_id', estimate.id)
+      .order('created_at');
 
-    if (packsError) {
-      console.error('Error fetching packs:', packsError);
-      return;
+    if (error) {
+      console.error('Error fetching line items:', error);
+      toast.error('Failed to load estimate details');
     }
-
-    const packsWithItems: EstimatePack[] = [];
-    for (const pack of packs || []) {
-      const { data: items } = await supabase
-        .from('pack_items')
-        .select('*')
-        .eq('pack_id', pack.id)
-        .order('created_at');
-
-      packsWithItems.push({
-        ...pack,
-        items: items || [],
-      });
-    }
-
-    const estimate = estimates.find(e => e.id === estimateId);
-    if (estimate) {
-      setSelectedEstimate({
-        ...estimate,
-        packs: packsWithItems,
-      });
-    }
+    
+    setLineItems(items || []);
+    setLoadingDetails(false);
   };
 
   const handleApprove = async (estimateId: string) => {
     const { error } = await supabase
-      .from('project_estimates')
+      .from('supplier_estimates')
       .update({ 
         status: 'APPROVED',
         approved_at: new Date().toISOString(),
@@ -127,7 +142,7 @@ export default function EstimateApprovals() {
     if (!estimateToReject) return;
 
     const { error } = await supabase
-      .from('project_estimates')
+      .from('supplier_estimates')
       .update({ 
         status: 'REJECTED',
         notes: rejectReason,
@@ -154,7 +169,7 @@ export default function EstimateApprovals() {
     setRejectDialogOpen(true);
   };
 
-  const getStatusBadgeVariant = (status: EstimateStatus) => {
+  const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case 'DRAFT': return 'secondary';
       case 'SUBMITTED': return 'default';
@@ -164,16 +179,35 @@ export default function EstimateApprovals() {
     }
   };
 
-  const getStatusBadgeClass = (status: EstimateStatus) => {
+  const getStatusBadgeClass = (status: string) => {
     if (status === 'APPROVED') return 'bg-green-600';
     return '';
+  };
+
+  const formatCurrency = (amount: number | null) => {
+    if (amount === null || amount === undefined) return '-';
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
   };
 
   if (authLoading || loading) {
     return (
       <AppLayout title="Estimate Approvals">
         <div className="p-4 sm:p-6 flex items-center justify-center min-h-[400px]">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (currentRole !== 'GC_PM') {
+    return (
+      <AppLayout title="Estimate Approvals">
+        <div className="p-4 sm:p-6 flex items-center justify-center min-h-[400px]">
+          <Card>
+            <CardContent className="py-8 text-center">
+              <p className="text-muted-foreground">Only GC Project Managers can approve estimates</p>
+            </CardContent>
+          </Card>
         </div>
       </AppLayout>
     );
@@ -207,7 +241,7 @@ export default function EstimateApprovals() {
                   className={`cursor-pointer transition-colors ${
                     selectedEstimate?.id === estimate.id ? 'border-primary' : ''
                   }`}
-                  onClick={() => fetchEstimateDetails(estimate.id)}
+                  onClick={() => fetchEstimateDetails(estimate)}
                 >
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between">
@@ -215,8 +249,13 @@ export default function EstimateApprovals() {
                       <Badge>Pending</Badge>
                     </div>
                     <CardDescription>
-                      {estimate.project?.name} • {estimate.supplier?.name}
+                      {estimate.project?.name} • {estimate.supplier_org?.name}
                     </CardDescription>
+                    {estimate.total_amount !== null && estimate.total_amount > 0 && (
+                      <p className="text-sm font-medium text-foreground mt-1">
+                        {formatCurrency(estimate.total_amount)}
+                      </p>
+                    )}
                   </CardHeader>
                   <CardContent className="pt-0">
                     <div className="flex gap-2">
@@ -250,20 +289,20 @@ export default function EstimateApprovals() {
                     className={`cursor-pointer transition-colors opacity-75 ${
                       selectedEstimate?.id === estimate.id ? 'border-primary opacity-100' : ''
                     }`}
-                    onClick={() => fetchEstimateDetails(estimate.id)}
+                    onClick={() => fetchEstimateDetails(estimate)}
                   >
                     <CardHeader className="pb-2">
                       <div className="flex items-start justify-between">
                         <CardTitle className="text-base">{estimate.name}</CardTitle>
                         <Badge 
-                          variant={getStatusBadgeVariant(estimate.status as EstimateStatus)}
-                          className={getStatusBadgeClass(estimate.status as EstimateStatus)}
+                          variant={getStatusBadgeVariant(estimate.status)}
+                          className={getStatusBadgeClass(estimate.status)}
                         >
-                          {ESTIMATE_STATUS_LABELS[estimate.status as EstimateStatus]}
+                          {STATUS_LABELS[estimate.status] || estimate.status}
                         </Badge>
                       </div>
                       <CardDescription>
-                        {estimate.project?.name} • {estimate.supplier?.name}
+                        {estimate.project?.name} • {estimate.supplier_org?.name}
                       </CardDescription>
                     </CardHeader>
                   </Card>
@@ -282,7 +321,12 @@ export default function EstimateApprovals() {
                       <CardTitle>{selectedEstimate.name}</CardTitle>
                       <CardDescription>
                         Project: {selectedEstimate.project?.name} | 
-                        Supplier: {selectedEstimate.supplier?.name}
+                        Supplier: {selectedEstimate.supplier_org?.name}
+                        {selectedEstimate.total_amount !== null && selectedEstimate.total_amount > 0 && (
+                          <span className="ml-2 font-medium text-foreground">
+                            • Total: {formatCurrency(selectedEstimate.total_amount)}
+                          </span>
+                        )}
                       </CardDescription>
                     </div>
                     {selectedEstimate.status === 'SUBMITTED' && (
@@ -305,57 +349,43 @@ export default function EstimateApprovals() {
                     </div>
                   )}
 
-                  {selectedEstimate.packs && selectedEstimate.packs.length > 0 ? (
-                    <div className="space-y-6">
-                      {selectedEstimate.packs.map(pack => (
-                        <div key={pack.id} className="border rounded-lg p-4">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Package className="h-5 w-5 text-muted-foreground" />
-                            <h3 className="font-semibold">{pack.pack_name}</h3>
-                            <Badge variant={pack.pack_type === 'ENGINEERED_LOCKED' ? 'secondary' : 'outline'}>
-                              {pack.pack_type === 'ENGINEERED_LOCKED' ? (
-                                <><Lock className="h-3 w-3 mr-1" /> Locked</>
-                              ) : (
-                                <><Unlock className="h-3 w-3 mr-1" /> Modifiable</>
-                              )}
-                            </Badge>
-                            <Badge variant="outline" className="ml-auto">
-                              {pack.items?.length || 0} items
-                            </Badge>
-                          </div>
-                          {pack.items && pack.items.length > 0 ? (
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>SKU</TableHead>
-                                  <TableHead>Description</TableHead>
-                                  <TableHead className="text-right">Qty</TableHead>
-                                  <TableHead>UOM</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {pack.items.map(item => (
-                                  <TableRow key={item.id}>
-                                    <TableCell className="font-mono text-sm">
-                                      {item.supplier_sku || '-'}
-                                    </TableCell>
-                                    <TableCell>{item.description}</TableCell>
-                                    <TableCell className="text-right">{item.quantity}</TableCell>
-                                    <TableCell>{item.uom}</TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          ) : (
-                            <p className="text-muted-foreground text-sm">No items in this pack</p>
-                          )}
-                        </div>
-                      ))}
+                  {loadingDetails ? (
+                    <div className="flex items-center justify-center py-12">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : lineItems.length > 0 ? (
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>SKU</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead className="text-right">Qty</TableHead>
+                            <TableHead>UOM</TableHead>
+                            <TableHead className="text-right">Unit Price</TableHead>
+                            <TableHead className="text-right">Line Total</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {lineItems.map(item => (
+                            <TableRow key={item.id}>
+                              <TableCell className="font-mono text-sm">
+                                {item.supplier_sku || '-'}
+                              </TableCell>
+                              <TableCell>{item.description}</TableCell>
+                              <TableCell className="text-right">{item.quantity ?? '-'}</TableCell>
+                              <TableCell>{item.uom || '-'}</TableCell>
+                              <TableCell className="text-right">{formatCurrency(item.unit_price)}</TableCell>
+                              <TableCell className="text-right font-medium">{formatCurrency(item.line_total)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
                     </div>
                   ) : (
                     <div className="text-center py-8 text-muted-foreground">
-                      <Eye className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                      <p>No packs in this estimate</p>
+                      <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No line items in this estimate</p>
                     </div>
                   )}
                 </CardContent>
@@ -363,7 +393,8 @@ export default function EstimateApprovals() {
             ) : (
               <Card>
                 <CardContent className="py-12 text-center text-muted-foreground">
-                  Select an estimate to review details
+                  <Eye className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Select an estimate to review details</p>
                 </CardContent>
               </Card>
             )}
