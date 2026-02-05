@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Package, CheckCircle2, AlertCircle, Plus } from 'lucide-react';
+import { Package, CheckCircle2, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface EstimatePack {
@@ -47,7 +47,18 @@ export function PackSelector({
   const fetchApprovedEstimate = async () => {
     setLoading(true);
 
-    // Find the most recent approved estimate for this project
+    // Resolve supplier's organization_id if supplierId is provided
+    let supplierOrgId: string | null = null;
+    if (supplierId) {
+      const { data: supplierData } = await supabase
+        .from('suppliers')
+        .select('organization_id')
+        .eq('id', supplierId)
+        .single();
+      supplierOrgId = supplierData?.organization_id ?? null;
+    }
+
+    // Find the most recent approved estimate for this project (+ supplier filter)
     let query = supabase
       .from('supplier_estimates')
       .select('id, name')
@@ -56,9 +67,14 @@ export function PackSelector({
       .order('approved_at', { ascending: false })
       .limit(1);
 
+    if (supplierOrgId) {
+      query = query.eq('supplier_org_id', supplierOrgId);
+    }
+
     const { data: estimates } = await query;
 
     if (!estimates || estimates.length === 0) {
+      setPacks([]);
       setLoading(false);
       return;
     }
@@ -67,7 +83,7 @@ export function PackSelector({
     setEstimateId(estimate.id);
     setEstimateName(estimate.name);
 
-    // Fetch items grouped by pack_name
+    // Fetch ALL items for the approved estimate (no pack_name filter)
     const { data: items } = await supabase
       .from('supplier_estimate_items')
       .select('id, supplier_sku, description, quantity, uom, catalog_item_id, pack_name')
@@ -78,7 +94,7 @@ export function PackSelector({
       // Group by pack_name
       const packMap = new Map<string, EstimatePackItem[]>();
       for (const item of items) {
-        const packName = item.pack_name || 'Ungrouped';
+        const packName = item.pack_name || 'Ungrouped Items';
         if (!packMap.has(packName)) {
           packMap.set(packName, []);
         }

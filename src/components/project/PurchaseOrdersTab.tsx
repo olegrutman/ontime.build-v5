@@ -132,6 +132,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: Pu
           status: 'ACTIVE',
           created_by_org_id: currentOrgId,
           pricing_owner_org_id: pricingOwnerOrgId,
+          source_estimate_id: data.source_estimate_id || null,
+          source_pack_name: data.source_pack_name || null,
+          pack_modified: data.pack_modified || false,
         })
         .select()
         .single();

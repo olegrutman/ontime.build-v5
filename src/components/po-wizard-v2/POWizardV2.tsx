@@ -17,6 +17,32 @@ import { ProductPicker } from './ProductPicker';
 
 type Screen = 'header' | 'items' | 'review';
 
+/** Check if an approved estimate exists for this project + supplier combo */
+async function checkApprovedEstimate(projectId: string, supplierId: string | null): Promise<boolean> {
+  let supplierOrgId: string | null = null;
+  if (supplierId) {
+    const { data } = await supabase
+      .from('suppliers')
+      .select('organization_id')
+      .eq('id', supplierId)
+      .single();
+    supplierOrgId = data?.organization_id ?? null;
+  }
+
+  let query = supabase
+    .from('supplier_estimates')
+    .select('id', { count: 'exact', head: true })
+    .eq('project_id', projectId)
+    .eq('status', 'APPROVED');
+
+  if (supplierOrgId) {
+    query = query.eq('supplier_org_id', supplierOrgId);
+  }
+
+  const { count } = await query;
+  return (count ?? 0) > 0;
+}
+
 interface POWizardV2Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -49,7 +75,7 @@ export function POWizardV2({
   const [editingItem, setEditingItem] = useState<POWizardV2LineItem | null>(null);
   const [suppliers, setSuppliers] = useState<ProjectSupplier[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState(true);
-  
+  const [hasApprovedEstimate, setHasApprovedEstimate] = useState(false);
   const [formData, setFormData] = useState<POWizardV2Data>(() => ({
     ...INITIAL_PO_WIZARD_V2_DATA,
     project_id: projectId,
@@ -121,6 +147,7 @@ export function POWizardV2({
   useEffect(() => {
     if (open) {
       setScreen('header');
+      setHasApprovedEstimate(false);
       setFormData({
         ...INITIAL_PO_WIZARD_V2_DATA,
         project_id: projectId,
@@ -131,6 +158,15 @@ export function POWizardV2({
       });
     }
   }, [open, projectId, projectName, projectAddress, workOrderId, workOrderTitle]);
+
+  // Check for approved estimate when supplier changes
+  useEffect(() => {
+    if (!open || !formData.supplier_id) {
+      setHasApprovedEstimate(false);
+      return;
+    }
+    checkApprovedEstimate(projectId, formData.supplier_id).then(setHasApprovedEstimate);
+  }, [open, projectId, formData.supplier_id]);
 
   const handleChange = useCallback((updates: Partial<POWizardV2Data>) => {
     setFormData(prev => ({ ...prev, ...updates }));
@@ -222,6 +258,7 @@ export function POWizardV2({
           projectId={projectId}
           supplierId={formData.supplier_id}
           onLoadPack={handleLoadPack}
+          hasApprovedEstimate={hasApprovedEstimate}
         />
       )}
       {screen === 'review' && (

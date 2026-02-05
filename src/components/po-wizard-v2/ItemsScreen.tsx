@@ -40,6 +40,7 @@ interface ItemsScreenProps {
   projectId: string;
   supplierId: string | null;
   onLoadPack: (items: POWizardV2LineItem[], estimateId: string, packName: string) => void;
+  hasApprovedEstimate: boolean;
 }
 
 export function ItemsScreen({
@@ -53,8 +54,9 @@ export function ItemsScreen({
   projectId,
   supplierId,
   onLoadPack,
+  hasApprovedEstimate,
 }: ItemsScreenProps) {
-  const [mode, setMode] = useState<OrderingMode>('estimate');
+  const [mode, setMode] = useState<OrderingMode>(hasApprovedEstimate ? 'estimate' : 'catalog');
 
   const handleSelectPack = (pack: EstimatePack, estimateId: string) => {
     // Convert estimate pack items to PO line items
@@ -94,7 +96,7 @@ export function ItemsScreen({
         <OrderingModeToggle
           mode={mode}
           onChange={setMode}
-          hasEstimate={true}
+          hasEstimate={hasApprovedEstimate}
         />
       </div>
 
