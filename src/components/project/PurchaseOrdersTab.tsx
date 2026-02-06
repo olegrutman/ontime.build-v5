@@ -50,9 +50,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: Pu
       .from('purchase_orders')
       .select(`
         *,
-        supplier:suppliers(id, name, supplier_code, contact_info),
+        supplier:suppliers(id, name, supplier_code, contact_info, organization_id),
         work_item:work_items(id, title),
-        line_items:po_line_items(id)
+        line_items:po_line_items(id, unit_price, line_total)
       `)
       .eq('project_id', projectId)
       .order('created_at', { ascending: false });
@@ -268,19 +268,25 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: Pu
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredPOs.map((po) => (
-              <POCard
-                key={po.id}
-                po={po}
-                onClick={() => setSelectedPOId(po.id)}
-                onEdit={() => setSelectedPOId(po.id)}
-                onDownload={handleDownload}
-                onSubmit={handleSubmitToSupplier}
-                canEdit={canCreatePO}
-                canSubmit={canCreatePO}
-                isSupplier={isSupplier}
-              />
-            ))}
+            {filteredPOs.map((po) => {
+              const isPricingOwner = po.pricing_owner_org_id === currentOrgId;
+              const isPoSupplier = (po.supplier as { organization_id?: string })?.organization_id === currentOrgId;
+              const canViewPricing = isPricingOwner || isPoSupplier;
+              return (
+                <POCard
+                  key={po.id}
+                  po={po}
+                  onClick={() => setSelectedPOId(po.id)}
+                  onEdit={() => setSelectedPOId(po.id)}
+                  onDownload={handleDownload}
+                  onSubmit={handleSubmitToSupplier}
+                  canEdit={canCreatePO}
+                  canSubmit={canCreatePO}
+                  canViewPricing={canViewPricing}
+                  isSupplier={isSupplier}
+                />
+              );
+            })}
           </div>
         )}
       </div>
