@@ -1,110 +1,134 @@
 
+# Make Email Notifications Work
 
-# Fix PDF Export for Invoices, POs, and Work Orders
+## Current State
 
-## Root Cause Analysis
+Your notification system is currently **in-app only**. Database triggers correctly create rows in the `notifications` table for events like project invites, invoice submissions, PO sends, and change order updates. Users see these in the bell icon sheet. However, **no email is ever sent** for any of these events.
 
-There are 5 separate issues preventing exports from working:
+The good news: all the building blocks already exist.
 
-1. **Edge functions not deployed** -- `invoice-download` and `po-download` both return 404 (not found). They need to be deployed.
-2. **Auth tokens not sent** -- The Invoice export button uses `window.open()` which is a plain browser navigation. It does NOT include the `Authorization: Bearer <token>` header that the edge function requires. Result: always returns 401 Unauthorized.
-3. **PO download gated behind `download_token`** -- The download button only shows if the PO has a `download_token` field. Many POs don't have one set, so users can't download at all. The authenticated fallback also uses `window.open()` (same auth problem).
-4. **Work Orders have no export feature** -- No download/export button exists anywhere in the work order detail page.
-5. **CORS headers incomplete** -- Both edge functions are missing required Supabase client headers, which can cause browser preflight (CORS) failures.
+| Building Block | Status |
+|---|---|
+| RESEND_API_KEY secret | Configured |
+| `user_settings.notify_email` preference | Exists |
+| `profiles.email` for recipients | Exists |
+| 7 notification triggers writing to `notifications` table | Active |
+| Resend email sending (proven via `send-po`) | Working |
 
-## Fix Plan
+## What Needs to Be Built
 
-### 1. Fix CORS Headers in Both Edge Functions
+### 1. New Edge Function: `send-notification-email`
 
-Update the `corsHeaders` in both `invoice-download/index.ts` and `po-download/index.ts` to include all required headers:
+A new backend function that receives a notification payload, looks up the recipient's email and notification preferences, and sends a formatted email via Resend.
 
+**Logic flow:**
+```text
+Notification trigger fires
+  -> Row inserted into notifications table
+  -> Database trigger calls edge function via pg_net
+  -> Edge function:
+     1. Receives notification data (recipient_org_id, type, title, body, action_url)
+     2. Finds users in that org via org_members
+     3. For each user:
+        a. Check user_settings.notify_email = true
+        b. Check category preference (notify_invites, notify_invoices, notify_change_orders)
+        c. Look up email from profiles table
+        d. Send formatted email via Resend API
 ```
-authorization, x-client-info, apikey, content-type,
-x-supabase-client-platform, x-supabase-client-platform-version,
-x-supabase-client-runtime, x-supabase-client-runtime-version
+
+### 2. Database Trigger: Fire Edge Function on New Notification
+
+A new `AFTER INSERT` trigger on the `notifications` table that calls the edge function using `pg_net` (Supabase's built-in HTTP extension for async calls from triggers).
+
+```text
+CREATE TRIGGER trg_send_notification_email
+AFTER INSERT ON notifications
+FOR EACH ROW
+EXECUTE FUNCTION send_notification_email_trigger();
 ```
 
-### 2. Fix Invoice Export -- Pass Auth Token Properly
+The trigger function will use `net.http_post()` to call the edge function with the new notification's data.
 
-**File: `src/components/invoices/InvoiceDetail.tsx`**
+### 3. Notification Type to Preference Mapping
 
-Replace the `window.open()` call with a `fetch()` + blob approach:
-- Get the user's auth token from `supabase.auth.getSession()`
-- Call the edge function with `fetch()` including `Authorization: Bearer <token>`
-- Receive the HTML response
-- Create a Blob URL and open it in a new tab (user can then Ctrl+P to save as PDF)
-- Add loading state on the button while fetching
+Map each notification type to the correct user_settings column:
 
-### 3. Fix PO Export -- Remove Token Dependency, Add Auth-Based Download
+| Notification Type | Setting Column |
+|---|---|
+| PROJECT_INVITE | notify_invites |
+| WORK_ITEM_INVITE | notify_invites |
+| WORK_ORDER_ASSIGNED | notify_invites |
+| PO_SENT | notify_email (general) |
+| CHANGE_SUBMITTED | notify_change_orders |
+| CHANGE_APPROVED | notify_change_orders |
+| CHANGE_REJECTED | notify_change_orders |
+| INVOICE_SUBMITTED | notify_invoices |
+| INVOICE_APPROVED | notify_invoices |
+| INVOICE_REJECTED | notify_invoices |
 
-**File: `src/components/purchase-orders/PODetail.tsx`**
+### 4. Email Template
 
-- Always show the Download button (don't gate behind `download_token`)
-- Use the authenticated download mode: `fetch()` with `Authorization` header and `po_id` parameter
-- Same blob approach as invoices
-- Keep the token-based download as a fallback for supplier email links
+A clean, branded HTML email template that includes:
+- OntimeBuild header
+- Notification title (bold)
+- Notification body text
+- "View in App" button linking to action_url
+- Footer with unsubscribe hint (link to profile settings)
 
-### 4. Create Work Order Export
+### 5. Resend Domain Requirement
 
-**New File: `supabase/functions/work-order-download/index.ts`**
+Currently the `send-po` function uses `onboarding@resend.dev` as the sender. This is Resend's sandbox domain and has limitations:
+- Can only send to the email address that owns the Resend account
+- Emails may be flagged as spam
 
-Create a new edge function that:
-- Accepts `work_item_id` parameter with an auth token
-- Fetches the work item, its labor entries, materials, and participants
-- Generates a professional HTML document (matching the invoice/PO style)
-- Returns HTML that can be printed as PDF
+**To send emails to any user, you need to:**
+1. Go to https://resend.com/domains
+2. Add and verify your domain (e.g., `ontimebuild.com` or `ontime.build`)
+3. Add the DNS records Resend provides (SPF, DKIM, DMARC)
+4. Once verified, update the "from" address to use your domain (e.g., `notifications@ontime.build`)
 
-**File: `src/components/work-item/WorkItemActions.tsx`**
-
-- Add an "Export PDF" button to the work order actions sidebar
-- Use the same `fetch()` + blob approach to call the new edge function
-
-### 5. Deploy All Edge Functions
-
-Deploy `invoice-download`, `po-download`, and the new `work-order-download` function. These functions use JWT verification (default behavior), so no config.toml changes needed.
+This is the single most important step -- without a verified domain, emails will only reach the Resend account owner.
 
 ## Technical Details
 
-### Auth Token Fetch Pattern (used in all 3 exports)
+### Files to Create/Modify
+
+| File | Action |
+|---|---|
+| `supabase/functions/send-notification-email/index.ts` | **New** -- Edge function to send email via Resend |
+| Database migration | **New** -- Add `pg_net` trigger on notifications table |
+| `supabase/config.toml` | Add function config (verify_jwt = false since called from DB trigger) |
+
+### Edge Function Design
+
+The function will:
+- Accept POST with `{ notification_id, recipient_org_id, type, title, body, action_url }`
+- Use service role to query `org_members` -> `profiles` -> `user_settings`
+- Filter out users with email notifications disabled (globally or per-category)
+- Send individual emails via Resend API (batch if multiple org members)
+- Log success/failure for debugging
+
+### Database Trigger Function
 
 ```text
-1. Get session: supabase.auth.getSession()
-2. Extract access_token from session
-3. fetch(edgeFunctionUrl, { headers: { Authorization: "Bearer " + token } })
-4. Get response as text (HTML)
-5. Create Blob with type "text/html"
-6. URL.createObjectURL(blob) -> open in new tab
-7. Show loading spinner during fetch, toast on error
+CREATE FUNCTION send_notification_email_trigger()
+  -- Uses net.http_post() to call the edge function
+  -- Passes NEW.id, NEW.recipient_org_id, NEW.type, NEW.title, NEW.body, NEW.action_url
+  -- Runs asynchronously (non-blocking)
 ```
 
-### Work Order Download Edge Function
+### Security
 
-The new edge function will generate an HTML document containing:
-- Work item header (title, code, type, state)
-- Description and location
-- Pricing summary (if applicable)
-- Labor entries table (hours, rates)
-- Materials table (quantities, costs)
-- Participants list
-- Footer with generation timestamp
+- Edge function uses `verify_jwt = false` (called from DB trigger, not from browser)
+- Authenticates via a shared `SUPABASE_SERVICE_ROLE_KEY` check or an internal secret
+- Service role access for reading user preferences and emails
 
-It will follow the same authentication pattern as the invoice function (JWT via Authorization header, RLS-based data access).
+## Prerequisites (Action Required From You)
 
-### Files Changed
+1. **Verify a domain on Resend** -- Go to https://resend.com/domains, add your domain, and complete DNS verification. Without this, emails can only reach the Resend account owner's address.
 
-| File | Change |
-|------|--------|
-| `supabase/functions/invoice-download/index.ts` | Fix CORS headers |
-| `supabase/functions/po-download/index.ts` | Fix CORS headers |
-| `supabase/functions/work-order-download/index.ts` | **New** -- work order HTML export |
-| `src/components/invoices/InvoiceDetail.tsx` | Fix export button to use fetch + auth token |
-| `src/components/purchase-orders/PODetail.tsx` | Fix download to use fetch + auth, always show button |
-| `src/components/work-item/WorkItemActions.tsx` | Add "Export PDF" button |
+2. **Confirm the sender address** -- Once domain is verified, decide on the "from" address (e.g., `notifications@ontime.build`, `noreply@ontimebuild.com`).
 
-### What Stays the Same
+3. **Enable pg_net extension** -- This is typically enabled by default on Supabase/Lovable Cloud, but will be verified during implementation.
 
-- All edge function business logic (HTML generation, data queries)
-- All existing button positioning and styling
-- Token-based PO download for supplier email links (kept as-is)
-- All database tables and RLS policies (no migrations needed)
-
+Once you confirm the domain is verified and provide the sender address, the implementation can proceed immediately.
