@@ -3,6 +3,9 @@ project_id = "gzqgbfazwvmwmirbqfwf"
 [functions.generate-work-order-description]
 verify_jwt = false
 
+[functions.send-notification-email]
+verify_jwt = false
+
 [functions.parse-estimate-pdf]
 verify_jwt = false
 
