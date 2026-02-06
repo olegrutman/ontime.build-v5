@@ -13,13 +13,16 @@ interface StepByStepFilterProps {
   onComplete: (filters: Record<string, string>) => void;
   onBack: () => void;
   onClose: () => void;
+  /** When provided, constrains all queries to only these catalog item IDs (for PSM mode) */
+  estimateCatalogIds?: string[];
 }
 
 // Dynamically discover which fields have filterable values
 async function discoverFilterSequence(
   supplierId: string,
   category: string,
-  secondaryCategory: string | null
+  secondaryCategory: string | null,
+  estimateCatalogIds?: string[]
 ): Promise<string[]> {
   // Build match object
   const matchObj: Record<string, string> = {
@@ -32,10 +35,17 @@ async function discoverFilterSequence(
 
   // Query all filterable fields
   const selectFields = FILTERABLE_FIELDS.join(',');
-  const { data, error } = await supabase
+  let query = supabase
     .from('catalog_items')
     .select(selectFields)
     .match(matchObj);
+
+  // Scope to estimate items if provided
+  if (estimateCatalogIds && estimateCatalogIds.length > 0) {
+    query = query.in('id', estimateCatalogIds);
+  }
+
+  const { data, error } = await query;
 
   if (error || !data || data.length === 0) return [];
 
@@ -67,6 +77,7 @@ export function StepByStepFilter({
   onComplete,
   onBack,
   onClose,
+  estimateCatalogIds,
 }: StepByStepFilterProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [appliedFilters, setAppliedFilters] = useState<Record<string, string>>({});
@@ -92,7 +103,7 @@ export function StepByStepFilter({
     setFilterSequence([]);
     setLoading(true);
     
-    discoverFilterSequence(supplierId, category, secondaryCategory)
+    discoverFilterSequence(supplierId, category, secondaryCategory, estimateCatalogIds)
       .then(sequence => {
         if (sequence.length === 0) {
           // No filters available, go directly to products
@@ -105,7 +116,7 @@ export function StepByStepFilter({
       .catch(() => {
         onComplete({});
       });
-  }, [supplierId, category, secondaryCategory, onComplete]);
+  }, [supplierId, category, secondaryCategory, onComplete, estimateCatalogIds]);
 
   // Fetch available values for current filter step
   const fetchFilterValues = useCallback(async () => {
@@ -134,10 +145,17 @@ export function StepByStepFilter({
       });
 
       // Query for current field values
-      const { data, error } = await supabase
+      let query = supabase
         .from('catalog_items')
         .select(currentField)
         .match(filterObj);
+
+      // Scope to estimate items if provided
+      if (estimateCatalogIds && estimateCatalogIds.length > 0) {
+        query = query.in('id', estimateCatalogIds);
+      }
+
+      const { data, error } = await query;
 
       if (error) throw error;
 
@@ -175,7 +193,7 @@ export function StepByStepFilter({
     } finally {
       setLoading(false);
     }
-  }, [discoveryComplete, supplierId, category, secondaryCategory, currentField, appliedFilters]);
+  }, [discoveryComplete, supplierId, category, secondaryCategory, currentField, appliedFilters, estimateCatalogIds]);
 
   // Only fetch filter values after discovery is complete
   useEffect(() => {

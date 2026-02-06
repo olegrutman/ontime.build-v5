@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { POWizardV2LineItem } from '@/types/poWizardV2';
 import { OrderingModeToggle, OrderingMode } from './OrderingModeToggle';
-import { PackSelector } from './PackSelector';
+import { EstimateSubTabs } from './EstimateSubTabs';
 
 interface EstimatePackItem {
   id: string;
@@ -41,6 +41,7 @@ interface ItemsScreenProps {
   supplierId: string | null;
   onLoadPack: (items: POWizardV2LineItem[], estimateId: string, packName: string) => void;
   hasApprovedEstimate: boolean;
+  onAddPSMItem: (item: POWizardV2LineItem) => void;
 }
 
 export function ItemsScreen({
@@ -55,6 +56,7 @@ export function ItemsScreen({
   supplierId,
   onLoadPack,
   hasApprovedEstimate,
+  onAddPSMItem,
 }: ItemsScreenProps) {
   const [mode, setMode] = useState<OrderingMode>(hasApprovedEstimate ? 'estimate' : 'catalog');
 
@@ -75,8 +77,8 @@ export function ItemsScreen({
     onLoadPack(lineItems, estimateId, pack.name);
   };
 
-  // Show pack selector when in estimate mode and no items loaded yet
-  const showPackSelector = mode === 'estimate' && items.length === 0;
+  // Show estimate browser when in estimate mode and no items loaded yet
+  const showEstimateBrowser = mode === 'estimate' && items.length === 0;
 
   return (
     <div className="flex flex-col h-full">
@@ -102,12 +104,13 @@ export function ItemsScreen({
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {showPackSelector ? (
-          <PackSelector
+        {showEstimateBrowser ? (
+          <EstimateSubTabs
             projectId={projectId}
             supplierId={supplierId}
             onSelectPack={handleSelectPack}
             onSwitchToCatalog={() => setMode('catalog')}
+            onAddPSMItem={onAddPSMItem}
           />
         ) : items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">

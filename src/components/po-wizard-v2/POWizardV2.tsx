@@ -266,6 +266,7 @@ export function POWizardV2({
           supplierId={formData.supplier_id}
           onLoadPack={handleLoadPack}
           hasApprovedEstimate={hasApprovedEstimate}
+          onAddPSMItem={handleAddItem}
         />
       )}
       {screen === 'review' && (
