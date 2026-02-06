@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Check, X, Send, Play, AlertTriangle } from 'lucide-react';
+import { Check, X, Send, Play, AlertTriangle, FileDown, Loader2 } from 'lucide-react';
 import { WorkItemData, WorkItemState } from './WorkItemPage';
 import { AppRole } from '@/types/organization';
 
@@ -26,6 +26,7 @@ export function WorkItemActions({ workItem, currentRole, onStateChange }: WorkIt
   const [loading, setLoading] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectionNotes, setRejectionNotes] = useState('');
+  const [exportLoading, setExportLoading] = useState(false);
 
   const state = workItem.state as WorkItemState;
   const itemType = workItem.item_type;
@@ -76,6 +77,32 @@ export function WorkItemActions({ workItem, currentRole, onStateChange }: WorkIt
     setRejectionNotes('');
   };
 
+  const handleExportPDF = async () => {
+    setExportLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Please log in to export');
+        return;
+      }
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/work-order-download?work_item_id=${workItem.id}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Export failed' }));
+        throw new Error(err.error || `Export failed (${res.status})`);
+      }
+      const html = await res.text();
+      const blob = new Blob([html], { type: 'text/html' });
+      window.open(URL.createObjectURL(blob), '_blank');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to export work order');
+    } finally {
+      setExportLoading(false);
+    }
+  };
+
   const handleExecute = async () => {
     setLoading(true);
     
@@ -103,6 +130,17 @@ export function WorkItemActions({ workItem, currentRole, onStateChange }: WorkIt
       <h3 className="text-sm font-medium">Actions</h3>
       
       <div className="space-y-2">
+        {/* Export PDF */}
+        <Button
+          className="w-full"
+          variant="outline"
+          onClick={handleExportPDF}
+          disabled={exportLoading}
+        >
+          {exportLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileDown className="w-4 h-4 mr-2" />}
+          Export PDF
+        </Button>
+
         {/* Submit for Pricing (TC only, OPEN state) */}
         {canSubmitForPricing && (
           <Button 

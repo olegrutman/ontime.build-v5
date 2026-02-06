@@ -362,13 +362,32 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
     }
   };
 
-  const handleDownload = () => {
-    if (!po?.download_token) {
-      toast.error('Download not available');
-      return;
+  const [exportLoading, setExportLoading] = useState(false);
+
+  const handleDownload = async () => {
+    setExportLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) {
+        toast.error('Please log in to download');
+        return;
+      }
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?po_id=${poId}&format=pdf`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Download failed' }));
+        throw new Error(err.error || `Download failed (${res.status})`);
+      }
+      const html = await res.text();
+      const blob = new Blob([html], { type: 'text/html' });
+      window.open(URL.createObjectURL(blob), '_blank');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to download PO');
+    } finally {
+      setExportLoading(false);
     }
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?token=${po.download_token}&format=pdf`;
-    window.open(url, '_blank');
   };
 
   if (loading) {
@@ -418,12 +437,10 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
 
         {/* Action Buttons */}
         <div className="flex gap-2">
-          {po.download_token && (
-            <Button variant="outline" onClick={handleDownload}>
-              <FileDown className="h-4 w-4 mr-2" />
-              Download
-            </Button>
-          )}
+          <Button variant="outline" onClick={handleDownload} disabled={exportLoading}>
+            {exportLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileDown className="h-4 w-4 mr-2" />}
+            Download
+          </Button>
 
           {/* ACTIVE: Edit, Delete, Submit */}
           {status === 'ACTIVE' && canEdit && (

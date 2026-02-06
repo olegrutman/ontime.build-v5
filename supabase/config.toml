@@ -5,3 +5,12 @@ verify_jwt = false
 
 [functions.parse-estimate-pdf]
 verify_jwt = false
+
+[functions.invoice-download]
+verify_jwt = false
+
+[functions.po-download]
+verify_jwt = false
+
+[functions.work-order-download]
+verify_jwt = false

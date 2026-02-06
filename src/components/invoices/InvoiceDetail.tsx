@@ -47,6 +47,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [linkedPO, setLinkedPO] = useState<{ po_number: string; status: string } | null>(null);
+  const [exportLoading, setExportLoading] = useState(false);
 
   // Get current user's organization ID
   const currentOrgId = userOrgRoles[0]?.organization?.id;
@@ -237,12 +238,34 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
         <div className="flex gap-2">
           <Button
             variant="outline"
-            onClick={() => {
-              const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invoice-download?invoice_id=${invoiceId}`;
-              window.open(url, '_blank');
+            disabled={exportLoading}
+            onClick={async () => {
+              setExportLoading(true);
+              try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (!session?.access_token) {
+                  toast.error('Please log in to export');
+                  return;
+                }
+                const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/invoice-download?invoice_id=${invoiceId}`;
+                const res = await fetch(url, {
+                  headers: { Authorization: `Bearer ${session.access_token}` },
+                });
+                if (!res.ok) {
+                  const err = await res.json().catch(() => ({ error: 'Export failed' }));
+                  throw new Error(err.error || `Export failed (${res.status})`);
+                }
+                const html = await res.text();
+                const blob = new Blob([html], { type: 'text/html' });
+                window.open(URL.createObjectURL(blob), '_blank');
+              } catch (err: any) {
+                toast.error(err.message || 'Failed to export invoice');
+              } finally {
+                setExportLoading(false);
+              }
             }}
           >
-            <FileDown className="h-4 w-4 mr-2" />
+            {exportLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileDown className="h-4 w-4 mr-2" />}
             Export PDF
           </Button>
 
