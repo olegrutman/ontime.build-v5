@@ -96,62 +96,64 @@ export function ProjectTopBar({
         <NotificationSheet />
       </div>
 
-      {/* Bottom row: Navigation tabs */}
-      <div className="px-3 sm:px-4 pb-2">
+      {/* Bottom row: Navigation tabs - scrollable on mobile */}
+      <div className="relative pb-2">
         <Tabs value={activeTab} onValueChange={onTabChange}>
-          <TabsList className="h-9 w-full justify-start bg-transparent p-0 gap-1">
-            <TabsTrigger
-              value="overview"
-              className="h-8 px-3 data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md"
-            >
-              Overview
-            </TabsTrigger>
-            {!isSupplier && (
+          <div className="overflow-x-auto px-3 sm:px-4">
+            <TabsList className="h-11 w-max justify-start bg-transparent p-0 gap-1">
               <TabsTrigger
-                value="sov"
-                className="h-8 px-3 data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md"
+                value="overview"
+                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
               >
-                SOV
+                Overview
               </TabsTrigger>
-            )}
-            {!isSupplier && (
+              {!isSupplier && (
+                <TabsTrigger
+                  value="sov"
+                  className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
+                >
+                  SOV
+                </TabsTrigger>
+              )}
+              {!isSupplier && (
+                <TabsTrigger
+                  value="work-orders"
+                  className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
+                >
+                  Work Orders
+                </TabsTrigger>
+              )}
+              {isSupplier && (
+                <TabsTrigger
+                  value="estimates"
+                  className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
+                >
+                  Estimates
+                </TabsTrigger>
+              )}
               <TabsTrigger
-                value="work-orders"
-                className="h-8 px-3 data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md"
+                value="invoices"
+                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
               >
-                Work Orders
+                Invoices
               </TabsTrigger>
-            )}
-            {isSupplier && (
               <TabsTrigger
-                value="estimates"
-                className="h-8 px-3 data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md"
+                value="purchase-orders"
+                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
               >
-                Estimates
+                POs
               </TabsTrigger>
-            )}
-            <TabsTrigger
-              value="invoices"
-              className="h-8 px-3 data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md"
-            >
-              Invoices
-            </TabsTrigger>
-            <TabsTrigger
-              value="purchase-orders"
-              className="h-8 px-3 data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md"
-            >
-              POs
-            </TabsTrigger>
-            {!isSupplier && (
-              <TabsTrigger
-                value="documents"
-                className="h-8 px-3 data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md"
-                disabled
-              >
-                Documents
-              </TabsTrigger>
-            )}
-          </TabsList>
+              {!isSupplier && (
+                <TabsTrigger
+                  value="documents"
+                  className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
+                  disabled
+                >
+                  Documents
+                </TabsTrigger>
+              )}
+            </TabsList>
+          </div>
         </Tabs>
       </div>
     </header>

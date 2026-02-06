@@ -1,13 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { 
-  AlertTriangle,
-  FileText
-} from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { 
@@ -16,14 +13,11 @@ import {
   ProjectContractsSection, 
   ProjectFinancialsSectionNew,
   ProjectTopBar,
-  WorkOrderSummaryCard,
   WorkOrdersTab,
-  InvoiceSummaryCard,
   PurchaseOrdersTab,
-  POSummaryCard,
-  // Supplier-specific components
+  MetricStrip,
+  AttentionBanner,
   SupplierContractsSection,
-  SupplierPOSummaryCard,
   SupplierFinancialsSummaryCard,
   SupplierEstimatesSection
 } from '@/components/project';
@@ -50,13 +44,6 @@ interface Project {
   organization_id: string;
 }
 
-interface WorkItemSummary {
-  sov_count: number;
-  change_count: number;
-  tm_count: number;
-  total_amount: number;
-  pending_change_orders: number;
-}
 
 export default function ProjectHome() {
   const { id } = useParams<{ id: string }>();
@@ -65,7 +52,6 @@ export default function ProjectHome() {
   const { user, userOrgRoles } = useAuth();
   const { toast } = useToast();
   const [project, setProject] = useState<Project | null>(null);
-  const [summary, setSummary] = useState<WorkItemSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Detect if current org is a supplier
@@ -114,28 +100,6 @@ export default function ProjectHome() {
       }
 
       setProject(proj as Project);
-
-      // Fetch work item summary
-      const { data: workItems } = await supabase
-        .from('work_items')
-        .select('item_type, amount, state')
-        .eq('project_id', id);
-
-      if (workItems) {
-        const sovItems = workItems.filter((w) => w.item_type === 'SOV_ITEM');
-        const changeItems = workItems.filter((w) => w.item_type === 'CHANGE_WORK');
-        const tmItems = workItems.filter((w) => w.item_type === 'TM_WORK');
-        const pendingCOs = changeItems.filter((w) => w.state === 'PRICED').length;
-        const total = workItems.reduce((sum, w) => sum + (w.amount || 0), 0);
-
-        setSummary({
-          sov_count: sovItems.length,
-          change_count: changeItems.length,
-          tm_count: tmItems.length,
-          total_amount: total,
-          pending_change_orders: pendingCOs,
-        });
-      }
 
       setLoading(false);
     };
@@ -201,66 +165,43 @@ export default function ProjectHome() {
           {/* Scrollable content */}
           <main className="flex-1 overflow-auto">
             <div className="container mx-auto px-4 py-6 space-y-6">
-              {/* Alert Banner */}
-              {summary && summary.pending_change_orders > 0 && activeTab === 'overview' && (
-                <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-900/20">
-                  <AlertTriangle className="h-4 w-4 text-amber-600" />
-                  <AlertDescription className="text-amber-800 dark:text-amber-200">
-                    {summary.pending_change_orders} Work Order{summary.pending_change_orders > 1 ? 's' : ''} Need{summary.pending_change_orders === 1 ? 's' : ''} Approval
-                  </AlertDescription>
-                </Alert>
-              )}
-
               {/* Overview Tab */}
               {activeTab === 'overview' && (
-                <div className="space-y-8">
-                  {/* Section 1: Project Details - 3 columns on desktop */}
-                  <section>
-                    <h2 className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-wide">
-                      Project Details
-                    </h2>
-                    <div className="grid gap-6 lg:grid-cols-3">
-                      <ProjectTeamSection projectId={id!} />
-                      {isSupplier && supplierOrgId ? (
-                        <SupplierContractsSection projectId={id!} supplierOrgId={supplierOrgId} />
-                      ) : (
-                        <ProjectContractsSection projectId={id!} />
-                      )}
-                      <ProjectScopeSection projectId={id!} projectType={project.project_type} />
-                    </div>
-                  </section>
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
+                  {/* Zone A: Action & Summary */}
+                  <div className="space-y-6">
+                    <AttentionBanner
+                      projectId={id!}
+                      onNavigate={handleTabChange}
+                      isSupplier={isSupplier}
+                      supplierOrgId={supplierOrgId}
+                    />
 
-                  {/* Section 2: Needs Attention - 3 columns on desktop */}
-                  <section>
-                    <h2 className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-wide">
-                      Needs Attention
-                    </h2>
-                    <div className="grid gap-4 lg:grid-cols-3">
-                      {isSupplier && supplierOrgId ? (
-                        <>
-                          <SupplierPOSummaryCard projectId={id!} supplierOrgId={supplierOrgId} />
-                          <InvoiceSummaryCard projectId={id!} />
-                          <SupplierFinancialsSummaryCard projectId={id!} supplierOrgId={supplierOrgId} />
-                        </>
-                      ) : (
-                        <>
-                          <WorkOrderSummaryCard projectId={id!} />
-                          <InvoiceSummaryCard projectId={id!} />
-                          <POSummaryCard projectId={id!} />
-                        </>
-                      )}
-                    </div>
-                  </section>
+                    <MetricStrip
+                      projectId={id!}
+                      onNavigate={handleTabChange}
+                      isSupplier={isSupplier}
+                      supplierOrgId={supplierOrgId}
+                    />
 
-                  {/* Section 3: Financial Snapshot - hide for suppliers */}
-                  {!isSupplier && (
-                    <section>
-                      <h2 className="text-sm font-medium text-muted-foreground mb-4 uppercase tracking-wide">
-                        Financial Snapshot
-                      </h2>
+                    {/* Financial Summary */}
+                    {isSupplier && supplierOrgId ? (
+                      <SupplierFinancialsSummaryCard projectId={id!} supplierOrgId={supplierOrgId} />
+                    ) : (
                       <ProjectFinancialsSectionNew projectId={id!} />
-                    </section>
-                  )}
+                    )}
+                  </div>
+
+                  {/* Zone B: Context */}
+                  <div className="space-y-4">
+                    <ProjectTeamSection projectId={id!} />
+                    {isSupplier && supplierOrgId ? (
+                      <SupplierContractsSection projectId={id!} supplierOrgId={supplierOrgId} />
+                    ) : (
+                      <ProjectContractsSection projectId={id!} />
+                    )}
+                    <ProjectScopeSection projectId={id!} projectType={project.project_type} />
+                  </div>
                 </div>
               )}
 

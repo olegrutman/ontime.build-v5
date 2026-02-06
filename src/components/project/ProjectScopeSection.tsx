@@ -210,11 +210,11 @@ export function ProjectScopeSection({ projectId, projectType }: ProjectScopeSect
                   ) : (
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   )}
-                  <ClipboardList className="h-4 w-4 text-primary" />
+                  <ClipboardList className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-sm font-medium">Scope</CardTitle>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <CardTitle className="text-base font-medium">Scope</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-0.5">
                     {scope ? summaryItems.join(' • ') || 'Details configured' : 'Not configured'}
                   </p>
                 </div>
@@ -222,13 +222,13 @@ export function ProjectScopeSection({ projectId, projectType }: ProjectScopeSect
               <Button 
                 size="sm" 
                 variant="ghost"
-                className="h-8 text-xs"
+                className="h-10 text-sm px-3"
                 onClick={(e) => {
                   e.stopPropagation();
                   navigate(`/projects/${projectId}/scope`);
                 }}
               >
-                <Edit className="h-3.5 w-3.5 mr-1.5" />
+                <Edit className="h-4 w-4 mr-1.5" />
                 {scope ? 'Edit' : 'Add'}
               </Button>
             </div>

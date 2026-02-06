@@ -156,11 +156,11 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
                     ) : (
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     )}
-                    <Users className="h-4 w-4 text-primary" />
+                    <Users className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <CardTitle className="text-sm font-medium">Team</CardTitle>
-                    <p className="text-xs text-muted-foreground mt-0.5">
+                    <CardTitle className="text-base font-medium">Team</CardTitle>
+                    <p className="text-sm text-muted-foreground mt-0.5">
                       {acceptedCount} active{pendingCount > 0 && ` • ${pendingCount} pending`}
                     </p>
                   </div>
@@ -169,13 +169,13 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
                   <Button 
                     size="sm" 
                     variant="ghost"
-                    className="h-8 text-xs"
+                    className="h-10 text-sm px-3"
                     onClick={(e) => {
                       e.stopPropagation();
                       setAddDialogOpen(true);
                     }}
                   >
-                    <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+                    <UserPlus className="h-4 w-4 mr-1.5" />
                     Add
                   </Button>
                 )}

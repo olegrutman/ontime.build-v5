@@ -283,11 +283,11 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
                   ) : (
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   )}
-                  <FileText className="h-4 w-4 text-primary" />
+                  <FileText className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <CardTitle className="text-sm font-medium">Contracts</CardTitle>
-                  <p className="text-xs text-muted-foreground mt-0.5">
+                  <CardTitle className="text-base font-medium">Contracts</CardTitle>
+                  <p className="text-sm text-muted-foreground mt-0.5">
                     {contracts.length} contract{contracts.length !== 1 ? 's' : ''} • {formatCurrency(totalContractValue)}
                   </p>
                 </div>
@@ -296,12 +296,12 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
                 <Button 
                   size="sm" 
                   variant="ghost" 
-                  className="h-8 text-xs"
+                  className="h-10 text-sm px-3"
                   asChild
                   onClick={(e) => e.stopPropagation()}
                 >
                   <Link to={`/project/${projectId}/edit?step=contracts`}>
-                    <Settings className="h-3.5 w-3.5 mr-1.5" />
+                    <Settings className="h-4 w-4 mr-1.5" />
                     Manage
                   </Link>
                 </Button>
