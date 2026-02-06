@@ -1,6 +1,5 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useDashboardData } from '@/hooks/useDashboardData';
@@ -10,17 +9,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import {
-  StatusMenu,
-  FinancialSnapshotTile,
-  NeedsAttentionTile,
   RemindersTile,
   AddReminderDialog,
-  ProjectRow,
-  PendingInvitesPanel,
   ArchiveProjectDialog,
   CompleteProjectDialog,
   type ProjectStatusFilter,
 } from '@/components/dashboard';
+import { DashboardAttentionBanner } from '@/components/dashboard/DashboardAttentionBanner';
+import { DashboardFinancialCard } from '@/components/dashboard/DashboardFinancialCard';
+import { DashboardProjectList } from '@/components/dashboard/DashboardProjectList';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -46,11 +43,8 @@ export default function Dashboard() {
   const [addReminderOpen, setAddReminderOpen] = useState(false);
 
   const currentOrg = userOrgRoles[0]?.organization;
-
-  // Filter projects by status
-  const filteredProjects = useMemo(() => {
-    return projects.filter((p) => p.status === statusFilter);
-  }, [projects, statusFilter]);
+  const orgType = currentOrg?.type || null;
+  const isSupplier = orgType === 'SUPPLIER';
 
   const handleArchive = (projectId: string) => {
     const project = projects.find((p) => p.id === projectId);
@@ -160,13 +154,18 @@ export default function Dashboard() {
     return (
       <AppLayout title="Dashboard">
         <div className="p-4 sm:p-6 space-y-6">
-          <Skeleton className="h-12 w-full max-w-lg" />
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-48" />
-            ))}
+          <Skeleton className="h-24 w-full" />
+          <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-20" />
+              ))}
+            </div>
+            <div className="space-y-4">
+              <Skeleton className="h-48" />
+              <Skeleton className="h-48" />
+            </div>
           </div>
-          <Skeleton className="h-64 w-full" />
         </div>
       </AppLayout>
     );
@@ -210,92 +209,56 @@ export default function Dashboard() {
 
   return (
     <AppLayout title="Dashboard">
-      {/* Sticky Status Menu */}
-      <StatusMenu
-        currentFilter={statusFilter}
-        onFilterChange={setStatusFilter}
-        counts={statusCounts}
-      />
-      
-      <div className="p-4 sm:p-6 space-y-6">
-        {/* Dashboard Tiles - 3 columns on desktop */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          <FinancialSnapshotTile
-            role={billing.role}
-            totalContractValue={financials.totalContracts}
-            outstandingToPay={billing.outstandingToPay}
-            outstandingToCollect={billing.outstandingToCollect}
-            profitMargin={financials.profitMargin}
-            totalRevenue={financials.totalRevenue}
-            totalCosts={financials.totalCosts}
-          />
+      <div className="p-4 sm:p-6">
+        {/* Two-Zone Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 lg:gap-8">
           
-          <NeedsAttentionTile
-            items={attentionItems}
-            pendingInvitesCount={pendingInvites.length}
-          />
-          
-          <RemindersTile
-            reminders={reminders}
-            onComplete={handleCompleteReminder}
-            onAdd={() => setAddReminderOpen(true)}
-          />
-        </div>
-        
-        {/* Pending Invites */}
-        <div id="pending-invites">
-          <PendingInvitesPanel invites={pendingInvites} onRefresh={refetch} />
-        </div>
-        
-        {/* Project List */}
-        {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-20 w-full" />
-            ))}
+          {/* Zone A: Action Center */}
+          <div className="space-y-6">
+            {/* Attention Banner (disappears when nothing needs attention) */}
+            <DashboardAttentionBanner
+              attentionItems={attentionItems}
+              pendingInvites={pendingInvites}
+              onRefresh={refetch}
+            />
+
+            {/* Project List with integrated status tabs */}
+            <DashboardProjectList
+              projects={projects}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              statusCounts={statusCounts}
+              loading={loading}
+              orgType={orgType}
+              onArchive={handleArchive}
+              onUnarchive={handleUnarchive}
+              onStatusChange={handleStatusChange}
+            />
           </div>
-        ) : filteredProjects.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <div className="flex justify-center mb-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                  <Briefcase className="h-8 w-8 text-muted-foreground" />
-                </div>
-              </div>
-              <h3 className="text-lg font-semibold mb-2">
-                {statusFilter === 'archived' ? 'No Archived Projects' : 'No Projects Found'}
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                {statusFilter === 'active' && (currentOrg.type === 'GC' || currentOrg.type === 'TC')
-                  ? 'Create your first project to get started.'
-                  : statusFilter === 'archived'
-                  ? 'Archived projects will appear here.'
-                  : 'No projects match your current filters.'}
-              </p>
-              {statusFilter === 'active' && (currentOrg.type === 'GC' || currentOrg.type === 'TC') && (
-                <Button onClick={() => navigate('/create-project')}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Project
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {filteredProjects.map((project) => (
-              <ProjectRow
-                key={project.id}
-                project={project}
-                userRole={project.userRole}
-                contractValue={project.contractValue}
-                pendingActions={project.pendingActions}
-                onArchive={handleArchive}
-                onUnarchive={handleUnarchive}
-                onStatusChange={handleStatusChange}
+
+          {/* Zone B: Summary Sidebar */}
+          <div className="space-y-4">
+            {/* Financial Card (hidden for suppliers) */}
+            {!isSupplier && (
+              <DashboardFinancialCard
+                role={billing.role}
+                totalContractValue={financials.totalContracts}
+                outstandingToPay={billing.outstandingToPay}
+                outstandingToCollect={billing.outstandingToCollect}
+                profitMargin={financials.profitMargin}
+                totalRevenue={financials.totalRevenue}
+                totalCosts={financials.totalCosts}
               />
-            ))}
+            )}
+
+            {/* Reminders */}
+            <RemindersTile
+              reminders={reminders}
+              onComplete={handleCompleteReminder}
+              onAdd={() => setAddReminderOpen(true)}
+            />
           </div>
-        )}
+        </div>
       </div>
 
       {/* Dialogs */}

@@ -17,23 +17,23 @@ const STATUS_CONFIG = [
 
 export function StatusMenu({ currentFilter, onFilterChange, counts }: StatusMenuProps) {
   return (
-    <div className="sticky top-14 z-30 bg-background/95 backdrop-blur border-b">
-      <div className="flex items-center gap-1 p-2 overflow-x-auto">
+    <div className="bg-background">
+      <div className="flex items-center gap-1.5 overflow-x-auto">
         {STATUS_CONFIG.map(({ key, label, color }) => (
           <button
             key={key}
             onClick={() => onFilterChange(key as ProjectStatusFilter)}
             className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap",
+              "flex items-center gap-2 px-5 py-2.5 rounded-lg text-base font-medium transition-colors whitespace-nowrap min-h-[44px]",
               currentFilter === key 
                 ? "bg-primary text-primary-foreground" 
                 : "hover:bg-muted"
             )}
           >
-            <span className={cn("w-2 h-2 rounded-full", color)} />
+            <span className={cn("w-2.5 h-2.5 rounded-full", color)} />
             {label}
             <span className={cn(
-              "px-2 py-0.5 rounded-full text-xs",
+              "px-2 py-0.5 rounded-full text-sm",
               currentFilter === key 
                 ? "bg-primary-foreground/20 text-primary-foreground" 
                 : "bg-muted-foreground/10"

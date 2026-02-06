@@ -8,3 +8,6 @@ export { NeedsAttentionPanel } from './NeedsAttentionPanel';
 export { PendingInvitesPanel } from './PendingInvitesPanel';
 export { ArchiveProjectDialog } from './ArchiveProjectDialog';
 export { CompleteProjectDialog } from './CompleteProjectDialog';
+export { DashboardAttentionBanner } from './DashboardAttentionBanner';
+export { DashboardFinancialCard } from './DashboardFinancialCard';
+export { DashboardProjectList } from './DashboardProjectList';
