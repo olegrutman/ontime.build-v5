@@ -14,6 +14,7 @@ import {
   Clock,
   Lock,
   CalendarIcon,
+  Receipt,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -55,6 +56,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { POStatusBadge } from './POStatusBadge';
+import { CreateInvoiceFromPO } from './CreateInvoiceFromPO';
 import { PurchaseOrder, POLineItem, POStatus } from '@/types/purchaseOrder';
 
 interface PODetailProps {
@@ -90,6 +92,9 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
   const [salesTaxPercent, setSalesTaxPercent] = useState<number>(0);
   const [readyDialogOpen, setReadyDialogOpen] = useState(false);
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState<Date | undefined>();
+  const [billToGCOpen, setBillToGCOpen] = useState(false);
+  const [hasTCtoGCContract, setHasTCtoGCContract] = useState(false);
+  const [alreadyInvoiced, setAlreadyInvoiced] = useState(false);
 
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
@@ -110,6 +115,32 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
   useEffect(() => {
     fetchPO();
   }, [poId]);
+
+  // Check if TC-to-GC contract exists and if PO is already invoiced
+  useEffect(() => {
+    if (!currentOrgId || !projectId) return;
+    
+    const checkBillToGC = async () => {
+      const [contractRes, invoiceRes] = await Promise.all([
+        supabase
+          .from('project_contracts')
+          .select('id')
+          .eq('project_id', projectId)
+          .eq('from_org_id', currentOrgId)
+          .eq('to_role', 'General Contractor')
+          .limit(1),
+        supabase
+          .from('invoices')
+          .select('id')
+          .eq('po_id', poId)
+          .limit(1),
+      ]);
+      setHasTCtoGCContract((contractRes.data?.length || 0) > 0);
+      setAlreadyInvoiced((invoiceRes.data?.length || 0) > 0);
+    };
+    
+    checkBillToGC();
+  }, [currentOrgId, projectId, poId]);
 
   const fetchPO = async () => {
     setLoading(true);
@@ -477,6 +508,22 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
               Mark Delivered
             </Button>
           )}
+
+          {/* Bill to GC: TC can create invoice from priced PO */}
+          {currentRole === 'TC_PM' &&
+            isPricingOwner &&
+            hasTCtoGCContract &&
+            !alreadyInvoiced &&
+            ['PRICED', 'FINALIZED', 'ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED'].includes(status) && (
+              <Button
+                variant="default"
+                onClick={() => setBillToGCOpen(true)}
+                className="bg-emerald-600 hover:bg-emerald-700"
+              >
+                <Receipt className="h-4 w-4 mr-2" />
+                Bill to GC
+              </Button>
+            )}
         </div>
       </div>
 
@@ -834,6 +881,19 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bill to GC Dialog */}
+      <CreateInvoiceFromPO
+        open={billToGCOpen}
+        onOpenChange={setBillToGCOpen}
+        po={po}
+        lineItems={lineItems}
+        projectId={projectId}
+        onSuccess={() => {
+          setAlreadyInvoiced(true);
+          onUpdate();
+        }}
+      />
 
     </div>
   );
