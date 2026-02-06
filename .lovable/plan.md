@@ -1,53 +1,56 @@
 
 
-# Allow GC and TC to See All Project POs; Show Pricing Only to Responsible Party
+# Fix: TC Can't See GC-Created POs
 
-## Problem
+## Root Cause
 
-1. **Visibility**: The current RLS policy on `purchase_orders` only allows the *creating* organization and the supplier to see POs. If a TC creates a PO, the GC on the same project cannot see it (and vice versa). Both GC and TC should see all POs on a shared project.
+Two issues in the last RLS migration:
 
-2. **Pricing on Cards**: The `PurchaseOrdersTab` never passes `canViewPricing` to `POCard`, so pricing always defaults to hidden on the card list. The `usePOPricingVisibility` hook is only used in `PODetail`.
+### 1. Case Mismatch in Status Check (the main bug)
+The new RLS policy checks for `pt.status = 'ACCEPTED'` (all uppercase), but the actual data in the `project_team` table stores the value as `'Accepted'` (title case). Since PostgreSQL text comparison is case-sensitive, this condition **never evaluates to true** -- the project-team path in the policy is dead code.
 
-## Changes
+### 2. Old Policy Never Dropped
+The migration was meant to replace the old policy `"Project participants and suppliers can view POs"` with `"Project team and suppliers can view POs"`, but the DROP statement was removed (from a prior failed migration attempt). Both policies now coexist. While PostgreSQL evaluates permissive policies with OR logic (so having both isn't harmful), the duplicate should be cleaned up.
 
-### 1. Database Migration: Update RLS SELECT Policy
+## Fix (Single Database Migration)
 
-Update the `purchase_orders` SELECT policy to also allow any user whose organization is on the same project team.
+Drop the old duplicate policy, then drop and recreate the new policy with the correct case (`'Accepted'` instead of `'ACCEPTED'`). Same fix for `po_line_items`.
 
 ```text
-DROP POLICY "Project participants and suppliers can view POs" ON purchase_orders;
+-- 1. Drop old duplicate purchase_orders SELECT policy
+DROP POLICY IF EXISTS "Project participants and suppliers can view POs" ON purchase_orders;
 
+-- 2. Drop current (broken) purchase_orders SELECT policy
+DROP POLICY IF EXISTS "Project team and suppliers can view POs" ON purchase_orders;
+
+-- 3. Recreate with correct case: 'Accepted' instead of 'ACCEPTED'
 CREATE POLICY "Project team and suppliers can view POs"
 ON purchase_orders FOR SELECT
 USING (
-  -- Creator org can always view
   user_in_org(auth.uid(), organization_id)
   OR
-  -- Supplier assigned to PO can view
   EXISTS (
     SELECT 1 FROM suppliers s
     WHERE s.id = purchase_orders.supplier_id
       AND user_in_org(auth.uid(), s.organization_id)
   )
   OR
-  -- Any org on the project team can view
   (
     purchase_orders.project_id IS NOT NULL
     AND EXISTS (
       SELECT 1 FROM project_team pt
       WHERE pt.project_id = purchase_orders.project_id
-        AND pt.organization_id = get_user_org_id(auth.uid())
-        AND pt.status = 'ACCEPTED'
+        AND pt.org_id = get_user_org_id(auth.uid())
+        AND pt.status = 'Accepted'   -- Fixed: was 'ACCEPTED'
     )
   )
 );
-```
 
-Also update the `po_line_items` SELECT policy to match:
+-- 4. Drop current (broken) po_line_items SELECT policy
+DROP POLICY IF EXISTS "PO participants can view line items" ON po_line_items;
+DROP POLICY IF EXISTS "PO team and suppliers can view line items" ON po_line_items;
 
-```text
-DROP POLICY "PO participants can view line items" ON po_line_items;
-
+-- 5. Recreate with correct case
 CREATE POLICY "PO team and suppliers can view line items"
 ON po_line_items FOR SELECT
 USING (
@@ -68,8 +71,8 @@ USING (
         AND EXISTS (
           SELECT 1 FROM project_team pt
           WHERE pt.project_id = po.project_id
-            AND pt.organization_id = get_user_org_id(auth.uid())
-            AND pt.status = 'ACCEPTED'
+            AND pt.org_id = get_user_org_id(auth.uid())
+            AND pt.status = 'Accepted'   -- Fixed: was 'ACCEPTED'
         )
       )
     )
@@ -77,55 +80,17 @@ USING (
 );
 ```
 
-### 2. `src/components/project/PurchaseOrdersTab.tsx` -- Wire Up Pricing Visibility
+## No Frontend Changes Needed
 
-Currently the tab fetches POs but never computes per-PO pricing visibility for the card grid. Changes:
+The frontend code in `PurchaseOrdersTab.tsx` is already correct -- it queries all POs for the project and computes `canViewPricing` per PO. The only blocker was the RLS policy silently returning no rows for the project-team check path.
 
-- Import `usePOPricingVisibility` (or compute inline since the hook expects a single PO)
-- For each PO in the grid, compute `canViewPricing` by checking if `currentOrgId` matches `po.pricing_owner_org_id` or the supplier's org
-- Pass computed `canViewPricing` to each `POCard`
-- Ensure the PO query includes `pricing_owner_org_id` and `supplier.organization_id` (add `organization_id` to the supplier select)
+## Summary
 
-Changes in the `fetchPurchaseOrders` query:
-- Add `pricing_owner_org_id` to the select (it's already included via `*`)
-- Update supplier select to include `organization_id`: `supplier:suppliers(id, name, supplier_code, contact_info, organization_id)`
-
-In the card grid, compute per-PO visibility:
-```text
-const isPricingOwner = po.pricing_owner_org_id === currentOrgId;
-const isPoSupplier = po.supplier?.organization_id === currentOrgId;
-const canViewPricing = isPricingOwner || isPoSupplier;
-```
-
-Pass to POCard:
-```text
-<POCard
-  ...
-  canViewPricing={canViewPricing}
-/>
-```
-
-### 3. `src/components/purchase-orders/POCard.tsx` -- Update Line Items Query
-
-The card currently only selects `line_items:po_line_items(id)` (just the id). For pricing to display on cards, the query needs `line_total` and `unit_price`:
-- Update the PurchaseOrdersTab query to select: `line_items:po_line_items(id, unit_price, line_total)`
-
-### 4. `src/pages/PurchaseOrders.tsx` -- Cross-Org Visibility (Global PO Page)
-
-The global PO page also queries POs without project-team awareness. No changes needed here since the RLS policy update will handle it at the database level. However, this page doesn't show pricing at all (it's the older list view), so no pricing changes needed.
-
-## Summary of Files
-
-| File | Change |
+| Item | Detail |
 |------|--------|
-| Database migration (new) | Update RLS SELECT on `purchase_orders` and `po_line_items` to include project team members |
-| `src/components/project/PurchaseOrdersTab.tsx` | Add `organization_id` to supplier select, compute per-PO `canViewPricing`, pass to POCard, expand line_items select |
-| `src/components/purchase-orders/POCard.tsx` | No code changes needed (already accepts `canViewPricing` prop) |
-
-## What This Achieves
-
-- GC and TC on the same project can both see all POs regardless of who created them
-- Pricing columns and totals are only shown to the party designated as `pricing_owner_org_id` (and to the supplier)
-- Field Crews on the project team can see POs exist but cannot see pricing
-- No changes to edit/finalize permissions (those remain as-is)
+| Root cause | `'ACCEPTED'` vs `'Accepted'` case mismatch in RLS policy |
+| Secondary issue | Old duplicate SELECT policy not cleaned up |
+| Fix | Single database migration: drop old policies, recreate with correct case |
+| Files changed | 1 new migration file only |
+| Risk | Low -- only changes SELECT policies, no schema changes |
 
