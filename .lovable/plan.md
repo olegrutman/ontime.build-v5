@@ -1,96 +1,63 @@
 
 
-# Fix: TC Can't See GC-Created POs
+# Fix: Pricing Owner (TC) Cannot Finalize POs Created by Another Org (GC)
 
 ## Root Cause
 
-Two issues in the last RLS migration:
+The current UPDATE policies on `purchase_orders` all require `organization_id = get_user_org_id(auth.uid())`, meaning only the **creating** organization can update the PO. When a GC creates a PO but material responsibility is assigned to the TC, the TC becomes the `pricing_owner_org_id` and the UI correctly shows them the "Finalize Order" button. However, the database silently rejects the update because the TC's org does not match the PO's `organization_id` (which is the GC's org).
 
-### 1. Case Mismatch in Status Check (the main bug)
-The new RLS policy checks for `pt.status = 'ACCEPTED'` (all uppercase), but the actual data in the `project_team` table stores the value as `'Accepted'` (title case). Since PostgreSQL text comparison is case-sensitive, this condition **never evaluates to true** -- the project-team path in the policy is dead code.
+### Current UPDATE Policies on `purchase_orders`
 
-### 2. Old Policy Never Dropped
-The migration was meant to replace the old policy `"Project participants and suppliers can view POs"` with `"Project team and suppliers can view POs"`, but the DROP statement was removed (from a prior failed migration attempt). Both policies now coexist. While PostgreSQL evaluates permissive policies with OR logic (so having both isn't harmful), the duplicate should be cleaned up.
+| Policy | Who | Condition |
+|--------|-----|-----------|
+| PM roles can update active POs | Any PM in creator org | status = ACTIVE, org matches creator |
+| GC_PM can update any PO | GC_PM in creator org | org matches creator |
+| Supplier can mark PO as priced | Supplier org | SUBMITTED to PRICED |
+| Supplier can mark PO as ordered | Supplier org | PRICED to ORDERED |
+| Supplier can mark PO as delivered | Supplier org | ORDERED to DELIVERED |
 
-## Fix (Single Database Migration)
+None of these allow a **pricing owner from a different org** to update the PO status. The finalize action (PRICED to FINALIZED) is completely blocked for cross-org pricing owners.
 
-Drop the old duplicate policy, then drop and recreate the new policy with the correct case (`'Accepted'` instead of `'ACCEPTED'`). Same fix for `po_line_items`.
+## Fix
+
+### Database Migration: Add Pricing Owner Finalize Policy
+
+Add a new UPDATE policy that allows the pricing owner organization to transition a PO from PRICED to FINALIZED, regardless of who created the PO.
 
 ```text
--- 1. Drop old duplicate purchase_orders SELECT policy
-DROP POLICY IF EXISTS "Project participants and suppliers can view POs" ON purchase_orders;
-
--- 2. Drop current (broken) purchase_orders SELECT policy
-DROP POLICY IF EXISTS "Project team and suppliers can view POs" ON purchase_orders;
-
--- 3. Recreate with correct case: 'Accepted' instead of 'ACCEPTED'
-CREATE POLICY "Project team and suppliers can view POs"
-ON purchase_orders FOR SELECT
+CREATE POLICY "Pricing owner can finalize PO"
+ON purchase_orders FOR UPDATE TO public
 USING (
-  user_in_org(auth.uid(), organization_id)
-  OR
-  EXISTS (
-    SELECT 1 FROM suppliers s
-    WHERE s.id = purchase_orders.supplier_id
-      AND user_in_org(auth.uid(), s.organization_id)
-  )
-  OR
-  (
-    purchase_orders.project_id IS NOT NULL
-    AND EXISTS (
-      SELECT 1 FROM project_team pt
-      WHERE pt.project_id = purchase_orders.project_id
-        AND pt.org_id = get_user_org_id(auth.uid())
-        AND pt.status = 'Accepted'   -- Fixed: was 'ACCEPTED'
-    )
-  )
-);
-
--- 4. Drop current (broken) po_line_items SELECT policy
-DROP POLICY IF EXISTS "PO participants can view line items" ON po_line_items;
-DROP POLICY IF EXISTS "PO team and suppliers can view line items" ON po_line_items;
-
--- 5. Recreate with correct case
-CREATE POLICY "PO team and suppliers can view line items"
-ON po_line_items FOR SELECT
-USING (
-  EXISTS (
-    SELECT 1 FROM purchase_orders po
-    WHERE po.id = po_line_items.po_id
-    AND (
-      user_in_org(auth.uid(), po.organization_id)
-      OR
-      EXISTS (
-        SELECT 1 FROM suppliers s
-        WHERE s.id = po.supplier_id
-          AND user_in_org(auth.uid(), s.organization_id)
-      )
-      OR
-      (
-        po.project_id IS NOT NULL
-        AND EXISTS (
-          SELECT 1 FROM project_team pt
-          WHERE pt.project_id = po.project_id
-            AND pt.org_id = get_user_org_id(auth.uid())
-            AND pt.status = 'Accepted'   -- Fixed: was 'ACCEPTED'
-        )
-      )
-    )
-  )
+  is_pm_role(auth.uid())
+  AND user_in_org(auth.uid(), pricing_owner_org_id)
+  AND status = 'PRICED'
+)
+WITH CHECK (
+  is_pm_role(auth.uid())
+  AND user_in_org(auth.uid(), pricing_owner_org_id)
+  AND status IN ('PRICED', 'FINALIZED')
 );
 ```
 
-## No Frontend Changes Needed
+This policy:
+- Requires the user to be a PM role (GC_PM or TC_PM)
+- Checks the user belongs to the `pricing_owner_org_id` (not the creator org)
+- Only allows updates when current status is PRICED
+- Only allows transition to FINALIZED (or staying at PRICED)
 
-The frontend code in `PurchaseOrdersTab.tsx` is already correct -- it queries all POs for the project and computes `canViewPricing` per PO. The only blocker was the RLS policy silently returning no rows for the project-team check path.
+### No Frontend Changes Needed
+
+The UI logic in `PODetail.tsx` and `usePOPricingVisibility.ts` is already correct:
+- `canFinalize` is computed as `isPricingOwner && po.status === 'PRICED'`
+- The "Finalize Order" button is shown and calls `updatePOStatus('FINALIZED')`
+- The only blocker was the RLS policy rejecting the update at the database level
 
 ## Summary
 
 | Item | Detail |
 |------|--------|
-| Root cause | `'ACCEPTED'` vs `'Accepted'` case mismatch in RLS policy |
-| Secondary issue | Old duplicate SELECT policy not cleaned up |
-| Fix | Single database migration: drop old policies, recreate with correct case |
+| Root cause | No UPDATE policy allows cross-org pricing owner to finalize |
+| Fix | One new RLS policy on `purchase_orders` for pricing owner finalization |
 | Files changed | 1 new migration file only |
-| Risk | Low -- only changes SELECT policies, no schema changes |
+| Risk | Low -- additive policy, does not modify existing policies |
 
