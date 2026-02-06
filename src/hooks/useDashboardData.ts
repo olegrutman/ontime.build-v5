@@ -376,7 +376,7 @@ export function useDashboardData(): DashboardData {
         // Count pending actions for this project
         const projectPendingCOs = pendingCOs.filter(co => co.project_id === project.id).length;
         const projectPendingInvoices = pendingInvoices.filter(inv => inv.project_id === project.id).length;
-        const pendingActions = orgType === 'GC' ? projectPendingCOs + projectPendingInvoices : 0;
+        const pendingActions = (orgType === 'GC' || orgType === 'TC') ? projectPendingCOs + projectPendingInvoices : 0;
 
         return {
           ...project,
@@ -397,27 +397,61 @@ export function useDashboardData(): DashboardData {
       const monthStart = startOfMonth(new Date()).toISOString();
       const monthEnd = endOfMonth(new Date()).toISOString();
 
-      let allInvoices: { status: string; total_amount: number; created_at: string }[] = [];
+      let allInvoices: { status: string; total_amount: number; created_at: string; contract_id: string | null }[] = [];
       if (projectIds.length > 0) {
         const { data } = await supabase
           .from('invoices')
-          .select('status, total_amount, created_at')
+          .select('status, total_amount, created_at, contract_id')
           .in('project_id', projectIds);
         allInvoices = data || [];
       }
 
-      const submittedInvoices = allInvoices.filter(i => i.status === 'SUBMITTED');
-      const approvedUnpaid = allInvoices.filter(i => i.status === 'APPROVED');
-      
-      const outstandingToPay = submittedInvoices.reduce((sum, i) => sum + (i.total_amount || 0), 0);
-      const outstandingToCollect = approvedUnpaid.reduce((sum, i) => sum + (i.total_amount || 0), 0);
+      // Build a lookup of contract_id -> { from_org_id, to_org_id } for role-aware filtering
+      const contractMap = new Map<string, { from_org_id: string | null; to_org_id: string | null }>();
+      contracts.forEach(c => {
+        // project_contracts may have multiple per project; key by a composite if needed
+        // but invoices reference contract_id directly
+      });
+      // Re-fetch contract details keyed by contract ID for invoice filtering
+      const contractIds = [...new Set(allInvoices.map(i => i.contract_id).filter((id): id is string => id !== null))];
+      let contractDetailMap = new Map<string, { from_org_id: string | null; to_org_id: string | null }>();
+      if (contractIds.length > 0) {
+        const { data: contractDetails } = await supabase
+          .from('project_contracts')
+          .select('id, from_org_id, to_org_id')
+          .in('id', contractIds);
+        (contractDetails || []).forEach((c: any) => {
+          contractDetailMap.set(c.id, { from_org_id: c.from_org_id, to_org_id: c.to_org_id });
+        });
+      }
+
+      // Outstanding to Pay: invoices SUBMITTED where current org is the payer (to_org_id)
+      const invoicesToPay = allInvoices.filter(i => {
+        if (i.status !== 'SUBMITTED' || !i.contract_id) return false;
+        const contract = contractDetailMap.get(i.contract_id);
+        return contract?.to_org_id === currentOrg.id;
+      });
+
+      // Outstanding to Collect: invoices APPROVED where current org is the biller (from_org_id)
+      const invoicesToCollect = allInvoices.filter(i => {
+        if (i.status !== 'APPROVED' || !i.contract_id) return false;
+        const contract = contractDetailMap.get(i.contract_id);
+        return contract?.from_org_id === currentOrg.id;
+      });
+
+      const outstandingToPay = invoicesToPay.reduce((sum, i) => sum + (i.total_amount || 0), 0);
+      const outstandingToCollect = invoicesToCollect.reduce((sum, i) => sum + (i.total_amount || 0), 0);
 
       setBilling({
-        invoicesReceived: submittedInvoices.length,
-        invoicesSent: allInvoices.filter(i => i.status !== 'DRAFT').length,
+        invoicesReceived: invoicesToPay.length,
+        invoicesSent: allInvoices.filter(i => {
+          if (i.status === 'DRAFT' || !i.contract_id) return false;
+          const contract = contractDetailMap.get(i.contract_id);
+          return contract?.from_org_id === currentOrg.id;
+        }).length,
         outstandingToPay,
         outstandingToCollect,
-        profit: 0, // Would need to calculate from contracts
+        profit: 0,
       });
 
       // This month stats
@@ -444,12 +478,16 @@ export function useDashboardData(): DashboardData {
 
       // 7. Calculate financial summary for TC
       const totalContractValue = contracts.reduce((sum, c) => {
-        // For TC, sum contracts where they are the receiver
+        // For TC, sum contracts where they are the receiver (to_org_id)
         if (orgType === 'TC' && c.to_org_id === currentOrg.id) {
           return sum + (c.contract_sum || 0);
         }
-        // For GC, sum contracts where they are the payer
-        if (orgType === 'GC' && c.from_org_id === currentOrg.id) {
+        // For GC, sum contracts where they are the client/payer (to_org_id on TC->GC contracts)
+        if (orgType === 'GC' && c.to_org_id === currentOrg.id) {
+          return sum + (c.contract_sum || 0);
+        }
+        // For FC, sum contracts where they are the receiver
+        if (orgType === 'FC' && c.to_org_id === currentOrg.id) {
           return sum + (c.contract_sum || 0);
         }
         return sum;

@@ -88,6 +88,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: Pu
         const { data: invoicedData } = await supabase
           .from('invoices')
           .select('po_id')
+          .eq('project_id', projectId)
           .in('po_id', poIds)
           .not('po_id', 'is', null);
         
@@ -253,7 +254,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: Pu
                 <SelectItem value="ACTIVE">Active</SelectItem>
                 <SelectItem value="SUBMITTED">Submitted</SelectItem>
                 <SelectItem value="PRICED">Priced</SelectItem>
+                <SelectItem value="FINALIZED">Finalized</SelectItem>
                 <SelectItem value="ORDERED">Ordered</SelectItem>
+                <SelectItem value="READY_FOR_DELIVERY">Ready for Delivery</SelectItem>
                 <SelectItem value="DELIVERED">Delivered</SelectItem>
               </SelectContent>
             </Select>
