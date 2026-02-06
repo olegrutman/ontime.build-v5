@@ -23,8 +23,8 @@ interface StatusColumnProps {
 }
 
 const sizeClasses = {
-  sm: 'h-6 px-2 text-xs min-w-[80px]',
-  md: 'h-8 px-3 text-sm min-w-[100px]',
+  sm: 'h-7 px-2.5 text-xs min-w-[80px]',
+  md: 'h-9 px-3 text-sm min-w-[100px]',
   lg: 'h-10 px-4 text-base min-w-[120px]',
 };
 

@@ -34,7 +34,7 @@ export function HoverActions({
       <div
         className={cn(
           'flex items-center gap-0.5 transition-opacity duration-200',
-          !alwaysVisible && 'opacity-0 group-hover:opacity-100',
+          !alwaysVisible && 'opacity-100 sm:opacity-0 sm:group-hover:opacity-100',
           position === 'left' ? 'mr-auto' : 'ml-auto',
           className
         )}
@@ -46,7 +46,7 @@ export function HoverActions({
                 size="icon"
                 variant="ghost"
                 className={cn(
-                  'h-7 w-7 shrink-0',
+                  'h-9 w-9 shrink-0',
                   action.variant === 'destructive' &&
                     'hover:bg-destructive/10 hover:text-destructive'
                 )}

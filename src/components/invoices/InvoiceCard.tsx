@@ -104,12 +104,12 @@ export function InvoiceCard({
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-              <FileText className="h-4 w-4 text-primary" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <FileText className="h-5 w-5 text-primary" />
             </div>
             <div>
               <h4 className="font-medium">{invoice.invoice_number}</h4>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {format(new Date(invoice.created_at), 'MMM d, yyyy')}
               </p>
             </div>
@@ -129,7 +129,7 @@ export function InvoiceCard({
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
             <div>
-              <p className="text-xs text-muted-foreground">Billing Period</p>
+              <p className="text-sm text-muted-foreground">Billing Period</p>
               <p className="font-medium">
                 {format(new Date(invoice.billing_period_start), 'MMM d')} -{' '}
                 {format(new Date(invoice.billing_period_end), 'MMM d, yyyy')}
@@ -140,7 +140,7 @@ export function InvoiceCard({
           <div className="flex items-center gap-2">
             <DollarSign className="h-4 w-4 text-muted-foreground" />
             <div>
-              <p className="text-xs text-muted-foreground">Amount Due</p>
+              <p className="text-sm text-muted-foreground">Amount Due</p>
               <p className="font-bold">{formatCurrency(invoice.total_amount)}</p>
             </div>
           </div>
@@ -196,7 +196,7 @@ export function InvoiceCard({
         )}
 
         {invoice.rejection_reason && invoice.status === 'REJECTED' && (
-          <div className="mt-3 p-2 bg-red-50 dark:bg-red-900/20 rounded text-xs text-red-700 dark:text-red-300">
+          <div className="mt-3 p-2 bg-red-50 dark:bg-red-900/20 rounded text-sm text-red-700 dark:text-red-300">
             <strong>Rejection:</strong> {invoice.rejection_reason}
           </div>
         )}

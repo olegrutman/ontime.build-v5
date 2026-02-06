@@ -341,19 +341,19 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
     <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
       <div className="bg-muted/50 rounded-lg p-4 text-center">
         <p className="text-2xl font-bold">{stats.draft}</p>
-        <p className="text-xs text-muted-foreground">Draft</p>
+        <p className="text-sm text-muted-foreground">Draft</p>
       </div>
       <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-center">
         <p className="text-2xl font-bold text-blue-600">{stats.submitted}</p>
-        <p className="text-xs text-muted-foreground">Pending Approval</p>
+        <p className="text-sm text-muted-foreground">Pending Approval</p>
       </div>
       <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-center">
         <p className="text-2xl font-bold text-green-600">{stats.approved}</p>
-        <p className="text-xs text-muted-foreground">Approved</p>
+        <p className="text-sm text-muted-foreground">Approved</p>
       </div>
       <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 text-center">
         <p className="text-2xl font-bold text-purple-600">{stats.paid}</p>
-        <p className="text-xs text-muted-foreground">Paid</p>
+        <p className="text-sm text-muted-foreground">Paid</p>
       </div>
     </div>
   );
@@ -385,8 +385,8 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
 
   const renderHeader = (showCreateButton: boolean) => (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div>
-        <h3 className="text-lg font-semibold">
+    <div>
+        <h3 className="text-xl font-semibold">
           {isTCWithDualView 
             ? (invoiceDirection === 'sent' ? `Sent to ${gcOrgName}` : 'Received from Field Crews')
             : 'Invoices'

@@ -245,7 +245,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: Pu
               </SelectContent>
             </Select>
             {canCreatePO && (
-              <Button size="sm" onClick={() => setWizardOpen(true)}>
+              <Button onClick={() => setWizardOpen(true)}>
                 <Plus className="h-4 w-4 mr-1" />
                 Create PO
               </Button>

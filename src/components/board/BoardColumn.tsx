@@ -81,7 +81,7 @@ export function BoardColumn({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 shrink-0"
+                className="h-9 w-9 shrink-0"
                 onClick={onAdd}
               >
                 <Plus className="h-4 w-4" />

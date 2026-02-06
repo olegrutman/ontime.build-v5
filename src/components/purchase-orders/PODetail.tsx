@@ -373,7 +373,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onBack}>
+          <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
@@ -485,28 +485,28 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
         <CardContent className="p-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
-              <p className="text-xs text-muted-foreground">Supplier</p>
+              <p className="text-sm text-muted-foreground">Supplier</p>
               <p className="font-medium flex items-center gap-1">
                 <Building2 className="h-4 w-4" />
                 {po.supplier?.name || '—'}
               </p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Project</p>
+              <p className="text-sm text-muted-foreground">Project</p>
               <p className="font-medium">{po.project?.name || '—'}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Work Order</p>
+              <p className="text-sm text-muted-foreground">Work Order</p>
               <p className="font-medium">{po.work_item?.title || '—'}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Created</p>
+              <p className="text-sm text-muted-foreground">Created</p>
               <p className="font-medium">{format(new Date(po.created_at), 'MMM d, yyyy')}</p>
             </div>
             {po.ready_for_delivery_at && (
               <div>
-                <p className="text-xs text-muted-foreground">Ready for Delivery</p>
-                <p className="font-medium flex items-center gap-1">
+              <p className="text-sm text-muted-foreground">Ready for Delivery</p>
+              <p className="font-medium flex items-center gap-1">
                   <Package className="h-4 w-4" />
                   {format(new Date(po.ready_for_delivery_at), 'MMM d, yyyy')}
                 </p>
@@ -514,7 +514,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
             )}
             {po.delivered_at && (
               <div>
-                <p className="text-xs text-muted-foreground">Delivered</p>
+                <p className="text-sm text-muted-foreground">Delivered</p>
                 <p className="font-medium flex items-center gap-1 text-green-600 dark:text-green-400">
                   <Truck className="h-4 w-4" />
                   {format(new Date(po.delivered_at), 'MMM d, yyyy')}
