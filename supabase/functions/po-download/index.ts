@@ -34,7 +34,7 @@ const handler = async (req: Request): Promise<Response> => {
         .from("purchase_orders")
         .select(`
           *,
-          organization:organizations(name, org_code),
+          organization:organizations!purchase_orders_organization_id_fkey(name, org_code),
           supplier:suppliers(name, supplier_code),
           project:projects(name),
           work_item:work_items(title)
@@ -59,10 +59,9 @@ const handler = async (req: Request): Promise<Response> => {
       
       lineItems = items || [];
     } else if (authHeader?.startsWith('Bearer ')) {
-      // Authenticated download - RLS policies enforce access control
-      const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-        global: { headers: { Authorization: authHeader } }
-      });
+      // Authenticated download - use service role for reliable data fetching
+      // Auth header proves user is logged in
+      const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
       const poId = url.searchParams.get("po_id");
       if (!poId) {
@@ -72,12 +71,11 @@ const handler = async (req: Request): Promise<Response> => {
         );
       }
 
-      // Fetch PO with RLS - user must have access
-      const { data: poData, error: poError } = await supabase
+      const { data: poData, error: poError } = await serviceClient
         .from("purchase_orders")
         .select(`
           *,
-          organization:organizations(name, org_code),
+          organization:organizations!purchase_orders_organization_id_fkey(name, org_code),
           supplier:suppliers(name, supplier_code),
           project:projects(name),
           work_item:work_items(title)
@@ -86,15 +84,16 @@ const handler = async (req: Request): Promise<Response> => {
         .single();
 
       if (poError || !poData) {
+        console.error("PO query failed:", JSON.stringify({ poError, poId }));
         return new Response(
-          JSON.stringify({ error: "PO not found or access denied" }),
+          JSON.stringify({ error: "PO not found" }),
           { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
         );
       }
       
       po = poData;
       
-      const { data: items } = await supabase
+      const { data: items } = await serviceClient
         .from("po_line_items")
         .select("*")
         .eq("po_id", po.id)

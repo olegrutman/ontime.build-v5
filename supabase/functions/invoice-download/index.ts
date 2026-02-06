@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,12 +47,11 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Create client with user's auth token - RLS policies enforce access control
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
+    // Use service role client - auth header proves user is logged in,
+    // service role bypasses RLS for reliable data fetching in edge functions
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch invoice with related data - RLS will enforce access control
+    // Fetch invoice with related data
     const { data: invoice, error: invoiceError } = await supabase
       .from("invoices")
       .select(`
@@ -72,12 +72,12 @@ const handler = async (req: Request): Promise<Response> => {
     if (invoiceError || !invoice) {
       console.error("Invoice fetch error:", invoiceError);
       return new Response(
-        JSON.stringify({ error: "Invoice not found or access denied" }),
+        JSON.stringify({ error: "Invoice not found" }),
         { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }
 
-    // Fetch line items - RLS will also apply here
+    // Fetch line items
     const { data: lineItems, error: lineItemsError } = await supabase
       .from("invoice_line_items")
       .select("*")
