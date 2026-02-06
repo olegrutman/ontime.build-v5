@@ -1,200 +1,186 @@
 
 
-# Project Overview Redesign -- Desktop & Mobile Optimization
+# Dashboard Redesign for All User Types
 
-## What's Wrong Today
+## Current State Assessment
 
-After reviewing every component on the Project Overview page, here are the specific problems:
+The dashboard currently has a rigid 3-column tile grid (Financial Snapshot, Needs Attention, Reminders) followed by a status-filtered project list. All four user types (GC, TC, FC, Supplier) see the same layout with minor role-based data differences inside tiles. The problems:
 
-**Desktop (1920px):**
-- The 3-column "Project Details" grid (Team, Contracts, Scope) shows collapsed cards that waste most of the screen width -- on a wide monitor, each card is narrow yet tall when expanded, creating an awkward layout
-- The "Needs Attention" section uses the same rigid 3-column grid for summary cards that could be more compact
-- The Financial Snapshot at the bottom is a dense 4-column grid of cards that sprawls horizontally -- on wide screens, the cards are too spread out; on medium screens, they stack awkwardly
-- Section headers ("PROJECT DETAILS", "NEEDS ATTENTION", "FINANCIAL SNAPSHOT") use small-caps muted text that is hard to scan quickly
-- There's too much vertical scrolling -- a user on a jobsite has to scroll past collapsed accordion cards to reach actionable information
+1. **Desktop feels sparse and clunky** -- three small tiles stretched across a wide screen with lots of dead space, followed by a long vertical project list
+2. **Tiles are equally weighted** but they shouldn't be -- "Needs Attention" is far more actionable than a static financial snapshot
+3. **Project rows are card-based** with small text, hover-only actions, and redundant status badges already visible in the filter bar
+4. **No "at a glance" numbers** -- you have to mentally add up pending items across tiles
+5. **Mobile stacks everything vertically** creating excessive scrolling, with small tap targets (h-7 buttons in PendingInvitesPanel)
+6. **No role-aware prioritization** -- a Field Crew member doesn't need the same dashboard as a GC
 
-**Mobile (390px):**
-- The tab bar ("Overview | SOV | Work Orders | Invoices | POs | Documents") horizontally overflows and is hard to tap
-- All 3-column grids stack vertically, creating a very long scroll
-- Summary cards (Work Orders, Invoices, POs) are full-width but show a lot of whitespace inside
-- Financial cards with inline editing are cramped
+## Design Strategy
 
-**Consistency Issues:**
-- The Project Wizard uses clear step headings with helper text and generous spacing, while the overview page uses dense collapsed accordion cards
-- Wizard buttons are large touch targets (44px+), while overview action buttons are tiny (h-6, h-7)
-- Font sizes are inconsistent: 10px badges, 12px labels, small icons
+Apply the same "Glanceable First, Expandable Second" principle from the Project Overview redesign. The dashboard should answer one question in 3 seconds: **"What do I need to do right now?"**
 
-## Design References
-
-The redesign draws inspiration from these construction and project management tools that solve similar problems well:
-
-1. **Procore** (procore.com) -- The industry standard for construction PM. Their project overview uses a "dashboard tile" approach where the most critical numbers are always visible above the fold, with drill-down tabs for details. They use large, clear status indicators and action-oriented sections.
-
-2. **Monday.com** (monday.com) -- Already referenced in our design system. Their project summaries use horizontal "status bars" and compact metric widgets that show key numbers without expanding. Information density is high but readable.
-
-3. **Fieldwire** (fieldwire.com) -- Designed specifically for field workers on mobile. They use a bottom-sheet navigation pattern, large touch targets, and prioritize "what needs my attention right now" as the first thing you see.
-
-4. **Buildertrend** (buildertrend.com) -- Uses a "command center" layout where the project overview is a single-scroll page with horizontally scrollable metric cards at the top, followed by a prioritized activity feed.
-
-## Redesign Strategy
-
-### Core Principle: "Glanceable First, Expandable Second"
-
-A construction worker pulls out their phone between tasks. They need to answer in 3 seconds: "Is there anything I need to act on right now?" Everything else is secondary.
-
-### Layout Changes
-
-**1. Sticky Top Bar -- Keep As-Is (works well)**
-The project name, status badge, and tab navigation are good. One improvement: make tabs scrollable horizontally on mobile with a subtle fade indicator.
-
-**2. Replace Three-Section Layout with Two-Zone Layout**
+### Layout: Two-Zone Desktop, Single-Column Mobile
 
 ```text
-DESKTOP (2 columns):
+DESKTOP (2 columns, 65/35 split):
 +----------------------------------+-------------------+
-|  ZONE A: Action & Summary        |  ZONE B: Context  |
-|                                   |                   |
-|  [Needs Attention Banner]         |  [Team Card]      |
-|  [Metric Strip: WOs | INVs | POs]|  [Contracts Card] |
-|  [Financial Summary Card]         |  [Scope Card]     |
-|                                   |                   |
+| ZONE A: Action Center            | ZONE B: Summary   |
+|                                  |                   |
+| [Attention Banner (if items)]    | [Financial Card]  |
+| [Pending Invites (inline)]       | [Reminders Card]  |
+| [Status Tabs + Project List]     |                   |
+|                                  |                   |
 +----------------------------------+-------------------+
 
 MOBILE (1 column, reordered):
-[Needs Attention Banner]
-[Metric Strip (horizontal scroll)]
-[Financial Summary Card]
-[Team / Contracts / Scope accordions]
+[Attention Banner]
+[Pending Invites]
+[Financial Summary (collapsed)]
+[Status Tabs]
+[Project List]
+[Reminders (collapsed)]
 ```
 
-**Zone A (Left, ~65% width on desktop)** = Actionable information. What needs attention, key numbers, financial health. This is what you see first.
+### Key Changes
 
-**Zone B (Right, ~35% width on desktop)** = Reference/context information. Team members, contract details, scope details. These are collapsible and secondary.
+**1. Move Status Tabs into the main content area (not sticky)**
 
-**3. Metric Strip -- New Component**
+The current sticky `StatusMenu` bar wastes vertical space and is redundant once you're scrolled past projects. Instead, integrate status filtering as inline tabs above the project list within Zone A.
 
-Replace the three separate summary cards (Work Orders, Invoices, POs) with a single horizontal "Metric Strip" component. Each metric is a compact cell showing:
-- Icon + Label (e.g., "Work Orders")
-- Big number (e.g., "12")
-- Status breakdown as colored dots or a mini bar (e.g., 3 green, 2 amber, 7 gray)
-- Tappable to navigate to that tab
+**2. Replace the 3-tile grid with a compact Attention Banner**
 
-This is inspired by Procore's project dashboard and Monday.com's summary widgets. On mobile, the strip scrolls horizontally.
+Merge "Needs Attention" + "Pending Invites" into a single prominent banner at the top of Zone A. Same amber style as the Project Overview `AttentionBanner` -- consistent experience across pages. Shows counts and action links inline. If nothing needs attention, it disappears entirely (no "All caught up" taking space).
 
-**4. Financial Summary -- Consolidated Card**
+**3. Financial Card moves to Zone B sidebar**
 
-Replace the sprawling 4-column financial grid with a single, well-organized card that shows:
-- A prominent "headline number" (Revenue for TC, Contract Value for GC)
-- Key sub-metrics in a 2x2 mini-grid (Billed, Outstanding, Retainage, Profit)
-- The billing progress bar at the bottom
-- An "Expand" button that reveals the full breakdown (currently hidden content)
+Becomes a compact single card in the right column. Same data, less sprawl. On mobile it collapses into a single headline number with an expand toggle.
 
-This reduces the Financial Snapshot from 4-6 separate cards to 1 card with progressive disclosure.
+**4. Reminders move to Zone B sidebar**
 
-**5. Needs Attention -- Prominent Banner**
+Below the financial card. Keeps the same functionality but in a more compact, sidebar-appropriate format.
 
-Move the alert banner for pending work orders to the very top of the content area (it already is). Enhance it to show ALL attention items, not just pending work orders. Include counts for:
-- Work Orders needing approval
-- Invoices awaiting action
-- POs awaiting pricing
-Each with a direct-action link.
+**5. Project List gets bigger touch targets and clearer info density**
 
-**6. Context Cards (Team, Contracts, Scope) -- Right Column**
+- Project name: 16px font (was 14px)
+- Role and contract value shown inline on mobile too
+- Status badges: 12px minimum text
+- Remove hover-only actions; use direct tap on the entire row
+- Dropdown menu button: 44px touch target (was 32px)
+- "Last updated" text: 13px (was 12px)
+- Pending actions badge: larger, more prominent
 
-Keep the existing collapsible card pattern but:
-- Increase font sizes (14px minimum for labels, 16px for values)
-- Use 44px touch targets for all interactive elements
-- Show 2-3 key facts when collapsed (not just counts)
-- Add clearer visual hierarchy with role-colored left borders
+**6. Role-Aware Empty States**
 
-### Font & Sizing Rules
+Different empty states per role:
+- GC/TC: "Create your first project" CTA
+- FC: "You'll see projects here once a contractor invites you"
+- Supplier: "Projects will appear once you're added to a contractor's team"
 
-- All body text: minimum 14px (was 12px in places)
-- All labels: minimum 13px (was 10px in places)
-- All tap targets: minimum 44px height
-- Badge text: minimum 12px (was 10px)
-- Key numbers/metrics: 24px+ for primary, 16px for secondary
-- Muted helper text: 13px (was 10-12px)
+## Technical Plan
 
-### Mobile-Specific Improvements
+### Files to Create
 
-- Tab bar: horizontally scrollable with fade edges, larger tap targets (36px height minimum)
-- Metric strip: horizontally scrollable cards with snap points
-- Bottom padding: 80px to account for phone navigation bars
-- All section dividers: 16px spacing (was 8px in places)
+**`src/components/dashboard/DashboardAttentionBanner.tsx`**
+A dashboard-level attention banner combining the current `NeedsAttentionTile` and `PendingInvitesPanel` into one unified component. Shows:
+- Work Orders needing approval (GC only)
+- Invoices to review
+- Pending invitations (with inline Accept/Decline)
+- Sent invites awaiting response
+Each with icon, count, and tappable action link. Uses the same amber styling as `AttentionBanner` from project overview for visual consistency.
 
-## Technical Plan -- Files to Change
+**`src/components/dashboard/DashboardFinancialCard.tsx`**
+A sidebar-format financial card replacing `FinancialSnapshotTile`. Shows:
+- GC: Total Contract Value + Outstanding to Pay
+- TC: Revenue, Costs, Profit Margin
+- FC: Contract Value + Outstanding to Collect
+- Supplier: (hidden -- suppliers don't have cross-project financials)
+Compact single-card format with a headline number and 2-3 sub-metrics.
 
-### 1. New Component: `src/components/project/MetricStrip.tsx`
+**`src/components/dashboard/DashboardProjectList.tsx`**
+Extracted project list with integrated status tabs. Takes the current `StatusMenu` and `ProjectRow` list and wraps them in a single component with:
+- Inline tab bar (not sticky)
+- Enhanced `ProjectRow` with bigger fonts and touch targets
+- Role-aware empty states
 
-A horizontal strip showing summary metrics for Work Orders, Invoices, and POs. Replaces the three separate summary cards. Each cell is tappable and navigates to the corresponding tab.
+### Files to Modify
 
-```text
-Props:
-- workOrderCounts: { approved, pending, total }
-- invoiceCounts: { approved, pending, total, amount }
-- poCounts: { awaiting, inTransit, delivered, total }
-- onNavigate: (tab: string) => void
-- viewerRole: string
-```
+**`src/pages/Dashboard.tsx`**
+- Replace the 3-column tile grid with the two-zone layout
+- Use `lg:grid-cols-[1fr_360px]` grid (matching Project Overview)
+- Zone A: DashboardAttentionBanner + DashboardProjectList
+- Zone B: DashboardFinancialCard + RemindersTile
+- Remove the separate `StatusMenu` sticky bar
+- Remove the separate `PendingInvitesPanel` section
 
-### 2. New Component: `src/components/project/FinancialSummaryCard.tsx`
+**`src/components/dashboard/ProjectRow.tsx`**
+- Increase font sizes: project name `text-base` (16px), meta info `text-sm` (14px)
+- Increase dropdown menu button to `h-10 w-10` (44px touch target)
+- Show contract value on mobile row too
+- Increase badge text to `text-sm` (was `text-xs`)
+- Make status badge + pending count more prominent
+- Remove HoverActions (requires precise hover, bad for touch)
+- Add subtle left border colored by project status (green=active, amber=hold, etc.)
 
-A consolidated single-card replacement for `ProjectFinancialsSectionNew`. Shows headline number, 2x2 sub-metrics, progress bar. Has an "expand" toggle for full breakdown.
+**`src/components/dashboard/RemindersTile.tsx`**
+- Increase font sizes: reminder title `text-sm` to `text-base`, due date `text-xs` to `text-sm`
+- Increase checkbox touch target to 44px
+- Increase "Add" button from `h-8 w-8` to `h-10 w-10`
+- Overdue reminders: bolder red styling
 
-### 3. New Component: `src/components/project/AttentionBanner.tsx`
+**`src/components/dashboard/StatusMenu.tsx`**
+- Increase button sizes: `py-2.5 px-5` with `text-base` font
+- Status dot: `w-2.5 h-2.5` (was `w-2 h-2`)
+- Count badge: `text-sm` (was `text-xs`)
+- Component will be used inline (not sticky) within DashboardProjectList
 
-Enhanced version of the current alert banner. Shows categorized attention items with counts and action links.
+**`src/components/dashboard/PendingInvitesPanel.tsx`**
+- Increase Accept/Decline buttons from `h-7 text-xs` to `h-10 text-sm`
+- Increase project name font to `text-base`
+- Increase description font to `text-sm`
+- Will be embedded inline within DashboardAttentionBanner instead of standalone
 
-### 4. Modify: `src/pages/ProjectHome.tsx`
+**`src/components/dashboard/index.ts`**
+- Export new components: DashboardAttentionBanner, DashboardFinancialCard, DashboardProjectList
+- Keep existing exports for backward compatibility
 
-- Replace the three-section layout with the two-zone layout
-- Use `lg:grid-cols-[1fr_380px]` for desktop two-column split
-- Stack vertically on mobile with reordered sections
-- Integrate new MetricStrip, FinancialSummaryCard, and AttentionBanner
-- Keep existing Team, Contracts, and Scope sections as context cards in Zone B
+### Files to Keep Unchanged
 
-### 5. Modify: `src/components/project/ProjectTopBar.tsx`
+- `src/hooks/useDashboardData.ts` -- data layer is fine, no changes needed
+- `src/components/dashboard/AddReminderDialog.tsx` -- dialog works well
+- `src/components/dashboard/ArchiveProjectDialog.tsx` -- dialog works well
+- `src/components/dashboard/CompleteProjectDialog.tsx` -- dialog works well
+- `src/components/layout/AppLayout.tsx` -- layout shell unchanged
+- `src/components/layout/TopBar.tsx` -- top bar unchanged
 
-- Make the tab row horizontally scrollable on mobile with `overflow-x-auto`
-- Increase tab touch targets from `h-8` to `h-10`
-- Add subtle gradient fade at edges when overflowing
+### Sizing Rules (Applied Across All Dashboard Components)
 
-### 6. Modify: `src/components/project/ProjectTeamSection.tsx`
+| Element | Current | New |
+|---------|---------|-----|
+| Body text / labels | 12px (`text-xs`) | 14px (`text-sm`) |
+| Project name | 14px (default) | 16px (`text-base`) |
+| Key numbers | 14px | 24px+ (`text-2xl`) |
+| Badges | 12px (`text-xs`) | 14px (`text-sm`) |
+| Tap targets (buttons) | 28-32px (`h-7`, `h-8`) | 40-44px (`h-10`, `h-11`) |
+| Icon sizes | 16px (`h-4 w-4`) | 20px (`h-5 w-5`) |
+| Muted helper text | 10-12px | 13-14px (`text-[13px]` or `text-sm`) |
 
-- Increase font sizes in collapsed state summary
-- Show role breakdown in collapsed header (e.g., "1 GC, 1 TC, 1 FC" instead of "3 active")
-- Ensure 44px minimum touch targets
+### Implementation Order
 
-### 7. Modify: `src/components/project/ProjectContractsSection.tsx`
+1. Create `DashboardAttentionBanner` (combines attention items + invites)
+2. Create `DashboardFinancialCard` (compact sidebar format)
+3. Create `DashboardProjectList` (status tabs + project list integrated)
+4. Update `ProjectRow` (bigger fonts, touch targets, status border)
+5. Update `RemindersTile` (bigger fonts, touch targets)
+6. Update `Dashboard.tsx` (new two-zone layout, wire everything together)
+7. Update `index.ts` (exports)
 
-- Increase font sizes
-- Show total contract value prominently in collapsed header
-- Larger touch targets for edit controls
+### What Stays the Same
 
-### 8. Modify: `src/components/project/ProjectScopeSection.tsx`
-
-- Increase font sizes and badge sizes
-- Show key scope facts in collapsed header
-
-### 9. Modify: `src/index.css`
-
-- No changes to CSS variables, just ensure the components use larger sizes
-
-## What Stays the Same
-
-- All data that is currently shown remains available (just reorganized)
+- All existing data and functionality preserved
+- Same status filtering (Active/On Hold/Completed/Archived)
+- Same project actions (Archive, Complete, Status Change)
+- Same reminder functionality (add, complete, due dates)
+- Same financial data per role
+- Same invitation accept/decline flow
 - Dark sidebar navigation
-- Wizard experiences (PO wizard, Work Order wizard, Project wizard) remain unchanged
-- Individual tab content (SOV, Work Orders, Invoices, POs) remains unchanged
-- Color system and brand identity
-- The collapsible card pattern for context sections
-
-## Implementation Order
-
-1. Create new components (MetricStrip, FinancialSummaryCard, AttentionBanner)
-2. Update ProjectTopBar for mobile scrolling
-3. Update ProjectHome.tsx with new layout
-4. Update context cards (Team, Contracts, Scope) for font sizes and touch targets
-5. Test on both desktop and mobile viewports
+- All dialogs (Archive, Complete, Add Reminder)
+- The `useDashboardData` hook -- no data layer changes
 
