@@ -49,7 +49,7 @@ export function ViewSwitcher({
                   variant="ghost"
                   size="sm"
                   className={cn(
-                    'h-8 w-8 p-0',
+                    'h-9 w-9 p-0',
                     isActive && 'bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground'
                   )}
                   onClick={() => onChange(mode)}

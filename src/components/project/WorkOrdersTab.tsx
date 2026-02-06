@@ -127,14 +127,19 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
       )}
 
       {/* Header with View Switcher and New Work Order button */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <h2 className="text-lg font-semibold">Work Orders</h2>
-          <ViewSwitcher
-            value={viewMode}
-            onChange={setViewMode}
-            availableModes={['list', 'board']}
-          />
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-3">
+            <h2 className="text-xl font-semibold">Work Orders</h2>
+            <ViewSwitcher
+              value={viewMode}
+              onChange={setViewMode}
+              availableModes={['list', 'board']}
+            />
+          </div>
+          <p className="text-sm text-muted-foreground mt-1">
+            {statusCounts.ALL} work order{statusCounts.ALL !== 1 ? 's' : ''} • {statusCounts.draft} draft • {statusCounts.approved} approved • {statusCounts.contracted} contracted
+          </p>
         </div>
         {canCreate && (
           <TooltipProvider>
@@ -168,9 +173,8 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
               <Button
                 key={status}
                 variant={activeTab === status ? 'default' : 'outline'}
-                size="sm"
                 onClick={() => setActiveTab(status)}
-                className="text-xs"
+                className="text-sm"
               >
                 {getStatusLabel(status)} ({statusCounts[status]})
               </Button>
@@ -249,15 +253,15 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
                       {changeOrder.description}
                     </p>
                   )}
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     {changeOrder.work_type && (
                       <span className="capitalize">{changeOrder.work_type.replace('_', ' ')}</span>
                     )}
                     {changeOrder.requires_materials && (
-                      <span className="bg-muted px-2 py-0.5 rounded">Materials</span>
+                      <span className="bg-muted px-2 py-1 rounded text-sm">Materials</span>
                     )}
                     {changeOrder.requires_equipment && (
-                      <span className="bg-muted px-2 py-0.5 rounded">Equipment</span>
+                      <span className="bg-muted px-2 py-1 rounded text-sm">Equipment</span>
                     )}
                   </div>
                 </CardContent>

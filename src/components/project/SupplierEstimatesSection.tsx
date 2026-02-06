@@ -147,10 +147,10 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-6 w-6"
+                className="h-9 w-9"
                 onClick={(e) => { e.stopPropagation(); setShowCreate(true); }}
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-5 w-5" />
               </Button>
               {isOpen ? (
                 <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -169,7 +169,7 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
                   className="flex justify-between items-center py-2 border-b last:border-0"
                 >
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-medium">{estimate.name}</p>
+                    <p className="text-base font-medium">{estimate.name}</p>
                     <Badge className={STATUS_COLORS[estimate.status] || STATUS_COLORS.DRAFT}>
                       {STATUS_LABELS[estimate.status] || estimate.status}
                     </Badge>
@@ -178,7 +178,7 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      className="h-9 w-9 text-muted-foreground hover:text-destructive"
                       onClick={(e) => {
                         e.stopPropagation();
                         setDeleteConfirmId(estimate.id);
@@ -190,7 +190,7 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
                 </div>
               ))
             ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">No estimates yet</p>
+              <p className="text-base text-muted-foreground text-center py-4">No estimates yet</p>
             )}
           </CardContent>
         </CollapsibleContent>

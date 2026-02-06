@@ -42,24 +42,24 @@ export function ChangeOrderHeader({ changeOrder }: ChangeOrderHeaderProps) {
         <ChangeOrderStatusBadge status={changeOrder.status} />
       </div>
 
-      <div className="flex flex-wrap gap-4 text-sm">
+      <div className="flex flex-wrap gap-4 text-base">
         {/* Location */}
         <div className="flex items-center gap-2 text-muted-foreground">
-          <MapPin className="w-4 h-4" />
+          <MapPin className="w-5 h-5" />
           <span>{formatLocation(changeOrder.location_data)}</span>
         </div>
 
         {/* Work Type */}
         {changeOrder.work_type && (
           <div className="flex items-center gap-2 text-muted-foreground">
-            <Hammer className="w-4 h-4" />
+            <Hammer className="w-5 h-5" />
             <span>{WORK_TYPE_LABELS[changeOrder.work_type]}</span>
           </div>
         )}
 
         {/* Created Date */}
         <div className="flex items-center gap-2 text-muted-foreground">
-          <Calendar className="w-4 h-4" />
+          <Calendar className="w-5 h-5" />
           <span>{format(new Date(changeOrder.created_at), 'MMM d, yyyy')}</span>
         </div>
       </div>

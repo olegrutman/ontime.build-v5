@@ -110,14 +110,14 @@ export function ChangeOrderDetailPage() {
   return (
     <AppLayout title={changeOrder.title}>
       <div className="p-4 sm:p-6">
-        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
-          <ArrowLeft className="w-4 h-4 mr-2" />
+        <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4 h-10">
+          <ArrowLeft className="w-5 h-5 mr-2" />
           Back
         </Button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="space-y-6">
             <Card className="p-6">
               <ChangeOrderHeader changeOrder={changeOrder} />
             </Card>

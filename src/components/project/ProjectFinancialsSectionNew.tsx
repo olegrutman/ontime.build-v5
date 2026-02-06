@@ -439,10 +439,10 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
             </div>
           </div>
           <div className="flex gap-1">
-            <Button size="sm" variant="default" onClick={saveContract} disabled={saving} className="h-7 px-2">
-              <Check className="h-3 w-3" />
+            <Button size="sm" variant="default" onClick={saveContract} disabled={saving} className="h-9 px-3">
+              <Check className="h-3.5 w-3.5" />
             </Button>
-            <Button size="sm" variant="ghost" onClick={cancelEditing} disabled={saving} className="h-7 px-2">
+            <Button size="sm" variant="ghost" onClick={cancelEditing} disabled={saving} className="h-9 px-3">
               <X className="h-3 w-3" />
             </Button>
           </div>
@@ -473,13 +473,13 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
           <Button
             size="icon"
             variant="ghost"
-            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+            className="h-8 w-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
             onClick={() => startEditing(contract)}
           >
             <Pencil className="h-3 w-3" />
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           {retainage}% retainage • {label}
         </p>
       </div>
@@ -594,21 +594,21 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
                           </div>
                         </div>
                         <div className="flex gap-1">
-                          <Button 
-                            size="sm" 
-                            variant="default" 
-                            onClick={createFcContract} 
-                            disabled={saving || (fcParticipants.length > 1 && !selectedFcOrgId)} 
-                            className="h-7 px-2"
+                           <Button 
+                             size="sm" 
+                             variant="default" 
+                             onClick={createFcContract} 
+                             disabled={saving || (fcParticipants.length > 1 && !selectedFcOrgId)} 
+                             className="h-9 px-3"
                           >
                             <Check className="h-3 w-3" />
                           </Button>
-                          <Button 
-                            size="sm" 
-                            variant="ghost" 
-                            onClick={() => setCreatingContract(false)} 
-                            disabled={saving} 
-                            className="h-7 px-2"
+                           <Button 
+                             size="sm" 
+                             variant="ghost" 
+                             onClick={() => setCreatingContract(false)} 
+                             disabled={saving} 
+                             className="h-9 px-3"
                           >
                             <X className="h-3 w-3" />
                           </Button>
@@ -662,7 +662,7 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
                         <p className={`text-2xl font-bold ${profit < 0 ? 'text-red-600' : ''}`}>
                           {formatCurrency(profit)}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-sm text-muted-foreground">
                           {profitPercent.toFixed(1)}% margin
                         </p>
                       </>
@@ -690,7 +690,7 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
                     </div>
                     <div>
                       <p className="text-sm font-medium">Material Costs</p>
-                      <p className="text-xs text-muted-foreground">From {materialCosts.workOrderCount} work order{materialCosts.workOrderCount > 1 ? 's' : ''}</p>
+                      <p className="text-sm text-muted-foreground">From {materialCosts.workOrderCount} work order{materialCosts.workOrderCount > 1 ? 's' : ''}</p>
                     </div>
                   </div>
                   
@@ -792,7 +792,7 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
               <div>
                 <p className="text-sm text-muted-foreground">Billed to Date</p>
                 <p className="text-2xl font-bold">{formatCurrency(billedToDate)}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-sm text-muted-foreground">
                   Outstanding: {formatCurrency(outstanding)}
                 </p>
               </div>
@@ -810,7 +810,7 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
               <div>
                 <p className="text-sm text-muted-foreground">Retainage Held</p>
                 <p className="text-2xl font-bold">{formatCurrency(retainageAmount)}</p>
-                <p className="text-xs text-muted-foreground">{retainagePercent}% of billed</p>
+                <p className="text-sm text-muted-foreground">{retainagePercent}% of billed</p>
               </div>
             </div>
           </CardContent>
@@ -832,8 +832,8 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
                 </div>
               </div>
             </div>
-            <Progress value={billingProgress} className="h-2" />
-            <div className="flex justify-between mt-2 text-xs text-muted-foreground">
+            <Progress value={billingProgress} className="h-3" />
+            <div className="flex justify-between mt-2 text-sm text-muted-foreground">
               <span>Billed: {formatCurrency(billedToDate)}</span>
               <span>Remaining: {formatCurrency(outstanding)}</span>
             </div>

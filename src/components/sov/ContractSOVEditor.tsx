@@ -228,7 +228,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Schedule of Values</h2>
+        <h2 className="text-xl font-semibold">Schedule of Values</h2>
         <Badge variant="outline">{sovs.length} Contract{sovs.length > 1 ? 's' : ''}</Badge>
       </div>
 
@@ -310,7 +310,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                                 <Button
                                   size="icon"
                                   variant="ghost"
-                                  className="h-8 w-8"
+                                  className="h-10 w-10"
                                   disabled={saving}
                                 >
                                   <Unlock className="h-4 w-4 text-muted-foreground" />
@@ -337,7 +337,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                                 <Button
                                   size="icon"
                                   variant="ghost"
-                                  className="h-8 w-8"
+                                  className="h-10 w-10"
                                   disabled={saving}
                                   title="Lock SOV"
                                 >
@@ -384,14 +384,14 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                         totals.totalBilled === 0 && !isEffectivelyLocked ? (
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-8 w-8"
-                                disabled={saving}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-10 w-10"
+                            disabled={saving}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
@@ -415,7 +415,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-8 w-8 cursor-not-allowed opacity-50"
+                            className="h-10 w-10 cursor-not-allowed opacity-50"
                             disabled
                             title={hasBilling ? "SOV has billing activity" : sov.is_locked ? "SOV is locked" : "Cannot delete - SOV has billing history"}
                           >
@@ -512,7 +512,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                           `}
                         >
                           <div className={`
-                            flex items-center gap-2 p-3
+                            flex items-center gap-2 p-4
                             ${!isEditing && !isEditingPercent ? 'cursor-move hover:bg-muted/50' : ''}
                           `}>
                             <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
@@ -533,10 +533,10 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                                   autoFocus
                                   className="h-8"
                                 />
-                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSaveEdit}>
+                                <Button size="icon" variant="ghost" className="h-10 w-10" onClick={handleSaveEdit}>
                                   <Check className="h-4 w-4 text-green-600" />
                                 </Button>
-                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingItem(null)}>
+                                <Button size="icon" variant="ghost" className="h-10 w-10" onClick={() => setEditingItem(null)}>
                                   <X className="h-4 w-4" />
                                 </Button>
                               </div>
@@ -568,19 +568,19 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                                       className="h-8 w-20"
                                     />
                                     <span className="text-sm">%</span>
-                                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSavePercentEdit}>
+                                    <Button size="icon" variant="ghost" className="h-10 w-10" onClick={handleSavePercentEdit}>
                                       <Check className="h-4 w-4 text-green-600" />
                                     </Button>
-                                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingPercent(null)}>
+                                    <Button size="icon" variant="ghost" className="h-10 w-10" onClick={() => setEditingPercent(null)}>
                                       <X className="h-4 w-4" />
                                     </Button>
                                   </div>
                                 ) : (
                                   <div className="flex items-center gap-2 text-sm flex-shrink-0">
-                                    <span className="text-muted-foreground w-16 text-right">
+                                    <span className="text-muted-foreground w-20 text-right">
                                       {item.percent_of_contract?.toFixed(2)}%
                                     </span>
-                                    <span className="font-medium w-24 text-right">
+                                    <span className="font-medium w-28 text-right">
                                       {formatCurrency(item.value_amount || 0)}
                                     </span>
                                   </div>
@@ -592,7 +592,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                                     <Button 
                                       size="icon" 
                                       variant="ghost" 
-                                      className="h-8 w-8" 
+                                      className="h-10 w-10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" 
                                       onClick={() => handleStartPercentEdit(sov.id, item)}
                                       title="Edit percentage"
                                     >
@@ -601,7 +601,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                                     <Button 
                                       size="icon" 
                                       variant="ghost" 
-                                      className="h-8 w-8" 
+                                      className="h-10 w-10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" 
                                       onClick={() => handleStartEdit(sov.id, item)}
                                       title="Edit name"
                                     >
@@ -612,7 +612,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                                     {(item.billed_to_date || 0) === 0 ? (
                                       <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                          <Button size="icon" variant="ghost" className="h-8 w-8">
+                                          <Button size="icon" variant="ghost" className="h-10 w-10">
                                             <Trash2 className="h-4 w-4 text-destructive" />
                                           </Button>
                                         </AlertDialogTrigger>
@@ -638,7 +638,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                                       <Button
                                         size="icon"
                                         variant="ghost"
-                                        className="h-8 w-8 cursor-not-allowed opacity-50"
+                                        className="h-10 w-10 cursor-not-allowed opacity-50"
                                         disabled
                                         title="Cannot delete - item has billing history"
                                       >

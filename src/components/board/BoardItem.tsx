@@ -65,7 +65,7 @@ export function BoardItem({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-9 w-9 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                 >
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
@@ -97,7 +97,7 @@ export function BoardItem({
           {tags.map((tag, index) => (
             <span
               key={index}
-              className="text-[10px] px-1.5 py-0.5 rounded font-medium"
+              className="text-xs px-2 py-1 rounded font-medium"
               style={{ backgroundColor: tag.color + '20', color: tag.color }}
             >
               {tag.label}

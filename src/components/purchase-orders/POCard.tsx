@@ -100,12 +100,12 @@ export function POCard({
       <CardContent className="p-4">
         <div className="flex items-start justify-between mb-3">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
-              <Package className="h-4 w-4 text-primary" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <Package className="h-5 w-5 text-primary" />
             </div>
             <div>
               <h4 className="font-medium">{po.po_number}</h4>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 {format(new Date(po.created_at), 'MMM d, yyyy')}
               </p>
             </div>
@@ -120,7 +120,7 @@ export function POCard({
           <div className="flex items-center gap-2">
             <Building2 className="h-4 w-4 text-muted-foreground" />
             <div>
-              <p className="text-xs text-muted-foreground">Supplier</p>
+              <p className="text-sm text-muted-foreground">Supplier</p>
               <p className="font-medium truncate">{po.supplier?.name || '—'}</p>
             </div>
           </div>
@@ -128,7 +128,7 @@ export function POCard({
           <div className="flex items-center gap-2">
             <FileText className="h-4 w-4 text-muted-foreground" />
             <div>
-              <p className="text-xs text-muted-foreground">Items</p>
+              <p className="text-sm text-muted-foreground">Items</p>
               <p className="font-medium">{lineItemCount} line item{lineItemCount !== 1 ? 's' : ''}</p>
             </div>
           </div>
@@ -141,7 +141,7 @@ export function POCard({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1 text-muted-foreground">
                   <DollarSign className="h-4 w-4" />
-                  <span className="text-xs">Total</span>
+                  <span className="text-sm">Total</span>
                 </div>
                 <span className="font-bold text-lg">
                   {new Intl.NumberFormat('en-US', {
@@ -153,7 +153,7 @@ export function POCard({
             ) : (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Lock className="h-3.5 w-3.5" />
-                <span className="text-xs">Pricing managed by another party</span>
+                <span className="text-sm">Pricing managed by another party</span>
               </div>
             )}
           </div>
@@ -223,7 +223,7 @@ export function POCard({
 
         {/* Work Item reference */}
         {po.work_item && (
-          <div className="mt-3 pt-2 border-t text-xs text-muted-foreground">
+          <div className="mt-3 pt-2 border-t text-sm text-muted-foreground">
             Work Order: {po.work_item.title}
           </div>
         )}
