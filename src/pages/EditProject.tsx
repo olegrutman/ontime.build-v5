@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { ChevronLeft, Loader2, Users, FileText, Save, Building2, User, Mail, Trash2, Plus } from 'lucide-react';
+import { ChevronLeft, Loader2, Users, FileText, Save, Building2, User, Mail, Trash2, Plus, Package } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -667,8 +667,11 @@ export default function EditProject() {
 
                       {/* Material Responsibility - only show for TC contracts */}
                       {(contract.from_role === 'Trade Contractor' || contract.to_role === 'Trade Contractor') && (
-                        <div className="space-y-2">
-                          <Label>Material Responsibility</Label>
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2">
+                            <Package className="h-4 w-4 text-muted-foreground" />
+                            <Label>Material Responsibility</Label>
+                          </div>
                           <p className="text-xs text-muted-foreground">Who provides and pays for materials?</p>
                           <ToggleGroup
                             type="single"
@@ -685,6 +688,14 @@ export default function EditProject() {
                               TC
                             </ToggleGroupItem>
                           </ToggleGroup>
+                          <p className="text-xs text-primary/80 bg-primary/5 rounded-md px-3 py-2">
+                            {(editingData.material_responsibility || 'TC') === 'GC'
+                              ? 'GC will manage material ordering and see supplier pricing for this contract.'
+                              : 'TC will manage material ordering and see supplier pricing for this contract.'}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            The responsible party can view supplier pricing, finalize Purchase Orders, and control material ordering for this contract.
+                          </p>
                         </div>
                       )}
 

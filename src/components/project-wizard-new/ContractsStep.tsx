@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { ProjectContract } from '@/types/projectWizard';
-import { DollarSign, ArrowUp, ArrowDown, Building2, AlertCircle } from 'lucide-react';
+import { DollarSign, ArrowUp, ArrowDown, Building2, AlertCircle, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
@@ -347,8 +347,11 @@ function ContractCard({ member, contract, onUpdate, description, showMaterialRes
 
         {/* Material Responsibility toggle - only for TC contracts */}
         {showMaterialResponsibility && (
-          <div className="space-y-2">
-            <Label>Material Responsibility</Label>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Package className="h-4 w-4 text-muted-foreground" />
+              <Label>Material Responsibility</Label>
+            </div>
             <p className="text-xs text-muted-foreground">Who provides and pays for materials?</p>
             <ToggleGroup
               type="single"
@@ -365,6 +368,14 @@ function ContractCard({ member, contract, onUpdate, description, showMaterialRes
                 TC
               </ToggleGroupItem>
             </ToggleGroup>
+            <p className="text-xs text-primary/80 bg-primary/5 rounded-md px-3 py-2">
+              {(contract.materialResponsibility || 'TC') === 'GC'
+                ? 'GC will manage material ordering and see supplier pricing for this contract.'
+                : 'TC will manage material ordering and see supplier pricing for this contract.'}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              The responsible party can view supplier pricing, finalize Purchase Orders, and control material ordering for this contract.
+            </p>
           </div>
         )}
 

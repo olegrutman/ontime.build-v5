@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Check, MapPin, Users, FileText, DollarSign, ArrowUp, ArrowDown, Building2, Home, Layers, Mountain, PaintBucket } from 'lucide-react';
+import { Check, MapPin, Users, FileText, DollarSign, ArrowUp, ArrowDown, Building2, Home, Layers, Mountain, PaintBucket, Package } from 'lucide-react';
 import { NewProjectWizardData, TeamRole, ProjectContract } from '@/types/projectWizard';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -486,6 +486,12 @@ export function ReviewStepNew({ data, creatorRole = 'General Contractor' }: Revi
                 </p>
               </div>
             </div>
+            {upstreamContract.materialResponsibility && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1 pt-2 border-t">
+                <Package className="h-3 w-3" />
+                <span>Materials: {upstreamContract.materialResponsibility}</span>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -504,18 +510,26 @@ export function ReviewStepNew({ data, creatorRole = 'General Contractor' }: Revi
                 const member = teamMembers.find(t => t.id === contract.toTeamMemberId);
                 if (!member) return null;
                 return (
-                  <div key={contract.toTeamMemberId} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
-                    <div>
-                      <p className="font-medium">{member.invited_org_name}</p>
-                      <p className="text-muted-foreground">{member.role}</p>
+                  <div key={contract.toTeamMemberId} className="py-2 border-b last:border-0">
+                    <div className="flex items-center justify-between text-sm">
+                      <div>
+                        <p className="font-medium">{member.invited_org_name}</p>
+                        <p className="text-muted-foreground">{member.role}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-medium">{formatCurrency(contract.contractSum)}</p>
+                        <p className="text-muted-foreground text-xs">
+                          {contract.retainagePercent}% retainage
+                          {contract.allowMobilization && ' • Mobilization'}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-medium">{formatCurrency(contract.contractSum)}</p>
-                      <p className="text-muted-foreground text-xs">
-                        {contract.retainagePercent}% retainage
-                        {contract.allowMobilization && ' • Mobilization'}
-                      </p>
-                    </div>
+                    {contract.materialResponsibility && (
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                        <Package className="h-3 w-3" />
+                        <span>Materials: {contract.materialResponsibility}</span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -544,18 +558,26 @@ export function ReviewStepNew({ data, creatorRole = 'General Contractor' }: Revi
                   const member = teamMembers.find(t => t.id === contract.toTeamMemberId);
                   if (!member) return null;
                   return (
-                    <div key={contract.toTeamMemberId} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
-                      <div>
-                        <p className="font-medium">{member.invited_org_name}</p>
-                        <p className="text-muted-foreground">{member.role}</p>
+                    <div key={contract.toTeamMemberId} className="py-2 border-b last:border-0">
+                      <div className="flex items-center justify-between text-sm">
+                        <div>
+                          <p className="font-medium">{member.invited_org_name}</p>
+                          <p className="text-muted-foreground">{member.role}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">{formatCurrency(contract.contractSum)}</p>
+                          <p className="text-muted-foreground text-xs">
+                            {contract.retainagePercent}% retainage
+                            {contract.allowMobilization && ' • Mobilization'}
+                          </p>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-medium">{formatCurrency(contract.contractSum)}</p>
-                        <p className="text-muted-foreground text-xs">
-                          {contract.retainagePercent}% retainage
-                          {contract.allowMobilization && ' • Mobilization'}
-                        </p>
-                      </div>
+                      {contract.materialResponsibility && member.role === 'Trade Contractor' && (
+                        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
+                          <Package className="h-3 w-3" />
+                          <span>Materials: {contract.materialResponsibility}</span>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

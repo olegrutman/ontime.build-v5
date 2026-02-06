@@ -1,14 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { FileText, DollarSign, ClipboardList, Receipt, Settings, ChevronDown, ChevronRight } from 'lucide-react';
+import { FileText, DollarSign, ClipboardList, Receipt, Settings, ChevronDown, ChevronRight, Package, Pencil, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermission } from '@/components/auth/RequirePermission';
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 interface Contract {
@@ -25,6 +28,7 @@ interface Contract {
   to_org_id: string | null;
   from_org_name?: string | null;
   to_org_name?: string | null;
+  material_responsibility: string | null;
 }
 
 interface TeamMember {
@@ -78,13 +82,39 @@ interface ContractRowProps {
   contract: Contract;
   currentOrgId: string | undefined;
   teamMembers: TeamMember[];
+  canEdit: boolean;
+  onContractUpdated: () => void;
 }
 
-function ContractRow({ contract, currentOrgId, teamMembers }: ContractRowProps) {
+function ContractRow({ contract, currentOrgId, teamMembers, canEdit, onContractUpdated }: ContractRowProps) {
+  const { toast } = useToast();
   const relatedMember = teamMembers.find(m => m.id === contract.to_project_team_id);
   const isPending = relatedMember?.status === 'Invited';
   const displayTrade = formatTrade(contract.trade);
   const retainageAmount = (contract.contract_sum || 0) * ((contract.retainage_percent || 0) / 100);
+  const isTCContract = contract.from_role === 'Trade Contractor' || contract.to_role === 'Trade Contractor';
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editValue, setEditValue] = useState<string>(contract.material_responsibility || 'TC');
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('project_contracts')
+        .update({ material_responsibility: editValue })
+        .eq('id', contract.id);
+      if (error) throw error;
+      toast({ title: 'Material responsibility updated' });
+      setEditOpen(false);
+      onContractUpdated();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="flex items-center justify-between py-3 border-b border-border/50 last:border-0">
@@ -104,9 +134,46 @@ function ContractRow({ contract, currentOrgId, teamMembers }: ContractRowProps) 
             </Badge>
           )}
         </div>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          {contract.from_role} → {contract.to_role}
-        </p>
+        <div className="flex items-center gap-2 mt-0.5">
+          <p className="text-xs text-muted-foreground">
+            {contract.from_role} → {contract.to_role}
+          </p>
+          {isTCContract && contract.material_responsibility && (
+            <div className="flex items-center gap-1">
+              <Badge variant="outline" className="text-[10px] h-5 px-1.5 gap-1">
+                <Package className="h-3 w-3" />
+                Materials: {contract.material_responsibility}
+              </Badge>
+              {canEdit && (
+                <Popover open={editOpen} onOpenChange={setEditOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-5 w-5">
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-3" align="start">
+                    <div className="space-y-3">
+                      <p className="text-xs font-medium">Material Responsibility</p>
+                      <ToggleGroup
+                        type="single"
+                        value={editValue}
+                        onValueChange={(v) => { if (v) setEditValue(v); }}
+                        className="justify-start"
+                      >
+                        <ToggleGroupItem value="GC" className="px-4 text-xs">GC</ToggleGroupItem>
+                        <ToggleGroupItem value="TC" className="px-4 text-xs">TC</ToggleGroupItem>
+                      </ToggleGroup>
+                      <Button size="sm" className="w-full" onClick={handleSave} disabled={saving}>
+                        {saving && <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />}
+                        Save
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
+          )}
+        </div>
       </div>
       <div className="flex items-center gap-4 ml-4">
         <div className="text-right">
@@ -132,50 +199,50 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
 
   const currentOrgId = userOrgRoles[0]?.organization?.id;
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const [contractsResult, teamResult] = await Promise.all([
-        supabase
-          .from('project_contracts')
-          .select(`
-            *,
-            from_org:organizations!project_contracts_from_org_id_fkey(name),
-            to_org:organizations!project_contracts_to_org_id_fkey(name)
-          `)
-          .eq('project_id', projectId),
-        supabase
-          .from('project_team')
-          .select('id, status, invited_org_name')
-          .eq('project_id', projectId),
-      ]);
+  const fetchData = useCallback(async () => {
+    const [contractsResult, teamResult] = await Promise.all([
+      supabase
+        .from('project_contracts')
+        .select(`
+          *,
+          from_org:organizations!project_contracts_from_org_id_fkey(name),
+          to_org:organizations!project_contracts_to_org_id_fkey(name)
+        `)
+        .eq('project_id', projectId),
+      supabase
+        .from('project_team')
+        .select('id, status, invited_org_name')
+        .eq('project_id', projectId),
+    ]);
 
-      if (contractsResult.error) {
-        console.error('Error fetching contracts:', contractsResult.error);
-      } else {
-        const allContracts = (contractsResult.data || []).map((c: any) => ({
-          ...c,
-          from_org_name: c.from_org?.name || null,
-          to_org_name: c.to_org?.name || null,
-        })) as Contract[];
-        const visibleContracts = currentOrgId 
-          ? allContracts.filter(c => 
-              c.from_org_id === currentOrgId || c.to_org_id === currentOrgId
-            )
-          : allContracts;
-        setContracts(visibleContracts);
-      }
+    if (contractsResult.error) {
+      console.error('Error fetching contracts:', contractsResult.error);
+    } else {
+      const allContracts = (contractsResult.data || []).map((c: any) => ({
+        ...c,
+        from_org_name: c.from_org?.name || null,
+        to_org_name: c.to_org?.name || null,
+      })) as Contract[];
+      const visibleContracts = currentOrgId 
+        ? allContracts.filter(c => 
+            c.from_org_id === currentOrgId || c.to_org_id === currentOrgId
+          )
+        : allContracts;
+      setContracts(visibleContracts);
+    }
 
-      if (teamResult.error) {
-        console.error('Error fetching team:', teamResult.error);
-      } else {
-        setTeamMembers(teamResult.data || []);
-      }
+    if (teamResult.error) {
+      console.error('Error fetching team:', teamResult.error);
+    } else {
+      setTeamMembers(teamResult.data || []);
+    }
 
-      setLoading(false);
-    };
-
-    fetchData();
+    setLoading(false);
   }, [projectId, currentOrgId]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const mainContracts = contracts.filter(c => !isChangeOrderContract(c));
   const changeOrderContracts = contracts.filter(c => isChangeOrderContract(c));
@@ -264,6 +331,8 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
                           contract={contract}
                           currentOrgId={currentOrgId}
                           teamMembers={teamMembers}
+                          canEdit={canManageContracts}
+                          onContractUpdated={fetchData}
                         />
                       ))}
                     </div>
@@ -283,6 +352,8 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
                           contract={contract}
                           currentOrgId={currentOrgId}
                           teamMembers={teamMembers}
+                          canEdit={canManageContracts}
+                          onContractUpdated={fetchData}
                         />
                       ))}
                     </div>
