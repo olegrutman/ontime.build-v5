@@ -63,17 +63,10 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Create client with user's auth token - RLS policies enforce access control
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } }
     });
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Invalid or expired token" }),
-        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
 
     // Fetch work item with project info
     const { data: workItem, error: wiError } = await supabase

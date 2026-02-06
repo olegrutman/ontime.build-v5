@@ -59,20 +59,10 @@ const handler = async (req: Request): Promise<Response> => {
       
       lineItems = items || [];
     } else if (authHeader?.startsWith('Bearer ')) {
-      // Authenticated download - verify user has access via RLS
+      // Authenticated download - RLS policies enforce access control
       const supabase = createClient(supabaseUrl, supabaseAnonKey, {
         global: { headers: { Authorization: authHeader } }
       });
-
-      // Validate the JWT token by getting the user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        return new Response(
-          JSON.stringify({ error: "Invalid or expired token" }),
-          { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
-        );
-      }
 
       const poId = url.searchParams.get("po_id");
       if (!poId) {
