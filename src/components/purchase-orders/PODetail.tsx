@@ -245,7 +245,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
         const item = lineItems.find((li) => li.id === itemId);
         if (item) {
           const lineTotal = edit.unit_price * item.quantity;
-          await supabase
+          const { error: lineError } = await supabase
             .from('po_line_items')
             .update({
               unit_price: edit.unit_price,
@@ -254,11 +254,12 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
               supplier_notes: edit.supplier_notes || null,
             })
             .eq('id', itemId);
+          if (lineError) throw lineError;
         }
       }
 
       // Update PO status to PRICED with sales tax
-      await supabase
+      const { error: statusError } = await supabase
         .from('purchase_orders')
         .update({
           status: 'PRICED',
@@ -267,6 +268,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
           priced_by: user.id,
         })
         .eq('id', poId);
+      if (statusError) throw statusError;
 
       toast.success('Pricing saved');
       setEditingPrices(false);
