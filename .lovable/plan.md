@@ -1,186 +1,200 @@
 
 
-# Dashboard Redesign for All User Types
+# Consistent Design Across All Project Tabs
 
-## Current State Assessment
+## Current Inconsistencies Found
 
-The dashboard currently has a rigid 3-column tile grid (Financial Snapshot, Needs Attention, Reminders) followed by a status-filtered project list. All four user types (GC, TC, FC, Supplier) see the same layout with minor role-based data differences inside tiles. The problems:
+After reviewing every tab and detail view, here are the specific problems organized by category:
 
-1. **Desktop feels sparse and clunky** -- three small tiles stretched across a wide screen with lots of dead space, followed by a long vertical project list
-2. **Tiles are equally weighted** but they shouldn't be -- "Needs Attention" is far more actionable than a static financial snapshot
-3. **Project rows are card-based** with small text, hover-only actions, and redundant status badges already visible in the filter bar
-4. **No "at a glance" numbers** -- you have to mentally add up pending items across tiles
-5. **Mobile stacks everything vertically** creating excessive scrolling, with small tap targets (h-7 buttons in PendingInvitesPanel)
-6. **No role-aware prioritization** -- a Field Crew member doesn't need the same dashboard as a GC
+### Font & Sizing Inconsistencies
 
-## Design Strategy
+| Component | Current Issue | Target |
+|-----------|--------------|--------|
+| Work Orders tab header | `text-lg` (18px) | `text-xl` (20px) to match POs tab |
+| Work Orders status filter buttons | `text-xs` (12px) | `text-sm` (14px) |
+| Work Order cards: meta tags | `text-xs` (12px), `py-0.5` (tiny badges) | `text-sm` (14px), proper padding |
+| Invoice summary stat labels | `text-xs` (12px) | `text-sm` (14px) |
+| SOV editor: item line numbers | `text-sm` (14px) but cramped | Increase row padding |
+| SOV editor: lock/delete buttons | `h-8 w-8` (32px) | `h-10 w-10` (40px) |
+| SOV editor: add input buttons | Default | `h-10` (40px) |
+| PO Detail: info card labels | `text-xs` (12px) | `text-sm` (14px) |
+| Invoice Detail: all table headers | Default small | `text-sm` minimum |
+| Board item tags | `text-[10px]` (10px!) | `text-xs` (12px) minimum |
+| Board item menu button | `h-6 w-6` (24px!) | `h-8 w-8` (32px) minimum |
+| HoverActions buttons | `h-7 w-7` (28px) | `h-9 w-9` (36px) |
+| Change Order Detail: metadata | `text-sm` mixed | Consistent `text-sm`/`text-base` |
 
-Apply the same "Glanceable First, Expandable Second" principle from the Project Overview redesign. The dashboard should answer one question in 3 seconds: **"What do I need to do right now?"**
+### Touch Target Violations (below 40px)
 
-### Layout: Two-Zone Desktop, Single-Column Mobile
+| Component | Current | Target |
+|-----------|---------|--------|
+| `HoverActions` buttons | `h-7 w-7` (28px) | `h-9 w-9` (36px) |
+| `BoardItem` menu button | `h-6 w-6` (24px) | `h-9 w-9` (36px) |
+| `BoardColumn` add button | `h-7 w-7` (28px) | `h-9 w-9` (36px) |
+| `ViewSwitcher` buttons | `h-8 w-8` (32px) | `h-9 w-9` (36px) |
+| SOV lock/delete/edit buttons | `h-8 w-8` (32px) | `h-10 w-10` (40px) |
+| SOV add item button | Default | `h-10` (40px) |
+| Invoice quick-action buttons | `size="sm"` (36px) | No change needed |
+| PO "Create PO" button | `size="sm"` (36px) | Default (40px) |
+| Supplier Estimates add button | `h-6 w-6` (24px!) | `h-9 w-9` (36px) |
+| Supplier Estimates delete button | `h-7 w-7` (28px) | `h-9 w-9` (36px) |
 
-```text
-DESKTOP (2 columns, 65/35 split):
-+----------------------------------+-------------------+
-| ZONE A: Action Center            | ZONE B: Summary   |
-|                                  |                   |
-| [Attention Banner (if items)]    | [Financial Card]  |
-| [Pending Invites (inline)]       | [Reminders Card]  |
-| [Status Tabs + Project List]     |                   |
-|                                  |                   |
-+----------------------------------+-------------------+
+### Layout Pattern Inconsistencies
 
-MOBILE (1 column, reordered):
-[Attention Banner]
-[Pending Invites]
-[Financial Summary (collapsed)]
-[Status Tabs]
-[Project List]
-[Reminders (collapsed)]
-```
+| Area | Current | Should Be |
+|------|---------|-----------|
+| Work Orders tab | Header inline, grid below | Match POs tab: header with stats subtitle |
+| Work Orders cards | 3-column grid, no subtitle stats | Add subtitle with summary stats like POs |
+| Invoice tab summary cards | 4-column mini-grid of colored boxes | Use same card style as financial summary |
+| SOV editor | Full-width single column | Fine as-is (editing context) |
+| Change Order detail | `lg:grid-cols-3` (2+1) | Align to project overview `lg:grid-cols-[1fr_360px]` |
+| PO Detail | Single column, inline header | Add two-zone layout for sidebar info |
+| Invoice Detail | Single column, inline header | Add two-zone layout for sidebar info |
 
-### Key Changes
+### Interaction Pattern Inconsistencies
 
-**1. Move Status Tabs into the main content area (not sticky)**
+| Component | Issue |
+|-----------|-------|
+| Work Order cards | Use `HoverActions` (invisible until hover -- unusable on mobile) |
+| Invoice cards | Use `HoverActions` (same hover-only problem) |
+| PO cards | Use `HoverActions` (same hover-only problem) |
+| Board items | `opacity-0 group-hover:opacity-100` menu button (invisible on mobile) |
+| SOV editor edit buttons | `opacity-0 group-hover:opacity-100` (hidden on touch) |
 
-The current sticky `StatusMenu` bar wastes vertical space and is redundant once you're scrolled past projects. Instead, integrate status filtering as inline tabs above the project list within Zone A.
+## Implementation Plan
 
-**2. Replace the 3-tile grid with a compact Attention Banner**
+### Phase 1: Shared Component Updates (affects all tabs)
 
-Merge "Needs Attention" + "Pending Invites" into a single prominent banner at the top of Zone A. Same amber style as the Project Overview `AttentionBanner` -- consistent experience across pages. Shows counts and action links inline. If nothing needs attention, it disappears entirely (no "All caught up" taking space).
+**1. `src/components/ui/hover-actions.tsx`**
+- Increase button size from `h-7 w-7` to `h-9 w-9`
+- Change default `alwaysVisible` behavior: on small screens, always show (use a media query approach via CSS: `opacity-100 sm:opacity-0 sm:group-hover:opacity-100`)
+- This single change improves touch accessibility across Work Orders, Invoices, POs, and Board items
 
-**3. Financial Card moves to Zone B sidebar**
+**2. `src/components/ui/status-column.tsx`**
+- Increase `sm` size from `h-6 px-2 text-xs min-w-[80px]` to `h-7 px-2.5 text-xs min-w-[80px]`
+- Increase `md` size from `h-8 px-3 text-sm min-w-[100px]` to `h-9 px-3 text-sm min-w-[100px]`
 
-Becomes a compact single card in the right column. Same data, less sprawl. On mobile it collapses into a single headline number with an expand toggle.
+**3. `src/components/ui/view-switcher.tsx`**
+- Increase button size from `h-8 w-8` to `h-9 w-9`
 
-**4. Reminders move to Zone B sidebar**
+**4. `src/components/board/BoardItem.tsx`**
+- Increase menu button from `h-6 w-6` to `h-9 w-9`
+- Always show menu button on mobile (remove `opacity-0 group-hover:opacity-100`, use responsive visibility)
+- Increase tag text from `text-[10px]` to `text-xs` (12px)
+- Increase tag padding from `px-1.5 py-0.5` to `px-2 py-1`
 
-Below the financial card. Keeps the same functionality but in a more compact, sidebar-appropriate format.
+**5. `src/components/board/BoardColumn.tsx`**
+- Increase add button from `h-7 w-7` to `h-9 w-9`
 
-**5. Project List gets bigger touch targets and clearer info density**
+### Phase 2: Work Orders Tab
 
-- Project name: 16px font (was 14px)
-- Role and contract value shown inline on mobile too
-- Status badges: 12px minimum text
-- Remove hover-only actions; use direct tap on the entire row
-- Dropdown menu button: 44px touch target (was 32px)
-- "Last updated" text: 13px (was 12px)
-- Pending actions badge: larger, more prominent
+**6. `src/components/project/WorkOrdersTab.tsx`**
+- Increase header from `text-lg` to `text-xl` (match POs tab)
+- Add summary stats subtitle below the header (e.g., "12 work orders -- 3 draft, 2 pricing, 7 approved") matching the POs tab pattern
+- Increase status filter buttons from `text-xs` to `text-sm`, increase size from `size="sm"` to default
+- Increase card tag badges from `text-xs py-0.5` to `text-sm py-1`
+- Increase card description from `text-sm` to `text-sm` (already fine, just ensure consistency)
+- Remove hover-only HoverActions on work order cards; instead, make the entire card tappable (already done) and add a visible action button
 
-**6. Role-Aware Empty States**
+### Phase 3: Invoices Tab
 
-Different empty states per role:
-- GC/TC: "Create your first project" CTA
-- FC: "You'll see projects here once a contractor invites you"
-- Supplier: "Projects will appear once you're added to a contractor's team"
+**7. `src/components/invoices/InvoicesTab.tsx`**
+- Replace the 4-column summary stat boxes with a pattern closer to the new MetricStrip: use inline stat cells with proper labels at `text-sm` (currently `text-xs`)
+- Increase "Pending Approval" and other stat labels from `text-xs` to `text-sm`
+- Increase the role-context Alert text to `text-sm`
 
-## Technical Plan
+**8. `src/components/invoices/InvoiceCard.tsx`**
+- Increase date and label text from `text-xs` to `text-sm`
+- Increase card icon containers from `h-9 w-9` to `h-10 w-10`
+- Make HoverActions always visible on mobile (handled by shared update in Phase 1)
 
-### Files to Create
+**9. `src/components/invoices/InvoiceDetail.tsx`**
+- Change layout to two-zone: main content (line items table, rejection notice) in left column; sidebar with summary card (invoice number, status, dates, total due) on the right
+- Increase the "Back" button and action buttons to `h-10` minimum
+- Increase info labels from `text-xs` to `text-sm`
 
-**`src/components/dashboard/DashboardAttentionBanner.tsx`**
-A dashboard-level attention banner combining the current `NeedsAttentionTile` and `PendingInvitesPanel` into one unified component. Shows:
-- Work Orders needing approval (GC only)
-- Invoices to review
-- Pending invitations (with inline Accept/Decline)
-- Sent invites awaiting response
-Each with icon, count, and tappable action link. Uses the same amber styling as `AttentionBanner` from project overview for visual consistency.
+### Phase 4: Purchase Orders Tab
 
-**`src/components/dashboard/DashboardFinancialCard.tsx`**
-A sidebar-format financial card replacing `FinancialSnapshotTile`. Shows:
-- GC: Total Contract Value + Outstanding to Pay
-- TC: Revenue, Costs, Profit Margin
-- FC: Contract Value + Outstanding to Collect
-- Supplier: (hidden -- suppliers don't have cross-project financials)
-Compact single-card format with a headline number and 2-3 sub-metrics.
+**10. `src/components/project/PurchaseOrdersTab.tsx`**
+- Increase "Create PO" button from `size="sm"` to default size
+- Ensure the Select dropdown is at least `h-10` (40px)
 
-**`src/components/dashboard/DashboardProjectList.tsx`**
-Extracted project list with integrated status tabs. Takes the current `StatusMenu` and `ProjectRow` list and wraps them in a single component with:
-- Inline tab bar (not sticky)
-- Enhanced `ProjectRow` with bigger fonts and touch targets
-- Role-aware empty states
+**11. `src/components/purchase-orders/POCard.tsx`**
+- Increase label text from `text-xs` to `text-sm`
+- Increase icon containers from `h-9 w-9` to `h-10 w-10`
+- Make HoverActions always visible on mobile (handled by shared update)
 
-### Files to Modify
+**12. `src/components/purchase-orders/PODetail.tsx`**
+- Increase info card labels from `text-xs` to `text-sm`
+- Increase the Back button to `h-10 w-10`
+- Change layout to two-zone: main content (line items table, notes) left; sidebar card (supplier, status, dates, total) right
+- Increase all action buttons to minimum `h-10`
 
-**`src/pages/Dashboard.tsx`**
-- Replace the 3-column tile grid with the two-zone layout
-- Use `lg:grid-cols-[1fr_360px]` grid (matching Project Overview)
-- Zone A: DashboardAttentionBanner + DashboardProjectList
-- Zone B: DashboardFinancialCard + RemindersTile
-- Remove the separate `StatusMenu` sticky bar
-- Remove the separate `PendingInvitesPanel` section
+### Phase 5: SOV Editor
 
-**`src/components/dashboard/ProjectRow.tsx`**
-- Increase font sizes: project name `text-base` (16px), meta info `text-sm` (14px)
-- Increase dropdown menu button to `h-10 w-10` (44px touch target)
-- Show contract value on mobile row too
-- Increase badge text to `text-sm` (was `text-xs`)
-- Make status badge + pending count more prominent
-- Remove HoverActions (requires precise hover, bad for touch)
-- Add subtle left border colored by project status (green=active, amber=hold, etc.)
+**13. `src/components/sov/ContractSOVEditor.tsx`**
+- Increase lock/delete/edit icon buttons from `h-8 w-8` to `h-10 w-10`
+- Increase add item button to `h-10`
+- Increase add item input to `h-10`
+- Increase item row padding from `p-3` to `p-4`
+- Make edit pencil icons always visible on mobile (responsive opacity)
+- Increase percent display width from `w-16` to `w-20`
+- Increase currency display width from `w-24` to `w-28`
 
-**`src/components/dashboard/RemindersTile.tsx`**
-- Increase font sizes: reminder title `text-sm` to `text-base`, due date `text-xs` to `text-sm`
-- Increase checkbox touch target to 44px
-- Increase "Add" button from `h-8 w-8` to `h-10 w-10`
-- Overdue reminders: bolder red styling
+### Phase 6: Change Order Detail Page
 
-**`src/components/dashboard/StatusMenu.tsx`**
-- Increase button sizes: `py-2.5 px-5` with `text-base` font
-- Status dot: `w-2.5 h-2.5` (was `w-2 h-2`)
-- Count badge: `text-sm` (was `text-xs`)
-- Component will be used inline (not sticky) within DashboardProjectList
+**14. `src/components/change-order-detail/ChangeOrderDetailPage.tsx`**
+- Change sidebar layout from `lg:grid-cols-3` to `lg:grid-cols-[1fr_380px]` (matching project overview and dashboard)
+- Increase "Back" button to `h-10`
 
-**`src/components/dashboard/PendingInvitesPanel.tsx`**
-- Increase Accept/Decline buttons from `h-7 text-xs` to `h-10 text-sm`
-- Increase project name font to `text-base`
-- Increase description font to `text-sm`
-- Will be embedded inline within DashboardAttentionBanner instead of standalone
+**15. `src/components/change-order-detail/ChangeOrderHeader.tsx`**
+- Increase metadata icons from `w-4 h-4` to `w-5 h-5`
+- Increase metadata text from `text-sm` to `text-base` for better readability
 
-**`src/components/dashboard/index.ts`**
-- Export new components: DashboardAttentionBanner, DashboardFinancialCard, DashboardProjectList
-- Keep existing exports for backward compatibility
+### Phase 7: Supplier-Specific Components
 
-### Files to Keep Unchanged
+**16. `src/components/project/SupplierEstimatesSection.tsx`**
+- Increase add button from `h-6 w-6` to `h-9 w-9`
+- Increase delete button from `h-7 w-7` to `h-9 w-9`
+- Increase estimate name text from `text-sm` to `text-base`
+- Increase "No estimates yet" message from `text-sm` to `text-base`
 
-- `src/hooks/useDashboardData.ts` -- data layer is fine, no changes needed
-- `src/components/dashboard/AddReminderDialog.tsx` -- dialog works well
-- `src/components/dashboard/ArchiveProjectDialog.tsx` -- dialog works well
-- `src/components/dashboard/CompleteProjectDialog.tsx` -- dialog works well
-- `src/components/layout/AppLayout.tsx` -- layout shell unchanged
-- `src/components/layout/TopBar.tsx` -- top bar unchanged
+### Phase 8: Financial Summary Cards
 
-### Sizing Rules (Applied Across All Dashboard Components)
+**17. `src/components/project/ProjectFinancialsSectionNew.tsx`**
+- Increase all `text-xs` labels to `text-sm`
+- Increase inline edit save/cancel buttons from `h-7 px-2` to `h-9 px-3`
+- Increase billing progress bar height from `h-2` to `h-3`
 
-| Element | Current | New |
-|---------|---------|-----|
-| Body text / labels | 12px (`text-xs`) | 14px (`text-sm`) |
-| Project name | 14px (default) | 16px (`text-base`) |
-| Key numbers | 14px | 24px+ (`text-2xl`) |
-| Badges | 12px (`text-xs`) | 14px (`text-sm`) |
-| Tap targets (buttons) | 28-32px (`h-7`, `h-8`) | 40-44px (`h-10`, `h-11`) |
-| Icon sizes | 16px (`h-4 w-4`) | 20px (`h-5 w-5`) |
-| Muted helper text | 10-12px | 13-14px (`text-[13px]` or `text-sm`) |
+## What Stays the Same
 
-### Implementation Order
-
-1. Create `DashboardAttentionBanner` (combines attention items + invites)
-2. Create `DashboardFinancialCard` (compact sidebar format)
-3. Create `DashboardProjectList` (status tabs + project list integrated)
-4. Update `ProjectRow` (bigger fonts, touch targets, status border)
-5. Update `RemindersTile` (bigger fonts, touch targets)
-6. Update `Dashboard.tsx` (new two-zone layout, wire everything together)
-7. Update `index.ts` (exports)
-
-### What Stays the Same
-
-- All existing data and functionality preserved
-- Same status filtering (Active/On Hold/Completed/Archived)
-- Same project actions (Archive, Complete, Status Change)
-- Same reminder functionality (add, complete, due dates)
-- Same financial data per role
-- Same invitation accept/decline flow
+- All data, logic, and functionality unchanged
+- Color system and brand identity
+- The two-zone layout pattern (already applied to Dashboard and Overview)
+- Wizard experiences (already good)
 - Dark sidebar navigation
-- All dialogs (Archive, Complete, Add Reminder)
-- The `useDashboardData` hook -- no data layer changes
+- All dialog and modal designs
+- All Supabase queries and state management
+
+## Implementation Order
+
+1. Shared components first (HoverActions, StatusColumn, ViewSwitcher, BoardItem, BoardColumn) -- biggest impact with fewest files
+2. Work Orders tab (highest traffic tab for field workers)
+3. Invoices tab + InvoiceDetail
+4. Purchase Orders tab + PODetail
+5. SOV Editor
+6. Change Order Detail page
+7. Supplier Estimates section
+8. Financial Summary cards
+
+## Key Design Rules Applied Throughout
+
+- Body text minimum: 14px (`text-sm`)
+- Labels minimum: 13px (`text-[13px]` or `text-sm`)
+- Touch targets minimum: 36px (`h-9`), ideally 40px (`h-10`)
+- Key numbers: 24px+ (`text-2xl`)
+- Badges: 12px minimum (`text-xs`)
+- All interactive elements visible on mobile (no hover-only UI)
+- Consistent two-zone layout for detail views
+- Consistent header pattern: title + subtitle stats + action buttons
 
