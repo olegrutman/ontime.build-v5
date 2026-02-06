@@ -28,6 +28,7 @@ interface PurchaseOrdersTabProps {
 export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: PurchaseOrdersTabProps) {
   const { userOrgRoles, currentRole, user } = useAuth();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [invoicedPOIds, setInvoicedPOIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [wizardOpen, setWizardOpen] = useState(false);
@@ -80,6 +81,18 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: Pu
       console.error('Error fetching POs:', error);
     } else {
       setPurchaseOrders((data || []) as unknown as PurchaseOrder[]);
+
+      // Fetch which POs have been invoiced
+      const poIds = (data || []).map((p: any) => p.id);
+      if (poIds.length > 0) {
+        const { data: invoicedData } = await supabase
+          .from('invoices')
+          .select('po_id')
+          .in('po_id', poIds)
+          .not('po_id', 'is', null);
+        
+        setInvoicedPOIds(new Set((invoicedData || []).map((inv: any) => inv.po_id)));
+      }
     }
     setLoading(false);
   };
@@ -284,6 +297,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: Pu
                   canSubmit={canCreatePO}
                   canViewPricing={canViewPricing}
                   isSupplier={isSupplier}
+                  isInvoiced={invoicedPOIds.has(po.id)}
                 />
               );
             })}

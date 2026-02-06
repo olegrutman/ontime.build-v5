@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { Package, Eye, Edit, Download, Send, Loader2, Building2, FileText, DollarSign, Lock, PackageCheck, Truck } from 'lucide-react';
+import { Package, Eye, Edit, Download, Send, Loader2, Building2, FileText, DollarSign, Lock, PackageCheck, Truck, Receipt } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { POStatusBadge } from './POStatusBadge';
@@ -17,6 +17,7 @@ interface POCardProps {
   canSubmit?: boolean;
   canViewPricing?: boolean;
   isSupplier?: boolean;
+  isInvoiced?: boolean;
 }
 
 export function POCard({
@@ -29,6 +30,7 @@ export function POCard({
   canSubmit = false,
   canViewPricing = false,
   isSupplier = false,
+  isInvoiced = false,
 }: POCardProps) {
   const [submitting, setSubmitting] = useState(false);
 
@@ -112,6 +114,12 @@ export function POCard({
           </div>
           <div className="flex items-center gap-2">
             <HoverActions actions={hoverActions} />
+            {isInvoiced && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
+                <Receipt className="h-3 w-3" />
+                Invoiced
+              </span>
+            )}
             <POStatusBadge status={status} />
           </div>
         </div>

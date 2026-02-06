@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2, FileDown } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2, FileDown, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -46,6 +46,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   const [actionLoading, setActionLoading] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [linkedPO, setLinkedPO] = useState<{ po_number: string; status: string } | null>(null);
 
   // Get current user's organization ID
   const currentOrgId = userOrgRoles[0]?.organization?.id;
@@ -81,6 +82,18 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
           .eq('id', invoiceRes.data.contract_id)
           .single();
         setContract(contractData);
+      }
+
+      // Fetch linked PO if po_id is set
+      if (invoiceRes.data.po_id) {
+        const { data: poData } = await supabase
+          .from('purchase_orders')
+          .select('po_number, status')
+          .eq('id', invoiceRes.data.po_id)
+          .single();
+        setLinkedPO(poData);
+      } else {
+        setLinkedPO(null);
       }
     }
     if (lineItemsRes.data) setLineItems(lineItemsRes.data as InvoiceLineItem[]);
@@ -269,6 +282,25 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
           )}
         </div>
       </div>
+
+      {/* Source PO Reference */}
+      {linkedPO && (
+        <Card className="border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <Package className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              <div>
+                <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
+                  Created from Purchase Order
+                </p>
+                <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                  {linkedPO.po_number} — Status: {linkedPO.status}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Rejection Notice */}
       {status === 'REJECTED' && invoice.rejection_reason && (
