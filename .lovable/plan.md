@@ -1,142 +1,73 @@
 
 
-# Mobile Optimization -- Every Screen
+# Sasha Speaks -- Add Voice Output to Sasha
 
-## Summary
+## Overview
 
-A comprehensive pass across all authenticated screens to ensure consistent, touch-friendly layouts on phones (390px and below). Many screens already have reasonable responsive foundations (e.g., `sm:` breakpoints on grids, scrollable tabs), but several areas have problems: overflowing cards, tiny tap targets, wasted space, status filter buttons wrapping poorly, and the Sasha bubble overlapping content.
+Make Sasha speak her responses aloud using ElevenLabs Text-to-Speech, so users hear explanations instead of just reading them. Each time Sasha responds, her text is converted to speech and played automatically. Users can still see the text in the chat panel, but the primary experience becomes listening.
 
----
+## How It Works
 
-## Issues Found (by screen)
+1. User asks Sasha a question (typed or tapped a button)
+2. Sasha's text response streams in as before
+3. Once the full response is ready, it gets sent to an Edge Function that calls ElevenLabs TTS
+4. The audio plays automatically through the browser
+5. A small speaker icon on each message lets users replay or mute
 
-### 1. Dashboard
-- Financial Snapshot card sub-metrics hidden on mobile by default (good), but expand button is `lg:hidden` -- works.
-- **Project row**: Contract value and date info disappear on mobile (`hidden sm:flex`), but the mobile fallback row (`sm:hidden`) is functional. Minor: action menu button could use slightly larger tap target.
-- Status filter tabs (`StatusMenu`) could overflow if many statuses have long labels.
+## Setup
 
-### 2. Project Overview (`ProjectHome`)
-- **Two-zone grid** uses `lg:grid-cols-[1fr_360px]` which stacks correctly on mobile. OK.
-- **MetricStrip**: Uses `sm:grid-cols-3` -- stacks to single column on mobile. The segments inside each metric cell use `flex gap-4` which can overflow on narrow screens with 3 segments. Needs `overflow-x-auto` or smaller text.
-- **Sasha bubble**: Overlaps with the bottom of content on mobile. Needs `pb-20` on main content to prevent obstruction.
+- Connect the **ElevenLabs** connector (you'll be prompted to link your ElevenLabs API key)
+- A new Edge Function (`elevenlabs-tts`) converts Sasha's text to speech
+- The `SashaBubble` component auto-plays the audio after each response
 
-### 3. Project TopBar (Tab Navigation)
-- Tabs are scrollable (`overflow-x-auto`). Good.
-- On mobile, project name is centered but the status dropdown + notification bell crowd the right. Minor spacing issue.
+## Voice Selection
 
-### 4. Work Orders Tab
-- **Status filter buttons** (`flex flex-wrap gap-2`) wrap to multiple rows on mobile, taking up excessive vertical space. Should use horizontal scroll instead.
-- **Work Order cards grid** uses `md:grid-cols-2 lg:grid-cols-3` -- stacks to single column on mobile. Good.
-- Header ("Work Orders" title + "New Work Order" button) uses `flex-col sm:flex-row`. Good.
+Use a warm, friendly female voice from ElevenLabs -- **Laura** (voice ID: `FGY2WhTYpPnrIDTdsKH5`) -- to match Sasha's calm, reassuring persona. This can be changed later.
 
-### 5. Work Order Detail (`ChangeOrderDetailPage`)
-- **Progress bar**: Step labels (`text-[11px]`) and 8px circles are small but acceptable. Connector lines use `mx-2` which can squeeze steps together on mobile. Needs better horizontal scroll or smaller gaps.
-- **Two-zone grid** uses `lg:grid-cols-[1fr_380px]` -- stacks on mobile. Good.
-- **Meta info row** in the header card uses `flex flex-wrap gap-4` which can be cramped.
-- **WorkOrderTopBar**: Breadcrumb (project name / WO title) hides project name on mobile (`hidden sm:inline`). Good.
+## Technical Details
 
-### 6. Purchase Orders Tab
-- Header uses `flex-col sm:flex-row`. Good.
-- **PO cards grid** uses `md:grid-cols-2 lg:grid-cols-3`. Stacks on mobile. Good.
-- **POCard** internal grid uses `grid-cols-2 gap-4` which can squeeze on narrow screens. Text truncation needed.
-- Status filter select is `w-36` which is fine.
+### New Edge Function: `supabase/functions/elevenlabs-tts/index.ts`
 
-### 7. Invoices Tab
-- Similar card layout to POs. `grid-cols-2` internal layout can squeeze.
+- Accepts `{ text, voiceId }` in the request body
+- Calls ElevenLabs TTS API (`eleven_turbo_v2_5` model for low latency)
+- Returns raw MP3 audio bytes
+- Uses `ELEVENLABS_API_KEY` from the connector
 
-### 8. Sasha Bubble
-- Panel is `w-[min(400px,calc(100vw-2rem))]` -- responsive. Good.
-- **Bubble button** (`bottom-4 right-4`) can overlap scrollable content. All pages need bottom padding.
-- On mobile, the bubble can overlap the bottom tab area of the ProjectTopBar when scrolled.
+### Modified: `src/components/sasha/SashaBubble.tsx`
 
-### 9. PO Wizard V2
-- Already uses Sheet on mobile (`h-[95vh]`). Good.
+- After Sasha's full response is parsed, call the TTS edge function with the response text
+- Use `fetch()` with `.blob()` to get the audio (not `supabase.functions.invoke`)
+- Create an `Audio` object and play it automatically
+- Track a `isSpeaking` state to show a small animated speaker icon
+- Add a mute toggle button in the chat header so users can silence voice if they prefer
 
-### 10. Work Order Wizard / FC Dialog
-- Uses Dialog. Should use Sheet on mobile for consistency (like POWizardV2 pattern).
+### Modified: `src/components/sasha/SashaMessage.tsx`
 
----
+- Add a small speaker/replay button on each Sasha message
+- Clicking it re-plays that message's audio
 
-## Changes
+### New State
 
-### File 1: `src/components/project/WorkOrdersTab.tsx`
-**Status filter buttons -- horizontal scroll on mobile**
+- `voiceEnabled` (boolean, default `true`) -- toggle in chat header
+- `currentAudio` (Audio | null) -- reference to currently playing audio so we can stop it when a new message arrives or panel closes
 
-Replace `flex flex-wrap gap-2` with a horizontal scrollable container that prevents wrapping on mobile:
-- Wrap status buttons in `overflow-x-auto` div
-- Use `flex gap-2 pb-1` (no wrap) so buttons scroll horizontally
-- Add `-webkit-overflow-scrolling: touch` for smooth mobile scroll
+### Audio Behavior
 
-### File 2: `src/components/project/MetricStrip.tsx`
-**Metric segments -- prevent overflow on narrow screens**
+- Stop any playing audio when the user sends a new message
+- Stop audio when the chat panel is closed
+- Don't speak the initial greeting (it's static) -- only speak AI-generated responses
+- Strip markdown formatting from text before sending to TTS for cleaner speech
 
-- Change segment text from `text-2xl` to `text-xl sm:text-2xl`
-- Add `overflow-hidden` to the cell container
-- Make segment values `text-lg` on mobile for better fit
+## Files Changed
 
-### File 3: `src/components/change-order-detail/WorkOrderProgressBar.tsx`
-**Progress bar -- horizontal scroll on mobile**
+| File | Change |
+|---|---|
+| `supabase/functions/elevenlabs-tts/index.ts` | New -- TTS edge function |
+| `src/components/sasha/SashaBubble.tsx` | Add auto-play TTS after responses, mute toggle, audio cleanup |
+| `src/components/sasha/SashaMessage.tsx` | Add replay button on assistant messages |
+| `supabase/config.toml` | Register new edge function |
 
-- Wrap the progress steps in `overflow-x-auto` to allow scrolling when steps don't fit
-- Reduce step circle from `w-8 h-8` to `w-7 h-7 sm:w-8 sm:h-8`
-- Reduce connector `mx-2` to `mx-1 sm:mx-2`
-- Add `min-w-0` on flex containers to prevent overflow
+## No Database Changes
 
-### File 4: `src/components/purchase-orders/POCard.tsx`
-**Card content -- better mobile text handling**
-
-- Add `truncate` to supplier name
-- Reduce internal gap from `gap-4` to `gap-3` on the `grid-cols-2`
-
-### File 5: `src/components/invoices/InvoiceCard.tsx`
-**Card content -- better mobile text handling**
-
-- Add `truncate` on billing period text
-- Reduce gap from `gap-4` to `gap-3`
-
-### File 6: `src/components/change-order-detail/ChangeOrderDetailPage.tsx`
-**Main content -- add bottom padding for Sasha bubble**
-
-- Add `pb-20` to the main content container so Sasha bubble doesn't obscure the last card
-
-### File 7: `src/pages/ProjectHome.tsx`
-**Main content -- add bottom padding for Sasha bubble**
-
-- Add `pb-16` to the scrollable content area
-
-### File 8: `src/pages/Dashboard.tsx`
-**Main content -- add bottom padding for Sasha bubble**
-
-- Add `pb-16` to the dashboard content wrapper
-
-### File 9: `src/components/sasha/SashaBubble.tsx`
-**Mobile-friendly chat panel positioning**
-
-- On mobile (below 640px), make the chat panel full-width at the bottom instead of floating:
-  - Change panel positioning to `bottom-16 left-2 right-2` on mobile (above the bubble)
-  - Set `max-h-[60vh]` on mobile to leave room for the keyboard
-  - Make the input area sticky and always visible
-
-### File 10: `src/components/change-order-detail/WorkOrderTopBar.tsx`
-**Mobile breadcrumb -- show truncated WO title properly**
-
-- Ensure `truncate` is applied to the WO title on mobile
-- Make the status badge use a smaller variant on mobile
-
-### File 11: `src/components/project/ProjectFinancialsSectionNew.tsx`
-**Financial cards grid -- mobile stack**
-
-- The grid already uses `md:grid-cols-2 lg:grid-cols-4`. On mobile (single column) this is fine.
-- Add `overflow-hidden` to prevent horizontal scroll on contract value editing
-
----
-
-## Technical Notes
-
-- All changes are CSS/Tailwind class adjustments -- no logic or data changes
-- No new dependencies needed
-- No database changes
-- Follows existing patterns: `sm:` breakpoint for tablet, `lg:` for desktop
-- Maintains 44px minimum touch targets on all interactive elements
-- Uses `overflow-x-auto` pattern already established in `ProjectTopBar` for scrollable tabs
+Audio is generated on-the-fly and not stored. No tables or migrations needed.
 
