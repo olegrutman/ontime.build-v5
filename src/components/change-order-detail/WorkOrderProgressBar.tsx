@@ -45,8 +45,8 @@ export function WorkOrderProgressBar({ status, hasFCParticipant }: WorkOrderProg
     : steps.findIndex((s) => s.key === effectiveStatus);
 
   return (
-    <div className="w-full px-4 sm:px-6 py-4">
-      <div className="flex items-center w-full">
+    <div className="w-full px-2 sm:px-6 py-4 overflow-x-auto">
+      <div className="flex items-center w-full min-w-0">
         {steps.map((step, index) => {
           const isCompleted = !isRejected && index < currentIndex;
           const isCurrent = index === currentIndex;
@@ -56,7 +56,7 @@ export function WorkOrderProgressBar({ status, hasFCParticipant }: WorkOrderProg
             <div
               key={step.key}
               className={cn(
-                'flex items-center',
+                'flex items-center min-w-0',
                 index < steps.length - 1 ? 'flex-1' : ''
               )}
             >
@@ -64,7 +64,7 @@ export function WorkOrderProgressBar({ status, hasFCParticipant }: WorkOrderProg
               <div className="flex flex-col items-center gap-1.5">
                 <div
                   className={cn(
-                    'w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-colors',
+                    'w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs font-semibold border-2 transition-colors shrink-0',
                     isCompleted && 'bg-green-500 border-green-500 text-white',
                     isCurrent && !isRejected && 'bg-primary border-primary text-primary-foreground',
                     isCurrent && isRejected && 'bg-destructive border-destructive text-destructive-foreground',
@@ -96,7 +96,7 @@ export function WorkOrderProgressBar({ status, hasFCParticipant }: WorkOrderProg
               {index < steps.length - 1 && (
                 <div
                   className={cn(
-                    'flex-1 h-0.5 mx-2 mt-[-1.25rem]',
+                    'flex-1 h-0.5 mx-1 sm:mx-2 mt-[-1.25rem]',
                     index < currentIndex
                       ? 'bg-green-500'
                       : 'bg-muted-foreground/20'

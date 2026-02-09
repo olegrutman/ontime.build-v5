@@ -43,7 +43,7 @@ export function WorkOrderTopBar({
             {projectName}
           </button>
           <span className="text-muted-foreground hidden sm:inline">/</span>
-          <h1 className="text-base sm:text-lg font-semibold truncate">
+          <h1 className="text-sm sm:text-lg font-semibold truncate">
             {workOrderTitle}
           </h1>
         </div>

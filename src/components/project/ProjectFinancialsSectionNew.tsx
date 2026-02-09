@@ -489,7 +489,7 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
   return (
     <div className="space-y-4">
       {/* Contract Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 overflow-hidden">
         {/* Trade Contractor: Show both contracts and profit */}
         {isTCView && (
           <>

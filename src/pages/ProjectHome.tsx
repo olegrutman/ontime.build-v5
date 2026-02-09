@@ -166,7 +166,7 @@ export default function ProjectHome() {
 
           {/* Scrollable content */}
           <main className="flex-1 overflow-auto">
-            <div className="container mx-auto px-4 py-6 space-y-6">
+            <div className="container mx-auto px-4 py-6 pb-20 space-y-6">
               {/* Overview Tab */}
               {activeTab === 'overview' && (
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
