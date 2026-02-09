@@ -17,3 +17,5 @@ export { MaterialResourceToggle } from './MaterialResourceToggle';
 export { LinkedPOCard } from './LinkedPOCard';
 export { MaterialMarkupEditor } from './MaterialMarkupEditor';
 export { WorkOrderMaterialsPanel } from './WorkOrderMaterialsPanel';
+export { WorkOrderTopBar } from './WorkOrderTopBar';
+export { WorkOrderProgressBar } from './WorkOrderProgressBar';
