@@ -42,6 +42,7 @@ export interface ChangeOrderProject {
   requires_equipment: boolean;
   equipment_cost_responsibility: CostResponsibility | null;
   pricing_mode: 'fixed' | 'tm';
+  tc_hourly_rate?: number | null;
   status: ChangeOrderStatus;
   labor_total: number;
   material_total: number;
