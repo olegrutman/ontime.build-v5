@@ -85,7 +85,7 @@ export function useChangeOrderProject(projectId?: string) {
       // Generate title if empty
       const title = data.title || generateTitleFromLocation(data.location_data);
 
-      const insertData = {
+      const insertData: Record<string, unknown> = {
         project_id: data.project_id,
         title,
         description: data.description || null,
@@ -101,6 +101,11 @@ export function useChangeOrderProject(projectId?: string) {
         created_by_role: currentRole,
         status: 'draft',
       };
+
+      // Pass pricing_mode if present (from WorkOrderWizardData)
+      if ('pricing_mode' in data && (data as any).pricing_mode) {
+        insertData.pricing_mode = (data as any).pricing_mode;
+      }
 
       // Insert the work order
       const { data: result, error } = await supabase

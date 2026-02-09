@@ -28,6 +28,7 @@ import { ContractedPricingCard } from './ContractedPricingCard';
 import { MaterialResourceToggle } from './MaterialResourceToggle';
 import { WorkOrderMaterialsPanel } from './WorkOrderMaterialsPanel';
 import { ChangeOrderChecklist } from './ChangeOrderChecklist';
+import { TMTimeCardsPanel } from './TMTimeCardsPanel';
 
 function formatLocation(location: LocationData): string {
   const parts: string[] = [];
@@ -299,8 +300,18 @@ export function ChangeOrderDetailPage() {
                     </Alert>
                   )}
 
-                  {/* FC Hours */}
-                  {((isTC && hasFCParticipant) || (isFC && hasFCParticipant)) && (
+                  {/* T&M Time Cards Panel */}
+                  {(changeOrder as any).pricing_mode === 'tm' && (
+                    <TMTimeCardsPanel
+                      changeOrderId={changeOrder.id}
+                      isGC={isGC}
+                      isTC={isTC}
+                      isFC={isFC}
+                    />
+                  )}
+
+                  {/* FC Hours (fixed price only) */}
+                  {(changeOrder as any).pricing_mode !== 'tm' && ((isTC && hasFCParticipant) || (isFC && hasFCParticipant)) && (
                     <FieldCrewHoursPanel
                       fcHours={fcHours}
                       isEditable={isFC && isFCEditable}
@@ -311,8 +322,8 @@ export function ChangeOrderDetailPage() {
                     />
                   )}
 
-                  {/* TC Labor */}
-                  {isTC && (
+                  {/* TC Labor (fixed price only) */}
+                  {(changeOrder as any).pricing_mode !== 'tm' && isTC && (
                     <TCPricingPanel
                       tcLabor={tcLabor}
                       isEditable={isEditable}
@@ -321,8 +332,8 @@ export function ChangeOrderDetailPage() {
                     />
                   )}
 
-                  {/* GC Labor Review */}
-                  {isGC && tcLabor.length > 0 && (
+                  {/* GC Labor Review (fixed price only) */}
+                  {(changeOrder as any).pricing_mode !== 'tm' && isGC && tcLabor.length > 0 && (
                     <GCLaborReviewPanel tcLabor={tcLabor} />
                   )}
 
