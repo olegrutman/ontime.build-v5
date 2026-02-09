@@ -1,67 +1,89 @@
 
 
-# FC Hourly Rate + TC Dual Counters
+# Finalize T&M Work Order -- Convert Hours to Fixed Labor
 
-## Two Changes
+## What This Does
 
-### 1. FC Sets Their Own Hourly Rate (TC can see it, GC cannot)
+When the T&M work is done, TC (or FC) clicks a **"Finalize T&M"** button. This:
 
-Currently there's one rate (`tc_hourly_rate`) on the work order level. We add a second rate: `fc_hourly_rate` on `change_order_projects`. FC sets this once at the top of their Time Cards panel. TC can see it (to understand FC's cost). GC never sees it.
+1. Sums up all approved time card hours and costs
+2. Creates corresponding fixed-price labor entries (`change_order_fc_hours` for FC, `change_order_tc_labor` for TC)
+3. Switches `pricing_mode` from `'tm'` to `'fixed'`
+4. The work order now behaves like a regular fixed-price work order and can proceed through the normal approval flow (Ready for Approval, GC Approve, Contract)
 
-- FC sees a rate editor at the top of their panel (same style as the existing TC rate editor)
-- TC sees the FC rate displayed read-only, labeled "FC Rate: $XX/hr"
-- GC sees neither the FC rate nor the TC rate (unchanged from current behavior)
-- FC's running totals show their earnings: total man-hours x FC rate
+After finalization, the T&M time cards remain in the database for audit purposes but the detail page shows the standard fixed-price panels.
 
-### 2. TC Sees Dual Counters
+## Who Can Finalize
 
-On the TC's Time Cards panel, replace the single set of running totals with two side-by-side summary sections:
+- **TC** can finalize at any time (they own the pricing relationship)
+- **FC** can finalize only if there is no TC participant (FC-direct work orders)
 
-**"FC to TC" section (what FC submitted to TC):**
-- Total FC man-hours (from all FC-submitted cards)
-- FC cost = FC man-hours x FC hourly rate (what TC owes FC)
+A confirmation dialog warns: "This will convert all T&M hours into fixed labor entries. This cannot be undone."
 
-**"TC to GC" section (what TC submitted to GC):**
-- Total hours submitted to GC (FC hours + TC own hours, only for cards with `tc_submitted_at`)
-- TC cost = submitted hours x TC hourly rate (what GC owes TC)
-- Count: X of Y cards submitted
-
-This gives TC a clear picture of both sides of the ledger.
-
-## Database Change
-
-Add `fc_hourly_rate` column to `change_order_projects`:
+## How the Conversion Works
 
 ```text
-ALTER TABLE change_order_projects
-  ADD COLUMN fc_hourly_rate numeric DEFAULT NULL;
+FC Labor Entry:
+  pricing_type = 'hourly'
+  hours = total FC man-hours (sum of all cards)
+  hourly_rate = fc_hourly_rate from work order
+  labor_total = hours x rate
+  is_locked = true
+
+TC Labor Entry:
+  pricing_type = 'hourly'  
+  hours = total hours (FC + TC own hours from all approved cards)
+  hourly_rate = tc_hourly_rate from work order
+  labor_total = hours x rate
 ```
 
-## File Changes
+The work order's `pricing_mode` is then updated to `'fixed'`, and the detail page automatically renders the standard fixed-price panels.
 
-### `src/components/change-order-detail/TMTimeCardsPanel.tsx`
+## UI Changes
 
-**FC rate editor:**
-- Fetch `fc_hourly_rate` alongside `tc_hourly_rate` from `change_order_projects`
-- Show an FC rate editor for FC users (same inline pattern as the existing TC rate editor)
-- New mutation to update `change_order_projects.fc_hourly_rate`
-- FC running totals: show "My Earnings" = total man-hours x fc_hourly_rate
-- TC view: show FC rate read-only (not editable by TC)
-- GC view: no change (sees neither rate)
+### TMTimeCardsPanel.tsx
 
-**TC dual counters:**
-- Replace the single running-totals row with two labeled sections
-- "From Field Crew": total FC man-hours, FC cost (fc_hours x fc_rate)
-- "Submitted to GC": total submitted hours, TC cost (submitted_hours x tc_rate), submitted/total count
-- Keep the existing TC rate editor above these counters
+- Add a **"Finalize T&M"** button in the header area (next to "Add Time Card")
+- Button is visible to TC always, or FC if no TC participant
+- Button is disabled if there are unapproved/unsubmitted cards still pending
+- Clicking shows an AlertDialog confirmation
+- On confirm: runs the finalize mutation (insert labor entries + update pricing_mode)
+- On success: invalidates queries so the page re-renders as a fixed-price work order
 
-### `src/types/changeOrderProject.ts`
+### ChangeOrderDetailPage.tsx
 
-- Add `fc_hourly_rate?: number | null` to the interface
+- No changes needed -- the existing conditional rendering already checks `pricing_mode === 'tm'` to show T&M panels vs fixed panels. Once mode flips to `'fixed'`, the standard panels appear automatically.
+
+## Technical Details
+
+### No Database Migration Needed
+
+The finalize action uses existing tables:
+- Inserts into `change_order_fc_hours` (already exists)
+- Inserts into `change_order_tc_labor` (already exists)
+- Updates `change_order_projects.pricing_mode` to `'fixed'` (column already exists)
+
+### Files Changed
 
 | File | Change |
 |---|---|
-| New migration | Add `fc_hourly_rate` to `change_order_projects` |
-| `TMTimeCardsPanel.tsx` | FC rate editor, TC dual counters, FC earnings display |
-| `changeOrderProject.ts` | Add `fc_hourly_rate` to type |
+| `TMTimeCardsPanel.tsx` | Add Finalize button, confirmation dialog, and finalize mutation |
+
+### Finalize Mutation Logic
+
+1. Query all `tm_time_cards` for this work order
+2. Sum FC man-hours from all cards with `fc_submitted_at` set
+3. Sum TC own hours from all cards with `tc_approved = true`
+4. Insert one `change_order_fc_hours` row with the FC total (locked immediately)
+5. Insert one `change_order_tc_labor` row with the full total at TC rate
+6. Update `change_order_projects` set `pricing_mode = 'fixed'`
+7. Invalidate all related queries
+
+### Button Disabled Conditions
+
+The Finalize button is disabled when:
+- No time cards exist
+- Any FC-submitted cards are still pending TC approval
+- TC rate is not set (needed for labor entry)
+- FC rate is not set (needed for FC labor entry)
 
