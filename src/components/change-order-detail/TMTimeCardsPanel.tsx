@@ -8,16 +8,28 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Clock, Check, X, Users, Send, DollarSign } from 'lucide-react';
+import { Plus, Clock, Check, X, Users, Send, DollarSign, Lock } from 'lucide-react';
 import { format } from 'date-fns';
 import { TimeCardForm } from './TimeCardForm';
 import { Input } from '@/components/ui/input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface TMTimeCardsPanelProps {
   changeOrderId: string;
   isGC: boolean;
   isTC: boolean;
   isFC: boolean;
+  hasTC?: boolean;
 }
 
 interface TimeCard {
@@ -44,7 +56,7 @@ interface TimeCard {
   updated_at: string;
 }
 
-export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCardsPanelProps) {
+export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC, hasTC = true }: TMTimeCardsPanelProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -220,7 +232,63 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
     },
   });
 
-  // Filter cards by role visibility
+  // Finalize T&M — convert hours to fixed labor entries
+  const canFinalize = isTC || (isFC && !hasTC);
+  const pendingApproval = timeCards.some((c) => !!c.fc_submitted_at && !c.tc_approved && !c.tc_rejection_notes);
+  const hasCards = timeCards.length > 0;
+  const finalizeDisabled = !hasCards || pendingApproval || tcRate <= 0 || fcRate <= 0;
+
+  const finalizeMutation = useMutation({
+    mutationFn: async () => {
+      const approvedCards = timeCards.filter((c) => !!c.fc_submitted_at);
+      const totalFCHours = approvedCards.reduce((sum, c) => sum + (c.fc_man_hours || 0), 0);
+      const totalTCOwnHours = approvedCards.reduce((sum, c) => sum + (c.tc_own_hours || 0), 0);
+      const totalHoursForGC = totalFCHours + totalTCOwnHours;
+
+      // Insert FC labor entry
+      const { error: fcErr } = await supabase.from('change_order_fc_hours').insert({
+        change_order_id: changeOrderId,
+        hours: totalFCHours,
+        hourly_rate: fcRate,
+        labor_total: totalFCHours * fcRate,
+        pricing_type: 'hourly',
+        description: 'T&M finalized — field crew hours',
+        entered_by: user?.id,
+        is_locked: true,
+        locked_at: new Date().toISOString(),
+        locked_by: user?.id,
+      } as never);
+      if (fcErr) throw fcErr;
+
+      // Insert TC labor entry
+      const { error: tcErr } = await supabase.from('change_order_tc_labor').insert({
+        change_order_id: changeOrderId,
+        hours: totalHoursForGC,
+        hourly_rate: tcRate,
+        labor_total: totalHoursForGC * tcRate,
+        pricing_type: 'hourly',
+        description: 'T&M finalized — total labor',
+        entered_by: user?.id,
+      } as never);
+      if (tcErr) throw tcErr;
+
+      // Switch pricing mode to fixed
+      const { error: modeErr } = await supabase
+        .from('change_order_projects')
+        .update({ pricing_mode: 'fixed' } as never)
+        .eq('id', changeOrderId);
+      if (modeErr) throw modeErr;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tm-time-cards', changeOrderId] });
+      queryClient.invalidateQueries({ queryKey: ['change-order-rate', changeOrderId] });
+      queryClient.invalidateQueries({ queryKey: ['change-order-detail', changeOrderId] });
+      queryClient.invalidateQueries({ queryKey: ['change-order-project'] });
+      toast({ title: 'T&M finalized', description: 'Hours converted to fixed labor entries.' });
+    },
+    onError: (e) => toast({ variant: 'destructive', title: 'Error finalizing', description: e.message }),
+  });
+
   const visibleCards = timeCards.filter((card) => {
     if (isGC) return !!card.tc_submitted_at;
     if (isFC) return card.fc_entered_by === user?.id;
@@ -348,11 +416,36 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
             <Clock className="w-4 h-4" />
             Time Cards
           </CardTitle>
-          {(isFC || isTC) && (
-            <Button size="sm" onClick={() => setShowForm(true)}>
-              <Plus className="w-4 h-4 mr-1" /> Add Time Card
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {(isFC || isTC) && (
+              <Button size="sm" onClick={() => setShowForm(true)}>
+                <Plus className="w-4 h-4 mr-1" /> Add Time Card
+              </Button>
+            )}
+            {canFinalize && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="outline" disabled={finalizeDisabled || finalizeMutation.isPending}>
+                    <Lock className="w-4 h-4 mr-1" /> Finalize T&M
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Finalize T&M Work Order</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will convert all T&M hours into fixed labor entries and switch this work order to fixed pricing. This cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => finalizeMutation.mutate()}>
+                      Finalize
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
         </div>
       </CardHeader>
 
