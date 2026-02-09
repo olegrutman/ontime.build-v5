@@ -125,12 +125,12 @@ export function InvoiceCard({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <div>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <div className="flex items-center gap-2 min-w-0">
+            <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="min-w-0">
               <p className="text-sm text-muted-foreground">Billing Period</p>
-              <p className="font-medium">
+              <p className="font-medium truncate">
                 {format(new Date(invoice.billing_period_start), 'MMM d')} -{' '}
                 {format(new Date(invoice.billing_period_end), 'MMM d, yyyy')}
               </p>

@@ -156,10 +156,10 @@ export function MetricStrip({ projectId, onNavigate, isSupplier, supplierOrgId }
             {cell.icon}
             <span className="text-sm font-medium">{cell.label}</span>
           </div>
-          <div className="flex items-baseline gap-4">
+          <div className="flex items-baseline gap-3 sm:gap-4 overflow-hidden">
             {cell.segments.map((seg, i) => (
-              <div key={i}>
-                <p className={cn("text-2xl font-bold tabular-nums", seg.color)}>{seg.count}</p>
+              <div key={i} className="min-w-0">
+                <p className={cn("text-xl sm:text-2xl font-bold tabular-nums", seg.color)}>{seg.count}</p>
                 <p className="text-xs text-muted-foreground mt-0.5 whitespace-nowrap">{seg.label}</p>
               </div>
             ))}

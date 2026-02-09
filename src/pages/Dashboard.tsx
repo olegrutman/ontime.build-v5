@@ -209,7 +209,7 @@ export default function Dashboard() {
 
   return (
     <AppLayout title="Dashboard">
-      <div className="p-4 sm:p-6">
+      <div className="p-4 sm:p-6 pb-20">
         {/* Two-Zone Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 lg:gap-8">
           

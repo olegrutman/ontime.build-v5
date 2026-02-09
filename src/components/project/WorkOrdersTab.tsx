@@ -167,19 +167,21 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
 
       {/* Status Tabs - only show in list view */}
       {viewMode === 'list' && (
-        <div className="flex flex-wrap gap-2">
-          {(['ALL', 'draft', 'fc_input', 'tc_pricing', 'ready_for_approval', 'approved', 'rejected'] as const).map(
-            (status) => (
-              <Button
-                key={status}
-                variant={activeTab === status ? 'default' : 'outline'}
-                onClick={() => setActiveTab(status)}
-                className="text-sm"
-              >
-                {getStatusLabel(status)} ({statusCounts[status]})
-              </Button>
-            )
-          )}
+        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="flex gap-2 pb-1">
+            {(['ALL', 'draft', 'fc_input', 'tc_pricing', 'ready_for_approval', 'approved', 'rejected'] as const).map(
+              (status) => (
+                <Button
+                  key={status}
+                  variant={activeTab === status ? 'default' : 'outline'}
+                  onClick={() => setActiveTab(status)}
+                  className="text-sm whitespace-nowrap shrink-0"
+                >
+                  {getStatusLabel(status)} ({statusCounts[status]})
+                </Button>
+              )
+            )}
+          </div>
         </div>
       )}
 
