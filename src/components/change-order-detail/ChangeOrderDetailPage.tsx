@@ -101,6 +101,7 @@ export function ChangeOrderDetailPage() {
   const isSupplier = currentRole === 'SUPPLIER';
 
   const hasFCParticipant = participants.some((p) => p.role === 'FC' && p.is_active);
+  const hasTCParticipant = participants.some((p) => p.role === 'TC' && p.is_active);
   const isFCEditable = changeOrder?.status === 'draft' || changeOrder?.status === 'fc_input';
   const isTCEditable = changeOrder?.status === 'draft' || changeOrder?.status === 'tc_pricing';
   const isEditable = isTCEditable;
@@ -307,6 +308,7 @@ export function ChangeOrderDetailPage() {
                       isGC={isGC}
                       isTC={isTC}
                       isFC={isFC}
+                      hasTC={hasTCParticipant}
                     />
                   )}
 
