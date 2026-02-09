@@ -1,103 +1,148 @@
 
 
-# Work Order Detail Page Redesign
+# Sasha -- In-App AI Guide (Floating Chat Bubble)
 
-## Current Problems
+## Overview
 
-1. **No sticky context bar** -- When scrolling, you lose sight of the Work Order title, status, and project name. The project overview page has a great sticky bar pattern that should be reused here.
-2. **No way to navigate back via tabs** -- The only way back to the Work Orders list is the browser back arrow or the small "Back" button. Users expect to click a "Work Orders" tab to return, matching the project overview pattern.
-3. **Information is scattered** -- The header card only shows title/status/location. The progress checklist is buried in the sidebar at the bottom. Pricing, scope, labor, and materials are stacked vertically with no visual grouping or hierarchy. On a large screen, the sidebar has too many disconnected cards.
-4. **No progress indicator** -- There is no visual progress bar showing how far along the Work Order is (e.g., Draft -> TC Pricing -> Ready for Approval -> Contracted). The checklist exists but is hidden in the sidebar.
+Add a floating chat bubble in the bottom-right corner of every authenticated page. When clicked, it opens a chat panel where Sasha -- a calm, construction-savvy AI guide -- helps users understand Work Orders, Purchase Orders, Invoices, and navigate the app confidently.
 
-## Solution
+Sasha is context-aware: she knows which page the user is on and tailors her responses accordingly. She uses plain construction language, never rushes, and always offers clear next-step buttons.
 
-Replace the generic `AppLayout` with a custom layout that mirrors the ProjectHome sticky bar + tabs pattern, and reorganize the content for better information hierarchy.
+## User Experience
 
-### 1. Sticky Top Bar (like Project Overview)
+1. A small purple circle with a friendly icon sits in the bottom-right corner of every page (after login)
+2. Clicking it opens a chat panel with Sasha's greeting and quick-action buttons
+3. Users can ask questions or tap buttons to get guided explanations
+4. Sasha detects the current page (Dashboard, Project, Work Order, PO, Invoice) and adjusts her guidance
+5. The panel can be closed and reopened; conversation resets on close to keep things simple (no persistence needed initially)
 
-Add a sticky header with:
-- Sidebar trigger (hamburger)
-- Project name (clickable, navigates back to project)
-- Work Order title
-- Status badge
-- Notification bell
-- A tab row with: **Overview** | **Work Orders** (clickable to navigate back to project Work Orders tab)
-
-Clicking "Work Orders" navigates to `/project/{projectId}?tab=work-orders`, giving users the familiar tab-based navigation back to the list.
-
-### 2. Status Progress Bar (top of content area)
-
-Below the sticky bar, add a horizontal multi-step progress indicator showing the Work Order lifecycle stages:
+## Architecture
 
 ```text
-[In Progress] --> [TC Pricing] --> [Ready for Approval] --> [Contracted]
+User clicks bubble
+       |
+       v
+  SashaChat (React panel)
+       |
+       v
+  Edge Function: sasha-guide
+       |
+       v
+  Lovable AI (gemini-3-flash-preview)
+       |
+       v
+  Streamed response back to UI
 ```
 
-- Each step is a circle/node connected by lines
-- Completed steps are filled with green
-- Current step is highlighted with the brand purple
-- Future steps are grayed out
-- Rejected status shows a red indicator on the current step
-- FC Input step only appears when a Field Crew is a participant
+### Why an Edge Function?
 
-This immediately tells the user where the Work Order stands without scrolling.
+The existing `generate-work-order-description` edge function already uses the Lovable AI gateway pattern with `LOVABLE_API_KEY`. Sasha follows the same approach -- a dedicated edge function that sends the conversation history plus a detailed system prompt to the AI, returning Sasha's response.
 
-### 3. Reorganized Content Layout
+## Components
 
-Keep the 65/35 two-zone split but reorganize cards for better grouping:
+### 1. Floating Bubble + Chat Panel
 
-**Zone A (Main, Left) -- in order:**
-1. **Header Card** -- Title, project name, location, work type, created date, description (merged with current ChangeOrderScopePanel to reduce card count)
-2. **Rejection Alert** -- Only when applicable, high-visibility warning
-3. **Labor Section** -- TC Labor panel (or FC Hours panel, depending on role)
-4. **Materials Section** -- Materials panel with linked PO info
-5. **Equipment Section** -- When applicable
+**File: `src/components/sasha/SashaBubble.tsx`**
 
-**Zone B (Sidebar, Right) -- in order:**
-1. **Pricing Card** -- Contracted pricing / My Earnings (most important sidebar info, moved to top)
-2. **Approval Panel** -- GC finalize actions (when applicable, near pricing for context)
-3. **Checklist Card** -- Ready-for-approval checklist
-4. **Participants Card** -- Team activation
-5. **Resource Toggles** -- Material/Equipment toggles (TC only)
+- A fixed-position button (bottom-right, z-50) with a chat icon
+- On click, toggles a chat panel (400px wide, 500px tall on desktop; full-width on mobile)
+- Panel contains: header with "Sasha" name and close button, scrollable message area, input field with send button
+- Quick-action buttons rendered inline in Sasha's messages (e.g., "Explain Work Orders", "Explore a demo project")
 
-The key change: merge the Header and Scope panels into one card, and move the Pricing card to the top of the sidebar since it is the most glanceable info.
+**File: `src/components/sasha/SashaMessage.tsx`**
 
-## Technical Details
+- Renders individual chat messages (user or Sasha)
+- Sasha's messages use markdown rendering via a simple prose wrapper
+- Action buttons are rendered as clickable chips below Sasha's text when the message includes them
 
-### New Component: `WorkOrderTopBar`
+**File: `src/components/sasha/SashaQuickActions.tsx`**
 
-A new component `src/components/change-order-detail/WorkOrderTopBar.tsx` that mirrors `ProjectTopBar`:
-- Accepts: `projectName`, `projectId`, `workOrderTitle`, `status`
-- Renders: sticky header with sidebar trigger, breadcrumb-style title, status badge, tabs
-- The "Work Orders" tab click navigates to `/project/{projectId}?tab=work-orders`
-- The "Overview" tab click navigates to `/project/{projectId}?tab=overview`
+- Renders button options that Sasha provides (e.g., "Show me a Purchase Order", "Go back")
+- Each button sends its label as the next user message
 
-### New Component: `WorkOrderProgressBar`
+**File: `src/components/sasha/index.ts`**
 
-A new component `src/components/change-order-detail/WorkOrderProgressBar.tsx`:
-- Accepts: `status` (ChangeOrderStatus), `hasFCParticipant` (boolean)
-- Renders a horizontal step indicator with the lifecycle stages
-- Dynamically shows/hides the "FC Input" step based on whether a Field Crew is involved
-- Uses consistent status colors from the existing palette
+- Barrel export
 
-### Updated: `ChangeOrderDetailPage`
+### 2. Context Detection Hook
 
-- Replace `AppLayout` with custom layout using `SidebarProvider`, `AppSidebar`, `SidebarInset` (same pattern as ProjectHome)
-- Add `WorkOrderTopBar` as the sticky header
-- Add `WorkOrderProgressBar` below the header
-- Merge `ChangeOrderHeader` and `ChangeOrderScopePanel` into a single combined card
-- Reorder sidebar cards: Pricing first, then Approval, Checklist, Participants, Resources
+**File: `src/hooks/useSashaContext.ts`**
 
-### File Changes
+- Reads current route via `useLocation()`
+- Determines what the user is currently viewing:
+  - `/dashboard` -> "Dashboard"
+  - `/project/:id` with `?tab=work-orders` -> "Project Work Orders tab"
+  - `/project/:id` with `?tab=purchase-orders` -> "Project Purchase Orders tab"
+  - `/project/:id` with `?tab=invoices` -> "Project Invoices tab"
+  - `/change-order/:id` -> "Work Order detail"
+  - etc.
+- Returns a plain-English context string that gets sent to the AI
+
+### 3. Edge Function
+
+**File: `supabase/functions/sasha-guide/index.ts`**
+
+- Receives: `{ messages: [{role, content}], context: string }`
+- Prepends Sasha's system prompt (the full persona and rules from the user's prompt)
+- Injects the page context into the system prompt so Sasha knows where the user is
+- Calls Lovable AI gateway (`gemini-3-flash-preview`) with the conversation
+- Returns Sasha's response as JSON
+- Uses the existing `LOVABLE_API_KEY` secret (already configured)
+
+### 4. Integration Point
+
+**File: `src/App.tsx`**
+
+- Add `<SashaBubble />` inside the `AuthProvider` and `BrowserRouter` so it has access to auth state and routing
+- Only render when the user is authenticated (not on Landing or Auth pages)
+
+## System Prompt for Sasha (embedded in edge function)
+
+The edge function will contain the full Sasha persona from the user's prompt, including:
+- Calm, reassuring, non-technical tone
+- One concept at a time approach
+- Always offer next-step buttons (returned as structured data in the response)
+- Context-awareness based on the current page
+- Construction-friendly language rules (no "configuration", "permissions matrix", etc.)
+- The greeting message logic for first interaction
+- Explanation flows for Work Orders, POs, and Invoices
+
+The AI will be instructed to return responses in a simple JSON format:
+
+```text
+{
+  "text": "Sasha's message in markdown",
+  "actions": ["Button label 1", "Button label 2", "Go back"]
+}
+```
+
+This allows the UI to render both the text and the action buttons cleanly.
+
+## Quick-Action Flow
+
+When a user taps a quick-action button (e.g., "Explain Work Orders"), that button's label is sent as the next user message. Sasha's system prompt includes instructions for how to respond to each of these standard prompts, ensuring consistent and helpful responses.
+
+## Visual Design
+
+- Bubble: 56px circle, brand purple (`#9b86f3`), white chat icon, subtle shadow, pulse animation on first load to draw attention
+- Panel: White card with rounded corners, shadow-xl, fixed position bottom-right (offset from bubble)
+- Messages: Left-aligned for Sasha (light gray bg), right-aligned for user (brand purple bg, white text)
+- Action buttons: Outlined chips below Sasha's messages, brand purple border
+- Mobile: Panel goes full-width at bottom, max-height 70vh
+
+## Files Changed
 
 | File | Change |
 |---|---|
-| `src/components/change-order-detail/WorkOrderTopBar.tsx` | New -- sticky top bar with project name, WO title, status, and navigable tabs |
-| `src/components/change-order-detail/WorkOrderProgressBar.tsx` | New -- horizontal status progress indicator |
-| `src/components/change-order-detail/ChangeOrderDetailPage.tsx` | Update -- replace AppLayout with custom layout, add top bar and progress bar, reorganize card order, merge header + scope into one card |
-| `src/components/change-order-detail/index.ts` | Update -- export new components |
+| `src/components/sasha/SashaBubble.tsx` | New -- floating bubble + chat panel |
+| `src/components/sasha/SashaMessage.tsx` | New -- message rendering with markdown |
+| `src/components/sasha/SashaQuickActions.tsx` | New -- action button chips |
+| `src/components/sasha/index.ts` | New -- barrel export |
+| `src/hooks/useSashaContext.ts` | New -- route-based context detection |
+| `supabase/functions/sasha-guide/index.ts` | New -- AI edge function with Sasha persona |
+| `src/App.tsx` | Add SashaBubble component (authenticated pages only) |
 
-### No Database Changes Required
+## No Database Changes
 
-All changes are purely frontend layout and component restructuring. No new queries, tables, or RLS policies needed.
+Sasha conversations are ephemeral (reset on close). No tables, RLS policies, or migrations needed. The edge function uses the already-configured `LOVABLE_API_KEY`.
 
