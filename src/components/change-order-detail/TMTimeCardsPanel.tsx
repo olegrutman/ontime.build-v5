@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { Plus, Clock, Check, X, Users, Send } from 'lucide-react';
+import { Plus, Clock, Check, X, Users, Send, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 import { TimeCardForm } from './TimeCardForm';
 import { Input } from '@/components/ui/input';
@@ -49,8 +49,25 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
-  const [editingRateId, setEditingRateId] = useState<string | null>(null);
+  const [editingRate, setEditingRate] = useState(false);
   const [rateValue, setRateValue] = useState('');
+
+  // Fetch work-order-level hourly rate
+  const { data: workOrder } = useQuery({
+    queryKey: ['change-order-rate', changeOrderId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('change_order_projects')
+        .select('tc_hourly_rate')
+        .eq('id', changeOrderId)
+        .single();
+      if (error) throw error;
+      return data as { tc_hourly_rate: number | null };
+    },
+    enabled: !!changeOrderId,
+  });
+
+  const woRate = workOrder?.tc_hourly_rate ?? 0;
 
   const { data: timeCards = [], isLoading } = useQuery({
     queryKey: ['tm-time-cards', changeOrderId],
@@ -64,6 +81,23 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
       return data as unknown as TimeCard[];
     },
     enabled: !!changeOrderId,
+  });
+
+  // Update work-order-level rate
+  const updateRateMutation = useMutation({
+    mutationFn: async (rate: number) => {
+      const { error } = await supabase
+        .from('change_order_projects')
+        .update({ tc_hourly_rate: rate } as never)
+        .eq('id', changeOrderId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['change-order-rate', changeOrderId] });
+      setEditingRate(false);
+      toast({ title: 'Hourly rate updated' });
+    },
+    onError: (e) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
   });
 
   // Create time card
@@ -122,7 +156,7 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
         .update({
           tc_approved: false,
           tc_rejection_notes: notes || 'Rejected',
-          fc_submitted_at: null, // Allow FC to resubmit
+          fc_submitted_at: null,
         } as never)
         .eq('id', cardId);
       if (error) throw error;
@@ -130,22 +164,6 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tm-time-cards', changeOrderId] });
       toast({ title: 'Time card rejected' });
-    },
-  });
-
-  // TC set rate
-  const setRateMutation = useMutation({
-    mutationFn: async ({ cardId, rate }: { cardId: string; rate: number }) => {
-      const { error } = await supabase
-        .from('tm_time_cards')
-        .update({ tc_hourly_rate: rate } as never)
-        .eq('id', cardId);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tm-time-cards', changeOrderId] });
-      setEditingRateId(null);
-      toast({ title: 'Rate updated' });
     },
   });
 
@@ -184,16 +202,20 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
 
   // Filter cards by role visibility
   const visibleCards = timeCards.filter((card) => {
-    if (isGC) return !!card.tc_submitted_at; // GC only sees TC-submitted
-    if (isTC) return !!card.fc_submitted_at || card.fc_entered_by === user?.id; // TC sees submitted FC cards
-    return true; // FC sees all their own
+    if (isGC) return !!card.tc_submitted_at;
+    if (isFC) return card.fc_entered_by === user?.id; // FC only sees own cards
+    if (isTC) return !!card.fc_submitted_at || card.fc_entered_by === user?.id;
+    return true;
   });
 
   // Running totals
-  const totalManHours = visibleCards.reduce((sum, c) => sum + (c.fc_man_hours || 0) + (c.tc_own_hours || 0), 0);
+  const totalManHours = visibleCards.reduce((sum, c) => {
+    if (isFC) return sum + (c.fc_man_hours || 0); // FC only sees own man-hours
+    return sum + (c.fc_man_hours || 0) + (c.tc_own_hours || 0);
+  }, 0);
   const totalCost = visibleCards.reduce((sum, c) => {
     const hours = (c.fc_man_hours || 0) + (c.tc_own_hours || 0);
-    return sum + hours * (c.tc_hourly_rate || 0);
+    return sum + hours * woRate;
   }, 0);
   const acknowledgedCount = visibleCards.filter((c) => c.gc_acknowledged).length;
 
@@ -206,13 +228,21 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
     return 'submitted';
   };
 
+  // FC sees limited statuses
+  const getFCStatus = (card: TimeCard) => {
+    if (card.tc_rejection_notes && !card.fc_submitted_at) return 'rejected';
+    if (!card.fc_submitted_at) return 'draft';
+    if (card.tc_approved) return 'approved';
+    return 'submitted'; // FC submitted, waiting for TC
+  };
+
   const statusBadge = (status: string) => {
     const map: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
       draft: { label: 'Draft', variant: 'secondary' },
       rejected: { label: 'Rejected', variant: 'destructive' },
       pending_approval: { label: 'Pending Approval', variant: 'outline' },
       approved: { label: 'Approved', variant: 'default' },
-      submitted: { label: 'Submitted to GC', variant: 'default' },
+      submitted: { label: 'Submitted', variant: 'outline' },
       acknowledged: { label: 'Acknowledged', variant: 'default' },
     };
     const s = map[status] || { label: status, variant: 'secondary' as const };
@@ -236,16 +266,69 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
       </CardHeader>
 
       <CardContent className="space-y-4">
+        {/* Work-Order-Level Hourly Rate (TC and FC only, not GC) */}
+        {!isGC && (
+          <div className="flex items-center gap-3 bg-muted/50 rounded-lg p-3">
+            <DollarSign className="w-4 h-4 text-muted-foreground" />
+            {editingRate ? (
+              <>
+                <Input
+                  type="number"
+                  placeholder="Hourly rate"
+                  value={rateValue}
+                  onChange={(e) => setRateValue(e.target.value)}
+                  className="w-28 h-8"
+                />
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const rate = parseFloat(rateValue);
+                    if (!isNaN(rate) && rate > 0) {
+                      updateRateMutation.mutate(rate);
+                    }
+                  }}
+                  disabled={updateRateMutation.isPending}
+                >
+                  Save
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setEditingRate(false)}>
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <>
+                <span className="text-sm font-medium">
+                  {woRate > 0 ? `$${woRate}/hr` : 'No rate set'}
+                </span>
+                {(isTC || isFC) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setRateValue(woRate > 0 ? String(woRate) : '');
+                      setEditingRate(true);
+                    }}
+                  >
+                    {woRate > 0 ? 'Edit Rate' : 'Set Rate'}
+                  </Button>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
         {/* Running Totals */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className={`grid ${isFC ? 'grid-cols-2' : 'grid-cols-3'} gap-3`}>
           <div className="bg-muted/50 rounded-lg p-3 text-center">
             <p className="text-2xl font-bold">{totalManHours.toFixed(1)}</p>
             <p className="text-xs text-muted-foreground">Total Man-Hours</p>
           </div>
-          <div className="bg-muted/50 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold">${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-            <p className="text-xs text-muted-foreground">Total Cost</p>
-          </div>
+          {!isFC && (
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold">${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-xs text-muted-foreground">Total Cost</p>
+            </div>
+          )}
           {isGC && (
             <div className="bg-muted/50 rounded-lg p-3 text-center">
               <p className="text-2xl font-bold">{acknowledgedCount}/{visibleCards.length}</p>
@@ -281,26 +364,20 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
         ) : (
           <div className="space-y-3">
             {visibleCards.map((card) => {
-              const status = getCardStatus(card);
-              const cardHours = (card.fc_man_hours || 0) + (card.tc_own_hours || 0);
-              const cardCost = cardHours * (card.tc_hourly_rate || 0);
+              const status = isFC ? getFCStatus(card) : getCardStatus(card);
+              const cardHours = isFC
+                ? (card.fc_man_hours || 0)
+                : (card.fc_man_hours || 0) + (card.tc_own_hours || 0);
+              const cardCost = cardHours * woRate;
 
               return (
                 <div key={card.id} className="border rounded-lg p-4 space-y-3">
                   {/* Header row */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      {isGC && status === 'submitted' && (
+                      {isGC && (status === 'submitted' || status === 'acknowledged') && (
                         <Checkbox
                           checked={card.gc_acknowledged}
-                          onCheckedChange={(checked) =>
-                            acknowledgeMutation.mutate({ cardId: card.id, ack: !!checked })
-                          }
-                        />
-                      )}
-                      {isGC && status === 'acknowledged' && (
-                        <Checkbox
-                          checked={true}
                           onCheckedChange={(checked) =>
                             acknowledgeMutation.mutate({ cardId: card.id, ack: !!checked })
                           }
@@ -322,14 +399,16 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
                       <Users className="w-3.5 h-3.5 text-muted-foreground" />
                       <span>{card.fc_men_count || 0} men × {card.fc_hours_per_man || 0} hrs = <strong>{card.fc_man_hours || 0} man-hrs</strong></span>
                     </div>
-                    {(card.tc_own_hours ?? 0) > 0 && (
+                    {/* TC own hours - hidden from FC */}
+                    {!isFC && (card.tc_own_hours ?? 0) > 0 && (
                       <span className="text-muted-foreground">+ {card.tc_own_hours} TC hrs</span>
                     )}
-                    {card.tc_hourly_rate && (
-                      <span className="text-muted-foreground">@ ${card.tc_hourly_rate}/hr</span>
-                    )}
-                    {card.tc_hourly_rate && (
-                      <span className="font-semibold">${cardCost.toFixed(2)}</span>
+                    {/* Rate & cost - hidden from FC */}
+                    {!isFC && woRate > 0 && (
+                      <>
+                        <span className="text-muted-foreground">@ ${woRate}/hr</span>
+                        <span className="font-semibold">${cardCost.toFixed(2)}</span>
+                      </>
                     )}
                   </div>
 
@@ -359,47 +438,15 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
                     </div>
                   )}
 
-                  {/* TC Rate + Submit */}
+                  {/* TC Submit to GC (no per-card rate anymore) */}
                   {isTC && card.tc_approved && !card.tc_submitted_at && (
                     <div className="flex items-center gap-2 pt-1">
-                      {editingRateId === card.id ? (
-                        <>
-                          <Input
-                            type="number"
-                            placeholder="Hourly rate"
-                            value={rateValue}
-                            onChange={(e) => setRateValue(e.target.value)}
-                            className="w-28 h-8"
-                          />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              const rate = parseFloat(rateValue);
-                              if (!isNaN(rate) && rate > 0) {
-                                setRateMutation.mutate({ cardId: card.id, rate });
-                              }
-                            }}
-                          >
-                            Set
-                          </Button>
-                        </>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setEditingRateId(card.id);
-                            setRateValue(String(card.tc_hourly_rate || ''));
-                          }}
-                        >
-                          {card.tc_hourly_rate ? `$${card.tc_hourly_rate}/hr` : 'Set Rate'}
-                        </Button>
-                      )}
-                      {card.tc_hourly_rate && (
+                      {woRate > 0 ? (
                         <Button size="sm" onClick={() => submitToGCMutation.mutate(card.id)}>
                           <Send className="w-3.5 h-3.5 mr-1" /> Submit to GC
                         </Button>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Set an hourly rate above before submitting.</p>
                       )}
                     </div>
                   )}
