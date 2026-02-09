@@ -245,39 +245,15 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC, hasTC = true
       const totalTCOwnHours = approvedCards.reduce((sum, c) => sum + (c.tc_own_hours || 0), 0);
       const totalHoursForGC = totalFCHours + totalTCOwnHours;
 
-      // Insert FC labor entry
-      const { error: fcErr } = await supabase.from('change_order_fc_hours').insert({
-        change_order_id: changeOrderId,
-        hours: totalFCHours,
-        hourly_rate: fcRate,
-        labor_total: totalFCHours * fcRate,
-        pricing_type: 'hourly',
-        description: 'T&M finalized — field crew hours',
-        entered_by: user?.id,
-        is_locked: true,
-        locked_at: new Date().toISOString(),
-        locked_by: user?.id,
-      } as never);
-      if (fcErr) throw fcErr;
-
-      // Insert TC labor entry
-      const { error: tcErr } = await supabase.from('change_order_tc_labor').insert({
-        change_order_id: changeOrderId,
-        hours: totalHoursForGC,
-        hourly_rate: tcRate,
-        labor_total: totalHoursForGC * tcRate,
-        pricing_type: 'hourly',
-        description: 'T&M finalized — total labor',
-        entered_by: user?.id,
-      } as never);
-      if (tcErr) throw tcErr;
-
-      // Switch pricing mode to fixed
-      const { error: modeErr } = await supabase
-        .from('change_order_projects')
-        .update({ pricing_mode: 'fixed' } as never)
-        .eq('id', changeOrderId);
-      if (modeErr) throw modeErr;
+      const { error } = await supabase.rpc('finalize_tm_work_order', {
+        p_change_order_id: changeOrderId,
+        p_fc_hours: totalFCHours,
+        p_fc_rate: fcRate,
+        p_tc_hours: totalHoursForGC,
+        p_tc_rate: tcRate,
+        p_user_id: user?.id,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tm-time-cards', changeOrderId] });

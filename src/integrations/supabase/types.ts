@@ -3854,6 +3854,17 @@ export type Database = {
         Args: { change_work_id: string }
         Returns: undefined
       }
+      finalize_tm_work_order: {
+        Args: {
+          p_change_order_id: string
+          p_fc_hours: number
+          p_fc_rate: number
+          p_tc_hours: number
+          p_tc_rate: number
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       generate_change_work_code: { Args: { org_id: string }; Returns: string }
       generate_po_number: { Args: { org_id: string }; Returns: string }
       get_invite_by_token_v2: { Args: { _token: string }; Returns: Json }
