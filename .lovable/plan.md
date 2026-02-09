@@ -1,70 +1,103 @@
 
 
-# Fix: Allow Tab Click to Return to List View
+# Work Order Detail Page Redesign
 
-## Problem
+## Current Problems
 
-When viewing a PO detail or Invoice detail inside a project tab, clicking the same tab in the top bar does nothing. The user has to use the browser back arrow to return to the list view. This happens because Radix UI's Tabs component only fires `onValueChange` when the value *changes* -- clicking the already-active tab is ignored.
-
-## Affected Tabs
-
-| Tab | Detail Component | State to Reset |
-|---|---|---|
-| POs | `PODetail` (inline) | `selectedPOId` |
-| Invoices | `InvoiceDetail` (inline) | `selectedInvoiceId` |
-| Work Orders | Navigates to `/change-order/:id` | Different route -- not affected by this fix |
-
-Work Orders navigate to a separate route, so the tabs aren't visible when viewing a work order detail. This fix focuses on POs and Invoices which render detail views inline within the tab.
+1. **No sticky context bar** -- When scrolling, you lose sight of the Work Order title, status, and project name. The project overview page has a great sticky bar pattern that should be reused here.
+2. **No way to navigate back via tabs** -- The only way back to the Work Orders list is the browser back arrow or the small "Back" button. Users expect to click a "Work Orders" tab to return, matching the project overview pattern.
+3. **Information is scattered** -- The header card only shows title/status/location. The progress checklist is buried in the sidebar at the bottom. Pricing, scope, labor, and materials are stacked vertically with no visual grouping or hierarchy. On a large screen, the sidebar has too many disconnected cards.
+4. **No progress indicator** -- There is no visual progress bar showing how far along the Work Order is (e.g., Draft -> TC Pricing -> Ready for Approval -> Contracted). The checklist exists but is hidden in the sidebar.
 
 ## Solution
 
-Use a "reset key" pattern: every time a tab is clicked (even the already-active one), increment a counter. Pass that counter as a React `key` to the tab content, forcing child components to remount and reset their internal state (like `selectedPOId`).
+Replace the generic `AppLayout` with a custom layout that mirrors the ProjectHome sticky bar + tabs pattern, and reorganize the content for better information hierarchy.
 
-### Changes
+### 1. Sticky Top Bar (like Project Overview)
 
-**1. `src/components/project/ProjectTopBar.tsx`**
+Add a sticky header with:
+- Sidebar trigger (hamburger)
+- Project name (clickable, navigates back to project)
+- Work Order title
+- Status badge
+- Notification bell
+- A tab row with: **Overview** | **Work Orders** (clickable to navigate back to project Work Orders tab)
 
-Replace the Radix `onValueChange` handler with individual `onClick` handlers on each `TabsTrigger`. This ensures `onTabChange` fires even when clicking the currently active tab.
+Clicking "Work Orders" navigates to `/project/{projectId}?tab=work-orders`, giving users the familiar tab-based navigation back to the list.
+
+### 2. Status Progress Bar (top of content area)
+
+Below the sticky bar, add a horizontal multi-step progress indicator showing the Work Order lifecycle stages:
 
 ```text
-Before: <Tabs value={activeTab} onValueChange={onTabChange}>
-After:  <Tabs value={activeTab}>
-        + onClick={() => onTabChange('purchase-orders')} on each TabsTrigger
+[In Progress] --> [TC Pricing] --> [Ready for Approval] --> [Contracted]
 ```
 
-**2. `src/pages/ProjectHome.tsx`**
+- Each step is a circle/node connected by lines
+- Completed steps are filled with green
+- Current step is highlighted with the brand purple
+- Future steps are grayed out
+- Rejected status shows a red indicator on the current step
+- FC Input step only appears when a Field Crew is a participant
 
-Add a `tabResetKey` counter state. Increment it every time `handleTabChange` is called (even with the same tab value). Use it as part of the `key` prop on the tab content components so they remount and reset their internal detail state.
+This immediately tells the user where the Work Order stands without scrolling.
 
-```text
-const [tabResetKey, setTabResetKey] = useState(0);
+### 3. Reorganized Content Layout
 
-const handleTabChange = (tab: string) => {
-  setSearchParams({ tab });
-  setTabResetKey(prev => prev + 1);  // forces child remount
-};
+Keep the 65/35 two-zone split but reorganize cards for better grouping:
 
-// In render:
-{activeTab === 'purchase-orders' && (
-  <PurchaseOrdersTab key={tabResetKey} ... />
-)}
-{activeTab === 'invoices' && (
-  <InvoicesTab key={tabResetKey} ... />
-)}
-```
+**Zone A (Main, Left) -- in order:**
+1. **Header Card** -- Title, project name, location, work type, created date, description (merged with current ChangeOrderScopePanel to reduce card count)
+2. **Rejection Alert** -- Only when applicable, high-visibility warning
+3. **Labor Section** -- TC Labor panel (or FC Hours panel, depending on role)
+4. **Materials Section** -- Materials panel with linked PO info
+5. **Equipment Section** -- When applicable
 
-## Why This Works
+**Zone B (Sidebar, Right) -- in order:**
+1. **Pricing Card** -- Contracted pricing / My Earnings (most important sidebar info, moved to top)
+2. **Approval Panel** -- GC finalize actions (when applicable, near pricing for context)
+3. **Checklist Card** -- Ready-for-approval checklist
+4. **Participants Card** -- Team activation
+5. **Resource Toggles** -- Material/Equipment toggles (TC only)
 
-- When the user clicks "POs" while already on the POs tab, `handleTabChange('purchase-orders')` fires
-- `tabResetKey` increments, changing the `key` prop on `PurchaseOrdersTab`
-- React unmounts the old instance (with `selectedPOId` set) and mounts a fresh one (with `selectedPOId = null`)
-- The user sees the PO list view again
-- Same behavior applies to the Invoices tab
+The key change: merge the Header and Scope panels into one card, and move the Pricing card to the top of the sidebar since it is the most glanceable info.
 
-## Files Changed
+## Technical Details
+
+### New Component: `WorkOrderTopBar`
+
+A new component `src/components/change-order-detail/WorkOrderTopBar.tsx` that mirrors `ProjectTopBar`:
+- Accepts: `projectName`, `projectId`, `workOrderTitle`, `status`
+- Renders: sticky header with sidebar trigger, breadcrumb-style title, status badge, tabs
+- The "Work Orders" tab click navigates to `/project/{projectId}?tab=work-orders`
+- The "Overview" tab click navigates to `/project/{projectId}?tab=overview`
+
+### New Component: `WorkOrderProgressBar`
+
+A new component `src/components/change-order-detail/WorkOrderProgressBar.tsx`:
+- Accepts: `status` (ChangeOrderStatus), `hasFCParticipant` (boolean)
+- Renders a horizontal step indicator with the lifecycle stages
+- Dynamically shows/hides the "FC Input" step based on whether a Field Crew is involved
+- Uses consistent status colors from the existing palette
+
+### Updated: `ChangeOrderDetailPage`
+
+- Replace `AppLayout` with custom layout using `SidebarProvider`, `AppSidebar`, `SidebarInset` (same pattern as ProjectHome)
+- Add `WorkOrderTopBar` as the sticky header
+- Add `WorkOrderProgressBar` below the header
+- Merge `ChangeOrderHeader` and `ChangeOrderScopePanel` into a single combined card
+- Reorder sidebar cards: Pricing first, then Approval, Checklist, Participants, Resources
+
+### File Changes
 
 | File | Change |
 |---|---|
-| `src/components/project/ProjectTopBar.tsx` | Add `onClick` handlers to each `TabsTrigger` so clicks always fire even on the active tab |
-| `src/pages/ProjectHome.tsx` | Add `tabResetKey` counter, increment on every tab change, pass as `key` to tab content components |
+| `src/components/change-order-detail/WorkOrderTopBar.tsx` | New -- sticky top bar with project name, WO title, status, and navigable tabs |
+| `src/components/change-order-detail/WorkOrderProgressBar.tsx` | New -- horizontal status progress indicator |
+| `src/components/change-order-detail/ChangeOrderDetailPage.tsx` | Update -- replace AppLayout with custom layout, add top bar and progress bar, reorganize card order, merge header + scope into one card |
+| `src/components/change-order-detail/index.ts` | Update -- export new components |
+
+### No Database Changes Required
+
+All changes are purely frontend layout and component restructuring. No new queries, tables, or RLS policies needed.
 
