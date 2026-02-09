@@ -429,6 +429,7 @@ export type Database = {
           description: string | null
           equipment_cost_responsibility: string | null
           equipment_total: number | null
+          fc_hourly_rate: number | null
           final_price: number | null
           fixing_trade_notes: string | null
           id: string
@@ -461,6 +462,7 @@ export type Database = {
           description?: string | null
           equipment_cost_responsibility?: string | null
           equipment_total?: number | null
+          fc_hourly_rate?: number | null
           final_price?: number | null
           fixing_trade_notes?: string | null
           id?: string
@@ -493,6 +495,7 @@ export type Database = {
           description?: string | null
           equipment_cost_responsibility?: string | null
           equipment_total?: number | null
+          fc_hourly_rate?: number | null
           final_price?: number | null
           fixing_trade_notes?: string | null
           id?: string
