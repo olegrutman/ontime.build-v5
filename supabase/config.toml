@@ -15,5 +15,8 @@ verify_jwt = false
 [functions.po-download]
 verify_jwt = false
 
+[functions.sasha-guide]
+verify_jwt = false
+
 [functions.work-order-download]
 verify_jwt = false
