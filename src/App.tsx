@@ -28,6 +28,7 @@ import { WorkItemPage } from "@/components/work-item";
 import { ChangeOrderDetailPage } from "@/components/change-order-detail";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
+import { SashaBubble } from "@/components/sasha";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +64,7 @@ const App = () => (
             <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <SashaBubble />
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
