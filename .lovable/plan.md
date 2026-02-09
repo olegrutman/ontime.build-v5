@@ -1,47 +1,70 @@
 
 
-# Fix: Partner Directory Not Showing Any Partners
+# Fix: Allow Tab Click to Return to List View
 
 ## Problem
 
-The Partner Directory shows no organizations or people because the code filters by `status = 'active'`, but the actual database values use `status = 'Accepted'`. This causes both queries to return zero results, so the entire directory appears empty for all users.
+When viewing a PO detail or Invoice detail inside a project tab, clicking the same tab in the top bar does nothing. The user has to use the browser back arrow to return to the list view. This happens because Radix UI's Tabs component only fires `onValueChange` when the value *changes* -- clicking the already-active tab is ignored.
 
-## Database Evidence
+## Affected Tabs
 
-All rows in `project_team` have `status = 'Accepted'`. The data is correct -- for example, the project "Main Street Apartments #33" has:
-- GC: John Smith (GC_Test)
-- TC: Mike Gold (TC_Test)  
-- FC: Tim Cook (FC_Test)
-- Supplier: Greg Moon (Supplier_Test)
+| Tab | Detail Component | State to Reset |
+|---|---|---|
+| POs | `PODetail` (inline) | `selectedPOId` |
+| Invoices | `InvoiceDetail` (inline) | `selectedInvoiceId` |
+| Work Orders | Navigates to `/change-order/:id` | Different route -- not affected by this fix |
 
-None of these appear because the filter never matches.
+Work Orders navigate to a separate route, so the tabs aren't visible when viewing a work order detail. This fix focuses on POs and Invoices which render detail views inline within the tab.
 
-## Fix
+## Solution
 
-Update two lines in `src/hooks/usePartnerDirectory.ts`:
+Use a "reset key" pattern: every time a tab is clicked (even the already-active one), increment a counter. Pass that counter as a React `key` to the tab content, forcing child components to remount and reset their internal state (like `selectedPOId`).
 
-**Line 62** -- First query (find current user's projects):
+### Changes
+
+**1. `src/components/project/ProjectTopBar.tsx`**
+
+Replace the Radix `onValueChange` handler with individual `onClick` handlers on each `TabsTrigger`. This ensures `onTabChange` fires even when clicking the currently active tab.
+
+```text
+Before: <Tabs value={activeTab} onValueChange={onTabChange}>
+After:  <Tabs value={activeTab}>
+        + onClick={() => onTabChange('purchase-orders')} on each TabsTrigger
 ```
-Before: .eq('status', 'active')
-After:  .eq('status', 'Accepted')
+
+**2. `src/pages/ProjectHome.tsx`**
+
+Add a `tabResetKey` counter state. Increment it every time `handleTabChange` is called (even with the same tab value). Use it as part of the `key` prop on the tab content components so they remount and reset their internal detail state.
+
+```text
+const [tabResetKey, setTabResetKey] = useState(0);
+
+const handleTabChange = (tab: string) => {
+  setSearchParams({ tab });
+  setTabResetKey(prev => prev + 1);  // forces child remount
+};
+
+// In render:
+{activeTab === 'purchase-orders' && (
+  <PurchaseOrdersTab key={tabResetKey} ... />
+)}
+{activeTab === 'invoices' && (
+  <InvoicesTab key={tabResetKey} ... />
+)}
 ```
 
-**Line 97** -- Second query (find other team members on those projects):
-```
-Before: .eq('status', 'active')
-After:  .eq('status', 'Accepted')
-```
+## Why This Works
 
-## Impact
-
-- Both the Organizations tab and People tab will populate correctly
-- GC users will see TCs, FCs, and Suppliers they've collaborated with
-- All users will see their cross-org partners grouped and sorted properly
-- No database changes needed -- the data is already correct
+- When the user clicks "POs" while already on the POs tab, `handleTabChange('purchase-orders')` fires
+- `tabResetKey` increments, changing the `key` prop on `PurchaseOrdersTab`
+- React unmounts the old instance (with `selectedPOId` set) and mounts a fresh one (with `selectedPOId = null`)
+- The user sees the PO list view again
+- Same behavior applies to the Invoices tab
 
 ## Files Changed
 
 | File | Change |
 |---|---|
-| `src/hooks/usePartnerDirectory.ts` | Change `'active'` to `'Accepted'` in two `.eq('status', ...)` filters (lines 62 and 97) |
+| `src/components/project/ProjectTopBar.tsx` | Add `onClick` handlers to each `TabsTrigger` so clicks always fire even on the active tab |
+| `src/pages/ProjectHome.tsx` | Add `tabResetKey` counter, increment on every tab change, pass as `key` to tab content components |
 
