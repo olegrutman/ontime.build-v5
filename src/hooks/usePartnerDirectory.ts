@@ -59,7 +59,7 @@ export function usePartnerDirectory() {
       .from('project_team')
       .select('project_id')
       .eq('org_id', currentOrg.id)
-      .eq('status', 'active');
+      .eq('status', 'Accepted');
 
     if (projectsError || !myProjects?.length) {
       setPartners([]);
@@ -94,7 +94,7 @@ export function usePartnerDirectory() {
       `)
       .in('project_id', projectIds)
       .neq('org_id', currentOrg.id)
-      .eq('status', 'active');
+      .eq('status', 'Accepted');
 
     if (teamError) {
       console.error('Error fetching team members:', teamError);
