@@ -1,0 +1,1 @@
+ALTER TABLE change_order_projects ADD COLUMN fc_hourly_rate numeric DEFAULT NULL;

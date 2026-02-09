@@ -49,25 +49,28 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
-  const [editingRate, setEditingRate] = useState(false);
-  const [rateValue, setRateValue] = useState('');
+  const [editingTCRate, setEditingTCRate] = useState(false);
+  const [tcRateValue, setTcRateValue] = useState('');
+  const [editingFCRate, setEditingFCRate] = useState(false);
+  const [fcRateValue, setFcRateValue] = useState('');
 
-  // Fetch work-order-level hourly rate
+  // Fetch work-order-level hourly rates
   const { data: workOrder } = useQuery({
     queryKey: ['change-order-rate', changeOrderId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('change_order_projects')
-        .select('tc_hourly_rate')
+        .select('tc_hourly_rate, fc_hourly_rate')
         .eq('id', changeOrderId)
         .single();
       if (error) throw error;
-      return data as { tc_hourly_rate: number | null };
+      return data as { tc_hourly_rate: number | null; fc_hourly_rate: number | null };
     },
     enabled: !!changeOrderId,
   });
 
-  const woRate = workOrder?.tc_hourly_rate ?? 0;
+  const tcRate = workOrder?.tc_hourly_rate ?? 0;
+  const fcRate = workOrder?.fc_hourly_rate ?? 0;
 
   const { data: timeCards = [], isLoading } = useQuery({
     queryKey: ['tm-time-cards', changeOrderId],
@@ -83,8 +86,8 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
     enabled: !!changeOrderId,
   });
 
-  // Update work-order-level rate
-  const updateRateMutation = useMutation({
+  // Update TC rate
+  const updateTCRateMutation = useMutation({
     mutationFn: async (rate: number) => {
       const { error } = await supabase
         .from('change_order_projects')
@@ -94,8 +97,25 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['change-order-rate', changeOrderId] });
-      setEditingRate(false);
-      toast({ title: 'Hourly rate updated' });
+      setEditingTCRate(false);
+      toast({ title: 'TC hourly rate updated' });
+    },
+    onError: (e) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
+  });
+
+  // Update FC rate
+  const updateFCRateMutation = useMutation({
+    mutationFn: async (rate: number) => {
+      const { error } = await supabase
+        .from('change_order_projects')
+        .update({ fc_hourly_rate: rate } as never)
+        .eq('id', changeOrderId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['change-order-rate', changeOrderId] });
+      setEditingFCRate(false);
+      toast({ title: 'FC hourly rate updated' });
     },
     onError: (e) => toast({ variant: 'destructive', title: 'Error', description: e.message }),
   });
@@ -203,20 +223,36 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
   // Filter cards by role visibility
   const visibleCards = timeCards.filter((card) => {
     if (isGC) return !!card.tc_submitted_at;
-    if (isFC) return card.fc_entered_by === user?.id; // FC only sees own cards
+    if (isFC) return card.fc_entered_by === user?.id;
     if (isTC) return !!card.fc_submitted_at || card.fc_entered_by === user?.id;
     return true;
   });
 
-  // Running totals
-  const totalManHours = visibleCards.reduce((sum, c) => {
-    if (isFC) return sum + (c.fc_man_hours || 0); // FC only sees own man-hours
-    return sum + (c.fc_man_hours || 0) + (c.tc_own_hours || 0);
-  }, 0);
-  const totalCost = visibleCards.reduce((sum, c) => {
-    const hours = (c.fc_man_hours || 0) + (c.tc_own_hours || 0);
-    return sum + hours * woRate;
-  }, 0);
+  // --- Compute totals ---
+  // FC totals
+  const fcTotalManHours = visibleCards.reduce((sum, c) => sum + (c.fc_man_hours || 0), 0);
+  const fcTotalEarnings = fcTotalManHours * fcRate;
+
+  // TC dual counters
+  const allFCSubmittedCards = timeCards.filter((c) => !!c.fc_submitted_at);
+  const fcToTCHours = allFCSubmittedCards.reduce((sum, c) => sum + (c.fc_man_hours || 0), 0);
+  const fcToTCCost = fcToTCHours * fcRate;
+
+  const submittedToGCCards = timeCards.filter((c) => !!c.tc_submitted_at);
+  const tcToGCHours = submittedToGCCards.reduce(
+    (sum, c) => sum + (c.fc_man_hours || 0) + (c.tc_own_hours || 0),
+    0
+  );
+  const tcToGCCost = tcToGCHours * tcRate;
+  const submittedCount = submittedToGCCards.length;
+  const totalCardCount = timeCards.filter((c) => !!c.fc_submitted_at || c.fc_entered_by === user?.id).length;
+
+  // GC totals
+  const gcTotalHours = visibleCards.reduce(
+    (sum, c) => sum + (c.fc_man_hours || 0) + (c.tc_own_hours || 0),
+    0
+  );
+  const gcTotalCost = gcTotalHours * tcRate;
   const acknowledgedCount = visibleCards.filter((c) => c.gc_acknowledged).length;
 
   const getCardStatus = (card: TimeCard) => {
@@ -228,12 +264,11 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
     return 'submitted';
   };
 
-  // FC sees limited statuses
   const getFCStatus = (card: TimeCard) => {
     if (card.tc_rejection_notes && !card.fc_submitted_at) return 'rejected';
     if (!card.fc_submitted_at) return 'draft';
     if (card.tc_approved) return 'approved';
-    return 'submitted'; // FC submitted, waiting for TC
+    return 'submitted';
   };
 
   const statusBadge = (status: string) => {
@@ -248,6 +283,62 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
     const s = map[status] || { label: status, variant: 'secondary' as const };
     return <Badge variant={s.variant}>{s.label}</Badge>;
   };
+
+  // Inline rate editor component
+  const RateEditor = ({
+    label,
+    rate,
+    editing,
+    value,
+    onChange,
+    onSave,
+    onEdit,
+    onCancel,
+    isPending,
+    editable,
+  }: {
+    label: string;
+    rate: number;
+    editing: boolean;
+    value: string;
+    onChange: (v: string) => void;
+    onSave: () => void;
+    onEdit: () => void;
+    onCancel: () => void;
+    isPending: boolean;
+    editable: boolean;
+  }) => (
+    <div className="flex items-center gap-3">
+      <DollarSign className="w-4 h-4 text-muted-foreground shrink-0" />
+      <span className="text-xs text-muted-foreground whitespace-nowrap">{label}</span>
+      {editing ? (
+        <>
+          <Input
+            type="number"
+            placeholder="Rate"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-24 h-7 text-sm"
+          />
+          <Button size="sm" className="h-7 text-xs" onClick={onSave} disabled={isPending}>
+            Save
+          </Button>
+          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onCancel}>
+            Cancel
+          </Button>
+        </>
+      ) : (
+        <>
+          <span className="text-sm font-medium">{rate > 0 ? `$${rate}/hr` : 'Not set'}</span>
+          {editable && (
+            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onEdit}>
+              {rate > 0 ? 'Edit' : 'Set'}
+            </Button>
+          )}
+        </>
+      )}
+    </div>
+  );
 
   return (
     <Card>
@@ -266,82 +357,114 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Work-Order-Level Hourly Rate (TC and FC only, not GC) */}
+        {/* Rate Editors - hidden from GC */}
         {!isGC && (
-          <div className="flex items-center gap-3 bg-muted/50 rounded-lg p-3">
-            <DollarSign className="w-4 h-4 text-muted-foreground" />
-            {editingRate ? (
-              <>
-                <Input
-                  type="number"
-                  placeholder="Hourly rate"
-                  value={rateValue}
-                  onChange={(e) => setRateValue(e.target.value)}
-                  className="w-28 h-8"
-                />
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    const rate = parseFloat(rateValue);
-                    if (!isNaN(rate) && rate > 0) {
-                      updateRateMutation.mutate(rate);
-                    }
-                  }}
-                  disabled={updateRateMutation.isPending}
-                >
-                  Save
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setEditingRate(false)}>
-                  Cancel
-                </Button>
-              </>
-            ) : (
-              <>
-                <span className="text-sm font-medium">
-                  {woRate > 0 ? `$${woRate}/hr` : 'No rate set'}
-                </span>
-                {(isTC || isFC) && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setRateValue(woRate > 0 ? String(woRate) : '');
-                      setEditingRate(true);
-                    }}
-                  >
-                    {woRate > 0 ? 'Edit Rate' : 'Set Rate'}
-                  </Button>
-                )}
-              </>
+          <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+            {/* FC Rate - editable by FC, read-only for TC */}
+            <RateEditor
+              label="FC Rate:"
+              rate={fcRate}
+              editing={editingFCRate}
+              value={fcRateValue}
+              onChange={setFcRateValue}
+              onSave={() => {
+                const r = parseFloat(fcRateValue);
+                if (!isNaN(r) && r > 0) updateFCRateMutation.mutate(r);
+              }}
+              onEdit={() => {
+                setFcRateValue(fcRate > 0 ? String(fcRate) : '');
+                setEditingFCRate(true);
+              }}
+              onCancel={() => setEditingFCRate(false)}
+              isPending={updateFCRateMutation.isPending}
+              editable={isFC}
+            />
+            {/* TC Rate - editable by TC, hidden from FC */}
+            {isTC && (
+              <RateEditor
+                label="TC Rate:"
+                rate={tcRate}
+                editing={editingTCRate}
+                value={tcRateValue}
+                onChange={setTcRateValue}
+                onSave={() => {
+                  const r = parseFloat(tcRateValue);
+                  if (!isNaN(r) && r > 0) updateTCRateMutation.mutate(r);
+                }}
+                onEdit={() => {
+                  setTcRateValue(tcRate > 0 ? String(tcRate) : '');
+                  setEditingTCRate(true);
+                }}
+                onCancel={() => setEditingTCRate(false)}
+                isPending={updateTCRateMutation.isPending}
+                editable={true}
+              />
             )}
           </div>
         )}
 
-        {/* Running Totals */}
-        <div className={`grid ${isFC ? 'grid-cols-2' : 'grid-cols-3'} gap-3`}>
-          <div className="bg-muted/50 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold">{totalManHours.toFixed(1)}</p>
-            <p className="text-xs text-muted-foreground">Total Man-Hours</p>
-          </div>
-          {!isFC && (
+        {/* Running Totals - role-specific */}
+        {isFC && (
+          <div className="grid grid-cols-2 gap-3">
             <div className="bg-muted/50 rounded-lg p-3 text-center">
-              <p className="text-2xl font-bold">${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              <p className="text-2xl font-bold">{fcTotalManHours.toFixed(1)}</p>
+              <p className="text-xs text-muted-foreground">My Man-Hours</p>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold">
+                {fcRate > 0
+                  ? `$${fcTotalEarnings.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  : '—'}
+              </p>
+              <p className="text-xs text-muted-foreground">My Earnings</p>
+            </div>
+          </div>
+        )}
+
+        {isTC && (
+          <div className="grid grid-cols-2 gap-3">
+            {/* FC to TC */}
+            <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">From Field Crew</p>
+              <p className="text-xl font-bold">{fcToTCHours.toFixed(1)} <span className="text-sm font-normal">hrs</span></p>
+              <p className="text-sm text-muted-foreground">
+                {fcRate > 0
+                  ? `$${fcToTCCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  : 'FC rate not set'}
+              </p>
+            </div>
+            {/* TC to GC */}
+            <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Submitted to GC</p>
+              <p className="text-xl font-bold">{tcToGCHours.toFixed(1)} <span className="text-sm font-normal">hrs</span></p>
+              <p className="text-sm text-muted-foreground">
+                {tcRate > 0
+                  ? `$${tcToGCCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  : 'TC rate not set'}
+              </p>
+              <p className="text-xs text-muted-foreground">{submittedCount} of {totalCardCount} cards submitted</p>
+            </div>
+          </div>
+        )}
+
+        {isGC && (
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold">{gcTotalHours.toFixed(1)}</p>
+              <p className="text-xs text-muted-foreground">Total Man-Hours</p>
+            </div>
+            <div className="bg-muted/50 rounded-lg p-3 text-center">
+              <p className="text-2xl font-bold">
+                ${gcTotalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </p>
               <p className="text-xs text-muted-foreground">Total Cost</p>
             </div>
-          )}
-          {isGC && (
             <div className="bg-muted/50 rounded-lg p-3 text-center">
               <p className="text-2xl font-bold">{acknowledgedCount}/{visibleCards.length}</p>
               <p className="text-xs text-muted-foreground">Acknowledged</p>
             </div>
-          )}
-          {!isGC && (
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
-              <p className="text-2xl font-bold">{visibleCards.length}</p>
-              <p className="text-xs text-muted-foreground">Time Cards</p>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
         <Separator />
 
@@ -368,7 +491,7 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
               const cardHours = isFC
                 ? (card.fc_man_hours || 0)
                 : (card.fc_man_hours || 0) + (card.tc_own_hours || 0);
-              const cardCost = cardHours * woRate;
+              const cardCost = cardHours * tcRate;
 
               return (
                 <div key={card.id} className="border rounded-lg p-4 space-y-3">
@@ -404,9 +527,9 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
                       <span className="text-muted-foreground">+ {card.tc_own_hours} TC hrs</span>
                     )}
                     {/* Rate & cost - hidden from FC */}
-                    {!isFC && woRate > 0 && (
+                    {!isFC && tcRate > 0 && (
                       <>
-                        <span className="text-muted-foreground">@ ${woRate}/hr</span>
+                        <span className="text-muted-foreground">@ ${tcRate}/hr</span>
                         <span className="font-semibold">${cardCost.toFixed(2)}</span>
                       </>
                     )}
@@ -438,15 +561,15 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC }: TMTimeCard
                     </div>
                   )}
 
-                  {/* TC Submit to GC (no per-card rate anymore) */}
+                  {/* TC Submit to GC */}
                   {isTC && card.tc_approved && !card.tc_submitted_at && (
                     <div className="flex items-center gap-2 pt-1">
-                      {woRate > 0 ? (
+                      {tcRate > 0 ? (
                         <Button size="sm" onClick={() => submitToGCMutation.mutate(card.id)}>
                           <Send className="w-3.5 h-3.5 mr-1" /> Submit to GC
                         </Button>
                       ) : (
-                        <p className="text-sm text-muted-foreground">Set an hourly rate above before submitting.</p>
+                        <p className="text-sm text-muted-foreground">Set TC rate above before submitting.</p>
                       )}
                     </div>
                   )}
