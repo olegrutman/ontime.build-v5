@@ -1,74 +1,86 @@
 
 
-# Fix: Finalize T&M RLS Error
+# Org Team Management -- Multi-User Support
 
-## The Problem
+## Overview
 
-The finalize mutation makes three separate inserts/updates from the client:
-1. Insert into `change_order_fc_hours` -- RLS only allows FC role
-2. Insert into `change_order_tc_labor` -- RLS only allows TC role  
-3. Update `change_order_projects.pricing_mode` -- works fine
+Add an "Organization Team" page accessible from the sidebar where admins (GC_PM, TC_PM, FC_PM) can invite colleagues to their organization, view current members, and manage pending invitations. Invited users see a banner on their dashboard to accept/decline org invitations.
 
-When TC finalizes, step 1 fails silently (RLS blocks it). When FC finalizes, step 2 fails.
+## What Gets Built
 
-## The Fix
+### 1. "My Team" Sidebar Link
 
-Create a single `SECURITY DEFINER` database function `finalize_tm_work_order` that:
-- Accepts `change_order_id`, `fc_hours`, `fc_rate`, `tc_hours`, `tc_rate`, and `user_id`
-- Inserts the FC labor entry (locked)
-- Inserts the TC labor entry
-- Updates `pricing_mode` to `'fixed'`
-- Runs as a transaction (all-or-nothing)
+Add a "My Team" nav item under the existing Navigation group, visible only to users with `canManageOrg` permission (GC_PM, TC_PM, FC_PM). Links to `/org/team`.
 
-Then update `TMTimeCardsPanel.tsx` to call this RPC function instead of three separate queries.
+### 2. Org Team Page (`/org/team`)
+
+A page with two sections:
+
+**Current Members** -- table/list showing:
+- Name, email, role (from `user_org_roles` joined with `profiles`)
+- Role badge (GC_PM, TC_PM, FS, etc.)
+- No remove action for now (keep it simple)
+
+**Invite New Member** -- a form with:
+- Email input
+- Role selector (dropdown filtered by `ALLOWED_ROLES_BY_ORG_TYPE` for the current org type)
+- "Send Invite" button
+- Inserts into `org_invitations` table (already has RLS for PM roles)
+
+**Pending Invitations** -- list showing:
+- Email, role, sent date, status
+- Option to cancel/revoke a pending invite
+
+### 3. Accept Org Invitation Flow
+
+**Database function**: `accept_org_invitation(p_invitation_id UUID)` -- a `SECURITY DEFINER` function that:
+1. Validates the invitation belongs to the calling user's email
+2. Checks it's still `pending` and not expired
+3. Inserts a `user_org_roles` row with the invited role
+4. Updates invitation status to `accepted`
+
+**Dashboard banner**: On the Dashboard page, query `org_invitations` where email matches the current user and status is `pending`. Show a card with "You've been invited to join [Org Name] as [Role]" with Accept/Decline buttons.
+
+### 4. Decline Function
+
+`decline_org_invitation(p_invitation_id UUID)` -- sets status to `expired`.
 
 ## Database Migration
 
-Create function `finalize_tm_work_order(...)` with `SECURITY DEFINER` that performs all three operations in one transaction.
+```text
+-- Accept org invitation (SECURITY DEFINER to bypass RLS)
+CREATE OR REPLACE FUNCTION public.accept_org_invitation(p_invitation_id UUID)
+RETURNS void ...
+  1. Validate caller's email matches invitation email
+  2. Check status = 'pending' and expires_at > now()
+  3. INSERT INTO user_org_roles (user_id, organization_id, role)
+  4. UPDATE org_invitations SET status = 'accepted'
+
+-- Decline org invitation
+CREATE OR REPLACE FUNCTION public.decline_org_invitation(p_invitation_id UUID)
+RETURNS void ...
+  1. Validate caller's email matches invitation email
+  2. UPDATE org_invitations SET status = 'expired'
+```
 
 ## File Changes
 
 | File | Change |
 |---|---|
-| New migration | Create `finalize_tm_work_order` database function |
-| `TMTimeCardsPanel.tsx` | Replace three separate queries in `finalizeMutation` with a single `supabase.rpc('finalize_tm_work_order', {...})` call |
+| New migration | Create `accept_org_invitation` and `decline_org_invitation` functions |
+| `src/pages/OrgTeam.tsx` (new) | Org team management page with members list, invite form, pending invitations |
+| `src/hooks/useOrgTeam.ts` (new) | Hook to fetch org members, pending invites, send invite, cancel invite |
+| `src/App.tsx` | Add route `/org/team` pointing to OrgTeam page |
+| `src/components/layout/AppSidebar.tsx` | Add "My Team" nav link for users with `canManageOrg` |
+| `src/components/dashboard/OrgInviteBanner.tsx` (new) | Banner component showing pending org invitations with Accept/Decline |
+| `src/pages/Dashboard.tsx` | Render `OrgInviteBanner` at top of dashboard |
 
-## Technical Details
+## Permission Model
 
-### Database Function
-
-```text
-finalize_tm_work_order(
-  p_change_order_id UUID,
-  p_fc_hours NUMERIC,
-  p_fc_rate NUMERIC,
-  p_tc_hours NUMERIC,
-  p_tc_rate NUMERIC,
-  p_user_id UUID
-) RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-```
-
-The function:
-1. Validates the caller is a participant on the project
-2. Inserts into `change_order_fc_hours` with `is_locked = true`
-3. Inserts into `change_order_tc_labor`
-4. Updates `change_order_projects` set `pricing_mode = 'fixed'`
-
-### TMTimeCardsPanel.tsx Change
-
-Replace the `finalizeMutation` body (lines 242-280) with:
-
-```text
-const { error } = await supabase.rpc('finalize_tm_work_order', {
-  p_change_order_id: changeOrderId,
-  p_fc_hours: totalFCHours,
-  p_fc_rate: fcRate,
-  p_tc_hours: totalHoursForGC,
-  p_tc_rate: tcRate,
-  p_user_id: user?.id,
-});
-if (error) throw error;
-```
-
+- **Who can invite**: GC_PM, TC_PM, FC_PM (roles where `canManageOrg = true`)
+- **Available roles to assign**: Filtered by org type using existing `ALLOWED_ROLES_BY_ORG_TYPE`
+  - GC org can invite: GC_PM
+  - TC org can invite: TC_PM, FS
+  - FC org can invite: FC_PM, FS
+- **Who can accept**: Any authenticated user whose email matches a pending invitation
+- **RLS**: Already configured -- PMs can INSERT and SELECT on `org_invitations`
