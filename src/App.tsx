@@ -12,6 +12,7 @@ import ProjectHome from "./pages/ProjectHome";
 import EditProjectScope from "./pages/EditProjectScope";
 import EditProject from "./pages/EditProject";
 import PartnerDirectory from "./pages/PartnerDirectory";
+import OrgTeam from "./pages/OrgTeam";
 import AdminSuppliers from "./pages/AdminSuppliers";
 import CatalogPage from "./pages/CatalogPage";
 
@@ -49,6 +50,7 @@ const App = () => (
             <Route path="/projects/:id/scope" element={<EditProjectScope />} />
             <Route path="/partners" element={<PartnerDirectory />} />
             <Route path="/admin/suppliers" element={<AdminSuppliers />} />
+            <Route path="/org/team" element={<OrgTeam />} />
             <Route path="/catalog" element={<CatalogPage />} />
             
             <Route path="/estimates" element={<SupplierEstimates />} />

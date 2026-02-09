@@ -18,6 +18,7 @@ import {
 import { DashboardAttentionBanner } from '@/components/dashboard/DashboardAttentionBanner';
 import { DashboardFinancialCard } from '@/components/dashboard/DashboardFinancialCard';
 import { DashboardProjectList } from '@/components/dashboard/DashboardProjectList';
+import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -215,6 +216,9 @@ export default function Dashboard() {
           
           {/* Zone A: Action Center */}
           <div className="space-y-6">
+            {/* Org Invitation Banner */}
+            <OrgInviteBanner />
+
             {/* Attention Banner (disappears when nothing needs attention) */}
             <DashboardAttentionBanner
               attentionItems={attentionItems}

@@ -3811,6 +3811,10 @@ export type Database = {
       }
     }
     Functions: {
+      accept_org_invitation: {
+        Args: { p_invitation_id: string }
+        Returns: undefined
+      }
       accept_project_invite: {
         Args: { _project_id: string }
         Returns: undefined
@@ -3845,6 +3849,10 @@ export type Database = {
           _user_phone?: string
         }
         Returns: Json
+      }
+      decline_org_invitation: {
+        Args: { p_invitation_id: string }
+        Returns: undefined
       }
       decline_project_invite: {
         Args: { _project_id: string }

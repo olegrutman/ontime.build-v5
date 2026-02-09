@@ -10,6 +10,7 @@ import {
   ChevronDown,
   FileText,
   ClipboardCheck,
+  Users,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { NavLink } from '@/components/NavLink';
@@ -32,7 +33,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ROLE_LABELS } from '@/types/organization';
+import { ROLE_LABELS, ROLE_PERMISSIONS } from '@/types/organization';
 import { cn } from '@/lib/utils';
 
 const mainNavItems = [
@@ -66,6 +67,7 @@ export function AppSidebar() {
   const isSupplier = currentOrg?.type === 'SUPPLIER';
   const canManageSuppliers = currentRole === 'GC_PM' || currentRole === 'TC_PM';
   const isGC = currentRole === 'GC_PM';
+  const canManageOrg = currentRole ? ROLE_PERMISSIONS[currentRole]?.canManageOrg : false;
 
   const getInitials = (name?: string | null) => {
     if (!name) return 'U';
@@ -129,6 +131,24 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+              {canManageOrg && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActive('/org/team')}
+                    tooltip={collapsed ? 'My Team' : undefined}
+                  >
+                    <NavLink
+                      to="/org/team"
+                      className="gap-3"
+                      activeClassName="nav-active"
+                    >
+                      <Users className="h-4 w-4 shrink-0" />
+                      {!collapsed && <span>My Team</span>}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
