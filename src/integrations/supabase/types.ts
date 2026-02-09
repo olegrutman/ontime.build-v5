@@ -442,6 +442,7 @@ export type Database = {
           material_total: number | null
           materials_locked_at: string | null
           materials_pricing_locked: boolean | null
+          pricing_mode: string
           project_id: string
           reason: string | null
           rejection_notes: string | null
@@ -472,6 +473,7 @@ export type Database = {
           material_total?: number | null
           materials_locked_at?: string | null
           materials_pricing_locked?: boolean | null
+          pricing_mode?: string
           project_id: string
           reason?: string | null
           rejection_notes?: string | null
@@ -502,6 +504,7 @@ export type Database = {
           material_total?: number | null
           materials_locked_at?: string | null
           materials_pricing_locked?: boolean | null
+          pricing_mode?: string
           project_id?: string
           reason?: string | null
           rejection_notes?: string | null
@@ -3170,6 +3173,86 @@ export type Database = {
             columns: ["work_item_id"]
             isOneToOne: false
             referencedRelation: "work_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tm_time_cards: {
+        Row: {
+          change_order_id: string
+          created_at: string
+          entry_date: string
+          fc_description: string | null
+          fc_entered_by: string | null
+          fc_hours_per_man: number | null
+          fc_man_hours: number | null
+          fc_men_count: number | null
+          fc_submitted_at: string | null
+          gc_acknowledged: boolean
+          gc_acknowledged_at: string | null
+          gc_acknowledged_by: string | null
+          id: string
+          tc_approved: boolean
+          tc_approved_at: string | null
+          tc_approved_by: string | null
+          tc_hourly_rate: number | null
+          tc_own_hours: number | null
+          tc_rejection_notes: string | null
+          tc_submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          change_order_id: string
+          created_at?: string
+          entry_date: string
+          fc_description?: string | null
+          fc_entered_by?: string | null
+          fc_hours_per_man?: number | null
+          fc_man_hours?: number | null
+          fc_men_count?: number | null
+          fc_submitted_at?: string | null
+          gc_acknowledged?: boolean
+          gc_acknowledged_at?: string | null
+          gc_acknowledged_by?: string | null
+          id?: string
+          tc_approved?: boolean
+          tc_approved_at?: string | null
+          tc_approved_by?: string | null
+          tc_hourly_rate?: number | null
+          tc_own_hours?: number | null
+          tc_rejection_notes?: string | null
+          tc_submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          change_order_id?: string
+          created_at?: string
+          entry_date?: string
+          fc_description?: string | null
+          fc_entered_by?: string | null
+          fc_hours_per_man?: number | null
+          fc_man_hours?: number | null
+          fc_men_count?: number | null
+          fc_submitted_at?: string | null
+          gc_acknowledged?: boolean
+          gc_acknowledged_at?: string | null
+          gc_acknowledged_by?: string | null
+          id?: string
+          tc_approved?: boolean
+          tc_approved_at?: string | null
+          tc_approved_by?: string | null
+          tc_hourly_rate?: number | null
+          tc_own_hours?: number | null
+          tc_rejection_notes?: string | null
+          tc_submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tm_time_cards_change_order_id_fkey"
+            columns: ["change_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_order_projects"
             referencedColumns: ["id"]
           },
         ]

@@ -11,6 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { WorkOrderWizard } from '@/components/work-order-wizard';
 import { FCWorkOrderDialog, FCWorkOrderData } from '@/components/fc-work-order';
 import { Plus, FileEdit, Eye, Edit, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { ChangeOrderStatus } from '@/types/changeOrderProject';
 import { ViewSwitcher, ViewMode } from '@/components/ui/view-switcher';
 import { StatusColumn, CHANGE_ORDER_STATUS_OPTIONS } from '@/components/ui/status-column';
@@ -239,7 +240,14 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
               >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-2 gap-2">
-                    <h3 className="font-semibold line-clamp-1 flex-1">{changeOrder.title}</h3>
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <h3 className="font-semibold line-clamp-1">{changeOrder.title}</h3>
+                      {(changeOrder as any).pricing_mode === 'tm' && (
+                        <Badge variant="outline" className="shrink-0 text-xs font-medium border-blue-300 text-blue-700 dark:border-blue-700 dark:text-blue-300">
+                          T&M
+                        </Badge>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <HoverActions actions={hoverActions} />
                       <StatusColumn

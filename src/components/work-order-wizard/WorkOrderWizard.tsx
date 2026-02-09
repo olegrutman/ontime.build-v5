@@ -12,6 +12,7 @@ import { WizardProgress } from './WizardProgress';
 import { TitleStep } from './steps/TitleStep';
 import { LocationStep } from './steps/LocationStep';
 import { WorkTypeStep } from './steps/WorkTypeStep';
+import { PricingModeStep } from './steps/PricingModeStep';
 import { ResourcesStep } from './steps/ResourcesStep';
 import { AssignmentStep } from './steps/AssignmentStep';
 import { ReviewStep } from './steps/ReviewStep';
@@ -20,6 +21,7 @@ const STEPS = [
   { title: 'Title', key: 'title' },
   { title: 'Location', key: 'location' },
   { title: 'Work Type', key: 'worktype' },
+  { title: 'Pricing', key: 'pricing' },
   { title: 'Resources', key: 'resources' },
   { title: 'Assignment', key: 'assignment' },
   { title: 'Review', key: 'review' },
@@ -143,9 +145,12 @@ export function WorkOrderWizard({
             <WorkTypeStep data={formData} onChange={handleChange} />
           )}
           {currentStep === 4 && (
-            <ResourcesStep data={formData} onChange={handleChange} isGC={isGC} />
+            <PricingModeStep data={formData} onChange={handleChange} />
           )}
           {currentStep === 5 && (
+            <ResourcesStep data={formData} onChange={handleChange} isGC={isGC} />
+          )}
+          {currentStep === 6 && (
             <AssignmentStep
               data={formData}
               onChange={handleChange}
@@ -154,7 +159,7 @@ export function WorkOrderWizard({
               isTC={isTC}
             />
           )}
-          {currentStep === 6 && (
+          {currentStep === 7 && (
             <ReviewStep
               data={formData}
               onChange={handleChange}

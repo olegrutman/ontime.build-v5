@@ -31,17 +31,20 @@ export interface WorkOrderWizardData {
   reason?: string;
   fixing_trade_notes?: string;
   
-  // Step 4: Resources
+  // Step 4: Pricing Mode
+  pricing_mode: 'fixed' | 'tm';
+  
+  // Step 5: Resources
   requires_materials: boolean;
   material_cost_responsibility: CostResponsibility | null;
   requires_equipment: boolean;
   equipment_cost_responsibility: CostResponsibility | null;
   
-  // Step 5: Assignment
+  // Step 6: Assignment
   assigned_org_id?: string | null;
   participant_org_ids?: string[];
   
-  // Step 6: Review - AI generated description
+  // Step 7: Review - AI generated description
   description: string;
 }
 
@@ -49,6 +52,7 @@ export const INITIAL_WIZARD_DATA: WorkOrderWizardData = {
   title: '',
   location_data: {},
   work_type: null,
+  pricing_mode: 'fixed',
   requires_materials: false,
   material_cost_responsibility: null,
   requires_equipment: false,
