@@ -98,12 +98,13 @@ export function ProjectTopBar({
 
       {/* Bottom row: Navigation tabs - scrollable on mobile */}
       <div className="relative pb-2">
-        <Tabs value={activeTab} onValueChange={onTabChange}>
+        <Tabs value={activeTab}>
           <div className="overflow-x-auto px-3 sm:px-4">
             <TabsList className="h-11 w-max justify-start bg-transparent p-0 gap-1">
               <TabsTrigger
                 value="overview"
                 className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
+                onClick={() => onTabChange('overview')}
               >
                 Overview
               </TabsTrigger>
@@ -111,6 +112,7 @@ export function ProjectTopBar({
                 <TabsTrigger
                   value="sov"
                   className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
+                  onClick={() => onTabChange('sov')}
                 >
                   SOV
                 </TabsTrigger>
@@ -119,6 +121,7 @@ export function ProjectTopBar({
                 <TabsTrigger
                   value="work-orders"
                   className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
+                  onClick={() => onTabChange('work-orders')}
                 >
                   Work Orders
                 </TabsTrigger>
@@ -127,6 +130,7 @@ export function ProjectTopBar({
                 <TabsTrigger
                   value="estimates"
                   className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
+                  onClick={() => onTabChange('estimates')}
                 >
                   Estimates
                 </TabsTrigger>
@@ -134,12 +138,14 @@ export function ProjectTopBar({
               <TabsTrigger
                 value="invoices"
                 className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
+                onClick={() => onTabChange('invoices')}
               >
                 Invoices
               </TabsTrigger>
               <TabsTrigger
                 value="purchase-orders"
                 className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
+                onClick={() => onTabChange('purchase-orders')}
               >
                 POs
               </TabsTrigger>
@@ -148,6 +154,7 @@ export function ProjectTopBar({
                   value="documents"
                   className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
                   disabled
+                  onClick={() => onTabChange('documents')}
                 >
                   Documents
                 </TabsTrigger>

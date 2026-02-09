@@ -53,6 +53,7 @@ export default function ProjectHome() {
   const { toast } = useToast();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tabResetKey, setTabResetKey] = useState(0);
 
   // Detect if current org is a supplier
   const currentOrg = userOrgRoles[0]?.organization;
@@ -64,6 +65,7 @@ export default function ProjectHome() {
 
   const handleTabChange = (tab: string) => {
     setSearchParams({ tab });
+    setTabResetKey(prev => prev + 1);
   };
 
   const handleStatusChange = async (newStatus: string) => {
@@ -223,6 +225,7 @@ export default function ProjectHome() {
               {/* Invoices Tab */}
               {activeTab === 'invoices' && (
                 <InvoicesTab 
+                  key={tabResetKey}
                   projectId={id!} 
                   retainagePercent={project.retainage_percent || 0} 
                 />
@@ -231,6 +234,7 @@ export default function ProjectHome() {
               {/* Purchase Orders Tab */}
               {activeTab === 'purchase-orders' && (
                 <PurchaseOrdersTab 
+                  key={tabResetKey}
                   projectId={id!} 
                   projectName={project?.name}
                   projectAddress={
