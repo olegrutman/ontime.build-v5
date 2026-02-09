@@ -1,66 +1,67 @@
 
 
-# Work Order-Level Hourly Rate + FC Visibility Fix
+# FC Hourly Rate + TC Dual Counters
 
 ## Two Changes
 
-### 1. Set Hourly Rate Once at the Work Order Level
+### 1. FC Sets Their Own Hourly Rate (TC can see it, GC cannot)
 
-Instead of setting a rate on each time card, TC (or FC) sets it once at the top of the Time Cards panel. It saves to `change_order_projects.tc_hourly_rate` and applies to all cards automatically.
+Currently there's one rate (`tc_hourly_rate`) on the work order level. We add a second rate: `fc_hourly_rate` on `change_order_projects`. FC sets this once at the top of their Time Cards panel. TC can see it (to understand FC's cost). GC never sees it.
 
-- A rate editor appears between the header and running totals
-- Shows current rate with an Edit button
-- All cost calculations use this single rate
-- Per-card rate editing is removed
+- FC sees a rate editor at the top of their panel (same style as the existing TC rate editor)
+- TC sees the FC rate displayed read-only, labeled "FC Rate: $XX/hr"
+- GC sees neither the FC rate nor the TC rate (unchanged from current behavior)
+- FC's running totals show their earnings: total man-hours x FC rate
 
-### 2. FC Cannot See TC-Submitted Data
+### 2. TC Sees Dual Counters
 
-FC should only see their own time cards and their statuses (draft, submitted, approved, rejected). They should NOT see:
-- TC's own hours (`tc_own_hours`)
-- The hourly rate or cost calculations
-- TC submission status to GC
-- GC acknowledgment status
+On the TC's Time Cards panel, replace the single set of running totals with two side-by-side summary sections:
 
-FC sees: date, their men count, hours, man-hours, description, and whether TC approved/rejected their card.
+**"FC to TC" section (what FC submitted to TC):**
+- Total FC man-hours (from all FC-submitted cards)
+- FC cost = FC man-hours x FC hourly rate (what TC owes FC)
+
+**"TC to GC" section (what TC submitted to GC):**
+- Total hours submitted to GC (FC hours + TC own hours, only for cards with `tc_submitted_at`)
+- TC cost = submitted hours x TC hourly rate (what GC owes TC)
+- Count: X of Y cards submitted
+
+This gives TC a clear picture of both sides of the ledger.
 
 ## Database Change
 
-Add `tc_hourly_rate` column to `change_order_projects`:
+Add `fc_hourly_rate` column to `change_order_projects`:
 
 ```text
 ALTER TABLE change_order_projects
-  ADD COLUMN tc_hourly_rate numeric DEFAULT NULL;
+  ADD COLUMN fc_hourly_rate numeric DEFAULT NULL;
 ```
-
-No other schema changes needed.
 
 ## File Changes
 
 ### `src/components/change-order-detail/TMTimeCardsPanel.tsx`
 
-**Rate editor at top (for TC/FC):**
-- Fetch the work order's `tc_hourly_rate` from `change_order_projects`
-- Show an inline rate display/editor above the running totals (visible to TC and FC only, not GC)
-- New mutation to update `change_order_projects.tc_hourly_rate`
-- Remove per-card rate state (`editingRateId`, `rateValue`, `setRateMutation`)
+**FC rate editor:**
+- Fetch `fc_hourly_rate` alongside `tc_hourly_rate` from `change_order_projects`
+- Show an FC rate editor for FC users (same inline pattern as the existing TC rate editor)
+- New mutation to update `change_order_projects.fc_hourly_rate`
+- FC running totals: show "My Earnings" = total man-hours x fc_hourly_rate
+- TC view: show FC rate read-only (not editable by TC)
+- GC view: no change (sees neither rate)
 
-**Cost calculations use work-order rate:**
-- `totalCost` uses the work-order-level rate instead of per-card `tc_hourly_rate`
-- Per-card cost display also uses the work-order rate
-
-**FC visibility restrictions:**
-- FC filter: only show cards where `fc_entered_by === user.id` (their own cards only)
-- FC view hides: TC own hours, hourly rate, cost, "Submitted to GC" badge, GC acknowledgment
-- FC running totals show only man-hours count (no cost)
-- FC status badges limited to: Draft, Submitted, Approved, Rejected (no "Submitted to GC" or "Acknowledged")
+**TC dual counters:**
+- Replace the single running-totals row with two labeled sections
+- "From Field Crew": total FC man-hours, FC cost (fc_hours x fc_rate)
+- "Submitted to GC": total submitted hours, TC cost (submitted_hours x tc_rate), submitted/total count
+- Keep the existing TC rate editor above these counters
 
 ### `src/types/changeOrderProject.ts`
 
-- Add `tc_hourly_rate?: number | null` to the `ChangeOrderProject` interface
+- Add `fc_hourly_rate?: number | null` to the interface
 
 | File | Change |
 |---|---|
-| New migration | Add `tc_hourly_rate` to `change_order_projects` |
-| `TMTimeCardsPanel.tsx` | Add WO-level rate editor, remove per-card rate, restrict FC view |
-| `changeOrderProject.ts` | Add `tc_hourly_rate` to type |
+| New migration | Add `fc_hourly_rate` to `change_order_projects` |
+| `TMTimeCardsPanel.tsx` | FC rate editor, TC dual counters, FC earnings display |
+| `changeOrderProject.ts` | Add `fc_hourly_rate` to type |
 
