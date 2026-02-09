@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { MessageCircle, X, Send } from 'lucide-react';
+import { X, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import sashaAvatar from '@/assets/sasha-avatar.png';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/hooks/useAuth';
@@ -164,9 +165,7 @@ export function SashaBubble() {
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <div className="flex items-center gap-2">
-              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-                <MessageCircle className="h-4 w-4 text-primary-foreground" />
-              </div>
+              <img src={sashaAvatar} alt="Sasha" className="h-8 w-8 rounded-full object-cover" />
               <div>
                 <p className="text-sm font-semibold">Sasha</p>
                 <p className="text-[11px] text-muted-foreground">Your Ontime.Build guide</p>
@@ -226,12 +225,18 @@ export function SashaBubble() {
       {/* Floating Bubble */}
       <button
         onClick={() => setOpen((o) => !o)}
-        className={`fixed bottom-4 right-4 z-50 h-14 w-14 rounded-full bg-primary text-primary-foreground shadow-lg flex items-center justify-center hover:scale-105 transition-transform ${
+        className={`fixed bottom-4 right-4 z-50 h-14 w-14 rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform overflow-hidden ${
           pulse ? 'animate-pulse' : ''
         }`}
         aria-label="Open Sasha guide"
       >
-        {open ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
+        {open ? (
+          <div className="h-full w-full bg-primary flex items-center justify-center">
+            <X className="h-6 w-6 text-primary-foreground" />
+          </div>
+        ) : (
+          <img src={sashaAvatar} alt="Sasha" className="h-full w-full object-cover" />
+        )}
       </button>
     </>
   );
