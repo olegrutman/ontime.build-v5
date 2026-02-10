@@ -1,17 +1,16 @@
 
 
-# Update RESEND_API_KEY Secret
+# Remove Two Sign-Up Links from Landing Page Header
 
-Replace the existing `RESEND_API_KEY` with a fresh key from your Resend dashboard.
+Remove the "Sign Up" navigation link and the "Start free" button from the landing page header (`LandingHeader.tsx`).
 
-## Steps
+## Changes
 
-1. Use the secret update tool to prompt you for the new key value.
-2. Redeploy the `send-notification-email` edge function to pick up the new key.
-3. Run a quick test invocation to confirm the key works.
+**File: `src/components/landing/LandingHeader.tsx`**
 
-## What You Need
+1. Remove `{ label: 'Sign Up', href: '/signup' }` from the `navLinks` array (line ~19)
+2. Remove the `<Link to="/signup">Start free</Link>` button from the desktop actions section (around line ~55)
+3. Remove the corresponding `<Link to="/signup">Start free</Link>` button from the mobile menu (around line ~75)
 
-- Go to [resend.com/api-keys](https://resend.com/api-keys) and create a new API key (or copy an existing valid one).
-- Have it ready to paste when prompted.
+The "Sign in" button and link will remain in both desktop and mobile views. The CTA section further down the page is unchanged.
 
