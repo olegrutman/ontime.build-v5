@@ -77,24 +77,16 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Verify the request is from the service role (DB trigger)
-    const authHeader = req.headers.get("Authorization");
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-    if (!authHeader || !serviceRoleKey) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    if (token !== serviceRoleKey) {
+    // Verify the request is from the DB trigger via shared secret
+    const triggerSecret = req.headers.get("x-trigger-secret");
+    if (triggerSecret !== "internal-db-trigger") {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
+
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     const payload: NotificationPayload = await req.json();
     const { recipient_org_id, recipient_user_id, type, title, body, action_url } = payload;
