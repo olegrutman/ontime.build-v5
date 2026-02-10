@@ -26,12 +26,72 @@ import {
 } from '@/components/ui/alert-dialog';
 import { 
   User, Building2, DollarSign, Lock, Bell, BadgeCheck, AlertTriangle, 
-  Loader2, Save, Eye, EyeOff, Phone, MapPin, Wrench
+  Loader2, Save, Eye, EyeOff, Phone, MapPin, Wrench, UserPlus
 } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
-import { ORG_TYPE_LABELS } from '@/types/organization';
+import { ORG_TYPE_LABELS, ALLOWED_ROLES_BY_ORG_TYPE, ROLE_LABELS, ROLE_PERMISSIONS } from '@/types/organization';
 import { TRADES, Trade } from '@/types/projectWizard';
+import { useOrgTeam } from '@/hooks/useOrgTeam';
+import type { AppRole, OrgType } from '@/types/organization';
+
+function InviteColleagueCard({ orgType }: { orgType: OrgType }) {
+  const { sendInvite } = useOrgTeam();
+  const [email, setEmail] = useState('');
+  const [role, setRole] = useState<AppRole | ''>('');
+  const [sending, setSending] = useState(false);
+
+  const allowedRoles = ALLOWED_ROLES_BY_ORG_TYPE[orgType] || [];
+
+  const handleSend = async () => {
+    if (!email || !role) return;
+    setSending(true);
+    const success = await sendInvite(email, role as AppRole);
+    if (success) {
+      setEmail('');
+      setRole('');
+    }
+    setSending(false);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <UserPlus className="h-5 w-5" />
+          Invite a Colleague
+        </CardTitle>
+        <CardDescription>Send an invitation to join your organization</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex-1">
+            <Input
+              type="email"
+              placeholder="colleague@company.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <Select value={role} onValueChange={(v) => setRole(v as AppRole)}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="Select role" />
+            </SelectTrigger>
+            <SelectContent>
+              {allowedRoles.map((r) => (
+                <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button onClick={handleSend} disabled={sending || !email || !role}>
+            {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UserPlus className="h-4 w-4 mr-2" />}
+            Send Invite
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 const TIMEZONES = [
   'America/New_York',
@@ -60,7 +120,7 @@ const JOB_TITLES = [
 ];
 
 export default function Profile() {
-  const { signOut } = useAuth();
+  const { signOut, userOrgRoles } = useAuth();
   const {
     loading,
     profile,
@@ -556,6 +616,15 @@ export default function Profile() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Section 2.5: Invite a Colleague */}
+        {organization?.type && ROLE_PERMISSIONS[
+          (userOrgRoles[0]?.role as AppRole) || 'FS'
+        ]?.canManageOrg && (
+          <InviteColleagueCard
+            orgType={organization.type as OrgType}
+          />
+        )}
 
         {/* Section 3: Pricing Defaults */}
         <Card>
