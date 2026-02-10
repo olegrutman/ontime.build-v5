@@ -58,7 +58,7 @@ export function HeroSection() {
               asChild
               className="h-12 px-8 text-base shadow-purple hover:shadow-lg transition-all"
             >
-              <a href="#auth">
+              <a href="/signup">
                 Start free trial
                 <ArrowRight className="ml-2 w-4 h-4" />
               </a>

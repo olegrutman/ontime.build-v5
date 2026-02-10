@@ -65,7 +65,7 @@ export default function Auth() {
         navigate('/dashboard');
       } else if (needsOrgSetup) {
         // User exists but no org - redirect to landing page sign-up
-        navigate('/#auth');
+        navigate('/signup');
       }
     }
   }, [authLoading, user, userOrgRoles, needsOrgSetup, navigate]);
@@ -128,7 +128,7 @@ export default function Auth() {
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
               Don't have an account?{' '}
-              <Link to="/#auth" className="text-primary hover:underline font-medium">
+              <Link to="/signup" className="text-primary hover:underline font-medium">
                 Sign up
               </Link>
             </p>

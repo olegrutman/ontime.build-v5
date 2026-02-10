@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
+import Signup from "./pages/Signup";
 import CreateProjectNew from "./pages/CreateProjectNew";
 import ProjectHome from "./pages/ProjectHome";
 import EditProjectScope from "./pages/EditProjectScope";
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/signup" element={<Signup />} />
             <Route path="/create-project" element={<CreateProjectNew />} />
             <Route path="/project/:id" element={<ProjectHome />} />
             <Route path="/project/:id/edit" element={<EditProject />} />
