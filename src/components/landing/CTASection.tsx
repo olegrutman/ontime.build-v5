@@ -30,7 +30,7 @@ export function CTASection() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button 
               size="lg" 
-              onClick={() => navigate('/auth')}
+              onClick={() => navigate('/signup')}
               className="h-14 px-10 text-lg shadow-purple hover:shadow-lg transition-all"
             >
               Start free trial
