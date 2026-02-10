@@ -1,0 +1,1 @@
+GRANT INSERT ON public.profiles TO supabase_auth_admin;
