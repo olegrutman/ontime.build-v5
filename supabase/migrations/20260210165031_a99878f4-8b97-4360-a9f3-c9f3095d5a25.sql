@@ -1,0 +1,21 @@
+
+ALTER TABLE profiles DROP CONSTRAINT IF EXISTS profiles_user_id_fkey;
+ALTER TABLE user_org_roles DROP CONSTRAINT IF EXISTS user_org_roles_user_id_fkey;
+ALTER TABLE user_settings DROP CONSTRAINT IF EXISTS user_settings_user_id_fkey;
+ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_created_by_fkey;
+ALTER TABLE org_invitations DROP CONSTRAINT IF EXISTS org_invitations_invited_by_fkey;
+ALTER TABLE project_team DROP CONSTRAINT IF EXISTS project_team_user_id_fkey;
+ALTER TABLE project_team DROP CONSTRAINT IF EXISTS project_team_invited_by_user_id_fkey;
+ALTER TABLE project_invites DROP CONSTRAINT IF EXISTS project_invites_invited_by_user_id_fkey;
+ALTER TABLE project_contracts DROP CONSTRAINT IF EXISTS project_contracts_created_by_user_id_fkey;
+ALTER TABLE project_activity DROP CONSTRAINT IF EXISTS project_activity_actor_user_id_fkey;
+ALTER TABLE invoices DROP CONSTRAINT IF EXISTS invoices_submitted_by_fkey;
+ALTER TABLE invoices DROP CONSTRAINT IF EXISTS invoices_approved_by_fkey;
+ALTER TABLE invoices DROP CONSTRAINT IF EXISTS invoices_rejected_by_fkey;
+ALTER TABLE invoices DROP CONSTRAINT IF EXISTS invoices_created_by_fkey;
+ALTER TABLE change_order_projects DROP CONSTRAINT IF EXISTS change_order_projects_created_by_fkey;
+ALTER TABLE change_order_participants DROP CONSTRAINT IF EXISTS change_order_participants_invited_by_fkey;
+ALTER TABLE change_order_fc_hours DROP CONSTRAINT IF EXISTS change_order_fc_hours_locked_by_fkey;
+ALTER TABLE change_order_fc_hours DROP CONSTRAINT IF EXISTS change_order_fc_hours_entered_by_fkey;
+ALTER TABLE change_order_tc_labor DROP CONSTRAINT IF EXISTS change_order_tc_labor_entered_by_fkey;
+ALTER TABLE project_guests DROP CONSTRAINT IF EXISTS project_guests_invited_by_fkey;
