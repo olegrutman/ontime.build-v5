@@ -1,80 +1,44 @@
 
 
-# Add Role Change for Org Members
+# Fix: Signup Fails with "permission denied for table users"
 
-## Overview
+## Root Cause
 
-Replace the static role badge on each member row with a role dropdown that admins can use to change a member's role. A SECURITY DEFINER database function handles the update server-side with proper authorization checks.
+The `create_organization_and_set_admin` function (and two other RPCs: `accept_org_invitation`, `decline_org_invitation`) query `auth.users` to fetch the user's email. These functions are `SECURITY DEFINER` owned by `postgres`, but in Lovable Cloud `postgres` is not a true superuser. Since `auth.users` has Row-Level Security enabled with no policies granting `postgres` access, every `SELECT FROM auth.users` inside those functions fails with "permission denied for table users."
+
+The signup flow hits this at Step 2 when `create_organization_and_set_admin` runs:
+```sql
+INSERT INTO profiles (...)
+SELECT _user_id, email, ...
+FROM auth.users WHERE id = _user_id   -- THIS LINE FAILS
+```
+
+## The Fix
+
+Rewrite the three functions to **stop reading from `auth.users`**. Instead, pass email as a parameter or read it from `public.profiles` (which the `handle_new_user` trigger already populates during signup).
+
+Specifically for `create_organization_and_set_admin`: the email is already available in `public.profiles` because the trigger inserts it before this RPC runs. So the function should read from `profiles` instead of `auth.users`.
 
 ## Database Migration
 
-A new `change_org_member_role` SECURITY DEFINER function that:
-1. Verifies the caller is a PM in the same organization as the target member
-2. Verifies the target role is valid for the organization type
-3. Prevents users from changing their own role (safety guard)
-4. Updates the `user_org_roles.role` column
+One migration that replaces three functions:
 
-No new RLS UPDATE policy is needed on `user_org_roles` since the function uses SECURITY DEFINER to bypass RLS.
-
-```text
-CREATE OR REPLACE FUNCTION public.change_org_member_role(
-  p_member_role_id UUID,
-  p_new_role TEXT
-) RETURNS void
-LANGUAGE plpgsql SECURITY DEFINER SET search_path = public
-AS $$
-DECLARE
-  v_org_id UUID;
-  v_target_user_id UUID;
-  v_org_type TEXT;
-BEGIN
-  -- Get target member info
-  SELECT organization_id, user_id INTO v_org_id, v_target_user_id
-  FROM user_org_roles WHERE id = p_member_role_id;
-
-  IF v_org_id IS NULL THEN RAISE EXCEPTION 'Member not found'; END IF;
-
-  -- Caller must be PM in same org
-  IF NOT EXISTS (
-    SELECT 1 FROM user_org_roles
-    WHERE user_id = auth.uid() AND organization_id = v_org_id
-      AND role IN ('GC_PM','TC_PM','FC_PM')
-  ) THEN RAISE EXCEPTION 'Not authorized'; END IF;
-
-  -- Cannot change own role
-  IF v_target_user_id = auth.uid() THEN
-    RAISE EXCEPTION 'Cannot change your own role';
-  END IF;
-
-  -- Validate role is allowed for org type
-  SELECT type INTO v_org_type FROM organizations WHERE id = v_org_id;
-  IF NOT (
-    (v_org_type = 'GC' AND p_new_role IN ('GC_PM')) OR
-    (v_org_type = 'TC' AND p_new_role IN ('TC_PM','FS')) OR
-    (v_org_type = 'FC' AND p_new_role IN ('FC_PM','FS')) OR
-    (v_org_type = 'SUPPLIER' AND p_new_role IN ('SUPPLIER'))
-  ) THEN RAISE EXCEPTION 'Invalid role for org type'; END IF;
-
-  -- Update
-  UPDATE user_org_roles SET role = p_new_role::app_role
-  WHERE id = p_member_role_id;
-END;
-$$;
-```
+| Function | Current Problem | Fix |
+|---|---|---|
+| `create_organization_and_set_admin` | `SELECT email FROM auth.users` in profile upsert | Read email from `public.profiles` instead |
+| `accept_org_invitation` | `SELECT email FROM auth.users` to match invitation | Read email from `public.profiles` instead |
+| `decline_org_invitation` | `SELECT email FROM auth.users` to match invitation | Read email from `public.profiles` instead |
 
 ## File Changes
 
 | File | Change |
 |---|---|
-| New migration | Create `change_org_member_role` function |
-| `src/hooks/useOrgTeam.ts` | Add `changeRole(memberRoleId, newRole)` function that calls the RPC |
-| `src/pages/OrgTeam.tsx` | Replace static Badge with a Select dropdown for role. Disable for the current user's own row. Show Badge for orgs with only one allowed role (e.g., GC). |
+| New migration | `CREATE OR REPLACE FUNCTION` for all three functions, replacing `auth.users` references with `public.profiles` lookups |
 
-## UI Behavior
+No frontend code changes needed -- the signup flow is correct; only the database functions need updating.
 
-- Each member row shows a role dropdown instead of a static badge
-- The current user's own row keeps a static badge (cannot change own role)
-- Organizations with only one possible role (GC has only GC_PM) show a static badge for all members since there is nothing to change
-- On selection change, the RPC is called and the list refreshes
-- Error/success feedback via existing toast system
+## Risk Considerations
+
+- The `handle_new_user` trigger must fire before `create_organization_and_set_admin` runs. This is guaranteed because the trigger fires on INSERT to `auth.users` (during `supabase.auth.signUp`), and the RPC is called in a separate request afterward.
+- The `accept_org_invitation` and `decline_org_invitation` functions also rely on `profiles` already existing, which is true for any authenticated user since the trigger creates it at signup.
 
