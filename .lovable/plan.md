@@ -1,31 +1,30 @@
 
 
-# Add "Invite to My Company" on Profile Page
+# Fix: Signup "Database error finding user" (500)
 
-## What This Does
+## Root Cause
 
-Adds a compact "Invite a Colleague" card to the Profile page, right after the Organization Information section. Users can enter an email and select a role to invite someone to their organization -- without needing to navigate to the separate My Team page.
+The `handle_new_user` trigger fires when a new user signs up and tries to INSERT into `public.profiles`. However, the `supabase_auth_admin` database role (which runs GoTrue/Auth operations) has **no INSERT permission** on the `profiles` table.
 
-## UI Design
+This causes the trigger to fail silently inside the auth transaction, rolling it back. GoTrue then can't find the partially-created user, producing the cryptic error: "unable to find user from email identity for duplicates: User not found" (HTTP 500).
 
-A new card between the Organization section and the Pricing Defaults section containing:
-- Email input + role dropdown + "Send Invite" button (single row on desktop)
-- Role options filtered by org type (using existing `ALLOWED_ROLES_BY_ORG_TYPE`)
-- Only visible to users with `canManageOrg` permission
-- Uses the existing `sendInvite` function from `useOrgTeam` hook
-- Success/error feedback via existing toast system
+## The Fix
+
+Grant the `supabase_auth_admin` role INSERT permission on the `profiles` table, so the `handle_new_user` trigger can successfully create the profile row during signup.
+
+## Database Migration
+
+A single `GRANT` statement:
+
+```text
+GRANT INSERT ON public.profiles TO supabase_auth_admin;
+```
 
 ## File Changes
 
 | File | Change |
 |---|---|
-| `src/pages/Profile.tsx` | Import `useOrgTeam` and permission constants. Add an "Invite a Colleague" card after the Organization card (after line 558). Card contains email input, role select, and send button. Only rendered when `permissions?.canManageOrg` is true. |
+| New migration | `GRANT INSERT ON public.profiles TO supabase_auth_admin` |
 
-## Technical Details
-
-- Reuses `useOrgTeam().sendInvite` -- no new hooks or database changes needed
-- Role options come from `ALLOWED_ROLES_BY_ORG_TYPE[orgType]`
-- Email is trimmed and lowercased before sending (already handled in `sendInvite`)
-- The card includes local state for email and role, resets on successful send
-- No database migration required -- everything uses existing tables and RLS policies
+No frontend code changes required -- the signup flow code is correct; it was the database permission blocking the trigger.
 
