@@ -13,7 +13,7 @@ export function LandingHeader() {
   const navLinks = [
     { label: 'Features', href: '#features' },
     { label: 'How it works', href: '#how-it-works' },
-    { label: 'Sign Up', href: '/signup' },
+    
   ];
 
   return (
@@ -52,9 +52,6 @@ export function LandingHeader() {
                 <Button variant="ghost" asChild>
                   <Link to="/auth">Sign in</Link>
                 </Button>
-                <Button className="shadow-purple" asChild>
-                  <Link to="/signup">Start free</Link>
-                </Button>
               </>
             )}
           </div>
@@ -87,9 +84,6 @@ export function LandingHeader() {
                   <>
                     <Button variant="outline" asChild className="w-full" onClick={() => setOpen(false)}>
                       <Link to="/auth">Sign in</Link>
-                    </Button>
-                    <Button asChild className="w-full" onClick={() => setOpen(false)}>
-                      <Link to="/signup">Start free</Link>
                     </Button>
                   </>
                 )}
