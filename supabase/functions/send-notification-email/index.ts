@@ -222,15 +222,6 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    // Validate the API key
-    if (/[\\x00-\\x1F\\x7F]/.test(resendApiKey) || /\\s/.test(resendApiKey.trim())) {
-      console.error("RESEND_API_KEY contains invalid characters");
-      return new Response(JSON.stringify({ error: "Invalid API key format" }), {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
-    }
-
     const resend = new Resend(resendApiKey.trim());
     const emailHtml = buildEmailHtml(title, body, fullActionUrl, appBaseUrl);
 
