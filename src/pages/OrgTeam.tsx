@@ -24,7 +24,8 @@ import { format } from 'date-fns';
 
 export default function OrgTeam() {
   const { userOrgRoles } = useAuth();
-  const { members, pendingInvites, loading, sendInvite, cancelInvite } = useOrgTeam();
+  const { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole } = useOrgTeam();
+  const { user } = useAuth();
 
   const currentOrg = userOrgRoles[0]?.organization;
   const orgType = currentOrg?.type;
@@ -77,24 +78,47 @@ export default function OrgTeam() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {members.map((m) => (
-              <div
-                key={m.id}
-                className="flex items-center justify-between py-2 border-b border-border last:border-0"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">
-                    {m.profile?.full_name || 'Unknown'}
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {m.profile?.email}
-                  </p>
+            {members.map((m) => {
+              const isSelf = m.user_id === user?.id;
+              const showDropdown = !isSelf && allowedRoles.length > 1;
+
+              return (
+                <div
+                  key={m.id}
+                  className="flex items-center justify-between py-2 border-b border-border last:border-0"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {m.profile?.full_name || 'Unknown'}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {m.profile?.email}
+                    </p>
+                  </div>
+                  {showDropdown ? (
+                    <Select
+                      value={m.role}
+                      onValueChange={(v) => changeRole(m.id, v as AppRole)}
+                    >
+                      <SelectTrigger className="w-[200px] shrink-0 ml-2 h-8 text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {allowedRoles.map((r) => (
+                          <SelectItem key={r} value={r}>
+                            {ROLE_LABELS[r]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Badge variant="secondary" className="shrink-0 ml-2">
+                      {ROLE_LABELS[m.role]}
+                    </Badge>
+                  )}
                 </div>
-                <Badge variant="secondary" className="shrink-0 ml-2">
-                  {ROLE_LABELS[m.role]}
-                </Badge>
-              </div>
-            ))}
+              );
+            })}
             {members.length === 0 && (
               <p className="text-sm text-muted-foreground">No members found.</p>
             )}

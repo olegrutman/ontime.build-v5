@@ -3837,6 +3837,10 @@ export type Database = {
       can_see_financials: { Args: { _user_id: string }; Returns: boolean }
       can_see_margins: { Args: { _user_id: string }; Returns: boolean }
       can_view_po_pricing: { Args: { po_id: string }; Returns: boolean }
+      change_org_member_role: {
+        Args: { p_member_role_id: string; p_new_role: string }
+        Returns: undefined
+      }
       check_org_setup_needed: { Args: never; Returns: Json }
       create_organization_and_set_admin: {
         Args: {

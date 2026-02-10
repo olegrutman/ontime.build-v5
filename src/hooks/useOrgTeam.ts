@@ -101,7 +101,23 @@ export function useOrgTeam() {
     }
   };
 
-  return { members, pendingInvites, loading, sendInvite, cancelInvite, refetch: fetchData };
+  const changeRole = async (memberRoleId: string, newRole: AppRole) => {
+    const { error } = await supabase.rpc('change_org_member_role', {
+      p_member_role_id: memberRoleId,
+      p_new_role: newRole,
+    });
+
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      return false;
+    }
+
+    toast({ title: 'Role Updated', description: 'Member role has been changed.' });
+    fetchData();
+    return true;
+  };
+
+  return { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, refetch: fetchData };
 }
 
 /** Hook for the dashboard: fetch pending org invites for the current user */
