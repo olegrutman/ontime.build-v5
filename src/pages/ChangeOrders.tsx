@@ -288,7 +288,7 @@ const ChangeOrders = () => {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="space-y-4">
                 {filteredChangeOrders.map((changeOrder) => (
                   <Card
                     key={changeOrder.id}
@@ -306,12 +306,7 @@ const ChangeOrders = () => {
                           {getStatusLabel(changeOrder.status)}
                         </span>
                       </div>
-                      {changeOrder.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                          {changeOrder.description}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                         {changeOrder.work_type && (
                           <span className="capitalize">{changeOrder.work_type.replace('_', ' ')}</span>
                         )}
