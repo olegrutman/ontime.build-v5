@@ -258,11 +258,6 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
                       />
                     </div>
                   </div>
-                  {changeOrder.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                      {changeOrder.description}
-                    </p>
-                  )}
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     {changeOrder.work_type && (
                       <span className="capitalize">{changeOrder.work_type.replace('_', ' ')}</span>

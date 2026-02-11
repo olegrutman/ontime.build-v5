@@ -113,7 +113,7 @@ export function ChangeOrderDetailPage() {
         <div className="min-h-screen flex w-full">
           <AppSidebar />
           <SidebarInset className="flex flex-col flex-1">
-            <div className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur px-4 py-3">
+            <div className="sticky top-0 z-40 border-b bg-card backdrop-blur px-4 py-3">
               <Skeleton className="h-8 w-64" />
             </div>
             <main className="flex-1 overflow-auto p-6 space-y-4">
@@ -168,7 +168,7 @@ export function ChangeOrderDetailPage() {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
-        <SidebarInset className="flex flex-col flex-1">
+         <SidebarInset className="flex flex-col flex-1 bg-background">
           {/* Sticky Top Bar */}
           <WorkOrderTopBar
             projectName={changeOrder.project?.name || 'Project'}
@@ -185,7 +185,7 @@ export function ChangeOrderDetailPage() {
               hasFCParticipant={hasFCParticipant}
             />
 
-            <div className="container mx-auto px-4 pb-20">
+            <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 pb-20">
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
                 {/* ===== Zone A: Main Content ===== */}
                 <div className="space-y-6">

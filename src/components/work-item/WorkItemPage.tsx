@@ -146,7 +146,7 @@ export function WorkItemPage() {
     <div className="min-h-screen bg-background">
       <Header />
       
-      <main className="container mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto w-full p-4 sm:p-6 pb-20">
         {/* Back button */}
         <Button variant="ghost" onClick={() => navigate(-1)} className="mb-4">
           <ArrowLeft className="w-4 h-4 mr-2" />

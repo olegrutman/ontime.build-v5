@@ -257,7 +257,7 @@ export default function PurchaseOrders() {
 
   return (
     <AppLayout title="Purchase Orders" subtitle="Create and send purchase orders to suppliers">
-      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div className="flex justify-end">
           <Dialog open={newPOOpen} onOpenChange={setNewPOOpen}>
             <DialogTrigger asChild>

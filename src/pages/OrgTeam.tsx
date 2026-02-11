@@ -60,7 +60,7 @@ export default function OrgTeam() {
 
   return (
     <AppLayout title="My Team">
-      <div className="p-4 sm:p-6 space-y-6 max-w-3xl pb-20">
+      <div className="space-y-6 max-w-3xl">
         {/* Org Header */}
         <div>
           <h1 className="text-2xl font-bold text-foreground">{currentOrg?.name}</h1>

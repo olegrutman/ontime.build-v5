@@ -20,14 +20,14 @@ export function TopBar({
   newButtonLabel = 'New',
 }: TopBarProps) {
   return (
-    <header className="sticky top-0 z-40 flex h-14 items-center gap-2 sm:gap-4 border-b bg-background/95 backdrop-blur px-3 sm:px-4">
+    <header className="sticky top-0 z-40 flex h-16 items-center gap-2 sm:gap-4 border-b bg-card backdrop-blur px-3 sm:px-4">
       <SidebarTrigger className="-ml-1" />
       <Separator orientation="vertical" className="h-6 hidden sm:block" />
 
       {/* Page Title */}
       {title && (
         <div className="min-w-0">
-          <h1 className="text-sm font-semibold truncate">{title}</h1>
+          <h1 className="text-base font-semibold truncate">{title}</h1>
           {subtitle && (
             <p className="text-xs text-muted-foreground truncate">{subtitle}</p>
           )}

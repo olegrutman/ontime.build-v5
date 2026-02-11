@@ -28,7 +28,7 @@ export function WorkOrderTopBar({
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b bg-card backdrop-blur">
       {/* Top row: sidebar trigger, project name, WO title, status, notifications */}
       <div className="flex items-center gap-2 sm:gap-4 px-3 sm:px-4 h-14">
         <SidebarTrigger className="-ml-1" />

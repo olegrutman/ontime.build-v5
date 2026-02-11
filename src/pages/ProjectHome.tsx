@@ -115,7 +115,7 @@ export default function ProjectHome() {
         <div className="min-h-screen flex w-full">
           <AppSidebar />
           <SidebarInset className="flex flex-col flex-1">
-            <div className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur px-4 py-3">
+            <div className="sticky top-0 z-40 border-b bg-card backdrop-blur px-4 py-3">
               <Skeleton className="h-8 w-64" />
             </div>
             <main className="flex-1 overflow-auto container mx-auto px-4 py-6 space-y-6">
@@ -153,7 +153,7 @@ export default function ProjectHome() {
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
-        <SidebarInset className="flex flex-col flex-1">
+         <SidebarInset className="flex flex-col flex-1 bg-background">
           {/* Sticky Project Top Bar */}
           <ProjectTopBar
             projectName={project.name}
@@ -166,7 +166,7 @@ export default function ProjectHome() {
 
           {/* Scrollable content */}
           <main className="flex-1 overflow-auto">
-            <div className="container mx-auto px-4 py-6 pb-20 space-y-6">
+            <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 pb-20 space-y-6">
               {/* Overview Tab */}
               {activeTab === 'overview' && (
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
