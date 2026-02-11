@@ -24,6 +24,7 @@ interface ProjectRowProps {
   userRole: string | null;
   contractValue: number | null;
   pendingActions: number;
+  orgType?: string | null;
   onArchive: (projectId: string) => void;
   onUnarchive: (projectId: string) => void;
   onStatusChange: (projectId: string, status: 'active' | 'on_hold' | 'completed') => void;
@@ -67,6 +68,7 @@ export function ProjectRow({
   userRole,
   contractValue,
   pendingActions,
+  orgType,
   onArchive,
   onUnarchive,
   onStatusChange,
@@ -171,7 +173,7 @@ export function ProjectRow({
                   {pendingActions} pending
                 </Badge>
               )}
-              {contractValue !== null && (
+              {contractValue !== null && orgType !== 'TC' && (
                 <span className="text-sm font-medium ml-auto">{formatCurrency(contractValue)}</span>
               )}
             </div>
@@ -179,7 +181,7 @@ export function ProjectRow({
 
           {/* Desktop info */}
           <div className="hidden sm:flex items-center gap-4 shrink-0">
-            {contractValue !== null && (
+            {contractValue !== null && orgType !== 'TC' && (
               <div className="text-right">
                 <p className="text-base font-semibold">{formatCurrency(contractValue)}</p>
                 <p className="text-sm text-muted-foreground">Contract</p>
