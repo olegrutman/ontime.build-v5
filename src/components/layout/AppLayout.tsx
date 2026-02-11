@@ -33,9 +33,7 @@ export function AppLayout({
             newButtonLabel={newButtonLabel}
           />
           <main className="flex-1 overflow-auto">
-            <div className="max-w-lg mx-auto w-full">
-              {children}
-            </div>
+            {children}
           </main>
         </SidebarInset>
       </div>

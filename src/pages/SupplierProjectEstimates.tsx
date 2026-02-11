@@ -396,7 +396,7 @@ export default function SupplierProjectEstimates() {
         <AppSidebar />
         <SidebarInset className="flex flex-col flex-1">
           <TopBar title="Project Estimates" />
-          <main className="flex-1 overflow-auto"><div className="max-w-lg mx-auto w-full px-4 py-6 space-y-6">
+          <main className="flex-1 overflow-auto container mx-auto px-4 py-6 space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
@@ -747,7 +747,7 @@ export default function SupplierProjectEstimates() {
                 fetchEstimates();
               }}
             />
-          </div></main>
+          </main>
         </SidebarInset>
       </div>
     </SidebarProvider>

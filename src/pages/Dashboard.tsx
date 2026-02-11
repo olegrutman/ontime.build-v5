@@ -211,8 +211,11 @@ export default function Dashboard() {
   return (
     <AppLayout title="Dashboard">
       <div className="p-4 sm:p-6 pb-20">
-        {/* Single-column stacked layout */}
-        <div className="space-y-6">
+        {/* Two-Zone Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 lg:gap-8">
+          
+          {/* Zone A: Action Center */}
+          <div className="space-y-6">
             {/* Org Invitation Banner */}
             <OrgInviteBanner />
 
@@ -235,25 +238,30 @@ export default function Dashboard() {
               onUnarchive={handleUnarchive}
               onStatusChange={handleStatusChange}
             />
-          {/* Financial Card (hidden for suppliers) */}
-          {!isSupplier && (
-            <DashboardFinancialCard
-              role={billing.role}
-              totalContractValue={financials.totalContracts}
-              outstandingToPay={billing.outstandingToPay}
-              outstandingToCollect={billing.outstandingToCollect}
-              profitMargin={financials.profitMargin}
-              totalRevenue={financials.totalRevenue}
-              totalCosts={financials.totalCosts}
-            />
-          )}
+          </div>
 
-          {/* Reminders */}
-          <RemindersTile
-            reminders={reminders}
-            onComplete={handleCompleteReminder}
-            onAdd={() => setAddReminderOpen(true)}
-          />
+          {/* Zone B: Summary Sidebar */}
+          <div className="space-y-4">
+            {/* Financial Card (hidden for suppliers) */}
+            {!isSupplier && (
+              <DashboardFinancialCard
+                role={billing.role}
+                totalContractValue={financials.totalContracts}
+                outstandingToPay={billing.outstandingToPay}
+                outstandingToCollect={billing.outstandingToCollect}
+                profitMargin={financials.profitMargin}
+                totalRevenue={financials.totalRevenue}
+                totalCosts={financials.totalCosts}
+              />
+            )}
+
+            {/* Reminders */}
+            <RemindersTile
+              reminders={reminders}
+              onComplete={handleCompleteReminder}
+              onAdd={() => setAddReminderOpen(true)}
+            />
+          </div>
         </div>
       </div>
 

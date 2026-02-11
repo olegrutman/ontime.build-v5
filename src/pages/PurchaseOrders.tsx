@@ -351,9 +351,9 @@ export default function PurchaseOrders() {
           </Dialog>
         </div>
 
-        <div className="space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* PO List */}
-          <div className="space-y-4">
+          <div className="lg:col-span-1 space-y-4">
             <h2 className="text-lg font-semibold">Orders</h2>
             {orders.length === 0 ? (
               <Card>
@@ -389,7 +389,7 @@ export default function PurchaseOrders() {
           </div>
 
           {/* PO Details */}
-          <div>
+          <div className="lg:col-span-2">
             {selectedPO ? (
               <Card>
                 <CardHeader>

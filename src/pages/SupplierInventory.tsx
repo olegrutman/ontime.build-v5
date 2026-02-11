@@ -333,7 +333,7 @@ export default function SupplierInventory() {
         <AppSidebar />
         <SidebarInset className="flex flex-col flex-1">
           <TopBar title="My Product Catalog" />
-          <main className="flex-1 overflow-auto"><div className="max-w-lg mx-auto w-full px-4 py-6 space-y-6">
+          <main className="flex-1 overflow-auto container mx-auto px-4 py-6 space-y-6">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
@@ -371,7 +371,7 @@ export default function SupplierInventory() {
             </div>
 
             {/* Stats */}
-            <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-4">
@@ -581,7 +581,7 @@ export default function SupplierInventory() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-          </div></main>
+          </main>
         </SidebarInset>
       </div>
     </SidebarProvider>

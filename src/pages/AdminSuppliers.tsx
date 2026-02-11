@@ -224,9 +224,9 @@ export default function AdminSuppliers() {
   return (
     <AppLayout title="Supplier Management" subtitle="Create suppliers and upload product catalogs">
       <div className="p-4 sm:p-6">
-        <div className="space-y-4 sm:space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Suppliers List */}
-          <div>
+          <div className="lg:col-span-1">
             <Card className="p-4">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-semibold">Suppliers</h2>
@@ -325,7 +325,7 @@ export default function AdminSuppliers() {
           </div>
 
           {/* Catalog Items */}
-          <div>
+          <div className="lg:col-span-2">
             {selectedSupplier ? (
               <Card className="p-4">
                 <div className="flex items-center justify-between mb-4">
