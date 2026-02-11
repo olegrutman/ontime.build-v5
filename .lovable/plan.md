@@ -1,72 +1,63 @@
 
-# Sort POs by Status Priority and Enable Edit-to-Wizard Flow
+# SOV Page: Separate Contracts from Work Orders + Billing Info
 
-## 1. Sort POs by Status (Most Attention First)
+## Changes
 
-**File: `src/components/project/PurchaseOrdersTab.tsx`**
+### File: `src/components/sov/ContractSOVEditor.tsx`
 
-Add a status priority map and sort `filteredPOs` before rendering. The priority order (highest attention first):
+**1. Split SOVs into two groups**
 
-1. SUBMITTED (needs pricing from supplier)
-2. PRICED (needs finalization or ordering)
-3. ACTIVE (draft, needs items or submission)
-4. FINALIZED (approved, pending order)
-5. ORDERED (in progress)
-6. READY_FOR_DELIVERY (awaiting delivery)
-7. DELIVERED (complete)
+Before the `sovs.map()` rendering loop (line 235), partition `sovs` into two arrays:
+- `contractSovs` -- SOVs where the linked contract's trade is NOT "Work Order" or "Work Order Labor"
+- `workOrderSovs` -- SOVs where the linked contract's trade IS "Work Order" or "Work Order Labor"
 
-Sort by this priority, then by `created_at` descending within the same status.
+Render them in two separate sections with section headings:
+- "Main Contracts" section (always on top, rendered first)
+- "Work Orders" section (below, with a separator/heading)
 
-## 2. Edit Button Opens Wizard with Existing Items
+**2. Add billing summary to Work Order SOV cards**
 
-**File: `src/components/project/PurchaseOrdersTab.tsx`**
+For each Work Order SOV card, display a small summary line showing how much of the main contract SOV has been billed. This is calculated by:
+- Finding the main contract SOVs (non-work-order)
+- Summing `billed_to_date` across all main contract SOV items
+- Summing `value_amount` (scheduled value) across all main contract SOV items
+- Displaying: "Main Contract Billed: $X of $Y (Z%)"
 
-Currently the `onEdit` handler on `POCard` just navigates to `PODetail`. Change it to:
+This gives users context on overall project billing progress when looking at work order SOVs.
 
-- Add new state: `editingPO` (holds the PO being edited) and `editWizardOpen`
-- When Edit is clicked, fetch the PO's line items from `po_line_items`, map them to `POWizardV2LineItem` format, and open the wizard pre-populated
-- On wizard complete: delete old `po_line_items` for the PO, insert new ones, update PO metadata (notes, delivery date), then refresh the list
+**3. Add overall billing summary at the top**
 
-**File: `src/components/po-wizard-v2/POWizardV2.tsx`**
-
-Add optional props for edit mode:
-- `initialData?: Partial<POWizardV2Data>` -- pre-fills the wizard with existing items
-- `editMode?: boolean` -- skips the header screen (supplier/project already set) and goes straight to the items screen
-- When `initialData` is provided with `line_items`, the wizard opens on the Items screen so users can immediately add/remove products
-
-**File: `src/components/po-wizard-v2/ItemsScreen.tsx`** (if needed)
-
-No changes expected; the existing add/remove/edit item flows already work. The wizard just needs to be pre-seeded with data.
+Add a compact summary bar above all SOVs showing:
+- Total main contract value
+- Total billed to date across main contracts
+- Percentage complete
 
 ## Technical Details
 
-### Status Priority Map
-```typescript
-const STATUS_PRIORITY: Record<POStatus, number> = {
-  SUBMITTED: 0,
-  PRICED: 1,
-  ACTIVE: 2,
-  FINALIZED: 3,
-  ORDERED: 4,
-  READY_FOR_DELIVERY: 5,
-  DELIVERED: 6,
-};
+The SOV rendering block changes from:
+
+```
+{sovs.map(sov => { ... })}
 ```
 
-### Edit Flow Data Mapping
-When editing, `po_line_items` rows are mapped to `POWizardV2LineItem`:
-- `catalog_item_id` from the line item's linked catalog item (may be empty for unmatched items)
-- `supplier_sku`, `description` (as `name`), `quantity`, `uom` mapped directly
-- `id` gets a new client-side UUID for the wizard's internal tracking
-- `specs` built from available dimension/length data
-- `unit_mode` defaults to `'EACH'`
+To:
 
-### Save Flow for Edits
-1. Delete all existing `po_line_items` where `po_id = editingPO.id`
-2. Insert new line items from wizard data
-3. Update PO record with any changed notes
-4. Refresh PO list
+```
+{/* Main Contracts */}
+<h3>Main Contracts</h3>
+{contractSovs.map(sov => { ... })}
+
+{/* Work Orders */}
+{workOrderSovs.length > 0 && (
+  <>
+    <h3>Work Orders</h3>
+    <div>Main Contract Billed: $X of $Y (Z%)</div>
+    {workOrderSovs.map(sov => { ... })}
+  </>
+)}
+```
+
+The existing SOV card rendering code (the content inside the `.map()`) stays completely unchanged -- only the grouping and section headings are new.
 
 ### Files Modified
-- `src/components/project/PurchaseOrdersTab.tsx` -- sorting + edit handler
-- `src/components/po-wizard-v2/POWizardV2.tsx` -- accept initialData/editMode props
+- `src/components/sov/ContractSOVEditor.tsx` -- split rendering into two grouped sections with billing summary
