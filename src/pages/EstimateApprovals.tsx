@@ -232,7 +232,7 @@ export default function EstimateApprovals() {
 
   return (
     <AppLayout title="Estimate Approvals" subtitle="Review and approve supplier estimates">
-      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Pending Approvals */}
           <div className="lg:col-span-1 space-y-4">

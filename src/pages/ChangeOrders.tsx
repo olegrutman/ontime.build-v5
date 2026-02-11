@@ -207,7 +207,7 @@ const ChangeOrders = () => {
       onNewClick={() => setShowWizard(true)}
       newButtonLabel="New Work Order"
     >
-      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Project Selector */}
         <Card>
           <CardContent className="py-4">
@@ -243,20 +243,22 @@ const ChangeOrders = () => {
         {selectedProjectId && (
           <>
             {/* Status Tabs */}
-            <div className="flex flex-wrap gap-2">
-              {(['ALL', 'draft', 'fc_input', 'tc_pricing', 'ready_for_approval', 'approved', 'rejected'] as const).map(
-                (status) => (
-                  <Button
-                    key={status}
-                    variant={activeTab === status ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setActiveTab(status)}
-                    className="text-xs"
-                  >
-                    {getStatusLabel(status)} ({statusCounts[status]})
-                  </Button>
-                )
-              )}
+            <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+              <div className="flex gap-2 pb-1">
+                {(['ALL', 'draft', 'fc_input', 'tc_pricing', 'ready_for_approval', 'approved', 'rejected'] as const).map(
+                  (status) => (
+                    <Button
+                      key={status}
+                      variant={activeTab === status ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setActiveTab(status)}
+                      className="text-xs whitespace-nowrap shrink-0"
+                    >
+                      {getStatusLabel(status)} ({statusCounts[status]})
+                    </Button>
+                  )
+                )}
+              </div>
             </div>
 
             {/* Change Orders List */}
@@ -288,7 +290,7 @@ const ChangeOrders = () => {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {filteredChangeOrders.map((changeOrder) => (
                   <Card
                     key={changeOrder.id}
@@ -306,11 +308,6 @@ const ChangeOrders = () => {
                           {getStatusLabel(changeOrder.status)}
                         </span>
                       </div>
-                      {changeOrder.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
-                          {changeOrder.description}
-                        </p>
-                      )}
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         {changeOrder.work_type && (
                           <span className="capitalize">{changeOrder.work_type.replace('_', ' ')}</span>

@@ -9,7 +9,7 @@
 @layer base {
   :root {
     /* Core brand - Clean white with purple accent */
-    --background: 0 0% 100%;
+    --background: 220 14% 96%;
     --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
@@ -99,7 +99,7 @@
   }
 
   .dark {
-    --background: 222 47% 6%;
+    --background: 222 47% 8%;
     --foreground: 210 40% 98%;
 
     --card: 222 47% 9%;

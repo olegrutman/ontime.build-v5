@@ -24,7 +24,7 @@ export function AppLayout({
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
-        <SidebarInset className="flex flex-col flex-1">
+         <SidebarInset className="flex flex-col flex-1 bg-background">
           <TopBar
             title={title}
             subtitle={subtitle}
@@ -33,7 +33,9 @@ export function AppLayout({
             newButtonLabel={newButtonLabel}
           />
           <main className="flex-1 overflow-auto">
-            {children}
+            <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 pb-20">
+              {children}
+            </div>
           </main>
         </SidebarInset>
       </div>

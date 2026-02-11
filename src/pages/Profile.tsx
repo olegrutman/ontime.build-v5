@@ -335,7 +335,7 @@ export default function Profile() {
 
   return (
     <AppLayout>
-      <div className="max-w-3xl mx-auto space-y-6 pb-12">
+      <div className="max-w-3xl mx-auto space-y-6">
         <div>
           <h1 className="text-2xl font-bold">Profile & Settings</h1>
           <p className="text-muted-foreground">Manage your personal info, organization, and preferences.</p>
@@ -351,7 +351,7 @@ export default function Profile() {
             <CardDescription>Your contact details and preferences</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>First Name</Label>
                 <Input
@@ -370,7 +370,7 @@ export default function Profile() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Email</Label>
                 <Input value={profile?.email || ''} disabled className="bg-muted" />
@@ -386,7 +386,7 @@ export default function Profile() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Preferred Contact</Label>
                 <Select
@@ -456,7 +456,7 @@ export default function Profile() {
             <CardDescription>Your company details</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Organization Name</Label>
                 <Input
@@ -497,7 +497,7 @@ export default function Profile() {
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>City</Label>
                 <Input
@@ -533,7 +533,7 @@ export default function Profile() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Company Phone</Label>
                 <div className="relative">
@@ -553,7 +553,7 @@ export default function Profile() {
             </div>
 
             {requiresTrade && (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Trade {requiresTrade && '*'}</Label>
                   <Select
@@ -589,7 +589,7 @@ export default function Profile() {
 
             <Separator />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>License Number</Label>
                 <Input
@@ -636,7 +636,7 @@ export default function Profile() {
             <CardDescription>Pre-fill values for change orders and estimates</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Default Hourly Rate</Label>
                 <div className="relative">

@@ -27,7 +27,7 @@ export default function PartnerDirectory() {
   if (!user) {
     return (
       <AppLayout title="Partner Directory">
-        <div className="p-4 sm:p-6">
+        <div className="space-y-4">
           <Card>
             <CardContent className="p-6 text-center">
               <p className="text-muted-foreground">Please sign in to access the Partner Directory.</p>
@@ -43,7 +43,7 @@ export default function PartnerDirectory() {
 
   return (
     <AppLayout title="Partner Directory" subtitle="Everyone you've worked with on projects">
-      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Search */}
         <div className="relative max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

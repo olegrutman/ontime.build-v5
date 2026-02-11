@@ -134,7 +134,7 @@ export default function MaterialOrders() {
 
   return (
     <AppLayout title="Material Orders" subtitle="Create and manage material orders">
-      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         <div className="flex justify-end">
           <Dialog>
             <DialogTrigger asChild>
