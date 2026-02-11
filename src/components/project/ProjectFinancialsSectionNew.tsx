@@ -323,13 +323,15 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
 
   // Find relevant contracts based on viewer role
   const upstreamContract = contracts.find(c => 
-    (c.from_role === 'General Contractor' && c.to_role === 'Trade Contractor') ||
-    (c.to_role === 'General Contractor' && c.from_role === 'Trade Contractor')
+    ((c.from_role === 'General Contractor' && c.to_role === 'Trade Contractor') ||
+     (c.to_role === 'General Contractor' && c.from_role === 'Trade Contractor')) &&
+    c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
   );
   
   const downstreamContract = contracts.find(c => 
-    (c.from_role === 'Trade Contractor' && c.to_role === 'Field Crew') ||
-    (c.to_role === 'Trade Contractor' && c.from_role === 'Field Crew')
+    ((c.from_role === 'Trade Contractor' && c.to_role === 'Field Crew') ||
+     (c.to_role === 'Trade Contractor' && c.from_role === 'Field Crew')) &&
+    c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
   );
 
   const isTCView = viewerRole === 'Trade Contractor';
