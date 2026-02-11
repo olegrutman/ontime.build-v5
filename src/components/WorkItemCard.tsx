@@ -99,12 +99,7 @@ export function WorkItemCard({ item, depth = 0, onClick, isSelected, onEdit, onD
               {item.title}
             </h3>
             
-            {/* Description */}
-            {item.description && (
-              <p className="text-sm text-muted-foreground line-clamp-1 mb-3">
-                {item.description}
-              </p>
-            )}
+            {/* Description removed for compact mobile layout */}
             
             {/* Meta row */}
             <div className="flex items-center gap-4 text-xs text-muted-foreground">

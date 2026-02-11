@@ -166,44 +166,39 @@ export default function ProjectHome() {
 
           {/* Scrollable content */}
           <main className="flex-1 overflow-auto">
-            <div className="container mx-auto px-4 py-6 pb-20 space-y-6">
+            <div className="p-4 pb-20 space-y-6 max-w-lg mx-auto w-full">
               {/* Overview Tab */}
               {activeTab === 'overview' && (
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
-                  {/* Zone A: Action & Summary */}
-                  <div className="space-y-6">
-                    <AttentionBanner
-                      projectId={id!}
-                      onNavigate={handleTabChange}
-                      isSupplier={isSupplier}
-                      supplierOrgId={supplierOrgId}
-                    />
+                <div className="space-y-6">
+                  <AttentionBanner
+                    projectId={id!}
+                    onNavigate={handleTabChange}
+                    isSupplier={isSupplier}
+                    supplierOrgId={supplierOrgId}
+                  />
 
-                    <MetricStrip
-                      projectId={id!}
-                      onNavigate={handleTabChange}
-                      isSupplier={isSupplier}
-                      supplierOrgId={supplierOrgId}
-                    />
+                  <MetricStrip
+                    projectId={id!}
+                    onNavigate={handleTabChange}
+                    isSupplier={isSupplier}
+                    supplierOrgId={supplierOrgId}
+                  />
 
-                    {/* Financial Summary */}
-                    {isSupplier && supplierOrgId ? (
-                      <SupplierFinancialsSummaryCard projectId={id!} supplierOrgId={supplierOrgId} />
-                    ) : (
-                      <ProjectFinancialsSectionNew projectId={id!} />
-                    )}
-                  </div>
+                  {/* Financial Summary */}
+                  {isSupplier && supplierOrgId ? (
+                    <SupplierFinancialsSummaryCard projectId={id!} supplierOrgId={supplierOrgId} />
+                  ) : (
+                    <ProjectFinancialsSectionNew projectId={id!} />
+                  )}
 
-                  {/* Zone B: Context */}
-                  <div className="space-y-4">
-                    <ProjectTeamSection projectId={id!} />
-                    {isSupplier && supplierOrgId ? (
-                      <SupplierContractsSection projectId={id!} supplierOrgId={supplierOrgId} />
-                    ) : (
-                      <ProjectContractsSection projectId={id!} />
-                    )}
-                    <ProjectScopeSection projectId={id!} projectType={project.project_type} />
-                  </div>
+                  {/* Context sections */}
+                  <ProjectTeamSection projectId={id!} />
+                  {isSupplier && supplierOrgId ? (
+                    <SupplierContractsSection projectId={id!} supplierOrgId={supplierOrgId} />
+                  ) : (
+                    <ProjectContractsSection projectId={id!} />
+                  )}
+                  <ProjectScopeSection projectId={id!} projectType={project.project_type} />
                 </div>
               )}
 
