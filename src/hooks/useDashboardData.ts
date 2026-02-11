@@ -56,6 +56,11 @@ interface FinancialSummary {
   totalRevenue: number;
   totalCosts: number;
   profitMargin: number;
+  totalWorkOrders: number;
+  totalWorkOrderValue: number;
+  totalBilled: number;
+  outstandingBilling: number;
+  potentialProfit: number;
 }
 
 interface DashboardData {
@@ -102,6 +107,11 @@ export function useDashboardData(): DashboardData {
     totalRevenue: 0,
     totalCosts: 0,
     profitMargin: 0,
+    totalWorkOrders: 0,
+    totalWorkOrderValue: 0,
+    totalBilled: 0,
+    outstandingBilling: 0,
+    potentialProfit: 0,
   });
   const [billing, setBilling] = useState({
     invoicesReceived: 0,
@@ -476,27 +486,29 @@ export function useDashboardData(): DashboardData {
         changeOrders: thisMonthCOs,
       });
 
-      // 7. Calculate financial summary for TC
+      // 7. Calculate financial summary
       const totalContractValue = contracts.reduce((sum, c) => {
-        // For TC, sum contracts where they are the receiver (to_org_id)
         if (orgType === 'TC' && c.to_org_id === currentOrg.id) {
           return sum + (c.contract_sum || 0);
         }
-        // For GC, sum contracts where they are the client/payer (to_org_id on TC->GC contracts)
         if (orgType === 'GC' && c.to_org_id === currentOrg.id) {
           return sum + (c.contract_sum || 0);
         }
-        // For FC, sum contracts where they are the receiver
         if (orgType === 'FC' && c.to_org_id === currentOrg.id) {
           return sum + (c.contract_sum || 0);
         }
         return sum;
       }, 0);
 
-      // TC profit calculation: revenue from upstream - costs to downstream
+      // TC-specific: fetch work orders and calculate comprehensive financials
       let totalRevenue = 0;
       let totalCosts = 0;
+      let totalWorkOrders = 0;
+      let totalWorkOrderValue = 0;
+      let totalBilled = 0;
+
       if (orgType === 'TC') {
+        // Revenue from main contracts (where TC is receiver)
         contracts.forEach(c => {
           if (c.to_org_id === currentOrg.id) {
             totalRevenue += c.contract_sum || 0;
@@ -505,17 +517,48 @@ export function useDashboardData(): DashboardData {
             totalCosts += c.contract_sum || 0;
           }
         });
+
+        // Fetch contracted work orders for work order revenue
+        if (projectIds.length > 0) {
+          const { data: workOrders } = await supabase
+            .from('change_order_projects')
+            .select('id, project_id, final_price, status')
+            .in('project_id', projectIds)
+            .in('status', ['approved', 'contracted']);
+
+          const woList = workOrders || [];
+          totalWorkOrders = woList.length;
+          totalWorkOrderValue = woList
+            .filter(wo => wo.status === 'contracted')
+            .reduce((sum, wo) => sum + (wo.final_price || 0), 0);
+          totalRevenue += totalWorkOrderValue;
+        }
+
+        // Calculate total billed from non-draft invoices sent by TC
+        const billedInvoices = allInvoices.filter(i => {
+          if (i.status === 'DRAFT' || !i.contract_id) return false;
+          const contract = contractDetailMap.get(i.contract_id);
+          return contract?.from_org_id === currentOrg.id;
+        });
+        totalBilled = billedInvoices.reduce((sum, i) => sum + (i.total_amount || 0), 0);
       }
 
+      const potentialProfit = totalRevenue - totalCosts;
       const profitMargin = totalRevenue > 0 
-        ? ((totalRevenue - totalCosts) / totalRevenue) * 100 
+        ? (potentialProfit / totalRevenue) * 100 
         : 0;
+      const outstandingBilling = totalRevenue - totalBilled;
 
       setFinancials({
         totalContracts: totalContractValue,
         totalRevenue,
         totalCosts,
         profitMargin,
+        totalWorkOrders,
+        totalWorkOrderValue,
+        totalBilled,
+        outstandingBilling,
+        potentialProfit,
       });
 
       // 8. Fetch reminders

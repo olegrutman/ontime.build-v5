@@ -138,6 +138,7 @@ export function DashboardProjectList({
                 userRole={project.userRole}
                 contractValue={project.contractValue}
                 pendingActions={project.pendingActions}
+                orgType={orgType}
                 onArchive={onArchive}
                 onUnarchive={onUnarchive}
                 onStatusChange={onStatusChange}

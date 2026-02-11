@@ -252,6 +252,11 @@ export default function Dashboard() {
                 profitMargin={financials.profitMargin}
                 totalRevenue={financials.totalRevenue}
                 totalCosts={financials.totalCosts}
+                totalWorkOrders={financials.totalWorkOrders}
+                totalWorkOrderValue={financials.totalWorkOrderValue}
+                totalBilled={financials.totalBilled}
+                outstandingBilling={financials.outstandingBilling}
+                potentialProfit={financials.potentialProfit}
               />
             )}
 

@@ -13,6 +13,11 @@ interface DashboardFinancialCardProps {
   profitMargin?: number;
   totalRevenue?: number;
   totalCosts?: number;
+  totalWorkOrders?: number;
+  totalWorkOrderValue?: number;
+  totalBilled?: number;
+  outstandingBilling?: number;
+  potentialProfit?: number;
 }
 
 function formatCurrency(value: number): string {
@@ -29,12 +34,106 @@ export function DashboardFinancialCard({
   profitMargin,
   totalRevenue,
   totalCosts,
+  totalWorkOrders,
+  totalWorkOrderValue,
+  totalBilled,
+  outstandingBilling,
+  potentialProfit,
 }: DashboardFinancialCardProps) {
   const [expanded, setExpanded] = useState(false);
 
-  // Headline number depends on role
-  const headlineLabel = role === 'TC' ? 'Revenue' : 'Total Contracts';
-  const headlineValue = role === 'TC' ? (totalRevenue || 0) : totalContractValue;
+  if (role === 'TC') {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center justify-between text-base">
+            <div className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-green-600" />
+              Financial Snapshot
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setExpanded(!expanded)}
+              className="h-8 w-8 p-0 lg:hidden"
+            >
+              {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Headline: Total Revenue */}
+          <div>
+            <p className="text-sm text-muted-foreground">Total Revenue</p>
+            <p className="text-2xl font-bold">{formatCurrency(totalRevenue || 0)}</p>
+          </div>
+
+          <div className={cn("space-y-3", !expanded && "hidden lg:block")}>
+            <Separator />
+
+            {/* Revenue breakdown */}
+            <div className="grid grid-cols-2 gap-3">
+              <MetricCell
+                label="Active Contracts"
+                value={formatCurrency(totalContractValue)}
+              />
+              <MetricCell
+                label={`Work Orders (${totalWorkOrders || 0})`}
+                value={formatCurrency(totalWorkOrderValue || 0)}
+              />
+            </div>
+
+            <Separator />
+
+            {/* Billing metrics */}
+            <div className="grid grid-cols-2 gap-3">
+              <MetricCell
+                label="Total Billed"
+                value={formatCurrency(totalBilled || 0)}
+                color="text-green-600"
+              />
+              <MetricCell
+                label="Outstanding Billing"
+                value={formatCurrency(outstandingBilling || 0)}
+                color="text-amber-600"
+              />
+              <MetricCell
+                label="Outstanding to Collect"
+                value={formatCurrency(outstandingToCollect)}
+                color="text-green-600"
+              />
+            </div>
+
+            <Separator />
+
+            {/* Cost & profit */}
+            <div className="grid grid-cols-2 gap-3">
+              <MetricCell
+                label="Costs"
+                value={`-${formatCurrency(totalCosts || 0)}`}
+                color="text-destructive"
+              />
+              <MetricCell
+                label="Potential Profit"
+                value={formatCurrency(potentialProfit || 0)}
+                color={(potentialProfit || 0) >= 0 ? 'text-green-600' : 'text-destructive'}
+              />
+              <MetricCell
+                label="Profit Margin"
+                value={profitMargin !== undefined ? `${profitMargin.toFixed(1)}%` : '--'}
+                color={(profitMargin || 0) >= 0 ? 'text-green-600' : 'text-destructive'}
+                large
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // GC / FC layout (unchanged)
+  const headlineLabel = 'Total Contracts';
+  const headlineValue = totalContractValue;
 
   return (
     <Card>
@@ -55,13 +154,11 @@ export function DashboardFinancialCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Headline Number */}
         <div>
           <p className="text-sm text-muted-foreground">{headlineLabel}</p>
           <p className="text-2xl font-bold">{formatCurrency(headlineValue)}</p>
         </div>
 
-        {/* Sub-metrics - always visible on desktop, collapsible on mobile */}
         <div className={cn("space-y-3", !expanded && "hidden lg:block")}>
           <Separator />
           
@@ -74,35 +171,18 @@ export function DashboardFinancialCard({
               />
             )}
             
-            {(role === 'TC' || role === 'FC') && (
-              <MetricCell 
-                label="Outstanding to Collect" 
-                value={formatCurrency(outstandingToCollect)} 
-                color="text-green-600" 
-              />
-            )}
-
-            {role === 'TC' && (
+            {role === 'FC' && (
               <>
                 <MetricCell 
-                  label="Costs" 
-                  value={`-${formatCurrency(totalCosts || 0)}`} 
-                  color="text-destructive" 
+                  label="Outstanding to Collect" 
+                  value={formatCurrency(outstandingToCollect)} 
+                  color="text-green-600" 
                 />
                 <MetricCell 
-                  label="Profit Margin" 
-                  value={profitMargin !== undefined ? `${profitMargin.toFixed(1)}%` : '--'} 
-                  color={(profitMargin || 0) >= 0 ? 'text-green-600' : 'text-destructive'}
-                  large
+                  label="Contract Value" 
+                  value={formatCurrency(totalContractValue)} 
                 />
               </>
-            )}
-
-            {role === 'FC' && (
-              <MetricCell 
-                label="Contract Value" 
-                value={formatCurrency(totalContractValue)} 
-              />
             )}
           </div>
         </div>
