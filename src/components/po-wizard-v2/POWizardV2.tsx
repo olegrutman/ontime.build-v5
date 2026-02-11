@@ -56,6 +56,9 @@ interface POWizardV2Props {
   workOrderId?: string;
   workOrderTitle?: string;
   onPOCreated?: (poId: string) => Promise<void>;
+  // Edit mode
+  editMode?: boolean;
+  initialData?: Partial<POWizardV2Data>;
 }
 
 export function POWizardV2({
@@ -69,6 +72,8 @@ export function POWizardV2({
   workOrderId,
   workOrderTitle,
   onPOCreated,
+  editMode = false,
+  initialData,
 }: POWizardV2Props) {
   const isMobile = useIsMobile();
   const [screen, setScreen] = useState<Screen>('header');
@@ -148,18 +153,29 @@ export function POWizardV2({
   // Reset when dialog opens
   useEffect(() => {
     if (open) {
-      setScreen('header');
-      setHasApprovedEstimate(false);
-      setFormData({
-        ...INITIAL_PO_WIZARD_V2_DATA,
-        project_id: projectId,
-        project_name: projectName,
-        delivery_address: projectAddress,
-        work_order_id: workOrderId,
-        work_order_title: workOrderTitle,
-      });
+      if (editMode && initialData) {
+        setScreen('items');
+        setFormData({
+          ...INITIAL_PO_WIZARD_V2_DATA,
+          project_id: projectId,
+          project_name: projectName,
+          delivery_address: projectAddress,
+          ...initialData,
+        });
+      } else {
+        setScreen('header');
+        setHasApprovedEstimate(false);
+        setFormData({
+          ...INITIAL_PO_WIZARD_V2_DATA,
+          project_id: projectId,
+          project_name: projectName,
+          delivery_address: projectAddress,
+          work_order_id: workOrderId,
+          work_order_title: workOrderTitle,
+        });
+      }
     }
-  }, [open, projectId, projectName, projectAddress, workOrderId, workOrderTitle]);
+  }, [open, projectId, projectName, projectAddress, workOrderId, workOrderTitle, editMode, initialData]);
 
   // Check for approved estimate when supplier changes
   useEffect(() => {
