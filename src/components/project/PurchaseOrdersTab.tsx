@@ -13,11 +13,21 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { PurchaseOrder, POStatus, PO_STATUS_LABELS } from '@/types/purchaseOrder';
+import { PurchaseOrder, POStatus, POLineItem, PO_STATUS_LABELS } from '@/types/purchaseOrder';
 import { POWizardV2 } from '@/components/po-wizard-v2';
-import { POWizardV2Data } from '@/types/poWizardV2';
+import { POWizardV2Data, POWizardV2LineItem } from '@/types/poWizardV2';
 import { POCard, PODetail } from '@/components/purchase-orders';
 import { Package } from 'lucide-react';
+
+const STATUS_PRIORITY: Record<POStatus, number> = {
+  SUBMITTED: 0,
+  PRICED: 1,
+  ACTIVE: 2,
+  FINALIZED: 3,
+  ORDERED: 4,
+  READY_FOR_DELIVERY: 5,
+  DELIVERED: 6,
+};
 
 interface PurchaseOrdersTabProps {
   projectId: string;
@@ -34,6 +44,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: Pu
   const [wizardOpen, setWizardOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPOId, setSelectedPOId] = useState<string | null>(null);
+  const [editingPO, setEditingPO] = useState<PurchaseOrder | null>(null);
+  const [editWizardOpen, setEditWizardOpen] = useState(false);
+  const [editInitialData, setEditInitialData] = useState<Partial<POWizardV2Data> | null>(null);
 
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
@@ -199,9 +212,112 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: Pu
     window.open(url, '_blank');
   };
 
-  const filteredPOs = statusFilter === 'all'
+  const handleEditPO = async (po: PurchaseOrder) => {
+    try {
+      const { data: lineItems, error } = await supabase
+        .from('po_line_items')
+        .select('*')
+        .eq('po_id', po.id)
+        .order('line_number');
+
+      if (error) throw error;
+
+      const wizardItems: POWizardV2LineItem[] = (lineItems || []).map((li: any) => ({
+        id: crypto.randomUUID(),
+        catalog_item_id: '',
+        supplier_sku: li.supplier_sku || '',
+        name: li.description,
+        specs: [li.dimension, li.length_ft ? `${li.length_ft}ft` : null].filter(Boolean).join(' | '),
+        quantity: li.quantity,
+        unit_mode: li.pieces ? 'BUNDLE' as const : 'EACH' as const,
+        bundle_count: li.pieces || undefined,
+        item_notes: li.notes || undefined,
+        uom: li.uom,
+        length_ft: li.length_ft || undefined,
+        computed_lf: li.computed_lf || undefined,
+      }));
+
+      setEditingPO(po);
+      setEditInitialData({
+        project_id: projectId,
+        project_name: projectName || '',
+        delivery_address: projectAddress || '',
+        supplier_id: po.supplier_id,
+        supplier_name: po.supplier?.name,
+        notes: po.notes || '',
+        line_items: wizardItems,
+      });
+      setEditWizardOpen(true);
+    } catch (err) {
+      console.error('Error loading PO for edit:', err);
+      toast.error('Failed to load PO for editing');
+    }
+  };
+
+  const handleEditComplete = async (data: POWizardV2Data) => {
+    if (!editingPO) return;
+    setIsSubmitting(true);
+    try {
+      // Delete old line items
+      const { error: deleteErr } = await supabase
+        .from('po_line_items')
+        .delete()
+        .eq('po_id', editingPO.id);
+      if (deleteErr) throw deleteErr;
+
+      // Insert new line items
+      if (data.line_items.length > 0) {
+        const lineItems = data.line_items.map((item, idx) => ({
+          po_id: editingPO.id,
+          line_number: idx + 1,
+          supplier_sku: item.supplier_sku,
+          description: item.name,
+          quantity: item.quantity,
+          uom: item.uom,
+          pieces: item.unit_mode === 'BUNDLE' ? item.bundle_count : null,
+          length_ft: item.length_ft || null,
+          computed_lf: item.computed_lf || null,
+          notes: item.item_notes || null,
+        }));
+        const { error: insertErr } = await supabase.from('po_line_items').insert(lineItems);
+        if (insertErr) throw insertErr;
+      }
+
+      // Update PO metadata
+      const { error: updateErr } = await supabase
+        .from('purchase_orders')
+        .update({
+          notes: data.notes || null,
+          source_estimate_id: data.source_estimate_id || null,
+          source_pack_name: data.source_pack_name || null,
+          pack_modified: data.pack_modified || false,
+        })
+        .eq('id', editingPO.id);
+      if (updateErr) throw updateErr;
+
+      toast.success(`PO ${editingPO.po_number} updated`);
+      setEditWizardOpen(false);
+      setEditingPO(null);
+      setEditInitialData(null);
+      fetchPurchaseOrders();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Error updating PO:', err);
+      toast.error('Failed to update PO: ' + message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const filteredPOs = (statusFilter === 'all'
     ? purchaseOrders
-    : purchaseOrders.filter(po => po.status === statusFilter);
+    : purchaseOrders.filter(po => po.status === statusFilter)
+  ).sort((a, b) => {
+    const pa = STATUS_PRIORITY[a.status] ?? 99;
+    const pb = STATUS_PRIORITY[b.status] ?? 99;
+    if (pa !== pb) return pa - pb;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
 
   const stats = {
     total: purchaseOrders.length,
@@ -293,7 +409,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: Pu
                   key={po.id}
                   po={po}
                   onClick={() => setSelectedPOId(po.id)}
-                  onEdit={() => setSelectedPOId(po.id)}
+                  onEdit={() => handleEditPO(po)}
                   onDownload={handleDownload}
                   onSubmit={handleSubmitToSupplier}
                   canEdit={canCreatePO}
@@ -318,6 +434,24 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: Pu
         onComplete={handleCreatePO}
         isSubmitting={isSubmitting}
       />
+
+      {/* PO Edit Wizard */}
+      {editInitialData && (
+        <POWizardV2
+          open={editWizardOpen}
+          onOpenChange={(open) => {
+            setEditWizardOpen(open);
+            if (!open) { setEditingPO(null); setEditInitialData(null); }
+          }}
+          projectId={projectId}
+          projectName={projectName || 'Project'}
+          projectAddress={projectAddress || ''}
+          onComplete={handleEditComplete}
+          isSubmitting={isSubmitting}
+          editMode
+          initialData={editInitialData}
+        />
+      )}
     </>
   );
 }
