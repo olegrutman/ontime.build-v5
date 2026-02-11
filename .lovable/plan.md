@@ -1,111 +1,102 @@
 
-# Work Orders Tab: Sort, Separate T&M, Show Creator, Contract Price, Progress Stage
+# TC Dashboard: Enhanced Financial Snapshot & Hide Contract Price on Project Tiles
 
-## Changes Overview
+## Overview
 
-### 1. Sort by urgency (most attention first)
-Priority order:
-1. `rejected` -- needs immediate re-work
-2. `fc_input` -- waiting on Field Crew
-3. `tc_pricing` -- waiting on Trade Contractor pricing
-4. `ready_for_approval` -- needs GC decision
-5. `draft` -- in progress, still being built
-6. `approved` -- done, pending contract conversion
-7. `contracted` -- complete
+For Trade Contractor users on the Dashboard, hide contract prices from project tiles and completely rework the Financial Snapshot card to show comprehensive metrics including work order financials.
 
-Within same status, sort by `created_at` descending (newest first).
+## Changes
 
-### 2. Separate T&M and Fixed Price work orders
-Split the list into two sections with headings:
-- **"Fixed Price"** section (work orders where `pricing_mode !== 'tm'`)
-- **"Time & Material"** section (work orders where `pricing_mode === 'tm'`)
+### 1. Hide Contract Price on Project Tiles for TC
 
-Each section gets its own heading. If either section is empty, it is hidden.
+**File: `src/components/dashboard/DashboardProjectList.tsx`**
 
-### 3. Show who created each work order
-Update the data fetch in `useChangeOrderProject.ts` to join the `profiles` table on `created_by`:
-```sql
-profiles!created_by(first_name, last_name)
+Pass `orgType` down to `ProjectRow` so it can conditionally hide the contract value display when the user is a Trade Contractor.
+
+**File: `src/components/dashboard/ProjectRow.tsx`**
+
+- Add `orgType` prop
+- When `orgType === 'TC'`, hide the contract value display (both mobile and desktop sections)
+
+### 2. Recalculate Financial Snapshot for TC
+
+**File: `src/hooks/useDashboardData.ts`**
+
+Expand the `FinancialSummary` interface and calculation logic:
+
+Current TC financial calculation only sums `project_contracts`. The new version will:
+
+- **Total Active Contracts**: Sum of all `contract_sum` from `project_contracts` where `to_org_id === currentOrg.id` (contracts where TC is the receiver from GC)
+- **Total Work Orders**: Count and total value of `change_order_projects` across all projects where the TC's org created them or is the project owner, with status in `approved` or `contracted`
+- **Total Revenue**: Main contracts (from GC) + Work Order revenue (from `final_price` on contracted work orders where TC bills GC)
+- **Total Costs**: Downstream contracts to FC (`from_org_id === currentOrg.id`) + Work Order labor costs
+- **Total Billed**: Sum of `total_amount` from invoices where TC is the sender (`from_org_id === currentOrg.id`) and status is not DRAFT
+- **Outstanding Billing**: Revenue minus Total Billed (how much is left to bill)
+- **Potential Profit**: Total Revenue - Total Costs
+- **Potential Profit Margin**: (Potential Profit / Total Revenue) * 100
+
+New fields added to `FinancialSummary`:
+```text
+totalActiveContracts  -- main contract sum from GC
+totalWorkOrders       -- count of work orders
+totalWorkOrderValue   -- sum of work order final_price (contracted)
+totalBilled           -- sum of non-draft invoices sent by TC
+outstandingBilling    -- totalRevenue - totalBilled
+potentialProfit       -- totalRevenue - totalCosts
 ```
-Display on each card: "Created by [Name]" with a subtle indicator if you are the creator ("You") vs someone else's name.
 
-### 4. Show contract price if contracted
-When a work order's status is `contracted`, display the `final_price` on the card as "Contract: $X,XXX".
+The hook will fetch `change_order_projects` for all project IDs and sum `final_price` where `status = 'contracted'` to get work order revenue. It will also sum invoices where TC is the sender to get total billed amount.
 
-### 5. Remove board/grid view option
-Remove the `ViewSwitcher` component from the Work Orders tab entirely. Only list view remains.
+### 3. Redesign Financial Card for TC
 
-### 6. Unify terminology: "In Progress" consistently
-The status labels already map `draft` to "In Progress" in `CHANGE_ORDER_STATUS_LABELS` and `CHANGE_ORDER_STATUS_OPTIONS`. Update the status filter tabs to use the same labels from `CHANGE_ORDER_STATUS_LABELS` instead of a separate `getStatusLabel` function. This ensures "In Progress" is used everywhere instead of "Draft".
+**File: `src/components/dashboard/DashboardFinancialCard.tsx`**
 
-### 7. Show current progress stage on the card
-For "In Progress" (draft) work orders, show a small inline indicator of where in the workflow the work order currently sits. Use the checklist data or a simple text like the next pending action. For non-draft statuses, the status badge already indicates the stage. Add a brief sub-label showing the current step (e.g., "Field Crew Input", "Trade Contractor Pricing") directly on the tile.
+Update the TC-specific rendering to show:
 
-### 8. Update WorkOrderTopBar with same terminology
-The `WorkOrderTopBar` already uses `ChangeOrderStatusBadge` which reads from `CHANGE_ORDER_STATUS_LABELS` -- so "draft" already shows as "In Progress". The progress bar `SHORT_LABELS` also maps draft to "In Progress". No changes needed here as they already use the centralized labels.
+- **Headline**: "Total Revenue" (main contracts + work orders combined)
+- **Active Contracts**: Total main contract value
+- **Work Orders**: Count and total value
+- **Total Billed**: How much has been invoiced
+- **Outstanding Billing**: Revenue minus billed
+- **Costs**: Downstream costs (FC contracts)
+- **Potential Profit**: Revenue - Costs with margin percentage
+- **Outstanding to Collect**: Approved invoices awaiting payment (existing)
 
----
+Layout uses the existing `MetricCell` component in a grid, with a separator between revenue metrics and cost/profit metrics.
 
 ## Technical Details
 
-### File: `src/hooks/useChangeOrderProject.ts`
-- In the `useChangeOrderProject` query (lines 50-75), add join: `profiles!created_by(first_name, last_name)` to the select clause
-- Update the `ChangeOrderProject` type usage to include creator profile data
+### Database Queries Added (in useDashboardData.ts)
 
-### File: `src/types/changeOrderProject.ts`
-- Add optional `creator_profile` to `ChangeOrderProject` interface:
-  ```typescript
-  creator_profile?: { first_name: string | null; last_name: string | null } | null;
-  ```
-
-### File: `src/components/project/WorkOrdersTab.tsx`
-
-**Remove board view:**
-- Remove `ViewSwitcher` import and component
-- Remove `viewMode` state
-- Remove `WorkOrdersBoard` import and conditional rendering
-- Remove "only show in list view" conditional on status tabs
-
-**Sort by urgency:**
-```typescript
-const STATUS_PRIORITY: Record<ChangeOrderStatus, number> = {
-  rejected: 0,
-  fc_input: 1,
-  tc_pricing: 2,
-  ready_for_approval: 3,
-  draft: 4,
-  approved: 5,
-  contracted: 6,
-};
-
-const sortedOrders = [...filteredChangeOrders].sort((a, b) => {
-  const pa = STATUS_PRIORITY[a.status] ?? 99;
-  const pb = STATUS_PRIORITY[b.status] ?? 99;
-  if (pa !== pb) return pa - pb;
-  return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-});
+1. Fetch contracted work orders:
+```sql
+SELECT id, project_id, final_price, status
+FROM change_order_projects
+WHERE project_id IN (...projectIds)
+AND status = 'contracted'
 ```
 
-**Separate T&M vs Fixed:**
+2. Fetch total billed (non-draft invoices sent by TC):
+Already have `allInvoices` -- filter where `from_org_id === currentOrg.id` and `status !== 'DRAFT'`, sum `total_amount`.
+
+### Updated FinancialSummary Interface
 ```typescript
-const fixedOrders = sortedOrders.filter(co => (co as any).pricing_mode !== 'tm');
-const tmOrders = sortedOrders.filter(co => (co as any).pricing_mode === 'tm');
+interface FinancialSummary {
+  totalContracts: number;
+  totalRevenue: number;
+  totalCosts: number;
+  profitMargin: number;
+  // New TC-specific fields
+  totalWorkOrders: number;
+  totalWorkOrderValue: number;
+  totalBilled: number;
+  outstandingBilling: number;
+  potentialProfit: number;
+}
 ```
-Render with section headings "Fixed Price" and "Time & Material".
-
-**Use centralized labels for filter tabs:**
-Replace `getStatusLabel()` with `CHANGE_ORDER_STATUS_LABELS` so "draft" shows as "In Progress".
-
-**Show creator on card:**
-Display "Created by You" or "Created by [First Last]" by comparing `created_by` against the current `user.id`.
-
-**Show contract price:**
-When `status === 'contracted'` and `final_price` exists, show formatted currency on the card.
-
-**Show progress stage on card:**
-For non-draft statuses, display the `CHANGE_ORDER_STATUS_LABELS[status]` as a small text below the status badge so users see exactly where the work order is in the workflow.
 
 ### Files Modified
-- `src/types/changeOrderProject.ts` -- add `creator_profile` field
-- `src/hooks/useChangeOrderProject.ts` -- join profiles table
-- `src/components/project/WorkOrdersTab.tsx` -- sorting, sections, creator, contract price, remove board view, unified terminology
+- `src/hooks/useDashboardData.ts` -- expanded financial calculations with work order data
+- `src/components/dashboard/DashboardFinancialCard.tsx` -- redesigned TC layout with all new metrics
+- `src/components/dashboard/DashboardProjectList.tsx` -- pass orgType to ProjectRow
+- `src/components/dashboard/ProjectRow.tsx` -- hide contract value for TC
