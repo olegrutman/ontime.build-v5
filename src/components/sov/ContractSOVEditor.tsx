@@ -29,8 +29,10 @@ interface ContractSOVEditorProps {
 }
 
 export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
-  const { currentRole } = useAuth();
+  const { currentRole, userOrgRoles } = useAuth();
   const isFC = currentRole === 'FC_PM';
+  const isTC = currentRole === 'TC_PM';
+  const currentOrgId = userOrgRoles[0]?.organization?.id;
   
   const {
     contracts,
@@ -235,16 +237,35 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
     return contract?.trade === 'Work Order' || contract?.trade === 'Work Order Labor';
   });
 
+  // For TC: further partition main contracts by direction
+  const gcToTcSovs = isTC ? contractSovs.filter(sov => {
+    const contract = getContractForSOV(sov);
+    return contract?.to_org_id === currentOrgId; // TC is receiver (GC pays TC)
+  }) : [];
+  const tcToFcSovs = isTC ? contractSovs.filter(sov => {
+    const contract = getContractForSOV(sov);
+    return contract?.from_org_id === currentOrgId; // TC is payer (TC pays FC)
+  }) : [];
+
+  // Helper to calculate billing totals for a set of SOVs
+  const calcBillingTotals = (sovList: typeof sovs) => {
+    const totals = sovList.reduce((acc, sov) => {
+      const items = sovItems[sov.id] || [];
+      const scheduled = items.reduce((sum, item) => sum + (item.value_amount || 0), 0);
+      const billed = items.reduce((sum, item) => sum + (item.billed_to_date || 0), 0);
+      return { scheduled: acc.scheduled + scheduled, billed: acc.billed + billed };
+    }, { scheduled: 0, billed: 0 });
+    const percent = totals.scheduled > 0 ? (totals.billed / totals.scheduled) * 100 : 0;
+    return { ...totals, percent };
+  };
+
   // Calculate main contract billing totals
-  const mainContractBillingTotals = contractSovs.reduce((acc, sov) => {
-    const items = sovItems[sov.id] || [];
-    const scheduled = items.reduce((sum, item) => sum + (item.value_amount || 0), 0);
-    const billed = items.reduce((sum, item) => sum + (item.billed_to_date || 0), 0);
-    return { scheduled: acc.scheduled + scheduled, billed: acc.billed + billed };
-  }, { scheduled: 0, billed: 0 });
-  const mainBilledPercent = mainContractBillingTotals.scheduled > 0
-    ? (mainContractBillingTotals.billed / mainContractBillingTotals.scheduled) * 100
-    : 0;
+  const mainContractBillingTotals = calcBillingTotals(contractSovs);
+  const mainBilledPercent = mainContractBillingTotals.percent;
+
+  // TC-specific billing totals
+  const gcToTcBilling = isTC ? calcBillingTotals(gcToTcSovs) : { scheduled: 0, billed: 0, percent: 0 };
+  const tcToFcBilling = isTC ? calcBillingTotals(tcToFcSovs) : { scheduled: 0, billed: 0, percent: 0 };
 
   const renderSOVCard = (sov: ContractSOV) => {
         const contract = getContractForSOV(sov);
@@ -713,25 +734,75 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
         <Badge variant="outline">{sovs.length} Contract{sovs.length > 1 ? 's' : ''}</Badge>
       </div>
 
-      {/* Main Contract Billing Summary */}
-      {contractSovs.length > 0 && mainContractBillingTotals.scheduled > 0 && (
-        <div className="rounded-lg border bg-muted/30 p-3 flex flex-wrap items-center gap-4 text-sm">
-          <span className="font-medium">Main Contract Billing:</span>
-          <span>{formatCurrency(mainContractBillingTotals.billed)} of {formatCurrency(mainContractBillingTotals.scheduled)}</span>
-          <SOVProgressBar
-            scheduledValue={mainContractBillingTotals.scheduled}
-            billedToDate={mainContractBillingTotals.billed}
-            size="sm"
-          />
-          <span className="text-muted-foreground">{mainBilledPercent.toFixed(1)}% complete</span>
-        </div>
-      )}
-
-      {/* Main Contracts Section */}
-      {contractSovs.length > 0 && (
+      {/* TC-specific layout: GC→TC on top, TC→FC below */}
+      {isTC ? (
         <>
-          <h3 className="text-base font-medium text-muted-foreground">Main Contracts</h3>
-          {contractSovs.map(sov => renderSOVCard(sov))}
+          {/* GC → TC Contracts (revenue) */}
+          {gcToTcSovs.length > 0 && (
+            <>
+              <h3 className="text-base font-medium text-muted-foreground">GC → TC Contracts</h3>
+              {gcToTcBilling.scheduled > 0 && (
+                <div className="rounded-lg border bg-muted/30 p-3 flex flex-wrap items-center gap-4 text-sm">
+                  <span className="font-medium">Billing:</span>
+                  <span>{formatCurrency(gcToTcBilling.billed)} of {formatCurrency(gcToTcBilling.scheduled)}</span>
+                  <SOVProgressBar
+                    scheduledValue={gcToTcBilling.scheduled}
+                    billedToDate={gcToTcBilling.billed}
+                    size="sm"
+                  />
+                  <span className="text-muted-foreground">{gcToTcBilling.percent.toFixed(1)}% complete</span>
+                </div>
+              )}
+              {gcToTcSovs.map(sov => renderSOVCard(sov))}
+            </>
+          )}
+
+          {/* TC → FC Contracts (costs) */}
+          {tcToFcSovs.length > 0 && (
+            <>
+              <div className="border-t pt-4 mt-2">
+                <h3 className="text-base font-medium text-muted-foreground">TC → FC Contracts</h3>
+              </div>
+              {tcToFcBilling.scheduled > 0 && (
+                <div className="rounded-lg border bg-muted/30 p-3 flex flex-wrap items-center gap-4 text-sm">
+                  <span className="font-medium">Billing:</span>
+                  <span>{formatCurrency(tcToFcBilling.billed)} of {formatCurrency(tcToFcBilling.scheduled)}</span>
+                  <SOVProgressBar
+                    scheduledValue={tcToFcBilling.scheduled}
+                    billedToDate={tcToFcBilling.billed}
+                    size="sm"
+                  />
+                  <span className="text-muted-foreground">{tcToFcBilling.percent.toFixed(1)}% complete</span>
+                </div>
+              )}
+              {tcToFcSovs.map(sov => renderSOVCard(sov))}
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          {/* Non-TC: original layout */}
+          {/* Main Contract Billing Summary */}
+          {contractSovs.length > 0 && mainContractBillingTotals.scheduled > 0 && (
+            <div className="rounded-lg border bg-muted/30 p-3 flex flex-wrap items-center gap-4 text-sm">
+              <span className="font-medium">Main Contract Billing:</span>
+              <span>{formatCurrency(mainContractBillingTotals.billed)} of {formatCurrency(mainContractBillingTotals.scheduled)}</span>
+              <SOVProgressBar
+                scheduledValue={mainContractBillingTotals.scheduled}
+                billedToDate={mainContractBillingTotals.billed}
+                size="sm"
+              />
+              <span className="text-muted-foreground">{mainBilledPercent.toFixed(1)}% complete</span>
+            </div>
+          )}
+
+          {/* Main Contracts Section */}
+          {contractSovs.length > 0 && (
+            <>
+              <h3 className="text-base font-medium text-muted-foreground">Main Contracts</h3>
+              {contractSovs.map(sov => renderSOVCard(sov))}
+            </>
+          )}
         </>
       )}
 
