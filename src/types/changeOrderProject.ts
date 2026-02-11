@@ -75,6 +75,9 @@ export interface ChangeOrderProject {
     name: string;
     address?: string;
   };
+  
+  // Creator profile (joined separately)
+  creator_profile?: { first_name: string | null; last_name: string | null } | null;
 }
 
 export interface ChangeOrderParticipant {
