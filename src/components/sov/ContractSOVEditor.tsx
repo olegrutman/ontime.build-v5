@@ -225,14 +225,28 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
     );
   }
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Schedule of Values</h2>
-        <Badge variant="outline">{sovs.length} Contract{sovs.length > 1 ? 's' : ''}</Badge>
-      </div>
+  // Partition SOVs into main contracts vs work orders
+  const contractSovs = sovs.filter(sov => {
+    const contract = getContractForSOV(sov);
+    return contract?.trade !== 'Work Order' && contract?.trade !== 'Work Order Labor';
+  });
+  const workOrderSovs = sovs.filter(sov => {
+    const contract = getContractForSOV(sov);
+    return contract?.trade === 'Work Order' || contract?.trade === 'Work Order Labor';
+  });
 
-      {sovs.map(sov => {
+  // Calculate main contract billing totals
+  const mainContractBillingTotals = contractSovs.reduce((acc, sov) => {
+    const items = sovItems[sov.id] || [];
+    const scheduled = items.reduce((sum, item) => sum + (item.value_amount || 0), 0);
+    const billed = items.reduce((sum, item) => sum + (item.billed_to_date || 0), 0);
+    return { scheduled: acc.scheduled + scheduled, billed: acc.billed + billed };
+  }, { scheduled: 0, billed: 0 });
+  const mainBilledPercent = mainContractBillingTotals.scheduled > 0
+    ? (mainContractBillingTotals.billed / mainContractBillingTotals.scheduled) * 100
+    : 0;
+
+  const renderSOVCard = (sov: ContractSOV) => {
         const contract = getContractForSOV(sov);
         const items = sovItems[sov.id] || [];
         const totals = getSOVTotals(sov.id);
@@ -690,7 +704,53 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
             </Collapsible>
           </Card>
         );
-      })}
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-xl font-semibold">Schedule of Values</h2>
+        <Badge variant="outline">{sovs.length} Contract{sovs.length > 1 ? 's' : ''}</Badge>
+      </div>
+
+      {/* Main Contract Billing Summary */}
+      {contractSovs.length > 0 && mainContractBillingTotals.scheduled > 0 && (
+        <div className="rounded-lg border bg-muted/30 p-3 flex flex-wrap items-center gap-4 text-sm">
+          <span className="font-medium">Main Contract Billing:</span>
+          <span>{formatCurrency(mainContractBillingTotals.billed)} of {formatCurrency(mainContractBillingTotals.scheduled)}</span>
+          <SOVProgressBar
+            scheduledValue={mainContractBillingTotals.scheduled}
+            billedToDate={mainContractBillingTotals.billed}
+            size="sm"
+          />
+          <span className="text-muted-foreground">{mainBilledPercent.toFixed(1)}% complete</span>
+        </div>
+      )}
+
+      {/* Main Contracts Section */}
+      {contractSovs.length > 0 && (
+        <>
+          <h3 className="text-base font-medium text-muted-foreground">Main Contracts</h3>
+          {contractSovs.map(sov => renderSOVCard(sov))}
+        </>
+      )}
+
+      {/* Work Orders Section */}
+      {workOrderSovs.length > 0 && (
+        <>
+          <div className="border-t pt-4 mt-2">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-base font-medium text-muted-foreground">Work Orders</h3>
+              {mainContractBillingTotals.scheduled > 0 && (
+                <span className="text-xs text-muted-foreground">
+                  Main Contract Billed: {formatCurrency(mainContractBillingTotals.billed)} of {formatCurrency(mainContractBillingTotals.scheduled)} ({mainBilledPercent.toFixed(1)}%)
+                </span>
+              )}
+            </div>
+          </div>
+          {workOrderSovs.map(sov => renderSOVCard(sov))}
+        </>
+      )}
 
       {/* Contracts Missing SOV Section */}
       {contractsMissingSOVs.length > 0 && !isFC && (
