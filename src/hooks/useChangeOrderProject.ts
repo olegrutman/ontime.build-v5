@@ -30,6 +30,23 @@ export function useChangeOrderProject(projectId?: string) {
     queryFn: async () => {
       if (!projectId) return [];
 
+      // Helper to attach creator profiles
+      const attachProfiles = async (orders: ChangeOrderProject[]) => {
+        const creatorIds = [...new Set(orders.map(o => o.created_by).filter(Boolean))];
+        if (creatorIds.length === 0) return orders;
+        
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, first_name, last_name')
+          .in('user_id', creatorIds);
+        
+        const profileMap = new Map((profiles || []).map(p => [p.user_id, p]));
+        return orders.map(o => ({
+          ...o,
+          creator_profile: profileMap.get(o.created_by) || null,
+        }));
+      };
+
       // FC and SUPPLIER users only see work orders where they are a participant
       if ((currentOrgType === 'FC' || currentOrgType === 'SUPPLIER') && currentOrgId) {
         // First get the work order IDs where this org is a participant
@@ -58,7 +75,7 @@ export function useChangeOrderProject(projectId?: string) {
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        return data as ChangeOrderProject[];
+        return attachProfiles(data as ChangeOrderProject[]);
       }
 
       // GC and TC see all work orders for the project
@@ -72,7 +89,7 @@ export function useChangeOrderProject(projectId?: string) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as ChangeOrderProject[];
+      return attachProfiles(data as ChangeOrderProject[]);
     },
     enabled: !!projectId,
   });

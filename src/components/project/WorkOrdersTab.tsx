@@ -10,13 +10,22 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { WorkOrderWizard } from '@/components/work-order-wizard';
 import { FCWorkOrderDialog, FCWorkOrderData } from '@/components/fc-work-order';
-import { Plus, FileEdit, Eye, Edit, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Plus, FileEdit, Eye, Edit, AlertTriangle, ArrowRight, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { ChangeOrderStatus } from '@/types/changeOrderProject';
-import { ViewSwitcher, ViewMode } from '@/components/ui/view-switcher';
+import { ChangeOrderStatus, CHANGE_ORDER_STATUS_LABELS } from '@/types/changeOrderProject';
 import { StatusColumn, CHANGE_ORDER_STATUS_OPTIONS } from '@/components/ui/status-column';
 import { HoverActions, HoverAction } from '@/components/ui/hover-actions';
-import { WorkOrdersBoard } from './WorkOrdersBoard';
+
+const STATUS_PRIORITY: Record<ChangeOrderStatus, number> = {
+  rejected: 0,
+  fc_input: 1,
+  tc_pricing: 2,
+  ready_for_approval: 3,
+  draft: 4,
+  approved: 5,
+  contracted: 6,
+};
+
 interface WorkOrdersTabProps {
   projectId: string;
   projectName: string;
@@ -24,11 +33,10 @@ interface WorkOrdersTabProps {
 
 export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
   const navigate = useNavigate();
-  const { currentRole } = useAuth();
+  const { currentRole, user } = useAuth();
   const [showWizard, setShowWizard] = useState(false);
   const [showFCDialog, setShowFCDialog] = useState(false);
   const [activeTab, setActiveTab] = useState<ChangeOrderStatus | 'ALL'>('ALL');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   const {
     changeOrders,
@@ -39,29 +47,35 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
     isCreatingFC,
   } = useChangeOrderProject(projectId);
 
-  // Get user's organization ID from auth context
   const { userOrgRoles } = useAuth();
   const userOrgId = userOrgRoles.length > 0 ? userOrgRoles[0].organization_id : undefined;
 
-  // Check SOV readiness - gates work order creation (only checks contracts where user's org is payer)
   const sovReadiness = useSOVReadiness(projectId, userOrgId);
 
-  // Refetch SOV status when tab becomes visible or projectId changes
   useEffect(() => {
     sovReadiness.refetch();
-  }, [projectId]); // Refetch when projectId changes or component mounts
+  }, [projectId]);
 
-  // GC and TC can create work orders with full wizard; FC uses simplified dialog
   const isFC = currentRole === 'FC_PM';
   const canCreate = currentRole === 'GC_PM' || currentRole === 'TC_PM' || isFC;
-  
-  // Block creation if SOVs aren't ready (except for FC who submit directly)
   const isBlocked = !isFC && !sovReadiness.isReady && !sovReadiness.loading;
 
   const filteredChangeOrders =
     activeTab === 'ALL'
       ? changeOrders
       : changeOrders.filter((co) => co.status === activeTab);
+
+  // Sort by urgency then by date
+  const sortedOrders = [...filteredChangeOrders].sort((a, b) => {
+    const pa = STATUS_PRIORITY[a.status as ChangeOrderStatus] ?? 99;
+    const pb = STATUS_PRIORITY[b.status as ChangeOrderStatus] ?? 99;
+    if (pa !== pb) return pa - pb;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
+  // Separate T&M vs Fixed
+  const fixedOrders = sortedOrders.filter(co => (co as any).pricing_mode !== 'tm');
+  const tmOrders = sortedOrders.filter(co => (co as any).pricing_mode === 'tm');
 
   const statusCounts = {
     ALL: changeOrders.length,
@@ -74,31 +88,110 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
     contracted: changeOrders.filter((co) => co.status === 'contracted').length,
   };
 
-  const getStatusLabel = (status: ChangeOrderStatus | 'ALL') => {
-    const labels: Record<ChangeOrderStatus | 'ALL', string> = {
-      ALL: 'All',
-      draft: 'Draft',
-      fc_input: 'Field Crew Input',
-      tc_pricing: 'TC Pricing',
-      ready_for_approval: 'Ready for Approval',
-      approved: 'Approved',
-      rejected: 'Rejected',
-      contracted: 'Contracted',
-    };
-    return labels[status];
+  const getStatusTabLabel = (status: ChangeOrderStatus | 'ALL') => {
+    if (status === 'ALL') return 'All';
+    return CHANGE_ORDER_STATUS_LABELS[status];
   };
 
-  const getStatusColor = (status: ChangeOrderStatus) => {
-    const colors: Record<ChangeOrderStatus, string> = {
-      draft: 'bg-muted text-muted-foreground',
-      fc_input: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-      tc_pricing: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-      ready_for_approval: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-      approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-      rejected: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-      contracted: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
-    };
-    return colors[status];
+  const getCreatorLabel = (co: any) => {
+    if (co.created_by === user?.id) return 'You';
+    const profile = co.creator_profile;
+    if (profile?.first_name || profile?.last_name) {
+      return [profile.first_name, profile.last_name].filter(Boolean).join(' ');
+    }
+    return 'Unknown';
+  };
+
+  const formatCurrency = (amount: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
+
+  const renderWorkOrderCard = (changeOrder: any) => {
+    const hoverActions: HoverAction[] = [
+      {
+        icon: <Eye className="h-4 w-4" />,
+        label: 'View',
+        onClick: () => navigate(`/change-order/${changeOrder.id}`),
+      },
+      {
+        icon: <Edit className="h-4 w-4" />,
+        label: 'Edit',
+        onClick: () => navigate(`/change-order/${changeOrder.id}`),
+      },
+    ];
+
+    const isContracted = changeOrder.status === 'contracted';
+    const creatorLabel = getCreatorLabel(changeOrder);
+    const isYou = changeOrder.created_by === user?.id;
+
+    return (
+      <Card
+        key={changeOrder.id}
+        className="group cursor-pointer hover:shadow-md transition-shadow"
+        onClick={() => navigate(`/change-order/${changeOrder.id}`)}
+      >
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between mb-2 gap-2">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <h3 className="font-semibold line-clamp-1">{changeOrder.title}</h3>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <HoverActions actions={hoverActions} />
+              <StatusColumn
+                value={changeOrder.status}
+                options={CHANGE_ORDER_STATUS_OPTIONS}
+                size="sm"
+                disabled
+              />
+            </div>
+          </div>
+
+          {/* Progress stage label */}
+          <p className="text-xs text-muted-foreground mb-2">
+            {CHANGE_ORDER_STATUS_LABELS[changeOrder.status as ChangeOrderStatus]}
+          </p>
+
+          <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
+            {changeOrder.work_type && (
+              <span className="capitalize">{changeOrder.work_type.replace('_', ' ')}</span>
+            )}
+            {changeOrder.requires_materials && (
+              <span className="bg-muted px-2 py-0.5 rounded text-xs">Materials</span>
+            )}
+            {changeOrder.requires_equipment && (
+              <span className="bg-muted px-2 py-0.5 rounded text-xs">Equipment</span>
+            )}
+          </div>
+
+          {/* Contract price when contracted */}
+          {isContracted && changeOrder.final_price != null && (
+            <p className="text-sm font-medium mt-2 text-foreground">
+              Contract: {formatCurrency(changeOrder.final_price)}
+            </p>
+          )}
+
+          {/* Creator */}
+          <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
+            <User className="h-3 w-3" />
+            <span>
+              Created by{' '}
+              <span className={isYou ? 'font-medium text-foreground' : ''}>{creatorLabel}</span>
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderOrderSection = (title: string, orders: any[]) => {
+    if (orders.length === 0) return null;
+    return (
+      <div className="space-y-3">
+        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">{title}</h3>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {orders.map(renderWorkOrderCard)}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -115,7 +208,6 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
               size="sm"
               className="ml-4 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-900/50"
               onClick={() => {
-                // Navigate to SOV tab - assuming parent handles tab switching
                 const sovTabButton = document.querySelector('[data-value="sov"]') as HTMLButtonElement;
                 if (sovTabButton) sovTabButton.click();
               }}
@@ -127,19 +219,12 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
         </Alert>
       )}
 
-      {/* Header with View Switcher and New Work Order button */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-xl font-semibold">Work Orders</h2>
-            <ViewSwitcher
-              value={viewMode}
-              onChange={setViewMode}
-              availableModes={['list', 'board']}
-            />
-          </div>
+          <h2 className="text-xl font-semibold">Work Orders</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            {statusCounts.ALL} work order{statusCounts.ALL !== 1 ? 's' : ''} • {statusCounts.draft} draft • {statusCounts.approved} approved • {statusCounts.contracted} contracted
+            {statusCounts.ALL} work order{statusCounts.ALL !== 1 ? 's' : ''} • {statusCounts.draft} in progress • {statusCounts.approved} approved • {statusCounts.contracted} contracted
           </p>
         </div>
         {canCreate && (
@@ -147,7 +232,7 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <span>
-                  <Button 
+                  <Button
                     onClick={() => isFC ? setShowFCDialog(true) : setShowWizard(true)}
                     disabled={isBlocked}
                   >
@@ -166,25 +251,23 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
         )}
       </div>
 
-      {/* Status Tabs - only show in list view */}
-      {viewMode === 'list' && (
-        <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div className="flex gap-2 pb-1">
-            {(['ALL', 'draft', 'fc_input', 'tc_pricing', 'ready_for_approval', 'approved', 'rejected'] as const).map(
-              (status) => (
-                <Button
-                  key={status}
-                  variant={activeTab === status ? 'default' : 'outline'}
-                  onClick={() => setActiveTab(status)}
-                  className="text-sm whitespace-nowrap shrink-0"
-                >
-                  {getStatusLabel(status)} ({statusCounts[status]})
-                </Button>
-              )
-            )}
-          </div>
+      {/* Status Tabs */}
+      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="flex gap-2 pb-1">
+          {(['ALL', 'draft', 'fc_input', 'tc_pricing', 'ready_for_approval', 'approved', 'rejected', 'contracted'] as const).map(
+            (status) => (
+              <Button
+                key={status}
+                variant={activeTab === status ? 'default' : 'outline'}
+                onClick={() => setActiveTab(status)}
+                className="text-sm whitespace-nowrap shrink-0"
+              >
+                {getStatusTabLabel(status)} ({statusCounts[status]})
+              </Button>
+            )
+          )}
         </div>
-      )}
+      </div>
 
       {/* Work Orders Content */}
       {isLoading ? (
@@ -193,16 +276,14 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
             <Skeleton key={i} className="h-24 w-full" />
           ))}
         </div>
-      ) : viewMode === 'board' ? (
-        <WorkOrdersBoard changeOrders={changeOrders} />
-      ) : filteredChangeOrders.length === 0 ? (
+      ) : sortedOrders.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <FileEdit className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
             <p className="text-muted-foreground">
               {activeTab === 'ALL'
                 ? 'No work orders yet for this project'
-                : `No ${getStatusLabel(activeTab).toLowerCase()} work orders`}
+                : `No ${getStatusTabLabel(activeTab).toLowerCase()} work orders`}
             </p>
             {canCreate && activeTab === 'ALL' && (
               <Button
@@ -217,62 +298,9 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredChangeOrders.map((changeOrder) => {
-            const hoverActions: HoverAction[] = [
-              {
-                icon: <Eye className="h-4 w-4" />,
-                label: 'View',
-                onClick: () => navigate(`/change-order/${changeOrder.id}`),
-              },
-              {
-                icon: <Edit className="h-4 w-4" />,
-                label: 'Edit',
-                onClick: () => navigate(`/change-order/${changeOrder.id}`),
-              },
-            ];
-
-            return (
-              <Card
-                key={changeOrder.id}
-                className="group cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => navigate(`/change-order/${changeOrder.id}`)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-2 gap-2">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <h3 className="font-semibold line-clamp-1">{changeOrder.title}</h3>
-                      {(changeOrder as any).pricing_mode === 'tm' && (
-                        <Badge variant="outline" className="shrink-0 text-xs font-medium border-blue-300 text-blue-700 dark:border-blue-700 dark:text-blue-300">
-                          T&M
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <HoverActions actions={hoverActions} />
-                      <StatusColumn
-                        value={changeOrder.status}
-                        options={CHANGE_ORDER_STATUS_OPTIONS}
-                        size="sm"
-                        disabled
-                      />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    {changeOrder.work_type && (
-                      <span className="capitalize">{changeOrder.work_type.replace('_', ' ')}</span>
-                    )}
-                    {changeOrder.requires_materials && (
-                      <span className="bg-muted px-2 py-1 rounded text-sm">Materials</span>
-                    )}
-                    {changeOrder.requires_equipment && (
-                      <span className="bg-muted px-2 py-1 rounded text-sm">Equipment</span>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+        <div className="space-y-6">
+          {renderOrderSection('Fixed Price', fixedOrders)}
+          {renderOrderSection('Time & Material', tmOrders)}
         </div>
       )}
 
