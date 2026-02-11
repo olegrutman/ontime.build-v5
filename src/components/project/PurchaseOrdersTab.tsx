@@ -20,9 +20,9 @@ import { POCard, PODetail } from '@/components/purchase-orders';
 import { Package } from 'lucide-react';
 
 const STATUS_PRIORITY: Record<POStatus, number> = {
-  SUBMITTED: 0,
-  PRICED: 1,
-  ACTIVE: 2,
+  ACTIVE: 0,
+  SUBMITTED: 1,
+  PRICED: 2,
   FINALIZED: 3,
   ORDERED: 4,
   READY_FOR_DELIVERY: 5,
