@@ -24,6 +24,7 @@ import OrderApprovals from "./pages/OrderApprovals";
 import PurchaseOrders from "./pages/PurchaseOrders";
 import ChangeOrders from "./pages/ChangeOrders";
 import Financials from "./pages/Financials";
+import Reminders from "./pages/Reminders";
 import SupplierInventory from "./pages/SupplierInventory";
 import SupplierProjectEstimates from "./pages/SupplierProjectEstimates";
 
@@ -63,6 +64,7 @@ const App = () => (
             <Route path="/purchase-orders" element={<PurchaseOrders />} />
             <Route path="/change-orders" element={<ChangeOrders />} />
             <Route path="/financials" element={<Financials />} />
+            <Route path="/reminders" element={<Reminders />} />
             <Route path="/change-order/:id" element={<ChangeOrderDetailPage />} />
             <Route path="/work-item/:id" element={<WorkItemPage />} />
             <Route path="/supplier/inventory" element={<SupplierInventory />} />
