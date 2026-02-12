@@ -56,7 +56,7 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
     sovReadiness.refetch();
   }, [projectId]);
 
-  const isFC = currentRole === 'FC_PM';
+  const isFC = currentRole === 'FC_PM' || currentRole === 'FS';
   const canCreate = currentRole === 'GC_PM' || currentRole === 'TC_PM' || isFC;
   const isBlocked = !isFC && !sovReadiness.isReady && !sovReadiness.loading;
 
@@ -93,11 +93,21 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
     return CHANGE_ORDER_STATUS_LABELS[status];
   };
 
+  const CREATOR_ROLE_LABELS: Record<string, string> = {
+    GC_PM: 'General Contractor',
+    TC_PM: 'Trade Contractor',
+    FC_PM: 'Field Crew',
+    FS: 'Field Crew',
+  };
+
   const getCreatorLabel = (co: any) => {
     if (co.created_by === user?.id) return 'You';
     const profile = co.creator_profile;
     if (profile?.first_name || profile?.last_name) {
       return [profile.first_name, profile.last_name].filter(Boolean).join(' ');
+    }
+    if (co.created_by_role && CREATOR_ROLE_LABELS[co.created_by_role]) {
+      return CREATOR_ROLE_LABELS[co.created_by_role];
     }
     return 'Unknown';
   };
@@ -163,7 +173,7 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
           </div>
 
           {/* Contract price when contracted */}
-          {isContracted && changeOrder.final_price != null && (
+          {isContracted && changeOrder.final_price != null && !isFC && (
             <p className="text-sm font-medium mt-2 text-foreground">
               Contract: {formatCurrency(changeOrder.final_price)}
             </p>
