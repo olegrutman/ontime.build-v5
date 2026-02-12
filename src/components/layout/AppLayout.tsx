@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { TopBar } from './TopBar';
+import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -20,8 +21,9 @@ export function AppLayout({
   onNewClick,
   newButtonLabel,
 }: AppLayoutProps) {
+  const defaultOpen = useDefaultSidebarOpen();
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={defaultOpen}>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
          <SidebarInset className="flex flex-col flex-1 bg-background">

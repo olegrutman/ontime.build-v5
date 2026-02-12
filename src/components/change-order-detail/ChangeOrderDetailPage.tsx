@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { useState } from 'react';
 import { LocationData, WORK_TYPE_LABELS } from '@/types/changeOrderProject';
+import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
 
 import { WorkOrderTopBar } from './WorkOrderTopBar';
 import { WorkOrderProgressBar } from './WorkOrderProgressBar';
@@ -106,10 +107,12 @@ export function ChangeOrderDetailPage() {
   const isTCEditable = changeOrder?.status === 'draft' || changeOrder?.status === 'tc_pricing';
   const isEditable = isTCEditable;
 
+  const defaultOpen = useDefaultSidebarOpen();
+
   // Loading state
   if (isLoading) {
     return (
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={defaultOpen}>
         <div className="min-h-screen flex w-full">
           <AppSidebar />
           <SidebarInset className="flex flex-col flex-1">
@@ -129,7 +132,7 @@ export function ChangeOrderDetailPage() {
   // Not found
   if (!changeOrder) {
     return (
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={defaultOpen}>
         <div className="min-h-screen flex w-full">
           <AppSidebar />
           <SidebarInset className="flex flex-col flex-1">
@@ -165,7 +168,7 @@ export function ChangeOrderDetailPage() {
   };
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={defaultOpen}>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
          <SidebarInset className="flex flex-col flex-1 bg-background">
