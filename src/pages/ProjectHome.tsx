@@ -169,9 +169,9 @@ export default function ProjectHome() {
             <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 pb-20 space-y-6">
               {/* Overview Tab */}
               {activeTab === 'overview' && (
-                <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_340px] gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_340px] gap-6 min-w-0">
                   {/* Zone A: Action & Summary */}
-                  <div className="space-y-6">
+                  <div className="space-y-6 min-w-0">
                     <AttentionBanner
                       projectId={id!}
                       onNavigate={handleTabChange}
@@ -195,7 +195,7 @@ export default function ProjectHome() {
                   </div>
 
                   {/* Zone B: Context */}
-                  <div className="space-y-4">
+                  <div className="space-y-4 min-w-0">
                     <ProjectTeamSection projectId={id!} />
                     {isSupplier && supplierOrgId ? (
                       <SupplierContractsSection projectId={id!} supplierOrgId={supplierOrgId} />

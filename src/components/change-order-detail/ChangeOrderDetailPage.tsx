@@ -186,9 +186,9 @@ export function ChangeOrderDetailPage() {
             />
 
             <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 pb-20">
-              <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_380px] gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_380px] gap-6 min-w-0">
                 {/* ===== Zone A: Main Content ===== */}
-                <div className="space-y-6">
+                <div className="space-y-6 min-w-0">
                   {/* Combined Header + Scope Card */}
                   <Card className="p-6">
                     <div className="space-y-4">
@@ -368,7 +368,7 @@ export function ChangeOrderDetailPage() {
                 </div>
 
                 {/* ===== Zone B: Sidebar ===== */}
-                <div className="space-y-6">
+                <div className="space-y-6 min-w-0">
                   {/* 1. Pricing Card (top of sidebar) */}
                   <ContractedPricingCard
                     changeOrder={changeOrder}

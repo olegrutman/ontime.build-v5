@@ -401,7 +401,7 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
         </p>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as InvoiceStatus | 'ALL')}>
           <SelectTrigger className="w-[160px]">
             <Filter className="h-4 w-4 mr-2" />
