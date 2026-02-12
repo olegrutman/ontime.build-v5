@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Receipt, Filter, AlertCircle, Send, Inbox, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Plus, Receipt, Filter, AlertCircle, Send, Inbox, AlertTriangle, ArrowRight, FileEdit, Clock, CheckCircle2, Wallet, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -338,23 +339,54 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
   };
 
   const renderSummaryCards = () => (
-    <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-      <div className="bg-muted/50 rounded-lg p-4 text-center">
-        <p className="text-2xl font-bold">{stats.draft}</p>
-        <p className="text-sm text-muted-foreground">Draft</p>
-      </div>
-      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 text-center">
-        <p className="text-2xl font-bold text-blue-600">{stats.submitted}</p>
-        <p className="text-sm text-muted-foreground">Pending Approval</p>
-      </div>
-      <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 text-center">
-        <p className="text-2xl font-bold text-green-600">{stats.approved}</p>
-        <p className="text-sm text-muted-foreground">Approved</p>
-      </div>
-      <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 text-center">
-        <p className="text-2xl font-bold text-purple-600">{stats.paid}</p>
-        <p className="text-sm text-muted-foreground">Paid</p>
-      </div>
+    <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+      <Card className="p-4 relative overflow-hidden">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Draft</span>
+          <span className="text-2xl font-bold">{stats.draft}</span>
+        </div>
+        <div className="absolute top-3 right-3 p-2 rounded-full bg-muted">
+          <FileEdit className="w-4 h-4 text-muted-foreground" />
+        </div>
+      </Card>
+      <Card className="p-4 relative overflow-hidden">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Pending</span>
+          <span className="text-2xl font-bold text-primary">{stats.submitted}</span>
+        </div>
+        <div className="absolute top-3 right-3 p-2 rounded-full bg-primary/10">
+          <Clock className="w-4 h-4 text-primary" />
+        </div>
+      </Card>
+      <Card className="p-4 relative overflow-hidden">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Approved</span>
+          <span className="text-2xl font-bold text-accent-foreground">{stats.approved}</span>
+        </div>
+        <div className="absolute top-3 right-3 p-2 rounded-full bg-accent">
+          <CheckCircle2 className="w-4 h-4 text-accent-foreground" />
+        </div>
+      </Card>
+      <Card className="p-4 relative overflow-hidden">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Paid</span>
+          <span className="text-2xl font-bold text-secondary-foreground">{stats.paid}</span>
+        </div>
+        <div className="absolute top-3 right-3 p-2 rounded-full bg-secondary">
+          <Wallet className="w-4 h-4 text-secondary-foreground" />
+        </div>
+      </Card>
+      <Card className="p-4 relative overflow-hidden col-span-2 sm:col-span-1">
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Total Billed</span>
+          <span className="text-2xl font-bold">
+            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(stats.totalBilled)}
+          </span>
+        </div>
+        <div className="absolute top-3 right-3 p-2 rounded-full bg-primary/10">
+          <DollarSign className="w-4 h-4 text-primary" />
+        </div>
+      </Card>
     </div>
   );
 
