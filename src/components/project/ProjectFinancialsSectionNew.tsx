@@ -59,6 +59,9 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
   const [newContractRetainage, setNewContractRetainage] = useState<number>(0);
   const [selectedFcOrgId, setSelectedFcOrgId] = useState<string>('');
   
+  // Work order FC cost state (TC view)
+  const [workOrderFCCost, setWorkOrderFCCost] = useState(0);
+  
   // Material costs state (TC view)
   const [materialCosts, setMaterialCosts] = useState<{
     supplierCost: number;
@@ -127,11 +130,24 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
     // Fetch work order totals
     const { data: workOrders } = await supabase
       .from('change_order_projects')
-      .select('final_price')
+      .select('id, final_price')
       .eq('project_id', projectId);
     
     const woTotal = (workOrders || []).reduce((sum, wo) => sum + (wo.final_price || 0), 0);
     setWorkOrderTotal(woTotal);
+    
+    // Fetch FC labor costs for work orders (TC profit calculation)
+    if (viewerRole === 'Trade Contractor') {
+      const woIds = (workOrders || []).map(wo => wo.id);
+      if (woIds.length > 0) {
+        const { data: fcHours } = await supabase
+          .from('change_order_fc_hours')
+          .select('labor_total')
+          .in('change_order_id', woIds);
+        const fcTotal = (fcHours || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0);
+        setWorkOrderFCCost(fcTotal);
+      }
+    }
     
     // Fetch FC participants for TC to create contracts
     const { data: fcData } = await supabase
@@ -681,6 +697,56 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
                 </div>
               </CardContent>
             </Card>
+
+            {/* Work Order Financials - TC Only */}
+            {workOrderTotal > 0 && (
+              <Card className="border-l-4 border-l-purple-500">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/20">
+                      <ClipboardList className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Work Orders</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Revenue (TC → GC)</span>
+                      <span>{formatCurrency(workOrderTotal)}</span>
+                    </div>
+                    {workOrderFCCost > 0 && (
+                      <div className="flex justify-between text-orange-600">
+                        <span>Field Crew Cost</span>
+                        <span>-{formatCurrency(workOrderFCCost)}</span>
+                      </div>
+                    )}
+                    <Separator className="my-2" />
+                    {(() => {
+                      const woProfit = workOrderTotal - workOrderFCCost;
+                      const woMargin = workOrderTotal > 0 ? (woProfit / workOrderTotal) * 100 : 0;
+                      return (
+                        <div className="flex justify-between font-semibold">
+                          <span className="flex items-center gap-1">
+                            <TrendingUp className={`h-3.5 w-3.5 ${woProfit >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+                            Work Order Profit
+                          </span>
+                          <div className="text-right">
+                            <span className={woProfit >= 0 ? 'text-green-600' : 'text-red-600'}>
+                              {formatCurrency(woProfit)}
+                            </span>
+                            <span className="text-xs text-muted-foreground ml-1">
+                              ({woMargin.toFixed(1)}%)
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Material Costs Summary - TC Only */}
             {materialCosts.supplierCost > 0 && (
