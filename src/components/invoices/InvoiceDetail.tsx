@@ -217,17 +217,17 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-4 min-w-0">
+          <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-3">
-              <h2 className="text-xl font-bold">{invoice.invoice_number}</h2>
+              <h2 className="text-xl font-bold truncate">{invoice.invoice_number}</h2>
               <InvoiceStatusBadge status={status} />
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground truncate">
               Billing Period: {format(new Date(invoice.billing_period_start), 'MMM d')} -{' '}
               {format(new Date(invoice.billing_period_end), 'MMM d, yyyy')}
             </p>
@@ -235,7 +235,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             disabled={exportLoading}
@@ -340,7 +340,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
         <CardHeader>
           <CardTitle>Line Items</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

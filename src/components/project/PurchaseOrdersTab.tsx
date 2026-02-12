@@ -360,7 +360,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: Pu
               {stats.total} PO{stats.total !== 1 ? 's' : ''} • {stats.active} Active • {stats.submitted} Submitted • {stats.delivered} Delivered
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-36">
                 <SelectValue placeholder="Filter" />

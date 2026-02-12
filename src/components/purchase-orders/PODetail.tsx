@@ -421,22 +421,22 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-4 min-w-0">
+          <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-3">
-              <h2 className="text-xl font-bold">{po.po_number}</h2>
+              <h2 className="text-xl font-bold truncate">{po.po_number}</h2>
               <POStatusBadge status={status} />
             </div>
-            <p className="text-sm text-muted-foreground">{po.po_name}</p>
+            <p className="text-sm text-muted-foreground truncate">{po.po_name}</p>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={handleDownload} disabled={exportLoading}>
             {exportLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <FileDown className="h-4 w-4 mr-2" />}
             Download
