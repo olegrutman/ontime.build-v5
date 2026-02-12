@@ -510,10 +510,10 @@ export function useDashboardData(): DashboardData {
       if (orgType === 'TC') {
         // Revenue from main contracts (where TC is receiver)
         contracts.forEach(c => {
-          if (c.to_org_id === currentOrg.id) {
+          if (c.from_org_id === currentOrg.id) {
             totalRevenue += c.contract_sum || 0;
           }
-          if (c.from_org_id === currentOrg.id) {
+          if (c.to_org_id === currentOrg.id) {
             totalCosts += c.contract_sum || 0;
           }
         });
