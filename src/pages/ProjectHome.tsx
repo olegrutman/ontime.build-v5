@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { FileText } from 'lucide-react';
+
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -172,7 +172,7 @@ export default function ProjectHome() {
             <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 pb-20 space-y-6">
               {/* Overview Tab */}
               {activeTab === 'overview' && (
-                <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_340px] gap-6 min-w-0">
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 min-w-0">
                   {/* Zone A: Action & Summary */}
                   <div className="space-y-6 min-w-0">
                     <AttentionBanner
@@ -248,16 +248,6 @@ export default function ProjectHome() {
                 />
               )}
 
-              {/* Documents Tab (placeholder) - hide for suppliers */}
-              {activeTab === 'documents' && !isSupplier && (
-                <div className="flex flex-col items-center justify-center py-12 text-center border rounded-lg bg-muted/20">
-                  <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
-                  <h3 className="text-lg font-medium mb-2">Documents</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Document management coming soon.
-                  </p>
-                </div>
-              )}
             </div>
           </main>
         </SidebarInset>

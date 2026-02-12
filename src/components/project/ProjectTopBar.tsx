@@ -118,13 +118,14 @@ export function ProjectTopBar({
                 </TabsTrigger>
               )}
               {!isSupplier && (
-                <TabsTrigger
-                  value="work-orders"
-                  className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
-                  onClick={() => onTabChange('work-orders')}
-                >
-                  Work Orders
-                </TabsTrigger>
+              <TabsTrigger
+                value="work-orders"
+                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
+                onClick={() => onTabChange('work-orders')}
+              >
+                <span className="lg:hidden">WOs</span>
+                <span className="hidden lg:inline">Work Orders</span>
+              </TabsTrigger>
               )}
               {isSupplier && (
                 <TabsTrigger
@@ -147,18 +148,9 @@ export function ProjectTopBar({
                 className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
                 onClick={() => onTabChange('purchase-orders')}
               >
-                Purchase Orders
+                <span className="lg:hidden">POs</span>
+                <span className="hidden lg:inline">Purchase Orders</span>
               </TabsTrigger>
-              {!isSupplier && (
-                <TabsTrigger
-                  value="documents"
-                  className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
-                  disabled
-                  onClick={() => onTabChange('documents')}
-                >
-                  Documents
-                </TabsTrigger>
-              )}
             </TabsList>
           </div>
         </Tabs>
