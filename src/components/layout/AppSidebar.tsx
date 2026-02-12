@@ -11,6 +11,7 @@ import {
   FileText,
   ClipboardCheck,
   Users,
+  DollarSign,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { NavLink } from '@/components/NavLink';
@@ -38,6 +39,7 @@ import { cn } from '@/lib/utils';
 
 const mainNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: Home },
+  { title: 'Financials', url: '/financials', icon: DollarSign },
   { title: 'Partners', url: '/partners', icon: Handshake },
 ];
 
@@ -112,7 +114,9 @@ export function AppSidebar() {
           {!collapsed && <SidebarGroupLabel>Navigation</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainNavItems.map((item) => (
+              {mainNavItems
+                .filter((item) => !(item.url === '/financials' && isSupplier))
+                .map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild

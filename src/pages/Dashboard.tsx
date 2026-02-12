@@ -17,7 +17,7 @@ import {
   type ProjectStatusFilter,
 } from '@/components/dashboard';
 import { DashboardAttentionBanner } from '@/components/dashboard/DashboardAttentionBanner';
-import { DashboardFinancialCard } from '@/components/dashboard/DashboardFinancialCard';
+
 import { DashboardProjectList } from '@/components/dashboard/DashboardProjectList';
 import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
 
@@ -254,24 +254,6 @@ export default function Dashboard() {
 
           {/* Zone B: Summary Sidebar */}
           <div className="space-y-4">
-            {/* Financial Card (hidden for suppliers) */}
-            {!isSupplier && (
-              <DashboardFinancialCard
-                role={billing.role}
-                totalContractValue={financials.totalContracts}
-                outstandingToPay={billing.outstandingToPay}
-                outstandingToCollect={billing.outstandingToCollect}
-                profitMargin={financials.profitMargin}
-                totalRevenue={financials.totalRevenue}
-                totalCosts={financials.totalCosts}
-                totalWorkOrders={financials.totalWorkOrders}
-                totalWorkOrderValue={financials.totalWorkOrderValue}
-                totalBilled={financials.totalBilled}
-                outstandingBilling={financials.outstandingBilling}
-                potentialProfit={financials.potentialProfit}
-              />
-            )}
-
             {/* Reminders */}
             <RemindersTile
               reminders={reminders}
