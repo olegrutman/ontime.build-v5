@@ -1,32 +1,62 @@
 
-# Optimize Project Overview for iPad
 
-## Current Issues (820x1180 iPad viewport)
-- The two-zone grid uses `lg:grid-cols-[1fr_360px]` (1024px breakpoint), so on iPad (820px minus sidebar) it falls to single column, stacking Zone B below Zone A
-- The third MetricStrip card ("Purchase Orders") gets clipped on the right edge
-- Wasted vertical space since the sidebar panel content (Team, Contracts, Scope) is short but forced below everything
+# Make the Entire Website Responsive for All Devices
 
-## Changes
+## Overview
+The app currently uses `lg:` (1024px+) breakpoints for most two-zone layouts, which means iPads (~820px) and smaller laptops (~1024-1280px) collapse to a single stacked column unnecessarily. This plan shifts key breakpoints to `md:` (768px+) with narrower sidebar columns, ensuring the app looks great on phones, iPads, small laptops, and desktops.
 
-### 1. `src/pages/ProjectHome.tsx` - Enable two-zone layout at `md` breakpoint with narrower sidebar
-- Change `lg:grid-cols-[1fr_360px]` to `md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_340px]`
-- This activates the side-by-side layout at 768px+ (iPad), with a narrower right column (280px) that widens on desktop (340px)
+## Changes by File
 
-### 2. `src/components/project/MetricStrip.tsx` - Prevent clipping on mid-size screens
-- Reduce minimum card height and padding slightly for tighter fit
-- Change `sm:grid-cols-3` to ensure cards fit within the available width on iPad by reducing gap and padding at the `md` breakpoint
+### 1. Dashboard (`src/pages/Dashboard.tsx`)
+- Change the main two-zone grid from `lg:grid-cols-[1fr_360px]` to `md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_340px]`
+- Apply the same fix to the loading skeleton grid
+- This enables the side-by-side layout on iPads
 
-### 3. `src/components/project/ProjectFinancialsSectionNew.tsx` - Tighten financial cards grid for iPad
-- If the financial cards use a two-column grid, adjust the breakpoint so they display properly at `md` width with the narrower Zone A
+### 2. Change Order Detail (`src/components/change-order-detail/ChangeOrderDetailPage.tsx`)
+- Change `lg:grid-cols-[1fr_380px]` to `md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_380px]`
+- Keeps the detailed sidebar visible on iPad instead of pushed below
 
-### Technical Details
-- iPad portrait: 820px viewport, sidebar collapsed ~48px = ~772px content area
-- With `md` breakpoint two-zone layout: Zone A ~492px, Zone B ~280px (fits well)
-- iPad landscape: 1180px, even more room
-- No functional changes, purely layout/spacing adjustments
-- All changes use existing Tailwind responsive utilities
+### 3. Work Item Page (`src/components/work-item/WorkItemPage.tsx`)
+- Change `lg:grid-cols-3` to `md:grid-cols-3` so the sidebar appears on iPad
+- Adjust column spans accordingly
 
-### Files Modified
-- `src/pages/ProjectHome.tsx` -- adjust grid breakpoint from `lg` to `md` with narrower sidebar column
-- `src/components/project/MetricStrip.tsx` -- tighten card spacing for mid-size screens
-- `src/components/project/ProjectFinancialsSectionNew.tsx` -- adjust financial cards grid breakpoint if needed
+### 4. Index / Work Items (`src/pages/Index.tsx`)
+- Change `lg:grid-cols-3` to `md:grid-cols-3`
+- Adjust column spans from `lg:col-span-*` to `md:col-span-*`
+
+### 5. Admin Suppliers (`src/pages/AdminSuppliers.tsx`)
+- Change `lg:grid-cols-3` to `md:grid-cols-3` with `md:col-span-*` adjustments
+
+### 6. Supplier Estimates (`src/pages/SupplierEstimates.tsx`)
+- Same pattern: `lg:grid-cols-3` to `md:grid-cols-3`
+
+### 7. Order Approvals (`src/pages/OrderApprovals.tsx`)
+- Same pattern: `lg:grid-cols-3` to `md:grid-cols-3`
+
+### 8. Estimate Approvals (`src/pages/EstimateApprovals.tsx`)
+- Same breakpoint shift if applicable
+
+### 9. Create Project (`src/pages/CreateProject.tsx`)
+- Change `lg:grid-cols-4` to `md:grid-cols-4` so the wizard progress sidebar appears on iPad
+
+### 10. Financial Cards (`src/components/project/ProjectFinancialsSectionNew.tsx`)
+- Already partially fixed; ensure `md:grid-cols-2 lg:grid-cols-4` pattern is consistent
+
+### 11. Invoice Grid (`src/components/invoices/InvoicesTab.tsx`)
+- Change `lg:grid-cols-3` to `md:grid-cols-2 lg:grid-cols-3` so cards don't stack to one column on iPad
+
+### 12. Change Orders Grid (`src/pages/ChangeOrders.tsx`)
+- Change `lg:grid-cols-3` to `md:grid-cols-2 lg:grid-cols-3`
+
+## What Stays the Same
+- The sidebar (`AppSidebar`) already uses the shadcn collapsible pattern with icon mode on mobile -- no changes needed
+- The `TopBar` already adapts for mobile -- no changes needed
+- Mobile phone layouts (below 768px) remain single-column as designed
+- All touch targets already meet the 44px minimum standard
+
+## Technical Summary
+- No new dependencies or components
+- All changes are Tailwind class adjustments (replacing `lg:` with `md:` or adding `md:` intermediate breakpoints)
+- Approximately 12 files modified with small class name changes
+- No functional or data changes
+
