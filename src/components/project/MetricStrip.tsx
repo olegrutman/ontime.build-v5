@@ -140,13 +140,13 @@ export function MetricStrip({ projectId, onNavigate, isSupplier, supplierOrgId }
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3">
       {cells.map((cell) => (
         <button
           key={cell.tab}
           onClick={() => onNavigate(cell.tab)}
           className={cn(
-            "rounded-xl border bg-card p-4 min-h-[112px]",
+            "rounded-xl border bg-card p-3 md:p-4 min-h-[100px] md:min-h-[112px]",
             "hover:bg-accent/50 hover:border-primary/30 transition-all",
             "cursor-pointer text-left",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -156,7 +156,7 @@ export function MetricStrip({ projectId, onNavigate, isSupplier, supplierOrgId }
             {cell.icon}
             <span className="text-sm font-medium">{cell.label}</span>
           </div>
-          <div className="flex items-baseline gap-3 sm:gap-4 overflow-hidden">
+          <div className="flex items-baseline gap-2 md:gap-4 overflow-hidden">
             {cell.segments.map((seg, i) => (
               <div key={i} className="min-w-0">
                 <p className={cn("text-xl sm:text-2xl font-bold tabular-nums", seg.color)}>{seg.count}</p>

@@ -329,7 +329,7 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
 
   if (loading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
         {[1, 2, 3, 4].map(i => (
           <Skeleton key={i} className="h-24" />
         ))}
