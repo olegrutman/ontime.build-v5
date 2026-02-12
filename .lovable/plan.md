@@ -1,40 +1,28 @@
 
 
-# Move Financial Snapshot from Dashboard to Its Own Page
+# Make Sidebar Fully Collapsible on All Screens
 
-UI/layout only. No logic, permissions, or database changes.
+The sidebar currently collapses to an "icon rail" (narrow strip showing only icons) on desktop/tablet, and uses a slide-out drawer on mobile. This change will make it fully collapsible (completely hidden) on all screen sizes, with the toggle button always visible in the top bar.
 
-## What happens
+## What Changes
 
-### 1. New page: `src/pages/Financials.tsx`
-- A new page that uses `AppLayout` (same as Dashboard)
-- Renders the existing `DashboardFinancialCard` component full-width with the same data from `useDashboardData()`
-- Hidden for Supplier orgs (same rule as on dashboard today)
+### 1. Switch collapse mode from "icon" to "offcanvas"
+In `AppSidebar.tsx`, change `collapsible="icon"` to `collapsible="offcanvas"`. This makes the sidebar fully hide when collapsed instead of showing a narrow icon strip.
 
-### 2. Remove Financial Snapshot from Dashboard (`src/pages/Dashboard.tsx`)
-- Delete the `DashboardFinancialCard` block (lines 258-273) from the dashboard sidebar
-- Remove the `DashboardFinancialCard` import
-- The `financials` and `billing` data from `useDashboardData` will still be fetched (used by the new page, not the dashboard)
+### 2. Ensure SidebarTrigger is always visible
+The `SidebarTrigger` in `TopBar.tsx` is already always rendered -- no changes needed there. It will continue to toggle the sidebar open/closed.
 
-### 3. Add sidebar link (`src/components/layout/AppSidebar.tsx`)
-- Add a "Financials" item to `mainNavItems` with the `DollarSign` icon and url `/financials`
-- Hidden for Supplier orgs (same visibility rule)
-- Shows as icon-only when sidebar is collapsed, with tooltip
-
-### 4. Register route (`src/App.tsx`)
-- Add `<Route path="/financials" element={<Financials />} />` alongside existing routes
+### 3. Clean up icon-only conditional rendering
+Since the sidebar will fully hide (not show icons), the `{!collapsed && ...}` guards on text labels in `AppSidebar.tsx` become unnecessary. However, keeping them is harmless and provides future flexibility, so they stay.
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `src/pages/Financials.tsx` | New page -- renders DashboardFinancialCard full-width |
-| `src/pages/Dashboard.tsx` | Remove DashboardFinancialCard from Zone B sidebar |
-| `src/components/layout/AppSidebar.tsx` | Add "Financials" nav item (hidden for suppliers) |
-| `src/App.tsx` | Add /financials route |
+| `src/components/layout/AppSidebar.tsx` | Change `collapsible="icon"` to `collapsible="offcanvas"` on the Sidebar component |
 
 ## What Is NOT Changed
-- No database, logic, permissions, or hook changes
-- `useDashboardData` hook unchanged -- the new page calls it independently
-- RemindersTile stays on Dashboard
-- All other sidebar items unchanged
+- No logic, permissions, database, or route changes
+- TopBar and SidebarTrigger remain unchanged
+- Mobile drawer behavior remains the same (already offcanvas-style)
+- All sidebar content (nav items, footer) unchanged
