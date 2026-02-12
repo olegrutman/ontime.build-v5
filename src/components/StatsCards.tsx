@@ -67,7 +67,7 @@ export function StatsCards({ items }: StatsCardsProps) {
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-5 gap-4">
       {stats.map((stat, index) => (
         <Card key={index} className="p-4 hover:shadow-md transition-shadow">
           <div className="flex items-start justify-between">

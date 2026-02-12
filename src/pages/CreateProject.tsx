@@ -278,23 +278,24 @@ export default function CreateProject() {
                 {renderStep()}
 
                 {/* Navigation */}
-                <div className="flex justify-between mt-8 pt-6 border-t">
+                <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-3 mt-8 pt-6 border-t">
                   <Button
                     variant="outline"
                     onClick={prevStep}
                     disabled={currentStep === 0}
+                    className="w-full sm:w-auto"
                   >
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Previous
                   </Button>
 
                   {currentStep < STEPS.length - 1 ? (
-                    <Button onClick={nextStep} disabled={!canProceed()}>
+                    <Button onClick={nextStep} disabled={!canProceed()} className="w-full sm:w-auto">
                       Next
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   ) : (
-                    <Button onClick={createProject} disabled={creating || !canProceed()}>
+                    <Button onClick={createProject} disabled={creating || !canProceed()} className="w-full sm:w-auto">
                       {creating ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />

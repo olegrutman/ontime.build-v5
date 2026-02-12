@@ -291,7 +291,7 @@ export default function EditProjectScope() {
     <AppLayout title={`Edit Scope - ${projectName}`}>
       <main className="container mx-auto px-4 py-6 space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" onClick={() => navigate(`/project/${id}`)}>
               <ArrowLeft className="h-5 w-5" />
@@ -311,7 +311,7 @@ export default function EditProjectScope() {
           </Button>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2">
           {/* Structure Section */}
           <Card>
             <CardHeader>

@@ -377,7 +377,7 @@ export default function EditProject() {
                 <CardTitle className="text-base">Add Team Member</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Company Name *</Label>
                     <Input
@@ -396,7 +396,7 @@ export default function EditProject() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Contact Email *</Label>
                     <Input
@@ -427,7 +427,7 @@ export default function EditProject() {
                 </div>
 
                 {requiresTrade && (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label>Trade *</Label>
                       <Select
@@ -464,7 +464,7 @@ export default function EditProject() {
                   <>
                     <Separator className="my-4" />
                     <p className="text-sm font-medium text-muted-foreground">Contract Terms</p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Contract Sum</Label>
                         <div className="relative">
@@ -617,7 +617,7 @@ export default function EditProject() {
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label>Contract Sum</Label>
                           <div className="relative">
