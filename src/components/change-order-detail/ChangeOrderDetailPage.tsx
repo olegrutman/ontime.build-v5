@@ -186,7 +186,7 @@ export function ChangeOrderDetailPage() {
             />
 
             <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 pb-20">
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_380px] gap-6">
                 {/* ===== Zone A: Main Content ===== */}
                 <div className="space-y-6">
                   {/* Combined Header + Scope Card */}

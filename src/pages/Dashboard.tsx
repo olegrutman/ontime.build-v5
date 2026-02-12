@@ -157,7 +157,7 @@ export default function Dashboard() {
       <AppLayout title="Dashboard">
         <div className="p-4 sm:p-6 space-y-6">
           <Skeleton className="h-24 w-full" />
-          <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+          <div className="grid gap-6 md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_340px]">
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-20" />
@@ -224,7 +224,7 @@ export default function Dashboard() {
           </div>
         )}
         {/* Two-Zone Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 lg:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_340px] gap-6 lg:gap-8">
           
           {/* Zone A: Action Center */}
           <div className="space-y-6">

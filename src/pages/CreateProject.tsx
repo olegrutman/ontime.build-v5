@@ -261,9 +261,9 @@ export default function CreateProject() {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
-        <div className="grid gap-6 lg:grid-cols-4">
+        <div className="grid gap-6 md:grid-cols-4">
           {/* Progress Sidebar */}
-          <div className="lg:col-span-1">
+          <div className="md:col-span-1">
             <Card className="sticky top-20">
               <CardContent className="p-4">
                 <WizardProgress currentStep={currentStep} steps={STEPS} />
@@ -272,7 +272,7 @@ export default function CreateProject() {
           </div>
 
           {/* Step Content */}
-          <div className="lg:col-span-3">
+          <div className="md:col-span-3">
             <Card>
               <CardContent className="p-6">
                 {renderStep()}

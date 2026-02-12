@@ -233,9 +233,9 @@ export default function EstimateApprovals() {
   return (
     <AppLayout title="Estimate Approvals" subtitle="Review and approve supplier estimates">
       <div className="space-y-4 sm:space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           {/* Pending Approvals */}
-          <div className="lg:col-span-1 space-y-4">
+          <div className="md:col-span-1 space-y-4">
             <h2 className="text-base sm:text-lg font-semibold flex items-center gap-2">
               Pending Review
               {submittedEstimates.length > 0 && (
@@ -326,7 +326,7 @@ export default function EstimateApprovals() {
           </div>
 
           {/* Estimate Details */}
-          <div className="lg:col-span-2">
+          <div className="md:col-span-2">
             {selectedEstimate ? (
               <Card>
                 <CardHeader>
