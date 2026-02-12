@@ -18,6 +18,7 @@ import { EstimateUploadWizard } from '@/components/estimate-upload';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { TopBar } from '@/components/layout/TopBar';
+import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -374,9 +375,11 @@ export default function SupplierProjectEstimates() {
     ? estimates
     : estimates.filter(e => e.project_id === selectedProjectId);
 
+  const defaultOpen = useDefaultSidebarOpen();
+
   if (authLoading) {
     return (
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={defaultOpen}>
         <div className="min-h-screen flex w-full">
           <AppSidebar />
           <SidebarInset className="flex flex-col flex-1">
@@ -391,7 +394,7 @@ export default function SupplierProjectEstimates() {
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={defaultOpen}>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
          <SidebarInset className="flex flex-col flex-1 bg-background">

@@ -4,6 +4,7 @@ import { FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
 
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
@@ -109,9 +110,11 @@ export default function ProjectHome() {
     fetchProject();
   }, [id, navigate]);
 
+  const defaultOpen = useDefaultSidebarOpen();
+
   if (loading) {
     return (
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={defaultOpen}>
         <div className="min-h-screen flex w-full">
           <AppSidebar />
           <SidebarInset className="flex flex-col flex-1">
@@ -134,7 +137,7 @@ export default function ProjectHome() {
 
   if (!project) {
     return (
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={defaultOpen}>
         <div className="min-h-screen flex w-full">
           <AppSidebar />
           <SidebarInset className="flex flex-col flex-1">
@@ -150,7 +153,7 @@ export default function ProjectHome() {
   const projectStatus = project.status || 'draft';
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={defaultOpen}>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
          <SidebarInset className="flex flex-col flex-1 bg-background">

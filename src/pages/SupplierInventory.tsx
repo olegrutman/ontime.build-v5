@@ -7,6 +7,7 @@ import { useToast } from '@/hooks/use-toast';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { TopBar } from '@/components/layout/TopBar';
+import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -311,9 +312,11 @@ export default function SupplierInventory() {
     return Object.values(skuCounts).filter(count => count > 1).length;
   }, [csvPreview]);
 
+  const defaultOpen = useDefaultSidebarOpen();
+
   if (authLoading || (!isSupplier && loading)) {
     return (
-      <SidebarProvider>
+      <SidebarProvider defaultOpen={defaultOpen}>
         <div className="min-h-screen flex w-full">
           <AppSidebar />
           <SidebarInset className="flex flex-col flex-1">
@@ -328,7 +331,7 @@ export default function SupplierInventory() {
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={defaultOpen}>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
          <SidebarInset className="flex flex-col flex-1 bg-background">
