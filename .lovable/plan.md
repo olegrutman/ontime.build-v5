@@ -1,55 +1,32 @@
 
-# Fix: TC Dashboard Revenue/Cost Direction is Swapped
+# Optimize Project Overview for iPad
 
-## Root Cause
-In `useDashboardData.ts`, the contract direction logic for TC financials is backwards:
+## Current Issues (820x1180 iPad viewport)
+- The two-zone grid uses `lg:grid-cols-[1fr_360px]` (1024px breakpoint), so on iPad (820px minus sidebar) it falls to single column, stacking Zone B below Zone A
+- The third MetricStrip card ("Purchase Orders") gets clipped on the right edge
+- Wasted vertical space since the sidebar panel content (Team, Contracts, Scope) is short but forced below everything
 
-```
-Current (WRONG):
-  to_org_id === TC  --> counted as Revenue  (but these are FC billing TC = COSTS)
-  from_org_id === TC --> counted as Costs   (but these are TC billing GC = REVENUE)
-```
+## Changes
 
-The contract model uses `from_org_id` = Contractor (invoice sender) and `to_org_id` = Client (payer). So for TC:
-- **Revenue**: contracts where `from_org_id === TC` (TC bills GC) -- currently $750K + $3.25K
-- **Costs**: contracts where `to_org_id === TC` (FC bills TC) -- currently $650K + $1.75K
+### 1. `src/pages/ProjectHome.tsx` - Enable two-zone layout at `md` breakpoint with narrower sidebar
+- Change `lg:grid-cols-[1fr_360px]` to `md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_340px]`
+- This activates the side-by-side layout at 768px+ (iPad), with a narrower right column (280px) that widens on desktop (340px)
 
-The 655K you see is actually the FC cost contracts ($651,750) plus the work order value ($3,250), incorrectly summed as revenue.
+### 2. `src/components/project/MetricStrip.tsx` - Prevent clipping on mid-size screens
+- Reduce minimum card height and padding slightly for tighter fit
+- Change `sm:grid-cols-3` to ensure cards fit within the available width on iPad by reducing gap and padding at the `md` breakpoint
 
-## Fix
+### 3. `src/components/project/ProjectFinancialsSectionNew.tsx` - Tighten financial cards grid for iPad
+- If the financial cards use a two-column grid, adjust the breakpoint so they display properly at `md` width with the narrower Zone A
 
-### File: `src/hooks/useDashboardData.ts`
-
-Swap the direction check on lines 512-518:
-
-**Before:**
-```typescript
-contracts.forEach(c => {
-  if (c.to_org_id === currentOrg.id) {
-    totalRevenue += c.contract_sum || 0;
-  }
-  if (c.from_org_id === currentOrg.id) {
-    totalCosts += c.contract_sum || 0;
-  }
-});
-```
-
-**After:**
-```typescript
-contracts.forEach(c => {
-  if (c.from_org_id === currentOrg.id) {
-    totalRevenue += c.contract_sum || 0;
-  }
-  if (c.to_org_id === currentOrg.id) {
-    totalCosts += c.contract_sum || 0;
-  }
-});
-```
-
-### Expected Result After Fix
-- **Total Revenue**: $750,000 + $3,250 (contracts) + $3,250 (work order) = $756,500
-- **Total Costs**: $650,000 + $1,750 (contracts) + FC labor from work orders
-- **Profit**: Revenue - Costs (now correct)
+### Technical Details
+- iPad portrait: 820px viewport, sidebar collapsed ~48px = ~772px content area
+- With `md` breakpoint two-zone layout: Zone A ~492px, Zone B ~280px (fits well)
+- iPad landscape: 1180px, even more room
+- No functional changes, purely layout/spacing adjustments
+- All changes use existing Tailwind responsive utilities
 
 ### Files Modified
-- `src/hooks/useDashboardData.ts` -- swap from/to direction in TC contract revenue/cost calculation
+- `src/pages/ProjectHome.tsx` -- adjust grid breakpoint from `lg` to `md` with narrower sidebar column
+- `src/components/project/MetricStrip.tsx` -- tighten card spacing for mid-size screens
+- `src/components/project/ProjectFinancialsSectionNew.tsx` -- adjust financial cards grid breakpoint if needed
