@@ -1,38 +1,36 @@
 
 
-# Project Overview Responsive Improvements
+# Redesign Invoice Status Tiles to Match Dashboard Style
 
-Layout-only changes. No logic, permissions, database, or route changes.
+Layout/styling only. No logic, permissions, database, or route changes.
 
-## Change 1: Tab Labels in ProjectTopBar.tsx
+## What Changes
 
-**Current**: Tabs show full text at all sizes: "Work Orders", "Purchase Orders", "Documents" (disabled placeholder).
+The `renderSummaryCards()` function in `src/components/invoices/InvoicesTab.tsx` (lines 340-358) currently renders plain colored `div` boxes with centered text. These will be upgraded to match the dashboard `StatsCards` pattern.
 
-**What changes**:
-- "Work Orders" tab: Show "WOs" on screens below lg, "Work Orders" on lg+
-- "Purchase Orders" tab: Show "POs" on screens below lg, "Purchase Orders" on lg+
-- Remove the disabled "Documents" tab entirely (it's a non-functional placeholder)
+### Current (plain divs, centered text, colored backgrounds)
+```
+[ 2 Draft ] [ 1 Pending ] [ 3 Approved ] [ 0 Paid ]
+```
 
-Implementation: Each tab trigger gets two spans -- one with the short label (`lg:hidden`) and one with the full label (`hidden lg:inline`).
+### New (Card components with icons, left-aligned, icon badge in corner)
+Each tile becomes a `Card` with:
+- **Top-left**: Uppercase tracking-wide label (e.g., "DRAFT", "PENDING APPROVAL")
+- **Below label**: Large bold count number
+- **Top-right**: Colored icon badge in a rounded container (matching the status color)
+- Icons: `FileEdit` for Draft, `Clock` for Pending, `CheckCircle2` for Approved, `Wallet` for Paid
+- A 5th summary tile for "Total Billed" showing the currency amount
 
-## Change 2: Overview Layout in ProjectHome.tsx
+### Grid
+- `grid-cols-2 sm:grid-cols-3 lg:grid-cols-5` (same responsive pattern as dashboard StatsCards)
 
-**Current**: Two-zone grid starts side-by-side at md (`md:grid-cols-[1fr_280px]`). On iPad, the right column (Team, Contracts, Scope) is squeezed into 280px.
-
-**What changes**:
-- Change the grid to only go side-by-side at lg: `lg:grid-cols-[1fr_340px]`
-- On xs/sm/md (phones and iPads): Zone B (Team, Contracts, Scope) stacks below Zone A (Attention Banner, Metrics, Financials)
-- Remove the `activeTab === 'documents'` content block (tab no longer exists)
-
-## Files Modified
+## File Modified
 
 | File | Change |
 |------|--------|
-| `src/components/project/ProjectTopBar.tsx` | Responsive short labels for WOs/POs tabs; remove Documents tab |
-| `src/pages/ProjectHome.tsx` | Grid breakpoint `md:` to `lg:` for two-zone layout; remove documents content block |
+| `src/components/invoices/InvoicesTab.tsx` | Replace `renderSummaryCards()` body with Card-based tiles matching dashboard StatsCards style |
 
 ## What Is NOT Changed
-- No component deletions (Team, Contracts, Scope sections remain -- just repositioned)
 - No logic, permissions, or database changes
-- No route changes
-- Sidebar, header, and all other tabs unchanged
+- No new components or files
+- All other invoice functionality unchanged
