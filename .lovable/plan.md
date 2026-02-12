@@ -1,143 +1,128 @@
 
 
-# Responsive Layout Overhaul -- Design + Layout Only
+# Responsive UI Upgrade -- Project Pages
 
-All changes are CSS/Tailwind class adjustments. No logic, data sources, routes, permissions, or component deletions.
+Design + layout changes only. No logic, permissions, database, or route changes.
 
-## Summary of Issues Found
+## Scope
 
-1. Several pages use `lg:grid-cols-3` for list/detail splits (PurchaseOrders, MaterialOrders) -- collapses to single column on iPad
-2. EditProject and EditProjectScope use `grid-cols-2` without `sm:` prefix -- forms break on phones
-3. Tables in SupplierInventory, MaterialOrders, PurchaseOrders lack mobile card fallback or horizontal scroll containment
-4. CreateProject wizard already uses `md:grid-cols-4` (fixed previously) but navigation buttons are not mobile-optimized
-5. Several pages build their own layout instead of using `AppLayout` (SupplierInventory, CreateProject)
-6. Inconsistent page container usage -- some use `container mx-auto px-4`, others use `max-w-7xl mx-auto p-4 sm:p-6`
+4 project areas: Overview, Work Orders, Purchase Orders, Invoices -- both list and detail views.
 
 ---
 
-## Changes by File
+## 1. Project Overview (`src/pages/ProjectHome.tsx`)
 
-### Phase 1: Global Consistency
+**Current**: Two-zone grid `md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_340px]` -- already decent but needs minor mobile polish.
 
-**1. `src/components/layout/AppLayout.tsx`** -- Standardize page container padding
-- Change `p-4 sm:p-6` to `px-4 sm:px-5 md:px-6 py-4 sm:py-6` for consistent side padding across breakpoints
-- No structural changes
+**Changes**:
+- Add `min-w-0` to the grid container and both zone divs to prevent long text from expanding layout
+- Ensure Zone B stacks cleanly below Zone A on xs/sm
 
-**2. `src/components/layout/TopBar.tsx`** -- No changes needed (already responsive)
-
-**3. `src/components/project/ProjectTopBar.tsx`** -- No changes needed (already has scrollable tabs)
-
-### Phase 2: List/Detail Split Pages (Master-Detail Pattern)
-
-These pages use a `lg:grid-cols-3` split that collapses on iPad. Fix: shift to `md:grid-cols-3`.
-
-**4. `src/pages/PurchaseOrders.tsx`**
-- Line 354: `lg:grid-cols-3` -> `md:grid-cols-3`
-- Line 356: `lg:col-span-1` -> `md:col-span-1`
-- Line 392: `lg:col-span-2` -> `md:col-span-2`
-- Line 436: `grid-cols-2` -> `grid-cols-1 sm:grid-cols-2` (PO detail metadata grid on mobile)
-
-**5. `src/pages/MaterialOrders.tsx`**
-- Line 186: `lg:grid-cols-3` -> `md:grid-cols-3`
-- Line 188: `lg:col-span-1` -> `md:col-span-1`
-- Line 233: `lg:col-span-2` -> `md:col-span-2`
-
-### Phase 3: Form Pages (Mobile Single-Column)
-
-**6. `src/pages/EditProject.tsx`**
-- Lines 380, 399, 430, 467, 620: `grid-cols-2` -> `grid-cols-1 sm:grid-cols-2` (forms stack on mobile)
-
-**7. `src/pages/EditProjectScope.tsx`**
-- Line 314: `lg:grid-cols-2` -> `md:grid-cols-2` (activate 2-col on iPad)
-- Lines 703, 784: Checkbox grids `grid-cols-2` -- leave as-is (they work on mobile since they're small items)
-- Line 294: header flex -- add `flex-wrap` for mobile button wrapping
-
-**8. `src/pages/Profile.tsx`**
-- Forms already use `grid-cols-1 sm:grid-cols-2` -- no changes needed
-- Line 389: `sm:grid-cols-3` -- verify spacing on narrow screens (likely fine)
-
-### Phase 4: Card Grid Pages
-
-**9. `src/components/project/WorkOrdersTab.tsx`**
-- Line 200: Already `md:grid-cols-2 lg:grid-cols-3` -- no change needed
-
-**10. `src/components/project/ProjectFinancialsSectionNew.tsx`**
-- Line 510: `lg:grid-cols-4` -> `md:grid-cols-2 lg:grid-cols-4` (wrap to 2-col on iPad)
-- Line 332: Loading skeleton same treatment
-
-**11. `src/components/project/ProjectFinancialsSection.tsx`**
-- Line 33: `lg:grid-cols-4` -> `md:grid-cols-2 lg:grid-cols-4`
-
-**12. `src/components/invoices/InvoicesTab.tsx`**
-- Lines 285, 320: Already `sm:grid-cols-2 lg:grid-cols-3` -- no change needed (previous fix applied)
-
-**13. `src/components/StatsCards.tsx`**
-- Line 70: `lg:grid-cols-5` -> `md:grid-cols-3 lg:grid-cols-5` (prevent 2-col jump to 5-col)
-
-### Phase 5: Create Project Wizard
-
-**14. `src/pages/CreateProject.tsx`**
-- Line 264: Already `md:grid-cols-4` -- no change needed
-- Lines 282-307: Mobile navigation buttons -- change to:
-  - On mobile (`sm:` below): Previous = full-width outline, Next/Create = full-width primary, stacked vertically
-  - On desktop: keep current side-by-side layout
-  - Add `flex-col-reverse sm:flex-row` to the nav container
-
-### Phase 6: Table-Heavy Pages (Horizontal Scroll Containment)
-
-**15. `src/pages/SupplierInventory.tsx`**
-- Line 445: Table is already inside `overflow-x-auto` within a Card -- good
-- No changes needed for the table
-- Line 375: Stats grid `md:grid-cols-3` -- already correct
-
-### Phase 7: Supplier Project Estimates & Other Detail Pages
-
-**16. `src/pages/SupplierProjectEstimates.tsx`** -- Check and apply same `md:` breakpoint pattern if using `lg:` splits
-
-**17. `src/pages/SupplierEstimates.tsx`** -- Already fixed in previous round
-
-**18. `src/pages/AdminSuppliers.tsx`** -- Already fixed in previous round
-
-**19. `src/pages/OrderApprovals.tsx`** -- Already fixed in previous round
-
-**20. `src/pages/EstimateApprovals.tsx`** -- Already fixed in previous round
-
-### Phase 8: Landing Page
-
-**21. `src/components/landing/HowItWorksSection.tsx`**
-- Line 49: Already `md:grid-cols-2 lg:grid-cols-4` -- no change needed
-
-**22. `src/components/landing/FeaturesSection.tsx`**
-- Line 55: Already `md:grid-cols-2 lg:grid-cols-3` -- no change needed
-
-### Phase 9: Work Item / T&M Pages
-
-**23. `src/components/work-item/WorkItemPage.tsx`** -- Already fixed in previous round to `md:grid-cols-3`
+**No other changes needed** -- MetricStrip, AttentionBanner, and financial sections are already responsive from prior rounds.
 
 ---
 
-## Technical Details
+## 2. Work Orders Tab (`src/components/project/WorkOrdersTab.tsx`)
 
-### Files Modified (net new changes only -- excludes previously fixed files)
+**Current**: Cards in `md:grid-cols-2 lg:grid-cols-3` grid. Status filter tabs are horizontally scrollable. Cards already display as stacked on mobile.
 
-| File | Change |
-|------|--------|
-| `src/pages/PurchaseOrders.tsx` | `lg:` -> `md:` for master-detail split |
-| `src/pages/MaterialOrders.tsx` | `lg:` -> `md:` for master-detail split |
-| `src/pages/EditProject.tsx` | `grid-cols-2` -> `grid-cols-1 sm:grid-cols-2` on 5 form grids |
-| `src/pages/EditProjectScope.tsx` | `lg:grid-cols-2` -> `md:grid-cols-2` + header flex-wrap |
-| `src/pages/CreateProject.tsx` | Mobile-stack navigation buttons |
-| `src/components/project/ProjectFinancialsSectionNew.tsx` | `lg:grid-cols-4` -> `md:grid-cols-2 lg:grid-cols-4` |
-| `src/components/project/ProjectFinancialsSection.tsx` | Same pattern |
-| `src/components/StatsCards.tsx` | Add `md:grid-cols-3` intermediate step |
+**Changes**:
+- Add `min-w-0` to card title containers to prevent overflow
+- Add `truncate` to work order title text to handle long names
+- Ensure status filter tab row has proper negative margin bleed on mobile for edge-to-edge scrolling (already has `-mx-4 px-4`)
 
-### What Is NOT Changed
-- No component deletions
-- No logic changes
-- No route changes
-- No data source changes
-- No permission changes
-- No new components or pages (the QA checklist item from the request is omitted as it would be a new product feature)
-- Landing page components are already responsive
-- Pages already fixed in the previous round are not re-touched
+**No major restructuring needed** -- the existing card-based layout already functions as "RecordCards" with title, status, body fields, and tap-to-open behavior.
+
+---
+
+## 3. Purchase Orders
+
+### 3a. PO List (`src/components/project/PurchaseOrdersTab.tsx`)
+
+**Current**: Grid `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`. POCard already shows title, status badge, supplier, items, pricing, and action buttons.
+
+**Changes**:
+- Add `min-w-0` to card content containers
+- Header actions flex: add `flex-wrap` to prevent overflow on narrow screens when filter + create button are side by side
+
+### 3b. PO Detail (`src/components/purchase-orders/PODetail.tsx`)
+
+**Current**: Header has `flex items-center justify-between` with title left and action buttons right. Table has no horizontal scroll containment.
+
+**Changes**:
+- **Header**: Change to `flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4` so title and actions stack on mobile
+- **Action buttons**: Wrap in `flex flex-wrap gap-2` to allow wrapping on narrow screens
+- **Info card grid**: Already `grid-cols-2 md:grid-cols-4` -- good
+- **Line items table**: Wrap `<Table>` in `<div className="overflow-x-auto">` to contain horizontal scroll inside the card on mobile
+- **Editing prices footer**: Add `sticky bottom-0 bg-card border-t p-4 z-10` on mobile for Save/Cancel to remain accessible
+- **Pricing inputs**: On mobile, ensure input widths don't overflow (`w-full sm:w-24`)
+
+---
+
+## 4. Invoices
+
+### 4a. Invoice List (`src/components/invoices/InvoicesTab.tsx`)
+
+**Current**: Grid `sm:grid-cols-2 lg:grid-cols-3`. InvoiceCard already shows number, status, billing period, amount, and action buttons.
+
+**Changes**:
+- Header: Add `flex-wrap` for mobile wrapping of filter dropdown + create button
+- Tab list (TC dual view): Add `max-w-full` and ensure it doesn't overflow on mobile
+
+### 4b. Invoice Detail (`src/components/invoices/InvoiceDetail.tsx`)
+
+**Current**: Header has `flex items-center justify-between` -- action buttons overflow on mobile. Table has 7 columns with no scroll containment.
+
+**Changes**:
+- **Header**: Change to `flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4` so title/status stack above action buttons on mobile
+- **Action buttons**: Wrap in `flex flex-wrap gap-2`
+- **Line items table**: Wrap in `<div className="overflow-x-auto">` for contained horizontal scroll on mobile
+- This is a wide table (7 columns) so horizontal scroll inside the card is the correct approach rather than converting to cards (preserves the SOV-style billing grid)
+
+---
+
+## 5. Work Order Detail (`src/components/change-order-detail/ChangeOrderDetailPage.tsx`)
+
+**Current**: Two-zone grid `md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_380px]`. Already responsive from prior round.
+
+**Changes**:
+- Add `min-w-0` to both zone divs to prevent long text overflow
+- Meta info row in the scope card: already `flex-wrap` -- good
+
+---
+
+## 6. Work Order Top Bar (`src/components/change-order-detail/WorkOrderTopBar.tsx`)
+
+**Current**: Already has scrollable tabs, truncation, and responsive sizing.
+
+**Changes**: None needed.
+
+---
+
+## 7. Project Top Bar (`src/components/project/ProjectTopBar.tsx`)
+
+**Current**: Already has scrollable tabs, status dropdown, responsive spacing.
+
+**Changes**: None needed.
+
+---
+
+## Summary of Files Modified
+
+| File | Changes |
+|------|---------|
+| `src/pages/ProjectHome.tsx` | Add `min-w-0` to grid zones |
+| `src/components/project/WorkOrdersTab.tsx` | Add `min-w-0` and `truncate` to title |
+| `src/components/project/PurchaseOrdersTab.tsx` | Add `flex-wrap` to header actions, `min-w-0` to content |
+| `src/components/purchase-orders/PODetail.tsx` | Stack header on mobile, wrap table in `overflow-x-auto`, sticky action bar for editing mode, responsive input widths |
+| `src/components/invoices/InvoicesTab.tsx` | Add `flex-wrap` to header actions |
+| `src/components/invoices/InvoiceDetail.tsx` | Stack header on mobile, wrap table in `overflow-x-auto`, `flex-wrap` on action buttons |
+| `src/components/change-order-detail/ChangeOrderDetailPage.tsx` | Add `min-w-0` to zone divs |
+
+## What Is NOT Changed
+- No logic, permissions, database calls, or routes
+- No component deletions or renames
+- No new components (no separate "RecordCard" component -- existing cards already serve this purpose)
+- Existing card-based lists already function as mobile-friendly record cards with title, status, body fields, and tap targets
+- Tables that need many columns (Invoice SOV table, PO line items) use horizontal scroll containment rather than card conversion, preserving the tabular data integrity
 
