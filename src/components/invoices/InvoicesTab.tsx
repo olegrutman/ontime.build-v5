@@ -282,7 +282,7 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
   const renderInvoiceList = () => {
     if (loading) {
       return (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[...Array(3)].map((_, i) => (
             <Skeleton key={i} className="h-36" />
           ))}
@@ -317,7 +317,7 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
     };
 
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {currentInvoices.map((invoice) => {
           const { canSubmit, canApprove } = getInvoicePermissions(invoice);
           return (

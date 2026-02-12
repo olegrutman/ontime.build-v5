@@ -357,9 +357,9 @@ export default function SupplierEstimates() {
           </Dialog>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Estimates List */}
-          <div className="lg:col-span-1 space-y-4">
+          <div className="md:col-span-1 space-y-4">
             <h2 className="text-lg font-semibold">Estimates</h2>
             {estimates.length === 0 ? (
               <Card>
@@ -393,7 +393,7 @@ export default function SupplierEstimates() {
           </div>
 
           {/* Estimate Details */}
-          <div className="lg:col-span-2">
+          <div className="md:col-span-2">
             {selectedEstimate ? (
               <Card>
                 <CardHeader>

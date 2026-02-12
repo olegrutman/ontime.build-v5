@@ -190,9 +190,9 @@ export default function OrderApprovals() {
   return (
     <AppLayout title="Order Approvals" subtitle="Review and approve material orders">
       <div className="space-y-4 sm:space-y-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           {/* Pending Approvals */}
-          <div className="lg:col-span-1 space-y-4">
+          <div className="md:col-span-1 space-y-4">
             <h2 className="text-base sm:text-lg font-semibold flex items-center gap-2">
               Pending Review
               {submittedOrders.length > 0 && (
@@ -288,7 +288,7 @@ export default function OrderApprovals() {
           </div>
 
           {/* Order Details */}
-          <div className="lg:col-span-2">
+          <div className="md:col-span-2">
             {selectedOrder ? (
               <Card>
                 <CardHeader>

@@ -33,9 +33,9 @@ const Index = () => {
         </div>
 
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Work Item List */}
-          <div className={selectedItem ? 'lg:col-span-2' : 'lg:col-span-3'}>
+          <div className={selectedItem ? 'md:col-span-2' : 'md:col-span-3'}>
             <div className="mb-4">
               <h2 className="text-lg font-semibold">Work Items</h2>
               <p className="text-sm text-muted-foreground">
@@ -53,7 +53,7 @@ const Index = () => {
 
           {/* Detail Panel */}
           {selectedItem && (
-            <div className="lg:col-span-1">
+            <div className="md:col-span-1">
               <WorkItemDetail
                 item={selectedItem}
                 onClose={() => setSelectedItem(null)}
