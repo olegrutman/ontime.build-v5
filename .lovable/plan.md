@@ -1,60 +1,61 @@
 
 
-# Fix: FC Contract Price Visibility & "Unknown" Creator on Work Order Tiles
+# Add Work Order Financials to TC Overview
 
-## Issues Found
-
-### 1. FC sees contract price they shouldn't
-On the Work Orders list, when a work order is in "contracted" status, the `final_price` (TC-to-GC contract price) is displayed to all roles, including Field Crew. FC should only see their own earnings, not the contract price between TC and GC.
-
-### 2. "Unknown" creator name
-The profiles table has RLS policies that restrict profile visibility to users within the same organization. Since GC creates work orders but is in a different org than TC and FC, the profile lookup fails silently, and the fallback shows "Unknown". The `created_by_role` field (e.g., `GC_PM`) is already available in the data and can be used to show a meaningful label like "General Contractor" instead.
+## Current State
+The TC overview shows main contract cards (GC contract, FC contract, estimated profit, material costs) but does NOT show work order financial breakdown — even though the `WorkOrderSummaryCard` component calculates this data separately.
 
 ## Changes
 
-### File: `src/components/project/WorkOrdersTab.tsx`
+### File: `src/components/project/ProjectFinancialsSectionNew.tsx`
 
-**Fix 1 - Hide contract price for FC:**
-Wrap the contracted price display (lines 165-170) with a role check so FC users don't see it:
+**1. Add state for FC labor costs (work order level):**
+Add a new state variable `workOrderFCCost` to track the total FC labor cost across all work orders.
+
+**2. Fetch FC labor costs in `fetchData`:**
+After fetching work order totals (lines 128-134), also query `change_order_fc_hours` to sum up FC labor costs for TC viewers:
 ```typescript
-{isContracted && changeOrder.final_price != null && !isFC && (
-  <p className="text-sm font-medium mt-2 text-foreground">
-    Contract: {formatCurrency(changeOrder.final_price)}
-  </p>
-)}
-```
-
-**Fix 2 - Show role-based fallback for creator:**
-Update `getCreatorLabel` to use a role label map when the profile is not accessible:
-```typescript
-const ROLE_LABELS: Record<string, string> = {
-  GC_PM: 'General Contractor',
-  TC_PM: 'Trade Contractor',
-  FC_PM: 'Field Crew',
-  FS: 'Field Crew',
-};
-
-const getCreatorLabel = (co: any) => {
-  if (co.created_by === user?.id) return 'You';
-  const profile = co.creator_profile;
-  if (profile?.first_name || profile?.last_name) {
-    return [profile.first_name, profile.last_name].filter(Boolean).join(' ');
+// After workOrderTotal calculation, if TC:
+if (viewerRole === 'Trade Contractor') {
+  const woIds = (workOrders || []).map(wo => wo.id);
+  if (woIds.length > 0) {
+    const { data: fcHours } = await supabase
+      .from('change_order_fc_hours')
+      .select('labor_total')
+      .in('change_order_id', woIds);
+    const fcTotal = (fcHours || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0);
+    setWorkOrderFCCost(fcTotal);
   }
-  // Fallback to role label when profile is not accessible (cross-org RLS)
-  if (co.created_by_role && ROLE_LABELS[co.created_by_role]) {
-    return ROLE_LABELS[co.created_by_role];
-  }
-  return 'Unknown';
-};
+}
 ```
 
-This also requires reading the `isFC` variable, which is already derivable from `currentRole` in the component. Will add:
-```typescript
-const isFC = currentRole === 'FC_PM' || currentRole === 'FS';
+**3. Add Work Order Summary card to TC section (after the Material Costs card, around line 716):**
+A new card showing:
+- **Work Order Revenue** (TC to GC): sum of `final_price` from all work orders
+- **Field Crew Cost** (FC to TC): sum of FC labor from `change_order_fc_hours`
+- **Work Order Profit**: Revenue - FC Cost, with margin percentage
+
+```
++----------------------------------+
+| Work Orders                      |
+| Revenue (TC -> GC):    $10,000   |
+| Field Crew Cost:       -$6,000   |
+| --------------------------       |
+| Work Order Profit:      $4,000   |
+|                         (40.0%)  |
++----------------------------------+
 ```
 
-### Root Cause Note
-The "Unknown" creator issue is caused by RLS on the `profiles` table, which only allows viewing profiles of users within the same organization. This is correct security behavior -- we just need a better fallback display.
+The card will use a purple left border (matching GC's work order card) with a ClipboardList icon.
+
+### Technical Details
+- Reuses the existing `workOrderTotal` state (already fetched) for revenue
+- Adds new `workOrderFCCost` state for the FC labor cost
+- Only rendered in the `isTCView` section
+- Profit is calculated as `workOrderTotal - workOrderFCCost`
+- Margin percentage = `(profit / workOrderTotal) * 100`
+- Shows `$0` gracefully when no work orders exist (card hidden if `workOrderTotal === 0`)
 
 ### Files Modified
-- `src/components/project/WorkOrdersTab.tsx` -- hide contract price for FC, show role label instead of "Unknown"
+- `src/components/project/ProjectFinancialsSectionNew.tsx` — add FC cost state, fetch logic, and Work Order summary card for TC view
+
