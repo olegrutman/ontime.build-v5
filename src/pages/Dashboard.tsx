@@ -10,14 +10,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import {
-  RemindersTile,
-  AddReminderDialog,
   ArchiveProjectDialog,
   CompleteProjectDialog,
   type ProjectStatusFilter,
 } from '@/components/dashboard';
 import { DashboardAttentionBanner } from '@/components/dashboard/DashboardAttentionBanner';
-
 import { DashboardProjectList } from '@/components/dashboard/DashboardProjectList';
 import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
 
@@ -30,9 +27,6 @@ export default function Dashboard() {
     statusCounts,
     attentionItems,
     pendingInvites,
-    billing,
-    financials,
-    reminders,
     loading: dataLoading,
     refetch,
   } = useDashboardData();
@@ -42,11 +36,9 @@ export default function Dashboard() {
   const [projectToArchive, setProjectToArchive] = useState<{ id: string; name: string } | null>(null);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [projectToComplete, setProjectToComplete] = useState<{ id: string; name: string } | null>(null);
-  const [addReminderOpen, setAddReminderOpen] = useState(false);
 
   const currentOrg = userOrgRoles[0]?.organization;
   const orgType = currentOrg?.type || null;
-  const isSupplier = orgType === 'SUPPLIER';
 
   const handleArchive = (projectId: string) => {
     const project = projects.find((p) => p.id === projectId);
@@ -118,38 +110,6 @@ export default function Dashboard() {
     setProjectToArchive(null);
   };
 
-  const handleCompleteReminder = async (reminderId: string) => {
-    const { error } = await supabase
-      .from('reminders')
-      .update({ completed: true })
-      .eq('id', reminderId);
-
-    if (error) {
-      toast({ title: 'Error', description: 'Failed to complete reminder', variant: 'destructive' });
-    } else {
-      refetch();
-    }
-  };
-
-  const handleAddReminder = async (reminder: { title: string; due_date: string; project_id?: string }) => {
-    if (!user || !currentOrg) return;
-    
-    const { error } = await supabase.from('reminders').insert({
-      user_id: user.id,
-      org_id: currentOrg.id,
-      title: reminder.title,
-      due_date: reminder.due_date,
-      project_id: reminder.project_id === 'none' ? null : reminder.project_id,
-    });
-
-    if (error) {
-      toast({ title: 'Error', description: 'Failed to add reminder', variant: 'destructive' });
-    } else {
-      toast({ title: 'Reminder Added', description: 'Your reminder has been saved.' });
-      refetch();
-    }
-  };
-
   const loading = authLoading || dataLoading;
 
   if (authLoading) {
@@ -157,16 +117,10 @@ export default function Dashboard() {
       <AppLayout title="Dashboard">
         <div className="p-4 sm:p-6 space-y-6">
           <Skeleton className="h-24 w-full" />
-          <div className="grid gap-6 md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_340px]">
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-20" />
-              ))}
-            </div>
-            <div className="space-y-4">
-              <Skeleton className="h-48" />
-              <Skeleton className="h-48" />
-            </div>
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-20" />
+            ))}
           </div>
         </div>
       </AppLayout>
@@ -223,45 +177,29 @@ export default function Dashboard() {
             </Button>
           </div>
         )}
-        {/* Two-Zone Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-[1fr_280px] lg:grid-cols-[1fr_340px] gap-6 lg:gap-8">
-          
-          {/* Zone A: Action Center */}
-          <div className="space-y-6">
-            {/* Org Invitation Banner */}
-            <OrgInviteBanner />
 
-            {/* Attention Banner (disappears when nothing needs attention) */}
-            <DashboardAttentionBanner
-              attentionItems={attentionItems}
-              pendingInvites={pendingInvites}
-              onRefresh={refetch}
-            />
+        {/* Org Invitation Banner */}
+        <OrgInviteBanner />
 
-            {/* Project List with integrated status tabs */}
-            <DashboardProjectList
-              projects={projects}
-              statusFilter={statusFilter}
-              onStatusFilterChange={setStatusFilter}
-              statusCounts={statusCounts}
-              loading={loading}
-              orgType={orgType}
-              onArchive={handleArchive}
-              onUnarchive={handleUnarchive}
-              onStatusChange={handleStatusChange}
-            />
-          </div>
+        {/* Attention Banner */}
+        <DashboardAttentionBanner
+          attentionItems={attentionItems}
+          pendingInvites={pendingInvites}
+          onRefresh={refetch}
+        />
 
-          {/* Zone B: Summary Sidebar */}
-          <div className="space-y-4">
-            {/* Reminders */}
-            <RemindersTile
-              reminders={reminders}
-              onComplete={handleCompleteReminder}
-              onAdd={() => setAddReminderOpen(true)}
-            />
-          </div>
-        </div>
+        {/* Project List with integrated status tabs */}
+        <DashboardProjectList
+          projects={projects}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+          statusCounts={statusCounts}
+          loading={loading}
+          orgType={orgType}
+          onArchive={handleArchive}
+          onUnarchive={handleUnarchive}
+          onStatusChange={handleStatusChange}
+        />
       </div>
 
       {/* Dialogs */}
@@ -277,13 +215,6 @@ export default function Dashboard() {
         onOpenChange={setCompleteDialogOpen}
         projectName={projectToComplete?.name || ''}
         onConfirm={confirmComplete}
-      />
-
-      <AddReminderDialog
-        open={addReminderOpen}
-        onOpenChange={setAddReminderOpen}
-        onAdd={handleAddReminder}
-        projects={projects.filter(p => p.status === 'active').map(p => ({ id: p.id, name: p.name }))}
       />
     </AppLayout>
   );
