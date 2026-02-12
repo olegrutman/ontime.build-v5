@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useDashboardData } from '@/hooks/useDashboardData';
@@ -208,9 +209,20 @@ export default function Dashboard() {
     );
   }
 
+  const canCreateProject = orgType === 'GC' || orgType === 'TC';
+
   return (
     <AppLayout title="Dashboard">
       <div className="space-y-6">
+        {/* Header with New Project button */}
+        {canCreateProject && (
+          <div className="flex justify-end">
+            <Button onClick={() => navigate('/create-project')} size="sm" className="gap-1.5">
+              <Plus className="h-4 w-4" />
+              New Project
+            </Button>
+          </div>
+        )}
         {/* Two-Zone Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6 lg:gap-8">
           
