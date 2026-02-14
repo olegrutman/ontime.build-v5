@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,23 +10,6 @@ import {
   Package,
 } from 'lucide-react';
 import { POWizardV2LineItem } from '@/types/poWizardV2';
-import { OrderingModeToggle, OrderingMode } from './OrderingModeToggle';
-import { EstimateSubTabs } from './EstimateSubTabs';
-
-interface EstimatePackItem {
-  id: string;
-  supplier_sku: string | null;
-  description: string;
-  quantity: number;
-  uom: string;
-  catalog_item_id: string | null;
-  pack_name: string | null;
-}
-
-interface EstimatePack {
-  name: string;
-  items: EstimatePackItem[];
-}
 
 interface ItemsScreenProps {
   items: POWizardV2LineItem[];
@@ -37,11 +19,6 @@ interface ItemsScreenProps {
   onBack: () => void;
   onNext: () => void;
   canAdvance: boolean;
-  projectId: string;
-  supplierId: string | null;
-  onLoadPack: (items: POWizardV2LineItem[], estimateId: string, packName: string) => void;
-  hasApprovedEstimate: boolean;
-  onAddPSMItem: (item: POWizardV2LineItem) => void;
   sourcePackName: string | null;
   onClearPack: () => void;
 }
@@ -54,36 +31,9 @@ export function ItemsScreen({
   onBack,
   onNext,
   canAdvance,
-  projectId,
-  supplierId,
-  onLoadPack,
-  hasApprovedEstimate,
-  onAddPSMItem,
   sourcePackName,
   onClearPack,
 }: ItemsScreenProps) {
-  const [mode, setMode] = useState<OrderingMode>(hasApprovedEstimate ? 'estimate' : 'catalog');
-
-  const handleSelectPack = (pack: EstimatePack, estimateId: string) => {
-    // Convert estimate pack items to PO line items
-    const lineItems: POWizardV2LineItem[] = pack.items.map((item, idx) => ({
-      id: `pack-${idx}-${Date.now()}`,
-      catalog_item_id: item.catalog_item_id || '',
-      supplier_sku: item.supplier_sku || '',
-      name: item.description,
-      specs: item.supplier_sku || '',
-      quantity: item.quantity,
-      unit_mode: 'EACH' as const,
-      uom: item.uom,
-      item_notes: item.catalog_item_id ? undefined : '⚠ Not in catalog',
-    }));
-
-    onLoadPack(lineItems, estimateId, pack.name);
-  };
-
-  // Show estimate browser when in estimate mode and no items loaded yet
-  const showEstimateBrowser = mode === 'estimate' && items.length === 0;
-
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -99,24 +49,11 @@ export function ItemsScreen({
             </Badge>
           )}
         </div>
-        <OrderingModeToggle
-          mode={mode}
-          onChange={setMode}
-          hasEstimate={hasApprovedEstimate}
-        />
       </div>
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3">
-        {showEstimateBrowser ? (
-          <EstimateSubTabs
-            projectId={projectId}
-            supplierId={supplierId}
-            onSelectPack={handleSelectPack}
-            onSwitchToCatalog={() => setMode('catalog')}
-            onAddPSMItem={onAddPSMItem}
-          />
-        ) : items.length === 0 ? (
+        {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <div className="p-4 rounded-full bg-muted mb-4">
               <Package className="h-8 w-8 text-muted-foreground" />
