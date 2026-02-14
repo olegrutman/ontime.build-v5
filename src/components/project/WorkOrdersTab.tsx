@@ -10,7 +10,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { WorkOrderWizard } from '@/components/work-order-wizard';
 import { FCWorkOrderDialog, FCWorkOrderData } from '@/components/fc-work-order';
-import { Plus, FileEdit, Eye, Edit, AlertTriangle, ArrowRight, User } from 'lucide-react';
+import { Plus, FileEdit, Eye, Edit, AlertTriangle, ArrowRight, User, Filter, Clock, CheckCircle2, Wallet, DollarSign } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { ChangeOrderStatus, CHANGE_ORDER_STATUS_LABELS } from '@/types/changeOrderProject';
 import { StatusColumn, CHANGE_ORDER_STATUS_OPTIONS } from '@/components/ui/status-column';
@@ -229,52 +230,71 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
         </Alert>
       )}
 
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {[
+          { label: 'In Progress', count: statusCounts.draft, icon: FileEdit, color: 'text-blue-600 bg-blue-100' },
+          { label: 'FC Input', count: statusCounts.fc_input, icon: Clock, color: 'text-amber-600 bg-amber-100' },
+          { label: 'TC Pricing', count: statusCounts.tc_pricing, icon: DollarSign, color: 'text-purple-600 bg-purple-100' },
+          { label: 'Approval', count: statusCounts.ready_for_approval, icon: CheckCircle2, color: 'text-emerald-600 bg-emerald-100' },
+          { label: 'Contracted', count: statusCounts.contracted, icon: Wallet, color: 'text-green-600 bg-green-100' },
+        ].map((item) => (
+          <Card key={item.label} className="p-4 relative overflow-hidden">
+            <p className="text-2xl font-bold">{item.count}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mt-1">{item.label}</p>
+            <div className={`absolute top-2 right-2 p-1.5 rounded-full ${item.color}`}>
+              <item.icon className="h-3.5 w-3.5" />
+            </div>
+          </Card>
+        ))}
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold">Work Orders</h2>
           <p className="text-sm text-muted-foreground mt-1">
-            {statusCounts.ALL} work order{statusCounts.ALL !== 1 ? 's' : ''} • {statusCounts.draft} in progress • {statusCounts.approved} approved • {statusCounts.contracted} contracted
+            {statusCounts.ALL} work order{statusCounts.ALL !== 1 ? 's' : ''}
           </p>
         </div>
-        {canCreate && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button
-                    onClick={() => isFC ? setShowFCDialog(true) : setShowWizard(true)}
-                    disabled={isBlocked}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    {isFC ? 'Submit Work Order' : 'New Work Order'}
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              {isBlocked && (
-                <TooltipContent>
-                  <p>Create SOVs for all contracts first</p>
-                </TooltipContent>
+        <div className="flex items-center gap-3">
+          <Select value={activeTab} onValueChange={(v) => setActiveTab(v as ChangeOrderStatus | 'ALL')}>
+            <SelectTrigger className="w-[180px]">
+              <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Statuses ({statusCounts.ALL})</SelectItem>
+              {(['draft', 'fc_input', 'tc_pricing', 'ready_for_approval', 'approved', 'rejected', 'contracted'] as ChangeOrderStatus[]).map(
+                (status) => (
+                  <SelectItem key={status} value={status}>
+                    {CHANGE_ORDER_STATUS_LABELS[status]} ({statusCounts[status]})
+                  </SelectItem>
+                )
               )}
-            </Tooltip>
-          </TooltipProvider>
-        )}
-      </div>
-
-      {/* Status Tabs */}
-      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div className="flex gap-2 pb-1">
-          {(['ALL', 'draft', 'fc_input', 'tc_pricing', 'ready_for_approval', 'approved', 'rejected', 'contracted'] as const).map(
-            (status) => (
-              <Button
-                key={status}
-                variant={activeTab === status ? 'default' : 'outline'}
-                onClick={() => setActiveTab(status)}
-                className="text-sm whitespace-nowrap shrink-0"
-              >
-                {getStatusTabLabel(status)} ({statusCounts[status]})
-              </Button>
-            )
+            </SelectContent>
+          </Select>
+          {canCreate && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      onClick={() => isFC ? setShowFCDialog(true) : setShowWizard(true)}
+                      disabled={isBlocked}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      {isFC ? 'Submit Work Order' : 'New Work Order'}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {isBlocked && (
+                  <TooltipContent>
+                    <p>Create SOVs for all contracts first</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
           )}
         </div>
       </div>
