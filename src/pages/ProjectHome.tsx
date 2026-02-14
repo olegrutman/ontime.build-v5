@@ -15,6 +15,7 @@ import {
   ProjectContractsSection, 
   ProjectFinancialsSectionNew,
   ProjectTopBar,
+  MobileProjectHeader,
   WorkOrdersTab,
   PurchaseOrdersTab,
   MetricStrip,
@@ -159,7 +160,14 @@ export default function ProjectHome() {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
          <SidebarInset className="flex flex-col flex-1 bg-background">
-          {/* Sticky Project Top Bar - hidden on mobile/tablet */}
+          {/* Compact mobile project header */}
+          <MobileProjectHeader
+            projectName={project.name}
+            projectStatus={projectStatus}
+            onStatusChange={handleStatusChange}
+          />
+
+          {/* Sticky Project Top Bar - desktop only */}
           <div className="hidden lg:block">
           <ProjectTopBar
             projectName={project.name}
