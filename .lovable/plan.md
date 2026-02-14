@@ -1,68 +1,123 @@
 
 
-# Redesign Product Picker Navigation for Easy Switching Between Estimate and Catalog
+# Implementation Plan: 5 Feature Bundle
 
-## The Problem Today
+This plan covers all five requested features in a logical build order, since some features depend on others (e.g., activity logging triggers feed the notification preferences system).
 
-Right now, the PO wizard has two separate "worlds" for adding materials:
+---
 
-1. **Project Estimate mode** -- shows Packs and Materials tabs, lives inside the Items screen
-2. **Full Catalog mode** -- opens the Product Picker as a separate modal on top of the wizard
+## 1. Activity / Audit Log (Real Event Logging)
 
-These two worlds are disconnected. Once you open the catalog picker and start drilling into categories and filters, the only way to get back to the estimate view is to close the picker entirely and switch the toggle. There's no smooth way to jump back and forth. The back button inside the picker steps through filter stages, but never takes you "out" to the estimate browser.
+**What it does:** Automatically records key project events (status changes, approvals, scope edits, team changes) into the existing `project_activity` table via database triggers -- no manual logging code needed.
 
-## What We Will Change
+**Current state:** The `project_activity` table and `ProjectActivitySection` UI component already exist and render activity items. But no triggers populate the table automatically.
 
-### 1. Add a "home" screen inside the Product Picker
+**Changes:**
 
-Instead of the picker always starting at the category grid, it will start at a **source selection screen** with two clear options:
+- **Database migration** -- Create PostgreSQL trigger functions on these tables:
+  - `change_order_projects` (status changes: submitted, approved, rejected)
+  - `project_participants` (invite accepted/declined)
+  - `projects` (status changes, scope updates)
+  - `invoices` (submitted, approved, rejected)
+  - Each trigger inserts a row into `project_activity` with `activity_type`, `description`, actor info (looked up from `profiles`), and relevant metadata
+- **No frontend changes needed** -- `ProjectActivitySection` already queries `project_activity` and renders by type with icons/colors. The existing realtime subscription will show new entries live.
 
-- **From Project Estimate** (only shown when an approved estimate exists) -- tapping this shows the Packs and Materials tabs right inside the picker
-- **Browse Full Catalog** -- tapping this goes to the category grid like today
+**Technical details:**
+- Triggers use `AFTER UPDATE` / `AFTER INSERT` on the relevant tables
+- Actor identity resolved by joining `auth.uid()` to `profiles` for `actor_name` and to `user_org_roles` + `organizations` for `actor_company`
+- Each trigger checks `OLD.status != NEW.status` to avoid duplicate logging on non-status updates
 
-This means the estimate browser moves from the Items screen into the Product Picker itself, so everything lives in one place.
+---
 
-### 2. Back button always works naturally
+## 2. Notification Preferences (Per-Event Channel Control)
 
-Since both paths now live inside the picker, the back button will always take you one step back:
+**What it does:** Replaces the current coarse notification toggles (email on/off, change orders on/off) with granular per-event controls letting users pick email vs. in-app for each event type.
 
-- From category grid, back goes to the source selection screen
-- From filters, back steps through filters one at a time (already working)
-- From the estimate packs/materials view, back goes to the source selection screen
-- From product list or quantity, back goes to the previous step
+**Current state:** `user_settings` has 5 boolean columns (`notify_email`, `notify_sms`, `notify_change_orders`, `notify_invoices`, `notify_invites`). The `send-notification-email` edge function already checks these columns before sending.
 
-### 3. Items screen becomes simpler
+**Changes:**
 
-The Items screen will no longer need the "Project Estimate / Full Catalog" toggle or the estimate browser. It just shows:
+- **Database migration** -- Add new columns to `user_settings`:
+  - `notify_work_order_assigned` (boolean, default true)
+  - `notify_work_order_approved` (boolean, default true)
+  - `notify_work_order_rejected` (boolean, default true)
+  - `notify_invoice_submitted` (boolean, default true)
+  - `notify_invoice_approved` (boolean, default true)
+  - `notify_invoice_rejected` (boolean, default true)
+  - `notify_project_invite` (boolean, default true)
+  - `email_digest_frequency` (text, default 'instant') -- for future batched emails
+- **Update Profile page** -- Replace the 5 switches with a structured section grouped by category (Work Orders, Invoices, Invitations), each with sub-toggles for individual events
+- **Update `send-notification-email` edge function** -- Expand the `TYPE_TO_PREFERENCE` mapping to reference the new granular columns instead of the broad categories
+- **Update `useProfile` hook** -- Add the new settings fields to the `UserSettings` interface
 
-- The list of items you have added so far
-- The "Change Pack" banner (if items came from a pack)
-- An "Add Item" button that always opens the Product Picker (which now has both paths inside it)
+---
 
-## How It Will Feel to Use
+## 3. Dashboard Quick Stats (KPI Tiles)
 
-1. You are on the Items screen with your list of materials
-2. You tap "Add Item" -- the Product Picker opens
-3. You see two big buttons: "From Project Estimate" and "Browse Full Catalog"
-4. You pick one, drill down, add an item -- picker closes, item appears in your list
-5. You tap "Add Item" again -- same two choices appear
-6. This time you pick the other source -- no mode switching needed, just tap and go
+**What it does:** Adds 3 compact stat tiles above the project list showing Open Work Orders, Pending Invoices, and Upcoming Reminders at a glance.
 
-## Files That Change
+**Current state:** `useDashboardData` already fetches all the data needed (attentionItems with change_order/invoice counts, reminders). The dashboard just doesn't display these as KPIs.
 
-| File | What Changes |
-|------|-------------|
-| `ProductPicker.tsx` | Add a new "source" step as the first screen; embed the EstimateSubTabs inside the picker when estimate path is chosen; update back button logic for the new step |
-| `ItemsScreen.tsx` | Remove the OrderingModeToggle and EstimateSubTabs; the "Add Item" button always opens the picker; keep the "Change Pack" banner |
-| `POWizardV2.tsx` | Pass `hasApprovedEstimate` and estimate-related props to the ProductPicker instead of ItemsScreen |
+**Changes:**
 
-## What Stays the Same
+- **New component** -- `src/components/dashboard/DashboardQuickStats.tsx`
+  - 3 compact tiles in a responsive grid (1 col mobile, 3 col desktop)
+  - Tile 1: "Open Work Orders" -- count from `attentionItems.filter(type === 'change_order').length`
+  - Tile 2: "Pending Invoices" -- count from `attentionItems.filter(type === 'invoice').length`  
+  - Tile 3: "Reminders Due" -- count from `reminders` with `due_date <= 7 days from now`
+  - Each tile is clickable, navigating to the relevant page
+  - Uses existing `Card` component with icon, count, and label
+- **Update Dashboard page** -- Insert `DashboardQuickStats` between the OrgInviteBanner and AttentionBanner
+- **Update `useDashboardData`** -- Expose `reminders` (already fetched but may need to be returned -- it is already returned)
 
-- The filter step-by-step logic (already fixed)
-- Pack loading and "Change Pack" flow
-- Quantity panel behavior
-- Review screen
-- Database queries and data flow
-- PSM (Materials) browser internals
-- Unmatched item editor
+No database changes needed.
+
+---
+
+## 4. Export / Download Project Summary PDF
+
+**What it does:** Adds a "Download Summary" button to the project page that generates a consolidated PDF with project info, financials, work order status breakdown, and billing summary.
+
+**Changes:**
+
+- **New edge function** -- `supabase/functions/project-summary-download/index.ts`
+  - Accepts `project_id` as query param
+  - Authenticates via JWT and verifies the user has access (is on the project team)
+  - Fetches project details, contracts, work orders (with status counts), invoices (with totals), and team members
+  - Generates a PDF using the same approach as existing `po-download` and `invoice-download` functions (HTML-to-PDF or manual PDF construction)
+  - Returns the PDF as a downloadable response
+- **New UI button** -- Add a "Download Summary" button to `ProjectTopBar` and `MobileProjectHeader`
+  - On click, calls the edge function and triggers a browser download
+  - Shows a loading spinner while generating
+
+---
+
+## 5. Onboarding Checklist
+
+**What it does:** Shows a dismissible checklist card on the dashboard for new users guiding them through: (1) Complete profile, (2) Set up organization, (3) Invite a team member, (4) Create first project.
+
+**Changes:**
+
+- **Database migration** -- Add `onboarding_dismissed` boolean column to `user_settings` (default false)
+- **New component** -- `src/components/dashboard/OnboardingChecklist.tsx`
+  - Renders a Card with 4 checklist items, each with an auto-detected completion state:
+    1. "Complete your profile" -- checked if `profile.first_name` and `profile.phone` exist
+    2. "Set up organization details" -- checked if `organization.address?.street` exists
+    3. "Invite a team member" -- checked if org has more than 1 member (query `user_org_roles` count)
+    4. "Create your first project" -- checked if `projects.length > 0`
+  - Each unchecked item links to the relevant page (Profile, Profile, Profile invite section, Create Project)
+  - "Dismiss" button sets `onboarding_dismissed = true` in `user_settings`
+  - Only shown when `user_settings.onboarding_dismissed !== true`
+- **Update Dashboard page** -- Render `OnboardingChecklist` at the top of the dashboard (before quick stats), conditionally based on the dismissed flag
+- **Update `useDashboardData`** or create a small `useOnboardingStatus` hook to check completion states
+
+---
+
+## Build Order
+
+1. Activity/Audit Log triggers (no frontend changes, enables data for everything else)
+2. Notification Preferences (database + Profile page + edge function update)
+3. Dashboard Quick Stats (pure frontend, no DB changes)
+4. Onboarding Checklist (small DB change + new component)
+5. Export Project Summary PDF (new edge function + button)
 
