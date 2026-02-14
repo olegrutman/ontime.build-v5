@@ -1,51 +1,25 @@
 
+# Fix Sasha AI Bubble Overlapping Bottom Nav on Mobile
 
-# Match Work Orders Page to Invoice Page on Mobile
-
-Align the Work Orders tab layout with the Invoice tab so both have the same visual structure on mobile: summary stat cards at the top, a dropdown filter (instead of scrollable buttons), and consistent card grid.
+The Sasha floating bubble is positioned `bottom-4` (16px from bottom), but the BottomNav is 64px tall (`h-16`) and only visible below `lg`. This causes the bubble to sit behind the nav bar on mobile/tablet.
 
 ## What Changes
 
-### 1. Add summary stat cards to `WorkOrdersTab.tsx`
+### 1. Move bubble above BottomNav on mobile
 
-Add a grid of summary cards (matching the Invoice tab's `renderSummaryCards`) at the top of the WO list, showing:
-- **In Progress** (draft count) with FileEdit icon
-- **FC Input** count with Clock icon
-- **TC Pricing** count with DollarSign icon
-- **Approval** (ready_for_approval count) with CheckCircle2 icon
-- **Contracted** count with Wallet icon
+In `src/components/sasha/SashaBubble.tsx`, change the bubble button's class from `bottom-4` to `bottom-20 lg:bottom-4` so it sits above the 64px bottom nav on mobile/tablet, and returns to its normal position on desktop where there is no bottom nav.
 
-Uses the same card styling: `Card p-4 relative overflow-hidden` with bold metric, uppercase label, and icon badge. Grid: `grid-cols-2 sm:grid-cols-3 lg:grid-cols-5`.
+### 2. Adjust chat panel position
 
-### 2. Replace horizontal scroll filter buttons with a Select dropdown
-
-Replace the scrollable row of status filter buttons (lines 265-280) with a `Select` dropdown matching the Invoice tab's filter style:
-- `SelectTrigger` with Filter icon and `w-[160px]`
-- Options: All Statuses, then each `ChangeOrderStatus` with label and count
-
-### 3. Keep everything else the same
-
-The card rendering (`renderWorkOrderCard`), section separation (Fixed Price / T&M), wizard dialogs, SOV alert, and create button all remain unchanged.
+The chat panel currently uses `bottom-20`. On mobile it needs to account for the raised bubble position, so change to `bottom-36 lg:bottom-20` to keep the panel above the bubble.
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `src/components/project/WorkOrdersTab.tsx` | Add summary cards, replace filter buttons with Select dropdown |
-
-## Technical Details
-
-New imports needed in `WorkOrdersTab.tsx`:
-- `Card` is already imported
-- Add: `Filter, Clock, CheckCircle2, Wallet, DollarSign` from lucide-react (some already imported)
-- Add: `Select, SelectContent, SelectItem, SelectTrigger, SelectValue` from `@/components/ui/select`
-
-The summary cards reuse the exact same pattern from `InvoicesTab.tsx` lines 341-390, adapted for WO status counts.
+| `src/components/sasha/SashaBubble.tsx` | Update bubble position to `bottom-20 lg:bottom-4`; update chat panel position to `bottom-36 lg:bottom-20` |
 
 ## What Is NOT Changed
-- Work order card design (already matches RecordCard pattern)
-- Fixed Price / T&M section separation
-- Wizard and dialog flows
-- Desktop behavior (cards still render in grid)
+- Desktop layout unchanged (bubble stays at bottom-right corner)
+- Chat panel sizing, content, and behavior unchanged
 - No database or logic changes
-
