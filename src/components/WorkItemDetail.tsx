@@ -1,7 +1,7 @@
 import { WorkItem, WORK_ITEM_TYPE_LABELS } from '@/types/workItem';
 import { StateBadge } from './StateBadge';
 import { TypeIndicator } from './TypeIndicator';
-import { StateProgressBar, StateProgressLabels } from './StateProgressBar';
+import { StateProgressBar } from './StateProgressBar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -63,7 +63,6 @@ export function WorkItemDetail({ item, onClose }: WorkItemDetailProps) {
         <div>
           <h3 className="text-sm font-medium mb-3">Progress</h3>
           <StateProgressBar currentState={item.state} readonly />
-          <StateProgressLabels />
         </div>
 
         <Separator />
