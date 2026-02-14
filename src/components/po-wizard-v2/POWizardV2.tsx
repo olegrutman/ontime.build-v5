@@ -223,6 +223,16 @@ export function POWizardV2({
     toast.success('Item removed');
   }, []);
 
+  const handleClearPack = useCallback(() => {
+    setFormData(prev => ({
+      ...prev,
+      line_items: [],
+      source_estimate_id: null,
+      source_pack_name: null,
+      pack_modified: false,
+    }));
+  }, []);
+
   const handleLoadPack = useCallback((items: POWizardV2LineItem[], estimateId: string, packName: string) => {
     setFormData(prev => ({
       ...prev,
@@ -283,6 +293,8 @@ export function POWizardV2({
           onLoadPack={handleLoadPack}
           hasApprovedEstimate={hasApprovedEstimate}
           onAddPSMItem={handleAddItem}
+          sourcePackName={formData.source_pack_name}
+          onClearPack={handleClearPack}
         />
       )}
       {screen === 'review' && (

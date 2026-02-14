@@ -42,6 +42,8 @@ interface ItemsScreenProps {
   onLoadPack: (items: POWizardV2LineItem[], estimateId: string, packName: string) => void;
   hasApprovedEstimate: boolean;
   onAddPSMItem: (item: POWizardV2LineItem) => void;
+  sourcePackName: string | null;
+  onClearPack: () => void;
 }
 
 export function ItemsScreen({
@@ -57,6 +59,8 @@ export function ItemsScreen({
   onLoadPack,
   hasApprovedEstimate,
   onAddPSMItem,
+  sourcePackName,
+  onClearPack,
 }: ItemsScreenProps) {
   const [mode, setMode] = useState<OrderingMode>(hasApprovedEstimate ? 'estimate' : 'catalog');
 
@@ -128,6 +132,18 @@ export function ItemsScreen({
           </div>
         ) : (
           <>
+            {/* Pack source banner */}
+            {sourcePackName && (
+              <div className="flex items-center justify-between rounded-lg bg-muted/60 px-3 py-2">
+                <span className="text-sm text-muted-foreground truncate">
+                  Pack: <span className="font-medium text-foreground">"{sourcePackName}"</span>
+                </span>
+                <Button variant="ghost" size="sm" className="h-7 text-xs shrink-0" onClick={onClearPack}>
+                  Change Pack
+                </Button>
+              </div>
+            )}
+
             {/* Item List */}
             {items.map((item) => (
               <Card key={item.id} className="overflow-hidden">
