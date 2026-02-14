@@ -1,47 +1,43 @@
 
 
-# Fix Product Picker Back Button to Go Back One Step
+# Fix Back Navigation After Pack Selection
 
 ## Problem
 
-When inside the multi-step filter flow (StepByStepFilter), pressing the back chevron in the ProductPicker header jumps all the way out to the category or secondary selection. Users expect it to go back one filter step at a time (e.g., from "Select Length" back to "Select Dimension").
+When a user is on the Items screen (Step 2) in estimate mode and selects a pack, the pack items are loaded into the line items list. At that point, the estimate browser (packs/materials tabs) disappears because `showEstimateBrowser` is `false` when `items.length > 0`. The footer "Back" button navigates to the Header screen (Step 1) instead of returning to the pack selection view.
 
-The internal logic already exists in `StepByStepFilter.handleBackStep` (line 229) -- it goes back one filter step, or calls `onBack` when at step 0. But the parent header button bypasses this entirely.
+Users expect the back button to return them to the packs page so they can select a different pack or switch to catalog mode.
 
 ## Solution
 
-Expose StepByStepFilter's back functionality via `useImperativeHandle` so the parent ProductPicker can delegate to it when the user taps the header back button during the filter-step phase.
+Add a "Change Pack" or back-to-packs action on the Items screen when items were loaded from an estimate pack. This gives users a clear path back to the pack selection without losing context.
 
-## Changes
+### Changes to `src/components/po-wizard-v2/ItemsScreen.tsx`
 
-### 1. `src/components/po-wizard-v2/StepByStepFilter.tsx`
+1. Accept a new `sourcePackName` prop (already available in `formData.source_pack_name` in the parent) to know whether items came from a pack.
+2. Accept a new `onClearItems` callback so the user can clear current pack items and return to pack selection.
+3. When items are loaded from a pack, show a small banner above the item list displaying the pack name with a "Change Pack" button. Tapping it clears items and returns to the estimate browser view.
 
-- Wrap with `forwardRef`
-- Expose a `goBack()` method via `useImperativeHandle` that calls the existing `handleBackStep` logic
+### Changes to `src/components/po-wizard-v2/POWizardV2.tsx`
 
-### 2. `src/components/po-wizard-v2/ProductPicker.tsx`
-
-- Create a `ref` for StepByStepFilter and pass it when rendering
-- In `handleBack`, when `step === 'filter-step'`, call `ref.current.goBack()` instead of jumping out
+1. Pass `sourcePackName={formData.source_pack_name}` and an `onClearPack` handler to `ItemsScreen`.
+2. The `onClearPack` handler clears `line_items`, `source_estimate_id`, `source_pack_name`, and `pack_modified` so the estimate browser reappears.
 
 ## Technical Details
 
-```
-StepByStepFilter:
-  - Add forwardRef wrapper
-  - useImperativeHandle exposes { goBack: handleBackStep }
+**ItemsScreen.tsx**
+- New props: `sourcePackName: string | null`, `onClearPack: () => void`
+- When `sourcePackName` is set and `items.length > 0`, render a small info row: `Pack: "{packName}"` with a "Change" button
+- "Change" button calls `onClearPack()` which resets items, causing `showEstimateBrowser` to become `true` again
 
-ProductPicker:
-  - const filterRef = useRef<{ goBack: () => void }>(null)
-  - Pass ref={filterRef} to StepByStepFilter
-  - handleBack case 'filter-step': filterRef.current?.goBack()
-    (removes the current jump-to-secondary/category logic)
-```
+**POWizardV2.tsx**
+- Add `handleClearPack` callback that resets `line_items: []`, `source_estimate_id: null`, `source_pack_name: null`, `pack_modified: false`
+- Pass `sourcePackName={formData.source_pack_name}` and `onClearPack={handleClearPack}` to `ItemsScreen`
 
 ## What Is NOT Changed
 
-- Filter discovery, skip logic, and auto-advance behavior
-- Category and secondary selection flow
-- Products and quantity steps
+- ProductPicker (full catalog) behavior unchanged
+- Pack loading logic unchanged
+- PSM browser unchanged
 - No database changes
 
