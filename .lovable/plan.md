@@ -1,28 +1,48 @@
 
 
-# Make Sidebar Fully Collapsible on All Screens
+# Unify Progress Bars to Match WorkOrderProgressBar Design
 
-The sidebar currently collapses to an "icon rail" (narrow strip showing only icons) on desktop/tablet, and uses a slide-out drawer on mobile. This change will make it fully collapsible (completely hidden) on all screen sizes, with the toggle button always visible in the top bar.
+The app currently has two different progress bar styles:
+
+1. **WorkOrderProgressBar** (on the Work Order detail page) -- numbered circles with connector lines and labels below, matching the screenshot
+2. **StateProgressBar** (used in ChangeWorkDetail, WorkItemDetail, WorkItemPage) -- a different style with smaller circles, no labels below the connector lines
+
+This plan updates the `StateProgressBar` component to match the `WorkOrderProgressBar` design so the look is consistent throughout the app.
 
 ## What Changes
 
-### 1. Switch collapse mode from "icon" to "offcanvas"
-In `AppSidebar.tsx`, change `collapsible="icon"` to `collapsible="offcanvas"`. This makes the sidebar fully hide when collapsed instead of showing a narrow icon strip.
+### 1. Redesign `StateProgressBar` in `src/components/StateProgressBar.tsx`
 
-### 2. Ensure SidebarTrigger is always visible
-The `SidebarTrigger` in `TopBar.tsx` is already always rendered -- no changes needed there. It will continue to toggle the sidebar open/closed.
+Replace the current implementation with a layout that matches `WorkOrderProgressBar`:
+- Numbered circles (w-7 h-7 / sm:w-8 sm:h-8) with border-2
+- Completed steps show green background with a check icon
+- Current step shows primary color fill
+- Future steps show muted/gray
+- Connector lines between circles (h-0.5, green when completed, muted otherwise)
+- Labels appear below each circle (text-[11px] font-medium)
 
-### 3. Clean up icon-only conditional rendering
-Since the sidebar will fully hide (not show icons), the `{!collapsed && ...}` guards on text labels in `AppSidebar.tsx` become unnecessary. However, keeping them is harmless and provides future flexibility, so they stay.
+Remove the separate `StateProgressLabels` export -- labels will be integrated directly into the bar (matching how `WorkOrderProgressBar` renders its labels inline under each circle).
+
+### 2. Update consumers of `StateProgressLabels`
+
+Remove `StateProgressLabels` usage from:
+- `src/components/WorkItemDetail.tsx` (line 66)
+- `src/components/work-item/WorkItemProgress.tsx` (line 12)
+- `src/components/change-work/ChangeWorkDetail.tsx` (line 153)
+
+Since labels are now built into the bar itself, these separate label rows are no longer needed.
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `src/components/layout/AppSidebar.tsx` | Change `collapsible="icon"` to `collapsible="offcanvas"` on the Sidebar component |
+| `src/components/StateProgressBar.tsx` | Redesign to match WorkOrderProgressBar style with inline labels |
+| `src/components/WorkItemDetail.tsx` | Remove `StateProgressLabels` import and usage |
+| `src/components/work-item/WorkItemProgress.tsx` | Remove `StateProgressLabels` import and usage |
+| `src/components/change-work/ChangeWorkDetail.tsx` | Remove `StateProgressLabels` import and usage |
 
 ## What Is NOT Changed
-- No logic, permissions, database, or route changes
-- TopBar and SidebarTrigger remain unchanged
-- Mobile drawer behavior remains the same (already offcanvas-style)
-- All sidebar content (nav items, footer) unchanged
+- `WorkOrderProgressBar` itself (it already has the target design)
+- No database, logic, permissions, or route changes
+- Progress bar functionality (readonly, state tracking) unchanged
+
