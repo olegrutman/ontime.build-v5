@@ -1,25 +1,41 @@
 
-# Fix Sasha AI Bubble Overlapping Bottom Nav on Mobile
 
-The Sasha floating bubble is positioned `bottom-4` (16px from bottom), but the BottomNav is 64px tall (`h-16`) and only visible below `lg`. This causes the bubble to sit behind the nav bar on mobile/tablet.
+# Add Account Avatar and Dropdown Menu to Mobile Top Bar
+
+On mobile/tablet (below lg), the sidebar is hidden and there's no way to access the profile, approvals, or admin pages. This adds a user avatar button in the top-right corner of the `TopBar` with a dropdown menu containing quick links to those pages.
 
 ## What Changes
 
-### 1. Move bubble above BottomNav on mobile
+### 1. Add avatar + dropdown to `TopBar.tsx`
 
-In `src/components/sasha/SashaBubble.tsx`, change the bubble button's class from `bottom-4` to `bottom-20 lg:bottom-4` so it sits above the 64px bottom nav on mobile/tablet, and returns to its normal position on desktop where there is no bottom nav.
+Add a user avatar button (visible only below lg via `lg:hidden`) in the top-right actions area of `TopBar`. Clicking it opens a dropdown menu with:
 
-### 2. Adjust chat panel position
+- **Profile** link (to `/profile`)
+- **Separator**
+- **Estimate Approvals** (GC_PM only, to `/approvals/estimates`)
+- **Manage Suppliers** (GC_PM / TC_PM only, to `/admin/suppliers`)
+- **Separator**
+- **My Team** (org admins only, to `/org/team`)
+- **Settings** (to `/profile`)
+- **Separator**
+- **Sign out**
 
-The chat panel currently uses `bottom-20`. On mobile it needs to account for the raised bubble position, so change to `bottom-36 lg:bottom-20` to keep the panel above the bubble.
+The avatar shows user initials (matching sidebar style) and the dropdown uses the same `DropdownMenu` component already used in `Header.tsx`.
+
+### 2. Import auth context in TopBar
+
+Add `useAuth` and `useNavigate` hooks to `TopBar` to access `profile`, `currentRole`, and navigation. Also import `Avatar`, `AvatarFallback`, `DropdownMenu` components, and role permission constants.
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `src/components/sasha/SashaBubble.tsx` | Update bubble position to `bottom-20 lg:bottom-4`; update chat panel position to `bottom-36 lg:bottom-20` |
+| `src/components/layout/TopBar.tsx` | Add avatar button with dropdown menu, visible only on mobile/tablet |
 
 ## What Is NOT Changed
-- Desktop layout unchanged (bubble stays at bottom-right corner)
-- Chat panel sizing, content, and behavior unchanged
+
+- Desktop layout: sidebar still provides all navigation on lg+
+- BottomNav unchanged
 - No database or logic changes
+- Notification bell stays in its current position
+
