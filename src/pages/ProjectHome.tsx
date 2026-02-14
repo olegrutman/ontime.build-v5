@@ -159,7 +159,8 @@ export default function ProjectHome() {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
          <SidebarInset className="flex flex-col flex-1 bg-background">
-          {/* Sticky Project Top Bar */}
+          {/* Sticky Project Top Bar - hidden on mobile/tablet */}
+          <div className="hidden lg:block">
           <ProjectTopBar
             projectName={project.name}
             projectStatus={projectStatus}
@@ -168,6 +169,7 @@ export default function ProjectHome() {
             onStatusChange={handleStatusChange}
             isSupplier={isSupplier}
           />
+          </div>
 
           {/* Scrollable content */}
           <main className="flex-1 overflow-auto">
