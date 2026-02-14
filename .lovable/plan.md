@@ -1,123 +1,122 @@
 
+# Redesign Project Overview Page - Four-Zone Layout
 
-# Implementation Plan: 5 Feature Bundle
+## Overview
+Replace the current two-column Overview layout (financial cards + sidebar context tiles) with a dense, role-aware four-zone vertical layout that answers three questions instantly: Am I profitable? Am I over budget on materials? What needs my attention?
 
-This plan covers all five requested features in a logical build order, since some features depend on others (e.g., activity logging triggers feed the notification preferences system).
+## Current State
+- **Zone A** (left column): AttentionBanner, MetricStrip (WO/Invoice/PO counts), and a large ProjectFinancialsSectionNew (913 lines, contract cards with inline editing, billing progress)
+- **Zone B** (right 340px column): Team, Contracts, Scope -- all collapsible
+- Layout is `grid-cols-1 lg:grid-cols-[1fr_340px]`
+- Financial data is spread across MetricStrip, ProjectFinancialsSectionNew, and SupplierFinancialsSummaryCard
+- AttentionBanner sits below the top bar, easy to miss on scroll
 
----
+## New Layout Structure
 
-## 1. Activity / Audit Log (Real Event Logging)
+```text
++----------------------------------------------------------+
+| ZONE 4: ATTENTION CENTER (amber banner, always visible)  |
++----------------------------------------------------------+
+| ZONE 1: FINANCIAL SIGNAL BAR                             |
+| [Card][Card][Card][Card][Card] -- dense, compact, 12-col |
++----------------------------------------------------------+
+| ZONE 2: FINANCIAL HEALTH SNAPSHOT                        |
+| [Graph 1]                    [Graph 2]                   |
++----------------------------------------------------------+
+| ZONE 3: OPERATIONAL SUMMARY                              |
+| [Recent WOs] [Recent Invoices] [Team] [Scope Summary]    |
++----------------------------------------------------------+
+```
 
-**What it does:** Automatically records key project events (status changes, approvals, scope edits, team changes) into the existing `project_activity` table via database triggers -- no manual logging code needed.
+On mobile: Attention Center first, then Financial Signal Bar stacked vertically, then graphs stacked, then operational lists.
 
-**Current state:** The `project_activity` table and `ProjectActivitySection` UI component already exist and render activity items. But no triggers populate the table automatically.
+## Detailed Zone Specifications
 
-**Changes:**
+### Zone 4: Attention Center (moved to top)
+- Reuse existing `AttentionBanner` component with minor styling tweaks
+- Position as the first element in the overview (above financials)
+- No content changes needed -- already role-aware
 
-- **Database migration** -- Create PostgreSQL trigger functions on these tables:
-  - `change_order_projects` (status changes: submitted, approved, rejected)
-  - `project_participants` (invite accepted/declined)
-  - `projects` (status changes, scope updates)
-  - `invoices` (submitted, approved, rejected)
-  - Each trigger inserts a row into `project_activity` with `activity_type`, `description`, actor info (looked up from `profiles`), and relevant metadata
-- **No frontend changes needed** -- `ProjectActivitySection` already queries `project_activity` and renders by type with icons/colors. The existing realtime subscription will show new entries live.
+### Zone 1: Financial Signal Bar
+Create a new `FinancialSignalBar` component that replaces both `MetricStrip` and `ProjectFinancialsSectionNew`.
 
-**Technical details:**
-- Triggers use `AFTER UPDATE` / `AFTER INSERT` on the relevant tables
-- Actor identity resolved by joining `auth.uid()` to `profiles` for `actor_name` and to `user_org_roles` + `organizations` for `actor_company`
-- Each trigger checks `OLD.status != NEW.status` to avoid duplicate logging on non-status updates
+**Data source**: Single hook `useProjectFinancials(projectId)` that fetches contracts, invoices, POs, work orders, and FC hours in parallel.
 
----
+**Role-based cards** (compact: p-3, no 40px icon circles, just small inline icons):
 
-## 2. Notification Preferences (Per-Event Channel Control)
+| # | FC | TC | GC | Supplier |
+|---|----|----|----|----|
+| 1 | Contract with TC | Incoming Contract (GC) | Contract with TC | Order Value |
+| 2 | Invoiced to Date | Outgoing Contract (FC) | Approved Work Orders | Invoiced |
+| 3 | Retainage Held | Supplier Estimate (if mat. responsible) | Total Invoiced | Paid |
+| 4 | Approved WOs Pending Billing | Total Billed to GC | Retainage Held | Outstanding |
+| 5 | Remaining Balance | Live Position (In - Out - Materials) | Supplier Est vs Orders | -- |
+| 6 | -- | Material Ordered vs Estimate | -- | -- |
+| 7 | -- | Total Paid to FC | -- | -- |
 
-**What it does:** Replaces the current coarse notification toggles (email on/off, change orders on/off) with granular per-event controls letting users pick email vs. in-app for each event type.
+**Layout**: `grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6` with `gap-2`. Each card is a small bordered div with:
+- 11px uppercase label
+- 20px bold number
+- Optional color indicator (green/red/amber)
+- No large icon boxes -- just a 14px inline icon next to the label
 
-**Current state:** `user_settings` has 5 boolean columns (`notify_email`, `notify_sms`, `notify_change_orders`, `notify_invoices`, `notify_invites`). The `send-notification-email` edge function already checks these columns before sending.
+**TC "Live Position" card**: Shows `Incoming - Outgoing - Materials Ordered` with green/red coloring based on positive/negative.
 
-**Changes:**
+### Zone 2: Financial Health Snapshot
+Create a new `FinancialHealthCharts` component using recharts (already installed).
 
-- **Database migration** -- Add new columns to `user_settings`:
-  - `notify_work_order_assigned` (boolean, default true)
-  - `notify_work_order_approved` (boolean, default true)
-  - `notify_work_order_rejected` (boolean, default true)
-  - `notify_invoice_submitted` (boolean, default true)
-  - `notify_invoice_approved` (boolean, default true)
-  - `notify_invoice_rejected` (boolean, default true)
-  - `notify_project_invite` (boolean, default true)
-  - `email_digest_frequency` (text, default 'instant') -- for future batched emails
-- **Update Profile page** -- Replace the 5 switches with a structured section grouped by category (Work Orders, Invoices, Invitations), each with sub-toggles for individual events
-- **Update `send-notification-email` edge function** -- Expand the `TYPE_TO_PREFERENCE` mapping to reference the new granular columns instead of the broad categories
-- **Update `useProfile` hook** -- Add the new settings fields to the `UserSettings` interface
+**GC and TC**: Material Estimate vs Actual Orders bar chart. Red bar overlay if actual exceeds estimate. Simple two-bar comparison per work order or aggregate.
 
----
+**TC only (additional)**: Margin Position Trend -- line chart showing cumulative margin over time based on approved work orders.
 
-## 3. Dashboard Quick Stats (KPI Tiles)
+**FC**: Earned vs Invoiced vs Retainage -- grouped bar or stacked bar chart.
 
-**What it does:** Adds 3 compact stat tiles above the project list showing Open Work Orders, Pending Invoices, and Upcoming Reminders at a glance.
+**Supplier**: No charts (skip zone entirely).
 
-**Current state:** `useDashboardData` already fetches all the data needed (attentionItems with change_order/invoice counts, reminders). The dashboard just doesn't display these as KPIs.
+Layout: `grid-cols-1 md:grid-cols-2 gap-4`. Charts inside compact cards with `p-3`, chart height ~160px. Clean, minimal axes.
 
-**Changes:**
+### Zone 3: Operational Summary
+Create a new `OperationalSummary` component with four compact lists in a 2x2 grid (`grid-cols-1 sm:grid-cols-2 gap-3`).
 
-- **New component** -- `src/components/dashboard/DashboardQuickStats.tsx`
-  - 3 compact tiles in a responsive grid (1 col mobile, 3 col desktop)
-  - Tile 1: "Open Work Orders" -- count from `attentionItems.filter(type === 'change_order').length`
-  - Tile 2: "Pending Invoices" -- count from `attentionItems.filter(type === 'invoice').length`  
-  - Tile 3: "Reminders Due" -- count from `reminders` with `due_date <= 7 days from now`
-  - Each tile is clickable, navigating to the relevant page
-  - Uses existing `Card` component with icon, count, and label
-- **Update Dashboard page** -- Insert `DashboardQuickStats` between the OrgInviteBanner and AttentionBanner
-- **Update `useDashboardData`** -- Expose `reminders` (already fetched but may need to be returned -- it is already returned)
+1. **Recent Work Orders** (5 most recent): Title, status badge, date. Clickable rows navigating to WO detail.
+2. **Recent Invoices** (5 most recent): Invoice number, status badge, amount. Clickable.
+3. **Team**: Compact inline list (role dot + org name), not collapsible. Show count summary.
+4. **Scope Summary**: 2-3 line text summary (type, floors, units). Link to edit.
 
-No database changes needed.
+No financial numbers in this zone -- purely operational status.
 
----
+### Contract Editing
+The existing inline contract editing from `ProjectFinancialsSectionNew` will be preserved. The contract value cards in Zone 1 will include hover-to-edit pencil icons that open the same inline edit flow.
 
-## 4. Export / Download Project Summary PDF
+## Files to Create / Modify
 
-**What it does:** Adds a "Download Summary" button to the project page that generates a consolidated PDF with project info, financials, work order status breakdown, and billing summary.
+### New Files
+1. **`src/hooks/useProjectFinancials.ts`** -- Consolidated data hook replacing scattered fetches in MetricStrip and ProjectFinancialsSectionNew. Returns role-specific financial metrics, chart data, and recent records.
 
-**Changes:**
+2. **`src/components/project/FinancialSignalBar.tsx`** -- Zone 1. Dense grid of role-aware financial cards. Includes inline contract editing capability migrated from ProjectFinancialsSectionNew.
 
-- **New edge function** -- `supabase/functions/project-summary-download/index.ts`
-  - Accepts `project_id` as query param
-  - Authenticates via JWT and verifies the user has access (is on the project team)
-  - Fetches project details, contracts, work orders (with status counts), invoices (with totals), and team members
-  - Generates a PDF using the same approach as existing `po-download` and `invoice-download` functions (HTML-to-PDF or manual PDF construction)
-  - Returns the PDF as a downloadable response
-- **New UI button** -- Add a "Download Summary" button to `ProjectTopBar` and `MobileProjectHeader`
-  - On click, calls the edge function and triggers a browser download
-  - Shows a loading spinner while generating
+3. **`src/components/project/FinancialHealthCharts.tsx`** -- Zone 2. Recharts-based graphs. Material Estimate vs Orders, Margin Trend, Earned vs Invoiced.
 
----
+4. **`src/components/project/OperationalSummary.tsx`** -- Zone 3. Four compact list panels: Recent WOs, Recent Invoices, Team summary, Scope summary.
 
-## 5. Onboarding Checklist
+### Modified Files
+5. **`src/pages/ProjectHome.tsx`** -- Replace the current overview `grid-cols-1 lg:grid-cols-[1fr_340px]` layout with the new four-zone vertical stack. Remove imports of MetricStrip, ProjectFinancialsSectionNew, SupplierFinancialsSummaryCard, ProjectTeamSection, ProjectContractsSection, ProjectScopeSection from the overview tab. Add imports for the three new zone components.
 
-**What it does:** Shows a dismissible checklist card on the dashboard for new users guiding them through: (1) Complete profile, (2) Set up organization, (3) Invite a team member, (4) Create first project.
+6. **`src/components/project/index.ts`** -- Add exports for the three new components; keep old exports for other tabs that may reference them.
 
-**Changes:**
+### Retained (no changes)
+- `AttentionBanner.tsx` -- reused as-is for Zone 4
+- `ProjectTeamSection.tsx`, `ProjectContractsSection.tsx`, `ProjectScopeSection.tsx` -- kept in codebase for potential use elsewhere, but removed from the Overview tab
+- All other tabs (SOV, Work Orders, Invoices, Purchase Orders) remain unchanged
 
-- **Database migration** -- Add `onboarding_dismissed` boolean column to `user_settings` (default false)
-- **New component** -- `src/components/dashboard/OnboardingChecklist.tsx`
-  - Renders a Card with 4 checklist items, each with an auto-detected completion state:
-    1. "Complete your profile" -- checked if `profile.first_name` and `profile.phone` exist
-    2. "Set up organization details" -- checked if `organization.address?.street` exists
-    3. "Invite a team member" -- checked if org has more than 1 member (query `user_org_roles` count)
-    4. "Create your first project" -- checked if `projects.length > 0`
-  - Each unchecked item links to the relevant page (Profile, Profile, Profile invite section, Create Project)
-  - "Dismiss" button sets `onboarding_dismissed = true` in `user_settings`
-  - Only shown when `user_settings.onboarding_dismissed !== true`
-- **Update Dashboard page** -- Render `OnboardingChecklist` at the top of the dashboard (before quick stats), conditionally based on the dismissed flag
-- **Update `useDashboardData`** or create a small `useOnboardingStatus` hook to check completion states
+## Responsive Behavior
+- **Desktop (lg+)**: Full 5-6 column signal bar, side-by-side charts, 2-column operational grid
+- **Tablet (md)**: 3-column signal bar, stacked charts, 2-column operational grid
+- **Mobile (sm/xs)**: Single-column stacked cards throughout, reduced chart height (120px), compact operational lists
 
----
-
-## Build Order
-
-1. Activity/Audit Log triggers (no frontend changes, enables data for everything else)
-2. Notification Preferences (database + Profile page + edge function update)
-3. Dashboard Quick Stats (pure frontend, no DB changes)
-4. Onboarding Checklist (small DB change + new component)
-5. Export Project Summary PDF (new edge function + button)
-
+## Technical Notes
+- The `useProjectFinancials` hook will batch all Supabase queries using `Promise.all` for performance
+- Viewer role detection reuses the existing pattern from `ProjectFinancialsSectionNew` (check user org against project_team)
+- Chart data for "Margin Position Trend" aggregates approved work orders by month
+- Material Estimate vs Orders compares `material_total` from change_order_projects against `po_line_items` totals from linked POs
+- Contract inline editing logic will be extracted into a shared sub-component used by FinancialSignalBar
