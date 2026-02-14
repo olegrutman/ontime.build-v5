@@ -35,8 +35,6 @@ export default function Dashboard() {
     refetch,
   } = useDashboardData();
 
-  const { profile, organization, userSettings, updateUserSettings } = useProfile();
-
   const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>('active');
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [projectToArchive, setProjectToArchive] = useState<{ id: string; name: string } | null>(null);
@@ -171,6 +169,7 @@ export default function Dashboard() {
 
   const canCreateProject = orgType === 'GC' || orgType === 'TC';
 
+  const { profile, organization, userSettings, updateUserSettings } = useProfile();
 
   // Onboarding state
   const showOnboarding = userSettings && !userSettings.onboarding_dismissed;
