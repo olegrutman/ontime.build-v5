@@ -796,63 +796,111 @@ export default function Profile() {
               <Bell className="h-5 w-5" />
               Notifications
             </CardTitle>
-            <CardDescription>Control how you receive updates</CardDescription>
+            <CardDescription>Control how you receive updates per event type</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Email Notifications</p>
-                <p className="text-sm text-muted-foreground">Receive updates via email</p>
+          <CardContent className="space-y-6">
+            {/* Global toggles */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Delivery Channels</p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-sm">Email Notifications</p>
+                    <p className="text-xs text-muted-foreground">Master toggle for all email alerts</p>
+                  </div>
+                  <Switch
+                    checked={userSettings?.notify_email ?? true}
+                    onCheckedChange={(v) => handleNotificationChange('notify_email', v)}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-sm">Text Notifications</p>
+                    <p className="text-xs text-muted-foreground">SMS updates (requires phone)</p>
+                  </div>
+                  <Switch
+                    checked={userSettings?.notify_sms ?? false}
+                    onCheckedChange={(v) => handleNotificationChange('notify_sms', v)}
+                    disabled={!profile?.phone}
+                  />
+                </div>
               </div>
-              <Switch
-                checked={userSettings?.notify_email ?? true}
-                onCheckedChange={(v) => handleNotificationChange('notify_email', v)}
-              />
             </div>
+
             <Separator />
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Text Notifications</p>
-                <p className="text-sm text-muted-foreground">Receive SMS updates (requires phone number)</p>
+
+            {/* Work Orders */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Work Orders</p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm">Assigned to my org</p>
+                  <Switch
+                    checked={userSettings?.notify_wo_assigned ?? true}
+                    onCheckedChange={(v) => handleNotificationChange('notify_wo_assigned', v)}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm">Approved</p>
+                  <Switch
+                    checked={userSettings?.notify_wo_approved ?? true}
+                    onCheckedChange={(v) => handleNotificationChange('notify_wo_approved', v)}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm">Rejected</p>
+                  <Switch
+                    checked={userSettings?.notify_wo_rejected ?? true}
+                    onCheckedChange={(v) => handleNotificationChange('notify_wo_rejected', v)}
+                  />
+                </div>
               </div>
-              <Switch
-                checked={userSettings?.notify_sms ?? false}
-                onCheckedChange={(v) => handleNotificationChange('notify_sms', v)}
-                disabled={!profile?.phone}
-              />
             </div>
+
             <Separator />
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Change Order Notifications</p>
-                <p className="text-sm text-muted-foreground">Updates on change orders</p>
+
+            {/* Invoices */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Invoices</p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm">Submitted for approval</p>
+                  <Switch
+                    checked={userSettings?.notify_inv_submitted ?? true}
+                    onCheckedChange={(v) => handleNotificationChange('notify_inv_submitted', v)}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm">Approved</p>
+                  <Switch
+                    checked={userSettings?.notify_inv_approved ?? true}
+                    onCheckedChange={(v) => handleNotificationChange('notify_inv_approved', v)}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm">Rejected</p>
+                  <Switch
+                    checked={userSettings?.notify_inv_rejected ?? true}
+                    onCheckedChange={(v) => handleNotificationChange('notify_inv_rejected', v)}
+                  />
+                </div>
               </div>
-              <Switch
-                checked={userSettings?.notify_change_orders ?? true}
-                onCheckedChange={(v) => handleNotificationChange('notify_change_orders', v)}
-              />
             </div>
+
             <Separator />
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Invoice Notifications</p>
-                <p className="text-sm text-muted-foreground">Updates on invoices</p>
+
+            {/* Invitations */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Invitations</p>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm">Project invitations</p>
+                  <Switch
+                    checked={userSettings?.notify_project_invite ?? true}
+                    onCheckedChange={(v) => handleNotificationChange('notify_project_invite', v)}
+                  />
+                </div>
               </div>
-              <Switch
-                checked={userSettings?.notify_invoices ?? true}
-                onCheckedChange={(v) => handleNotificationChange('notify_invoices', v)}
-              />
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Invitation Notifications</p>
-                <p className="text-sm text-muted-foreground">Project and team invitations</p>
-              </div>
-              <Switch
-                checked={userSettings?.notify_invites ?? true}
-                onCheckedChange={(v) => handleNotificationChange('notify_invites', v)}
-              />
             </div>
           </CardContent>
         </Card>

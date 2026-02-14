@@ -53,6 +53,17 @@ export interface UserSettings {
   notify_change_orders: boolean;
   notify_invoices: boolean;
   notify_invites: boolean;
+  // Granular preferences
+  notify_wo_assigned: boolean;
+  notify_wo_approved: boolean;
+  notify_wo_rejected: boolean;
+  notify_inv_submitted: boolean;
+  notify_inv_approved: boolean;
+  notify_inv_rejected: boolean;
+  notify_project_invite: boolean;
+  email_digest_frequency: string;
+  // Onboarding
+  onboarding_dismissed: boolean;
 }
 
 export function useProfile() {
@@ -128,7 +139,7 @@ export function useProfile() {
       if (userSettingsData) {
         setUserSettings(userSettingsData as unknown as UserSettings);
       } else {
-        // Initialize with defaults
+      // Initialize with defaults
         setUserSettings({
           user_id: user.id,
           notify_email: true,
@@ -136,6 +147,15 @@ export function useProfile() {
           notify_change_orders: true,
           notify_invoices: true,
           notify_invites: true,
+          notify_wo_assigned: true,
+          notify_wo_approved: true,
+          notify_wo_rejected: true,
+          notify_inv_submitted: true,
+          notify_inv_approved: true,
+          notify_inv_rejected: true,
+          notify_project_invite: true,
+          email_digest_frequency: 'instant',
+          onboarding_dismissed: false,
         });
       }
 

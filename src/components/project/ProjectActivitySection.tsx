@@ -28,9 +28,15 @@ const activityIcons: Record<string, React.ComponentType<{ className?: string }>>
   CONTRACT_UPDATED: FileEdit,
   CHANGE_ORDER_APPROVED: ClipboardCheck,
   CHANGE_ORDER_SUBMITTED: ClipboardCheck,
+  CHANGE_ORDER_REJECTED: ClipboardCheck,
   FC_HOURS_SUBMITTED: ClipboardCheck,
   FC_HOURS_UPDATED: FileEdit,
   PROJECT_CREATED: Activity,
+  STATUS_CHANGED: Activity,
+  INVOICE_SUBMITTED: ClipboardCheck,
+  INVOICE_APPROVED: CheckCircle,
+  INVOICE_REJECTED: ClipboardCheck,
+  INVOICE_PAID: CheckCircle,
 };
 
 const activityColors: Record<string, string> = {
@@ -40,9 +46,15 @@ const activityColors: Record<string, string> = {
   CONTRACT_UPDATED: 'text-orange-500',
   CHANGE_ORDER_APPROVED: 'text-green-500',
   CHANGE_ORDER_SUBMITTED: 'text-amber-500',
+  CHANGE_ORDER_REJECTED: 'text-destructive',
   FC_HOURS_SUBMITTED: 'text-blue-500',
   FC_HOURS_UPDATED: 'text-purple-500',
   PROJECT_CREATED: 'text-primary',
+  STATUS_CHANGED: 'text-primary',
+  INVOICE_SUBMITTED: 'text-blue-500',
+  INVOICE_APPROVED: 'text-green-500',
+  INVOICE_REJECTED: 'text-destructive',
+  INVOICE_PAID: 'text-green-500',
 };
 
 // Activity types relevant to each role
@@ -53,6 +65,7 @@ const roleActivityTypes: Record<string, string[]> = {
     'FC_HOURS_SUBMITTED',
     'FC_HOURS_UPDATED',
     'CHANGE_ORDER_APPROVED',
+    'STATUS_CHANGED',
   ],
   'Trade Contractor': [
     'INVITE_SENT',
@@ -61,9 +74,15 @@ const roleActivityTypes: Record<string, string[]> = {
     'CONTRACT_UPDATED',
     'CHANGE_ORDER_APPROVED',
     'CHANGE_ORDER_SUBMITTED',
+    'CHANGE_ORDER_REJECTED',
     'FC_HOURS_SUBMITTED',
     'FC_HOURS_UPDATED',
     'PROJECT_CREATED',
+    'STATUS_CHANGED',
+    'INVOICE_SUBMITTED',
+    'INVOICE_APPROVED',
+    'INVOICE_REJECTED',
+    'INVOICE_PAID',
   ],
   'General Contractor': [
     'INVITE_SENT',
@@ -72,7 +91,13 @@ const roleActivityTypes: Record<string, string[]> = {
     'CONTRACT_UPDATED',
     'CHANGE_ORDER_APPROVED',
     'CHANGE_ORDER_SUBMITTED',
+    'CHANGE_ORDER_REJECTED',
     'PROJECT_CREATED',
+    'STATUS_CHANGED',
+    'INVOICE_SUBMITTED',
+    'INVOICE_APPROVED',
+    'INVOICE_REJECTED',
+    'INVOICE_PAID',
   ],
 };
 
