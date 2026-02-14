@@ -1,41 +1,47 @@
 
 
-# Add Account Avatar and Dropdown Menu to Mobile Top Bar
+# Fix Product Picker Back Button to Go Back One Step
 
-On mobile/tablet (below lg), the sidebar is hidden and there's no way to access the profile, approvals, or admin pages. This adds a user avatar button in the top-right corner of the `TopBar` with a dropdown menu containing quick links to those pages.
+## Problem
 
-## What Changes
+When inside the multi-step filter flow (StepByStepFilter), pressing the back chevron in the ProductPicker header jumps all the way out to the category or secondary selection. Users expect it to go back one filter step at a time (e.g., from "Select Length" back to "Select Dimension").
 
-### 1. Add avatar + dropdown to `TopBar.tsx`
+The internal logic already exists in `StepByStepFilter.handleBackStep` (line 229) -- it goes back one filter step, or calls `onBack` when at step 0. But the parent header button bypasses this entirely.
 
-Add a user avatar button (visible only below lg via `lg:hidden`) in the top-right actions area of `TopBar`. Clicking it opens a dropdown menu with:
+## Solution
 
-- **Profile** link (to `/profile`)
-- **Separator**
-- **Estimate Approvals** (GC_PM only, to `/approvals/estimates`)
-- **Manage Suppliers** (GC_PM / TC_PM only, to `/admin/suppliers`)
-- **Separator**
-- **My Team** (org admins only, to `/org/team`)
-- **Settings** (to `/profile`)
-- **Separator**
-- **Sign out**
+Expose StepByStepFilter's back functionality via `useImperativeHandle` so the parent ProductPicker can delegate to it when the user taps the header back button during the filter-step phase.
 
-The avatar shows user initials (matching sidebar style) and the dropdown uses the same `DropdownMenu` component already used in `Header.tsx`.
+## Changes
 
-### 2. Import auth context in TopBar
+### 1. `src/components/po-wizard-v2/StepByStepFilter.tsx`
 
-Add `useAuth` and `useNavigate` hooks to `TopBar` to access `profile`, `currentRole`, and navigation. Also import `Avatar`, `AvatarFallback`, `DropdownMenu` components, and role permission constants.
+- Wrap with `forwardRef`
+- Expose a `goBack()` method via `useImperativeHandle` that calls the existing `handleBackStep` logic
 
-## Files Modified
+### 2. `src/components/po-wizard-v2/ProductPicker.tsx`
 
-| File | Change |
-|------|--------|
-| `src/components/layout/TopBar.tsx` | Add avatar button with dropdown menu, visible only on mobile/tablet |
+- Create a `ref` for StepByStepFilter and pass it when rendering
+- In `handleBack`, when `step === 'filter-step'`, call `ref.current.goBack()` instead of jumping out
+
+## Technical Details
+
+```
+StepByStepFilter:
+  - Add forwardRef wrapper
+  - useImperativeHandle exposes { goBack: handleBackStep }
+
+ProductPicker:
+  - const filterRef = useRef<{ goBack: () => void }>(null)
+  - Pass ref={filterRef} to StepByStepFilter
+  - handleBack case 'filter-step': filterRef.current?.goBack()
+    (removes the current jump-to-secondary/category logic)
+```
 
 ## What Is NOT Changed
 
-- Desktop layout: sidebar still provides all navigation on lg+
-- BottomNav unchanged
-- No database or logic changes
-- Notification bell stays in its current position
+- Filter discovery, skip logic, and auto-advance behavior
+- Category and secondary selection flow
+- Products and quantity steps
+- No database changes
 
