@@ -31,7 +31,7 @@ export function WorkOrderTopBar({
     <header className="sticky top-0 z-40 border-b bg-card backdrop-blur">
       {/* Top row: sidebar trigger, project name, WO title, status, notifications */}
       <div className="flex items-center gap-2 sm:gap-4 px-3 sm:px-4 h-14">
-        <SidebarTrigger className="-ml-1" />
+        <SidebarTrigger className="-ml-1 hidden lg:flex" />
         <Separator orientation="vertical" className="h-6 hidden sm:block" />
 
         {/* Breadcrumb: Project > WO Title */}
@@ -55,8 +55,8 @@ export function WorkOrderTopBar({
         <NotificationSheet />
       </div>
 
-      {/* Bottom row: Navigation tabs */}
-      <div className="relative pb-2">
+      {/* Bottom row: Navigation tabs - hidden on mobile/tablet */}
+      <div className="relative pb-2 hidden lg:block">
         <Tabs value="detail">
           <div className="overflow-x-auto px-3 sm:px-4">
             <TabsList className="h-11 w-max justify-start bg-transparent p-0 gap-1">
