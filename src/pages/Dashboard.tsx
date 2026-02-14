@@ -41,6 +41,7 @@ export default function Dashboard() {
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [projectToComplete, setProjectToComplete] = useState<{ id: string; name: string } | null>(null);
 
+  const { profile, organization, userSettings, updateUserSettings } = useProfile();
   const currentOrg = userOrgRoles[0]?.organization;
   const orgType = currentOrg?.type || null;
 
@@ -169,7 +170,6 @@ export default function Dashboard() {
 
   const canCreateProject = orgType === 'GC' || orgType === 'TC';
 
-  const { profile, organization, userSettings, updateUserSettings } = useProfile();
 
   // Onboarding state
   const showOnboarding = userSettings && !userSettings.onboarding_dismissed;
