@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import {
 } from '@/types/poWizardV2';
 import { CategoryGrid } from './CategoryGrid';
 import { SecondaryCategoryList } from './SecondaryCategoryList';
-import { StepByStepFilter } from './StepByStepFilter';
+import { StepByStepFilter, StepByStepFilterHandle } from './StepByStepFilter';
 import { ProductList } from './ProductList';
 import { QuantityPanel } from './QuantityPanel';
 
@@ -40,6 +40,7 @@ export function ProductPicker({
   onClearEdit,
 }: ProductPickerProps) {
   const isMobile = useIsMobile();
+  const filterRef = useRef<StepByStepFilterHandle>(null);
   const [step, setStep] = useState<PickerStep>('category');
   const [categories, setCategories] = useState<CategoryCount[]>([]);
   const [secondaryCategories, setSecondaryCategories] = useState<SecondaryCount[]>([]);
@@ -314,15 +315,8 @@ export function ProductPicker({
         setSelectedVirtualCategory(null);
         break;
       case 'filter-step':
-        if (secondaryCategories.length > 1) {
-          setStep('secondary');
-        } else {
-          setStep('category');
-          setSelectedVirtualCategory(null);
-        }
-        setSelectedSecondary(null);
-        setAppliedFilters({});
-        break;
+        filterRef.current?.goBack();
+        return;
       case 'products':
         // Always go back to filter-step
         setStep('filter-step');
@@ -392,6 +386,7 @@ export function ProductPicker({
         )}
         {step === 'filter-step' && dbCategory && (
           <StepByStepFilter
+            ref={filterRef}
             supplierId={supplierId}
             category={dbCategory}
             secondaryCategory={selectedSecondary}
