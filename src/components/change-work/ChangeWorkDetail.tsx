@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { StateBadge } from '@/components/StateBadge';
-import { StateProgressBar, StateProgressLabels } from '@/components/StateProgressBar';
+import { StateProgressBar } from '@/components/StateProgressBar';
 import { PricingEditor } from './PricingEditor';
 import { ParticipantsPanel } from './ParticipantsPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -150,7 +150,6 @@ export function ChangeWorkDetail({
           {/* State Progress */}
           <div className="space-y-2">
             <StateProgressBar currentState={changeWork.state} readonly />
-            <StateProgressLabels />
           </div>
 
           {/* Rejection Notes */}
