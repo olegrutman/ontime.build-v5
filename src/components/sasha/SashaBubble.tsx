@@ -161,7 +161,7 @@ export function SashaBubble() {
     <>
       {/* Chat Panel */}
       {open && (
-        <div className="fixed z-50 shadow-xl rounded-2xl border bg-background flex flex-col animate-in slide-in-from-bottom-4 fade-in duration-200 bottom-20 right-2 left-2 sm:left-auto sm:right-4 sm:w-[min(400px,calc(100vw-2rem))] max-h-[60vh] sm:max-h-[min(500px,70vh)]">
+        <div className="fixed z-50 shadow-xl rounded-2xl border bg-background flex flex-col animate-in slide-in-from-bottom-4 fade-in duration-200 bottom-36 lg:bottom-20 right-2 left-2 sm:left-auto sm:right-4 sm:w-[min(400px,calc(100vw-2rem))] max-h-[60vh] sm:max-h-[min(500px,70vh)]">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <div className="flex items-center gap-2">
@@ -225,7 +225,7 @@ export function SashaBubble() {
       {/* Floating Bubble */}
       <button
         onClick={() => setOpen((o) => !o)}
-        className={`fixed bottom-4 right-4 z-50 h-14 w-14 rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform overflow-hidden ${
+        className={`fixed bottom-20 lg:bottom-4 right-4 z-50 h-14 w-14 rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform overflow-hidden ${
           pulse ? 'animate-pulse' : ''
         }`}
         aria-label="Open Sasha guide"
