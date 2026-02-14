@@ -8,6 +8,7 @@ import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
 
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
+import { BottomNav } from '@/components/layout/BottomNav';
 import { 
   ProjectTeamSection, 
   ProjectScopeSection, 
@@ -129,9 +130,10 @@ export default function ProjectHome() {
               </div>
               <Skeleton className="h-96 w-full" />
             </main>
-          </SidebarInset>
-        </div>
-      </SidebarProvider>
+        </SidebarInset>
+        <BottomNav />
+      </div>
+    </SidebarProvider>
     );
   }
 
@@ -251,6 +253,7 @@ export default function ProjectHome() {
             </div>
           </main>
         </SidebarInset>
+        <BottomNav />
       </div>
     </SidebarProvider>
   );

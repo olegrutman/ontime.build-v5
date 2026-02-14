@@ -21,7 +21,7 @@ export function TopBar({
 }: TopBarProps) {
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center gap-2 sm:gap-4 border-b bg-card backdrop-blur px-3 sm:px-4">
-      <SidebarTrigger className="-ml-1" />
+      <SidebarTrigger className="-ml-1 hidden lg:flex" />
       <Separator orientation="vertical" className="h-6 hidden sm:block" />
 
       {/* Page Title */}

@@ -88,7 +88,7 @@ export function AppSidebar() {
     items.some((item) => location.pathname.startsWith(item.url));
 
   return (
-    <Sidebar collapsible="offcanvas" className="border-r border-sidebar-border">
+    <Sidebar collapsible="offcanvas" className="border-r border-sidebar-border hidden lg:flex">
       {/* Header / Logo */}
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-3 px-2 py-3">
