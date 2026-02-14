@@ -19,3 +19,6 @@ export { SupplierPOSummaryCard } from './SupplierPOSummaryCard';
 export { SupplierFinancialsSummaryCard } from './SupplierFinancialsSummaryCard';
 export { SupplierEstimatesSection } from './SupplierEstimatesSection';
 export { MobileProjectHeader } from './MobileProjectHeader';
+export { FinancialSignalBar } from './FinancialSignalBar';
+export { FinancialHealthCharts } from './FinancialHealthCharts';
+export { OperationalSummary } from './OperationalSummary';
