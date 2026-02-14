@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -70,7 +70,11 @@ async function discoverFilterSequence(
     .sort((a, b) => (FILTER_PRIORITY[b] || 0) - (FILTER_PRIORITY[a] || 0));
 }
 
-export function StepByStepFilter({
+export interface StepByStepFilterHandle {
+  goBack: () => void;
+}
+
+export const StepByStepFilter = forwardRef<StepByStepFilterHandle, StepByStepFilterProps>(function StepByStepFilter({
   supplierId,
   category,
   secondaryCategory,
@@ -78,7 +82,7 @@ export function StepByStepFilter({
   onBack,
   onClose,
   estimateCatalogIds,
-}: StepByStepFilterProps) {
+}, ref) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [appliedFilters, setAppliedFilters] = useState<Record<string, string>>({});
   const [availableValues, setAvailableValues] = useState<SpecValue[]>([]);
@@ -239,6 +243,10 @@ export function StepByStepFilter({
     }
   }, [currentStepIndex, filterSequence, appliedFilters, onBack]);
 
+  useImperativeHandle(ref, () => ({
+    goBack: handleBackStep,
+  }), [handleBackStep]);
+
   // Build breadcrumb path
   const buildBreadcrumb = () => {
     const parts: string[] = [];
@@ -327,4 +335,4 @@ export function StepByStepFilter({
       </div>
     </div>
   );
-}
+});
