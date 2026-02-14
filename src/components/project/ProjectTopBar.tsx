@@ -56,7 +56,7 @@ export function ProjectTopBar({
     <header className="sticky top-0 z-40 border-b bg-card backdrop-blur">
       {/* Top row: sidebar trigger, project name, status, notifications */}
       <div className="flex items-center gap-2 sm:gap-4 px-3 sm:px-4 h-14">
-        <SidebarTrigger className="-ml-1" />
+        <SidebarTrigger className="-ml-1 hidden lg:flex" />
         <Separator orientation="vertical" className="h-6 hidden sm:block" />
 
         {/* Project name - centered on mobile, left-aligned on desktop */}
@@ -96,8 +96,8 @@ export function ProjectTopBar({
         <NotificationSheet />
       </div>
 
-      {/* Bottom row: Navigation tabs - scrollable on mobile */}
-      <div className="relative pb-2">
+      {/* Bottom row: Navigation tabs - hidden on mobile/tablet, shown on desktop */}
+      <div className="relative pb-2 hidden lg:block">
         <Tabs value={activeTab}>
           <div className="overflow-x-auto px-3 sm:px-4">
             <TabsList className="h-11 w-max justify-start bg-transparent p-0 gap-1">

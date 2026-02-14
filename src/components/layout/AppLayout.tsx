@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from './AppSidebar';
 import { TopBar } from './TopBar';
+import { BottomNav } from './BottomNav';
 import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
 
 interface AppLayoutProps {
@@ -40,6 +41,7 @@ export function AppLayout({
             </div>
           </main>
         </SidebarInset>
+        <BottomNav />
       </div>
     </SidebarProvider>
   );
