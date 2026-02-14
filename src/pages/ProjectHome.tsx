@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useProjectRealtime } from '@/hooks/useProjectRealtime';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { supabase } from '@/integrations/supabase/client';
@@ -62,6 +63,9 @@ export default function ProjectHome() {
   const currentOrg = userOrgRoles[0]?.organization;
   const isSupplier = currentOrg?.type === 'SUPPLIER';
   const supplierOrgId = isSupplier ? currentOrg?.id : null;
+
+  // Realtime subscriptions – refreshKey bumps when any project entity changes
+  const realtimeKey = useProjectRealtime(id);
 
   // Get active tab from URL or default to 'overview'
   const activeTab = searchParams.get('tab') || 'overview';
@@ -195,6 +199,7 @@ export default function ProjectHome() {
                     />
 
                     <MetricStrip
+                      key={`metrics-${realtimeKey}`}
                       projectId={id!}
                       onNavigate={handleTabChange}
                       isSupplier={isSupplier}
@@ -240,7 +245,7 @@ export default function ProjectHome() {
               {/* Invoices Tab */}
               {activeTab === 'invoices' && (
                 <InvoicesTab 
-                  key={tabResetKey}
+                  key={`invoices-${tabResetKey}-${realtimeKey}`}
                   projectId={id!} 
                   retainagePercent={project.retainage_percent || 0} 
                 />
@@ -249,7 +254,7 @@ export default function ProjectHome() {
               {/* Purchase Orders Tab */}
               {activeTab === 'purchase-orders' && (
                 <PurchaseOrdersTab 
-                  key={tabResetKey}
+                  key={`po-${tabResetKey}-${realtimeKey}`}
                   projectId={id!} 
                   projectName={project?.name}
                   projectAddress={
