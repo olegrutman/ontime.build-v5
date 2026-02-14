@@ -288,11 +288,6 @@ export function POWizardV2({
           onBack={() => setScreen('header')}
           onNext={() => setScreen('review')}
           canAdvance={canAdvanceFromItems}
-          projectId={projectId}
-          supplierId={formData.supplier_id}
-          onLoadPack={handleLoadPack}
-          hasApprovedEstimate={hasApprovedEstimate}
-          onAddPSMItem={handleAddItem}
           sourcePackName={formData.source_pack_name}
           onClearPack={handleClearPack}
         />
@@ -320,6 +315,10 @@ export function POWizardV2({
         onUpdateItem={handleUpdateItem}
         editingItem={editingItem}
         onClearEdit={() => setEditingItem(null)}
+        hasApprovedEstimate={hasApprovedEstimate}
+        projectId={projectId}
+        onLoadPack={handleLoadPack}
+        onAddPSMItem={handleAddItem}
       />
 
       {/* Unmatched Item Editor */}
