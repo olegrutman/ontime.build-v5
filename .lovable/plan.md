@@ -1,48 +1,65 @@
 
+# Bottom Navigation Bar for Mobile and Tablet
 
-# Unify Progress Bars to Match WorkOrderProgressBar Design
+On screens smaller than desktop (below 1024px), replace the sidebar with a fixed bottom navigation bar. The items shown change based on context:
 
-The app currently has two different progress bar styles:
+- **Dashboard/general pages**: Dashboard, Financials, Partners, My Team, Reminders
+- **Project pages** (`/project/:id`): Dashboard (back), Overview, SOV, Work Orders, Invoices, POs
 
-1. **WorkOrderProgressBar** (on the Work Order detail page) -- numbered circles with connector lines and labels below, matching the screenshot
-2. **StateProgressBar** (used in ChangeWorkDetail, WorkItemDetail, WorkItemPage) -- a different style with smaller circles, no labels below the connector lines
-
-This plan updates the `StateProgressBar` component to match the `WorkOrderProgressBar` design so the look is consistent throughout the app.
+On desktop (1024px+), the sidebar continues to work as it does today.
 
 ## What Changes
 
-### 1. Redesign `StateProgressBar` in `src/components/StateProgressBar.tsx`
+### 1. Create `src/components/layout/BottomNav.tsx` (new file)
 
-Replace the current implementation with a layout that matches `WorkOrderProgressBar`:
-- Numbered circles (w-7 h-7 / sm:w-8 sm:h-8) with border-2
-- Completed steps show green background with a check icon
-- Current step shows primary color fill
-- Future steps show muted/gray
-- Connector lines between circles (h-0.5, green when completed, muted otherwise)
-- Labels appear below each circle (text-[11px] font-medium)
+A fixed bottom bar (`fixed bottom-0 left-0 right-0 z-50`) visible only on mobile/tablet (`lg:hidden`). Contains:
+- 5 icon+label buttons in a row, evenly spaced
+- Detects current route using `useLocation()` to determine context (project vs dashboard)
+- **Dashboard context** items: Dashboard (Home icon), Financials (DollarSign), Partners (Handshake), My Team (Users), Reminders (Bell)
+- **Project context** items: Dashboard (Home -- navigates to /dashboard), Overview, SOV, WOs, Invoices, POs (navigates via `?tab=` params on current project URL)
+- Active item highlighted with primary color
+- Respects role visibility (e.g., hide My Team if user lacks `canManageOrg`)
 
-Remove the separate `StateProgressLabels` export -- labels will be integrated directly into the bar (matching how `WorkOrderProgressBar` renders its labels inline under each circle).
+### 2. Hide sidebar on mobile/tablet
 
-### 2. Update consumers of `StateProgressLabels`
+In `AppSidebar.tsx`, wrap the entire `<Sidebar>` with a `hidden lg:block` so it only renders on desktop. The `SidebarTrigger` in `TopBar.tsx` and `ProjectTopBar.tsx` will also be hidden on mobile/tablet (`hidden lg:block`).
 
-Remove `StateProgressLabels` usage from:
-- `src/components/WorkItemDetail.tsx` (line 66)
-- `src/components/work-item/WorkItemProgress.tsx` (line 12)
-- `src/components/change-work/ChangeWorkDetail.tsx` (line 153)
+### 3. Hide project tab strip on mobile/tablet
 
-Since labels are now built into the bar itself, these separate label rows are no longer needed.
+In `ProjectTopBar.tsx`, hide the bottom tab row (`<div className="relative pb-2">`) on mobile/tablet (`hidden lg:block`) since the bottom nav replaces it.
+
+### 4. Add BottomNav to layouts
+
+- In `AppLayout.tsx`: Add `<BottomNav />` after `</SidebarInset>`, inside the SidebarProvider
+- In `ProjectHome.tsx`: Add `<BottomNav />` similarly in each render branch
+
+### 5. Adjust bottom padding
+
+The existing `pb-20` on main content areas already accounts for floating elements -- this will naturally provide clearance for the bottom nav bar.
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| `src/components/StateProgressBar.tsx` | Redesign to match WorkOrderProgressBar style with inline labels |
-| `src/components/WorkItemDetail.tsx` | Remove `StateProgressLabels` import and usage |
-| `src/components/work-item/WorkItemProgress.tsx` | Remove `StateProgressLabels` import and usage |
-| `src/components/change-work/ChangeWorkDetail.tsx` | Remove `StateProgressLabels` import and usage |
+| `src/components/layout/BottomNav.tsx` | New -- context-aware bottom navigation bar |
+| `src/components/layout/AppSidebar.tsx` | Hide on mobile/tablet with `hidden lg:block` |
+| `src/components/layout/TopBar.tsx` | Hide SidebarTrigger on mobile/tablet |
+| `src/components/project/ProjectTopBar.tsx` | Hide SidebarTrigger and tab strip on mobile/tablet |
+| `src/components/layout/AppLayout.tsx` | Add BottomNav component |
+| `src/pages/ProjectHome.tsx` | Add BottomNav component |
+| `src/components/layout/index.ts` | Export BottomNav |
+
+## Technical Details
+
+The BottomNav component will:
+- Use `useLocation()` to detect if on a project page (path starts with `/project/`)
+- Extract the project ID and current tab from URL params
+- Use `useAuth()` to check `canManageOrg` for My Team visibility
+- Use `useNavigate()` for navigation
+- Render as a `nav` element with `h-16` and `bg-card border-t`
+- Each item: flex-col, icon (20px) + label (text-[10px]), with `min-h-[44px]` tap target
 
 ## What Is NOT Changed
-- `WorkOrderProgressBar` itself (it already has the target design)
-- No database, logic, permissions, or route changes
-- Progress bar functionality (readonly, state tracking) unchanged
-
+- Desktop sidebar behavior unchanged
+- No database, logic, or permissions changes
+- No route changes
