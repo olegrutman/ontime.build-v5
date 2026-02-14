@@ -1,4 +1,5 @@
-import { ChevronDown } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronDown, Download, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,9 +9,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { NotificationSheet } from '@/components/notifications';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface MobileProjectHeaderProps {
   projectName: string;
+  projectId: string;
   projectStatus: string;
   onStatusChange?: (status: string) => void;
 }
@@ -40,9 +44,35 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function MobileProjectHeader({
   projectName,
+  projectId,
   projectStatus,
   onStatusChange,
 }: MobileProjectHeaderProps) {
+  const { toast } = useToast();
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadSummary = async () => {
+    setDownloading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/project-summary-download?project_id=${projectId}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (!res.ok) throw new Error('Failed to generate summary');
+      const html = await res.text();
+      const blob = new Blob([html], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${projectName.replace(/\s+/g, '-')}-Summary.html`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (err: any) {
+      toast({ title: 'Download failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setDownloading(false);
+    }
+  };
   return (
     <header className="sticky top-0 z-40 border-b bg-card backdrop-blur lg:hidden">
       <div className="flex items-center gap-2 px-3 h-12">
@@ -76,6 +106,11 @@ export function MobileProjectHeader({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Download */}
+        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0" onClick={handleDownloadSummary} disabled={downloading}>
+          {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+        </Button>
 
         {/* Notifications */}
         <NotificationSheet />

@@ -1,4 +1,5 @@
-import { ChevronDown } from 'lucide-react';
+import { useState } from 'react';
+import { ChevronDown, Download, Loader2 } from 'lucide-react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -11,9 +12,12 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { NotificationSheet } from '@/components/notifications';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface ProjectTopBarProps {
   projectName: string;
+  projectId: string;
   projectStatus: string;
   activeTab: string;
   onTabChange: (tab: string) => void;
@@ -46,12 +50,38 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function ProjectTopBar({
   projectName,
+  projectId,
   projectStatus,
   activeTab,
   onTabChange,
   onStatusChange,
   isSupplier = false,
 }: ProjectTopBarProps) {
+  const { toast } = useToast();
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadSummary = async () => {
+    setDownloading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/project-summary-download?project_id=${projectId}`;
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (!res.ok) throw new Error('Failed to generate summary');
+      const html = await res.text();
+      const blob = new Blob([html], { type: 'text/html' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${projectName.replace(/\s+/g, '-')}-Summary.html`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (err: any) {
+      toast({ title: 'Download failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setDownloading(false);
+    }
+  };
   return (
     <header className="sticky top-0 z-40 border-b bg-card backdrop-blur">
       {/* Top row: sidebar trigger, project name, status, notifications */}
@@ -91,6 +121,11 @@ export function ProjectTopBar({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        {/* Download Summary */}
+        <Button variant="ghost" size="sm" className="h-8 px-2" onClick={handleDownloadSummary} disabled={downloading}>
+          {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+        </Button>
 
         {/* Notifications */}
         <NotificationSheet />

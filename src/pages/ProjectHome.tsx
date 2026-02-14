@@ -167,6 +167,7 @@ export default function ProjectHome() {
           {/* Compact mobile project header */}
           <MobileProjectHeader
             projectName={project.name}
+            projectId={id!}
             projectStatus={projectStatus}
             onStatusChange={handleStatusChange}
           />
@@ -175,6 +176,7 @@ export default function ProjectHome() {
           <div className="hidden lg:block">
           <ProjectTopBar
             projectName={project.name}
+            projectId={id!}
             projectStatus={projectStatus}
             activeTab={activeTab}
             onTabChange={handleTabChange}

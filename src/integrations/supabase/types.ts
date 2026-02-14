@@ -3358,34 +3358,61 @@ export type Database = {
       user_settings: {
         Row: {
           created_at: string
+          email_digest_frequency: string
           id: string
           notify_change_orders: boolean | null
           notify_email: boolean | null
+          notify_inv_approved: boolean
+          notify_inv_rejected: boolean
+          notify_inv_submitted: boolean
           notify_invites: boolean | null
           notify_invoices: boolean | null
+          notify_project_invite: boolean
           notify_sms: boolean | null
+          notify_wo_approved: boolean
+          notify_wo_assigned: boolean
+          notify_wo_rejected: boolean
+          onboarding_dismissed: boolean
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          email_digest_frequency?: string
           id?: string
           notify_change_orders?: boolean | null
           notify_email?: boolean | null
+          notify_inv_approved?: boolean
+          notify_inv_rejected?: boolean
+          notify_inv_submitted?: boolean
           notify_invites?: boolean | null
           notify_invoices?: boolean | null
+          notify_project_invite?: boolean
           notify_sms?: boolean | null
+          notify_wo_approved?: boolean
+          notify_wo_assigned?: boolean
+          notify_wo_rejected?: boolean
+          onboarding_dismissed?: boolean
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
+          email_digest_frequency?: string
           id?: string
           notify_change_orders?: boolean | null
           notify_email?: boolean | null
+          notify_inv_approved?: boolean
+          notify_inv_rejected?: boolean
+          notify_inv_submitted?: boolean
           notify_invites?: boolean | null
           notify_invoices?: boolean | null
+          notify_project_invite?: boolean
           notify_sms?: boolean | null
+          notify_wo_approved?: boolean
+          notify_wo_assigned?: boolean
+          notify_wo_rejected?: boolean
+          onboarding_dismissed?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -3907,6 +3934,7 @@ export type Database = {
       }
       generate_change_work_code: { Args: { org_id: string }; Returns: string }
       generate_po_number: { Args: { org_id: string }; Returns: string }
+      get_actor_info: { Args: never; Returns: Record<string, unknown> }
       get_invite_by_token_v2: { Args: { _token: string }; Returns: Json }
       get_my_notifications: {
         Args: { _limit?: number; _offset?: number }

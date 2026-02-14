@@ -7,19 +7,19 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Notification type → user_settings column mapping
+// Notification type → user_settings column mapping (granular)
 const TYPE_TO_PREFERENCE: Record<string, string> = {
-  PROJECT_INVITE: "notify_invites",
-  WORK_ITEM_INVITE: "notify_invites",
-  WORK_ORDER_ASSIGNED: "notify_invites",
-  PROJECT_ADDED: "notify_invites",
+  PROJECT_INVITE: "notify_project_invite",
+  WORK_ITEM_INVITE: "notify_project_invite",
+  WORK_ORDER_ASSIGNED: "notify_wo_assigned",
+  PROJECT_ADDED: "notify_project_invite",
   PO_SENT: "notify_email",
-  CHANGE_SUBMITTED: "notify_change_orders",
-  CHANGE_APPROVED: "notify_change_orders",
-  CHANGE_REJECTED: "notify_change_orders",
-  INVOICE_SUBMITTED: "notify_invoices",
-  INVOICE_APPROVED: "notify_invoices",
-  INVOICE_REJECTED: "notify_invoices",
+  CHANGE_SUBMITTED: "notify_wo_assigned",
+  CHANGE_APPROVED: "notify_wo_approved",
+  CHANGE_REJECTED: "notify_wo_rejected",
+  INVOICE_SUBMITTED: "notify_inv_submitted",
+  INVOICE_APPROVED: "notify_inv_approved",
+  INVOICE_REJECTED: "notify_inv_rejected",
 };
 
 interface NotificationPayload {
@@ -77,7 +77,6 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Verify the request is from the DB trigger via shared secret
     const triggerSecret = req.headers.get("x-trigger-secret");
     if (triggerSecret !== "internal-db-trigger") {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
@@ -93,7 +92,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Processing notification email: type=${type}, org=${recipient_org_id}, user=${recipient_user_id}`);
 
-    // Get the preference column for this notification type
     const prefColumn = TYPE_TO_PREFERENCE[type];
     if (!prefColumn) {
       console.log(`No email preference mapping for notification type: ${type}`);
@@ -105,14 +103,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 
-    // Determine which users to email
     let userIds: string[] = [];
 
     if (recipient_user_id) {
-      // If targeted to a specific user, just use that user
       userIds = [recipient_user_id];
     } else {
-      // Find all users in the recipient org
       const orgMembersRes = await fetch(
         `${supabaseUrl}/rest/v1/user_org_roles?organization_id=eq.${recipient_org_id}&select=user_id`,
         {
@@ -135,7 +130,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Found ${userIds.length} potential recipient(s)`);
 
-    // Fetch user settings for all users (check email preferences)
     const userIdFilter = userIds.map((id) => `"${id}"`).join(",");
     const settingsRes = await fetch(
       `${supabaseUrl}/rest/v1/user_settings?user_id=in.(${userIdFilter})&select=user_id,notify_email,${prefColumn}`,
@@ -148,7 +142,6 @@ const handler = async (req: Request): Promise<Response> => {
     );
     const settings = await settingsRes.json();
 
-    // Build a map of user_id → settings
     const settingsMap = new Map<string, any>();
     if (Array.isArray(settings)) {
       for (const s of settings) {
@@ -156,14 +149,9 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Filter users who have email notifications enabled
     const eligibleUserIds = userIds.filter((uid) => {
       const s = settingsMap.get(uid);
-      if (!s) {
-        // No settings row → defaults are true, so eligible
-        return true;
-      }
-      // Must have global notify_email = true AND category-specific = true
+      if (!s) return true;
       const globalEnabled = s.notify_email !== false;
       const categoryEnabled = prefColumn === "notify_email" || s[prefColumn] !== false;
       return globalEnabled && categoryEnabled;
@@ -177,7 +165,6 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    // Fetch emails from profiles
     const eligibleIdFilter = eligibleUserIds.map((id) => `"${id}"`).join(",");
     const profilesRes = await fetch(
       `${supabaseUrl}/rest/v1/profiles?user_id=in.(${eligibleIdFilter})&select=user_id,email,full_name`,
@@ -198,7 +185,6 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    // Determine app base URL from action_url or fallback
     let appBaseUrl = "https://omni-work.lovable.app";
     try {
       const parsed = new URL(action_url);
@@ -207,12 +193,10 @@ const handler = async (req: Request): Promise<Response> => {
       // keep fallback
     }
 
-    // Build the full action URL (ensure it's absolute)
     const fullActionUrl = action_url.startsWith("http")
       ? action_url
       : `${appBaseUrl}${action_url}`;
 
-    // Send emails via Resend
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {
       console.error("RESEND_API_KEY not configured");

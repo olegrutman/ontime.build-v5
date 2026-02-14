@@ -17,6 +17,9 @@ import {
 import { DashboardAttentionBanner } from '@/components/dashboard/DashboardAttentionBanner';
 import { DashboardProjectList } from '@/components/dashboard/DashboardProjectList';
 import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
+import { DashboardQuickStats } from '@/components/dashboard/DashboardQuickStats';
+import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
+import { useProfile } from '@/hooks/useProfile';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -27,6 +30,7 @@ export default function Dashboard() {
     statusCounts,
     attentionItems,
     pendingInvites,
+    reminders,
     loading: dataLoading,
     refetch,
   } = useDashboardData();
@@ -165,6 +169,26 @@ export default function Dashboard() {
 
   const canCreateProject = orgType === 'GC' || orgType === 'TC';
 
+  const { profile, organization, userSettings, updateUserSettings } = useProfile();
+
+  // Onboarding state
+  const showOnboarding = userSettings && !userSettings.onboarding_dismissed;
+  const profileComplete = !!(profile?.first_name && profile?.phone);
+  const orgComplete = !!(organization?.address?.street);
+  const teamInvited = (userOrgRoles.length > 1); // rough heuristic
+  const projectCreated = projects.length > 0;
+
+  const handleDismissOnboarding = async () => {
+    await updateUserSettings({ onboarding_dismissed: true });
+  };
+
+  // Quick stats
+  const openWorkOrders = attentionItems.filter(i => i.type === 'change_order').length;
+  const pendingInvoicesCount = attentionItems.filter(i => i.type === 'invoice').length;
+  const now = new Date();
+  const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const remindersDue = reminders.filter(r => new Date(r.due_date) <= weekFromNow).length;
+
   return (
     <AppLayout title="Dashboard">
       <div className="space-y-6">
@@ -178,8 +202,26 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Onboarding Checklist */}
+        {showOnboarding && (
+          <OnboardingChecklist
+            profileComplete={profileComplete}
+            orgComplete={orgComplete}
+            teamInvited={teamInvited}
+            projectCreated={projectCreated}
+            onDismiss={handleDismissOnboarding}
+          />
+        )}
+
         {/* Org Invitation Banner */}
         <OrgInviteBanner />
+
+        {/* Quick Stats */}
+        <DashboardQuickStats
+          openWorkOrders={openWorkOrders}
+          pendingInvoices={pendingInvoicesCount}
+          remindersDue={remindersDue}
+        />
 
         {/* Attention Banner */}
         <DashboardAttentionBanner
