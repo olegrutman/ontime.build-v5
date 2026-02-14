@@ -11,23 +11,20 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { 
-  ProjectTeamSection, 
-  ProjectScopeSection, 
-  ProjectContractsSection, 
-  ProjectFinancialsSectionNew,
   ProjectTopBar,
   MobileProjectHeader,
   WorkOrdersTab,
   PurchaseOrdersTab,
-  MetricStrip,
   AttentionBanner,
-  SupplierContractsSection,
-  SupplierFinancialsSummaryCard,
-  SupplierEstimatesSection
+  SupplierEstimatesSection,
+  FinancialSignalBar,
+  FinancialHealthCharts,
+  OperationalSummary,
 } from '@/components/project';
 import { InvoicesTab } from '@/components/invoices';
 import { ContractSOVEditor } from '@/components/sov';
 import { useToast } from '@/hooks/use-toast';
+import { useProjectFinancials } from '@/hooks/useProjectFinancials';
 
 interface Project {
   id: string;
@@ -66,6 +63,7 @@ export default function ProjectHome() {
 
   // Realtime subscriptions – refreshKey bumps when any project entity changes
   const realtimeKey = useProjectRealtime(id);
+  const financials = useProjectFinancials(id || '', isSupplier, supplierOrgId);
 
   // Get active tab from URL or default to 'overview'
   const activeTab = searchParams.get('tab') || 'overview';
@@ -190,42 +188,28 @@ export default function ProjectHome() {
             <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 pb-20 space-y-6">
               {/* Overview Tab */}
               {activeTab === 'overview' && (
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 min-w-0">
-                  {/* Zone A: Action & Summary */}
-                  <div className="space-y-6 min-w-0">
-                    <AttentionBanner
-                      projectId={id!}
-                      onNavigate={handleTabChange}
-                      isSupplier={isSupplier}
-                      supplierOrgId={supplierOrgId}
-                    />
+                <div className="space-y-4">
+                  {/* Zone 4: Attention Center */}
+                  <AttentionBanner
+                    projectId={id!}
+                    onNavigate={handleTabChange}
+                    isSupplier={isSupplier}
+                    supplierOrgId={supplierOrgId}
+                  />
 
-                    <MetricStrip
-                      key={`metrics-${realtimeKey}`}
-                      projectId={id!}
-                      onNavigate={handleTabChange}
-                      isSupplier={isSupplier}
-                      supplierOrgId={supplierOrgId}
-                    />
+                  {/* Zone 1: Financial Signal Bar */}
+                  <FinancialSignalBar financials={financials} projectId={id!} />
 
-                    {/* Financial Summary */}
-                    {isSupplier && supplierOrgId ? (
-                      <SupplierFinancialsSummaryCard projectId={id!} supplierOrgId={supplierOrgId} />
-                    ) : (
-                      <ProjectFinancialsSectionNew projectId={id!} />
-                    )}
-                  </div>
+                  {/* Zone 2: Financial Health Snapshot */}
+                  <FinancialHealthCharts financials={financials} />
 
-                  {/* Zone B: Context */}
-                  <div className="space-y-4 min-w-0">
-                    <ProjectTeamSection projectId={id!} />
-                    {isSupplier && supplierOrgId ? (
-                      <SupplierContractsSection projectId={id!} supplierOrgId={supplierOrgId} />
-                    ) : (
-                      <ProjectContractsSection projectId={id!} />
-                    )}
-                    <ProjectScopeSection projectId={id!} projectType={project.project_type} />
-                  </div>
+                  {/* Zone 3: Operational Summary */}
+                  <OperationalSummary
+                    projectId={id!}
+                    projectType={project.project_type}
+                    financials={financials}
+                    onNavigate={handleTabChange}
+                  />
                 </div>
               )}
 
