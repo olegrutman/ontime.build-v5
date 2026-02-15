@@ -62,20 +62,22 @@ export default function EstimateApprovals() {
   const [rejectReason, setRejectReason] = useState('');
   const [estimateToReject, setEstimateToReject] = useState<string | null>(null);
 
+  const canAccess = currentRole === 'GC_PM' || currentRole === 'TC_PM';
+
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
-    } else if (!authLoading && currentRole !== 'GC_PM') {
-      toast.error('Only GC Project Managers can approve estimates');
+    } else if (!authLoading && !canAccess) {
+      toast.error('Only GC or TC Project Managers can approve estimates');
       navigate('/dashboard');
     }
-  }, [user, currentRole, authLoading, navigate]);
+  }, [user, canAccess, authLoading, navigate]);
 
   useEffect(() => {
-    if (currentRole === 'GC_PM') {
+    if (canAccess) {
       fetchEstimates();
     }
-  }, [currentRole]);
+  }, [canAccess]);
 
   const fetchEstimates = async () => {
     setLoading(true);
@@ -240,13 +242,13 @@ export default function EstimateApprovals() {
     );
   }
 
-  if (currentRole !== 'GC_PM') {
+  if (!canAccess) {
     return (
       <AppLayout title="Estimate Approvals">
         <div className="p-4 sm:p-6 flex items-center justify-center min-h-[400px]">
           <Card>
             <CardContent className="py-8 text-center">
-              <p className="text-muted-foreground">Only GC Project Managers can approve estimates</p>
+              <p className="text-muted-foreground">Only GC or TC Project Managers can approve estimates</p>
             </CardContent>
           </Card>
         </div>

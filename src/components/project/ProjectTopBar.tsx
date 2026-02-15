@@ -162,15 +162,13 @@ export function ProjectTopBar({
                 <span className="hidden lg:inline">Work Orders</span>
               </TabsTrigger>
               )}
-              {isSupplier && (
-                <TabsTrigger
-                  value="estimates"
-                  className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
-                  onClick={() => onTabChange('estimates')}
-                >
-                  Estimates
-                </TabsTrigger>
-              )}
+              <TabsTrigger
+                value="estimates"
+                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
+                onClick={() => onTabChange('estimates')}
+              >
+                Estimates
+              </TabsTrigger>
               <TabsTrigger
                 value="invoices"
                 className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
