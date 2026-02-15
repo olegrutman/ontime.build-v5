@@ -140,6 +140,33 @@ export default function EstimateApprovals() {
     }
 
     toast.success('Estimate approved');
+
+    // Auto-update material_estimate_total on the material-responsible contract
+    const approvedEstimate = data[0];
+    if (approvedEstimate?.project_id) {
+      try {
+        // Sum all approved estimates for this project
+        const { data: approvedEstimates } = await supabase
+          .from('supplier_estimates')
+          .select('total_amount')
+          .eq('project_id', approvedEstimate.project_id)
+          .eq('status', 'APPROVED');
+        
+        const totalBudget = (approvedEstimates || []).reduce(
+          (sum, est) => sum + (est.total_amount || 0), 0
+        );
+
+        // Update all material-responsible contracts for this project
+        await supabase
+          .from('project_contracts')
+          .update({ material_estimate_total: totalBudget } as any)
+          .eq('project_id', approvedEstimate.project_id)
+          .not('material_responsibility', 'is', null);
+      } catch (err) {
+        console.error('Failed to update material estimate total:', err);
+      }
+    }
+
     fetchEstimates();
     if (selectedEstimate?.id === estimateId) {
       setSelectedEstimate(prev => prev ? { ...prev, status: 'APPROVED' } : null);
