@@ -230,6 +230,10 @@ export function ContractsStep({ projectId, contracts, onChange, creatorRole }: C
     );
   }
 
+  // Separate TC members for material responsibility section (GC only)
+  const tcMembers = teamMembers.filter(m => m.role === 'Trade Contractor');
+  const showMaterialSection = creatorRole === 'General Contractor' && tcMembers.length > 0;
+
   return (
     <div className="space-y-6">
       <div>
@@ -240,6 +244,59 @@ export function ContractsStep({ projectId, contracts, onChange, creatorRole }: C
             : 'Enter the contract terms you negotiated with each Trade Contractor.'}
         </p>
       </div>
+
+      {/* Material Responsibility section - GC only, when TCs exist */}
+      {showMaterialSection && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <Package className="h-4 w-4" />
+            <span>Material Responsibility</span>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Who provides and pays for materials on each trade contract?
+          </p>
+          {tcMembers.map((member) => {
+            const contract = getContract(member.id, true);
+            const tradeName = member.trade === 'Other' ? member.trade_custom : member.trade;
+            return (
+              <Card key={member.id}>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center gap-2 font-medium text-sm">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    {member.invited_org_name || 'Unknown Company'}
+                    {tradeName && <span className="text-muted-foreground font-normal">({tradeName})</span>}
+                  </div>
+                  <ToggleGroup
+                    type="single"
+                    value={contract.materialResponsibility || 'TC'}
+                    onValueChange={(value) => {
+                      if (value) updateContract(member.id, { materialResponsibility: value as 'GC' | 'TC' });
+                    }}
+                    className="justify-start"
+                  >
+                    <ToggleGroupItem value="GC" aria-label="GC provides materials" className="px-4">
+                      GC
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="TC" aria-label="TC provides materials" className="px-4">
+                      TC
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                  <p className="text-xs text-primary/80 bg-primary/5 rounded-md px-3 py-2">
+                    {(contract.materialResponsibility || 'TC') === 'GC'
+                      ? 'GC will manage material ordering and see supplier pricing for this contract.'
+                      : 'TC will manage material ordering and see supplier pricing for this contract.'}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Separator between material responsibility and contracts */}
+      {showMaterialSection && (upstreamGC || downstreamMembers.length > 0) && (
+        <Separator className="my-6" />
+      )}
 
       {/* TC's upstream contract with GC */}
       {upstreamGC && (
@@ -262,7 +319,7 @@ export function ContractsStep({ projectId, contracts, onChange, creatorRole }: C
         <Separator className="my-6" />
       )}
 
-      {/* Downstream contracts with FC (or TC if GC) */}
+      {/* Downstream contracts */}
       {downstreamMembers.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
@@ -279,7 +336,7 @@ export function ContractsStep({ projectId, contracts, onChange, creatorRole }: C
               member={member}
               contract={getContract(member.id, member.role === 'Trade Contractor')}
               onUpdate={(updates) => updateContract(member.id, updates)}
-              showMaterialResponsibility={member.role === 'Trade Contractor'}
+              isSupplier={member.role === 'Supplier'}
             />
           ))}
         </div>
@@ -293,11 +350,13 @@ interface ContractCardProps {
   contract: ProjectContract;
   onUpdate: (updates: Partial<ProjectContract>) => void;
   description?: string;
-  showMaterialResponsibility?: boolean;
+  isSupplier?: boolean;
 }
 
-function ContractCard({ member, contract, onUpdate, description, showMaterialResponsibility }: ContractCardProps) {
+function ContractCard({ member, contract, onUpdate, description, isSupplier }: ContractCardProps) {
   const tradeName = member.trade === 'Other' ? member.trade_custom : member.trade;
+  const sumLabel = isSupplier ? 'Estimate Price' : 'Contract Sum';
+  const sumHint = isSupplier ? 'Enter the estimate price' : 'Enter the contract sum';
   
   return (
     <Card>
@@ -314,7 +373,7 @@ function ContractCard({ member, contract, onUpdate, description, showMaterialRes
       <CardContent className="space-y-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label>Contract Sum</Label>
+            <Label>{sumLabel}</Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
               <Input
@@ -328,7 +387,7 @@ function ContractCard({ member, contract, onUpdate, description, showMaterialRes
               />
             </div>
             {contract.contractSum === 0 && (
-              <p className="text-xs text-amber-600">Enter the contract sum</p>
+              <p className="text-xs text-amber-600">{sumHint}</p>
             )}
           </div>
           <div className="space-y-2">
@@ -356,40 +415,6 @@ function ContractCard({ member, contract, onUpdate, description, showMaterialRes
             onCheckedChange={(checked) => onUpdate({ allowMobilization: checked })}
           />
         </div>
-
-        {/* Material Responsibility toggle - only for TC contracts */}
-        {showMaterialResponsibility && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Package className="h-4 w-4 text-muted-foreground" />
-              <Label>Material Responsibility</Label>
-            </div>
-            <p className="text-xs text-muted-foreground">Who provides and pays for materials?</p>
-            <ToggleGroup
-              type="single"
-              value={contract.materialResponsibility || 'TC'}
-              onValueChange={(value) => {
-                if (value) onUpdate({ materialResponsibility: value as 'GC' | 'TC' });
-              }}
-              className="justify-start"
-            >
-              <ToggleGroupItem value="GC" aria-label="GC provides materials" className="px-4">
-                GC
-              </ToggleGroupItem>
-              <ToggleGroupItem value="TC" aria-label="TC provides materials" className="px-4">
-                TC
-              </ToggleGroupItem>
-            </ToggleGroup>
-            <p className="text-xs text-primary/80 bg-primary/5 rounded-md px-3 py-2">
-              {(contract.materialResponsibility || 'TC') === 'GC'
-                ? 'GC will manage material ordering and see supplier pricing for this contract.'
-                : 'TC will manage material ordering and see supplier pricing for this contract.'}
-            </p>
-            <p className="text-[11px] text-muted-foreground">
-              The responsible party can view supplier pricing, finalize Purchase Orders, and control material ordering for this contract.
-            </p>
-          </div>
-        )}
 
         <div className="space-y-2">
           <Label>Notes (Optional)</Label>
