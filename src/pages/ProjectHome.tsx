@@ -21,6 +21,7 @@ import {
   FinancialHealthCharts,
   OperationalSummary,
 } from '@/components/project';
+import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
 import { InvoicesTab } from '@/components/invoices';
 import { ContractSOVEditor } from '@/components/sov';
 import { useToast } from '@/hooks/use-toast';
@@ -223,9 +224,12 @@ export default function ProjectHome() {
                 <WorkOrdersTab projectId={id!} projectName={project.name} />
               )}
 
-              {/* Estimates Tab - suppliers only */}
+              {/* Estimates Tab */}
               {activeTab === 'estimates' && isSupplier && supplierOrgId && (
                 <SupplierEstimatesSection projectId={id!} supplierOrgId={supplierOrgId} />
+              )}
+              {activeTab === 'estimates' && !isSupplier && (
+                <ProjectEstimatesReview projectId={id!} />
               )}
 
               {/* Invoices Tab */}

@@ -202,8 +202,8 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
 
-        {/* Approvals Section - GC_PM only */}
-        {isGC && (
+        {/* Approvals Section - GC_PM and TC_PM */}
+        {(isGC || currentRole === 'TC_PM') && (
           <SidebarGroup>
             <Collapsible defaultOpen={isInGroup(gcNavItems)} className="group/collapsible">
               <CollapsibleTrigger asChild>
