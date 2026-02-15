@@ -1,0 +1,1 @@
+ALTER TABLE project_contracts ADD COLUMN material_estimate_total numeric DEFAULT NULL;

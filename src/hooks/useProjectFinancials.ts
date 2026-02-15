@@ -34,6 +34,7 @@ export interface ProjectFinancials {
   materialEstimate: number;
   materialOrdered: number;
   totalPaidToFC: number;
+  materialEstimateTotal: number | null; // TC's project-level material budget
 
   // Supplier-specific
   supplierOrderValue: number;
@@ -50,10 +51,14 @@ export interface ProjectFinancials {
   // FC participants (for contract creation)
   fcParticipants: { org_id: string; org_name: string }[];
 
+  // Material responsibility
+  isTCMaterialResponsible: boolean;
+
   // Actions
   refetch: () => void;
   updateContract: (id: string, sum: number, retainage: number) => Promise<boolean>;
   createFcContract: (fcOrgId: string, sum: number, retainage: number) => Promise<boolean>;
+  updateMaterialEstimate: (contractId: string, amount: number) => Promise<boolean>;
 }
 
 export function useProjectFinancials(projectId: string, isSupplier?: boolean, supplierOrgId?: string | null): ProjectFinancials {
@@ -75,6 +80,8 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [recentInvoices, setRecentInvoices] = useState<ProjectFinancials['recentInvoices']>([]);
   const [monthlyWOData, setMonthlyWOData] = useState<ProjectFinancials['monthlyWOData']>([]);
   const [fcParticipants, setFcParticipants] = useState<{ org_id: string; org_name: string }[]>([]);
+  const [materialEstimateTotal, setMaterialEstimateTotal] = useState<number | null>(null);
+  const [isTCMaterialResponsible, setIsTCMaterialResponsible] = useState(false);
 
   const fetchData = async () => {
     if (!user || !projectId) { setLoading(false); return; }
@@ -137,6 +144,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       const [contractsRes, invoicesRes, workOrdersRes, fcParticipantsRes] = await Promise.all([
         supabase.from('project_contracts').select(`
           id, from_role, to_role, contract_sum, retainage_percent, trade, from_org_id, to_org_id,
+          material_responsibility, material_estimate_total,
           from_org:organizations!project_contracts_from_org_id_fkey(name),
           to_org:organizations!project_contracts_to_org_id_fkey(name)
         `).eq('project_id', projectId),
@@ -150,6 +158,18 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         ...c, from_org_name: c.from_org?.name || null, to_org_name: c.to_org?.name || null,
       })) as Contract[];
       setContracts(contractsWithNames);
+
+      // Detect TC material responsibility
+      if (detectedRole === 'Trade Contractor' && orgIds.length > 0) {
+        const tcContract = contractsWithNames.find((c: any) =>
+          c.material_responsibility === 'TC' &&
+          (orgIds.includes(c.from_org_id || '') || orgIds.includes(c.to_org_id || ''))
+        );
+        if (tcContract) {
+          setIsTCMaterialResponsible(true);
+          setMaterialEstimateTotal((tcContract as any).material_estimate_total ?? null);
+        }
+      }
 
       // Invoices
       const allInvoices = invoicesRes.data || [];
@@ -169,7 +189,12 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
 
       // Material estimates vs ordered
       const matEstimate = wos.reduce((sum, wo) => sum + (wo.material_total || 0), 0);
-      setMaterialEstimate(matEstimate);
+      // If TC is material-responsible and has set a project-level budget, use that instead
+      const tcContract = detectedRole === 'Trade Contractor' ? (contractsRes.data || []).find((c: any) =>
+        c.material_responsibility === 'TC' && c.material_estimate_total != null &&
+        (orgIds.includes(c.from_org_id || '') || orgIds.includes(c.to_org_id || ''))
+      ) : null;
+      setMaterialEstimate(tcContract ? (tcContract as any).material_estimate_total : matEstimate);
 
       const woIdsWithPO = wos.filter(wo => wo.linked_po_id).map(wo => wo.linked_po_id!);
       if (woIdsWithPO.length > 0) {
@@ -276,13 +301,22 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     return true;
   };
 
+  const updateMaterialEstimate = async (contractId: string, amount: number): Promise<boolean> => {
+    const { error } = await supabase.from('project_contracts').update({ material_estimate_total: amount } as any).eq('id', contractId);
+    if (error) return false;
+    setMaterialEstimateTotal(amount);
+    setMaterialEstimate(amount);
+    return true;
+  };
+
   return {
     loading, viewerRole, contracts, upstreamContract, downstreamContract, userOrgIds,
     billedToDate, workOrderTotal, workOrderFCCost, retainageAmount, outstanding,
     materialEstimate, materialOrdered, totalPaidToFC,
+    materialEstimateTotal, isTCMaterialResponsible,
     supplierOrderValue, supplierInvoiced, supplierPaid,
     recentWorkOrders, recentInvoices, monthlyWOData, fcParticipants,
-    refetch: fetchData, updateContract, createFcContract,
+    refetch: fetchData, updateContract, createFcContract, updateMaterialEstimate,
   };
 }
 
