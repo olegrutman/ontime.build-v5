@@ -472,10 +472,12 @@ export default function CreateProjectNew() {
                   {WIZARD_STEPS.map((step, index) => (
                     <div
                       key={step.id}
+                      onClick={() => { if (index < currentStep) setCurrentStep(index); }}
                       className={cn(
                         "flex items-center gap-3 p-3 rounded-lg transition-colors",
                         index === currentStep && "bg-primary/10",
-                        index < currentStep && "text-muted-foreground"
+                        index < currentStep && "text-muted-foreground cursor-pointer hover:bg-muted/50",
+                        index > currentStep && "cursor-default"
                       )}
                     >
                       <div className={cn(
