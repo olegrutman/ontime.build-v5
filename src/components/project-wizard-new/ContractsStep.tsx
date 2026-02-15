@@ -69,30 +69,19 @@ export function ContractsStep({ projectId, contracts, onChange, creatorRole }: C
   // GC → TC contracts
   // TC → FC contracts
   const downstreamMembers = useMemo(() => {
+    // Exclude Suppliers entirely — their estimate price comes from approved supplier estimates, not manual entry
     const base = teamMembers.filter(m => {
       if (creatorRole === 'General Contractor') {
-        return m.role === 'Trade Contractor' || m.role === 'Supplier';
+        return m.role === 'Trade Contractor';
       }
       if (creatorRole === 'Trade Contractor') {
-        return m.role === 'Field Crew' || m.role === 'Supplier';
+        return m.role === 'Field Crew';
       }
       return false;
     });
 
-    // Hide Supplier cards when GC is creator and all TC contracts have materialResponsibility === 'TC'
-    if (creatorRole === 'General Contractor') {
-      const tcMembers = base.filter(m => m.role === 'Trade Contractor');
-      const allTCResponsible = tcMembers.length > 0 && tcMembers.every(tc => {
-        const c = contracts.find(ct => ct.toTeamMemberId === tc.id);
-        return c?.materialResponsibility === 'TC';
-      });
-      if (allTCResponsible) {
-        return base.filter(m => m.role !== 'Supplier');
-      }
-    }
-
     return base;
-  }, [teamMembers, creatorRole, contracts]);
+  }, [teamMembers, creatorRole]);
 
   // Get IDs for dependency tracking
   const upstreamGCId = upstreamGC?.id || null;

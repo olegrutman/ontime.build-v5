@@ -189,12 +189,14 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
 
       // Material estimates vs ordered
       const matEstimate = wos.reduce((sum, wo) => sum + (wo.material_total || 0), 0);
-      // If TC is material-responsible and has set a project-level budget, use that instead
-      const tcContract = detectedRole === 'Trade Contractor' ? (contractsRes.data || []).find((c: any) =>
-        c.material_responsibility === 'TC' && c.material_estimate_total != null &&
-        (orgIds.includes(c.from_org_id || '') || orgIds.includes(c.to_org_id || ''))
-      ) : null;
-      setMaterialEstimate(tcContract ? (tcContract as any).material_estimate_total : matEstimate);
+      // Use material_estimate_total from the material-responsible contract (GC or TC) if set
+      const materialContract = (contractsRes.data || []).find((c: any) =>
+        c.material_responsibility != null && c.material_estimate_total != null &&
+        (detectedRole === 'Trade Contractor'
+          ? (orgIds.includes(c.from_org_id || '') || orgIds.includes(c.to_org_id || ''))
+          : true)
+      );
+      setMaterialEstimate(materialContract ? (materialContract as any).material_estimate_total : matEstimate);
 
       const woIdsWithPO = wos.filter(wo => wo.linked_po_id).map(wo => wo.linked_po_id!);
       if (woIdsWithPO.length > 0) {
