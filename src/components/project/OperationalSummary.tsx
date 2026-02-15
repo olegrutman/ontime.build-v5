@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ClipboardList, Receipt, Users, Edit, FileText } from 'lucide-react';
+import { ClipboardList, Receipt, Users, Edit, FileText, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { useAuth } from '@/hooks/useAuth';
+import { AddTeamMemberDialog } from '@/components/project/AddTeamMemberDialog';
 
 interface OperationalSummaryProps {
   projectId: string;
@@ -72,20 +74,25 @@ function fmtCurrency(v: number): string {
 
 export function OperationalSummary({ projectId, projectType, financials, onNavigate }: OperationalSummaryProps) {
   const navigate = useNavigate();
+  const { userOrgRoles } = useAuth();
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [scope, setScope] = useState<ScopeInfo | null>(null);
   const [loadingTeam, setLoadingTeam] = useState(true);
   const [loadingScope, setLoadingScope] = useState(true);
+  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+
+  const creatorOrgType = userOrgRoles[0]?.organization?.type ?? null;
+
+  const fetchTeam = useCallback(async () => {
+    const { data } = await supabase
+      .from('project_team')
+      .select('id, role, invited_org_name, status')
+      .eq('project_id', projectId);
+    setTeam(data || []);
+    setLoadingTeam(false);
+  }, [projectId]);
 
   useEffect(() => {
-    const fetchTeam = async () => {
-      const { data } = await supabase
-        .from('project_team')
-        .select('id, role, invited_org_name, status')
-        .eq('project_id', projectId);
-      setTeam(data || []);
-      setLoadingTeam(false);
-    };
     const fetchScope = async () => {
       const { data } = await supabase
         .from('project_scope_details')
@@ -97,7 +104,7 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
     };
     fetchTeam();
     fetchScope();
-  }, [projectId]);
+  }, [projectId, fetchTeam]);
 
   const { recentWorkOrders, recentInvoices } = financials;
 
@@ -128,10 +135,10 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
       {/* Recent Work Orders */}
       <div className="border bg-card p-3">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1.5">
+          <button onClick={() => onNavigate('work-orders')} className="flex items-center gap-1.5 hover:text-primary transition-colors">
             <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Recent Work Orders</span>
-          </div>
+          </button>
           <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => onNavigate('work-orders')}>View All</Button>
         </div>
         {recentWorkOrders.length === 0 ? (
@@ -158,10 +165,10 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
       {/* Recent Invoices */}
       <div className="border bg-card p-3">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1.5">
+          <button onClick={() => onNavigate('invoices')} className="flex items-center gap-1.5 hover:text-primary transition-colors">
             <Receipt className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Recent Invoices</span>
-          </div>
+          </button>
           <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => onNavigate('invoices')}>View All</Button>
         </div>
         {recentInvoices.length === 0 ? (
@@ -183,10 +190,16 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
 
       {/* Team */}
       <div className="border bg-card p-3">
-        <div className="flex items-center gap-1.5 mb-2">
-          <Users className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Team</span>
-          <span className="text-[10px] text-muted-foreground ml-1">({team.filter(m => m.status === 'Accepted').length} active)</span>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5">
+            <Users className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Team</span>
+            <span className="text-[10px] text-muted-foreground ml-1">({team.filter(m => m.status === 'Accepted').length} active)</span>
+          </div>
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => setIsAddMemberOpen(true)}>
+            <Plus className="h-3 w-3 mr-1" />
+            Add
+          </Button>
         </div>
         {loadingTeam ? (
           <Skeleton className="h-12" />
@@ -225,6 +238,14 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
           <p className="text-xs text-muted-foreground py-1">No scope configured</p>
         )}
       </div>
+
+      <AddTeamMemberDialog
+        open={isAddMemberOpen}
+        onOpenChange={setIsAddMemberOpen}
+        projectId={projectId}
+        creatorOrgType={creatorOrgType}
+        onMemberAdded={fetchTeam}
+      />
     </div>
   );
 }
