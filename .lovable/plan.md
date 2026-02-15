@@ -1,26 +1,25 @@
 
 
-# Hide Supplier Estimate When TC Is Material Responsible
+# Fix Sidebar Visibility - Dark Text on Dark Background
 
 ## Problem
-When a GC creates a project and assigns material responsibility to the TC, the Supplier contract card still appears in the Contracts step. Since the TC is managing materials, the GC should not need to enter a Supplier estimate price -- that's the TC's concern.
+The sidebar has a dark background (`222 47% 11%` - near black) but the `--sidebar-foreground` is set to the exact same dark color, making all text and icons invisible.
 
-## Change
+## Fix
 
-### File: `src/components/project-wizard-new/ContractsStep.tsx`
+### File: `src/index.css` (line 75)
 
-**Filter out Supplier members when TC is material responsible:**
+Change `--sidebar-foreground` from the dark color to a light color so text is readable against the dark sidebar background.
 
-In the `downstreamMembers` memo (lines 71-83), when `creatorRole === 'General Contractor'`, check the current contracts state. If any TC contract has `materialResponsibility === 'TC'`, exclude Supplier members from the downstream list.
+**Before:**
+```css
+--sidebar-foreground: 222 47% 11%;   /* dark text on dark bg = invisible */
+```
 
-Logic:
-1. Keep the current filter for TC and Supplier roles.
-2. After filtering, if the member is a Supplier, check whether ALL TC contracts on this project have `materialResponsibility === 'TC'`.
-3. If yes, exclude Supplier members -- the TC handles supplier relationships.
-4. If any TC contract has `materialResponsibility === 'GC'` (or there are no TCs), keep Supplier members visible since the GC is managing materials directly.
+**After:**
+```css
+--sidebar-foreground: 210 40% 98%;   /* light text on dark bg = readable */
+```
 
-This means the Supplier contract card will dynamically appear/disappear as the GC toggles material responsibility on TC contracts within the same step.
+This single line fix will make all sidebar navigation items, labels, group headers, and the user profile section visible against the dark sidebar background. The value `210 40% 98%` is a near-white that matches what the dark mode sidebar already uses and provides strong contrast.
 
-The `downstreamMembers` memo will add `contracts` as a dependency to react to material responsibility changes.
-
-No other files need to change.
