@@ -540,7 +540,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                           onDrop={(e) => !isLocked && handleDrop(e, sov.id, index)}
                           onDragEnd={() => { setDraggedItem(null); setDragOverIndex(null); }}
                           className={`
-                            rounded-lg border bg-card overflow-hidden
+                            group rounded-lg border bg-card overflow-hidden
                             ${isDragging ? 'opacity-50' : ''}
                             ${isDragOver ? 'border-primary border-2' : 'border-border'}
                             transition-colors
