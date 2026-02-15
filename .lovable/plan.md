@@ -1,25 +1,26 @@
 
-# Make Operational Summary Tiles Clickable + Add Team Member Button
 
-## Changes
+# Hide Supplier Estimate When TC Is Material Responsible
 
-### File: `src/components/project/OperationalSummary.tsx`
+## Problem
+When a GC creates a project and assigns material responsibility to the TC, the Supplier contract card still appears in the Contracts step. Since the TC is managing materials, the GC should not need to enter a Supplier estimate price -- that's the TC's concern.
 
-**1. Work Orders tile header becomes clickable**
-- Make the entire "Recent Work Orders" header area (icon + label) clickable, navigating to the work-orders tab (same as "View All").
+## Change
 
-**2. Invoices tile header becomes clickable**
-- Same treatment for the "Recent Invoices" header -- clicking the title navigates to the invoices tab.
+### File: `src/components/project-wizard-new/ContractsStep.tsx`
 
-**3. Add "Add Member" button to Team tile**
-- Add a `+` or "Add" button in the Team tile header (same position as "View All" on the other tiles).
-- Clicking it opens the existing `AddTeamMemberDialog` component.
-- Wire up props: `open`, `onOpenChange`, `projectId`, `creatorOrgType` (derived from current user's org type), and `onMemberAdded` (refetches team data).
-- Import `AddTeamMemberDialog` and necessary types.
-- Add local state for dialog open/close and pass the current user's org type via the `useAuth` hook.
+**Filter out Supplier members when TC is material responsible:**
 
-## Technical Details
+In the `downstreamMembers` memo (lines 71-83), when `creatorRole === 'General Contractor'`, check the current contracts state. If any TC contract has `materialResponsibility === 'TC'`, exclude Supplier members from the downstream list.
 
-- `AddTeamMemberDialog` requires `creatorOrgType` (OrgType). This will be obtained from `useAuth().userOrgRoles[0]?.organization?.type`.
-- `onMemberAdded` callback will re-fetch the team list by extracting the existing `fetchTeam` logic into a callable function.
-- The tile headers for Work Orders and Invoices will be wrapped in a `button` element that calls `onNavigate('work-orders')` and `onNavigate('invoices')` respectively, making the whole header row clickable (not just "View All").
+Logic:
+1. Keep the current filter for TC and Supplier roles.
+2. After filtering, if the member is a Supplier, check whether ALL TC contracts on this project have `materialResponsibility === 'TC'`.
+3. If yes, exclude Supplier members -- the TC handles supplier relationships.
+4. If any TC contract has `materialResponsibility === 'GC'` (or there are no TCs), keep Supplier members visible since the GC is managing materials directly.
+
+This means the Supplier contract card will dynamically appear/disappear as the GC toggles material responsibility on TC contracts within the same step.
+
+The `downstreamMembers` memo will add `contracts` as a dependency to react to material responsibility changes.
+
+No other files need to change.
