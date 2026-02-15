@@ -93,6 +93,8 @@ interface UploadWizardState {
   open: boolean;
   estimateId: string;
   supplierId: string;
+  projectName: string;
+  estimateName: string;
 }
 
 export default function SupplierProjectEstimates() {
@@ -126,6 +128,8 @@ export default function SupplierProjectEstimates() {
     open: false,
     estimateId: '',
     supplierId: '',
+    projectName: '',
+    estimateName: '',
   });
 
   // Delete confirmation
@@ -230,12 +234,27 @@ export default function SupplierProjectEstimates() {
     if (error) {
       console.error('Create error:', error);
       toast({ title: 'Error', description: 'Failed to create estimate', variant: 'destructive' });
-    } else {
+    } else if (data) {
       toast({ title: 'Success', description: 'Estimate created' });
       setShowCreate(false);
       setNewEstimateName('');
       setNewEstimateProjectId('');
       fetchEstimates();
+      // Auto-open upload wizard with the new estimate
+      const { data: suppliers } = await supabase
+        .from('suppliers')
+        .select('id')
+        .eq('organization_id', currentOrg?.id)
+        .limit(1);
+      const sid = suppliers?.[0]?.id || '';
+      const projectName = projects.find(p => p.id === data.project_id)?.name || '';
+      setUploadWizard({
+        open: true,
+        estimateId: data.id,
+        supplierId: sid,
+        projectName,
+        estimateName: data.name,
+      });
     }
     setCreating(false);
   };
@@ -494,14 +513,6 @@ export default function SupplierProjectEstimates() {
                 </DialogHeader>
                 <div className="space-y-4 py-4">
                   <div className="space-y-2">
-                    <Label>Estimate Name</Label>
-                    <Input
-                      placeholder="e.g., Phase 1 Materials"
-                      value={newEstimateName}
-                      onChange={(e) => setNewEstimateName(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
                     <Label>Project</Label>
                     <Select value={newEstimateProjectId} onValueChange={setNewEstimateProjectId}>
                       <SelectTrigger>
@@ -513,6 +524,14 @@ export default function SupplierProjectEstimates() {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Estimate Name</Label>
+                    <Input
+                      placeholder="e.g., Phase 1 Materials"
+                      value={newEstimateName}
+                      onChange={(e) => setNewEstimateName(e.target.value)}
+                    />
                   </div>
                 </div>
                 <DialogFooter>
@@ -557,7 +576,6 @@ export default function SupplierProjectEstimates() {
                           variant="outline" 
                           size="sm"
                           onClick={async () => {
-                            // Get supplier_id from suppliers table for this org
                             const { data: suppliers } = await supabase
                               .from('suppliers')
                               .select('id')
@@ -568,11 +586,13 @@ export default function SupplierProjectEstimates() {
                               open: true,
                               estimateId: selectedEstimate.id,
                               supplierId: sid,
+                              projectName: selectedEstimate.project?.name || '',
+                              estimateName: selectedEstimate.name,
                             });
                           }}
                         >
                           <Upload className="h-4 w-4 mr-2" />
-                          Upload CSV
+                          Upload
                         </Button>
                         <Button 
                           size="sm"
@@ -601,7 +621,7 @@ export default function SupplierProjectEstimates() {
                         <CardContent className="flex flex-col items-center justify-center py-8">
                           <Package className="h-8 w-8 text-muted-foreground/50 mb-2" />
                           <p className="text-sm text-muted-foreground">
-                            No items yet. Upload a CSV to add line items.
+                            No items yet. Upload a file to add line items.
                           </p>
                         </CardContent>
                       </Card>
@@ -744,6 +764,8 @@ export default function SupplierProjectEstimates() {
               onOpenChange={(open) => setUploadWizard(prev => ({ ...prev, open }))}
               estimateId={uploadWizard.estimateId}
               supplierId={uploadWizard.supplierId}
+              projectName={uploadWizard.projectName}
+              estimateName={uploadWizard.estimateName}
               onComplete={() => {
                 if (selectedEstimate) {
                   fetchEstimateItems(selectedEstimate.id);

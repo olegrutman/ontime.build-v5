@@ -24,6 +24,7 @@ interface ParseResult {
   packs: ParsedPack[];
   totalItems: number;
   warnings: string[];
+  estimate_total: number | null;
 }
 
 // ── Extraction prompt ──────────────────────────────────────────────────
@@ -32,14 +33,14 @@ const SYSTEM_PROMPT = `You are a construction materials estimate parser. Your jo
 
 Rules:
 - Identify section headings, categories, or groupings as pack names. If no clear sections exist, use "General" as the pack name.
-- Extract ONLY material line items — skip headers, footers, page numbers, totals, subtotals, tax lines, terms & conditions, company addresses, and disclaimers.
-- For each item extract: supplier SKU, product description, quantity, and unit of measure (UOM).
+- Extract ONLY material line items — skip headers, footers, page numbers, subtotals, tax lines, terms & conditions, company addresses, and disclaimers.
+- For each item extract: supplier SKU, product description, quantity, and unit of measure (UOM). Do NOT include per-item pricing.
 - Normalize SKUs: strip whitespace, convert to UPPERCASE.
 - Common UOMs: EA (each), PC (piece), LF (linear foot), BF (board foot), SF (square foot), BDL (bundle), RL (roll), BX (box), CTN (carton), MSF (thousand square feet), MBF (thousand board feet), GAL (gallon), BAG, SHEET, PAIL.
 - If a UOM is not explicit, infer from context (e.g., lumber is typically BF or LF, sheets are EA or SHEET).
-- IGNORE all pricing columns (unit price, extended price, totals, discounts). Do not include any pricing data.
 - If quantity is missing or unclear, default to 0.
-- Clean up descriptions: remove embedded pricing data, page artifacts, and formatting noise.`;
+- Clean up descriptions: remove embedded pricing data, page artifacts, and formatting noise.
+- IMPORTANT: Extract the document's GRAND TOTAL / ESTIMATE TOTAL as a single number. Look for the final total amount on the quote (after tax, or the bottom-line total). If no total is found, return null.`;
 
 const EXTRACT_TOOL = {
   type: "function" as const,
@@ -91,6 +92,10 @@ const EXTRACT_TOOL = {
             required: ["name", "items"],
             additionalProperties: false,
           },
+        },
+        estimate_total: {
+          type: "number",
+          description: "The grand total / bottom-line total amount from the quote document. Null if not found.",
         },
       },
       required: ["packs"],
@@ -278,6 +283,7 @@ serve(async (req) => {
     }
 
     let packs: ParsedPack[] = [];
+    let estimate_total: number | null = null;
 
     // Try tool call first (expected path)
     const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
@@ -285,6 +291,7 @@ serve(async (req) => {
       try {
         const args = JSON.parse(toolCall.function.arguments);
         packs = args.packs || [];
+        if (typeof args.estimate_total === 'number') estimate_total = args.estimate_total;
       } catch {
         // Tool call arguments might be truncated — try repair
         console.warn("Tool call JSON parse failed, attempting repair...");
@@ -341,7 +348,7 @@ serve(async (req) => {
     console.log(`Extracted ${totalItems} items across ${packs.length} packs`);
 
     // ── Return structured result ─────────────────────────────────────
-    const result: ParseResult = { packs, totalItems, warnings };
+    const result: ParseResult = { packs, totalItems, warnings, estimate_total };
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

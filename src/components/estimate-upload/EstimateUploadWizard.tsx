@@ -6,7 +6,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Upload, FileText, FileUp } from 'lucide-react';
+import { Upload, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { parseEstimateCSV, ParsedPack, ParseResult } from '@/lib/parseEstimateCSV';
 import { PackReviewStep } from './PackReviewStep';
@@ -14,13 +14,15 @@ import { PdfUploadStep } from './PdfUploadStep';
 import { CatalogMatchStep, MatchedPack } from './CatalogMatchStep';
 import { supabase } from '@/integrations/supabase/client';
 
-type WizardStep = 'choose' | 'csv-upload' | 'pdf-upload' | 'review' | 'match';
+type WizardStep = 'upload' | 'review' | 'match';
 
 interface EstimateUploadWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   estimateId: string;
   supplierId: string;
+  projectName?: string;
+  estimateName?: string;
   onComplete: () => void;
 }
 
@@ -29,16 +31,18 @@ export function EstimateUploadWizard({
   onOpenChange,
   estimateId,
   supplierId,
+  projectName,
+  estimateName,
   onComplete,
 }: EstimateUploadWizardProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [step, setStep] = useState<WizardStep>('choose');
+  const [step, setStep] = useState<WizardStep>('upload');
   const [parseResult, setParseResult] = useState<ParseResult | null>(null);
   const [packs, setPacks] = useState<ParsedPack[]>([]);
   const [saving, setSaving] = useState(false);
-  const [pdfWarnings, setPdfWarnings] = useState<string[]>([]);
+  const [estimateTotal, setEstimateTotal] = useState<number | null>(null);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCsvFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -61,9 +65,9 @@ export function EstimateUploadWizard({
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handlePdfParsed = (parsedPacks: ParsedPack[], warnings: string[]) => {
+  const handlePdfParsed = (parsedPacks: ParsedPack[], warnings: string[], total?: number | null) => {
     setPacks(parsedPacks);
-    setPdfWarnings(warnings);
+    if (total != null) setEstimateTotal(total);
     setParseResult({
       packs: parsedPacks,
       totalItems: parsedPacks.reduce((sum, p) => sum + p.items.length, 0),
@@ -104,6 +108,14 @@ export function EstimateUploadWizard({
 
       if (error) throw error;
 
+      // Save estimate_total if extracted from PDF
+      if (estimateTotal != null && estimateTotal > 0) {
+        await supabase
+          .from('supplier_estimates')
+          .update({ total_amount: estimateTotal })
+          .eq('id', estimateId);
+      }
+
       toast.success(`${items.length} items saved across ${matchedPacks.length} packs`);
       onComplete();
       onOpenChange(false);
@@ -117,10 +129,10 @@ export function EstimateUploadWizard({
   };
 
   const resetWizard = () => {
-    setStep('choose');
+    setStep('upload');
     setParseResult(null);
     setPacks([]);
-    setPdfWarnings([]);
+    setEstimateTotal(null);
   };
 
   const handleClose = (open: boolean) => {
@@ -131,9 +143,7 @@ export function EstimateUploadWizard({
   const totalItems = packs.reduce((sum, p) => sum + p.items.length, 0);
 
   const stepTitle: Record<WizardStep, string> = {
-    'choose': 'Upload Estimate',
-    'csv-upload': 'Upload CSV',
-    'pdf-upload': 'Upload PDF Quote',
+    'upload': 'Upload Estimate',
     'review': 'Review Packs',
     'match': 'Catalog Matching',
   };
@@ -143,87 +153,45 @@ export function EstimateUploadWizard({
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>{stepTitle[step]}</DialogTitle>
+          {(projectName || estimateName) && (
+            <div className="flex flex-col gap-0.5 text-sm text-muted-foreground pt-1">
+              {projectName && <span>Project: <span className="font-medium text-foreground">{projectName}</span></span>}
+              {estimateName && <span>Estimate: <span className="font-medium text-foreground">{estimateName}</span></span>}
+            </div>
+          )}
         </DialogHeader>
 
         <div className="flex-1 overflow-auto">
-          {/* ── Step 1: Choose file type ─────────────────────────── */}
-          {step === 'choose' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-8 px-4">
-              <button
-                className="flex flex-col items-center gap-3 p-6 rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer"
-                onClick={() => setStep('pdf-upload')}
-              >
-                <div className="p-3 rounded-full bg-primary/10">
-                  <FileUp className="h-7 w-7 text-primary" />
-                </div>
-                <div className="text-center">
-                  <h3 className="font-medium text-sm">Upload PDF</h3>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    AI extracts items automatically from supplier quotes
-                  </p>
-                </div>
-                <span className="text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full">
-                  Recommended
-                </span>
-              </button>
-
-              <button
-                className="flex flex-col items-center gap-3 p-6 rounded-lg border-2 border-dashed border-muted-foreground/25 hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer"
-                onClick={() => setStep('csv-upload')}
-              >
-                <div className="p-3 rounded-full bg-muted">
-                  <FileText className="h-7 w-7 text-muted-foreground" />
-                </div>
-                <div className="text-center">
-                  <h3 className="font-medium text-sm">Upload CSV</h3>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Requires columns: pack_name, supplier_sku, description, qty, unit
-                  </p>
-                </div>
-              </button>
-            </div>
-          )}
-
-          {/* ── CSV upload (legacy) ──────────────────────────────── */}
-          {step === 'csv-upload' && (
-            <div className="flex flex-col items-center justify-center py-12 gap-4">
-              <div className="p-4 rounded-full bg-muted">
-                <Upload className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <div className="text-center">
-                <h3 className="font-medium mb-1">Upload your quote CSV</h3>
-                <p className="text-sm text-muted-foreground max-w-sm">
-                  File should have columns: pack_name, supplier_sku, description, quantity, unit.
-                  Pricing data will be excluded.
-                </p>
-              </div>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".csv"
-                onChange={handleFileSelect}
-                className="hidden"
+          {/* ── Upload step (unified PDF + CSV) ───────────────── */}
+          {step === 'upload' && (
+            <div className="space-y-4">
+              <PdfUploadStep
+                estimateId={estimateId}
+                onParsed={handlePdfParsed}
+                onCancel={() => handleClose(false)}
               />
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setStep('choose')}>Back</Button>
-                <Button size="lg" onClick={() => fileInputRef.current?.click()}>
-                  <FileText className="h-5 w-5 mr-2" />
-                  Select CSV File
+              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                <span className="h-px w-12 bg-border" />
+                or
+                <span className="h-px w-12 bg-border" />
+              </div>
+              <div className="flex justify-center">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv"
+                  onChange={handleCsvFileSelect}
+                  className="hidden"
+                />
+                <Button variant="ghost" size="sm" onClick={() => fileInputRef.current?.click()}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Upload CSV instead
                 </Button>
               </div>
             </div>
           )}
 
-          {/* ── PDF upload (new AI-powered) ──────────────────────── */}
-          {step === 'pdf-upload' && (
-            <PdfUploadStep
-              estimateId={estimateId}
-              onParsed={handlePdfParsed}
-              onCancel={() => setStep('choose')}
-            />
-          )}
-
-          {/* ── Review packs ─────────────────────────────────────── */}
+          {/* ── Review packs ─────────────────────────────────── */}
           {step === 'review' && (
             <PackReviewStep
               packs={packs}
@@ -235,7 +203,7 @@ export function EstimateUploadWizard({
             />
           )}
 
-          {/* ── Catalog matching ─────────────────────────────────── */}
+          {/* ── Catalog matching ─────────────────────────────── */}
           {step === 'match' && (
             <CatalogMatchStep
               packs={packs}

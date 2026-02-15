@@ -10,7 +10,7 @@ type Phase = 'idle' | 'uploading' | 'parsing' | 'error';
 
 interface PdfUploadStepProps {
   estimateId: string;
-  onParsed: (packs: ParsedPack[], warnings: string[]) => void;
+  onParsed: (packs: ParsedPack[], warnings: string[], estimateTotal?: number | null) => void;
   onCancel: () => void;
 }
 
@@ -92,7 +92,7 @@ export function PdfUploadStep({ estimateId, onParsed, onCancel }: PdfUploadStepP
       warnings.forEach((w: string) => toast.warning(w));
 
       toast.success(`Extracted ${data.totalItems} items from ${data.packs.length} packs`);
-      onParsed(data.packs, warnings);
+      onParsed(data.packs, warnings, data.estimate_total ?? null);
     } catch (err: any) {
       console.error('PDF processing error:', err);
       const msg = err?.message || 'Failed to process PDF';
@@ -155,8 +155,8 @@ export function PdfUploadStep({ estimateId, onParsed, onCancel }: PdfUploadStepP
           <div className="text-center">
             <h3 className="font-medium mb-1">Drop your PDF quote here</h3>
             <p className="text-sm text-muted-foreground max-w-sm">
-              AI will extract SKUs, descriptions, quantities, and UOMs automatically.
-              Max 20MB. Pricing data is excluded.
+              AI will extract items and total pricing automatically.
+              Max 20MB.
             </p>
           </div>
           <input
