@@ -39,8 +39,8 @@ export function JoinSearchStep({ onSelectOrg, onBack }: JoinSearchStepProps) {
     setHasSearched(true);
 
     const { data, error } = await supabase.rpc('search_organizations_for_join', {
-      _state: state || null,
-      _trade: trade || null,
+      _state: (state && state !== '__all__') ? state : null,
+      _trade: (trade && trade !== '__all__') ? trade : null,
       _query: query || null,
       _limit: 20,
     });
