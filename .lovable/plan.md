@@ -1,32 +1,40 @@
 
 
-# Fix: Organization Search Fails with Specific State/Trade Filters
+# Fix: "Unknown User" on Join Requests — RLS Policy Blocking Profile Access
 
-## Problem
-Some organizations have trailing whitespace in their `address->>'state'` values (e.g., `"CO "` instead of `"CO"`). The RPC uses an exact `ILIKE` match, so selecting "CO" from the dropdown doesn't match `"CO "`, causing those organizations to be excluded from results. When "Any state" is selected, the filter is skipped entirely, which is why it works.
+## Root Cause
+
+The `profiles` table has a SELECT policy called "Org members can view profiles" that only allows reading profiles of users who share the same organization (via `user_org_roles`). When a new user submits a join request, they are **not yet a member** of that organization, so the admin cannot read their profile row. The query returns `null`, and the UI falls back to "Unknown User".
+
+The profile data IS being saved correctly (verified in the database). The admin simply cannot see it due to row-level security.
 
 ## Fix
 
-### Database Migration: Add TRIM() to the state and trade comparisons
-
-Update the `search_organizations_for_join` function to trim whitespace before comparing:
+Add a new RLS policy on `profiles` that allows organization admins to view profiles of users who have a **pending join request** to their organization.
 
 ```sql
-WHERE
-  (_state IS NULL OR _state = '' OR TRIM(o.address->>'state') ILIKE TRIM(_state))
-  AND (_trade IS NULL OR _trade = '' OR TRIM(o.trade) ILIKE '%' || TRIM(_trade) || '%')
-  AND (_query IS NULL OR _query = '' OR o.name ILIKE '%' || _query || '%')
+CREATE POLICY "Org admins can view join request profiles"
+  ON profiles FOR SELECT
+  TO authenticated
+  USING (
+    EXISTS (
+      SELECT 1
+      FROM org_join_requests ojr
+      JOIN user_org_roles uor ON uor.organization_id = ojr.organization_id
+      WHERE ojr.user_id = profiles.user_id
+        AND ojr.status = 'pending'
+        AND uor.user_id = auth.uid()
+    )
+  );
 ```
 
-### Data cleanup (same migration)
-Also clean up existing dirty data:
+This is a single database migration. No frontend changes are needed — the existing query in `OrgTeam.tsx` will automatically return the correct profile data once the RLS policy permits it.
 
-```sql
-UPDATE organizations
-SET address = jsonb_set(address, '{state}', to_jsonb(TRIM(address->>'state')))
-WHERE address->>'state' IS NOT NULL
-  AND address->>'state' != TRIM(address->>'state');
-```
+## Technical Details
 
-This is a single migration with no frontend changes needed.
+| Change | Detail |
+|--------|--------|
+| New RLS policy on `profiles` | Allows authenticated users to SELECT profiles of users with a pending `org_join_requests` entry targeting the viewer's organization |
+| Scope | Only exposes profiles to admins of the org being requested to join, and only while the request is pending |
+| Frontend changes | None |
 
