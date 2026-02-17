@@ -1376,6 +1376,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          job_title: string | null
           organization_id: string
           reviewed_at: string | null
           reviewed_by: string | null
@@ -1385,6 +1386,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          job_title?: string | null
           organization_id: string
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -1394,6 +1396,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          job_title?: string | null
           organization_id?: string
           reviewed_at?: string | null
           reviewed_by?: string | null

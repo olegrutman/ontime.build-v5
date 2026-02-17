@@ -31,6 +31,7 @@ interface JoinRequest {
   user_id: string;
   status: string;
   created_at: string;
+  job_title?: string | null;
   profile?: { full_name: string | null; email: string } | null;
 }
 
@@ -61,7 +62,7 @@ export default function OrgTeam() {
     const [reqRes, orgRes] = await Promise.all([
       supabase
         .from('org_join_requests')
-        .select('id, user_id, status, created_at')
+        .select('id, user_id, status, created_at, job_title')
         .eq('organization_id', orgId)
         .eq('status', 'pending')
         .order('created_at', { ascending: false }),
@@ -215,7 +216,9 @@ export default function OrgTeam() {
                       {req.profile?.full_name || 'Unknown User'}
                     </p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {req.profile?.email} · Requested{' '}
+                      {req.profile?.email}
+                      {req.job_title && ` · ${req.job_title}`}
+                      {' · Requested '}
                       {format(new Date(req.created_at), 'MMM d, yyyy')}
                     </p>
                   </div>
@@ -267,6 +270,7 @@ export default function OrgTeam() {
                     </p>
                     <p className="text-xs text-muted-foreground truncate">
                       {m.profile?.email}
+                      {m.profile?.job_title && ` · ${m.profile.job_title}`}
                     </p>
                   </div>
                   {showDropdown ? (

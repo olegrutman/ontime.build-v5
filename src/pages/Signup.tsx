@@ -131,12 +131,14 @@ export default function Signup() {
         last_name: data.lastName,
         phone: data.phone || null,
         full_name: `${data.firstName} ${data.lastName}`.trim(),
+        job_title: data.jobTitle || null,
       }).eq('user_id', session.user.id);
 
       // Submit join request
       const { error: joinError } = await supabase.from('org_join_requests').insert({
         organization_id: data.joinOrgId,
         user_id: session.user.id,
+        job_title: data.jobTitle || null,
       });
 
       setLoading(false);
@@ -273,6 +275,7 @@ export default function Signup() {
             onChange={updateData}
             onNext={handleAccountNext}
             loading={loading}
+            showJobTitle
           />
         )}
       </SignupShell>
