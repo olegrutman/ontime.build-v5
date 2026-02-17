@@ -1,49 +1,69 @@
 
 
-# Fix: Members Not Showing on Team Page
+# Add Job Title to Join Flow and Show on Team Page
 
-## Problem
-The Members list on the Team page shows no members (or "Unknown" names) because the query to fetch members with their profiles is failing with a **400 error**: "Could not find a relationship between 'user_org_roles' and 'profiles'".
+## Overview
+When a new user signs up to join an existing organization, they will be asked for their **job title** before submitting the join request. The admin will see this job title when reviewing join requests, and can assign the appropriate role. The team page will also display each member's job title alongside their role.
 
-## Root Cause
-The `useOrgTeam` hook (line 47) uses a PostgREST embedded join:
-```
-profile:profiles(full_name, email)
-```
+## Changes
 
-This requires a **foreign key relationship** between `user_org_roles` and `profiles`. Currently, `user_org_roles.user_id` has no FK to `profiles.user_id`, so PostgREST rejects the query entirely with a 400 status. This means **zero members** are returned -- not even without profile data.
+### 1. Database: Add `job_title` column to `org_join_requests` and `profiles`
 
-The `org_invitations` query also fails (403 -- separate RLS issue), but the members query is the primary blocker.
+- Add a `job_title` column to `org_join_requests` so the requesting user's stated title is visible to the admin
+- The `profiles` table already has columns but may need a `job_title` column if not present -- will store it there upon approval
 
-## Fix
+### 2. Signup Flow: Add Job Title Field for Join Path
 
-### 1. Database Migration: Add FK from `user_org_roles.user_id` to `profiles.user_id`
+**File: `src/components/signup-wizard/types.ts`**
+- Already has `jobTitle` field in the wizard data type (no change needed)
 
+**File: `src/pages/Signup.tsx`**
+- Before submitting the join request, show a job title input field on the Account step (or as a small addition before the join request is sent)
+- Store the `job_title` in the `org_join_requests` row when inserting
+
+### 3. Join Request Review: Show Job Title to Admin
+
+**File: `src/pages/OrgTeam.tsx`**
+- In the Join Requests section, display the user's stated job title next to their name
+- Fetch `job_title` from the `org_join_requests` table
+
+### 4. Team Members: Show Job Title
+
+**File: `src/pages/OrgTeam.tsx`**
+- In the Members section, display each member's job title below their name/email
+- Fetch `job_title` from `profiles` table (joined via the existing FK)
+
+**File: `src/hooks/useOrgTeam.ts`**
+- Update the profiles query to also fetch `job_title`
+
+### 5. Update `approve_join_request` RPC
+
+- When approving, copy the `job_title` from the join request into the user's `profiles` row
+- Keep the current auto-role-assignment logic (admin can change the role afterward via the existing dropdown on the team page)
+
+## Technical Details
+
+### Migration SQL
 ```sql
-ALTER TABLE public.user_org_roles
-  ADD CONSTRAINT user_org_roles_user_id_profiles_fkey
-  FOREIGN KEY (user_id) REFERENCES public.profiles(user_id);
+-- Add job_title to org_join_requests
+ALTER TABLE public.org_join_requests ADD COLUMN job_title TEXT;
+
+-- Add job_title to profiles (if not exists)
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS job_title TEXT;
+
+-- Update approve_join_request to copy job_title to profile
+CREATE OR REPLACE FUNCTION public.approve_join_request(_request_id UUID)
+RETURNS VOID ...
+-- (adds: UPDATE profiles SET job_title = _req.job_title WHERE user_id = _req.user_id)
 ```
 
-This enables PostgREST to resolve the `profile:profiles(...)` join.
+### Frontend Changes Summary
 
-### 2. Frontend: Add fallback query in `useOrgTeam.ts`
-
-If the join still returns null profiles (e.g., due to RLS), add a fallback that fetches profiles separately (similar to what `OrgTeam.tsx` already does for join requests). This ensures member names always display.
-
-Update `fetchData` in `useOrgTeam.ts` to:
-- First try the joined query
-- If any member has a null profile, fetch profiles separately using `.in('user_id', userIds)` and merge them
-
-### 3. RLS on `org_invitations`: Fix the 403 error
-
-The `org_invitations` SELECT query returns 403 ("permission denied for table users"). This suggests an RLS policy on `org_invitations` references `auth.users` in a way that causes a permission error. Need to check and fix the RLS policy so org admins can read their org's pending invitations.
-
-## Summary
-
-| Change | File/Location | Detail |
-|--------|--------------|--------|
-| Add FK constraint | Database migration | `user_org_roles.user_id` -> `profiles.user_id` |
-| Fallback profile fetch | `src/hooks/useOrgTeam.ts` | Fetch profiles separately if join returns nulls |
-| Fix invitations RLS | Database migration | Fix policy on `org_invitations` that references `auth.users` |
+| File | Change |
+|------|--------|
+| `src/pages/Signup.tsx` | Add job title input before join request submission; include `job_title` in the insert |
+| `src/pages/OrgTeam.tsx` | Show job title in join requests list and members list |
+| `src/hooks/useOrgTeam.ts` | Include `job_title` in profile fetch |
+| `src/components/signup-wizard/types.ts` | No change needed (already has `jobTitle`) |
+| Database migration | Add `job_title` column, update RPC |
 
