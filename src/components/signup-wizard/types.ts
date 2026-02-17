@@ -1,3 +1,8 @@
+export const JOB_TITLES = [
+  'Owner', 'Project Manager', 'Superintendent', 'Estimator',
+  'Office Manager', 'Foreman', 'Other',
+];
+
 export interface SignupWizardData {
   firstName: string;
   lastName: string;

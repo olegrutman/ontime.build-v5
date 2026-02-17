@@ -3,9 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { Mail, Lock, User, Phone, Loader2, Briefcase } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Mail, Lock, User, Phone, Loader2 } from 'lucide-react';
 import { z } from 'zod';
-import type { SignupWizardData } from './types';
+import { JOB_TITLES, type SignupWizardData } from './types';
 
 const schema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -114,17 +115,16 @@ export function AccountStep({ data, onChange, onNext, loading, showJobTitle }: P
         {showJobTitle && (
           <div>
             <Label htmlFor="jobTitle">Job Title</Label>
-            <div className="relative mt-1">
-              <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                id="jobTitle"
-                type="text"
-                value={data.jobTitle}
-                onChange={e => onChange({ jobTitle: e.target.value })}
-                placeholder="e.g. Project Manager, Foreman"
-                className="pl-10"
-              />
-            </div>
+            <Select value={data.jobTitle} onValueChange={v => onChange({ jobTitle: v })}>
+              <SelectTrigger id="jobTitle" className="mt-1">
+                <SelectValue placeholder="Select your job title" />
+              </SelectTrigger>
+              <SelectContent>
+                {JOB_TITLES.map(t => (
+                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
 
