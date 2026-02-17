@@ -42,7 +42,7 @@ export function JoinSearchStep({ onSelectOrg, onBack }: JoinSearchStepProps) {
       _state: (state && state !== '__all__') ? state : null,
       _trade: (trade && trade !== '__all__') ? trade : null,
       _query: query || null,
-      _limit: 20,
+      _limit: 100,
     });
 
     if (!error && data) {
