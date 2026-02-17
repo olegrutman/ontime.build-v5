@@ -1,105 +1,66 @@
 
 
-# Admin Designation and Member Permissions System
+# Permissions Audit: Current State and Recommended Fixes
 
-## Overview
-Replace the current role-based "admin" assumption with an explicit `is_admin` flag on each team member. Admins can manage granular permissions for their team members through a detail popup on the My Team page.
+## Current Situation
 
-## Database Changes
+There are **two disconnected permission systems** in the app:
 
-### 1. Add `is_admin` column to `user_org_roles`
-- Add `is_admin BOOLEAN NOT NULL DEFAULT false` to `user_org_roles`
-- Set the organization creator as admin: update existing rows where `user_id = organizations.created_by`
+### System 1: Role-Based (Hardcoded) -- ACTIVELY USED
+The `ROLE_PERMISSIONS` map in `src/types/organization.ts` assigns fixed permissions per role (GC_PM, TC_PM, FC_PM, FS, SUPPLIER). These are checked throughout the app via:
+- `RequirePermission` component (used in SOV editors, contracts section)
+- `usePermission` hook (used in ProjectContractsSection)
+- Direct `permissions?.canViewRates` checks (used in WorkItemPage, WorkItemLabor, TMLaborEntries, etc.)
+- `ROLE_PERMISSIONS[currentRole]?.canManageOrg` (used in BottomNav for sidebar visibility)
 
-### 2. Create `member_permissions` table
-Stores per-member granular permission overrides:
+### System 2: Member-Level (Database) -- NOT ENFORCED
+The `member_permissions` table stores per-user toggles (`can_approve_invoices`, `can_create_work_orders`, etc.) that admins can edit in the MemberDetailDialog. However, **none of these flags are actually checked** anywhere in the app. They are only displayed and saved -- never used to gate any functionality.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid (PK) | |
-| user_org_role_id | uuid (FK) | Links to `user_org_roles.id` |
-| can_approve_invoices | boolean | Default false |
-| can_create_work_orders | boolean | Default false |
-| can_create_pos | boolean | Default false |
-| can_manage_team | boolean | Default false |
-| can_view_financials | boolean | Default false |
-| can_submit_time | boolean | Default true |
-| updated_at | timestamptz | |
+## What Needs to Happen
 
-- RLS: only members of the same org can read; only admins can update
-- Auto-create a row via trigger when a `user_org_roles` row is inserted
+The two systems need to be **unified** so that the granular member permissions set by admins actually control what users can do. Here is the mapping between database permissions and where they should be enforced:
 
-### 3. Create `transfer_admin` RPC
-A `SECURITY DEFINER` function that:
-- Validates current user is the admin
-- Removes `is_admin` from current user
-- Sets `is_admin = true` on the target member
-- Only one admin per org at a time
+| Database Permission | Where to Enforce | Current Behavior |
+|---|---|---|
+| `can_approve_invoices` | Invoice approve/reject buttons (InvoiceCard, InvoiceDetail) | Controlled only by org role (GC_PM gets `canApprove`) |
+| `can_create_work_orders` | Work Order creation wizard, "New Work Order" buttons | Not gated at all beyond role-based sidebar visibility |
+| `can_create_pos` | PO creation wizard, "New PO" buttons | Not gated at all |
+| `can_manage_team` | Team page invite/edit actions | Gated by `is_admin` flag only |
+| `can_view_financials` | Financial summaries, rate columns, margins | Controlled by `canViewRates`/`canViewMargins` from role |
+| `can_submit_time` | Time entry forms in T&M periods | Not explicitly gated |
 
-### 4. Create `update_member_permissions` RPC
-A `SECURITY DEFINER` function that:
-- Validates caller is the org admin
-- Updates the `member_permissions` row for the given member
+## Proposed Changes
 
-### 5. Fix `search_organizations_for_join`
-Update the admin_name subquery to select only users where `is_admin = true` instead of filtering by role, so "John Smith" (the actual admin) shows up instead of "Allen Rutman" (office manager).
+### 1. Update `useAuth` to expose member permissions
+Fetch the current user's `member_permissions` row alongside their org role and expose it in the auth context. Admins automatically get all permissions.
 
-## Frontend Changes
+### 2. Update `RequirePermission` / `usePermission` to check member permissions
+Instead of only checking the hardcoded `ROLE_PERMISSIONS` map, also check the user's `member_permissions` row from the database. The logic would be:
+- If user is admin: all permissions granted
+- Otherwise: check `member_permissions` flags
 
-### 1. Profile Page (`src/pages/Profile.tsx`)
-- Show an "Admin" badge next to the user's name/role if they are the org admin
+### 3. Create a unified permission key mapping
+Map the role-based keys (`canApprove`, `canViewRates`, etc.) to the database column names (`can_approve_invoices`, `can_view_financials`, etc.) so existing `RequirePermission` usage continues to work.
 
-### 2. My Team Page (`src/pages/OrgTeam.tsx`)
-- Show an "Admin" badge next to the admin member in the members list
-- When the current user is admin and clicks on a team member row, open a **Member Detail Dialog**
+### 4. Enforce permissions at key UI points
+- **Invoice approve/reject**: Check `can_approve_invoices`
+- **Work Order "New" button**: Check `can_create_work_orders`
+- **PO "New" button**: Check `can_create_pos`
+- **Team invite/manage**: Check `can_manage_team` OR `is_admin`
+- **Financial data visibility**: Check `can_view_financials`
+- **Time entry forms**: Check `can_submit_time`
 
-### 3. New Component: `MemberDetailDialog`
-A dialog/sheet that shows when an admin clicks a team member, containing:
-- Member name, email, job title, role
-- **Permissions section** with toggle switches for each permission:
-  - Approve Invoices
-  - Create Work Orders
-  - Create Purchase Orders
-  - Manage Team
-  - View Financials
-  - Submit Time
-- **Transfer Admin** button (with confirmation) to make this member the new admin
-- Save button to persist permission changes
+### Files to modify
 
-### 4. Update `useOrgTeam` hook
-- Fetch `is_admin` field alongside member data
-- Fetch `member_permissions` for each member
-- Add `updateMemberPermissions` and `transferAdmin` functions
-
-### 5. Update `useAuth` hook
-- Include `is_admin` in the `userOrgRoles` fetch so it's available app-wide
-- Update the `UserOrgRole` type in `src/types/organization.ts` to include `is_admin`
-
-## Technical Details
-
-### Migration SQL (summary)
-
-```text
-1. ALTER TABLE user_org_roles ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT false;
-2. UPDATE user_org_roles SET is_admin = true WHERE user_id IN (SELECT created_by FROM organizations WHERE created_by IS NOT NULL) AND organization_id IN (SELECT id FROM organizations WHERE created_by = user_org_roles.user_id);
-3. CREATE TABLE member_permissions (...)
-4. CREATE TRIGGER to auto-create member_permissions on user_org_roles insert
-5. Backfill member_permissions for existing rows
-6. CREATE FUNCTION transfer_admin(...)
-7. CREATE FUNCTION update_member_permissions(...)
-8. RLS policies on member_permissions
-9. Update search_organizations_for_join to use is_admin
-```
-
-### Files to create/modify
-
-| File | Action |
-|------|--------|
-| Migration SQL | Create: schema changes + RPCs |
-| `src/types/organization.ts` | Add `is_admin` to `UserOrgRole`, add `MemberPermissions` interface |
-| `src/hooks/useAuth.tsx` | Ensure `is_admin` flows through from query |
-| `src/hooks/useOrgTeam.ts` | Fetch `is_admin` + permissions, add mutation functions |
-| `src/components/team/MemberDetailDialog.tsx` | New: permission toggles + transfer admin |
-| `src/pages/OrgTeam.tsx` | Add admin badge, click handler to open dialog |
-| `src/pages/Profile.tsx` | Show admin badge |
+| File | Change |
+|---|---|
+| `src/hooks/useAuth.tsx` | Fetch user's `member_permissions` row; expose in context |
+| `src/types/organization.ts` | Add unified permission mapping; update `RolePermissions` interface |
+| `src/components/auth/RequirePermission.tsx` | Check `member_permissions` instead of/alongside `ROLE_PERMISSIONS` |
+| `src/components/invoices/InvoicesTab.tsx` | Gate approve actions with `can_approve_invoices` |
+| `src/components/project/WorkOrdersTab.tsx` | Gate "New Work Order" with `can_create_work_orders` |
+| `src/components/project/PurchaseOrdersTab.tsx` | Gate "New PO" with `can_create_pos` |
+| `src/pages/OrgTeam.tsx` | Gate invite/manage with `can_manage_team` or `is_admin` |
+| `src/components/work-item/WorkItemPage.tsx` | Use unified permission check for financial visibility |
+| `src/components/work-item/tm/TMLaborEntries.tsx` | Gate time submission with `can_submit_time` |
 
