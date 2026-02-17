@@ -1164,6 +1164,50 @@ export type Database = {
           },
         ]
       }
+      member_permissions: {
+        Row: {
+          can_approve_invoices: boolean
+          can_create_pos: boolean
+          can_create_work_orders: boolean
+          can_manage_team: boolean
+          can_submit_time: boolean
+          can_view_financials: boolean
+          id: string
+          updated_at: string
+          user_org_role_id: string
+        }
+        Insert: {
+          can_approve_invoices?: boolean
+          can_create_pos?: boolean
+          can_create_work_orders?: boolean
+          can_manage_team?: boolean
+          can_submit_time?: boolean
+          can_view_financials?: boolean
+          id?: string
+          updated_at?: string
+          user_org_role_id: string
+        }
+        Update: {
+          can_approve_invoices?: boolean
+          can_create_pos?: boolean
+          can_create_work_orders?: boolean
+          can_manage_team?: boolean
+          can_submit_time?: boolean
+          can_view_financials?: boolean
+          id?: string
+          updated_at?: string
+          user_org_role_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_permissions_user_org_role_id_fkey"
+            columns: ["user_org_role_id"]
+            isOneToOne: true
+            referencedRelation: "user_org_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_reads: {
         Row: {
           id: string
@@ -3374,6 +3418,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_admin: boolean
           organization_id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
@@ -3381,6 +3426,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_admin?: boolean
           organization_id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
@@ -3388,6 +3434,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_admin?: boolean
           organization_id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
@@ -4155,23 +4202,36 @@ export type Database = {
           result_type: string
         }[]
       }
-      search_organizations_for_join: {
-        Args: {
-          _limit?: number
-          _query?: string
-          _state?: string
-          _trade?: string
-        }
-        Returns: {
-          admin_name: string
-          allow_join_requests: boolean
-          org_address: Json
-          org_id: string
-          org_name: string
-          org_trade: string
-          org_type: string
-        }[]
-      }
+      search_organizations_for_join:
+        | {
+            Args: { _limit?: number; _query: string }
+            Returns: {
+              admin_name: string
+              city: string
+              id: string
+              name: string
+              org_type: Database["public"]["Enums"]["org_type"]
+              state: string
+              trade: string
+            }[]
+          }
+        | {
+            Args: {
+              _limit?: number
+              _query?: string
+              _state?: string
+              _trade?: string
+            }
+            Returns: {
+              admin_name: string
+              allow_join_requests: boolean
+              org_address: Json
+              org_id: string
+              org_name: string
+              org_trade: string
+              org_type: string
+            }[]
+          }
       send_work_order_assignment_notification: {
         Args: {
           _change_order_id: string
@@ -4181,6 +4241,19 @@ export type Database = {
         Returns: undefined
       }
       submit_tm_period: { Args: { period_id: string }; Returns: undefined }
+      transfer_admin: { Args: { _target_role_id: string }; Returns: undefined }
+      update_member_permissions: {
+        Args: {
+          _can_approve_invoices?: boolean
+          _can_create_pos?: boolean
+          _can_create_work_orders?: boolean
+          _can_manage_team?: boolean
+          _can_submit_time?: boolean
+          _can_view_financials?: boolean
+          _target_role_id: string
+        }
+        Returns: undefined
+      }
       update_sov_billing_totals: {
         Args: { p_project_id: string }
         Returns: undefined

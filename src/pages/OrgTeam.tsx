@@ -22,9 +22,10 @@ import {
   ALLOWED_ROLES_BY_ORG_TYPE,
   AppRole,
 } from '@/types/organization';
-import { Users, Mail, Clock, X, UserPlus, Settings, Check, XCircle } from 'lucide-react';
+import { Users, Mail, Clock, X, UserPlus, Settings, Check, XCircle, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { MemberDetailDialog } from '@/components/team/MemberDetailDialog';
 
 interface JoinRequest {
   id: string;
@@ -37,13 +38,14 @@ interface JoinRequest {
 
 export default function OrgTeam() {
   const { userOrgRoles, refreshUserData } = useAuth();
-  const { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, refetch } = useOrgTeam();
+  const { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, updateMemberPermissions, transferAdmin, refetch } = useOrgTeam();
   const { user } = useAuth();
   const { toast } = useToast();
 
   const currentOrg = userOrgRoles[0]?.organization;
   const orgType = currentOrg?.type;
   const orgId = currentOrg?.id;
+  const isCurrentUserAdmin = userOrgRoles[0]?.is_admin ?? false;
 
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<AppRole | ''>('');
@@ -51,6 +53,7 @@ export default function OrgTeam() {
   const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
   const [joinRequestsLoading, setJoinRequestsLoading] = useState(true);
   const [allowJoinRequests, setAllowJoinRequests] = useState(true);
+  const [selectedMember, setSelectedMember] = useState<typeof members[0] | null>(null);
 
   const allowedRoles = orgType ? ALLOWED_ROLES_BY_ORG_TYPE[orgType] : [];
 
@@ -262,38 +265,53 @@ export default function OrgTeam() {
               return (
                 <div
                   key={m.id}
-                  className="flex items-center justify-between py-2 border-b border-border last:border-0"
+                  className={`flex items-center justify-between py-2 border-b border-border last:border-0 ${
+                    isCurrentUserAdmin && !isSelf ? 'cursor-pointer hover:bg-muted/50 rounded-md px-2 -mx-2' : ''
+                  }`}
+                  onClick={() => {
+                    if (isCurrentUserAdmin || isSelf) setSelectedMember(m);
+                  }}
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">
+                    <p className="text-sm font-medium text-foreground truncate flex items-center gap-1.5">
                       {m.profile?.full_name || 'Unknown'}
+                      {m.is_admin && (
+                        <Badge variant="default" className="text-[10px] px-1.5 py-0">
+                          <ShieldCheck className="h-3 w-3 mr-0.5" />
+                          Admin
+                        </Badge>
+                      )}
                     </p>
                     <p className="text-xs text-muted-foreground truncate">
                       {m.profile?.email}
                       {m.profile?.job_title && ` · ${m.profile.job_title}`}
                     </p>
                   </div>
-                  {showDropdown ? (
-                    <Select
-                      value={m.role}
-                      onValueChange={(v) => changeRole(m.id, v as AppRole)}
-                    >
-                      <SelectTrigger className="w-[200px] shrink-0 ml-2 h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {allowedRoles.map((r) => (
-                          <SelectItem key={r} value={r}>
-                            {ROLE_LABELS[r]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <Badge variant="secondary" className="shrink-0 ml-2">
-                      {ROLE_LABELS[m.role]}
-                    </Badge>
-                  )}
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
+                    {showDropdown ? (
+                      <Select
+                        value={m.role}
+                        onValueChange={(v) => {
+                          changeRole(m.id, v as AppRole);
+                        }}
+                      >
+                        <SelectTrigger className="w-[200px] h-8 text-xs" onClick={(e) => e.stopPropagation()}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allowedRoles.map((r) => (
+                            <SelectItem key={r} value={r}>
+                              {ROLE_LABELS[r]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Badge variant="secondary">
+                        {ROLE_LABELS[m.role]}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
               );
             })}
@@ -380,6 +398,16 @@ export default function OrgTeam() {
           </Card>
         )}
       </div>
+
+      <MemberDetailDialog
+        member={selectedMember}
+        open={!!selectedMember}
+        onOpenChange={(open) => { if (!open) setSelectedMember(null); }}
+        onUpdatePermissions={updateMemberPermissions}
+        onTransferAdmin={transferAdmin}
+        isCurrentUserAdmin={isCurrentUserAdmin}
+        isSelf={selectedMember?.user_id === user?.id}
+      />
     </AppLayout>
   );
 }
