@@ -12,6 +12,7 @@ export interface OrgMember {
   profile: {
     full_name: string | null;
     email: string;
+    job_title: string | null;
   } | null;
 }
 
@@ -44,7 +45,7 @@ export function useOrgTeam() {
     const [membersRes, invitesRes] = await Promise.all([
       supabase
         .from('user_org_roles')
-        .select('id, user_id, role, created_at, profile:profiles(full_name, email)')
+        .select('id, user_id, role, created_at, profile:profiles(full_name, email, job_title)')
         .eq('organization_id', orgId),
       supabase
         .from('org_invitations')
@@ -65,11 +66,11 @@ export function useOrgTeam() {
       if (missingProfileIds.length > 0) {
         const { data: profiles } = await supabase
           .from('profiles')
-          .select('user_id, full_name, email')
+          .select('user_id, full_name, email, job_title')
           .in('user_id', missingProfileIds);
 
         if (profiles) {
-          const profileMap = new Map(profiles.map((p) => [p.user_id, { full_name: p.full_name, email: p.email }]));
+          const profileMap = new Map(profiles.map((p) => [p.user_id, { full_name: p.full_name, email: p.email, job_title: p.job_title }]));
           membersList = membersList.map((m) =>
             m.profile ? m : { ...m, profile: profileMap.get(m.user_id) || null }
           );

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
-import { Mail, Lock, User, Phone, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, Phone, Loader2, Briefcase } from 'lucide-react';
 import { z } from 'zod';
 import type { SignupWizardData } from './types';
 
@@ -23,9 +23,10 @@ interface Props {
   onChange: (fields: Partial<SignupWizardData>) => void;
   onNext: () => void;
   loading: boolean;
+  showJobTitle?: boolean;
 }
 
-export function AccountStep({ data, onChange, onNext, loading }: Props) {
+export function AccountStep({ data, onChange, onNext, loading, showJobTitle }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -109,6 +110,23 @@ export function AccountStep({ data, onChange, onNext, loading }: Props) {
             />
           </div>
         </div>
+
+        {showJobTitle && (
+          <div>
+            <Label htmlFor="jobTitle">Job Title</Label>
+            <div className="relative mt-1">
+              <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                id="jobTitle"
+                type="text"
+                value={data.jobTitle}
+                onChange={e => onChange({ jobTitle: e.target.value })}
+                placeholder="e.g. Project Manager, Foreman"
+                className="pl-10"
+              />
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <div>
