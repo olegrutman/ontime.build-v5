@@ -1,20 +1,22 @@
 
 
-# Hide Pricing Defaults for GC Users and Remove Invite from Profile
+# Show All Matching Companies in Join Search
+
+## Problem
+The organization search in the "Find Your Company" step currently limits results to 20 entries. When multiple companies share the same name, some may be hidden.
 
 ## Changes
 
-### 1. Hide Pricing Defaults for GC users
-The "Pricing Defaults" card (hourly rate, markup, crew size, etc.) is not relevant for General Contractors. It will be conditionally rendered -- only shown when the user's organization type is **not** GC.
+### 1. Increase the search limit in the frontend call
+**File: `src/components/signup-wizard/JoinSearchStep.tsx`**
+- Change `_limit: 20` to `_limit: 100` (or remove the limit parameter to use a higher default)
 
-### 2. Remove "Invite a Colleague" card
-The invite functionality already exists on the Team page, so it is redundant here. The entire `InviteColleagueCard` component and its rendering block will be removed from the Profile page.
-
-## Technical Details
+### 2. Update the database function default limit
+**Database migration**
+- Update the `search_organizations_for_join` function to increase the default `_limit` from `20` to `100`, ensuring all matching companies are returned even without a frontend override
 
 | File | Change |
 |------|--------|
-| `src/pages/Profile.tsx` | Wrap the Pricing Defaults card in a condition: only render when `organization?.type !== 'GC'` |
-| `src/pages/Profile.tsx` | Remove the `InviteColleagueCard` component definition (lines 38-94) and its usage (lines 620-627) |
-| `src/pages/Profile.tsx` | Clean up unused imports (`UserPlus`, `useOrgTeam`) |
+| `src/components/signup-wizard/JoinSearchStep.tsx` | Change `_limit: 20` to `_limit: 100` |
+| Database migration | Update default `_limit` from `20` to `100` |
 
