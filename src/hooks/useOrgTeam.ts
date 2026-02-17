@@ -55,7 +55,28 @@ export function useOrgTeam() {
     ]);
 
     if (membersRes.data) {
-      setMembers(membersRes.data as unknown as OrgMember[]);
+      let membersList = membersRes.data as unknown as OrgMember[];
+
+      // Fallback: if any member has null profile, fetch profiles separately
+      const missingProfileIds = membersList
+        .filter((m) => !m.profile)
+        .map((m) => m.user_id);
+
+      if (missingProfileIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, email')
+          .in('user_id', missingProfileIds);
+
+        if (profiles) {
+          const profileMap = new Map(profiles.map((p) => [p.user_id, { full_name: p.full_name, email: p.email }]));
+          membersList = membersList.map((m) =>
+            m.profile ? m : { ...m, profile: profileMap.get(m.user_id) || null }
+          );
+        }
+      }
+
+      setMembers(membersList);
     }
     if (invitesRes.data) {
       setPendingInvites(invitesRes.data as unknown as OrgInvite[]);
