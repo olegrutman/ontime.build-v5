@@ -38,8 +38,21 @@ export interface UserOrgRole {
   user_id: string;
   organization_id: string;
   role: AppRole;
+  is_admin: boolean;
   created_at: string;
   organization?: Organization;
+}
+
+export interface MemberPermissions {
+  id: string;
+  user_org_role_id: string;
+  can_approve_invoices: boolean;
+  can_create_work_orders: boolean;
+  can_create_pos: boolean;
+  can_manage_team: boolean;
+  can_view_financials: boolean;
+  can_submit_time: boolean;
+  updated_at: string;
 }
 
 export interface OrgInvitation {

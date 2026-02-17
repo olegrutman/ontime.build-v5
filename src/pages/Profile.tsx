@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,7 +27,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { 
   User, Building2, DollarSign, Lock, Bell, BadgeCheck, AlertTriangle, 
-  Loader2, Save, Eye, EyeOff, Phone, MapPin, Wrench
+  Loader2, Save, Eye, EyeOff, Phone, MapPin, Wrench, ShieldCheck
 } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
@@ -280,7 +281,15 @@ export default function Profile() {
     <AppLayout>
       <div className="max-w-3xl mx-auto space-y-6">
         <div>
-          <h1 className="text-2xl font-bold">Profile & Settings</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            Profile & Settings
+            {userOrgRoles[0]?.is_admin && (
+              <Badge variant="default" className="text-xs">
+                <ShieldCheck className="h-3 w-3 mr-1" />
+                Admin
+              </Badge>
+            )}
+          </h1>
           <p className="text-muted-foreground">Manage your personal info, organization, and preferences.</p>
         </div>
 

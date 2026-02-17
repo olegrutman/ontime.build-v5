@@ -1,19 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { AppRole } from '@/types/organization';
+import { AppRole, MemberPermissions } from '@/types/organization';
 import { useToast } from '@/hooks/use-toast';
 
 export interface OrgMember {
   id: string;
   user_id: string;
   role: AppRole;
+  is_admin: boolean;
   created_at: string;
   profile: {
     full_name: string | null;
     email: string;
     job_title: string | null;
   } | null;
+  permissions: MemberPermissions | null;
 }
 
 export interface OrgInvite {
@@ -42,10 +44,10 @@ export function useOrgTeam() {
     if (!orgId) return;
     setLoading(true);
 
-    const [membersRes, invitesRes] = await Promise.all([
+    const [membersRes, invitesRes, permissionsRes] = await Promise.all([
       supabase
         .from('user_org_roles')
-        .select('id, user_id, role, created_at, profile:profiles(full_name, email, job_title)')
+        .select('id, user_id, role, is_admin, created_at, profile:profiles(full_name, email, job_title)')
         .eq('organization_id', orgId),
       supabase
         .from('org_invitations')
@@ -53,7 +55,16 @@ export function useOrgTeam() {
         .eq('organization_id', orgId)
         .eq('status', 'pending')
         .order('created_at', { ascending: false }),
+      supabase
+        .from('member_permissions')
+        .select('*'),
     ]);
+
+    // Build permissions map
+    const permMap = new Map<string, MemberPermissions>();
+    if (permissionsRes.data) {
+      (permissionsRes.data as unknown as MemberPermissions[]).forEach(p => permMap.set(p.user_org_role_id, p));
+    }
 
     if (membersRes.data) {
       let membersList = membersRes.data as unknown as OrgMember[];
@@ -76,6 +87,12 @@ export function useOrgTeam() {
           );
         }
       }
+
+      // Attach permissions
+      membersList = membersList.map(m => ({
+        ...m,
+        permissions: permMap.get(m.id) || null,
+      }));
 
       setMembers(membersList);
     }
@@ -139,7 +156,43 @@ export function useOrgTeam() {
     return true;
   };
 
-  return { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, refetch: fetchData };
+  const updateMemberPermissions = async (targetRoleId: string, perms: Partial<MemberPermissions>) => {
+    const { error } = await supabase.rpc('update_member_permissions', {
+      _target_role_id: targetRoleId,
+      _can_approve_invoices: perms.can_approve_invoices ?? null,
+      _can_create_work_orders: perms.can_create_work_orders ?? null,
+      _can_create_pos: perms.can_create_pos ?? null,
+      _can_manage_team: perms.can_manage_team ?? null,
+      _can_view_financials: perms.can_view_financials ?? null,
+      _can_submit_time: perms.can_submit_time ?? null,
+    });
+
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      return false;
+    }
+
+    toast({ title: 'Updated', description: 'Permissions have been updated.' });
+    fetchData();
+    return true;
+  };
+
+  const transferAdmin = async (targetRoleId: string) => {
+    const { error } = await supabase.rpc('transfer_admin', {
+      _target_role_id: targetRoleId,
+    });
+
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      return false;
+    }
+
+    toast({ title: 'Admin Transferred', description: 'Admin role has been transferred.' });
+    fetchData();
+    return true;
+  };
+
+  return { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, updateMemberPermissions, transferAdmin, refetch: fetchData };
 }
 
 /** Hook for the dashboard: fetch pending org invites for the current user */
