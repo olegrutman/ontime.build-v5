@@ -38,7 +38,7 @@ interface Contract {
 }
 
 export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
-  const { userOrgRoles } = useAuth();
+  const { userOrgRoles, permissions } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
@@ -313,7 +313,7 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
     const getInvoicePermissions = (invoice: Invoice) => {
       const contract = contracts.find(c => c.id === invoice.contract_id);
       const canSubmit = contract?.from_org_id === currentOrgId;
-      const canApprove = contract?.to_org_id === currentOrgId;
+      const canApprove = contract?.to_org_id === currentOrgId && (permissions?.canApprove ?? false);
       return { canSubmit, canApprove };
     };
 

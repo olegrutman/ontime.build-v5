@@ -15,9 +15,10 @@ interface TMLaborEntriesProps {
   period: TMPeriod;
   currentRole: AppRole | null;
   canViewRates: boolean;
+  canSubmitTime: boolean;
 }
 
-export function TMLaborEntries({ period, currentRole, canViewRates }: TMLaborEntriesProps) {
+export function TMLaborEntries({ period, currentRole, canViewRates, canSubmitTime }: TMLaborEntriesProps) {
   const { user } = useAuth();
   const [entries, setEntries] = useState<TMLaborEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -25,6 +26,7 @@ export function TMLaborEntries({ period, currentRole, canViewRates }: TMLaborEnt
   const isEditable = period.status === 'OPEN';
   const isTC = currentRole === 'TC_PM';
   const isFS = currentRole === 'FS';
+  const canAddEntries = canSubmitTime && isEditable && (isTC || isFS);
 
   useEffect(() => {
     fetchEntries();
@@ -95,7 +97,7 @@ export function TMLaborEntries({ period, currentRole, canViewRates }: TMLaborEnt
   };
 
   const canEditEntry = (entry: TMLaborEntry) => {
-    if (!isEditable) return false;
+    if (!isEditable || !canSubmitTime) return false;
     if (isTC) return true;
     if (isFS && entry.entered_by === user?.id) return true;
     return false;
@@ -122,7 +124,7 @@ export function TMLaborEntries({ period, currentRole, canViewRates }: TMLaborEnt
             </span>
           )}
         </h4>
-        {isEditable && (isTC || isFS) && (
+        {canAddEntries && (
           <Button size="sm" variant="ghost" onClick={addEntry}>
             <Plus className="w-4 h-4" />
           </Button>

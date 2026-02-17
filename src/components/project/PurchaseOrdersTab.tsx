@@ -36,7 +36,7 @@ interface PurchaseOrdersTabProps {
 }
 
 export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: PurchaseOrdersTabProps) {
-  const { userOrgRoles, currentRole, user } = useAuth();
+  const { userOrgRoles, currentRole, user, permissions } = useAuth();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [invoicedPOIds, setInvoicedPOIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -51,7 +51,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: Pu
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
   const isSupplier = currentOrgType === 'SUPPLIER';
-  const canCreatePO = currentRole === 'GC_PM' || currentRole === 'TC_PM';
+  const canCreatePO = permissions?.canCreatePOs ?? false;
 
   useEffect(() => {
     fetchPurchaseOrders();

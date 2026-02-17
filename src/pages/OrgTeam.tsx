@@ -37,7 +37,7 @@ interface JoinRequest {
 }
 
 export default function OrgTeam() {
-  const { userOrgRoles, refreshUserData } = useAuth();
+  const { userOrgRoles, refreshUserData, permissions } = useAuth();
   const { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, updateMemberPermissions, transferAdmin, refetch } = useOrgTeam();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -46,6 +46,7 @@ export default function OrgTeam() {
   const orgType = currentOrg?.type;
   const orgId = currentOrg?.id;
   const isCurrentUserAdmin = userOrgRoles[0]?.is_admin ?? false;
+  const canManageTeam = permissions?.canManageOrg ?? false;
 
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<AppRole | ''>('');
@@ -260,7 +261,7 @@ export default function OrgTeam() {
           <CardContent className="space-y-3">
             {members.map((m) => {
               const isSelf = m.user_id === user?.id;
-              const showDropdown = !isSelf && allowedRoles.length > 1;
+              const showDropdown = !isSelf && allowedRoles.length > 1 && canManageTeam;
 
               return (
                 <div

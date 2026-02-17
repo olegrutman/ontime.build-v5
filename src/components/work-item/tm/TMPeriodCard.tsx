@@ -18,10 +18,11 @@ interface TMPeriodCardProps {
   period: TMPeriod;
   currentRole: AppRole | null;
   canViewRates: boolean;
+  canSubmitTime?: boolean;
   onUpdate: () => void;
 }
 
-export function TMPeriodCard({ period, currentRole, canViewRates, onUpdate }: TMPeriodCardProps) {
+export function TMPeriodCard({ period, currentRole, canViewRates, canSubmitTime = true, onUpdate }: TMPeriodCardProps) {
   const [isOpen, setIsOpen] = useState(period.status === 'OPEN');
   
   const isGC = currentRole === 'GC_PM';
@@ -95,7 +96,8 @@ export function TMPeriodCard({ period, currentRole, canViewRates, onUpdate }: TM
                 <TMLaborEntries 
                   period={period} 
                   currentRole={currentRole} 
-                  canViewRates={canViewRates} 
+                  canViewRates={canViewRates}
+                  canSubmitTime={canSubmitTime}
                 />
 
                 <Separator />
