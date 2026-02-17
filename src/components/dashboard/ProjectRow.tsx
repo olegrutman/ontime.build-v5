@@ -31,6 +31,7 @@ interface ProjectRowProps {
 }
 
 const STATUS_BORDER_COLORS: Record<string, string> = {
+  'setup': 'border-l-violet-500',
   'active': 'border-l-green-500',
   'on_hold': 'border-l-amber-500',
   'completed': 'border-l-blue-500',
@@ -39,6 +40,7 @@ const STATUS_BORDER_COLORS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
+  'setup': 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
   'draft': 'bg-muted text-muted-foreground',
   'active': 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
   'on_hold': 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
@@ -47,6 +49,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
+  'setup': 'Setup',
   'draft': 'Draft',
   'active': 'Active',
   'on_hold': 'On Hold',

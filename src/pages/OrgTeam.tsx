@@ -1,12 +1,15 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { AppLayout } from '@/components/layout';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTeam } from '@/hooks/useOrgTeam';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -19,22 +22,83 @@ import {
   ALLOWED_ROLES_BY_ORG_TYPE,
   AppRole,
 } from '@/types/organization';
-import { Users, Mail, Clock, X } from 'lucide-react';
+import { Users, Mail, Clock, X, UserPlus, Settings, Check, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
+
+interface JoinRequest {
+  id: string;
+  user_id: string;
+  status: string;
+  created_at: string;
+  profile?: { full_name: string | null; email: string } | null;
+}
 
 export default function OrgTeam() {
   const { userOrgRoles } = useAuth();
   const { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole } = useOrgTeam();
   const { user } = useAuth();
+  const { toast } = useToast();
 
   const currentOrg = userOrgRoles[0]?.organization;
   const orgType = currentOrg?.type;
+  const orgId = currentOrg?.id;
 
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<AppRole | ''>('');
   const [sending, setSending] = useState(false);
+  const [joinRequests, setJoinRequests] = useState<JoinRequest[]>([]);
+  const [joinRequestsLoading, setJoinRequestsLoading] = useState(true);
+  const [allowJoinRequests, setAllowJoinRequests] = useState(true);
 
   const allowedRoles = orgType ? ALLOWED_ROLES_BY_ORG_TYPE[orgType] : [];
+
+  // Fetch join requests and org settings
+  const fetchJoinRequests = useCallback(async () => {
+    if (!orgId) return;
+    setJoinRequestsLoading(true);
+
+    const [reqRes, orgRes] = await Promise.all([
+      supabase
+        .from('org_join_requests')
+        .select('id, user_id, status, created_at')
+        .eq('organization_id', orgId)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('organizations')
+        .select('allow_join_requests')
+        .eq('id', orgId)
+        .single(),
+    ]);
+
+    if (orgRes.data) {
+      setAllowJoinRequests(orgRes.data.allow_join_requests);
+    }
+
+    if (reqRes.data && reqRes.data.length > 0) {
+      // Fetch profiles for each request
+      const userIds = reqRes.data.map(r => r.user_id);
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, email')
+        .in('user_id', userIds);
+
+      const profileMap = new Map<string, { full_name: string | null; email: string }>();
+      (profiles || []).forEach(p => profileMap.set(p.user_id, { full_name: p.full_name, email: p.email }));
+
+      setJoinRequests(reqRes.data.map(r => ({
+        ...r,
+        profile: profileMap.get(r.user_id) || null,
+      })));
+    } else {
+      setJoinRequests([]);
+    }
+
+    setJoinRequestsLoading(false);
+  }, [orgId]);
+
+  useEffect(() => { fetchJoinRequests(); }, [fetchJoinRequests]);
 
   const handleSendInvite = async () => {
     if (!email || !role) return;
@@ -45,6 +109,39 @@ export default function OrgTeam() {
       setRole('');
     }
     setSending(false);
+  };
+
+  const handleApproveJoinRequest = async (requestId: string) => {
+    const { error } = await supabase.rpc('approve_join_request', { _request_id: requestId });
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Approved', description: 'Team member has been added.' });
+      fetchJoinRequests();
+    }
+  };
+
+  const handleRejectJoinRequest = async (requestId: string) => {
+    const { error } = await supabase.rpc('reject_join_request', { _request_id: requestId });
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: 'Rejected', description: 'Join request has been declined.' });
+      fetchJoinRequests();
+    }
+  };
+
+  const handleToggleJoinRequests = async (checked: boolean) => {
+    if (!orgId) return;
+    const { error } = await supabase
+      .from('organizations')
+      .update({ allow_join_requests: checked })
+      .eq('id', orgId);
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } else {
+      setAllowJoinRequests(checked);
+    }
   };
 
   if (loading) {
@@ -68,6 +165,79 @@ export default function OrgTeam() {
             Manage your organization's team members and invitations
           </p>
         </div>
+
+        {/* Organization Settings */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Organization Settings
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="allow-join">Allow team members to join via search</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  When enabled, users can find and request to join your organization
+                </p>
+              </div>
+              <Switch
+                id="allow-join"
+                checked={allowJoinRequests}
+                onCheckedChange={handleToggleJoinRequests}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Join Requests */}
+        {joinRequests.length > 0 && (
+          <Card className="border-l-4 border-l-amber-500">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <UserPlus className="h-4 w-4" />
+                Join Requests ({joinRequests.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {joinRequests.map((req) => (
+                <div
+                  key={req.id}
+                  className="flex items-center justify-between py-2 border-b border-border last:border-0"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {req.profile?.full_name || 'Unknown User'}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {req.profile?.email} · Requested{' '}
+                      {format(new Date(req.created_at), 'MMM d, yyyy')}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0 ml-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleApproveJoinRequest(req.id)}
+                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                    >
+                      <Check className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRejectJoinRequest(req.id)}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <XCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Current Members */}
         <Card>

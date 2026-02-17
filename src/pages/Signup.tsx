@@ -9,19 +9,27 @@ import { AccountStep } from '@/components/signup-wizard/AccountStep';
 import { CompanyStep } from '@/components/signup-wizard/CompanyStep';
 import { RoleStep } from '@/components/signup-wizard/RoleStep';
 import { InviteDetectedStep } from '@/components/signup-wizard/InviteDetectedStep';
+import { ChoiceStep } from '@/components/signup-wizard/ChoiceStep';
+import { JoinSearchStep } from '@/components/signup-wizard/JoinSearchStep';
 import type { SignupWizardData } from '@/components/signup-wizard/types';
 import { OrgType } from '@/types/organization';
 
-const STEPS = [
+const STEPS_NEW = [
   { id: 'account', label: 'Your Account', description: 'Name, email & password', icon: User },
   { id: 'company', label: 'Your Company', description: 'Organization details', icon: Building2 },
   { id: 'role', label: 'Your Role', description: 'Role & trade info', icon: Briefcase },
+];
+
+const STEPS_JOIN = [
+  { id: 'search', label: 'Find Company', description: 'Search organizations', icon: Building2 },
+  { id: 'account', label: 'Your Account', description: 'Name, email & password', icon: User },
 ];
 
 export default function Signup() {
   const navigate = useNavigate();
   const { user, userOrgRoles, loading: authLoading, refreshUserData } = useAuth();
   const { toast } = useToast();
+  const [signupPath, setSignupPath] = useState<'new' | 'join' | null>(null);
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [inviteDetected, setInviteDetected] = useState(false);
@@ -56,10 +64,31 @@ export default function Signup() {
     setData(prev => ({ ...prev, ...fields }));
   };
 
+  const handleChoice = (path: 'new' | 'join') => {
+    setSignupPath(path);
+    setStep(0);
+  };
+
+  const handleJoinOrgSelect = (org: any) => {
+    if (!org.allow_join_requests) {
+      toast({
+        variant: 'destructive',
+        title: 'Invitation required',
+        description: 'This company requires invitation approval. Ask the admin to invite you.',
+      });
+      return;
+    }
+    updateData({
+      signupPath: 'join',
+      joinOrgId: org.org_id,
+      joinOrgName: org.org_name,
+    });
+    setStep(1); // Go to account creation
+  };
+
   const handleAccountNext = async () => {
     setLoading(true);
 
-    // Create auth user
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: data.email,
       password: data.password,
@@ -94,6 +123,37 @@ export default function Signup() {
       return;
     }
 
+    // If join path, submit join request now
+    if (signupPath === 'join' && data.joinOrgId) {
+      // Create profile first
+      await supabase.from('profiles').upsert({
+        user_id: session.user.id,
+        email: data.email,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        phone: data.phone || null,
+        full_name: `${data.firstName} ${data.lastName}`.trim(),
+      });
+
+      // Submit join request
+      const { error: joinError } = await supabase.from('org_join_requests').insert({
+        organization_id: data.joinOrgId,
+        user_id: session.user.id,
+      });
+
+      setLoading(false);
+      if (joinError) {
+        toast({ variant: 'destructive', title: 'Error', description: joinError.message });
+      } else {
+        toast({
+          title: 'Join request sent!',
+          description: `Your request to join ${data.joinOrgName} has been submitted. You'll be notified when approved.`,
+        });
+        navigate('/auth');
+      }
+      return;
+    }
+
     // Check for pending org invitations
     const { data: invites } = await supabase
       .from('org_invitations')
@@ -110,7 +170,7 @@ export default function Signup() {
     }
 
     setLoading(false);
-    setStep(1);
+    setStep(signupPath === 'new' ? 1 : 0);
   };
 
   const handleInviteAccept = async () => {
@@ -176,10 +236,19 @@ export default function Signup() {
     navigate('/dashboard');
   };
 
+  // Choice screen (before path is selected)
+  if (!signupPath) {
+    return (
+      <SignupShell steps={[]} step={-1} signupPath={null}>
+        <ChoiceStep onChoice={handleChoice} />
+      </SignupShell>
+    );
+  }
+
   // Show invite-detected screen
   if (inviteDetected) {
     return (
-      <SignupShell step={step}>
+      <SignupShell steps={signupPath === 'new' ? STEPS_NEW : STEPS_JOIN} step={step} signupPath={signupPath}>
         <InviteDetectedStep
           orgName={inviteOrgName}
           loading={loading}
@@ -190,8 +259,31 @@ export default function Signup() {
     );
   }
 
+  // JOIN path
+  if (signupPath === 'join') {
+    return (
+      <SignupShell steps={STEPS_JOIN} step={step} signupPath={signupPath}>
+        {step === 0 && (
+          <JoinSearchStep
+            onSelectOrg={handleJoinOrgSelect}
+            onBack={() => setSignupPath(null)}
+          />
+        )}
+        {step === 1 && (
+          <AccountStep
+            data={data}
+            onChange={updateData}
+            onNext={handleAccountNext}
+            loading={loading}
+          />
+        )}
+      </SignupShell>
+    );
+  }
+
+  // NEW path
   return (
-    <SignupShell step={step}>
+    <SignupShell steps={STEPS_NEW} step={step} signupPath={signupPath}>
       {step === 0 && (
         <AccountStep
           data={data}
@@ -205,10 +297,7 @@ export default function Signup() {
           data={data}
           onChange={updateData}
           onNext={() => setStep(2)}
-          onBack={() => {
-            // Can't go back to account step (already created)
-            // but allow going back if they came from invite decline
-          }}
+          onBack={() => setSignupPath(null)}
         />
       )}
       {step === 2 && (
@@ -224,12 +313,18 @@ export default function Signup() {
   );
 }
 
-function SignupShell({ step, children }: { step: number; children: React.ReactNode }) {
+interface SignupShellProps {
+  steps: readonly { id: string; label: string; description: string; icon: any }[];
+  step: number;
+  signupPath: 'new' | 'join' | null;
+  children: React.ReactNode;
+}
+
+function SignupShell({ steps, step, signupPath, children }: SignupShellProps) {
   return (
     <div className="min-h-screen bg-background flex">
       {/* Sidebar stepper */}
       <div className="hidden md:flex w-80 bg-card border-r p-8 flex-col">
-        {/* Logo */}
         <div className="flex items-center gap-3 mb-12">
           <div className="flex items-center justify-center w-10 h-10 bg-primary rounded-xl">
             <Building2 className="w-5 h-5 text-primary-foreground" />
@@ -240,43 +335,45 @@ function SignupShell({ step, children }: { step: number; children: React.ReactNo
           </div>
         </div>
 
-        {/* Steps */}
-        <div className="space-y-2 flex-1">
-          {STEPS.map((s, i) => {
-            const isComplete = i < step;
-            const isCurrent = i === step;
-            const Icon = s.icon;
-            return (
-              <div
-                key={s.id}
-                className={cn(
-                  'flex items-start gap-4 rounded-lg p-3 transition-colors',
-                  isCurrent && 'bg-primary/5',
-                )}
-              >
+        {steps.length > 0 && (
+          <div className="space-y-2 flex-1">
+            {steps.map((s, i) => {
+              const isComplete = i < step;
+              const isCurrent = i === step;
+              const Icon = s.icon;
+              return (
                 <div
+                  key={s.id}
                   className={cn(
-                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-medium transition-colors',
-                    isComplete && 'border-primary bg-primary text-primary-foreground',
-                    isCurrent && 'border-primary text-primary',
-                    !isComplete && !isCurrent && 'border-muted text-muted-foreground',
+                    'flex items-start gap-4 rounded-lg p-3 transition-colors',
+                    isCurrent && 'bg-primary/5',
                   )}
                 >
-                  {isComplete ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                  <div
+                    className={cn(
+                      'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-2 text-sm font-medium transition-colors',
+                      isComplete && 'border-primary bg-primary text-primary-foreground',
+                      isCurrent && 'border-primary text-primary',
+                      !isComplete && !isCurrent && 'border-muted text-muted-foreground',
+                    )}
+                  >
+                    {isComplete ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                  </div>
+                  <div className="pt-1">
+                    <p className={cn(
+                      'text-sm font-medium',
+                      (isComplete || isCurrent) ? 'text-foreground' : 'text-muted-foreground',
+                    )}>
+                      {s.label}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{s.description}</p>
+                  </div>
                 </div>
-                <div className="pt-1">
-                  <p className={cn(
-                    'text-sm font-medium',
-                    (isComplete || isCurrent) ? 'text-foreground' : 'text-muted-foreground',
-                  )}>
-                    {s.label}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{s.description}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
+        {steps.length === 0 && <div className="flex-1" />}
 
         <p className="text-xs text-muted-foreground">
           Already have an account?{' '}
@@ -287,7 +384,6 @@ function SignupShell({ step, children }: { step: number; children: React.ReactNo
       {/* Main content */}
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-lg">
-          {/* Mobile logo */}
           <div className="flex md:hidden items-center justify-center gap-3 mb-8">
             <div className="flex items-center justify-center w-10 h-10 bg-primary rounded-xl">
               <Building2 className="w-5 h-5 text-primary-foreground" />
