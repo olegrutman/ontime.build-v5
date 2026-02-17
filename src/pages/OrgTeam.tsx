@@ -36,7 +36,7 @@ interface JoinRequest {
 
 export default function OrgTeam() {
   const { userOrgRoles } = useAuth();
-  const { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole } = useOrgTeam();
+  const { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, refetch } = useOrgTeam();
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -118,6 +118,7 @@ export default function OrgTeam() {
     } else {
       toast({ title: 'Approved', description: 'Team member has been added.' });
       fetchJoinRequests();
+      refetch();
     }
   };
 
