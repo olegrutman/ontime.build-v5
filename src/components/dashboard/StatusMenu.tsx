@@ -1,14 +1,15 @@
 import { cn } from '@/lib/utils';
 
-export type ProjectStatusFilter = 'active' | 'on_hold' | 'completed' | 'archived';
+export type ProjectStatusFilter = 'setup' | 'active' | 'on_hold' | 'completed' | 'archived';
 
 interface StatusMenuProps {
   currentFilter: ProjectStatusFilter;
   onFilterChange: (filter: ProjectStatusFilter) => void;
-  counts: {active: number;on_hold: number;completed: number;archived: number;};
+  counts: {setup: number; active: number; on_hold: number; completed: number; archived: number;};
 }
 
 const STATUS_CONFIG = [
+{ key: 'setup', label: 'Setup', color: 'bg-violet-500' },
 { key: 'active', label: 'Active', color: 'bg-green-500' },
 { key: 'on_hold', label: 'On Hold', color: 'bg-amber-500' },
 { key: 'completed', label: 'Completed', color: 'bg-blue-500' },

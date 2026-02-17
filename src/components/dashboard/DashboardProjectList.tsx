@@ -22,7 +22,7 @@ interface DashboardProjectListProps {
   projects: Project[];
   statusFilter: ProjectStatusFilter;
   onStatusFilterChange: (filter: ProjectStatusFilter) => void;
-  statusCounts: { active: number; on_hold: number; completed: number; archived: number };
+  statusCounts: { setup: number; active: number; on_hold: number; completed: number; archived: number };
   loading: boolean;
   orgType: string | null;
   onArchive: (projectId: string) => void;
@@ -44,6 +44,9 @@ export function DashboardProjectList({
   const navigate = useNavigate();
 
   const filteredProjects = useMemo(() => {
+    if (statusFilter === 'setup') {
+      return projects.filter((p) => p.status === 'setup' || p.status === 'draft');
+    }
     return projects.filter((p) => p.status === statusFilter);
   }, [projects, statusFilter]);
 

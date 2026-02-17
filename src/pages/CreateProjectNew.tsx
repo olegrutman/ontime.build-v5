@@ -116,7 +116,7 @@ export default function CreateProjectNew() {
           created_by: user.id,
           created_by_org_id: currentOrg.id,
           organization_id: currentOrg.id,
-          status: 'draft',
+          status: 'setup',
         })
         .select('id')
         .single();
@@ -410,10 +410,10 @@ export default function CreateProjectNew() {
     
     setSaving(true);
     try {
-      // Activate the project
+      // Keep project in setup state (readiness engine will determine when it can go active)
       await supabase
         .from('projects')
-        .update({ status: 'active' })
+        .update({ status: 'setup' })
         .eq('id', data.projectId);
 
       toast({ title: 'Project created!', description: 'Invitations will be sent to team members.' });

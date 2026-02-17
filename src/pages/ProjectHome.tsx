@@ -22,10 +22,12 @@ import {
   OperationalSummary,
 } from '@/components/project';
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
+import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
 import { InvoicesTab } from '@/components/invoices';
 import { ContractSOVEditor } from '@/components/sov';
 import { useToast } from '@/hooks/use-toast';
 import { useProjectFinancials } from '@/hooks/useProjectFinancials';
+import { useProjectReadiness } from '@/hooks/useProjectReadiness';
 
 interface Project {
   id: string;
@@ -65,6 +67,7 @@ export default function ProjectHome() {
   // Realtime subscriptions – refreshKey bumps when any project entity changes
   const realtimeKey = useProjectRealtime(id);
   const financials = useProjectFinancials(id || '', isSupplier, supplierOrgId);
+  const readiness = useProjectReadiness(id);
 
   // Get active tab from URL or default to 'overview'
   const activeTab = searchParams.get('tab') || 'overview';
@@ -190,6 +193,11 @@ export default function ProjectHome() {
               {/* Overview Tab */}
               {activeTab === 'overview' && (
                 <div className="space-y-4">
+                  {/* Readiness Card for setup/draft projects */}
+                  {(project.status === 'setup' || project.status === 'draft') && (
+                    <ProjectReadinessCard readiness={readiness} />
+                  )}
+
                   {/* Zone 4: Attention Center */}
                   <AttentionBanner
                     projectId={id!}

@@ -66,6 +66,7 @@ interface FinancialSummary {
 interface DashboardData {
   projects: ProjectWithDetails[];
   statusCounts: {
+    setup: number;
     active: number;
     on_hold: number;
     completed: number;
@@ -614,6 +615,7 @@ export function useDashboardData(): DashboardData {
 
   const statusCounts = useMemo(() => {
     return {
+      setup: projects.filter(p => p.status === 'setup' || p.status === 'draft').length,
       active: projects.filter(p => p.status === 'active').length,
       on_hold: projects.filter(p => p.status === 'on_hold').length,
       completed: projects.filter(p => p.status === 'completed').length,

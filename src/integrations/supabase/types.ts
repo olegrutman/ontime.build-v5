@@ -1372,6 +1372,44 @@ export type Database = {
           },
         ]
       }
+      org_join_requests: {
+        Row: {
+          created_at: string
+          id: string
+          organization_id: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          organization_id: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          organization_id?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_join_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_settings: {
         Row: {
           created_at: string
@@ -1419,6 +1457,7 @@ export type Database = {
       organizations: {
         Row: {
           address: Json | null
+          allow_join_requests: boolean
           created_at: string
           created_by: string | null
           id: string
@@ -1434,6 +1473,7 @@ export type Database = {
         }
         Insert: {
           address?: Json | null
+          allow_join_requests?: boolean
           created_at?: string
           created_by?: string | null
           id?: string
@@ -1449,6 +1489,7 @@ export type Database = {
         }
         Update: {
           address?: Json | null
+          allow_join_requests?: boolean
           created_at?: string
           created_by?: string | null
           id?: string
@@ -3859,6 +3900,10 @@ export type Database = {
         }
         Returns: Json
       }
+      approve_join_request: {
+        Args: { _request_id: string }
+        Returns: undefined
+      }
       approve_tm_period: { Args: { period_id: string }; Returns: string }
       can_accept_project_invite: {
         Args: { _user_id: string }
@@ -4023,6 +4068,7 @@ export type Database = {
         Returns: undefined
       }
       normalize_phone: { Args: { phone: string }; Returns: string }
+      reject_join_request: { Args: { _request_id: string }; Returns: undefined }
       reject_tm_period: {
         Args: { notes: string; period_id: string }
         Returns: undefined
@@ -4097,6 +4143,23 @@ export type Database = {
           org_type: Database["public"]["Enums"]["org_type"]
           organization_name: string
           result_type: string
+        }[]
+      }
+      search_organizations_for_join: {
+        Args: {
+          _limit?: number
+          _query?: string
+          _state?: string
+          _trade?: string
+        }
+        Returns: {
+          admin_name: string
+          allow_join_requests: boolean
+          org_address: Json
+          org_id: string
+          org_name: string
+          org_trade: string
+          org_type: string
         }[]
       }
       send_work_order_assignment_notification: {

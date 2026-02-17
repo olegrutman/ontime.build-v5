@@ -14,4 +14,7 @@ export interface SignupWizardData {
   jobTitle: string;
   trade: string;
   tradeCustom: string;
+  signupPath?: 'new' | 'join';
+  joinOrgId?: string;
+  joinOrgName?: string;
 }
