@@ -126,14 +126,12 @@ export default function Signup() {
     // If join path, submit join request now
     if (signupPath === 'join' && data.joinOrgId) {
       // Create profile first
-      await supabase.from('profiles').upsert({
-        user_id: session.user.id,
-        email: data.email,
+      await supabase.from('profiles').update({
         first_name: data.firstName,
         last_name: data.lastName,
         phone: data.phone || null,
         full_name: `${data.firstName} ${data.lastName}`.trim(),
-      });
+      }).eq('user_id', session.user.id);
 
       // Submit join request
       const { error: joinError } = await supabase.from('org_join_requests').insert({
