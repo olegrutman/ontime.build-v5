@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { RolePermissions, ROLE_PERMISSIONS, AppRole } from '@/types/organization';
+import { RolePermissions } from '@/types/organization';
 
 type PermissionKey = keyof RolePermissions;
 
@@ -16,25 +16,8 @@ interface RequirePermissionProps {
 }
 
 /**
- * Permission-aware component that conditionally renders children based on user role permissions.
- * 
- * @example
- * // Single permission
- * <RequirePermission permission="canApprove">
- *   <Button>Approve</Button>
- * </RequirePermission>
- * 
- * @example
- * // Multiple permissions (ANY)
- * <RequirePermission permission={["canViewRates", "canViewMargins"]}>
- *   <PricingDetails />
- * </RequirePermission>
- * 
- * @example
- * // Multiple permissions (ALL)
- * <RequirePermission permission={["canApprove", "canViewInvoices"]} requireAll>
- *   <AdminPanel />
- * </RequirePermission>
+ * Permission-aware component that conditionally renders children based on
+ * the unified effective permissions (role defaults + member_permissions + admin override).
  */
 export function RequirePermission({
   permission,
@@ -42,12 +25,9 @@ export function RequirePermission({
   children,
   fallback = null,
 }: RequirePermissionProps) {
-  const { currentRole } = useAuth();
+  const { permissions } = useAuth();
 
   const hasPermission = React.useMemo(() => {
-    if (!currentRole) return false;
-
-    const permissions = ROLE_PERMISSIONS[currentRole as AppRole];
     if (!permissions) return false;
 
     const permissionList = Array.isArray(permission) ? permission : [permission];
@@ -56,7 +36,7 @@ export function RequirePermission({
       return permissionList.every((p) => permissions[p]);
     }
     return permissionList.some((p) => permissions[p]);
-  }, [currentRole, permission, requireAll]);
+  }, [permissions, permission, requireAll]);
 
   if (!hasPermission) {
     return <>{fallback}</>;
@@ -66,15 +46,13 @@ export function RequirePermission({
 }
 
 /**
- * Hook to check permissions programmatically
+ * Hook to check permissions programmatically.
+ * Uses the unified effective permissions from auth context.
  */
 export function usePermission(permission: PermissionKey | PermissionKey[], requireAll = false): boolean {
-  const { currentRole } = useAuth();
+  const { permissions } = useAuth();
 
   return React.useMemo(() => {
-    if (!currentRole) return false;
-
-    const permissions = ROLE_PERMISSIONS[currentRole as AppRole];
     if (!permissions) return false;
 
     const permissionList = Array.isArray(permission) ? permission : [permission];
@@ -83,7 +61,7 @@ export function usePermission(permission: PermissionKey | PermissionKey[], requi
       return permissionList.every((p) => permissions[p]);
     }
     return permissionList.some((p) => permissions[p]);
-  }, [currentRole, permission, requireAll]);
+  }, [permissions, permission, requireAll]);
 }
 
 /**

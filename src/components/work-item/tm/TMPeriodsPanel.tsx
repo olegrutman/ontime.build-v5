@@ -13,10 +13,11 @@ interface TMPeriodsPanelProps {
   workItemId: string;
   currentRole: AppRole | null;
   canViewRates: boolean;
+  canSubmitTime?: boolean;
   isWorkItemOpen: boolean;
 }
 
-export function TMPeriodsPanel({ workItemId, currentRole, canViewRates, isWorkItemOpen }: TMPeriodsPanelProps) {
+export function TMPeriodsPanel({ workItemId, currentRole, canViewRates, canSubmitTime = true, isWorkItemOpen }: TMPeriodsPanelProps) {
   const [periods, setPeriods] = useState<TMPeriod[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -132,6 +133,7 @@ export function TMPeriodsPanel({ workItemId, currentRole, canViewRates, isWorkIt
               period={period}
               currentRole={currentRole}
               canViewRates={canViewRates}
+              canSubmitTime={canSubmitTime}
               onUpdate={fetchPeriods}
             />
           ))}

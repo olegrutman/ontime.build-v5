@@ -34,7 +34,7 @@ interface WorkOrdersTabProps {
 
 export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
   const navigate = useNavigate();
-  const { currentRole, user } = useAuth();
+  const { currentRole, user, permissions } = useAuth();
   const [showWizard, setShowWizard] = useState(false);
   const [showFCDialog, setShowFCDialog] = useState(false);
   const [activeTab, setActiveTab] = useState<ChangeOrderStatus | 'ALL'>('ALL');
@@ -58,7 +58,7 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
   }, [projectId]);
 
   const isFC = currentRole === 'FC_PM' || currentRole === 'FS';
-  const canCreate = currentRole === 'GC_PM' || currentRole === 'TC_PM' || isFC;
+  const canCreate = permissions?.canCreateWorkOrders ?? false;
   const isBlocked = !isFC && !sovReadiness.isReady && !sovReadiness.loading;
 
   const filteredChangeOrders =

@@ -99,8 +99,42 @@ export interface RolePermissions {
   canAddMaterialLists: boolean;
   canManageOrg: boolean;
   canInviteMembers: boolean;
+  canCreateWorkOrders: boolean;
+  canCreatePOs: boolean;
+  canSubmitTime: boolean;
 }
 
+/** Mapping from RolePermissions keys to member_permissions DB columns */
+export const PERMISSION_TO_DB_COLUMN: Record<keyof RolePermissions, keyof MemberPermissions | null> = {
+  canViewRates: 'can_view_financials',
+  canViewMargins: 'can_view_financials',
+  canApprove: 'can_approve_invoices',
+  canViewInvoices: 'can_view_financials',
+  canAddHoursEstimates: 'can_submit_time',
+  canAddMaterialLists: null, // No direct DB column, always allowed
+  canManageOrg: 'can_manage_team',
+  canInviteMembers: 'can_manage_team',
+  canCreateWorkOrders: 'can_create_work_orders',
+  canCreatePOs: 'can_create_pos',
+  canSubmitTime: 'can_submit_time',
+};
+
+/** All permissions enabled (used for admins) */
+export const ALL_PERMISSIONS: RolePermissions = {
+  canViewRates: true,
+  canViewMargins: true,
+  canApprove: true,
+  canViewInvoices: true,
+  canAddHoursEstimates: true,
+  canAddMaterialLists: true,
+  canManageOrg: true,
+  canInviteMembers: true,
+  canCreateWorkOrders: true,
+  canCreatePOs: true,
+  canSubmitTime: true,
+};
+
+/** Role-based defaults — used as baseline before member_permissions override */
 export const ROLE_PERMISSIONS: Record<AppRole, RolePermissions> = {
   GC_PM: {
     canViewRates: true,
@@ -111,26 +145,35 @@ export const ROLE_PERMISSIONS: Record<AppRole, RolePermissions> = {
     canAddMaterialLists: true,
     canManageOrg: true,
     canInviteMembers: true,
+    canCreateWorkOrders: true,
+    canCreatePOs: true,
+    canSubmitTime: true,
   },
   TC_PM: {
     canViewRates: true,
     canViewMargins: true,
-    canApprove: false, // Can submit for approval, not approve
+    canApprove: false,
     canViewInvoices: true,
     canAddHoursEstimates: true,
     canAddMaterialLists: true,
     canManageOrg: true,
     canInviteMembers: true,
+    canCreateWorkOrders: true,
+    canCreatePOs: true,
+    canSubmitTime: true,
   },
   FC_PM: {
-    canViewRates: false, // FC cannot see rates (limited access)
-    canViewMargins: false, // FC cannot see margins/profit
+    canViewRates: false,
+    canViewMargins: false,
     canApprove: false,
-    canViewInvoices: true, // Can view their own invoices
+    canViewInvoices: true,
     canAddHoursEstimates: true,
     canAddMaterialLists: true,
-    canManageOrg: true, // Can manage their own org
-    canInviteMembers: false, // FC cannot invite other parties
+    canManageOrg: true,
+    canInviteMembers: false,
+    canCreateWorkOrders: true,
+    canCreatePOs: false,
+    canSubmitTime: true,
   },
   FS: {
     canViewRates: false,
@@ -141,6 +184,9 @@ export const ROLE_PERMISSIONS: Record<AppRole, RolePermissions> = {
     canAddMaterialLists: true,
     canManageOrg: false,
     canInviteMembers: false,
+    canCreateWorkOrders: false,
+    canCreatePOs: false,
+    canSubmitTime: true,
   },
   SUPPLIER: {
     canViewRates: false,
@@ -151,5 +197,35 @@ export const ROLE_PERMISSIONS: Record<AppRole, RolePermissions> = {
     canAddMaterialLists: false,
     canManageOrg: false,
     canInviteMembers: false,
+    canCreateWorkOrders: false,
+    canCreatePOs: false,
+    canSubmitTime: false,
   },
 };
+
+/**
+ * Compute effective permissions by merging role defaults with DB member_permissions.
+ * Admins get ALL permissions regardless.
+ */
+export function getEffectivePermissions(
+  role: AppRole | null,
+  memberPerms: MemberPermissions | null,
+  isAdmin: boolean
+): RolePermissions {
+  if (isAdmin) return ALL_PERMISSIONS;
+  if (!role) return ROLE_PERMISSIONS.SUPPLIER; // fallback: no permissions
+
+  const roleDefaults = ROLE_PERMISSIONS[role];
+
+  // If no member_permissions row exists, use role defaults
+  if (!memberPerms) return roleDefaults;
+
+  // Override role defaults with DB member_permissions
+  const result: RolePermissions = { ...roleDefaults };
+  for (const [key, dbCol] of Object.entries(PERMISSION_TO_DB_COLUMN)) {
+    if (dbCol && dbCol in memberPerms) {
+      (result as any)[key] = (memberPerms as any)[dbCol];
+    }
+  }
+  return result;
+}

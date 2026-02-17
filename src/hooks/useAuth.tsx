@@ -1,7 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
-import { Profile, UserOrgRole, AppRole, ROLE_PERMISSIONS, RolePermissions } from '@/types/organization';
+import { Profile, UserOrgRole, AppRole, MemberPermissions, RolePermissions, getEffectivePermissions } from '@/types/organization';
 
 interface AuthContextType {
   user: User | null;
@@ -10,6 +10,8 @@ interface AuthContextType {
   userOrgRoles: UserOrgRole[];
   currentRole: AppRole | null;
   permissions: RolePermissions | null;
+  memberPermissions: MemberPermissions | null;
+  isAdmin: boolean;
   loading: boolean;
   needsOrgSetup: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
@@ -25,6 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [userOrgRoles, setUserOrgRoles] = useState<UserOrgRole[]>([]);
+  const [memberPermissions, setMemberPermissions] = useState<MemberPermissions | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = async (userId: string) => {
@@ -50,6 +53,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     if (rolesData) {
       setUserOrgRoles(rolesData as UserOrgRole[]);
+
+      // Fetch member_permissions for the primary role
+      if (rolesData.length > 0) {
+        const { data: permsData } = await supabase
+          .from('member_permissions')
+          .select('*')
+          .eq('user_org_role_id', rolesData[0].id)
+          .maybeSingle();
+
+        setMemberPermissions(permsData as MemberPermissions | null);
+      }
     }
   };
 
@@ -70,9 +84,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Defer data fetching to avoid blocking
           setTimeout(() => fetchUserData(session.user.id), 0);
         } else {
-          setProfile(null);
-          setUserOrgRoles([]);
-        }
+        setProfile(null);
+        setUserOrgRoles([]);
+        setMemberPermissions(null);
+      }
         setLoading(false);
       }
     );
@@ -116,13 +131,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
     setProfile(null);
     setUserOrgRoles([]);
+    setMemberPermissions(null);
     // Redirect to landing page
     window.location.href = '/';
   };
 
   // Get current role (first role for now, can be enhanced to allow switching)
   const currentRole = userOrgRoles.length > 0 ? userOrgRoles[0].role : null;
-  const permissions = currentRole ? ROLE_PERMISSIONS[currentRole] : null;
+  const isAdmin = userOrgRoles.length > 0 ? (userOrgRoles[0].is_admin ?? false) : false;
+  const permissions = getEffectivePermissions(currentRole, memberPermissions, isAdmin);
   const needsOrgSetup = !loading && !!user && userOrgRoles.length === 0;
 
   return (
@@ -134,6 +151,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         userOrgRoles,
         currentRole,
         permissions,
+        memberPermissions,
+        isAdmin,
         loading,
         needsOrgSetup,
         signUp,

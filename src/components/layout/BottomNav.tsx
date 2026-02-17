@@ -12,7 +12,6 @@ import {
   ShoppingCart,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { ROLE_PERMISSIONS } from '@/types/organization';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -26,9 +25,9 @@ export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { currentRole } = useAuth();
+  const { permissions } = useAuth();
 
-  const canManageOrg = currentRole ? ROLE_PERMISSIONS[currentRole]?.canManageOrg : false;
+  const canManageOrg = permissions?.canManageOrg ?? false;
 
   const isProjectPage = location.pathname.startsWith('/project/');
   const projectId = isProjectPage ? location.pathname.split('/')[2] : null;

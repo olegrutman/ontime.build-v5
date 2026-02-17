@@ -218,10 +218,11 @@ export function WorkItemPage() {
             {/* T&M Periods Panel - for TM_WORK items */}
             {showTMPeriodsPanel && (
               <Card className="p-6">
-                <TMPeriodsPanel
+              <TMPeriodsPanel
                   workItemId={workItem.id}
                   currentRole={currentRole}
                   canViewRates={permissions?.canViewRates ?? false}
+                  canSubmitTime={permissions?.canSubmitTime ?? false}
                   isWorkItemOpen={isEditable}
                 />
               </Card>
