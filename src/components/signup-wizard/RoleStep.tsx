@@ -7,12 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { TRADES } from '@/types/projectWizard';
-import type { SignupWizardData } from './types';
-
-const JOB_TITLES = [
-  'Owner', 'Project Manager', 'Superintendent', 'Estimator',
-  'Office Manager', 'Foreman', 'Other',
-];
+import { JOB_TITLES, type SignupWizardData } from './types';
 
 interface Props {
   data: SignupWizardData;
