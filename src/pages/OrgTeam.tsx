@@ -35,7 +35,7 @@ interface JoinRequest {
 }
 
 export default function OrgTeam() {
-  const { userOrgRoles } = useAuth();
+  const { userOrgRoles, refreshUserData } = useAuth();
   const { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, refetch } = useOrgTeam();
   const { user } = useAuth();
   const { toast } = useToast();
@@ -99,6 +99,9 @@ export default function OrgTeam() {
   }, [orgId]);
 
   useEffect(() => { fetchJoinRequests(); }, [fetchJoinRequests]);
+
+  // Refresh auth context on mount so recently-approved users see their org data
+  useEffect(() => { refreshUserData(); }, []);
 
   const handleSendInvite = async () => {
     if (!email || !role) return;
