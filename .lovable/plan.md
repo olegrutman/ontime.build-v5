@@ -1,45 +1,54 @@
 
-# Add RFI Count Badge to Operational Summary
 
-## What Changes
+# Convert RFI to Work Order
 
-Add a fifth tile to the Operational Summary grid on the Project Overview tab showing open RFIs. This tile will match the existing tile pattern (icon, uppercase label, count badge, clickable "View All" to navigate to the RFIs tab).
+## Overview
 
-## Implementation
+Add a "Convert to Work Order" button on the RFI detail sheet. When clicked, it opens the existing Work Order Wizard pre-filled with data from the RFI -- the subject becomes the title, the question + answer become the description, and location data carries over.
 
-### File Modified: `src/components/project/OperationalSummary.tsx`
+## Changes
 
-1. **Import** `MessageSquareMore` icon from lucide-react (matches the sidebar icon for RFIs).
-2. **Add state** for `openRfiCount` (number) and `loadingRfis` (boolean).
-3. **Fetch open RFI count** in the existing `useEffect` block:
-   - Query `project_rfis` table filtered by `project_id` and `status = 'OPEN'`, using `.select('id', { count: 'exact', head: true })` to get just the count without transferring rows.
-4. **Add a new tile** in the grid (after "Recent Invoices", before "Team") showing:
-   - `MessageSquareMore` icon + "Open RFIs" label
-   - Bold count number with a red/amber accent badge if count > 0
-   - "View All" button that calls `onNavigate('rfis')`
-   - If count is 0, show "No open RFIs" muted text
+### 1. `src/components/rfi/RFIDetailDialog.tsx`
 
-### Grid Layout Adjustment
+- Add a "Convert to Work Order" button (visible when RFI status is ANSWERED or CLOSED, and the user has create permissions)
+- When clicked, call a new `onConvertToWorkOrder` callback prop with the RFI data
+- Button placed after the Close RFI section with a Separator, using a `ClipboardList` icon to match the Work Orders icon
 
-The current grid is `grid-cols-1 sm:grid-cols-2` with 4 tiles (2x2). Adding a 5th tile means the last row will have 1 tile on `sm`. No layout change needed -- the existing responsive grid handles this naturally. Alternatively, the RFI tile can span the full width on the last row for visual balance using `sm:col-span-2` only when it is the 5th item.
+### 2. `src/components/rfi/RFIsTab.tsx`
 
-### No Other Files Changed
+- Import `WorkOrderWizard` from the work order wizard components
+- Add state for `woWizardOpen` and `woInitialData` (pre-filled `WorkOrderWizardData`)
+- Add a handler `handleConvertToWO` that:
+  - Builds `WorkOrderWizardData` from the selected RFI (title = RFI subject, location_data from RFI, description = "RFI-{number}: {question}\n\nAnswer: {answer}")
+  - Opens the Work Order Wizard with that pre-filled data
+- Pass `onConvertToWorkOrder` callback to `RFIDetailDialog`
+- Wire `WorkOrderWizard` `onComplete` to the existing `useChangeOrderProject` hook's create mutation (same pattern used in `WorkOrdersTab`)
 
-This is a self-contained addition to `OperationalSummary.tsx`. The `project_rfis` table and RLS policies already exist from the previous RFI implementation.
+### 3. `src/components/work-order-wizard/WorkOrderWizard.tsx`
 
-## Technical Details
+- Add an optional `initialData` prop (`Partial<WorkOrderWizardData>`) so the wizard can be pre-filled
+- Merge `initialData` with `INITIAL_WIZARD_DATA` in the initial `useState` call
+- No other changes to wizard behavior
 
-```text
-Query:
-  supabase
-    .from('project_rfis')
-    .select('id', { count: 'exact', head: true })
-    .eq('project_id', projectId)
-    .eq('status', 'OPEN')
+## Pre-Fill Mapping
 
-Result: count number used for badge display
-```
+| RFI Field | Work Order Field |
+|---|---|
+| `subject` | `title` |
+| `location_data` | `location_data` (direct copy) |
+| `question` + `answer` | `description` (formatted as "RFI-N: question\n\nAnswer: answer") |
 
-The tile will show:
-- Count > 0: amber badge with count, e.g. "3 Open"
-- Count = 0: muted "No open RFIs" text
+## User Flow
+
+1. User opens an answered/closed RFI from the detail sheet
+2. Clicks "Convert to Work Order" button at the bottom
+3. Work Order Wizard opens, pre-filled with RFI data on the Title step (user can see the title is already set)
+4. User proceeds through remaining wizard steps (location already filled, can adjust)
+5. On Review step, the description is pre-populated from the RFI content
+6. User submits -- a new work order is created with the RFI context baked in
+
+## Visibility Rules
+
+- Button visible only when RFI status is `ANSWERED` or `CLOSED` (the question has been resolved, so action can be taken)
+- Only users with work order creation permissions see the button (GC_PM, TC_PM roles)
+
