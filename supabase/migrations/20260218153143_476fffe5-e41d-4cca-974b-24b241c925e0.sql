@@ -1,0 +1,1 @@
+ALTER TABLE public.project_rfis ADD COLUMN IF NOT EXISTS location_data jsonb DEFAULT '{}'::jsonb;
