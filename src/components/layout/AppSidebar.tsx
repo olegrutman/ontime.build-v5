@@ -13,6 +13,7 @@ import {
   Users,
   DollarSign,
   Bell,
+  MessageSquareMore,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { NavLink } from '@/components/NavLink';
@@ -41,6 +42,7 @@ import { cn } from '@/lib/utils';
 const mainNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: Home },
   { title: 'Financials', url: '/financials', icon: DollarSign },
+  { title: 'RFIs', url: '/rfis', icon: MessageSquareMore },
   { title: 'Reminders', url: '/reminders', icon: Bell },
   { title: 'Partners', url: '/partners', icon: Handshake },
 ];
@@ -117,7 +119,11 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {mainNavItems
-                .filter((item) => !(item.url === '/financials' && isSupplier))
+                .filter((item) => {
+                  if (item.url === '/financials' && isSupplier) return false;
+                  if (item.url === '/rfis' && isSupplier) return false;
+                  return true;
+                })
                 .map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton

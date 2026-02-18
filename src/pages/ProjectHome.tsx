@@ -25,6 +25,7 @@ import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesRev
 import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
 import { InvoicesTab } from '@/components/invoices';
 import { ContractSOVEditor } from '@/components/sov';
+import { RFIsTab } from '@/components/rfi';
 import { useToast } from '@/hooks/use-toast';
 import { useProjectFinancials } from '@/hooks/useProjectFinancials';
 import { useProjectReadiness } from '@/hooks/useProjectReadiness';
@@ -236,6 +237,11 @@ export default function ProjectHome() {
               {/* Work Orders Tab - hide for suppliers */}
               {activeTab === 'work-orders' && !isSupplier && (
                 <WorkOrdersTab projectId={id!} projectName={project.name} projectStatus={projectStatus} />
+              )}
+
+              {/* RFIs Tab */}
+              {activeTab === 'rfis' && !isSupplier && (
+                <RFIsTab projectId={id!} />
               )}
 
               {/* Estimates Tab */}

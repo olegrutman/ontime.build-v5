@@ -1168,6 +1168,7 @@ export type Database = {
         Row: {
           can_approve_invoices: boolean
           can_create_pos: boolean
+          can_create_rfis: boolean
           can_create_work_orders: boolean
           can_manage_team: boolean
           can_submit_time: boolean
@@ -1179,6 +1180,7 @@ export type Database = {
         Insert: {
           can_approve_invoices?: boolean
           can_create_pos?: boolean
+          can_create_rfis?: boolean
           can_create_work_orders?: boolean
           can_manage_team?: boolean
           can_submit_time?: boolean
@@ -1190,6 +1192,7 @@ export type Database = {
         Update: {
           can_approve_invoices?: boolean
           can_create_pos?: boolean
+          can_create_rfis?: boolean
           can_create_work_orders?: boolean
           can_manage_team?: boolean
           can_submit_time?: boolean
@@ -2142,6 +2145,88 @@ export type Database = {
             columns: ["upstream_participant_id"]
             isOneToOne: false
             referencedRelation: "project_participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_rfis: {
+        Row: {
+          answer: string | null
+          answered_at: string | null
+          answered_by_user_id: string | null
+          assigned_to_org_id: string
+          created_at: string
+          due_date: string | null
+          id: string
+          priority: string
+          project_id: string
+          question: string
+          reference_area: string | null
+          rfi_number: number
+          status: string
+          subject: string
+          submitted_by_org_id: string
+          submitted_by_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          answer?: string | null
+          answered_at?: string | null
+          answered_by_user_id?: string | null
+          assigned_to_org_id: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          priority?: string
+          project_id: string
+          question: string
+          reference_area?: string | null
+          rfi_number?: number
+          status?: string
+          subject: string
+          submitted_by_org_id: string
+          submitted_by_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          answer?: string | null
+          answered_at?: string | null
+          answered_by_user_id?: string | null
+          assigned_to_org_id?: string
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          priority?: string
+          project_id?: string
+          question?: string
+          reference_area?: string | null
+          rfi_number?: number
+          status?: string
+          subject?: string
+          submitted_by_org_id?: string
+          submitted_by_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_rfis_assigned_to_org_id_fkey"
+            columns: ["assigned_to_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_rfis_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_rfis_submitted_by_org_id_fkey"
+            columns: ["submitted_by_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -4319,6 +4404,8 @@ export type Database = {
         | "INVOICE_SUBMITTED"
         | "INVOICE_APPROVED"
         | "INVOICE_REJECTED"
+        | "RFI_SUBMITTED"
+        | "RFI_ANSWERED"
       order_status:
         | "DRAFT"
         | "SUBMITTED"
@@ -4497,6 +4584,8 @@ export const Constants = {
         "INVOICE_SUBMITTED",
         "INVOICE_APPROVED",
         "INVOICE_REJECTED",
+        "RFI_SUBMITTED",
+        "RFI_ANSWERED",
       ],
       order_status: [
         "DRAFT",

@@ -59,6 +59,20 @@ export function useProjectRealtime(projectId: string | undefined) {
           bump();
         }
       )
+      // RFIs
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'project_rfis',
+          filter: `project_id=eq.${projectId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['project-rfis'] });
+          bump();
+        }
+      )
       .subscribe();
 
     return () => {

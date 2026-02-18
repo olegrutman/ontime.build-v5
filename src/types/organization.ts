@@ -102,6 +102,7 @@ export interface RolePermissions {
   canCreateWorkOrders: boolean;
   canCreatePOs: boolean;
   canSubmitTime: boolean;
+  canCreateRFIs: boolean;
 }
 
 /** Mapping from RolePermissions keys to member_permissions DB columns */
@@ -117,6 +118,7 @@ export const PERMISSION_TO_DB_COLUMN: Record<keyof RolePermissions, keyof Member
   canCreateWorkOrders: 'can_create_work_orders',
   canCreatePOs: 'can_create_pos',
   canSubmitTime: 'can_submit_time',
+  canCreateRFIs: null, // DB column exists but types not yet regenerated
 };
 
 /** All permissions enabled (used for admins) */
@@ -132,6 +134,7 @@ export const ALL_PERMISSIONS: RolePermissions = {
   canCreateWorkOrders: true,
   canCreatePOs: true,
   canSubmitTime: true,
+  canCreateRFIs: true,
 };
 
 /** Role-based defaults — used as baseline before member_permissions override */
@@ -148,6 +151,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, RolePermissions> = {
     canCreateWorkOrders: true,
     canCreatePOs: true,
     canSubmitTime: true,
+    canCreateRFIs: true,
   },
   TC_PM: {
     canViewRates: true,
@@ -161,6 +165,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, RolePermissions> = {
     canCreateWorkOrders: true,
     canCreatePOs: true,
     canSubmitTime: true,
+    canCreateRFIs: true,
   },
   FC_PM: {
     canViewRates: false,
@@ -174,6 +179,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, RolePermissions> = {
     canCreateWorkOrders: true,
     canCreatePOs: false,
     canSubmitTime: true,
+    canCreateRFIs: true,
   },
   FS: {
     canViewRates: false,
@@ -187,6 +193,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, RolePermissions> = {
     canCreateWorkOrders: false,
     canCreatePOs: false,
     canSubmitTime: true,
+    canCreateRFIs: false,
   },
   SUPPLIER: {
     canViewRates: false,
@@ -200,6 +207,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, RolePermissions> = {
     canCreateWorkOrders: false,
     canCreatePOs: false,
     canSubmitTime: false,
+    canCreateRFIs: false,
   },
 };
 
