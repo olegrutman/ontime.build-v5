@@ -2039,6 +2039,7 @@ export type Database = {
           invited_at: string
           invited_by: string
           material_responsibility: string | null
+          no_estimate_confirmed: boolean | null
           organization_id: string
           po_requires_approval: boolean | null
           project_id: string
@@ -2051,6 +2052,7 @@ export type Database = {
           invited_at?: string
           invited_by: string
           material_responsibility?: string | null
+          no_estimate_confirmed?: boolean | null
           organization_id: string
           po_requires_approval?: boolean | null
           project_id: string
@@ -2063,6 +2065,7 @@ export type Database = {
           invited_at?: string
           invited_by?: string
           material_responsibility?: string | null
+          no_estimate_confirmed?: boolean | null
           organization_id?: string
           po_requires_approval?: boolean | null
           project_id?: string

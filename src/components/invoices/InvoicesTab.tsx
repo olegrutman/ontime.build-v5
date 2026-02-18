@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 interface InvoicesTabProps {
   projectId: string;
   retainagePercent: number;
+  projectStatus?: string;
 }
 
 interface Contract {
@@ -37,7 +38,7 @@ interface Contract {
   to_org_name?: string | null;
 }
 
-export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
+export function InvoicesTab({ projectId, retainagePercent, projectStatus }: InvoicesTabProps) {
   const { userOrgRoles, permissions } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -81,8 +82,10 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
     return contractsWhereUserCanInvoice.length > 0;
   }, [currentOrgType, contractsWhereUserCanInvoice]);
 
+  const isProjectNotActive = projectStatus && projectStatus !== 'active';
+
   // Block invoice creation if SOVs aren't ready
-  const isBlocked = !sovReadiness.isReady && !sovReadiness.loading;
+  const isBlocked = isProjectNotActive || (!sovReadiness.isReady && !sovReadiness.loading);
 
   // Separate invoices into sent and received
   const { sentInvoices, receivedInvoices } = useMemo(() => {
@@ -534,6 +537,17 @@ export function InvoicesTab({ projectId, retainagePercent }: InvoicesTabProps) {
   // For GC and FC: Single view
   return (
     <div className="space-y-6">
+      {/* Project not active blocking banner */}
+      {isProjectNotActive && (
+        <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-amber-800 dark:text-amber-200">Project Setup Incomplete</AlertTitle>
+          <AlertDescription className="text-amber-700 dark:text-amber-300">
+            Project setup incomplete. Waiting for required parties.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {renderSOVAlert()}
       {renderHeader(currentOrgType !== 'GC')}
 

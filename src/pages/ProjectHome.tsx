@@ -80,6 +80,11 @@ export default function ProjectHome() {
 
   const handleStatusChange = async (newStatus: string) => {
     if (!project) return;
+    // Prevent manual activation — project activates automatically via readiness engine
+    if (newStatus === 'active') {
+      toast({ title: 'Projects activate automatically when setup is complete', variant: 'destructive' });
+      return;
+    }
 
     const { error } = await supabase
       .from('projects')
@@ -230,7 +235,7 @@ export default function ProjectHome() {
 
               {/* Work Orders Tab - hide for suppliers */}
               {activeTab === 'work-orders' && !isSupplier && (
-                <WorkOrdersTab projectId={id!} projectName={project.name} />
+                <WorkOrdersTab projectId={id!} projectName={project.name} projectStatus={projectStatus} />
               )}
 
               {/* Estimates Tab */}
@@ -246,7 +251,8 @@ export default function ProjectHome() {
                 <InvoicesTab 
                   key={`invoices-${tabResetKey}-${realtimeKey}`}
                   projectId={id!} 
-                  retainagePercent={project.retainage_percent || 0} 
+                  retainagePercent={project.retainage_percent || 0}
+                  projectStatus={projectStatus}
                 />
               )}
 
@@ -256,6 +262,7 @@ export default function ProjectHome() {
                   key={`po-${tabResetKey}-${realtimeKey}`}
                   projectId={id!} 
                   projectName={project?.name}
+                  projectStatus={projectStatus}
                   projectAddress={
                     project?.address 
                       ? `${project.address.street || ''}, ${project.address.city || ''}, ${project.address.state || ''} ${project.address.zip || ''}`.replace(/^,\s*|,\s*$/g, '').trim()
