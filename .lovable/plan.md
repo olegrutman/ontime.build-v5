@@ -1,31 +1,26 @@
 
-
-# Include FC in Project Readiness Blocking Logic
+# Hide Project Setup Card for Field Crew Users
 
 ## What Changes
 
-Currently, Field Crew (FC) participants are excluded from the blocking readiness logic and shown only as an informational (non-blocking) item with a blue info icon. This change treats FC the same as GC and TC -- their invite acceptance will be a blocking requirement that counts toward the readiness percentage.
+The Project Readiness Card will no longer appear for Field Crew (FC) users on the project overview. FC users are only responsible for accepting the project invite -- once the SOV is activated for them, it becomes an active project. The setup completion checklist is only relevant for GC and TC roles.
 
 ## Technical Changes
 
-### `src/hooks/useProjectReadiness.ts`
+### `src/pages/ProjectHome.tsx`
 
-1. **Remove the FC exclusion filter** (line 59): Stop filtering out FC from `blockingParticipants`. All participants (GC, TC, FC, SUPPLIER) will be treated equally for invite acceptance tracking.
-
-2. **Remove the separate FC informational item** (lines 72-79, 105-108): No more special-case FC display. FC orgs will appear in the standard "Awaiting: ..." label alongside any other pending orgs.
-
-3. **Remove the `informational` field usage for FC**: The `fc_accepted` item will no longer be appended separately.
-
-**Before:**
-- FC filtered out of blocking logic
-- FC shown as blue informational item (does not affect percentage)
-
-**After:**
-- FC included in blocking logic alongside all other roles
-- FC pending invites show in the standard "Awaiting: OrgName" label
-- FC acceptance counts toward the readiness percentage
+- Add an `isFC` flag alongside the existing `isSupplier` flag:
+  ```
+  const isFC = currentOrg?.type === 'FC';
+  ```
+- Update the readiness card conditional (around line 197) to also exclude FC:
+  ```
+  {(project.status === 'setup' || project.status === 'draft') && !isFC && (
+    <ProjectReadinessCard readiness={readiness} />
+  )}
+  ```
+- Optionally skip the `useProjectReadiness` hook call for FC users to avoid unnecessary database queries, or leave it since it's harmless.
 
 ### No other file changes needed
 
-The `ProjectReadinessCard` component already handles informational vs blocking items generically -- removing the FC special case in the hook is sufficient.
-
+The readiness hook and card component remain unchanged -- this is purely a visibility change on the page level.
