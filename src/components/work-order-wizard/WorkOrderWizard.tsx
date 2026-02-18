@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -54,6 +54,13 @@ export function WorkOrderWizard({
     ...INITIAL_WIZARD_DATA,
     ...initialData,
   });
+
+  useEffect(() => {
+    if (open) {
+      setFormData({ ...INITIAL_WIZARD_DATA, ...initialData });
+      setCurrentStep(1);
+    }
+  }, [open, initialData]);
 
   const isGC = currentRole === 'GC_PM';
   const isTC = currentRole === 'TC_PM';
