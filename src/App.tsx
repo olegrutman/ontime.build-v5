@@ -27,6 +27,7 @@ import Financials from "./pages/Financials";
 import Reminders from "./pages/Reminders";
 import SupplierInventory from "./pages/SupplierInventory";
 import SupplierProjectEstimates from "./pages/SupplierProjectEstimates";
+import RFIs from "./pages/RFIs";
 
 import { WorkItemPage } from "@/components/work-item";
 import { ChangeOrderDetailPage } from "@/components/change-order-detail";
@@ -70,6 +71,7 @@ const App = () => (
             <Route path="/supplier/inventory" element={<SupplierInventory />} />
             <Route path="/supplier/estimates" element={<SupplierProjectEstimates />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/rfis" element={<RFIs />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
           <SashaBubble />
