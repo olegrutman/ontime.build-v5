@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { ClipboardList, FileText, Bell } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface DashboardQuickStatsProps {
   openWorkOrders: number;
@@ -38,9 +39,19 @@ export function DashboardQuickStats({ openWorkOrders, pendingInvoices, reminders
     },
   ];
 
+  const visibleTiles = tiles.filter((t) => t.count > 0);
+
+  if (visibleTiles.length === 0) return null;
+
+  const gridCols = visibleTiles.length === 1
+    ? 'grid-cols-1'
+    : visibleTiles.length === 2
+    ? 'grid-cols-2'
+    : 'grid-cols-3';
+
   return (
-    <div className="grid grid-cols-3 gap-2 sm:gap-3">
-      {tiles.map((tile) => {
+    <div className={cn('grid gap-2 sm:gap-3', gridCols)}>
+      {visibleTiles.map((tile) => {
         const Icon = tile.icon;
         return (
           <Card
