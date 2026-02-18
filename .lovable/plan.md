@@ -1,17 +1,26 @@
 
-# Make RFI Page Consistent with Other Pages on Mobile
+# Add "My Team" Access for Supplier Role
 
 ## Problem
-The standalone RFIs page (`/rfis`) manually sets up its own layout with `SidebarProvider`, `AppSidebar`, `TopBar`, and `BottomNav` instead of using the shared `AppLayout` component that other pages (Financials, Dashboard, etc.) use. This causes inconsistent mobile behavior.
+Currently, the SUPPLIER role has `canManageOrg: false` in its default permissions. This means only supplier admins (who get all permissions) can see the "My Team" page. Non-admin supplier team members cannot access it.
 
 ## Change
 
-**File: `src/pages/RFIs.tsx`**
+**File: `src/types/organization.ts`** (1 line change)
 
-Replace the manual layout scaffolding with `AppLayout`:
-- Remove imports for `SidebarProvider`, `SidebarInset`, `AppSidebar`, `BottomNav`, `TopBar`, `useDefaultSidebarOpen`
-- Import `AppLayout` from `@/components/layout`
-- Wrap the page content in `<AppLayout title="RFIs">` instead of the manual sidebar/topbar/bottomnav setup
-- Keep the project selector and `RFIsTab` content as-is inside the layout
+Update the SUPPLIER role defaults to set `canManageOrg: true`:
 
-The result will match how `Financials.tsx`, `Dashboard.tsx`, and other pages are structured, ensuring consistent mobile headers, profile icons, and bottom navigation.
+```
+SUPPLIER: {
+  ...
+  canManageOrg: true,   // was false
+  ...
+}
+```
+
+This ensures all supplier team members can see and access the "My Team" page in both the sidebar and the mobile bottom navigation, matching how GC, TC, and FC roles already work.
+
+## What This Affects
+- Sidebar: "My Team" link appears for all supplier users (not just admins)
+- Mobile bottom nav: "My Team" tab appears in the dashboard items for supplier users
+- The OrgTeam page itself already handles admin-vs-member permissions internally (only admins can invite, change roles, etc.), so non-admin suppliers will see the team list but won't have admin controls
