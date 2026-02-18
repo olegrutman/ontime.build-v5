@@ -606,7 +606,7 @@ export function useContractSOV(projectId: string | undefined) {
     if (!contract || !projectId) return;
     
     // Verify current org is the payer
-    if (contract.to_org_id !== currentOrgId) {
+    if (contract.to_org_id !== currentOrgId && !isProjectCreator) {
       toast({
         title: 'Cannot Create SOV',
         description: 'Only the payer organization can create an SOV for this contract.',
