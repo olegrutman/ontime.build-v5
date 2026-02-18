@@ -34,6 +34,7 @@ interface WorkOrderWizardProps {
   projectName: string;
   onComplete: (data: WorkOrderWizardData & { project_id: string }) => Promise<void>;
   isSubmitting?: boolean;
+  initialData?: Partial<WorkOrderWizardData>;
 }
 
 export function WorkOrderWizard({
@@ -43,12 +44,16 @@ export function WorkOrderWizard({
   projectName,
   onComplete,
   isSubmitting = false,
+  initialData,
 }: WorkOrderWizardProps) {
   const { currentRole } = useAuth();
   const { data: projectScope } = useProjectScope(projectId);
   
   const [currentStep, setCurrentStep] = useState(1);
-  const [formData, setFormData] = useState<WorkOrderWizardData>(INITIAL_WIZARD_DATA);
+  const [formData, setFormData] = useState<WorkOrderWizardData>({
+    ...INITIAL_WIZARD_DATA,
+    ...initialData,
+  });
 
   const isGC = currentRole === 'GC_PM';
   const isTC = currentRole === 'TC_PM';

@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { RFIStatusBadge } from './RFIStatusBadge';
 import { RFIPriorityBadge } from './RFIPriorityBadge';
 import { useToast } from '@/hooks/use-toast';
+import { ClipboardList } from 'lucide-react';
 import type { ProjectRFI } from '@/types/rfi';
 
 interface RFIDetailDialogProps {
@@ -20,10 +21,13 @@ interface RFIDetailDialogProps {
   currentUserId: string | undefined;
   onAnswer: (id: string, answer: string, userId: string) => Promise<void>;
   onClose: (id: string) => Promise<void>;
+  onConvertToWorkOrder?: (rfi: ProjectRFI) => void;
+  canCreateWorkOrders?: boolean;
 }
 
 export function RFIDetailDialog({
   rfi, open, onOpenChange, currentOrgId, currentUserId, onAnswer, onClose,
+  onConvertToWorkOrder, canCreateWorkOrders,
 }: RFIDetailDialogProps) {
   const { toast } = useToast();
   const [answer, setAnswer] = useState('');
@@ -33,6 +37,7 @@ export function RFIDetailDialog({
 
   const canAnswer = currentOrgId === rfi.assigned_to_org_id && rfi.status === 'OPEN';
   const canClose = rfi.status === 'ANSWERED' && (currentOrgId === rfi.submitted_by_org_id);
+  const canConvert = (rfi.status === 'ANSWERED' || rfi.status === 'CLOSED') && canCreateWorkOrders;
 
   const handleAnswer = async () => {
     if (!answer.trim() || !currentUserId) return;
@@ -146,6 +151,21 @@ export function RFIDetailDialog({
               <Separator />
               <Button variant="outline" onClick={handleClose} disabled={submitting} className="w-full">
                 Close RFI
+              </Button>
+            </>
+          )}
+
+          {/* Convert to Work Order */}
+          {canConvert && onConvertToWorkOrder && (
+            <>
+              <Separator />
+              <Button
+                variant="outline"
+                onClick={() => onConvertToWorkOrder(rfi)}
+                className="w-full"
+              >
+                <ClipboardList className="h-4 w-4 mr-2" />
+                Convert to Work Order
               </Button>
             </>
           )}
