@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export interface ReadinessItem {
   key: string;
@@ -13,13 +14,18 @@ export interface ProjectReadiness {
   checklist: ReadinessItem[];
   loading: boolean;
   recalculate: () => void;
+  creatorOrgType: 'GC' | 'TC' | null;
+  isActive: boolean;
   firstContractId: string | null;
 }
 
 export function useProjectReadiness(projectId: string | undefined): ProjectReadiness {
   const [checklist, setChecklist] = useState<ReadinessItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [creatorOrgType, setCreatorOrgType] = useState<'GC' | 'TC' | null>(null);
+  const [isActive, setIsActive] = useState(false);
   const [firstContractId, setFirstContractId] = useState<string | null>(null);
+  const activatingRef = useRef(false);
 
   const calculate = useCallback(async () => {
     if (!projectId) { setLoading(false); return; }
@@ -28,70 +34,251 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
     try {
       // Parallel queries
       const [
+        projectRes,
         contractsRes,
         sovRes,
         participantsRes,
+        estimatesRes,
       ] = await Promise.all([
-        supabase.from('project_contracts').select('id, contract_sum, material_responsibility, retainage_percent, status').eq('project_id', projectId),
-        supabase.from('project_sov').select('id').eq('project_id', projectId),
-        supabase.from('project_participants').select('id, role, invite_status, organizations:organization_id(name)').eq('project_id', projectId),
+        supabase.from('projects').select('status, created_by_org_id, organization_id').eq('id', projectId).single(),
+        supabase.from('project_contracts').select('id, contract_sum, material_responsibility, from_org_id, to_org_id, from_role, to_role, status').eq('project_id', projectId),
+        supabase.from('project_sov').select('id, contract_id').eq('project_id', projectId),
+        supabase.from('project_participants').select('id, role, invite_status, no_estimate_confirmed, organization_id, organizations:organization_id(name, type)').eq('project_id', projectId),
+        supabase.from('supplier_estimates').select('id, supplier_org_id, status').eq('project_id', projectId),
       ]);
+
+      const project = projectRes.data;
+      if (!project) { setLoading(false); return; }
+
+      const projectStatus = project.status;
+      setIsActive(projectStatus === 'active');
 
       const contracts = contractsRes.data || [];
       const sovs = sovRes.data || [];
       const participants = participantsRes.data || [];
+      const estimates = estimatesRes.data || [];
 
       setFirstContractId(contracts.length > 0 ? contracts[0].id : null);
 
-      // 1. Organization exists (always true)
-      const orgExists = true;
+      // Determine creator org type
+      const creatorOrgId = project.created_by_org_id || project.organization_id;
+      let detectedCreatorType: 'GC' | 'TC' | null = null;
 
-      // 2. Contract sum entered
-      const hasContractSum = contracts.some(c => c.contract_sum != null && c.contract_sum > 0);
+      // Check participants to find creator org type
+      const creatorParticipant = participants.find((p: any) => p.organization_id === creatorOrgId);
+      if (creatorParticipant) {
+        const orgType = (creatorParticipant as any).organizations?.type;
+        if (orgType === 'GC' || orgType === 'TC') {
+          detectedCreatorType = orgType;
+        }
+      }
 
-      // 3. SOV created
-      const hasSov = sovs.length > 0;
+      // Fallback: check role field
+      if (!detectedCreatorType) {
+        if (creatorParticipant?.role === 'GC') detectedCreatorType = 'GC';
+        else if (creatorParticipant?.role === 'TC') detectedCreatorType = 'TC';
+      }
 
-      // 4. Required team members invited (>1 participant)
-      const hasTeam = participants.length > 1;
+      // Fallback: if no participant match, check org directly
+      if (!detectedCreatorType && creatorOrgId) {
+        const { data: orgData } = await supabase
+          .from('organizations')
+          .select('type')
+          .eq('id', creatorOrgId)
+          .single();
+        if (orgData?.type === 'GC' || orgData?.type === 'TC') {
+          detectedCreatorType = orgData.type;
+        }
+      }
 
-      const pendingOrgs = participants
-        .filter(p => p.invite_status !== 'ACCEPTED')
-        .map(p => (p as any).organizations?.name)
-        .filter(Boolean);
-      const allAccepted = participants.length > 1 && pendingOrgs.length === 0;
-      const acceptedLabel = allAccepted
-        ? 'All invites accepted'
-        : pendingOrgs.length > 0
-          ? `Awaiting: ${pendingOrgs.join(', ')}`
-          : 'All invites accepted';
+      setCreatorOrgType(detectedCreatorType);
 
-      // 6. Material responsibility selected
+      // Helper: find contracts by role
+      const gcContract = contracts.find(c => c.to_role === 'General Contractor' || c.from_role === 'General Contractor');
+      const fcContract = contracts.find(c => c.to_role === 'Field Crew' || c.from_role === 'Field Crew');
+
+      // Helper: check SOV exists for a contract
+      const hasSovForContract = (contractId: string) => sovs.some(s => s.contract_id === contractId);
+
+      // Helper: check participant acceptance by role
+      const getParticipantsByRole = (role: string) => participants.filter(p => p.role === role);
+      const isRoleAccepted = (role: string) => {
+        const parts = getParticipantsByRole(role);
+        return parts.length > 0 && parts.every(p => p.invite_status === 'ACCEPTED');
+      };
+      const getRolePendingNames = (role: string) => {
+        return getParticipantsByRole(role)
+          .filter(p => p.invite_status !== 'ACCEPTED')
+          .map(p => (p as any).organizations?.name || 'Unknown')
+          .filter(Boolean);
+      };
+
+      // Check supplier status
+      const supplierParticipants = getParticipantsByRole('SUPPLIER');
+      const hasSupplier = supplierParticipants.length > 0;
+      const supplierAccepted = hasSupplier && supplierParticipants.every(p => p.invite_status === 'ACCEPTED');
+      const supplierPendingNames = getRolePendingNames('SUPPLIER');
+
+      // Check supplier estimate status
+      const supplierHasEstimate = hasSupplier && supplierParticipants.some(sp => {
+        const hasUploadedEstimate = estimates.some(e => (e as any).supplier_org_id === sp.organization_id);
+        const confirmedNoEstimate = (sp as any).no_estimate_confirmed === true;
+        return hasUploadedEstimate || confirmedNoEstimate;
+      });
+
+      // Material responsibility
       const hasMaterialResp = contracts.some(c => c.material_responsibility != null && c.material_responsibility !== '');
+      const materialResp = contracts.find(c => c.material_responsibility)?.material_responsibility;
 
-      // 7. Supplier assigned if materials required
-      const hasSupplier = !hasMaterialResp || participants.some(p => p.role === 'SUPPLIER');
+      // FC invited?
+      const fcParticipants = getParticipantsByRole('FC');
+      const fcInvited = fcParticipants.length > 0;
+      const fcAccepted = isRoleAccepted('FC');
+      const fcPendingNames = getRolePendingNames('FC');
 
-      // 8. Retainage defined
-      const hasRetainage = contracts.some(c => c.retainage_percent != null && c.retainage_percent > 0);
+      // GC accepted?
+      const gcAccepted = isRoleAccepted('GC');
+      const gcPendingNames = getRolePendingNames('GC');
 
-      // 9. Contract mode selected (at least one Active contract)
-      const hasActiveContract = contracts.some(c => c.status === 'Active');
+      // TC accepted?
+      const tcAccepted = isRoleAccepted('TC');
+      const tcPendingNames = getRolePendingNames('TC');
 
-      const items: ReadinessItem[] = [
-        { key: 'org', label: 'Organization exists', complete: orgExists },
-        { key: 'contract_sum', label: 'Contract sum entered', complete: hasContractSum },
-        { key: 'sov', label: 'Schedule of Values created', complete: hasSov },
-        { key: 'team', label: 'Team members invited', complete: hasTeam },
-        { key: 'accepted', label: acceptedLabel, complete: allAccepted },
-        { key: 'material_resp', label: 'Material responsibility selected', complete: hasMaterialResp },
-        { key: 'supplier', label: 'Supplier assigned', complete: hasSupplier },
-        { key: 'retainage', label: 'Retainage defined', complete: hasRetainage },
-        { key: 'active_contract', label: 'Contract mode selected', complete: hasActiveContract },
-      ];
+      // Build checklist based on creator type
+      const items: ReadinessItem[] = [];
 
+      if (detectedCreatorType === 'TC') {
+        // TC-Created Project Checklist
+        // 1. Contract sum with GC
+        const hasGCContractSum = gcContract ? (gcContract.contract_sum != null && gcContract.contract_sum > 0) : false;
+        items.push({ key: 'gc_contract_sum', label: 'Contract sum with GC entered', complete: hasGCContractSum });
+
+        // 2. Contract sum with FC
+        const hasFCContractSum = fcContract ? (fcContract.contract_sum != null && fcContract.contract_sum > 0) : false;
+        items.push({ key: 'fc_contract_sum', label: 'Contract sum with FC entered', complete: hasFCContractSum });
+
+        // 3. SOV for GC contract
+        const hasGCSov = gcContract ? hasSovForContract(gcContract.id) : false;
+        items.push({ key: 'gc_sov', label: 'SOV for GC contract created', complete: hasGCSov });
+
+        // 4. SOV for FC contract
+        const hasFCSov = fcContract ? hasSovForContract(fcContract.id) : false;
+        items.push({ key: 'fc_sov', label: 'SOV for FC contract created', complete: hasFCSov });
+
+        // 5. Material responsibility selected
+        items.push({ key: 'material_resp', label: 'Material responsibility selected', complete: hasMaterialResp });
+
+        // 6. Supplier assigned (if TC responsible)
+        if (materialResp === 'TC' || !hasMaterialResp) {
+          items.push({ key: 'supplier', label: hasSupplier ? 'Supplier assigned' : 'Supplier not yet assigned', complete: hasSupplier });
+        }
+
+        // 7. GC accepted
+        items.push({
+          key: 'gc_accepted',
+          label: gcAccepted ? 'GC accepted' : `Awaiting GC${gcPendingNames.length > 0 ? ': ' + gcPendingNames.join(', ') : ''}`,
+          complete: gcAccepted,
+        });
+
+        // 8. FC accepted
+        items.push({
+          key: 'fc_accepted',
+          label: fcAccepted ? 'FC accepted' : `Awaiting FC${fcPendingNames.length > 0 ? ': ' + fcPendingNames.join(', ') : ''}`,
+          complete: fcAccepted,
+        });
+
+        // 9. Supplier accepted (if assigned)
+        if (hasSupplier) {
+          items.push({
+            key: 'supplier_accepted',
+            label: supplierAccepted ? 'Supplier accepted' : `Awaiting Supplier${supplierPendingNames.length > 0 ? ': ' + supplierPendingNames.join(', ') : ''}`,
+            complete: supplierAccepted,
+          });
+        }
+
+        // 10. Supplier estimate (if supplier assigned)
+        if (hasSupplier) {
+          items.push({
+            key: 'supplier_estimate',
+            label: supplierHasEstimate ? 'Supplier estimate uploaded' : 'Awaiting supplier estimate',
+            complete: supplierHasEstimate,
+          });
+        }
+      } else {
+        // GC-Created Project Checklist (default)
+        // 1. Contract sum with TC
+        const hasTCContractSum = contracts.some(c => 
+          (c.from_role === 'Trade Contractor' || c.to_role === 'Trade Contractor') &&
+          c.contract_sum != null && c.contract_sum > 0
+        );
+        items.push({ key: 'tc_contract_sum', label: 'Contract sum with TC entered', complete: hasTCContractSum });
+
+        // 2. TC accepted
+        items.push({
+          key: 'tc_accepted',
+          label: tcAccepted ? 'TC accepted' : `Awaiting TC${tcPendingNames.length > 0 ? ': ' + tcPendingNames.join(', ') : ''}`,
+          complete: tcAccepted,
+        });
+
+        // 3. SOV created
+        const hasSov = sovs.length > 0;
+        items.push({ key: 'sov', label: 'Schedule of Values created', complete: hasSov });
+
+        // 4. Material responsibility
+        items.push({ key: 'material_resp', label: 'Material responsibility selected', complete: hasMaterialResp });
+
+        // 5. Supplier assigned (if materials required)
+        if (hasMaterialResp) {
+          items.push({ key: 'supplier', label: hasSupplier ? 'Supplier assigned' : 'Supplier not yet assigned', complete: hasSupplier });
+        }
+
+        // 6. Supplier accepted (if assigned)
+        if (hasSupplier) {
+          items.push({
+            key: 'supplier_accepted',
+            label: supplierAccepted ? 'Supplier accepted' : `Awaiting Supplier${supplierPendingNames.length > 0 ? ': ' + supplierPendingNames.join(', ') : ''}`,
+            complete: supplierAccepted,
+          });
+        }
+
+        // 7. Supplier estimate (if supplier assigned)
+        if (hasSupplier) {
+          items.push({
+            key: 'supplier_estimate',
+            label: supplierHasEstimate ? 'Supplier estimate uploaded' : 'Awaiting supplier estimate',
+            complete: supplierHasEstimate,
+          });
+        }
+
+        // 8. FC accepted (only if FC was invited)
+        if (fcInvited) {
+          items.push({
+            key: 'fc_accepted',
+            label: fcAccepted ? 'FC accepted' : `Awaiting FC${fcPendingNames.length > 0 ? ': ' + fcPendingNames.join(', ') : ''}`,
+            complete: fcAccepted,
+          });
+        }
+      }
 
       setChecklist(items);
+
+      // Auto-activation: if all items complete and project is in setup status
+      const allComplete = items.length > 0 && items.every(i => i.complete);
+      if (allComplete && projectStatus === 'setup' && !activatingRef.current) {
+        activatingRef.current = true;
+        const { error } = await supabase
+          .from('projects')
+          .update({ status: 'active' })
+          .eq('id', projectId);
+        
+        if (!error) {
+          setIsActive(true);
+          toast.success('Project is now active!');
+        } else {
+          console.error('Failed to auto-activate project:', error);
+        }
+        activatingRef.current = false;
+      }
     } catch (err) {
       console.error('Error calculating readiness:', err);
     } finally {
@@ -105,5 +292,5 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
   const completedCount = blocking.filter(i => i.complete).length;
   const percent = blocking.length > 0 ? Math.round((completedCount / blocking.length) * 100) : 0;
 
-  return { percent, checklist, loading, recalculate: calculate, firstContractId };
+  return { percent, checklist, loading, recalculate: calculate, creatorOrgType, isActive, firstContractId };
 }

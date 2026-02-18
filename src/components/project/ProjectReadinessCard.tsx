@@ -12,7 +12,7 @@ interface ProjectReadinessCardProps {
 }
 
 export function ProjectReadinessCard({ readiness }: ProjectReadinessCardProps) {
-  const { percent, checklist, loading, recalculate, firstContractId } = readiness;
+  const { percent, checklist, loading, recalculate, creatorOrgType, isActive, firstContractId } = readiness;
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
 
@@ -26,7 +26,19 @@ export function ProjectReadinessCard({ readiness }: ProjectReadinessCardProps) {
     );
   }
 
+  if (isActive) {
+    return (
+      <Card className="border-l-4 border-l-green-500">
+        <CardContent className="p-4 flex items-center gap-3">
+          <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+          <span className="font-medium text-sm">Project is active and ready for execution</span>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const isReady = percent === 100;
+  const creatorLabel = creatorOrgType === 'TC' ? 'TC Setup' : creatorOrgType === 'GC' ? 'GC Setup' : 'Project Setup';
 
   const handleSetMaterialResp = async (value: 'GC' | 'TC') => {
     if (!firstContractId) return;
@@ -46,24 +58,6 @@ export function ProjectReadinessCard({ readiness }: ProjectReadinessCardProps) {
     }
   };
 
-  const handleActivateContract = async () => {
-    if (!firstContractId) return;
-    setSaving(true);
-    try {
-      const { error } = await supabase
-        .from('project_contracts')
-        .update({ status: 'Active' })
-        .eq('id', firstContractId);
-      if (error) throw error;
-      toast({ title: 'Contract activated' });
-      recalculate();
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <Card className={cn(
       "border-l-4",
@@ -72,7 +66,7 @@ export function ProjectReadinessCard({ readiness }: ProjectReadinessCardProps) {
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center justify-between">
           <span>
-            {isReady ? 'Ready to Execute' : `Setup Incomplete (${percent}%)`}
+            {isReady ? 'Ready — Activating...' : `${creatorLabel} — ${percent}% Complete`}
           </span>
           {isReady ? (
             <CheckCircle2 className="h-5 w-5 text-green-500" />
@@ -116,17 +110,6 @@ export function ProjectReadinessCard({ readiness }: ProjectReadinessCardProps) {
                     className="px-3 py-1 text-xs font-medium rounded-md border border-border bg-muted hover:bg-accent transition-colors disabled:opacity-50"
                   >
                     TC
-                  </button>
-                </div>
-              )}
-              {item.key === 'active_contract' && !item.complete && firstContractId && (
-                <div className="ml-6 mt-1.5">
-                  <button
-                    disabled={saving}
-                    onClick={handleActivateContract}
-                    className="px-3 py-1 text-xs font-medium rounded-md border border-border bg-muted hover:bg-accent transition-colors disabled:opacity-50"
-                  >
-                    Activate Contract
                   </button>
                 </div>
               )}

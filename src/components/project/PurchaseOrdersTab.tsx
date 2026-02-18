@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -33,9 +35,10 @@ interface PurchaseOrdersTabProps {
   projectId: string;
   projectName?: string;
   projectAddress?: string;
+  projectStatus?: string;
 }
 
-export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: PurchaseOrdersTabProps) {
+export function PurchaseOrdersTab({ projectId, projectName, projectAddress, projectStatus }: PurchaseOrdersTabProps) {
   const { userOrgRoles, currentRole, user, permissions } = useAuth();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [invoicedPOIds, setInvoicedPOIds] = useState<Set<string>>(new Set());
@@ -349,9 +352,22 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: Pu
     );
   }
 
+  const isProjectNotActive = projectStatus && projectStatus !== 'active';
+
   return (
     <>
       <div className="space-y-6">
+        {/* Project not active blocking banner */}
+        {isProjectNotActive && (
+          <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-amber-800 dark:text-amber-200">Project Setup Incomplete</AlertTitle>
+            <AlertDescription className="text-amber-700 dark:text-amber-300">
+              Project setup incomplete. Waiting for required parties.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {/* Header with Stats */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -376,7 +392,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress }: Pu
                 <SelectItem value="DELIVERED">Delivered</SelectItem>
               </SelectContent>
             </Select>
-            {canCreatePO && (
+            {canCreatePO && !isProjectNotActive && (
               <Button onClick={() => setWizardOpen(true)}>
                 <Plus className="h-4 w-4 mr-1" />
                 Create PO

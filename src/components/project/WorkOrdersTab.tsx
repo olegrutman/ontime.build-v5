@@ -30,9 +30,10 @@ const STATUS_PRIORITY: Record<ChangeOrderStatus, number> = {
 interface WorkOrdersTabProps {
   projectId: string;
   projectName: string;
+  projectStatus?: string;
 }
 
-export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
+export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrdersTabProps) {
   const navigate = useNavigate();
   const { currentRole, user, permissions } = useAuth();
   const [showWizard, setShowWizard] = useState(false);
@@ -205,10 +206,23 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
     );
   };
 
+  const isProjectNotActive = projectStatus && projectStatus !== 'active';
+
   return (
     <div className="space-y-4">
+      {/* Project not active blocking banner */}
+      {isProjectNotActive && (
+        <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertTitle className="text-amber-800 dark:text-amber-200">Project Setup Incomplete</AlertTitle>
+          <AlertDescription className="text-amber-700 dark:text-amber-300">
+            Project setup incomplete. Waiting for required parties.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* SOV Readiness Alert Banner */}
-      {isBlocked && (
+      {!isProjectNotActive && isBlocked && (
         <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertTitle className="text-amber-800 dark:text-amber-200">SOV Setup Required</AlertTitle>
@@ -274,7 +288,7 @@ export function WorkOrdersTab({ projectId, projectName }: WorkOrdersTabProps) {
               )}
             </SelectContent>
           </Select>
-          {canCreate && (
+          {canCreate && !isProjectNotActive && (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
