@@ -212,6 +212,22 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
             <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Recent Invoices</span>
           </button>
           <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => onNavigate('invoices')}>View All</Button>
+        </div>
+        {recentInvoices.length === 0 ? (
+          <p className="text-xs text-muted-foreground py-2">No invoices yet</p>
+        ) : (
+          <div className="space-y-1">
+            {recentInvoices.map(inv => (
+              <div key={inv.id} className="flex items-center justify-between py-1.5 px-1">
+                <span className="text-sm truncate flex-1 mr-2">{inv.invoice_number}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <StatusBadge status={inv.status} />
+                  <span className="text-xs font-medium tabular-nums">{fmtCurrency(inv.total_amount)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Open RFIs */}
@@ -236,24 +252,7 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
           <p className="text-xs text-muted-foreground py-2">No open RFIs</p>
         )}
       </div>
-        {recentInvoices.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-2">No invoices yet</p>
-        ) : (
-          <div className="space-y-1">
-            {recentInvoices.map(inv => (
-              <div key={inv.id} className="flex items-center justify-between py-1.5 px-1">
-                <span className="text-sm truncate flex-1 mr-2">{inv.invoice_number}</span>
-                <div className="flex items-center gap-2 shrink-0">
-                  <StatusBadge status={inv.status} />
-                  <span className="text-xs font-medium tabular-nums">{fmtCurrency(inv.total_amount)}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
-      {/* Team */}
       <div className="border bg-card p-3">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">
