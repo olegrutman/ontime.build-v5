@@ -1,48 +1,34 @@
 
+# Conditional Quick Stats Tiles + Collapsible Status Bar on Mobile
 
-# Optimize Dashboard for Mobile
+## What Changes
 
-## Problems Identified
+### 1. Quick Stats tiles: only show tiles that need attention (count > 0)
+- In `DashboardQuickStats.tsx`, filter the `tiles` array to only include tiles where `count > 0`
+- If no tiles have counts > 0, render nothing (return `null`)
+- This keeps the dashboard clean when everything is fine
 
-1. **Quick Stats cards stack vertically (1 column)** on mobile, consuming ~300px of vertical space for just 3 numbers -- pushes actual project content below the fold
-2. **Status tab bar** gets cut off horizontally ("On Hold", "Completed", "Archived" hidden off-screen) with no visual scroll hint
-3. **"New Project" button** floats alone in a right-aligned row, wasting vertical space
-4. **Top header area** has unused vertical space above the quick stats
-
-## Changes
-
-### 1. `src/components/dashboard/DashboardQuickStats.tsx`
-- Change grid from `grid-cols-1 sm:grid-cols-3` to `grid-cols-3` (always 3 columns)
-- Make tiles compact on mobile: smaller icon (hide icon container on xs), smaller text, tighter padding
-- This turns ~300px of vertical space into a single ~70px row
-
-### 2. `src/components/dashboard/StatusMenu.tsx`
-- Add scroll-snap and hide scrollbar styling for a cleaner horizontal scroll
-- Reduce horizontal padding on mobile (`px-3` instead of `px-5`) so more tabs fit on screen
-- Reduce vertical margin on mobile
-
-### 3. `src/pages/Dashboard.tsx`
-- Move the "New Project" button into the TopBar via the existing `showNewButton` / `onNewClick` props (already supported by `AppLayout`) instead of rendering it as a separate row
-- Tighten overall `space-y` gap on mobile from `space-y-6` to `space-y-4 sm:space-y-6`
-
-### 4. `src/components/dashboard/ProjectRow.tsx`
-- Tighten card padding on mobile (reduce from `p-3` to `p-2.5`)
-- Slightly reduce icon size on xs screens
+### 2. Status bar: collapse on mobile, only expand when needed
+- In `DashboardProjectList.tsx`, on mobile (sm and below), wrap `StatusMenu` in a `Collapsible` component
+- Show a compact summary row (e.g., "Active (3)" with a chevron toggle) instead of the full tab strip
+- Tapping expands to show all status options
+- On desktop (sm+), show the full `StatusMenu` as it is today
+- If a non-active status has items needing attention (e.g., setup count > 0), show a small dot/badge on the collapsed bar to hint the user should look
 
 ## Technical Details
 
-**DashboardQuickStats** -- the key change:
-```
-grid-cols-3 gap-2 sm:gap-3
-```
-Each tile becomes a compact column with smaller font on mobile: `text-lg sm:text-2xl` for the number, icon container shrinks to `p-1.5 sm:p-2.5`.
+### `src/components/dashboard/DashboardQuickStats.tsx`
+- Filter: `const visibleTiles = tiles.filter(t => t.count > 0)`
+- If `visibleTiles.length === 0`, return `null`
+- Render `visibleTiles` instead of `tiles`
+- Adjust grid: `grid-cols-1` when 1 tile, `grid-cols-2` when 2, `grid-cols-3` when 3 (use dynamic class)
 
-**StatusMenu** -- add fade hint and compact sizing:
-- Add `scrollbar-hide` utility class (or inline `scrollbar-width: none` / `-webkit-scrollbar` override)
-- Reduce button padding: `px-3 sm:px-5 py-2 sm:py-2.5`
-- Add right-edge gradient fade mask to hint scrollability
+### `src/components/dashboard/DashboardProjectList.tsx`
+- Import `Collapsible, CollapsibleTrigger, CollapsibleContent` and `useIsMobile`
+- On mobile: render a collapsible trigger showing current filter label + count + chevron
+- `CollapsibleContent` wraps the existing `StatusMenu`
+- On desktop (`!isMobile`): render `StatusMenu` directly as before
+- When a status is selected from the expanded menu, auto-collapse
 
-**Dashboard page** -- remove standalone button row:
-- Pass `showNewButton={canCreateProject}`, `onNewClick={() => navigate('/create-project')}`, `newButtonLabel="New Project"` to `AppLayout`
-- Remove the separate `<div className="flex justify-end">` block
-
+### `src/pages/Dashboard.tsx`
+- No changes needed -- the components handle the conditional logic internally
