@@ -2178,6 +2178,7 @@ export type Database = {
           project_id: string
           roof_deck_type: string | null
           roof_type: string | null
+          scope_description: string | null
           shaft_type: string | null
           shaft_type_notes: string | null
           siding_included: boolean | null
@@ -2222,6 +2223,7 @@ export type Database = {
           project_id: string
           roof_deck_type?: string | null
           roof_type?: string | null
+          scope_description?: string | null
           shaft_type?: string | null
           shaft_type_notes?: string | null
           siding_included?: boolean | null
@@ -2266,6 +2268,7 @@ export type Database = {
           project_id?: string
           roof_deck_type?: string | null
           roof_type?: string | null
+          scope_description?: string | null
           shaft_type?: string | null
           shaft_type_notes?: string | null
           siding_included?: boolean | null

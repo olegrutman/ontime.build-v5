@@ -112,7 +112,7 @@ function InclusionBadges({ scope }: { scope: ScopeDetails }) {
 
 export function ProjectScopeSection({ projectId, projectType }: ProjectScopeSectionProps) {
   const navigate = useNavigate();
-  const [scope, setScope] = useState<ScopeDetails | null>(null);
+  const [scope, setScope] = useState<(ScopeDetails & { scope_description?: string | null }) | null>(null);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -215,7 +215,13 @@ export function ProjectScopeSection({ projectId, projectType }: ProjectScopeSect
                 <div>
                   <CardTitle className="text-base font-medium">Scope</CardTitle>
                   <p className="text-sm text-muted-foreground mt-0.5">
-                    {scope ? summaryItems.join(' • ') || 'Details configured' : 'Not configured'}
+                    {scope?.scope_description
+                      ? scope.scope_description.length > 120
+                        ? scope.scope_description.slice(0, 120) + '…'
+                        : scope.scope_description
+                      : scope
+                        ? summaryItems.join(' • ') || 'Details configured'
+                        : 'Not configured'}
                   </p>
                 </div>
               </div>

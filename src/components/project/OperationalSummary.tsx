@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ClipboardList, Receipt, Users, Edit, FileText, Plus } from 'lucide-react';
+import { ClipboardList, Receipt, Users, Edit, FileText, Plus, Sparkles, Loader2, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { AddTeamMemberDialog } from '@/components/project/AddTeamMemberDialog';
+import { toast } from '@/hooks/use-toast';
 
 interface OperationalSummaryProps {
   projectId: string;
@@ -31,6 +32,7 @@ interface ScopeInfo {
   num_buildings: number | null;
   stories: number | null;
   num_units: number | null;
+  scope_description: string | null;
 }
 
 const roleDotColors: Record<string, string> = {
@@ -80,6 +82,7 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
   const [loadingTeam, setLoadingTeam] = useState(true);
   const [loadingScope, setLoadingScope] = useState(true);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  const [generatingDescription, setGeneratingDescription] = useState(false);
 
   const creatorOrgType = userOrgRoles[0]?.organization?.type ?? null;
 
@@ -96,7 +99,7 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
     const fetchScope = async () => {
       const { data } = await supabase
         .from('project_scope_details')
-        .select('home_type, floors, num_buildings, stories, num_units')
+        .select('home_type, floors, num_buildings, stories, num_units, scope_description')
         .eq('project_id', projectId)
         .maybeSingle();
       setScope(data);
@@ -122,6 +125,32 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
       if (scope.num_units) scopeSummary.push(`${scope.num_units} units`);
     }
   }
+
+  const handleGenerateDescription = async () => {
+    setGeneratingDescription(true);
+    try {
+      const response = await supabase.functions.invoke('generate-scope-description', {
+        body: { project_id: projectId },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      const { description, error } = response.data;
+      if (error) {
+        toast({ title: 'Error', description: error, variant: 'destructive' });
+        return;
+      }
+
+      setScope(prev => prev ? { ...prev, scope_description: description } : prev);
+      toast({ title: 'Description generated', description: 'Scope description has been saved.' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message || 'Failed to generate description', variant: 'destructive' });
+    } finally {
+      setGeneratingDescription(false);
+    }
+  };
 
   // Group team by role
   const teamByRole = team.reduce<Record<string, TeamMember[]>>((acc, m) => {
@@ -225,15 +254,40 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
             <FileText className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Scope</span>
           </div>
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => navigate(`/projects/${projectId}/scope`)}>
-            <Edit className="h-3 w-3 mr-1" />
-            Edit
-          </Button>
+          <div className="flex items-center gap-1">
+            {scope && scopeSummary.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-[11px]"
+                onClick={handleGenerateDescription}
+                disabled={generatingDescription}
+              >
+                {generatingDescription ? (
+                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                ) : scope.scope_description ? (
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                ) : (
+                  <Sparkles className="h-3 w-3 mr-1" />
+                )}
+                {scope.scope_description ? 'Regenerate' : 'Generate'}
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => navigate(`/projects/${projectId}/scope`)}>
+              <Edit className="h-3 w-3 mr-1" />
+              Edit
+            </Button>
+          </div>
         </div>
         {loadingScope ? (
           <Skeleton className="h-8" />
         ) : scope && scopeSummary.length > 0 ? (
-          <p className="text-sm text-foreground">{scopeSummary.join(' • ')}</p>
+          <div className="space-y-1.5">
+            <p className="text-sm text-foreground">{scopeSummary.join(' • ')}</p>
+            {scope.scope_description && (
+              <p className="text-xs text-muted-foreground leading-relaxed">{scope.scope_description}</p>
+            )}
+          </div>
         ) : (
           <p className="text-xs text-muted-foreground py-1">No scope configured</p>
         )}
