@@ -12,11 +12,14 @@ export interface ProjectReadiness {
   percent: number;
   checklist: ReadinessItem[];
   loading: boolean;
+  recalculate: () => void;
+  firstContractId: string | null;
 }
 
 export function useProjectReadiness(projectId: string | undefined): ProjectReadiness {
   const [checklist, setChecklist] = useState<ReadinessItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [firstContractId, setFirstContractId] = useState<string | null>(null);
 
   const calculate = useCallback(async () => {
     if (!projectId) { setLoading(false); return; }
@@ -37,6 +40,8 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
       const contracts = contractsRes.data || [];
       const sovs = sovRes.data || [];
       const participants = participantsRes.data || [];
+
+      setFirstContractId(contracts.length > 0 ? contracts[0].id : null);
 
       // 1. Organization exists (always true)
       const orgExists = true;
@@ -116,5 +121,5 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
   const completedCount = blocking.filter(i => i.complete).length;
   const percent = blocking.length > 0 ? Math.round((completedCount / blocking.length) * 100) : 0;
 
-  return { percent, checklist, loading };
+  return { percent, checklist, loading, recalculate: calculate, firstContractId };
 }
