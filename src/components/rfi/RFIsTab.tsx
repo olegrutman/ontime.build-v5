@@ -6,9 +6,12 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { RFICard } from './RFICard';
 import { CreateRFIDialog } from './CreateRFIDialog';
 import { RFIDetailDialog } from './RFIDetailDialog';
+import { WorkOrderWizard } from '@/components/work-order-wizard';
 import { useProjectRFIs } from '@/hooks/useProjectRFIs';
 import { useAuth } from '@/hooks/useAuth';
+import { useChangeOrderProject } from '@/hooks/useChangeOrderProject';
 import { supabase } from '@/integrations/supabase/client';
+import { INITIAL_WIZARD_DATA, type WorkOrderWizardData } from '@/types/workOrderWizard';
 import type { ProjectRFI, RFIStatus } from '@/types/rfi';
 
 interface RFIsTabProps {
@@ -23,14 +26,32 @@ interface TeamOrg {
 export function RFIsTab({ projectId }: RFIsTabProps) {
   const { user, userOrgRoles, permissions } = useAuth();
   const { rfis, isLoading, createRFI, answerRFI, closeRFI } = useProjectRFIs(projectId);
+  const { createChangeOrder, isCreating } = useChangeOrderProject(projectId);
   const [statusFilter, setStatusFilter] = useState<'ALL' | RFIStatus>('ALL');
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedRFI, setSelectedRFI] = useState<ProjectRFI | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [teamOrgs, setTeamOrgs] = useState<TeamOrg[]>([]);
+  const [woWizardOpen, setWoWizardOpen] = useState(false);
+  const [woInitialData, setWoInitialData] = useState<Partial<WorkOrderWizardData>>({});
+  const [projectName, setProjectName] = useState('');
 
   const currentOrgId = userOrgRoles[0]?.organization?.id;
   const canCreate = permissions?.canCreateRFIs ?? false;
+  const canCreateWorkOrders = permissions?.canCreateWorkOrders ?? false;
+
+  // Fetch project name for wizard
+  useEffect(() => {
+    if (!projectId) return;
+    supabase
+      .from('projects')
+      .select('name')
+      .eq('id', projectId)
+      .single()
+      .then(({ data }) => {
+        if (data) setProjectName(data.name);
+      });
+  }, [projectId]);
 
   // Fetch team orgs for assign-to dropdown
   useEffect(() => {
@@ -53,6 +74,18 @@ export function RFIsTab({ projectId }: RFIsTabProps) {
   const handleCardClick = (rfi: ProjectRFI) => {
     setSelectedRFI(rfi);
     setDetailOpen(true);
+  };
+
+  const handleConvertToWO = (rfi: ProjectRFI) => {
+    const description = `RFI-${rfi.rfi_number}: ${rfi.question}${rfi.answer ? `\n\nAnswer: ${rfi.answer}` : ''}`;
+    setWoInitialData({
+      ...INITIAL_WIZARD_DATA,
+      title: rfi.subject,
+      location_data: (rfi.location_data as any) || {},
+      description,
+    });
+    setDetailOpen(false);
+    setWoWizardOpen(true);
   };
 
   if (isLoading) {
@@ -117,6 +150,21 @@ export function RFIsTab({ projectId }: RFIsTabProps) {
         currentUserId={user?.id}
         onAnswer={async (id, ans, uid) => { await answerRFI.mutateAsync({ id, answer: ans, answeredByUserId: uid }); }}
         onClose={async (id) => { await closeRFI.mutateAsync(id); }}
+        onConvertToWorkOrder={handleConvertToWO}
+        canCreateWorkOrders={canCreateWorkOrders}
+      />
+
+      {/* Work Order Wizard */}
+      <WorkOrderWizard
+        open={woWizardOpen}
+        onOpenChange={setWoWizardOpen}
+        projectId={projectId}
+        projectName={projectName}
+        initialData={woInitialData}
+        onComplete={async (data) => {
+          await createChangeOrder(data);
+        }}
+        isSubmitting={isCreating}
       />
     </div>
   );
