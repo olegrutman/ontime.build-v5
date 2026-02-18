@@ -1,35 +1,57 @@
 
 
-# FC Invites: Show Status but Don't Block Setup
+# Add Material Responsibility Selector to Readiness Card
 
 ## What Changes
 
-Currently, if a Field Crew (FC) organization hasn't accepted their invite, it blocks the "All invites accepted" checklist item and lowers the readiness percentage. This prevents the project from reaching 100% readiness.
-
-**New behavior:**
-- FC pending invites will **not** count toward the blocking "All invites accepted" check
-- A separate, **informational** checklist item will show FC acceptance status (e.g., "FC accepted: ABC Crew" or "FC invited: ABC Crew (pending)")
-- This item will update to show a checkmark once the FC accepts, but it won't affect the readiness percentage either way
+When the "Material responsibility selected" checklist item is incomplete, a small inline GC/TC toggle will appear directly below it, allowing the user to set it without navigating elsewhere. Once set, the toggle disappears and the item shows as complete.
 
 ## Technical Changes
 
-### `src/hooks/useProjectReadiness.ts`
+### 1. `src/hooks/useProjectReadiness.ts`
 
-1. **Filter FC out of the blocking logic** (lines 52-61): When calculating `pendingOrgs` and `allAccepted`, exclude participants with `role === 'FC'`. Only GC, TC, and SUPPLIER invites block readiness.
+- **Expose a `recalculate` callback** so the card can refresh after an update.
+- **Expose the first contract ID** (needed to know which contract to update).
+- Update the `ProjectReadiness` interface:
 
-2. **Add a separate informational FC item**: After the main checklist items, add an optional item (only if FC participants exist) that shows their acceptance status. This item will be marked `complete` when accepted but will **not** be included in the percentage calculation.
+```typescript
+export interface ProjectReadiness {
+  percent: number;
+  checklist: ReadinessItem[];
+  loading: boolean;
+  recalculate: () => void;
+  firstContractId: string | null;
+}
+```
 
-3. **Update the `ReadinessItem` interface**: Add an optional `informational?: boolean` flag so the UI can distinguish blocking items from informational ones.
+- Store `firstContractId` from the contracts query and return it alongside the existing fields.
 
-4. **Update percentage calculation** (line 97-98): Exclude items with `informational: true` from the completed/total count.
+### 2. `src/components/project/ProjectReadinessCard.tsx`
 
-### `src/components/project/ProjectReadinessCard.tsx`
+- Accept `readiness` which now includes `recalculate` and `firstContractId`.
+- For the `material_resp` checklist item, when `!item.complete`, render an inline toggle below the label:
 
-- Informational items render with a lighter style (e.g., info icon instead of red X when incomplete) to visually distinguish them from blocking items.
+```
+Material responsibility selected
+  [GC] / [TC]  toggle
+```
+
+- On toggle change, call:
+```typescript
+await supabase
+  .from('project_contracts')
+  .update({ material_responsibility: value })
+  .eq('id', firstContractId);
+readiness.recalculate();
+```
+
+- Uses the existing `Switch` component with "GC" and "TC" labels (same pattern as the project wizard's PartiesStep).
+
+### 3. No database changes needed
+
+The `material_responsibility` column already exists on `project_contracts` and accepts `'GC'` or `'TC'` string values.
 
 ## Result
 
-- FC acceptance no longer blocks project activation
-- The setup page still shows whether FC has accepted, giving visibility without creating a bottleneck
-- GC, TC, and Supplier invites continue to block as before
+Users see an actionable toggle directly in the readiness card for material responsibility, can set it with one click, and the checklist immediately updates to reflect completion.
 
