@@ -30,7 +30,7 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
       ] = await Promise.all([
         supabase.from('project_contracts').select('id, contract_sum, material_responsibility, retainage_percent, status').eq('project_id', projectId),
         supabase.from('project_sov').select('id').eq('project_id', projectId),
-        supabase.from('project_participants').select('id, role, invite_status').eq('project_id', projectId),
+        supabase.from('project_participants').select('id, role, invite_status, organizations:organization_id(name)').eq('project_id', projectId),
       ]);
 
       const contracts = contractsRes.data || [];
@@ -49,8 +49,16 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
       // 4. Required team members invited (>1 participant)
       const hasTeam = participants.length > 1;
 
-      // 5. All invites accepted
-      const allAccepted = participants.length > 1 && participants.every(p => p.invite_status === 'ACCEPTED');
+      const pendingOrgs = participants
+        .filter(p => p.invite_status !== 'ACCEPTED')
+        .map(p => (p as any).organizations?.name)
+        .filter(Boolean);
+      const allAccepted = participants.length > 1 && pendingOrgs.length === 0;
+      const acceptedLabel = allAccepted
+        ? 'All invites accepted'
+        : pendingOrgs.length > 0
+          ? `Awaiting: ${pendingOrgs.join(', ')}`
+          : 'All invites accepted';
 
       // 6. Material responsibility selected
       const hasMaterialResp = contracts.some(c => c.material_responsibility != null && c.material_responsibility !== '');
@@ -69,7 +77,7 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
         { key: 'contract_sum', label: 'Contract sum entered', complete: hasContractSum },
         { key: 'sov', label: 'Schedule of Values created', complete: hasSov },
         { key: 'team', label: 'Team members invited', complete: hasTeam },
-        { key: 'accepted', label: 'All invites accepted', complete: allAccepted },
+        { key: 'accepted', label: acceptedLabel, complete: allAccepted },
         { key: 'material_resp', label: 'Material responsibility selected', complete: hasMaterialResp },
         { key: 'supplier', label: 'Supplier assigned', complete: hasSupplier },
         { key: 'retainage', label: 'Retainage defined', complete: hasRetainage },
