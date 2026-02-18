@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useDashboardData } from '@/hooks/useDashboardData';
@@ -190,17 +189,13 @@ export default function Dashboard() {
   const remindersDue = reminders.filter(r => new Date(r.due_date) <= weekFromNow).length;
 
   return (
-    <AppLayout title="Dashboard">
-      <div className="space-y-6">
-        {/* Header with New Project button */}
-        {canCreateProject && (
-          <div className="flex justify-end">
-            <Button onClick={() => navigate('/create-project')} size="sm" className="gap-1.5">
-              <Plus className="h-4 w-4" />
-              New Project
-            </Button>
-          </div>
-        )}
+    <AppLayout
+      title="Dashboard"
+      showNewButton={canCreateProject}
+      onNewClick={() => navigate('/create-project')}
+      newButtonLabel="New Project"
+    >
+      <div className="space-y-4 sm:space-y-6">
 
         {/* Onboarding Checklist */}
         {showOnboarding && (

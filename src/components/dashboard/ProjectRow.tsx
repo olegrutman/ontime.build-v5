@@ -98,7 +98,7 @@ export function ProjectRow({
       )}
       onClick={handleRowClick}
     >
-      <CardContent className="p-3 sm:p-4">
+      <CardContent className="p-2.5 sm:p-4">
         <div className="flex items-center gap-3 sm:gap-4">
           {/* Icon */}
           <div className="flex h-11 w-11 sm:h-12 sm:w-12 items-center justify-center rounded-lg bg-primary/10 shrink-0">
