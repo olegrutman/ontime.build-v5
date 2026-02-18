@@ -1,78 +1,46 @@
 
-
-# AI-Generated Scope of Work Description
+# Add AI-Generated Scope Description to Edit Scope Page
 
 ## What Changes
 
-Add an AI-generated essential scope of work description that appears in the Scope tile on the project overview page. The AI takes all the structured scope data (floors, foundation, siding, roofing, inclusions, etc.) and produces a concise, professional paragraph summarizing the framing scope of work. This description is stored in the database so it only needs to be generated once (and can be regenerated when scope changes).
-
-## How It Works
-
-1. User configures project scope details (floors, foundation, siding, etc.)
-2. A "Generate Description" button appears in the Scope tile on the overview page
-3. AI reads all scope fields and produces a 2-3 sentence essential scope summary
-4. The description is saved to the database and displayed in the Scope tile
-5. User can regenerate if scope changes
+Add a card at the top of the Edit Scope page that displays the AI-generated scope description and provides a "Generate" / "Regenerate" button, reusing the same `generate-scope-description` edge function already built.
 
 ## Technical Changes
 
-### 1. Database Migration
+### `src/pages/EditProjectScope.tsx`
 
-Add a `scope_description` text column to `project_scope_details`:
+1. **Add state variables:**
+   - `scopeDescription` (string) -- loaded from `project_scope_details.scope_description` during initial fetch
+   - `generatingDescription` (boolean) -- loading state for the AI call
 
-```sql
-ALTER TABLE public.project_scope_details
-ADD COLUMN IF NOT EXISTS scope_description text;
+2. **Update initial data fetch** (around line 158-169): Also capture `scope_description` from the fetched `scopeData`.
+
+3. **Add `handleGenerateDescription` function:** Calls `supabase.functions.invoke('generate-scope-description', { body: { project_id } })`, updates `scopeDescription` state, and shows toast on success/error.
+
+4. **Add new imports:** `Sparkles`, `RefreshCw` from `lucide-react`; `Alert`, `AlertDescription` from UI components.
+
+5. **Add a "Scope Description" card** right after the header (before the grid, around line 313): A full-width card showing:
+   - If description exists: the description text with a "Regenerate" button (RefreshCw icon)
+   - If no description: a prompt to generate with a "Generate Description" button (Sparkles icon)
+   - While generating: a spinner with disabled button
+   - The card uses a subtle background to distinguish it from the form fields
+
+### No other files changed
+
+The edge function and database column already exist. This is purely a UI addition to the edit page.
+
+### UI Layout
+
+```text
+[Back] Edit Scope & Project Details          [Save Changes]
+
++-------------------------------------------------------+
+| Scope Description                    [Generate/Regen]  |
+| "Framing scope includes a 2-story custom home on      |
+|  slab foundation with gable roof..."                   |
++-------------------------------------------------------+
+
+[Structure]          [Stairs & Elevator]
+[Roof]               [Exterior Features]
+...
 ```
-
-### 2. New Edge Function: `generate-scope-description`
-
-**File:** `supabase/functions/generate-scope-description/index.ts`
-
-- Accepts `project_id` in the request body
-- Fetches the full `project_scope_details` row and project name from the database
-- Builds a structured prompt with all scope fields (home type, floors, foundation, roof, siding, balconies, decking, inclusions, etc.)
-- Calls Lovable AI (`google/gemini-3-flash-preview`) with a system prompt for construction scope writing
-- Returns the generated description
-- Handles 429/402 rate limit errors
-
-The system prompt will instruct the AI to write a concise (2-3 sentence) essential scope of work description for a framing contractor, covering structure type, key features, and scope inclusions.
-
-### 3. Update `config.toml`
-
-Add entry for the new function:
-```toml
-[functions.generate-scope-description]
-verify_jwt = false
-```
-
-### 4. Update Scope Tile in `OperationalSummary.tsx`
-
-In the Scope Summary tile (lines 221-240):
-
-- Fetch `scope_description` alongside existing scope fields
-- Display the AI description text below the summary line (e.g., "Single Family Home -- 2 floors")
-- Add a "Generate" button (sparkle icon) that calls the edge function
-- Show a loading spinner while generating
-- After generation, save the description to `project_scope_details` and display it
-- If description already exists, show it with a small "Regenerate" button
-
-### 5. Update `ProjectScopeSection.tsx`
-
-In the collapsed header subtitle (line 218), show the AI description instead of or alongside the basic summary stats when available. This gives users a richer preview without expanding.
-
-### Files Modified
-
-1. **New:** `supabase/functions/generate-scope-description/index.ts` -- Edge function calling Lovable AI
-2. **Edit:** `supabase/config.toml` -- Register new function
-3. **Edit:** `src/components/project/OperationalSummary.tsx` -- Display description in scope tile with generate button
-4. **Edit:** `src/components/project/ProjectScopeSection.tsx` -- Show description in collapsed header
-
-### UI Behavior
-
-- **No description yet + scope exists:** Show "Generate" button with sparkle icon
-- **Generating:** Button shows spinner, disabled
-- **Description exists:** Show the text, with a small "Regenerate" link
-- **No scope configured:** Show "No scope configured" as today (no generate button)
-- **Error (429/402):** Toast with appropriate message
-
