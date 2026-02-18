@@ -1,19 +1,31 @@
 
-# Add Inline "Activate Contract" Button to Readiness Card
+
+# Include FC in Project Readiness Blocking Logic
 
 ## What Changes
 
-When the "Contract mode selected" checklist item is incomplete, an inline "Activate" button will appear directly below it (same pattern as the material responsibility GC/TC buttons). Clicking it sets the first contract's status to `'Active'` and refreshes the checklist.
+Currently, Field Crew (FC) participants are excluded from the blocking readiness logic and shown only as an informational (non-blocking) item with a blue info icon. This change treats FC the same as GC and TC -- their invite acceptance will be a blocking requirement that counts toward the readiness percentage.
 
 ## Technical Changes
 
-### `src/components/project/ProjectReadinessCard.tsx`
+### `src/hooks/useProjectReadiness.ts`
 
-- Add a new handler `handleActivateContract` that updates `project_contracts.status` to `'Active'` for the `firstContractId`, then calls `recalculate()`.
-- Below the `active_contract` checklist item (when incomplete and `firstContractId` exists), render an inline "Activate Contract" button styled consistently with the existing material responsibility buttons.
+1. **Remove the FC exclusion filter** (line 59): Stop filtering out FC from `blockingParticipants`. All participants (GC, TC, FC, SUPPLIER) will be treated equally for invite acceptance tracking.
+
+2. **Remove the separate FC informational item** (lines 72-79, 105-108): No more special-case FC display. FC orgs will appear in the standard "Awaiting: ..." label alongside any other pending orgs.
+
+3. **Remove the `informational` field usage for FC**: The `fc_accepted` item will no longer be appended separately.
+
+**Before:**
+- FC filtered out of blocking logic
+- FC shown as blue informational item (does not affect percentage)
+
+**After:**
+- FC included in blocking logic alongside all other roles
+- FC pending invites show in the standard "Awaiting: OrgName" label
+- FC acceptance counts toward the readiness percentage
 
 ### No other file changes needed
 
-- `firstContractId` is already exposed from the hook and available in the card component.
-- The `project_contracts.status` column already accepts `'Active'` as a value.
-- No database migration required.
+The `ProjectReadinessCard` component already handles informational vs blocking items generically -- removing the FC special case in the hook is sufficient.
+
