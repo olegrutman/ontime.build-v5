@@ -17,9 +17,12 @@ import {
   PurchaseOrdersTab,
   AttentionBanner,
   SupplierEstimatesSection,
+  SupplierFinancialsSummaryCard,
+  SupplierPOSummaryCard,
   FinancialSignalBar,
   FinancialHealthCharts,
   OperationalSummary,
+  SupplierEstimateVsOrdersCard,
 } from '@/components/project';
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
 import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
@@ -200,32 +203,41 @@ export default function ProjectHome() {
               {/* Overview Tab */}
               {activeTab === 'overview' && (
                 <div className="space-y-4">
-                  {/* Readiness Card for setup/draft projects */}
-                  {(project.status === 'setup' || project.status === 'draft') && !isFC && (
-                    <ProjectReadinessCard readiness={readiness} />
+                  {isSupplier && supplierOrgId ? (
+                    <>
+                      <AttentionBanner
+                        projectId={id!}
+                        onNavigate={handleTabChange}
+                        isSupplier={isSupplier}
+                        supplierOrgId={supplierOrgId}
+                      />
+                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <SupplierEstimateVsOrdersCard projectId={id!} supplierOrgId={supplierOrgId} />
+                        <SupplierFinancialsSummaryCard projectId={id!} supplierOrgId={supplierOrgId} />
+                        <SupplierPOSummaryCard projectId={id!} supplierOrgId={supplierOrgId} />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {(project.status === 'setup' || project.status === 'draft') && !isFC && (
+                        <ProjectReadinessCard readiness={readiness} />
+                      )}
+                      <AttentionBanner
+                        projectId={id!}
+                        onNavigate={handleTabChange}
+                        isSupplier={isSupplier}
+                        supplierOrgId={supplierOrgId}
+                      />
+                      <FinancialSignalBar financials={financials} projectId={id!} />
+                      <FinancialHealthCharts financials={financials} />
+                      <OperationalSummary
+                        projectId={id!}
+                        projectType={project.project_type}
+                        financials={financials}
+                        onNavigate={handleTabChange}
+                      />
+                    </>
                   )}
-
-                  {/* Zone 4: Attention Center */}
-                  <AttentionBanner
-                    projectId={id!}
-                    onNavigate={handleTabChange}
-                    isSupplier={isSupplier}
-                    supplierOrgId={supplierOrgId}
-                  />
-
-                  {/* Zone 1: Financial Signal Bar */}
-                  <FinancialSignalBar financials={financials} projectId={id!} />
-
-                  {/* Zone 2: Financial Health Snapshot */}
-                  <FinancialHealthCharts financials={financials} />
-
-                  {/* Zone 3: Operational Summary */}
-                  <OperationalSummary
-                    projectId={id!}
-                    projectType={project.project_type}
-                    financials={financials}
-                    onNavigate={handleTabChange}
-                  />
                 </div>
               )}
 
