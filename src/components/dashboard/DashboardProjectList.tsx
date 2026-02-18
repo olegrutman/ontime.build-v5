@@ -1,11 +1,30 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, Plus, HardHat, Truck } from 'lucide-react';
+import { Briefcase, Plus, HardHat, Truck, ChevronDown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 import { StatusMenu, type ProjectStatusFilter } from './StatusMenu';
 import { ProjectRow } from './ProjectRow';
+
+const STATUS_LABELS: Record<ProjectStatusFilter, string> = {
+  setup: 'Setup',
+  active: 'Active',
+  on_hold: 'On Hold',
+  completed: 'Completed',
+  archived: 'Archived',
+};
+
+const STATUS_COLORS: Record<ProjectStatusFilter, string> = {
+  setup: 'bg-violet-500',
+  active: 'bg-green-500',
+  on_hold: 'bg-amber-500',
+  completed: 'bg-blue-500',
+  archived: 'bg-muted-foreground',
+};
 
 interface Project {
   id: string;
@@ -42,6 +61,8 @@ export function DashboardProjectList({
   onStatusChange,
 }: DashboardProjectListProps) {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+  const [statusOpen, setStatusOpen] = useState(false);
 
   const filteredProjects = useMemo(() => {
     if (statusFilter === 'setup') {
@@ -51,6 +72,18 @@ export function DashboardProjectList({
   }, [projects, statusFilter]);
 
   const canCreateProject = orgType === 'GC' || orgType === 'TC';
+
+  // Check if any non-current status has items (hint dot)
+  const hasOtherItems = useMemo(() => {
+    return Object.entries(statusCounts).some(
+      ([key, count]) => key !== statusFilter && count > 0
+    );
+  }, [statusCounts, statusFilter]);
+
+  const handleMobileFilterChange = (filter: ProjectStatusFilter) => {
+    onStatusFilterChange(filter);
+    setStatusOpen(false);
+  };
 
   const emptyStateConfig = {
     GC: {
@@ -83,12 +116,40 @@ export function DashboardProjectList({
 
   return (
     <div className="space-y-0">
-      {/* Inline Status Tabs */}
-      <StatusMenu
-        currentFilter={statusFilter}
-        onFilterChange={onStatusFilterChange}
-        counts={statusCounts}
-      />
+      {/* Status Tabs - Collapsible on mobile */}
+      {isMobile ? (
+        <Collapsible open={statusOpen} onOpenChange={setStatusOpen}>
+          <CollapsibleTrigger className="flex items-center justify-between w-full py-2.5 px-1">
+            <div className="flex items-center gap-2">
+              <span className={cn('w-2.5 h-2.5 rounded-full', STATUS_COLORS[statusFilter])} />
+              <span className="text-sm font-medium">{STATUS_LABELS[statusFilter]}</span>
+              <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                {statusCounts[statusFilter]}
+              </span>
+              {hasOtherItems && !statusOpen && (
+                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+              )}
+            </div>
+            <ChevronDown className={cn(
+              'h-4 w-4 text-muted-foreground transition-transform',
+              statusOpen && 'rotate-180'
+            )} />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <StatusMenu
+              currentFilter={statusFilter}
+              onFilterChange={handleMobileFilterChange}
+              counts={statusCounts}
+            />
+          </CollapsibleContent>
+        </Collapsible>
+      ) : (
+        <StatusMenu
+          currentFilter={statusFilter}
+          onFilterChange={onStatusFilterChange}
+          counts={statusCounts}
+        />
+      )}
 
       {/* Project List */}
       <div className="mt-4">
