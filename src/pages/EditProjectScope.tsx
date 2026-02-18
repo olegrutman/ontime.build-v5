@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Sparkles, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { AppLayout } from '@/components/layout';
@@ -123,6 +123,8 @@ export default function EditProjectScope() {
   const [projectType, setProjectType] = useState('');
   const [scope, setScope] = useState<ScopeData>({ ...defaultScope, project_id: id || '' });
   const [isNew, setIsNew] = useState(false);
+  const [scopeDescription, setScopeDescription] = useState<string>('');
+  const [generatingDescription, setGeneratingDescription] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -167,6 +169,7 @@ export default function EditProjectScope() {
           siding_materials: sidingMaterials,
           decorative_items: decorativeItems,
         });
+        setScopeDescription((scopeData as any).scope_description || '');
       } else {
         setIsNew(true);
         setScope({ ...defaultScope, project_id: id });
@@ -262,6 +265,24 @@ export default function EditProjectScope() {
     setScope((prev) => ({ ...prev, [field]: value }));
   };
 
+  const handleGenerateDescription = async () => {
+    if (!id) return;
+    setGeneratingDescription(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-scope-description', {
+        body: { project_id: id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setScopeDescription(data.description || '');
+      toast.success('Scope description generated');
+    } catch (err: any) {
+      console.error('Error generating description:', err);
+      toast.error(err.message || 'Failed to generate description');
+    }
+    setGeneratingDescription(false);
+  };
+
   const toggleArrayItem = (field: 'siding_materials' | 'decorative_items', item: string) => {
     setScope((prev) => {
       const current = prev[field] || [];
@@ -310,6 +331,39 @@ export default function EditProjectScope() {
             Save Changes
           </Button>
         </div>
+
+        {/* Scope Description Card */}
+        {!isNew && (
+          <Card className="bg-muted/30">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-base">Scope Description</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleGenerateDescription}
+                disabled={generatingDescription}
+              >
+                {generatingDescription ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                ) : scopeDescription ? (
+                  <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                )}
+                {scopeDescription ? 'Regenerate' : 'Generate Description'}
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {scopeDescription ? (
+                <p className="text-sm text-muted-foreground leading-relaxed">{scopeDescription}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  No AI description yet. Click "Generate Description" to create one from your scope details.
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid gap-6 md:grid-cols-2">
           {/* Structure Section */}
