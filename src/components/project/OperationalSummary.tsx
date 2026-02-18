@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ClipboardList, Receipt, Users, Edit, FileText, Plus, Sparkles, Loader2, RefreshCw } from 'lucide-react';
+import { ClipboardList, Receipt, Users, Edit, FileText, Plus, Sparkles, Loader2, RefreshCw, MessageSquareMore } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -83,6 +83,8 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
   const [loadingScope, setLoadingScope] = useState(true);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [generatingDescription, setGeneratingDescription] = useState(false);
+  const [openRfiCount, setOpenRfiCount] = useState(0);
+  const [loadingRfis, setLoadingRfis] = useState(true);
 
   const creatorOrgType = userOrgRoles[0]?.organization?.type ?? null;
 
@@ -107,6 +109,17 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
     };
     fetchTeam();
     fetchScope();
+
+    const fetchRfiCount = async () => {
+      const { count, error } = await supabase
+        .from('project_rfis')
+        .select('id', { count: 'exact', head: true })
+        .eq('project_id', projectId)
+        .eq('status', 'OPEN');
+      if (!error) setOpenRfiCount(count ?? 0);
+      setLoadingRfis(false);
+    };
+    fetchRfiCount();
   }, [projectId, fetchTeam]);
 
   const { recentWorkOrders, recentInvoices } = financials;
@@ -199,7 +212,30 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
             <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Recent Invoices</span>
           </button>
           <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => onNavigate('invoices')}>View All</Button>
+      </div>
+
+      {/* Open RFIs */}
+      <div className="border bg-card p-3 sm:col-span-2">
+        <div className="flex items-center justify-between mb-2">
+          <button onClick={() => onNavigate('rfis')} className="flex items-center gap-1.5 hover:text-primary transition-colors">
+            <MessageSquareMore className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Open RFIs</span>
+          </button>
+          <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => onNavigate('rfis')}>View All</Button>
         </div>
+        {loadingRfis ? (
+          <Skeleton className="h-8" />
+        ) : openRfiCount > 0 ? (
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold tabular-nums">{openRfiCount}</span>
+            <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-0 text-[10px]">
+              {openRfiCount} Open
+            </Badge>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground py-2">No open RFIs</p>
+        )}
+      </div>
         {recentInvoices.length === 0 ? (
           <p className="text-xs text-muted-foreground py-2">No invoices yet</p>
         ) : (
