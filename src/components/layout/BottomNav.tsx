@@ -10,6 +10,7 @@ import {
   ClipboardList,
   FileText,
   ShoppingCart,
+  MessageSquareMore,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -48,6 +49,7 @@ export function BottomNav() {
     { label: 'WOs', icon: ClipboardList, tab: 'work-orders' },
     { label: 'Invoices', icon: FileText, tab: 'invoices' },
     { label: 'POs', icon: ShoppingCart, tab: 'purchase-orders' },
+    { label: 'RFIs', icon: MessageSquareMore, tab: 'rfis' },
   ];
 
   const items = isProjectPage ? projectItems : dashboardItems;
