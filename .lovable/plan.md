@@ -1,23 +1,18 @@
 
+# Pass RFI Context to AI Description Generator
 
-# Fix: RFI to Work Order Data Not Transferring
+## Problem
 
-## Root Cause
+When converting an RFI to a Work Order, the RFI question and answer are stored in `data.description` (pre-filled by `RFIsTab.handleConvertToWO`), but the Review step's `generateDescription` function never sends this to the edge function. The AI generates a generic description without the RFI context.
 
-The `WorkOrderWizard` component is permanently mounted inside `RFIsTab`. React's `useState` only uses its initial value on the **first render**. When the user clicks "Convert to Work Order", `woInitialData` state updates but the wizard's internal `formData` state was already initialized with the empty default -- it never picks up the new value.
+## Changes
 
-## Fix
+### 1. `src/components/work-order-wizard/steps/ReviewStep.tsx`
 
-**File: `src/components/work-order-wizard/WorkOrderWizard.tsx`**
+Add `rfi_context: data.description` to the body sent to the edge function, so the existing pre-filled description (containing "RFI-N: question\n\nAnswer: ...") is passed along.
 
-Add a `useEffect` that resets `formData` and `currentStep` whenever `open` transitions to `true`. This ensures every time the wizard opens, it picks up the latest `initialData`.
+### 2. `supabase/functions/generate-work-order-description/index.ts`
 
-```text
-useEffect:
-  when `open` becomes true:
-    setFormData({ ...INITIAL_WIZARD_DATA, ...initialData })
-    setCurrentStep(1)
-```
-
-This is a single small change -- add a `useEffect` with dependencies `[open, initialData]` that runs the reset logic when the dialog opens. No other files need changes.
-
+- Accept an optional `rfi_context` field in the request body
+- When present, add it to the context parts sent to the AI (e.g. `RFI Context: {rfi_context}`)
+- Update the system/user prompt to instruct the AI to incorporate the RFI question and answer into a concise scope of work description
