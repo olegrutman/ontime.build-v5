@@ -1,27 +1,62 @@
 
 
-# Add Profile Icon to All Mobile Headers
+# "More" Menu for Project Bottom Nav
 
-## Problem
-The main `TopBar` (used on Dashboard, Financials, Partners, etc.) already shows a profile avatar with dropdown on mobile. However, two project-level headers are missing it:
-1. `MobileProjectHeader` -- used on the Project Home screen (mobile only)
-2. `WorkOrderTopBar` -- used on the Work Order detail screen
+## What Changes
 
-## Changes
+The project bottom nav currently shows 7 items in a single row, which is too cramped on mobile. We'll show the 4 most important tabs directly, and group the rest under a "More" button that opens a bottom drawer.
 
-### 1. `src/components/project/MobileProjectHeader.tsx`
-- Import `Avatar`, `AvatarFallback`, `DropdownMenu` (and related), `useAuth`, and the same icons used in `TopBar`
-- Add the same avatar + dropdown menu pattern from `TopBar` after the notification bell
-- The dropdown includes: Profile, role-based admin links (Estimate Approvals, Manage Suppliers, My Team), Settings, and Sign Out
+### Visible tabs (always shown):
+- **Home** (back to dashboard)
+- **Overview**
+- **WOs** (Work Orders)
+- **More** (opens drawer)
 
-### 2. `src/components/change-order-detail/WorkOrderTopBar.tsx`
-- Import `Avatar`, `AvatarFallback`, `DropdownMenu` (and related), `useAuth`, and the same icons
-- Add the avatar + dropdown after the notification bell, visible only on mobile (`lg:hidden`)
-- Same dropdown menu items as above
+### Items inside the "More" drawer:
+- SOV
+- Invoices
+- POs
+- RFIs
 
-### Technical Details
-Both components will replicate the existing pattern from `TopBar` (lines 67-118):
-- Compute `initials` from `profile.full_name`
-- Render `Avatar` with `AvatarFallback` inside a `DropdownMenuTrigger`
-- Show the trigger only on mobile (`lg:hidden`)
-- Dropdown includes role-based menu items using `currentRole` and `permissions` from `useAuth()`
+If any of the "More" items is currently active, the "More" button gets the active (primary) color so the user knows they're on one of those tabs.
+
+## Changes to `src/components/layout/BottomNav.tsx`
+
+1. Split `projectItems` into two arrays:
+   - `primaryProjectItems`: Home, Overview, WOs (3 items)
+   - `moreProjectItems`: SOV, Invoices, POs, RFIs (4 items)
+
+2. Add a `moreOpen` state (`useState<boolean>(false)`)
+
+3. Render the 3 primary items as buttons, then a 4th "More" button with the `MoreHorizontal` (or `Ellipsis`) icon from lucide-react
+
+4. The "More" button highlights as active if any `moreProjectItems` tab matches `activeTab`
+
+5. Clicking "More" opens a Vaul `Drawer` (already available in the project) from the bottom, showing the 4 additional items as a vertical list with icons and labels
+
+6. Tapping an item in the drawer navigates to that tab and closes the drawer
+
+7. The drawer includes a `DrawerTitle` for accessibility ("More options")
+
+8. Dashboard context stays unchanged (5 items, fits fine)
+
+## Technical Details
+
+```text
+Bottom bar layout (project context):
+
+[ Home ]  [ Overview ]  [ WOs ]  [ More ]
+                                   |
+                          opens Drawer with:
+                           - SOV
+                           - Invoices
+                           - POs
+                           - RFIs
+```
+
+- Import `Drawer, DrawerContent, DrawerTitle` from `@/components/ui/drawer`
+- Import `MoreHorizontal` from `lucide-react`
+- Add `useState` for drawer open state
+- "More" button: check `moreProjectItems.some(i => i.tab === activeTab)` for active state
+- Drawer items: render as buttons with icon + label, same click handler, close drawer on tap
+- No changes to dashboard items or any other file
