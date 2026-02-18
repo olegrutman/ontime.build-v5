@@ -94,6 +94,7 @@ export function ReviewStep({
           requires_equipment: data.requires_equipment,
           material_responsibility: data.material_cost_responsibility,
           equipment_responsibility: data.equipment_cost_responsibility,
+          rfi_context: data.description || undefined,
         },
       });
 

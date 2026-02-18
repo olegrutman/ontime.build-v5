@@ -26,6 +26,7 @@ interface GenerateRequest {
   requires_equipment: boolean;
   material_responsibility?: string;
   equipment_responsibility?: string;
+  rfi_context?: string;
 }
 
 const WORK_TYPE_DESCRIPTIONS: Record<string, string> = {
@@ -95,6 +96,7 @@ serve(async (req) => {
       requires_equipment,
       material_responsibility,
       equipment_responsibility,
+      rfi_context,
     } = body;
 
     const workTypeDesc = WORK_TYPE_DESCRIPTIONS[work_type] || work_type;
@@ -115,6 +117,10 @@ serve(async (req) => {
       }
     }
 
+    if (rfi_context) {
+      contextParts.push(`RFI Context (question & answer):\n${rfi_context}`);
+    }
+
     if (material_responsibility) {
       contextParts.push(
         `Materials: ${material_responsibility} responsible${requires_materials ? " (additional materials needed)" : ""}`
@@ -133,7 +139,8 @@ Use industry-standard terminology.
 Focus on what needs to be done, where, and any special considerations.
 Keep descriptions under 150 words.
 Do not include pricing or scheduling information.
-Write in a professional but direct tone.`;
+Write in a professional but direct tone.
+If RFI context is provided, combine the question and answer into a clear, actionable scope of work description.`;
 
     const userPrompt = `Generate a scope of work description for the following work order:
 
