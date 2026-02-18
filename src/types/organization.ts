@@ -202,7 +202,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, RolePermissions> = {
     canViewInvoices: false,
     canAddHoursEstimates: false,
     canAddMaterialLists: false,
-    canManageOrg: false,
+    canManageOrg: true,
     canInviteMembers: false,
     canCreateWorkOrders: false,
     canCreatePOs: false,
