@@ -121,7 +121,7 @@ export function AppSidebar() {
               {mainNavItems
                 .filter((item) => {
                   if (item.url === '/financials' && isSupplier) return false;
-                  if (item.url === '/rfis' && isSupplier) return false;
+                  
                   return true;
                 })
                 .map((item) => (
