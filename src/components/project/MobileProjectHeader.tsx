@@ -1,16 +1,20 @@
 import { useState } from 'react';
-import { ChevronDown, Download, Loader2 } from 'lucide-react';
+import { ChevronDown, Download, Loader2, User, Shield, Users, Settings, LogOut, Package } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { NotificationSheet } from '@/components/notifications';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 interface MobileProjectHeaderProps {
   projectName: string;
@@ -49,7 +53,13 @@ export function MobileProjectHeader({
   onStatusChange,
 }: MobileProjectHeaderProps) {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { profile, currentRole, signOut } = useAuth();
   const [downloading, setDownloading] = useState(false);
+
+  const initials = profile?.full_name
+    ? profile.full_name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+    : '?';
 
   const handleDownloadSummary = async () => {
     setDownloading(true);
@@ -114,6 +124,57 @@ export function MobileProjectHeader({
 
         {/* Notifications */}
         <NotificationSheet />
+
+        {/* Profile avatar + dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-7 w-7 p-0 rounded-full shrink-0">
+              <Avatar className="h-7 w-7">
+                <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => navigate('/profile')}>
+              <User className="mr-2 h-4 w-4" />
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {currentRole === 'GC_PM' && (
+              <DropdownMenuItem onClick={() => navigate('/approvals/estimates')}>
+                <Shield className="mr-2 h-4 w-4" />
+                Estimate Approvals
+              </DropdownMenuItem>
+            )}
+            {(currentRole === 'GC_PM' || currentRole === 'TC_PM') && (
+              <DropdownMenuItem onClick={() => navigate('/admin/suppliers')}>
+                <Package className="mr-2 h-4 w-4" />
+                Manage Suppliers
+              </DropdownMenuItem>
+            )}
+            {(currentRole === 'GC_PM' || currentRole === 'TC_PM' || currentRole === 'FC_PM') && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/org/team')}>
+                  <Users className="mr-2 h-4 w-4" />
+                  My Team
+                </DropdownMenuItem>
+              </>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate('/profile')}>
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => signOut()}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );

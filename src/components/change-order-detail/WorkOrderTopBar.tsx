@@ -1,10 +1,21 @@
 import { useNavigate } from 'react-router-dom';
+import { User, Shield, Users, Settings, LogOut, Package } from 'lucide-react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { NotificationSheet } from '@/components/notifications';
 import { ChangeOrderStatusBadge } from './ChangeOrderStatusBadge';
 import { ChangeOrderStatus } from '@/types/changeOrderProject';
+import { useAuth } from '@/hooks/useAuth';
 
 interface WorkOrderTopBarProps {
   projectName: string;
@@ -20,6 +31,11 @@ export function WorkOrderTopBar({
   status,
 }: WorkOrderTopBarProps) {
   const navigate = useNavigate();
+  const { profile, currentRole, signOut } = useAuth();
+
+  const initials = profile?.full_name
+    ? profile.full_name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+    : '?';
 
   const handleTabClick = (tab: string) => {
     if (tab === 'work-orders' || tab === 'overview') {
@@ -53,6 +69,57 @@ export function WorkOrderTopBar({
 
         {/* Notifications */}
         <NotificationSheet />
+
+        {/* Mobile profile avatar + dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="lg:hidden h-9 w-9 rounded-full">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => navigate('/profile')}>
+              <User className="mr-2 h-4 w-4" />
+              Profile
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {currentRole === 'GC_PM' && (
+              <DropdownMenuItem onClick={() => navigate('/approvals/estimates')}>
+                <Shield className="mr-2 h-4 w-4" />
+                Estimate Approvals
+              </DropdownMenuItem>
+            )}
+            {(currentRole === 'GC_PM' || currentRole === 'TC_PM') && (
+              <DropdownMenuItem onClick={() => navigate('/admin/suppliers')}>
+                <Package className="mr-2 h-4 w-4" />
+                Manage Suppliers
+              </DropdownMenuItem>
+            )}
+            {(currentRole === 'GC_PM' || currentRole === 'TC_PM' || currentRole === 'FC_PM') && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/org/team')}>
+                  <Users className="mr-2 h-4 w-4" />
+                  My Team
+                </DropdownMenuItem>
+              </>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => navigate('/profile')}>
+              <Settings className="mr-2 h-4 w-4" />
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => signOut()}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Bottom row: Navigation tabs - hidden on mobile/tablet */}
