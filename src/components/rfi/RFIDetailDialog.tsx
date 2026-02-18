@@ -35,8 +35,8 @@ export function RFIDetailDialog({
 
   if (!rfi) return null;
 
-  const canAnswer = currentOrgId === rfi.assigned_to_org_id && rfi.status === 'OPEN';
-  const canClose = rfi.status === 'ANSWERED' && (currentOrgId === rfi.submitted_by_org_id);
+  const canAnswer = rfi.status === 'OPEN';
+  const canClose = rfi.status === 'ANSWERED';
   const canConvert = (rfi.status === 'ANSWERED' || rfi.status === 'CLOSED') && canCreateWorkOrders;
 
   const handleAnswer = async () => {
