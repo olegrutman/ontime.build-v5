@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface SOVReadiness {
   isReady: boolean;
@@ -13,6 +14,7 @@ interface Contract {
   contract_sum: number | null;
   trade: string | null;
   to_org_id: string | null;
+  from_org_id: string | null;
 }
 
 interface SOV {
@@ -22,11 +24,14 @@ interface SOV {
 
 export function useSOVReadiness(
   projectId: string | undefined,
-  userOrgId: string | undefined
+  userOrgId: string | undefined,
+  isProjectCreator: boolean = false
 ): SOVReadiness & { refetch: () => void } {
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [sovs, setSovs] = useState<SOV[]>([]);
   const [loading, setLoading] = useState(true);
+  const [creatorFlag, setCreatorFlag] = useState(false);
+  const { user } = useAuth();
 
   const fetchData = useCallback(async () => {
     if (!projectId) {
@@ -36,16 +41,24 @@ export function useSOVReadiness(
 
     setLoading(true);
     try {
-      const [contractsResult, sovsResult] = await Promise.all([
+      const [contractsResult, sovsResult, projectResult] = await Promise.all([
         supabase
           .from('project_contracts')
-          .select('id, contract_sum, trade, to_org_id')
+          .select('id, contract_sum, trade, to_org_id, from_org_id')
           .eq('project_id', projectId),
         supabase
           .from('project_sov')
           .select('id, contract_id')
           .eq('project_id', projectId),
+        supabase
+          .from('projects')
+          .select('created_by')
+          .eq('id', projectId)
+          .single(),
       ]);
+
+      const isCreator = isProjectCreator || !!(user && projectResult.data?.created_by === user.id);
+      setCreatorFlag(isCreator);
 
       setContracts((contractsResult.data || []) as Contract[]);
       setSovs((sovsResult.data || []) as SOV[]);
@@ -72,14 +85,14 @@ export function useSOVReadiness(
     }
 
     // Filter to primary contracts only (exclude Work Order trades) with contract_sum > 0
-    // AND where the user's org is the payer (to_org_id) - SOVs are managed by the payer
+    // Payer (to_org_id) manages SOVs, but project creator can manage all
     const isWorkOrderContract = (c: Contract) =>
       c.trade === 'Work Order' || c.trade === 'Work Order Labor';
 
     const primaryContracts = contracts.filter(
       c => (c.contract_sum || 0) > 0 && 
            !isWorkOrderContract(c) &&
-           (!userOrgId || c.to_org_id === userOrgId) // Only check contracts where user's org is payer
+           (!userOrgId || c.to_org_id === userOrgId || (creatorFlag && (c.from_org_id === userOrgId || c.to_org_id === userOrgId)))
     );
 
     // Edge case: No primary contracts with value - SOV is ready (nothing to configure)
@@ -114,7 +127,7 @@ export function useSOVReadiness(
       loading: false,
       message
     };
-  }, [contracts, sovs, loading]);
+  }, [contracts, sovs, loading, creatorFlag]);
 
   return {
     ...readiness,
