@@ -2158,6 +2158,7 @@ export type Database = {
           created_at: string
           due_date: string | null
           id: string
+          location_data: Json | null
           priority: string
           project_id: string
           question: string
@@ -2177,6 +2178,7 @@ export type Database = {
           created_at?: string
           due_date?: string | null
           id?: string
+          location_data?: Json | null
           priority?: string
           project_id: string
           question: string
@@ -2196,6 +2198,7 @@ export type Database = {
           created_at?: string
           due_date?: string | null
           id?: string
+          location_data?: Json | null
           priority?: string
           project_id?: string
           question?: string
