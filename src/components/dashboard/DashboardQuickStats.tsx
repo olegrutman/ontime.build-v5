@@ -39,7 +39,7 @@ export function DashboardQuickStats({ openWorkOrders, pendingInvoices, reminders
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div className="grid grid-cols-3 gap-2 sm:gap-3">
       {tiles.map((tile) => {
         const Icon = tile.icon;
         return (
@@ -48,13 +48,13 @@ export function DashboardQuickStats({ openWorkOrders, pendingInvoices, reminders
             className="cursor-pointer hover:shadow-md transition-shadow"
             onClick={tile.onClick}
           >
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className={`rounded-lg p-2.5 ${tile.bg}`}>
+            <CardContent className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-4">
+              <div className={`rounded-lg p-1.5 sm:p-2.5 hidden sm:block ${tile.bg}`}>
                 <Icon className={`h-5 w-5 ${tile.accent}`} />
               </div>
-              <div>
-                <p className="text-2xl font-bold leading-none">{tile.count}</p>
-                <p className="text-xs text-muted-foreground mt-1">{tile.label}</p>
+              <div className="min-w-0">
+                <p className="text-lg sm:text-2xl font-bold leading-none">{tile.count}</p>
+                <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1 truncate">{tile.label}</p>
               </div>
             </CardContent>
           </Card>
