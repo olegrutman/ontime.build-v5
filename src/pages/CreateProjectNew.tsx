@@ -281,11 +281,11 @@ export default function CreateProjectNew() {
     // Determine which team members SHOULD have contracts based on creator role
     const membersNeedingContracts = (dbTeamMembers || []).filter(m => {
       if (creatorRole === 'General Contractor') {
-        return m.role === 'Trade Contractor' || m.role === 'Supplier';
+        return m.role === 'Trade Contractor';
       }
       if (creatorRole === 'Trade Contractor') {
-        // TC needs upstream contract with GC AND downstream with FC/Supplier
-        return m.role === 'General Contractor' || m.role === 'Field Crew' || m.role === 'Supplier';
+        // TC needs upstream contract with GC AND downstream with FC
+        return m.role === 'General Contractor' || m.role === 'Field Crew';
       }
       return false;
     });
