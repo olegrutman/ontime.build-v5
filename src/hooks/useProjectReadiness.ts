@@ -55,28 +55,16 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
       // 4. Required team members invited (>1 participant)
       const hasTeam = participants.length > 1;
 
-      // Exclude FC from blocking logic
-      const blockingParticipants = participants.filter(p => p.role !== 'FC');
-      const pendingOrgs = blockingParticipants
+      const pendingOrgs = participants
         .filter(p => p.invite_status !== 'ACCEPTED')
         .map(p => (p as any).organizations?.name)
         .filter(Boolean);
-      const allAccepted = blockingParticipants.length > 1 && pendingOrgs.length === 0;
+      const allAccepted = participants.length > 1 && pendingOrgs.length === 0;
       const acceptedLabel = allAccepted
         ? 'All invites accepted'
         : pendingOrgs.length > 0
           ? `Awaiting: ${pendingOrgs.join(', ')}`
           : 'All invites accepted';
-
-      // FC informational item
-      const fcParticipants = participants.filter(p => p.role === 'FC');
-      const fcAccepted = fcParticipants.length > 0 && fcParticipants.every(p => p.invite_status === 'ACCEPTED');
-      const fcNames = fcParticipants.map(p => (p as any).organizations?.name).filter(Boolean);
-      const fcLabel = fcParticipants.length === 0
-        ? null
-        : fcAccepted
-          ? `FC accepted: ${fcNames.join(', ')}`
-          : `FC invited: ${fcNames.join(', ')} (pending)`;
 
       // 6. Material responsibility selected
       const hasMaterialResp = contracts.some(c => c.material_responsibility != null && c.material_responsibility !== '');
@@ -102,10 +90,6 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
         { key: 'active_contract', label: 'Contract mode selected', complete: hasActiveContract },
       ];
 
-      // Add FC informational item if FC participants exist
-      if (fcLabel) {
-        items.push({ key: 'fc_accepted', label: fcLabel, complete: fcAccepted, informational: true });
-      }
 
       setChecklist(items);
     } catch (err) {
