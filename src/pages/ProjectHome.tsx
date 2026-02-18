@@ -62,6 +62,7 @@ export default function ProjectHome() {
   // Detect if current org is a supplier
   const currentOrg = userOrgRoles[0]?.organization;
   const isSupplier = currentOrg?.type === 'SUPPLIER';
+  const isFC = currentOrg?.type === 'FC';
   const supplierOrgId = isSupplier ? currentOrg?.id : null;
 
   // Realtime subscriptions – refreshKey bumps when any project entity changes
@@ -194,7 +195,7 @@ export default function ProjectHome() {
               {activeTab === 'overview' && (
                 <div className="space-y-4">
                   {/* Readiness Card for setup/draft projects */}
-                  {(project.status === 'setup' || project.status === 'draft') && (
+                  {(project.status === 'setup' || project.status === 'draft') && !isFC && (
                     <ProjectReadinessCard readiness={readiness} />
                   )}
 
