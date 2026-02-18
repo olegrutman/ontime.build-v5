@@ -294,7 +294,7 @@ function generateStaticListItems(
 }
 
 export function useContractSOV(projectId: string | undefined) {
-  const { userOrgRoles } = useAuth();
+  const { userOrgRoles, user } = useAuth();
   const currentOrgId = userOrgRoles[0]?.organization?.id;
   
   const [contracts, setContracts] = useState<ProjectContract[]>([]);
@@ -304,6 +304,7 @@ export function useContractSOV(projectId: string | undefined) {
   const [sovBillingStatus, setSovBillingStatus] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isProjectCreator, setIsProjectCreator] = useState(false);
 
   // Fetch all data
   const fetchData = useCallback(async () => {
@@ -312,8 +313,8 @@ export function useContractSOV(projectId: string | undefined) {
     setLoading(true);
     
     try {
-      // Fetch contracts, SOVs, and items in parallel
-      const [contractsResult, sovsResult, templatesResult] = await Promise.all([
+      // Fetch contracts, SOVs, project creator info, and items in parallel
+      const [contractsResult, sovsResult, templatesResult, projectResult] = await Promise.all([
         supabase
           .from('project_contracts')
           .select(`
@@ -329,8 +330,16 @@ export function useContractSOV(projectId: string | undefined) {
         supabase
           .from('sov_templates')
           .select('*')
-          .order('display_name')
+          .order('display_name'),
+        supabase
+          .from('projects')
+          .select('created_by')
+          .eq('id', projectId)
+          .single()
       ]);
+      
+      const creatorMatch = !!(user && projectResult.data?.created_by === user.id);
+      setIsProjectCreator(creatorMatch);
       
       // Map contracts with org names and filter to only contracts where current org is a party
       const fetchedContracts: ProjectContract[] = (contractsResult.data || [])
@@ -350,9 +359,9 @@ export function useContractSOV(projectId: string | undefined) {
           from_org_name: c.from_org?.name || null,
           to_org_name: c.to_org?.name || null,
         }))
-        // Filter to only contracts where current user's org is a party
+        // Filter to only contracts where current user's org is a party (or user is project creator)
         .filter((c: ProjectContract) => 
-          c.from_org_id === currentOrgId || c.to_org_id === currentOrgId
+          c.from_org_id === currentOrgId || c.to_org_id === currentOrgId || creatorMatch
         );
       const fetchedSovs = (sovsResult.data || []) as ContractSOV[];
       
@@ -452,7 +461,7 @@ export function useContractSOV(projectId: string | undefined) {
     return contracts.filter(c => 
       (c.contract_sum || 0) > 0 &&
       !isWorkOrderContract(c) &&
-      c.to_org_id === currentOrgId &&  // Current org is payer
+      (c.to_org_id === currentOrgId || isProjectCreator) &&  // Current org is payer OR project creator
       !contractsWithSOVs.has(c.id)     // No SOV exists
     );
   })();
@@ -462,11 +471,11 @@ export function useContractSOV(projectId: string | undefined) {
     if (!projectId || contracts.length === 0) return;
     
     // Filter to only PRIMARY contracts (not work orders) with a contract_sum > 0
-    // AND where the current org is the PAYER (to_org_id)
+    // AND where the current org is the PAYER (to_org_id) OR user is project creator
     const contractsWithValue = contracts.filter(c => 
       (c.contract_sum || 0) > 0 && 
       !isWorkOrderContract(c) &&
-      c.to_org_id === currentOrgId  // Only payer can create SOV
+      (c.to_org_id === currentOrgId || isProjectCreator)  // Payer or project creator
     );
     
     if (contractsWithValue.length === 0) {
