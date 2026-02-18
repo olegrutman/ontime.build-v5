@@ -1,49 +1,25 @@
 
 
-# Make All Project Team Members See (and Interact with) Every RFI
+# Show RFI Page for Supplier Users
 
-## Current State
+## Problem
+The sidebar navigation in `AppSidebar.tsx` explicitly hides the "RFIs" link for supplier users (line 124). Even though we enabled `canCreateRFIs: true` for suppliers, they cannot navigate to the page.
 
-- **SELECT policy** (viewing): Already uses `has_project_access(auth.uid(), project_id)` -- all project team members can view all RFIs. No change needed here.
-- **UPDATE policy** (answering/closing): Currently restricted to users whose org is either the `assigned_to_org_id` or `submitted_by_org_id`. This means other team members (e.g., a GC viewing a TC-to-Supplier RFI) cannot answer or close it.
+## Fix
 
-## Proposed Change
+**File: `src/components/layout/AppSidebar.tsx`** (1 line)
 
-Broaden the UPDATE RLS policy so that any project team member can update an RFI (answer it or close it), not just the assigned/submitting org.
-
-### Database Migration
-
-Drop the existing restrictive UPDATE policy and replace it with one that mirrors the SELECT policy:
-
-```sql
-DROP POLICY "Assigned or submitting org can update RFIs" ON project_rfis;
-
-CREATE POLICY "Project team members can update RFIs"
-  ON project_rfis
-  FOR UPDATE
-  USING (has_project_access(auth.uid(), project_id));
-```
-
-### Frontend Change
-
-In `src/components/rfi/RFIDetailDialog.tsx`, update the `canAnswer` and `canClose` guards so any team member can answer an open RFI or close an answered one (not just the assigned/submitting org):
+Remove the filter that hides the RFIs nav item for suppliers. Change:
 
 ```
-// Before:
-const canAnswer = currentOrgId === rfi.assigned_to_org_id && rfi.status === 'OPEN';
-const canClose = rfi.status === 'ANSWERED' && (currentOrgId === rfi.submitted_by_org_id);
-
-// After:
-const canAnswer = rfi.status === 'OPEN';
-const canClose = rfi.status === 'ANSWERED';
+if (item.url === '/rfis' && isSupplier) return false;
 ```
 
-## Files Affected
+to simply not filter out `/rfis` for suppliers. The `/financials` filter can remain since suppliers don't need that page.
 
-- **Database**: 1 migration (replace UPDATE RLS policy on `project_rfis`)
-- **`src/components/rfi/RFIDetailDialog.tsx`**: Update `canAnswer` and `canClose` logic (2 lines)
+Also check the mobile bottom nav (`BottomNav.tsx`) to ensure RFIs are accessible on mobile for suppliers as well.
 
-## What This Achieves
+## Technical Details
 
-- All project team members can view, answer, and close any RFI on the project
-- The 5-step creation wizard remains unchanged (only users with `canCreateRFIs` permission can create)
+- Line 124 in `AppSidebar.tsx`: Remove the `isSupplier` check for `/rfis`
+- Verify `BottomNav.tsx` doesn't have a similar filter blocking supplier access on mobile
