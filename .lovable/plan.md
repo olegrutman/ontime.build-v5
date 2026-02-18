@@ -1,135 +1,78 @@
 
 
-# Overhaul Project Readiness Engine: Role-Based Setup and Auto-Activation
-
-## Overview
-
-This is a significant refactoring of the project readiness system to enforce role-based setup responsibilities depending on WHO created the project (GC or TC), add automatic project activation when all conditions are met, and block Work Orders, Purchase Orders, and Invoices until the project is ACTIVE.
-
-## Current State
-
-- The `projects` table has a `created_by_org_id` column that identifies which organization created the project
-- The `projects` table has a `status` field constrained to: `setup`, `active`, `draft`, `on_hold`, `completed`, `archived`
-- The readiness hook (`useProjectReadiness`) has a generic 9-item checklist that doesn't vary by creator role
-- There is no blocking of WOs/POs/Invoices based on project status
-- Contract activation is manual via a button
-- There is no supplier estimate tracking in readiness
+# AI-Generated Scope of Work Description
 
 ## What Changes
 
-### 1. Readiness Hook Rewrite (`src/hooks/useProjectReadiness.ts`)
+Add an AI-generated essential scope of work description that appears in the Scope tile on the project overview page. The AI takes all the structured scope data (floors, foundation, siding, roofing, inclusions, etc.) and produces a concise, professional paragraph summarizing the framing scope of work. This description is stored in the database so it only needs to be generated once (and can be regenerated when scope changes).
 
-The hook will accept the current user's org type and the project's `created_by_org_id` to build a **context-aware checklist**.
+## How It Works
 
-New data queries added:
-- Fetch `created_by_org_id` from `projects` table and join to `organizations` to get creator org type
-- Fetch `supplier_estimates` for the project to check estimate upload status
+1. User configures project scope details (floors, foundation, siding, etc.)
+2. A "Generate Description" button appears in the Scope tile on the overview page
+3. AI reads all scope fields and produces a 2-3 sentence essential scope summary
+4. The description is saved to the database and displayed in the Scope tile
+5. User can regenerate if scope changes
 
-**TC-Created Project Checklist:**
-1. Contract sum with GC entered
-2. Contract sum with FC entered
-3. SOV for GC contract created
-4. SOV for FC contract created
-5. Material responsibility selected
-6. Supplier assigned (if TC responsible for materials)
-7. GC accepted
-8. FC accepted
-9. Supplier accepted (if assigned)
-10. Supplier estimate uploaded or confirmed none (if supplier assigned)
+## Technical Changes
 
-**GC-Created Project Checklist:**
-1. Contract sum with TC entered
-2. TC accepted
-3. SOV created
-4. Material responsibility selected
-5. Supplier assigned (if materials required)
-6. Supplier accepted (if assigned)
-7. Supplier estimate uploaded or confirmed none (if supplier assigned)
-8. FC accepted (only if FC was invited)
+### 1. Database Migration
 
-The hook will also:
-- Export a new `creatorOrgType` field (GC or TC)
-- Remove the generic "Organization exists", "Retainage defined", and "Contract mode selected" items
-- Remove the `firstContractId` / manual activation logic
+Add a `scope_description` text column to `project_scope_details`:
 
-### 2. Auto-Activation Logic (`src/hooks/useProjectReadiness.ts`)
-
-When `percent === 100` and project status is `setup`:
-- Automatically update `projects.status` to `active`
-- Show a toast notification: "Project is now active!"
-- No manual activation button needed
-
-### 3. Updated Readiness Card (`src/components/project/ProjectReadinessCard.tsx`)
-
-- Remove "Activate Contract" button (activation is now automatic)
-- Keep material responsibility inline buttons
-- Update title to show creator context (e.g., "TC Setup" or "GC Setup")
-- When 100% is reached and auto-activation fires, show a success state briefly
-
-### 4. Block WOs/POs/Invoices When Not Active (`src/pages/ProjectHome.tsx`)
-
-Pass `project.status` to each tab component. When `project.status !== 'active'`:
-- Show an alert banner: "Project setup incomplete. Waiting for required parties."
-- Hide the "Create" / "+" buttons in WorkOrdersTab, PurchaseOrdersTab, and InvoicesTab
-- Display empty state with the blocking message
-
-Implementation approach:
-- Add a `projectStatus` prop to `WorkOrdersTab`, `PurchaseOrdersTab`, and `InvoicesTab`
-- Each component checks if `projectStatus !== 'active'` and renders a blocking banner instead of action buttons
-
-### 5. Supplier Estimate Tracking
-
-Query `supplier_estimates` table for the project to determine if:
-- A supplier has uploaded at least one estimate (any status), OR
-- A supplier has confirmed "No Estimate Exists" (we may need a flag for this)
-
-If the `supplier_estimates` table doesn't have a "no estimate" flag, we will add a `no_estimate_confirmed` boolean column to `project_participants` via migration to track when a supplier explicitly confirms no estimate exists.
-
-## Technical Details
-
-### Database Migration
-
-Add `no_estimate_confirmed` column to `project_participants`:
 ```sql
-ALTER TABLE public.project_participants
-ADD COLUMN no_estimate_confirmed boolean DEFAULT false;
+ALTER TABLE public.project_scope_details
+ADD COLUMN IF NOT EXISTS scope_description text;
 ```
+
+### 2. New Edge Function: `generate-scope-description`
+
+**File:** `supabase/functions/generate-scope-description/index.ts`
+
+- Accepts `project_id` in the request body
+- Fetches the full `project_scope_details` row and project name from the database
+- Builds a structured prompt with all scope fields (home type, floors, foundation, roof, siding, balconies, decking, inclusions, etc.)
+- Calls Lovable AI (`google/gemini-3-flash-preview`) with a system prompt for construction scope writing
+- Returns the generated description
+- Handles 429/402 rate limit errors
+
+The system prompt will instruct the AI to write a concise (2-3 sentence) essential scope of work description for a framing contractor, covering structure type, key features, and scope inclusions.
+
+### 3. Update `config.toml`
+
+Add entry for the new function:
+```toml
+[functions.generate-scope-description]
+verify_jwt = false
+```
+
+### 4. Update Scope Tile in `OperationalSummary.tsx`
+
+In the Scope Summary tile (lines 221-240):
+
+- Fetch `scope_description` alongside existing scope fields
+- Display the AI description text below the summary line (e.g., "Single Family Home -- 2 floors")
+- Add a "Generate" button (sparkle icon) that calls the edge function
+- Show a loading spinner while generating
+- After generation, save the description to `project_scope_details` and display it
+- If description already exists, show it with a small "Regenerate" button
+
+### 5. Update `ProjectScopeSection.tsx`
+
+In the collapsed header subtitle (line 218), show the AI description instead of or alongside the basic summary stats when available. This gives users a richer preview without expanding.
 
 ### Files Modified
 
-1. **`src/hooks/useProjectReadiness.ts`** -- Complete rewrite of checklist logic based on creator org type; add auto-activation; add supplier estimate checks
-2. **`src/components/project/ProjectReadinessCard.tsx`** -- Remove activate contract button; update display for new checklist items; remove `firstContractId` usage
-3. **`src/pages/ProjectHome.tsx`** -- Pass `projectStatus` to tab components; fetch `created_by_org_id` in project query
-4. **`src/components/project/WorkOrdersTab.tsx`** -- Add `projectStatus` prop; show blocking banner when not active
-5. **`src/components/project/PurchaseOrdersTab.tsx`** -- Add `projectStatus` prop; show blocking banner when not active
-6. **`src/components/invoices/InvoicesTab.tsx`** -- Add `projectStatus` prop; show blocking banner when not active
+1. **New:** `supabase/functions/generate-scope-description/index.ts` -- Edge function calling Lovable AI
+2. **Edit:** `supabase/config.toml` -- Register new function
+3. **Edit:** `src/components/project/OperationalSummary.tsx` -- Display description in scope tile with generate button
+4. **Edit:** `src/components/project/ProjectScopeSection.tsx` -- Show description in collapsed header
 
-### Updated Hook Interface
+### UI Behavior
 
-```typescript
-export interface ProjectReadiness {
-  percent: number;
-  checklist: ReadinessItem[];
-  loading: boolean;
-  recalculate: () => void;
-  creatorOrgType: 'GC' | 'TC' | null;
-  isActive: boolean;
-}
-```
-
-### Blocking Banner Component
-
-A reusable alert shown in WO/PO/Invoice tabs:
-```
-[AlertTriangle icon] Project setup incomplete. Waiting for required parties.
-```
-
-### Key Behavioral Rules
-
-- No manual activation -- project transitions to `active` automatically
-- FC users still do NOT see the readiness card (existing behavior preserved)
-- Supplier users still do NOT see the readiness card (existing behavior preserved)
-- The `handleStatusChange` in ProjectHome will be restricted to prevent manual `active` status changes
-- Existing features (financial charts, attention banner, operational summary) remain unchanged
-- The readiness card only shows for `setup` status projects (not `draft`)
+- **No description yet + scope exists:** Show "Generate" button with sparkle icon
+- **Generating:** Button shows spinner, disabled
+- **Description exists:** Show the text, with a small "Regenerate" link
+- **No scope configured:** Show "No scope configured" as today (no generate button)
+- **Error (429/402):** Toast with appropriate message
 
