@@ -1,37 +1,35 @@
 
 
-# Show Pending Invite Names in Setup Readiness Card
+# FC Invites: Show Status but Don't Block Setup
 
 ## What Changes
 
-Instead of the generic label "All invites accepted", the checklist will show **which specific organizations** still have pending invites. For example:
+Currently, if a Field Crew (FC) organization hasn't accepted their invite, it blocks the "All invites accepted" checklist item and lowers the readiness percentage. This prevents the project from reaching 100% readiness.
 
-- "All invites accepted" (when complete)
-- "Awaiting acceptance: ABC Framing, XYZ Electric" (when incomplete)
+**New behavior:**
+- FC pending invites will **not** count toward the blocking "All invites accepted" check
+- A separate, **informational** checklist item will show FC acceptance status (e.g., "FC accepted: ABC Crew" or "FC invited: ABC Crew (pending)")
+- This item will update to show a checkmark once the FC accepts, but it won't affect the readiness percentage either way
 
 ## Technical Changes
 
-### 1. `src/hooks/useProjectReadiness.ts`
+### `src/hooks/useProjectReadiness.ts`
 
-**Update the participants query** to join organization names:
+1. **Filter FC out of the blocking logic** (lines 52-61): When calculating `pendingOrgs` and `allAccepted`, exclude participants with `role === 'FC'`. Only GC, TC, and SUPPLIER invites block readiness.
 
-```
-supabase
-  .from('project_participants')
-  .select('id, role, invite_status, organizations:organization_id(name)')
-  .eq('project_id', projectId)
-```
+2. **Add a separate informational FC item**: After the main checklist items, add an optional item (only if FC participants exist) that shows their acceptance status. This item will be marked `complete` when accepted but will **not** be included in the percentage calculation.
 
-**Build a dynamic label** for the `accepted` checklist item:
+3. **Update the `ReadinessItem` interface**: Add an optional `informational?: boolean` flag so the UI can distinguish blocking items from informational ones.
 
-- If all accepted: label = `"All invites accepted"`
-- If some pending: label = `"Awaiting: CompanyA, CompanyB"` (list the org names with non-ACCEPTED status)
+4. **Update percentage calculation** (line 97-98): Exclude items with `informational: true` from the completed/total count.
 
-### 2. `src/components/project/ProjectReadinessCard.tsx`
+### `src/components/project/ProjectReadinessCard.tsx`
 
-No structural changes needed -- it already renders `item.label` dynamically. The improved label from the hook will display automatically.
+- Informational items render with a lighter style (e.g., info icon instead of red X when incomplete) to visually distinguish them from blocking items.
 
 ## Result
 
-The readiness card will clearly tell the user **who** hasn't accepted yet, so they know exactly which team members to follow up with.
+- FC acceptance no longer blocks project activation
+- The setup page still shows whether FC has accepted, giving visibility without creating a bottleneck
+- GC, TC, and Supplier invites continue to block as before
 
