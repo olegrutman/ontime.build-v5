@@ -75,6 +75,15 @@ export function TeamStep({ team, onChange, creatorRole, projectId, creatorOrgTyp
     
     setRemovingId(member.id);
     try {
+      // Delete associated contract (if org_id exists)
+      if (member.org_id) {
+        await supabase
+          .from('project_contracts')
+          .delete()
+          .eq('project_id', projectId)
+          .or(`from_org_id.eq.${member.org_id},to_org_id.eq.${member.org_id}`);
+      }
+
       // Delete from project_invites first (if exists)
       await supabase
         .from('project_invites')
