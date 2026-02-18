@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Upload, Package, FileSpreadsheet, AlertCircle, AlertTriangle, Loader2 } from 'lucide-react';
+import { Upload, Package, FileSpreadsheet, AlertCircle, AlertTriangle, Loader2, Plus, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -21,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -28,7 +30,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { parseEnhancedInventoryCSV, EnhancedCatalogCSVRow, CatalogCategory } from '@/types/supplier';
+import { parseEnhancedInventoryCSV, EnhancedCatalogCSVRow, CatalogCategory, CATALOG_CATEGORIES, CATEGORY_LABELS } from '@/types/supplier';
+import { AddProductDialog } from '@/components/supplier-inventory/AddProductDialog';
+import { EditProductDialog } from '@/components/supplier-inventory/EditProductDialog';
 
 interface CatalogItem {
   id: string;
@@ -89,6 +93,11 @@ export default function SupplierInventory() {
   const [csvPreview, setCsvPreview] = useState<EnhancedCatalogCSVRow[]>([]);
   const [showPreview, setShowPreview] = useState(false);
   const [xlsxUploading, setXlsxUploading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editItem, setEditItem] = useState<CatalogItem | null>(null);
+  const [supplierId, setSupplierId] = useState<string | null>(null);
 
   const currentOrg = userOrgRoles[0]?.organization;
   const isSupplier = currentOrg?.type === 'SUPPLIER';
@@ -118,12 +127,13 @@ export default function SupplierInventory() {
 
     try {
       // Ensure supplier record exists, creating one if needed
-      const supplierId = await ensureSupplierRecord(currentOrg.id, currentOrg.name);
+      const sid = await ensureSupplierRecord(currentOrg.id, currentOrg.name);
+      setSupplierId(sid);
 
       const { data, error } = await supabase
         .from('catalog_items')
         .select('*')
-        .eq('supplier_id', supplierId)
+        .eq('supplier_id', sid)
         .order('category', { ascending: true })
         .order('supplier_sku', { ascending: true });
 
@@ -302,6 +312,24 @@ export default function SupplierInventory() {
   const uniqueCategories = new Set(items.map(i => i.category)).size;
   const uniqueManufacturers = new Set(items.filter(i => i.manufacturer).map(i => i.manufacturer)).size;
 
+  // Filtered items based on search and category
+  const filteredItems = useMemo(() => {
+    let result = items;
+    if (categoryFilter && categoryFilter !== 'all') {
+      result = result.filter(i => i.category === categoryFilter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(i =>
+        i.supplier_sku.toLowerCase().includes(q) ||
+        (i.name && i.name.toLowerCase().includes(q)) ||
+        i.description.toLowerCase().includes(q) ||
+        (i.manufacturer && i.manufacturer.toLowerCase().includes(q))
+      );
+    }
+    return result;
+  }, [items, searchQuery, categoryFilter]);
+
   // Detect duplicate SKUs in preview
   const duplicateSkuCount = useMemo(() => {
     if (csvPreview.length === 0) return 0;
@@ -367,9 +395,13 @@ export default function SupplierInventory() {
                   ) : (
                     <>
                       <Upload className="h-4 w-4 mr-2" />
-                      Upload CSV/Excel
+                      Upload
                     </>
                   )}
+                </Button>
+                <Button onClick={() => setAddDialogOpen(true)} disabled={!supplierId}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Product
                 </Button>
               </div>
             </div>
@@ -425,6 +457,32 @@ export default function SupplierInventory() {
               </AlertDescription>
             </Alert>
 
+            {/* Search & Filter */}
+            {!loading && items.length > 0 && (
+              <div className="flex flex-col sm:flex-row gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search by SKU, name, description, or manufacturer..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-full sm:w-48">
+                    <SelectValue placeholder="All Categories" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Categories</SelectItem>
+                    {CATALOG_CATEGORIES.map((c) => (
+                      <SelectItem key={c} value={c}>{CATEGORY_LABELS[c]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {/* Catalog Table */}
             {loading ? (
               <Skeleton className="h-64 w-full" />
@@ -434,12 +492,18 @@ export default function SupplierInventory() {
                   <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
                   <h3 className="text-lg font-medium mb-2">No Products Yet</h3>
                   <p className="text-sm text-muted-foreground text-center max-w-sm mb-4">
-                    Upload a CSV file to add products to your catalog.
+                    Upload a CSV or add products manually.
                   </p>
-                  <Button onClick={() => fileInputRef.current?.click()}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload CSV
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload CSV
+                    </Button>
+                    <Button onClick={() => setAddDialogOpen(true)} disabled={!supplierId}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Product
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ) : (
@@ -458,8 +522,12 @@ export default function SupplierInventory() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {items.slice(0, 100).map((item) => (
-                          <TableRow key={item.id}>
+                        {filteredItems.slice(0, 200).map((item) => (
+                          <TableRow
+                            key={item.id}
+                            className="cursor-pointer hover:bg-muted/50"
+                            onClick={() => setEditItem(item)}
+                          >
                             <TableCell className="font-mono text-sm">
                               {item.supplier_sku}
                             </TableCell>
@@ -497,9 +565,14 @@ export default function SupplierInventory() {
                       </TableBody>
                     </Table>
                   </div>
-                  {items.length > 100 && (
+                  {filteredItems.length > 200 && (
                     <p className="text-sm text-muted-foreground text-center py-4">
-                      Showing 100 of {items.length} items
+                      Showing 200 of {filteredItems.length} items. Use search to narrow results.
+                    </p>
+                  )}
+                  {filteredItems.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      No items match your search.
                     </p>
                   )}
                 </CardContent>
@@ -585,6 +658,22 @@ export default function SupplierInventory() {
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+
+            {/* Add / Edit Dialogs */}
+            {supplierId && (
+              <AddProductDialog
+                open={addDialogOpen}
+                onOpenChange={setAddDialogOpen}
+                supplierId={supplierId}
+                onSaved={fetchCatalogItems}
+              />
+            )}
+            <EditProductDialog
+              open={!!editItem}
+              onOpenChange={(open) => { if (!open) setEditItem(null); }}
+              item={editItem}
+              onSaved={fetchCatalogItems}
+            />
             </div>
           </main>
         </SidebarInset>
