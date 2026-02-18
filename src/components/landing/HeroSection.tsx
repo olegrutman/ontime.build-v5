@@ -67,9 +67,12 @@ export function HeroSection() {
               size="lg" 
               variant="outline"
               className="h-12 px-8 text-base group"
+              asChild
             >
-              <Play className="mr-2 w-4 h-4 group-hover:text-primary transition-colors" />
-              Watch demo
+              <a href="/demo">
+                <Play className="mr-2 w-4 h-4 group-hover:text-primary transition-colors" />
+                Try interactive demo
+              </a>
             </Button>
           </div>
 

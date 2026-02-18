@@ -3,6 +3,9 @@ import { useProjectRealtime } from '@/hooks/useProjectRealtime';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { supabase } from '@/integrations/supabase/client';
+import { useDemo } from '@/contexts/DemoContext';
+import { getDemoProjectById } from '@/data/demoData';
+import { DemoProjectOverview } from '@/components/demo';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
@@ -63,11 +66,14 @@ export default function ProjectHome() {
   const [loading, setLoading] = useState(true);
   const [tabResetKey, setTabResetKey] = useState(0);
 
+  const { isDemoMode, demoRole } = useDemo();
+  const isInDemoMode = isDemoMode && id?.startsWith('demo-');
+
   // Detect if current org is a supplier
   const currentOrg = userOrgRoles[0]?.organization;
-  const isSupplier = currentOrg?.type === 'SUPPLIER';
-  const isFC = currentOrg?.type === 'FC';
-  const supplierOrgId = isSupplier ? currentOrg?.id : null;
+  const isSupplier = isInDemoMode ? demoRole === 'SUPPLIER' : currentOrg?.type === 'SUPPLIER';
+  const isFC = isInDemoMode ? demoRole === 'FC' : currentOrg?.type === 'FC';
+  const supplierOrgId = isSupplier ? (isInDemoMode ? 'demo-org-supplier' : currentOrg?.id) : null;
 
   // Realtime subscriptions – refreshKey bumps when any project entity changes
   const realtimeKey = useProjectRealtime(id);
@@ -105,6 +111,17 @@ export default function ProjectHome() {
   };
 
   useEffect(() => {
+    if (isInDemoMode && id) {
+      const demoProject = getDemoProjectById(id);
+      if (demoProject) {
+        setProject(demoProject as unknown as Project);
+        setLoading(false);
+      } else {
+        navigate('/demo');
+      }
+      return;
+    }
+
     const fetchProject = async () => {
       if (!id) return;
 
@@ -121,12 +138,11 @@ export default function ProjectHome() {
       }
 
       setProject(proj as Project);
-
       setLoading(false);
     };
 
     fetchProject();
-  }, [id, navigate]);
+  }, [id, navigate, isInDemoMode]);
 
   const defaultOpen = useDefaultSidebarOpen();
 
@@ -203,7 +219,9 @@ export default function ProjectHome() {
               {/* Overview Tab */}
               {activeTab === 'overview' && (
                 <div className="space-y-4">
-                  {isSupplier && supplierOrgId ? (
+                  {isInDemoMode ? (
+                    <DemoProjectOverview onNavigate={handleTabChange} />
+                  ) : isSupplier && supplierOrgId ? (
                     <>
                       <AttentionBanner
                         projectId={id!}
