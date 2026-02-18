@@ -1,16 +1,49 @@
 
-# Allow Supplier to Submit RFIs
 
-## Problem
-The SUPPLIER role currently has `canCreateRFIs: false` in its default permissions, which hides the "New RFI" button and blocks suppliers from creating RFIs.
+# Make All Project Team Members See (and Interact with) Every RFI
 
-## Change
+## Current State
 
-**File: `src/types/organization.ts`** (1 line)
+- **SELECT policy** (viewing): Already uses `has_project_access(auth.uid(), project_id)` -- all project team members can view all RFIs. No change needed here.
+- **UPDATE policy** (answering/closing): Currently restricted to users whose org is either the `assigned_to_org_id` or `submitted_by_org_id`. This means other team members (e.g., a GC viewing a TC-to-Supplier RFI) cannot answer or close it.
 
-Update the SUPPLIER role defaults:
+## Proposed Change
+
+Broaden the UPDATE RLS policy so that any project team member can update an RFI (answer it or close it), not just the assigned/submitting org.
+
+### Database Migration
+
+Drop the existing restrictive UPDATE policy and replace it with one that mirrors the SELECT policy:
+
+```sql
+DROP POLICY "Assigned or submitting org can update RFIs" ON project_rfis;
+
+CREATE POLICY "Project team members can update RFIs"
+  ON project_rfis
+  FOR UPDATE
+  USING (has_project_access(auth.uid(), project_id));
 ```
-canCreateRFIs: true   // was false
+
+### Frontend Change
+
+In `src/components/rfi/RFIDetailDialog.tsx`, update the `canAnswer` and `canClose` guards so any team member can answer an open RFI or close an answered one (not just the assigned/submitting org):
+
+```
+// Before:
+const canAnswer = currentOrgId === rfi.assigned_to_org_id && rfi.status === 'OPEN';
+const canClose = rfi.status === 'ANSWERED' && (currentOrgId === rfi.submitted_by_org_id);
+
+// After:
+const canAnswer = rfi.status === 'OPEN';
+const canClose = rfi.status === 'ANSWERED';
 ```
 
-This will make the "+ New RFI" button visible for supplier users on the RFIs page, allowing them to use the same 5-step RFI wizard (Location, Category, Details, Routing, Review) that GC/TC/FC roles already use. No other code changes are needed since the `RFIsTab` component already reads `permissions.canCreateRFIs` to control button visibility.
+## Files Affected
+
+- **Database**: 1 migration (replace UPDATE RLS policy on `project_rfis`)
+- **`src/components/rfi/RFIDetailDialog.tsx`**: Update `canAnswer` and `canClose` logic (2 lines)
+
+## What This Achieves
+
+- All project team members can view, answer, and close any RFI on the project
+- The 5-step creation wizard remains unchanged (only users with `canCreateRFIs` permission can create)
