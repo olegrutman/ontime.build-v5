@@ -1,25 +1,41 @@
 
 
-# Show RFI Page for Supplier Users
+# Show Estimate Sum vs Orders on Supplier Overview
 
-## Problem
-The sidebar navigation in `AppSidebar.tsx` explicitly hides the "RFIs" link for supplier users (line 124). Even though we enabled `canCreateRFIs: true` for suppliers, they cannot navigate to the page.
+## What Changes
 
-## Fix
+When a supplier views a project's Overview tab, add a new **"Estimates vs Orders"** comparison card that shows:
+- **Total Estimates**: Sum of `total_amount` from `supplier_estimates` for this project/supplier org
+- **Total Orders (POs)**: Sum of finalized PO line totals (already calculated in `SupplierFinancialsSummaryCard`)
+- **Difference**: Visual indicator showing how estimates compare to actual orders (over/under)
 
-**File: `src/components/layout/AppSidebar.tsx`** (1 line)
+## Implementation
 
-Remove the filter that hides the RFIs nav item for suppliers. Change:
+### 1. New Component: `SupplierEstimateVsOrdersCard`
+**File: `src/components/project/SupplierEstimateVsOrdersCard.tsx`**
 
-```
-if (item.url === '/rfis' && isSupplier) return false;
-```
+A card component that:
+- Queries `supplier_estimates` for this project + supplier org, summing `total_amount` (for APPROVED and SUBMITTED statuses)
+- Queries `purchase_orders` with `po_line_items` for finalized/delivered POs for this supplier
+- Displays:
+  - Estimate Total
+  - Order Total (finalized POs)
+  - Difference (with color coding: green if orders match/exceed, amber if under)
+  - A simple progress bar showing orders as a percentage of estimates
 
-to simply not filter out `/rfis` for suppliers. The `/financials` filter can remain since suppliers don't need that page.
+### 2. Update Supplier Overview in ProjectHome
+**File: `src/pages/ProjectHome.tsx`**
 
-Also check the mobile bottom nav (`BottomNav.tsx`) to ensure RFIs are accessible on mobile for suppliers as well.
+In the overview tab, when `isSupplier` is true, render the new `SupplierEstimateVsOrdersCard` alongside the existing `SupplierFinancialsSummaryCard` and `SupplierPOSummaryCard` in a grid layout. This replaces the generic financial components (FinancialSignalBar, FinancialHealthCharts, OperationalSummary) that aren't relevant to suppliers.
+
+### 3. Export
+**File: `src/components/project/index.ts`**
+
+Add export for the new component.
 
 ## Technical Details
 
-- Line 124 in `AppSidebar.tsx`: Remove the `isSupplier` check for `/rfis`
-- Verify `BottomNav.tsx` doesn't have a similar filter blocking supplier access on mobile
+- The `supplier_estimates` table has `total_amount`, `project_id`, `supplier_org_id`, and `status` fields
+- PO totals are derived from `po_line_items.line_total` on finalized POs, same pattern as `SupplierFinancialsSummaryCard`
+- Supplier org ID lookup uses `suppliers` table (org_id to supplier_id mapping), same pattern as existing supplier cards
+- Uses `@tanstack/react-query` for data fetching, consistent with existing components
