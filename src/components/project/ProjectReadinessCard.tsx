@@ -46,6 +46,24 @@ export function ProjectReadinessCard({ readiness }: ProjectReadinessCardProps) {
     }
   };
 
+  const handleActivateContract = async () => {
+    if (!firstContractId) return;
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('project_contracts')
+        .update({ status: 'Active' })
+        .eq('id', firstContractId);
+      if (error) throw error;
+      toast({ title: 'Contract activated' });
+      recalculate();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <Card className={cn(
       "border-l-4",
@@ -98,6 +116,17 @@ export function ProjectReadinessCard({ readiness }: ProjectReadinessCardProps) {
                     className="px-3 py-1 text-xs font-medium rounded-md border border-border bg-muted hover:bg-accent transition-colors disabled:opacity-50"
                   >
                     TC
+                  </button>
+                </div>
+              )}
+              {item.key === 'active_contract' && !item.complete && firstContractId && (
+                <div className="ml-6 mt-1.5">
+                  <button
+                    disabled={saving}
+                    onClick={handleActivateContract}
+                    className="px-3 py-1 text-xs font-medium rounded-md border border-border bg-muted hover:bg-accent transition-colors disabled:opacity-50"
+                  >
+                    Activate Contract
                   </button>
                 </div>
               )}
