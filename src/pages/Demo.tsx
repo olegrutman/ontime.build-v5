@@ -4,6 +4,7 @@ import { useDemo } from '@/contexts/DemoContext';
 import { DEMO_PROJECTS, type DemoRole } from '@/data/demoData';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { OntimeLogo } from '@/components/ui/OntimeLogo';
 import {
   HardHat,
   Wrench,
@@ -11,7 +12,6 @@ import {
   Package,
   ArrowRight,
   ArrowLeft,
-  Building2,
   Home,
   Layers,
 } from 'lucide-react';
@@ -23,6 +23,7 @@ const ROLE_OPTIONS: { role: DemoRole; label: string; description: string; icon: 
   { role: 'SUPPLIER', label: 'Supplier', description: 'Receive purchase orders and enter material pricing.', icon: <Package className="w-8 h-8" /> },
 ];
 
+import { Building2 } from 'lucide-react';
 const PROJECT_ICONS = [<Home className="w-6 h-6" />, <Building2 className="w-6 h-6" />, <Layers className="w-6 h-6" />];
 
 export default function Demo() {
@@ -44,7 +45,10 @@ export default function Demo() {
         <button onClick={() => navigate('/')} className="text-sm text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
           <ArrowLeft className="w-4 h-4" /> Back to home
         </button>
-        <span className="text-xs font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">Interactive Demo</span>
+        <div className="flex items-center gap-2">
+          <OntimeLogo className="w-7 h-7" />
+          <span className="text-xs font-medium text-primary bg-primary/10 px-3 py-1 rounded-full">Interactive Demo</span>
+        </div>
       </header>
 
       <main className="flex-1 flex items-center justify-center p-4">
