@@ -3,7 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Building2, Check, User, Briefcase, Loader2 } from 'lucide-react';
+import { Check, User, Briefcase, Loader2, Building2 } from 'lucide-react';
+import { OntimeLogo } from '@/components/ui/OntimeLogo';
 import { cn } from '@/lib/utils';
 import { AccountStep } from '@/components/signup-wizard/AccountStep';
 import { CompanyStep } from '@/components/signup-wizard/CompanyStep';
@@ -327,9 +328,7 @@ function SignupShell({ steps, step, signupPath, children }: SignupShellProps) {
       {/* Sidebar stepper */}
       <div className="hidden md:flex w-80 bg-card border-r p-8 flex-col">
         <div className="flex items-center gap-3 mb-12">
-          <div className="flex items-center justify-center w-10 h-10 bg-primary rounded-xl">
-            <Building2 className="w-5 h-5 text-primary-foreground" />
-          </div>
+          <OntimeLogo className="w-10 h-10" />
           <div>
             <h1 className="font-bold text-lg tracking-tight">Ontime.Build</h1>
             <p className="text-[10px] text-muted-foreground uppercase tracking-widest">V1</p>
@@ -386,9 +385,7 @@ function SignupShell({ steps, step, signupPath, children }: SignupShellProps) {
       <div className="flex-1 flex items-center justify-center p-6">
         <div className="w-full max-w-lg">
           <div className="flex md:hidden items-center justify-center gap-3 mb-8">
-            <div className="flex items-center justify-center w-10 h-10 bg-primary rounded-xl">
-              <Building2 className="w-5 h-5 text-primary-foreground" />
-            </div>
+            <OntimeLogo className="w-10 h-10" />
             <h1 className="font-bold text-lg tracking-tight">Ontime.Build</h1>
           </div>
           {children}
