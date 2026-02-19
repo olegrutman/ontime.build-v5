@@ -10,160 +10,58 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const handler = async (req: Request): Promise<Response> => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+const PO_SELECT = `
+  *,
+  organization:organizations!purchase_orders_organization_id_fkey(name, org_code),
+  supplier:suppliers(name, supplier_code),
+  project:projects(name),
+  work_item:work_items(title)
+`;
 
-  try {
-    const url = new URL(req.url);
-    const downloadToken = url.searchParams.get("token");
-    const format = url.searchParams.get("format") || "csv";
-    const authHeader = req.headers.get("Authorization");
+function buildCsv(po: any, items: any[]): string {
+  const csvHeader = "Line,SKU,Description,Quantity,UOM,Pieces,Length_Ft,Board_Feet,Linear_Feet,Notes";
+  const csvRows = items.map((item: any) =>
+    [
+      item.line_number,
+      `"${(item.supplier_sku || '').replace(/"/g, '""')}"`,
+      `"${(item.description || '').replace(/"/g, '""')}"`,
+      item.quantity,
+      item.uom,
+      item.pieces || '',
+      item.length_ft || '',
+      item.computed_bf || '',
+      item.computed_lf || '',
+      `"${(item.notes || '').replace(/"/g, '""')}"`
+    ].join(",")
+  );
+  const projectName = po.project?.name || po.work_item?.title || "";
+  return [
+    `# Purchase Order: ${po.po_number}`,
+    `# Name: ${po.po_name}`,
+    `# Supplier: ${po.supplier?.name} (${po.supplier?.supplier_code})`,
+    `# Project: ${projectName}`,
+    `# Generated: ${new Date().toISOString()}`,
+    "",
+    csvHeader,
+    ...csvRows
+  ].join("\n");
+}
 
-    // Two modes: download_token (for external share links) OR authenticated request
-    let po: any = null;
-    let lineItems: any[] = [];
+function buildHtml(po: any, items: any[]): string {
+  const projectName = po.project?.name || po.work_item?.title || "";
+  const itemsHtml = items.map((item: any) => `
+    <tr>
+      <td>${item.line_number}</td>
+      <td>${item.supplier_sku || '-'}</td>
+      <td>${item.description}</td>
+      <td style="text-align: right;">${item.quantity}</td>
+      <td>${item.uom}</td>
+      ${item.computed_bf ? `<td style="text-align: right;">${item.computed_bf}</td>` : '<td>-</td>'}
+      ${item.computed_lf ? `<td style="text-align: right;">${item.computed_lf}</td>` : '<td>-</td>'}
+    </tr>
+  `).join("");
 
-    if (downloadToken) {
-      // Token-based download (for supplier access via email link)
-      // Use service role since suppliers may not have accounts
-      const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
-      
-      const { data: poData, error: poError } = await serviceClient
-        .from("purchase_orders")
-        .select(`
-          *,
-          organization:organizations!purchase_orders_organization_id_fkey(name, org_code),
-          supplier:suppliers(name, supplier_code),
-          project:projects(name),
-          work_item:work_items(title)
-        `)
-        .eq("download_token", downloadToken)
-        .single();
-
-      if (poError || !poData) {
-        return new Response(
-          JSON.stringify({ error: "Invalid or expired download link" }),
-          { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
-        );
-      }
-      
-      po = poData;
-      
-      const { data: items } = await serviceClient
-        .from("po_line_items")
-        .select("*")
-        .eq("po_id", po.id)
-        .order("line_number");
-      
-      lineItems = items || [];
-    } else if (authHeader?.startsWith('Bearer ')) {
-      // Authenticated download - use service role for reliable data fetching
-      // Auth header proves user is logged in
-      const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
-
-      const poId = url.searchParams.get("po_id");
-      if (!poId) {
-        return new Response(
-          JSON.stringify({ error: "Missing po_id parameter" }),
-          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-        );
-      }
-
-      const { data: poData, error: poError } = await serviceClient
-        .from("purchase_orders")
-        .select(`
-          *,
-          organization:organizations!purchase_orders_organization_id_fkey(name, org_code),
-          supplier:suppliers(name, supplier_code),
-          project:projects(name),
-          work_item:work_items(title)
-        `)
-        .eq("id", poId)
-        .single();
-
-      if (poError || !poData) {
-        console.error("PO query failed:", JSON.stringify({ poError, poId }));
-        return new Response(
-          JSON.stringify({ error: "PO not found" }),
-          { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
-        );
-      }
-      
-      po = poData;
-      
-      const { data: items } = await serviceClient
-        .from("po_line_items")
-        .select("*")
-        .eq("po_id", po.id)
-        .order("line_number");
-      
-      lineItems = items || [];
-    } else {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized - provide token or Authorization header" }),
-        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
-    }
-
-    const items = lineItems;
-    const projectName = po.project?.name || po.work_item?.title || "";
-
-    if (format === "csv") {
-      // Generate CSV
-      const csvHeader = "Line,SKU,Description,Quantity,UOM,Pieces,Length_Ft,Board_Feet,Linear_Feet,Notes";
-      const csvRows = items.map((item: any) => 
-        [
-          item.line_number,
-          `"${(item.supplier_sku || '').replace(/"/g, '""')}"`,
-          `"${(item.description || '').replace(/"/g, '""')}"`,
-          item.quantity,
-          item.uom,
-          item.pieces || '',
-          item.length_ft || '',
-          item.computed_bf || '',
-          item.computed_lf || '',
-          `"${(item.notes || '').replace(/"/g, '""')}"`
-        ].join(",")
-      );
-
-      const csvContent = [
-        `# Purchase Order: ${po.po_number}`,
-        `# Name: ${po.po_name}`,
-        `# Supplier: ${po.supplier?.name} (${po.supplier?.supplier_code})`,
-        `# Project: ${projectName}`,
-        `# Generated: ${new Date().toISOString()}`,
-        "",
-        csvHeader,
-        ...csvRows
-      ].join("\n");
-
-      return new Response(csvContent, {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "text/csv",
-          "Content-Disposition": `attachment; filename="${po.po_number}.csv"`,
-        },
-      });
-    } else if (format === "pdf") {
-      // Generate simple HTML that can be printed as PDF
-      // For a production app, you'd use a PDF library like jsPDF or puppeteer
-      const itemsHtml = items.map((item: any) => `
-        <tr>
-          <td>${item.line_number}</td>
-          <td>${item.supplier_sku || '-'}</td>
-          <td>${item.description}</td>
-          <td style="text-align: right;">${item.quantity}</td>
-          <td>${item.uom}</td>
-          ${item.computed_bf ? `<td style="text-align: right;">${item.computed_bf}</td>` : '<td>-</td>'}
-          ${item.computed_lf ? `<td style="text-align: right;">${item.computed_lf}</td>` : '<td>-</td>'}
-        </tr>
-      `).join("");
-
-      const htmlContent = `
-<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -187,7 +85,6 @@ const handler = async (req: Request): Promise<Response> => {
     <h1>Purchase Order</h1>
     <h2>${po.po_number}</h2>
   </div>
-  
   <div class="info">
     <p><strong>PO Name:</strong> ${po.po_name}</p>
     <p><strong>From:</strong> ${po.organization?.name} (${po.organization?.org_code})</p>
@@ -196,40 +93,143 @@ const handler = async (req: Request): Promise<Response> => {
     <p><strong>Date:</strong> ${new Date(po.created_at).toLocaleDateString()}</p>
     ${po.sent_at ? `<p><strong>Sent:</strong> ${new Date(po.sent_at).toLocaleDateString()}</p>` : ''}
   </div>
-  
   <table>
     <thead>
-      <tr>
-        <th>#</th>
-        <th>SKU</th>
-        <th>Description</th>
-        <th>Qty</th>
-        <th>UOM</th>
-        <th>BF</th>
-        <th>LF</th>
-      </tr>
+      <tr><th>#</th><th>SKU</th><th>Description</th><th>Qty</th><th>UOM</th><th>BF</th><th>LF</th></tr>
     </thead>
-    <tbody>
-      ${itemsHtml}
-    </tbody>
+    <tbody>${itemsHtml}</tbody>
   </table>
-  
   ${po.notes ? `<div style="margin-top: 20px;"><strong>Notes:</strong> ${po.notes}</div>` : ''}
-  
   <div class="footer">
     <p>Generated by Ontime.Build on ${new Date().toLocaleString()}</p>
     <p>To save as PDF: Press Ctrl+P (or Cmd+P) and select "Save as PDF"</p>
   </div>
 </body>
-</html>
-      `;
+</html>`;
+}
 
-      return new Response(htmlContent, {
+const handler = async (req: Request): Promise<Response> => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const url = new URL(req.url);
+    const downloadToken = url.searchParams.get("token");
+    const format = url.searchParams.get("format") || "csv";
+    const authHeader = req.headers.get("Authorization");
+
+    let po: any = null;
+    let lineItems: any[] = [];
+    const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    if (downloadToken) {
+      // --- TOKEN-BASED DOWNLOAD (supplier via email link) ---
+      const { data: poData, error: poError } = await serviceClient
+        .from("purchase_orders")
+        .select(PO_SELECT)
+        .eq("download_token", downloadToken)
+        .single();
+
+      if (poError || !poData) {
+        return new Response(
+          JSON.stringify({ error: "Invalid or expired download link" }),
+          { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // --- TOKEN EXPIRATION CHECK ---
+      if (poData.download_token_expires_at && new Date(poData.download_token_expires_at) < new Date()) {
+        return new Response(
+          JSON.stringify({ error: "Download link has expired. Please request a new PO from the sender." }),
+          { status: 410, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      po = poData;
+
+      // Increment download count
+      await serviceClient
+        .from("purchase_orders")
+        .update({ download_count: (po.download_count || 0) + 1 })
+        .eq("id", po.id);
+
+      const { data: items } = await serviceClient
+        .from("po_line_items")
+        .select("*")
+        .eq("po_id", po.id)
+        .order("line_number");
+
+      lineItems = items || [];
+    } else if (authHeader?.startsWith('Bearer ')) {
+      // --- AUTHENTICATED DOWNLOAD ---
+      const poId = url.searchParams.get("po_id");
+      if (!poId) {
+        return new Response(
+          JSON.stringify({ error: "Missing po_id parameter" }),
+          { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Validate the user token
+      const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const token = authHeader.replace("Bearer ", "");
+      const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+      if (claimsError || !claimsData?.claims) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      // Fetch PO via RLS-enabled client
+      const { data: poData, error: poError } = await userClient
+        .from("purchase_orders")
+        .select(PO_SELECT)
+        .eq("id", poId)
+        .single();
+
+      if (poError || !poData) {
+        console.error("PO query failed:", JSON.stringify({ poError, poId }));
+        return new Response(
+          JSON.stringify({ error: "PO not found" }),
+          { status: 404, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        );
+      }
+
+      po = poData;
+
+      const { data: items } = await userClient
+        .from("po_line_items")
+        .select("*")
+        .eq("po_id", po.id)
+        .order("line_number");
+
+      lineItems = items || [];
+    } else {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - provide token or Authorization header" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
+    if (format === "csv") {
+      const csvContent = buildCsv(po, lineItems);
+      return new Response(csvContent, {
         status: 200,
         headers: {
           ...corsHeaders,
-          "Content-Type": "text/html",
+          "Content-Type": "text/csv",
+          "Content-Disposition": `attachment; filename="${po.po_number}.csv"`,
         },
+      });
+    } else if (format === "pdf") {
+      const htmlContent = buildHtml(po, lineItems);
+      return new Response(htmlContent, {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "text/html" },
       });
     }
 
