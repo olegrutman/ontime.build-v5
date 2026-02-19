@@ -1,4 +1,4 @@
-import { Building2 } from 'lucide-react';
+import { OntimeLogo } from '@/components/ui/OntimeLogo';
 import { Link } from 'react-router-dom';
 
 const footerLinks = {
@@ -35,13 +35,11 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <Link to="/" className="flex items-center gap-2.5 mb-4">
-              <div className="flex items-center justify-center w-9 h-9 bg-primary rounded-xl">
-                <Building2 className="w-5 h-5 text-primary-foreground" />
-              </div>
-              <span className="font-bold text-lg">Ontime.Build</span>
+              <OntimeLogo className="w-9 h-9" />
+              <span className="font-bold text-lg">OnTime.Build</span>
             </Link>
             <p className="text-sm text-muted-foreground">
-              Modern construction billing and change order management.
+              Build Smarter. Deliver On Time.
             </p>
           </div>
 
@@ -67,7 +65,7 @@ export function Footer() {
 
         <div className="mt-16 pt-8 border-t flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Ontime.Build. All rights reserved.
+            © {new Date().getFullYear()} OnTime.Build. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             <a href="#" className="text-muted-foreground hover:text-foreground transition-colors">

@@ -1,6 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  Building2,
   Home,
   Handshake,
   Boxes,
@@ -38,6 +37,7 @@ import {
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ROLE_LABELS, ROLE_PERMISSIONS } from '@/types/organization';
 import { cn } from '@/lib/utils';
+import { OntimeLogo } from '@/components/ui/OntimeLogo';
 
 const mainNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: Home },
@@ -94,13 +94,11 @@ export function AppSidebar() {
       {/* Header / Logo */}
       <SidebarHeader className="border-b border-sidebar-border">
         <div className="flex items-center gap-3 px-2 py-3">
-          <div className="flex items-center justify-center w-9 h-9 bg-primary rounded-lg shrink-0">
-            <Building2 className="w-5 h-5 text-primary-foreground" />
-          </div>
+          <OntimeLogo className="w-9 h-9 shrink-0" />
           {!collapsed && (
             <div className="overflow-hidden flex-1 min-w-0">
               <h1 className="font-bold text-base tracking-tight text-sidebar-foreground truncate">
-                Ontime.Build
+                OnTime.Build
               </h1>
               {currentOrg && (
                 <p className="text-[10px] text-sidebar-foreground/60 uppercase tracking-widest truncate">
