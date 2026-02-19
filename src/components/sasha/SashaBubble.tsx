@@ -5,7 +5,8 @@ import sashaAvatar from '@/assets/sasha-avatar.png';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/hooks/useAuth';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useDemo } from '@/contexts/DemoContext';
 import { useSashaContext } from '@/hooks/useSashaContext';
 import { SashaMessage, type SashaChatMessage } from './SashaMessage';
 import { toast } from 'sonner';
@@ -27,6 +28,8 @@ const INITIAL_GREETING: SashaChatMessage = {
 export function SashaBubble() {
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+  const { isDemoMode, demoProjectId } = useDemo();
   const context = useSashaContext();
 
   const [open, setOpen] = useState(false);
@@ -51,6 +54,44 @@ export function SashaBubble() {
   useEffect(() => {
     if (open) setTimeout(() => inputRef.current?.focus(), 100);
   }, [open]);
+
+  // Handle Sasha action buttons that trigger navigation
+  const handleAction = useCallback(
+    (action: string) => {
+      const lower = action.toLowerCase();
+      // Navigation actions in demo mode
+      if (isDemoMode && demoProjectId) {
+        const projectPath = `/project/${demoProjectId}`;
+        if (lower.includes('work order') && lower.includes('tab') || lower.includes('go to work order')) {
+          navigate(`${projectPath}?tab=work-orders`);
+          return;
+        }
+        if (lower.includes('purchase order') || lower.includes('go to po')) {
+          navigate(`${projectPath}?tab=purchase-orders`);
+          return;
+        }
+        if (lower.includes('invoice') && (lower.includes('tab') || lower.includes('view invoice'))) {
+          navigate(`${projectPath}?tab=invoices`);
+          return;
+        }
+        if (lower.includes('sov') || lower.includes('schedule of values')) {
+          navigate(`${projectPath}?tab=sov`);
+          return;
+        }
+        if (lower.includes('rfi')) {
+          navigate(`${projectPath}?tab=rfis`);
+          return;
+        }
+        if (lower.includes('overview') || lower.includes('project home')) {
+          navigate(`${projectPath}?tab=overview`);
+          return;
+        }
+      }
+      // Default: send as chat message
+      sendMessage(action);
+    },
+    [isDemoMode, demoProjectId, navigate]
+  );
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -153,9 +194,9 @@ export function SashaBubble() {
     setInput('');
   };
 
-  // Hide on non-auth pages
+  // Show for demo mode (no auth needed) or authenticated users
   const hiddenPaths = ['/', '/auth'];
-  if (!user || hiddenPaths.includes(location.pathname)) return null;
+  if (!isDemoMode && (!user || hiddenPaths.includes(location.pathname))) return null;
 
   return (
     <>
@@ -184,7 +225,7 @@ export function SashaBubble() {
                   key={i}
                   message={msg}
                   isLast={i === messages.length - 1}
-                  onActionSelect={sendMessage}
+                  onActionSelect={handleAction}
                   isLoading={isLoading}
                 />
               ))}
