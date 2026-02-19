@@ -104,6 +104,7 @@ export function AccountStep({ data, onChange, onNext, loading, showJobTitle }: P
             <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               id="phone"
+              type="tel"
               value={data.phone}
               onChange={e => onChange({ phone: e.target.value })}
               placeholder="(555) 123-4567"
