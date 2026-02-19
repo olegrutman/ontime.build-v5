@@ -1,4 +1,5 @@
-import { Building2, Menu } from 'lucide-react';
+import { Menu } from 'lucide-react';
+import { OntimeLogo } from '@/components/ui/OntimeLogo';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,10 +23,8 @@ export function LandingHeader() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2.5">
-            <div className="flex items-center justify-center w-9 h-9 bg-primary rounded-xl">
-              <Building2 className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="font-bold text-xl tracking-tight">Ontime.Build</span>
+            <OntimeLogo className="w-9 h-9" />
+            <span className="font-bold text-xl tracking-tight">OnTime.Build</span>
           </Link>
 
           {/* Desktop Nav */}

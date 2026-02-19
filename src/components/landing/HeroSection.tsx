@@ -25,7 +25,7 @@ export function HeroSection() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
             </span>
             <span className="text-sm font-medium text-secondary-foreground">
-              Now in public beta
+              Schedule · Manage · Deliver
             </span>
           </div>
 

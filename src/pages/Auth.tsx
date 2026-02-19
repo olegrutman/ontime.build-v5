@@ -4,7 +4,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Building2, Mail, Lock, Loader2 } from 'lucide-react';
+import { Mail, Lock, Loader2 } from 'lucide-react';
+import { OntimeLogo } from '@/components/ui/OntimeLogo';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 
@@ -75,11 +76,9 @@ export default function Auth() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="flex items-center justify-center w-12 h-12 bg-primary rounded-xl">
-            <Building2 className="w-6 h-6 text-primary-foreground" />
-          </div>
+          <OntimeLogo className="w-12 h-12" />
           <div>
-            <h1 className="font-bold text-2xl tracking-tight">Ontime.Build</h1>
+            <h1 className="font-bold text-2xl tracking-tight">OnTime.Build</h1>
             <p className="text-xs text-muted-foreground uppercase tracking-widest">V1</p>
           </div>
         </div>
