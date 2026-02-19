@@ -331,6 +331,7 @@ export default function Profile() {
               <div className="space-y-2">
                 <Label>Phone Number</Label>
                 <Input
+                  type="tel"
                   value={personalForm.phone}
                   onChange={(e) => setPersonalForm(prev => ({ ...prev, phone: e.target.value }))}
                   placeholder="(555) 123-4567"
@@ -491,6 +492,7 @@ export default function Profile() {
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
+                    type="tel"
                     value={orgForm.phone}
                     onChange={(e) => setOrgForm(prev => ({ ...prev, phone: e.target.value }))}
                     placeholder="(555) 123-4567"
