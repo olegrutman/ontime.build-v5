@@ -5,7 +5,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useDemo } from '@/contexts/DemoContext';
 import { getDemoProjectById } from '@/data/demoData';
-import { DemoProjectOverview } from '@/components/demo';
+import { DemoProjectOverview, DemoWorkOrdersTab, DemoPurchaseOrdersTab, DemoInvoicesTab, DemoSOVTab, DemoRFIsTab } from '@/components/demo';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
@@ -261,17 +261,19 @@ export default function ProjectHome() {
 
               {/* SOV Tab - hide for suppliers */}
               {activeTab === 'sov' && !isSupplier && (
-                <ContractSOVEditor projectId={id!} />
+                isInDemoMode ? <DemoSOVTab /> : <ContractSOVEditor projectId={id!} />
               )}
 
               {/* Work Orders Tab - hide for suppliers */}
               {activeTab === 'work-orders' && !isSupplier && (
-                <WorkOrdersTab projectId={id!} projectName={project.name} projectStatus={projectStatus} />
+                isInDemoMode
+                  ? <DemoWorkOrdersTab projectId={id!} projectName={project.name} />
+                  : <WorkOrdersTab projectId={id!} projectName={project.name} projectStatus={projectStatus} />
               )}
 
               {/* RFIs Tab */}
               {activeTab === 'rfis' && !isSupplier && (
-                <RFIsTab projectId={id!} />
+                isInDemoMode ? <DemoRFIsTab /> : <RFIsTab projectId={id!} />
               )}
 
               {/* Estimates Tab */}
@@ -284,27 +286,31 @@ export default function ProjectHome() {
 
               {/* Invoices Tab */}
               {activeTab === 'invoices' && (
-                <InvoicesTab 
-                  key={`invoices-${tabResetKey}-${realtimeKey}`}
-                  projectId={id!} 
-                  retainagePercent={project.retainage_percent || 0}
-                  projectStatus={projectStatus}
-                />
+                isInDemoMode
+                  ? <DemoInvoicesTab projectId={id!} />
+                  : <InvoicesTab 
+                      key={`invoices-${tabResetKey}-${realtimeKey}`}
+                      projectId={id!} 
+                      retainagePercent={project.retainage_percent || 0}
+                      projectStatus={projectStatus}
+                    />
               )}
 
               {/* Purchase Orders Tab */}
               {activeTab === 'purchase-orders' && (
-                <PurchaseOrdersTab 
-                  key={`po-${tabResetKey}-${realtimeKey}`}
-                  projectId={id!} 
-                  projectName={project?.name}
-                  projectStatus={projectStatus}
-                  projectAddress={
-                    project?.address 
-                      ? `${project.address.street || ''}, ${project.address.city || ''}, ${project.address.state || ''} ${project.address.zip || ''}`.replace(/^,\s*|,\s*$/g, '').trim()
-                      : ''
-                  }
-                />
+                isInDemoMode
+                  ? <DemoPurchaseOrdersTab projectId={id!} />
+                  : <PurchaseOrdersTab 
+                      key={`po-${tabResetKey}-${realtimeKey}`}
+                      projectId={id!} 
+                      projectName={project?.name}
+                      projectStatus={projectStatus}
+                      projectAddress={
+                        project?.address 
+                          ? `${project.address.street || ''}, ${project.address.city || ''}, ${project.address.state || ''} ${project.address.zip || ''}`.replace(/^,\s*|,\s*$/g, '').trim()
+                          : ''
+                      }
+                    />
               )}
 
             </div>

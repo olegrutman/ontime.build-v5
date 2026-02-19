@@ -228,6 +228,108 @@ export const DEMO_TEAM: DemoTeamMember[] = [
   { id: 'tm-4', name: 'Casey Nguyen', role: 'SUPPLIER', email: 'casey@austinlumber.com', org_name: 'Austin Lumber Co' },
 ];
 
+// ────────── PO Line Items ──────────
+
+export interface DemoPOLineItem {
+  id: string;
+  po_id: string;
+  description: string;
+  quantity: number;
+  uom: string;
+  unit_price: number;
+}
+
+export const DEMO_PO_LINE_ITEMS: DemoPOLineItem[] = [
+  { id: 'demo-poli-1a', po_id: 'demo-po-1', description: '2x6 SPF Studs 8ft', quantity: 240, uom: 'EA', unit_price: 8.50 },
+  { id: 'demo-poli-1b', po_id: 'demo-po-1', description: '2x10 SPF Joists 12ft', quantity: 80, uom: 'EA', unit_price: 18.75 },
+  { id: 'demo-poli-1c', po_id: 'demo-po-1', description: '3/4" Plywood Sheathing 4x8', quantity: 45, uom: 'SHT', unit_price: 52.00 },
+  { id: 'demo-poli-1d', po_id: 'demo-po-1', description: 'Simpson Strong-Tie H10A', quantity: 120, uom: 'EA', unit_price: 3.25 },
+  { id: 'demo-poli-2a', po_id: 'demo-po-2', description: '12/2 NM-B Romex 250ft', quantity: 8, uom: 'ROLL', unit_price: 185.00 },
+  { id: 'demo-poli-2b', po_id: 'demo-po-2', description: '14/2 NM-B Romex 250ft', quantity: 12, uom: 'ROLL', unit_price: 145.00 },
+  { id: 'demo-poli-2c', po_id: 'demo-po-2', description: '4" Square Boxes', quantity: 60, uom: 'EA', unit_price: 2.85 },
+  { id: 'demo-poli-2d', po_id: 'demo-po-2', description: '20A GFCI Receptacles', quantity: 24, uom: 'EA', unit_price: 18.50 },
+  { id: 'demo-poli-2e', po_id: 'demo-po-2', description: '200A Load Center Panel', quantity: 1, uom: 'EA', unit_price: 425.00 },
+  { id: 'demo-poli-3a', po_id: 'demo-po-3', description: 'Hardie Plank 8.25" Cedarmill 12ft', quantity: 400, uom: 'PC', unit_price: 14.50 },
+  { id: 'demo-poli-3b', po_id: 'demo-po-3', description: 'Hardie Trim 5/4x4 12ft', quantity: 120, uom: 'PC', unit_price: 22.00 },
+  { id: 'demo-poli-3c', po_id: 'demo-po-3', description: 'Hardie Corner Boards 3x3 10ft', quantity: 48, uom: 'PC', unit_price: 28.50 },
+];
+
+// ────────── RFIs ──────────
+
+export interface DemoRFI {
+  id: string;
+  project_id: string;
+  rfi_number: string;
+  subject: string;
+  question: string;
+  status: 'open' | 'answered' | 'closed';
+  priority: 'high' | 'medium' | 'low';
+  created_by: string;
+  assigned_to: string;
+  created_at: string;
+  answered_at: string | null;
+}
+
+export const DEMO_RFIS: DemoRFI[] = [
+  { id: 'demo-rfi-1a', project_id: 'demo-proj-1', rfi_number: 'RFI-001', subject: 'Foundation anchor bolt spacing', question: 'Plans show 6ft spacing but code requires 4ft max for seismic zone. Please clarify.', status: 'open', priority: 'high', created_by: 'Jordan Lee', assigned_to: 'Architect', created_at: '2025-12-15T00:00:00Z', answered_at: null },
+  { id: 'demo-rfi-1b', project_id: 'demo-proj-1', rfi_number: 'RFI-002', subject: 'Electrical panel location', question: 'Can we relocate main panel from garage to utility room per owner request?', status: 'answered', priority: 'medium', created_by: 'Alex Rivera', assigned_to: 'Engineer', created_at: '2025-12-18T00:00:00Z', answered_at: '2025-12-20T00:00:00Z' },
+  { id: 'demo-rfi-2a', project_id: 'demo-proj-2', rfi_number: 'RFI-003', subject: 'Existing ductwork reuse', question: 'Floor 2 existing return duct in good condition. Can we reuse instead of replacing?', status: 'open', priority: 'medium', created_by: 'Jordan Lee', assigned_to: 'Engineer', created_at: '2025-11-25T00:00:00Z', answered_at: null },
+  { id: 'demo-rfi-3a', project_id: 'demo-proj-3', rfi_number: 'RFI-004', subject: 'Siding color selection', question: 'Owner wants Arctic White but plans show Iron Gray. Which color for Units 1-6?', status: 'open', priority: 'high', created_by: 'Sam Torres', assigned_to: 'Architect', created_at: '2025-10-20T00:00:00Z', answered_at: null },
+  { id: 'demo-rfi-3b', project_id: 'demo-proj-3', rfi_number: 'RFI-005', subject: 'Plumbing stub-out height', question: 'Vanity rough-in height 19" or 21"? Different specs on A3.2 vs P2.1.', status: 'answered', priority: 'low', created_by: 'Jordan Lee', assigned_to: 'Architect', created_at: '2025-10-22T00:00:00Z', answered_at: '2025-10-25T00:00:00Z' },
+];
+
+// ────────── Invoice Line Items ──────────
+
+export interface DemoInvoiceLineItem {
+  id: string;
+  invoice_id: string;
+  sov_code: string;
+  description: string;
+  scheduled_value: number;
+  previous_billed: number;
+  current_billed: number;
+  retainage_percent: number;
+}
+
+export const DEMO_INVOICE_LINE_ITEMS: DemoInvoiceLineItem[] = [
+  { id: 'demo-ili-1a', invoice_id: 'demo-inv-1a', sov_code: '01', description: 'General Conditions', scheduled_value: 18500, previous_billed: 0, current_billed: 9250, retainage_percent: 10 },
+  { id: 'demo-ili-1b', invoice_id: 'demo-inv-1a', sov_code: '06', description: 'Wood & Plastics', scheduled_value: 68000, previous_billed: 0, current_billed: 5750, retainage_percent: 10 },
+  { id: 'demo-ili-2a', invoice_id: 'demo-inv-1b', sov_code: '16', description: 'Electrical', scheduled_value: 35000, previous_billed: 0, current_billed: 8500, retainage_percent: 10 },
+  { id: 'demo-ili-3a', invoice_id: 'demo-inv-2a', sov_code: '02', description: 'Demolition', scheduled_value: 55000, previous_billed: 0, current_billed: 45000, retainage_percent: 5 },
+  { id: 'demo-ili-4a', invoice_id: 'demo-inv-2b', sov_code: '15', description: 'Mechanical / HVAC', scheduled_value: 120000, previous_billed: 0, current_billed: 32000, retainage_percent: 5 },
+  { id: 'demo-ili-5a', invoice_id: 'demo-inv-3a', sov_code: '07', description: 'Thermal & Moisture', scheduled_value: 98000, previous_billed: 0, current_billed: 62000, retainage_percent: 10 },
+  { id: 'demo-ili-6a', invoice_id: 'demo-inv-3b', sov_code: '15', description: 'Plumbing', scheduled_value: 145000, previous_billed: 0, current_billed: 28000, retainage_percent: 10 },
+];
+
+// ────────── Work Order Detail ──────────
+
+export interface DemoWorkOrderDetail {
+  id: string;
+  location: string;
+  work_type_label: string;
+  checklist: { label: string; done: boolean }[];
+}
+
+export const DEMO_WORK_ORDER_DETAILS: DemoWorkOrderDetail[] = [
+  { id: 'demo-wo-1a', location: 'Main House — Level 1', work_type_label: 'Framing', checklist: [{ label: 'Location set', done: true }, { label: 'Scope written', done: false }, { label: 'TC pricing entered', done: false }, { label: 'Materials priced', done: false }, { label: 'FC hours locked', done: false }] },
+  { id: 'demo-wo-1b', location: 'Main House — Level 1 & 2', work_type_label: 'Electrical', checklist: [{ label: 'Location set', done: true }, { label: 'Scope written', done: true }, { label: 'TC pricing entered', done: true }, { label: 'Materials priced', done: true }, { label: 'FC hours locked', done: false }] },
+  { id: 'demo-wo-2a', location: 'Floors 1-3 Interior', work_type_label: 'Demolition', checklist: [{ label: 'Location set', done: true }, { label: 'Scope written', done: true }, { label: 'TC pricing entered', done: false }, { label: 'Materials priced', done: false }, { label: 'FC hours locked', done: false }] },
+  { id: 'demo-wo-2b', location: 'Floors 1-3 Mechanical Room', work_type_label: 'HVAC', checklist: [{ label: 'Location set', done: true }, { label: 'Scope written', done: true }, { label: 'TC pricing entered', done: true }, { label: 'Materials priced', done: true }, { label: 'FC hours locked', done: true }] },
+  { id: 'demo-wo-3a', location: 'Units 1-6 Exterior', work_type_label: 'Exterior / Siding', checklist: [{ label: 'Location set', done: true }, { label: 'Scope written', done: false }, { label: 'TC pricing entered', done: false }, { label: 'Materials priced', done: false }, { label: 'FC hours locked', done: false }] },
+  { id: 'demo-wo-3b', location: 'Units 1-12 All Levels', work_type_label: 'Plumbing', checklist: [{ label: 'Location set', done: true }, { label: 'Scope written', done: true }, { label: 'TC pricing entered', done: true }, { label: 'Materials priced', done: false }, { label: 'FC hours locked', done: false }] },
+];
+
+// ────────── Demo Project Scope (for wizard) ──────────
+
+export const DEMO_PROJECT_SCOPE = {
+  structures: [
+    { id: 'ds-1', name: 'Main House', levels: ['Level 1', 'Level 2', 'Attic'] },
+    { id: 'ds-2', name: 'ADU', levels: ['Level 1'] },
+    { id: 'ds-3', name: 'Garage', levels: ['Level 1'] },
+  ],
+  exterior_features: ['Front Porch', 'Rear Deck', 'Driveway', 'Landscaping'],
+};
+
 // ────────── Helpers ──────────
 
 export function getDemoProjectById(id: string) {
@@ -243,6 +345,10 @@ export function getDemoDataForProject(projectId: string, role: DemoRole) {
   const invoices = DEMO_INVOICES.filter(inv => inv.project_id === projectId);
   const contracts = DEMO_CONTRACTS.filter(c => c.project_id === projectId);
   const sovItems = DEMO_SOV_ITEMS.filter(s => s.project_id === projectId);
+  const rfis = DEMO_RFIS.filter(r => r.project_id === projectId);
+  const poLineItems = DEMO_PO_LINE_ITEMS.filter(li => purchaseOrders.some(po => po.id === li.po_id));
+  const invoiceLineItems = DEMO_INVOICE_LINE_ITEMS.filter(li => invoices.some(inv => inv.id === li.invoice_id));
+  const workOrderDetails = DEMO_WORK_ORDER_DETAILS.filter(d => workOrders.some(wo => wo.id === d.id));
 
-  return { attentionItems, workOrders, purchaseOrders, invoices, contracts, sovItems };
+  return { attentionItems, workOrders, purchaseOrders, invoices, contracts, sovItems, rfis, poLineItems, invoiceLineItems, workOrderDetails };
 }
