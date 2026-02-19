@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { formatPhone } from '@/lib/formatPhone';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -423,8 +424,8 @@ export function AuthSection() {
                         <Input
                           id="phone"
                           value={signUpForm.phone}
-                          onChange={(e) => updateSignUpField('phone', e.target.value)}
-                          placeholder="(555) 123-4567"
+                          onChange={(e) => updateSignUpField('phone', formatPhone(e.target.value))}
+                          placeholder="(303)669-1130"
                           className="pl-10"
                         />
                       </div>

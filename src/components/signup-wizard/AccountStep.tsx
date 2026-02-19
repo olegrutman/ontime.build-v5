@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Mail, Lock, User, Phone, Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { JOB_TITLES, type SignupWizardData } from './types';
+import { formatPhone } from '@/lib/formatPhone';
 
 const schema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -106,8 +107,8 @@ export function AccountStep({ data, onChange, onNext, loading, showJobTitle }: P
               id="phone"
               type="tel"
               value={data.phone}
-              onChange={e => onChange({ phone: e.target.value })}
-              placeholder="(555) 123-4567"
+              onChange={e => onChange({ phone: formatPhone(e.target.value) })}
+              placeholder="(303)669-1130"
               className="pl-10"
             />
           </div>

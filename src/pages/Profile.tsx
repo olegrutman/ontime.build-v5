@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { formatPhone } from '@/lib/formatPhone';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -333,8 +334,8 @@ export default function Profile() {
                 <Input
                   type="tel"
                   value={personalForm.phone}
-                  onChange={(e) => setPersonalForm(prev => ({ ...prev, phone: e.target.value }))}
-                  placeholder="(555) 123-4567"
+                  onChange={(e) => setPersonalForm(prev => ({ ...prev, phone: formatPhone(e.target.value) }))}
+                  placeholder="(303)669-1130"
                 />
               </div>
             </div>
@@ -494,8 +495,8 @@ export default function Profile() {
                   <Input
                     type="tel"
                     value={orgForm.phone}
-                    onChange={(e) => setOrgForm(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="(555) 123-4567"
+                    onChange={(e) => setOrgForm(prev => ({ ...prev, phone: formatPhone(e.target.value) }))}
+                    placeholder="(303)669-1130"
                     className="pl-10"
                   />
                 </div>
