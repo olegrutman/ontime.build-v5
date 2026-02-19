@@ -1,120 +1,78 @@
 
 
-# Brand the App with OnTime.Build Identity
+# Use Uploaded Logo as Primary Brand Logo Globally
 
-## Overview
+## What Changes
 
-Apply the OnTime.Build brand identity from the uploaded logo sheet across the entire application. This includes using the uploaded logo image as the favicon and in-app logo, updating the color palette to match the brand colors (blues, dark navy, teal accents), switching typography to Montserrat/Poppins, updating the tagline, and setting proper HTML meta tags.
-
----
-
-## Part 1: Logo Asset
-
-**Copy the uploaded image to the project:**
-- Copy `user-uploads://ChatGPT_Image_Feb_19_2026_01_06_13_PM.png` to `public/ontime-logo.png` for use as favicon and OG image
-- Since the uploaded image is a brand sheet (not a clean icon), we will create a clean SVG logo component (`src/components/ui/OntimeLogo.tsx`) that renders the hexagonal shield + building icon mark from the brand sheet using inline SVG -- matching the blue/dark color scheme
+Replace the current hand-drawn SVG logo (`OntimeLogo` component) with the actual uploaded PNG image (`ontime-logo.png` already in `public/`). Update every location that still uses the generic `Building2` icon for branding. Ensure consistent application across all pages and responsive breakpoints.
 
 ---
 
-## Part 2: Color Palette Update
+## Part 1: Replace OntimeLogo SVG with PNG Image
 
-**File: `src/index.css`**
+**File: `src/components/ui/OntimeLogo.tsx`**
+- Replace the inline SVG with an `<img>` tag pointing to `/ontime-logo.png`
+- Keep the same props interface (`className`) for drop-in compatibility
+- Add a `variant` prop: `"full"` (default, full logo) and `"icon"` (same image, smaller for collapsed sidebar/mobile icon use)
+- This single change automatically updates: LandingHeader, Footer, AppSidebar, and Auth page (all already import `OntimeLogo`)
 
-Update CSS custom properties to match the brand colors extracted from the sheet:
+## Part 2: Fix Signup Page Logo
 
-| Role | Current | New (from brand sheet) |
-|------|---------|----------------------|
-| Primary | `200 98% 39%` (cyan) | `207 90% 54%` (brand blue) |
-| Secondary | `215 24% 26%` (dark gray) | `220 26% 14%` (dark navy) |
-| Sidebar BG | `222 47% 11%` | `222 47% 11%` (keep -- matches dark brand) |
-| Accent green | (state-approved) | keep existing |
-| Ring/focus | match primary | `207 90% 54%` |
+**File: `src/pages/Signup.tsx`**
+- Replace the `Building2` icon in `SignupShell` (both desktop sidebar and mobile header) with `<OntimeLogo>`
+- Desktop sidebar (line 330-331): Replace `<div className="... bg-primary rounded-xl"><Building2 /></div>` with `<OntimeLogo className="w-10 h-10" />`
+- Mobile header (line 389-391): Same replacement
 
-Light mode adjustments:
-- `--primary`: shift to the brand blue `207 90% 54%`
-- `--ring`: match primary
-- `--sidebar-primary`: match primary
+## Part 3: Demo Page Logo
 
-Dark mode adjustments:
-- `--primary`: lighter brand blue `207 90% 64%`
+**File: `src/pages/Demo.tsx`**
+- Add the `OntimeLogo` to the demo header bar next to "Interactive Demo" for brand consistency
 
----
+## Part 4: Confirm Color Palette (Already Done)
 
-## Part 3: Typography Update
+The CSS variables are already set to the brand palette from the previous branding pass:
+- Primary blue: `207 90% 54%` (buttons, highlights, links)
+- Dark navy sidebar: `222 47% 11%` (navigation background)
+- White canvas: `209 40% 96%` (main background)
+- Destructive/warning: `0 72% 50%` (alerts) -- orange accent reserved for financial alerts via state colors (`38 92% 50%`)
+- No new colors introduced
 
-**File: `src/index.css`**
-- Replace the `Plus Jakarta Sans` Google Font import with `Poppins` (weights 400, 500, 600, 700, 800)
-- Update `body` and heading font-family to `'Poppins', system-ui, sans-serif`
+## Part 5: Confirm Typography (Already Done)
 
-**File: `tailwind.config.ts`**
-- Update `fontFamily.sans` to start with `'Poppins'` instead of `'Inter'`
+Already using Poppins as primary font with proper weights:
+- Semibold for headers (`font-semibold` on h1-h6)
+- Regular for body
+- Medium for buttons
 
----
+## Part 6: Dark Mode Logo Handling
 
-## Part 4: Replace Logo in All Locations
-
-Create a reusable `OntimeLogo` SVG component that renders the hexagonal shield icon.
-
-**Files to update (replace `Building2` icon with `OntimeLogo`):**
-
-1. `src/components/landing/LandingHeader.tsx` -- header logo
-2. `src/components/landing/Footer.tsx` -- footer logo
-3. `src/components/layout/AppSidebar.tsx` -- sidebar logo
-4. `src/pages/Auth.tsx` -- auth page logo
-5. `src/pages/Demo.tsx` -- if it has a logo reference
-6. `src/components/signup-wizard/AccountStep.tsx` -- if it shows a logo
-
-Each location: replace the `<div className="... bg-primary rounded-xl"><Building2 .../></div>` pattern with `<OntimeLogo className="w-9 h-9" />`.
+**File: `src/components/ui/OntimeLogo.tsx`**
+- The PNG logo stays full-color in both light and dark modes (no CSS filter applied)
+- No inversion or color manipulation
 
 ---
 
-## Part 5: HTML Meta Tags and Favicon
-
-**File: `index.html`**
-- Update `<title>` to "OnTime.Build -- Construction Intelligence"
-- Update `og:title` to "OnTime.Build"
-- Update `og:description` to "Build Smarter. Deliver On Time. Modern construction billing and change order management."
-- Add favicon link pointing to `/ontime-logo.png`
-- Update Twitter meta tags
-
----
-
-## Part 6: Tagline Updates
-
-**File: `src/components/landing/HeroSection.tsx`**
-- Update the badge text or add a tagline: "Schedule. Manage. Deliver"
-- Keep existing headline but ensure it aligns with brand voice
-
-**File: `src/components/landing/Footer.tsx`**
-- Update description to "Build Smarter. Deliver On Time."
-
----
-
-## File Summary
+## Files Modified
 
 ```text
-New files:
-  src/components/ui/OntimeLogo.tsx    -- Reusable SVG logo component
-  public/ontime-logo.png             -- Copied from user upload (favicon/OG)
-
-Modified files:
-  index.html                          -- Title, meta tags, favicon
-  src/index.css                       -- Colors, typography
-  tailwind.config.ts                  -- Font family
-  src/components/landing/LandingHeader.tsx  -- Logo swap
-  src/components/landing/Footer.tsx         -- Logo swap + tagline
-  src/components/layout/AppSidebar.tsx      -- Logo swap
-  src/pages/Auth.tsx                        -- Logo swap
-  src/components/landing/HeroSection.tsx    -- Tagline alignment
+src/components/ui/OntimeLogo.tsx   -- Replace SVG with <img> using /ontime-logo.png
+src/pages/Signup.tsx               -- Replace Building2 icon with OntimeLogo in SignupShell
+src/pages/Demo.tsx                 -- Add OntimeLogo to demo header
 ```
 
-## Implementation Sequence
+## What Already Works (No Changes Needed)
 
-1. Copy logo image to public/ for favicon
-2. Create OntimeLogo SVG component
-3. Update index.html meta tags and favicon
-4. Update CSS colors and typography
-5. Update tailwind.config.ts font family
-6. Swap logos in all 4+ locations
-7. Update taglines in landing/footer
+These files already import and use `OntimeLogo` and will automatically pick up the PNG change:
+- `src/components/landing/LandingHeader.tsx` -- desktop + mobile header
+- `src/components/landing/Footer.tsx` -- footer logo
+- `src/components/layout/AppSidebar.tsx` -- sidebar logo (full + collapsed)
+- `src/pages/Auth.tsx` -- login page
+- `index.html` -- favicon already points to `/ontime-logo.png`
+- `public/ontime-logo.png` -- already copied from upload
 
+## Implementation Order
+
+1. Update `OntimeLogo.tsx` to render the PNG image
+2. Update `Signup.tsx` to use `OntimeLogo` instead of `Building2`
+3. Add `OntimeLogo` to `Demo.tsx` header
+4. Verify all pages render the real logo with no legacy SVG or Building2 icons remaining in brand positions
