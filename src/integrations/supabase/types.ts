@@ -2667,7 +2667,9 @@ export type Database = {
           created_at: string
           created_by_org_id: string | null
           delivered_at: string | null
+          download_count: number | null
           download_token: string | null
+          download_token_expires_at: string | null
           id: string
           material_order_id: string | null
           notes: string | null
@@ -2697,7 +2699,9 @@ export type Database = {
           created_at?: string
           created_by_org_id?: string | null
           delivered_at?: string | null
+          download_count?: number | null
           download_token?: string | null
+          download_token_expires_at?: string | null
           id?: string
           material_order_id?: string | null
           notes?: string | null
@@ -2727,7 +2731,9 @@ export type Database = {
           created_at?: string
           created_by_org_id?: string | null
           delivered_at?: string | null
+          download_count?: number | null
           download_token?: string | null
+          download_token_expires_at?: string | null
           id?: string
           material_order_id?: string | null
           notes?: string | null
@@ -4221,7 +4227,7 @@ export type Database = {
       normalize_phone: { Args: { phone: string }; Returns: string }
       reject_join_request: { Args: { _request_id: string }; Returns: undefined }
       reject_tm_period: {
-        Args: { notes: string; period_id: string }
+        Args: { notes?: string; period_id: string }
         Returns: undefined
       }
       search_catalog: {

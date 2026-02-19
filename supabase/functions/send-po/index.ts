@@ -1,44 +1,32 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
-// Read RESEND_API_KEY and validate it strictly.
-// The runtime error "failed to parse header value" happens when a header contains
-// illegal control characters (often copied in with newlines).
 const rawApiKey = Deno.env.get("RESEND_API_KEY");
 
 function getValidatedResendApiKey(): string {
   if (!rawApiKey) {
-    throw new Error(
-      "RESEND_API_KEY is not configured. Please add it in your backend secrets.",
-    );
+    throw new Error("RESEND_API_KEY is not configured. Please add it in your backend secrets.");
   }
-
-  // Reject any ASCII control chars (0x00-0x1F, 0x7F) that would make headers invalid.
   if (/[\x00-\x1F\x7F]/.test(rawApiKey)) {
-    throw new Error(
-      "RESEND_API_KEY contains invalid hidden characters. Please re-save the key in backend secrets (paste only the key, no whitespace/newlines).",
-    );
+    throw new Error("RESEND_API_KEY contains invalid hidden characters.");
   }
-
   const trimmed = rawApiKey.trim();
-
-  // API keys should not contain whitespace; if they do, it's almost certainly a paste issue.
   if (/\s/.test(trimmed)) {
-    throw new Error(
-      "RESEND_API_KEY contains whitespace. Please re-save the key in backend secrets (no spaces/newlines).",
-    );
+    throw new Error("RESEND_API_KEY contains whitespace.");
   }
-
   return trimmed;
 }
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface SendPORequest {
   po_id: string;
@@ -51,13 +39,43 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const RESEND_API_KEY = getValidatedResendApiKey();
+    // --- AUTH CHECK ---
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
 
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const token = authHeader.replace("Bearer ", "");
+    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    const userId = claimsData.claims.sub as string;
+
+    const RESEND_API_KEY = getValidatedResendApiKey();
     const { po_id, supplier_email }: SendPORequest = await req.json();
 
-    // Fetch PO details
-    const { data: po, error: poError } = await supabase
+    // --- EMAIL VALIDATION ---
+    if (!supplier_email || !EMAIL_RE.test(supplier_email)) {
+      return new Response(JSON.stringify({ error: "Invalid supplier email" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // --- FETCH PO VIA RLS-ENABLED CLIENT ---
+    const { data: po, error: poError } = await userClient
       .from("purchase_orders")
       .select(`
         *,
@@ -70,21 +88,23 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (poError || !po) {
-      throw new Error("Purchase order not found");
+      return new Response(JSON.stringify({ error: "Purchase order not found or access denied" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
     }
 
-    // Fetch line items
-    const { data: lineItems } = await supabase
+    // Fetch line items via user client (RLS enforced)
+    const { data: lineItems } = await userClient
       .from("po_line_items")
       .select("*")
       .eq("po_id", po_id)
       .order("line_number");
 
     // Generate download URLs
-    const baseUrl = Deno.env.get("SUPABASE_URL")!;
     const downloadToken = po.download_token;
-    const pdfUrl = `${baseUrl}/functions/v1/po-download?token=${downloadToken}&format=pdf`;
-    const csvUrl = `${baseUrl}/functions/v1/po-download?token=${downloadToken}&format=csv`;
+    const pdfUrl = `${supabaseUrl}/functions/v1/po-download?token=${downloadToken}&format=pdf`;
+    const csvUrl = `${supabaseUrl}/functions/v1/po-download?token=${downloadToken}&format=csv`;
 
     // Build line items table for email
     const itemsHtml = (lineItems || []).map((item: any) => `
@@ -100,7 +120,7 @@ const handler = async (req: Request): Promise<Response> => {
     const projectName = po.project?.name || po.work_item?.title || "N/A";
     const totalItems = lineItems?.length || 0;
 
-    // Send email using Resend REST API
+    // Send email via Resend
     const headers = new Headers();
     headers.set("Content-Type", "application/json");
     headers.set("Authorization", `Bearer ${RESEND_API_KEY}`);
@@ -122,7 +142,6 @@ const handler = async (req: Request): Promise<Response> => {
               <p><strong>Project:</strong> ${projectName}</p>
               <p><strong>Total Items:</strong> ${totalItems}</p>
             </div>
-            
             <h2 style="color: #333;">Line Items</h2>
             <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
               <thead>
@@ -134,13 +153,9 @@ const handler = async (req: Request): Promise<Response> => {
                   <th style="padding: 8px; text-align: left;">UOM</th>
                 </tr>
               </thead>
-              <tbody>
-                ${itemsHtml}
-              </tbody>
+              <tbody>${itemsHtml}</tbody>
             </table>
-            
             ${po.notes ? `<p><strong>Notes:</strong> ${po.notes}</p>` : ''}
-            
             <div style="margin: 30px 0;">
               <h3>Download Options</h3>
               <p>
@@ -148,7 +163,6 @@ const handler = async (req: Request): Promise<Response> => {
                 <a href="${csvUrl}" style="display: inline-block; padding: 10px 20px; background: #666; color: white; text-decoration: none; border-radius: 4px;">Download CSV (ERP)</a>
               </p>
             </div>
-            
             <p style="color: #666; font-size: 12px; margin-top: 40px;">
               This is an automated message from Ontime.Build. Please do not reply directly to this email.
             </p>
@@ -163,29 +177,20 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error(emailResult.message || "Failed to send email");
     }
 
-    // Update PO status to SENT
-    const authHeader = req.headers.get("Authorization");
-    const token = authHeader?.replace("Bearer ", "");
-    
-    if (token) {
-      const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-        global: { headers: { Authorization: `Bearer ${token}` } }
-      });
-      
-      // Get user ID from token
-      const { data: { user } } = await userClient.auth.getUser(token);
-      
-      await supabase
-        .from("purchase_orders")
-        .update({
-          status: "SUBMITTED",
-          submitted_at: new Date().toISOString(),
-          submitted_by: user?.id,
-          sent_at: new Date().toISOString(),
-          sent_by: user?.id,
-        })
-        .eq("id", po_id);
-    }
+    // Update PO status + refresh download token expiration using service role
+    const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+    await serviceClient
+      .from("purchase_orders")
+      .update({
+        status: "SUBMITTED",
+        submitted_at: new Date().toISOString(),
+        submitted_by: userId,
+        sent_at: new Date().toISOString(),
+        sent_by: userId,
+        download_token_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        download_count: 0,
+      })
+      .eq("id", po_id);
 
     console.log("PO email sent successfully:", emailResult);
 
