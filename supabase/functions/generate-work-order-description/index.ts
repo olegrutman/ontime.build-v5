@@ -26,6 +26,11 @@ interface GenerateRequest {
   requires_equipment: boolean;
   material_responsibility?: string;
   equipment_responsibility?: string;
+  structural_element?: string;
+  scope_size?: string;
+  urgency?: string;
+  access_conditions?: string;
+  existing_conditions?: string;
   rfi_context?: string;
 }
 
@@ -96,6 +101,11 @@ serve(async (req) => {
       requires_equipment,
       material_responsibility,
       equipment_responsibility,
+      structural_element,
+      scope_size,
+      urgency,
+      access_conditions,
+      existing_conditions,
       rfi_context,
     } = body;
 
@@ -115,6 +125,22 @@ serve(async (req) => {
       if (fixing_trade_notes) {
         contextParts.push(`Trade issue details: ${fixing_trade_notes}`);
       }
+    }
+
+    if (structural_element) {
+      contextParts.push(`Structural Element: ${structural_element}`);
+    }
+    if (scope_size) {
+      contextParts.push(`Scope Size: ${scope_size}`);
+    }
+    if (urgency && urgency !== "Standard") {
+      contextParts.push(`Urgency: ${urgency}`);
+    }
+    if (access_conditions && access_conditions !== "Clear Access") {
+      contextParts.push(`Access Conditions: ${access_conditions}`);
+    }
+    if (existing_conditions) {
+      contextParts.push(`Existing Conditions: ${existing_conditions}`);
     }
 
     if (rfi_context) {

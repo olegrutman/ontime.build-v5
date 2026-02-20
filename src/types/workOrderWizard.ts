@@ -47,6 +47,32 @@ export const EXTERIOR_DIRECTION_OPTIONS = [
   'General',
 ];
 
+// Scope detail options
+export const STRUCTURAL_ELEMENT_OPTIONS = [
+  'Wall', 'Header', 'Beam', 'Joist', 'Rafter', 'Truss',
+  'Post/Column', 'Sill Plate', 'Top Plate', 'Stud', 'Blocking',
+  'Sheathing', 'Subfloor', 'Stairway', 'Other',
+];
+
+export const SCOPE_SIZE_OPTIONS = [
+  'Single Item', 'Partial Wall/Section', 'Full Wall',
+  'Multiple Walls', 'Entire Room', 'Entire Floor', 'Other',
+];
+
+export const URGENCY_OPTIONS = [
+  'Standard', 'Priority', 'Urgent', 'Emergency',
+];
+
+export const ACCESS_CONDITIONS_OPTIONS = [
+  'Clear Access', 'Scaffold Required', 'Lift Required',
+  'Ladder Only', 'Confined Space', 'Other',
+];
+
+export const EXISTING_CONDITIONS_OPTIONS = [
+  'New Construction', 'Partially Complete', 'Needs Demo First',
+  'Damaged/Compromised', 'Standing but Incorrect', 'Other',
+];
+
 // Work Order Wizard step data
 export interface WorkOrderWizardData {
   // Step 1: Title
@@ -60,20 +86,27 @@ export interface WorkOrderWizardData {
   reason?: string;
   fixing_trade_notes?: string;
   
-  // Step 4: Pricing Mode
+  // Step 4: Scope Details
+  structural_element?: string;
+  scope_size?: string;
+  urgency?: string;
+  access_conditions?: string;
+  existing_conditions?: string;
+  
+  // Step 5: Pricing Mode
   pricing_mode: 'fixed' | 'tm';
   
-  // Step 5: Resources
+  // Step 6: Resources
   requires_materials: boolean;
   material_cost_responsibility: CostResponsibility | null;
   requires_equipment: boolean;
   equipment_cost_responsibility: CostResponsibility | null;
   
-  // Step 6: Assignment
+  // Step 7: Assignment
   assigned_org_id?: string | null;
   participant_org_ids?: string[];
   
-  // Step 7: Review - AI generated description
+  // Step 8: Review - AI generated description
   description: string;
 }
 
@@ -81,6 +114,11 @@ export const INITIAL_WIZARD_DATA: WorkOrderWizardData = {
   title: '',
   location_data: {},
   work_type: null,
+  structural_element: undefined,
+  scope_size: undefined,
+  urgency: undefined,
+  access_conditions: undefined,
+  existing_conditions: undefined,
   pricing_mode: 'fixed',
   requires_materials: false,
   material_cost_responsibility: null,
