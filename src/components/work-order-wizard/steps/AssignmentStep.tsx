@@ -138,16 +138,6 @@ export function AssignmentStep({
 
   return (
     <div className="space-y-6">
-      <div className="text-center mb-6">
-        <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-          <Users className="w-6 h-6 text-primary" />
-        </div>
-        <h2 className="text-xl font-semibold">Assignment</h2>
-        <p className="text-muted-foreground text-sm mt-1">
-          Assign this work order to a {assigneeLabel.toLowerCase()}
-        </p>
-      </div>
-
       {/* Primary Assignee */}
       <div className="space-y-2">
         <Label className="flex items-center gap-2">

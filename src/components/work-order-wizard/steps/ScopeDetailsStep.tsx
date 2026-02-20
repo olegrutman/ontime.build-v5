@@ -61,16 +61,6 @@ function ScopeSelect({
 export function ScopeDetailsStep({ data, onChange }: ScopeDetailsStepProps) {
   return (
     <div className="space-y-6">
-      <div className="text-center mb-6">
-        <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-          <Crosshair className="w-6 h-6 text-primary" />
-        </div>
-        <h2 className="text-xl font-semibold">Scope Details</h2>
-        <p className="text-muted-foreground text-sm mt-1">
-          Optional details to help generate a precise description
-        </p>
-      </div>
-
       <ScopeSelect
         icon={Layers}
         label="Structural Element"
