@@ -71,11 +71,14 @@ export function ItemsScreen({
           <>
             {/* Pack source banner */}
             {sourcePackName && (
-              <div className="flex items-center justify-between rounded-lg bg-muted/60 px-3 py-2">
-                <span className="text-sm text-muted-foreground truncate">
-                  Pack: <span className="font-medium text-foreground">"{sourcePackName}"</span>
-                </span>
-                <Button variant="ghost" size="sm" className="h-7 text-xs shrink-0" onClick={onClearPack}>
+              <div className="flex items-center justify-between rounded-lg bg-primary/10 border border-primary/20 px-3 py-2.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Package className="h-4 w-4 text-primary shrink-0" />
+                  <span className="text-sm text-muted-foreground truncate">
+                    Pack: <span className="font-medium text-foreground">"{sourcePackName}"</span>
+                  </span>
+                </div>
+                <Button variant="outline" size="sm" className="h-8 text-sm font-medium shrink-0" onClick={onClearPack}>
                   Change Pack
                 </Button>
               </div>
