@@ -1,23 +1,40 @@
 
 
-# Fix X Button Overlapping Step Description
+# Move Step Description into Top Bar
 
 ## Problem
-The Dialog close button (X) in the top-right corner overlaps with the step header/description text that sits at the top of each wizard step.
+The centered step header (icon + title + description) at the top of each wizard step collides with the Dialog's close button (X) in the top-right corner. Padding adjustments haven't fully resolved this.
 
 ## Solution
-Add top padding to the content area inside `WorkOrderWizard.tsx` so step content clears the close button. This is a single-line change.
+Move the step title and subtitle into the `WizardProgress` top bar component, and remove the duplicated header blocks from all 8 step components. This keeps the description safely centered in the bar area, away from the X button.
 
 ## Technical Details
 
-### File: `src/components/work-order-wizard/WorkOrderWizard.tsx`
-- The step content container currently has class `p-6 min-h-[400px] max-h-[60vh] overflow-y-auto`
-- Change to `px-6 pb-6 pt-2 min-h-[400px] max-h-[60vh] overflow-y-auto` -- reducing top padding since the WizardProgress bar already provides separation, and the X button sits in the DialogContent header area above
+### 1. Update `STEPS` array in `WorkOrderWizard.tsx`
+Add a `description` field to each step object:
+```
+{ title: 'Title', key: 'title', description: 'Give this work order a descriptive name' },
+{ title: 'Location', key: 'location', description: 'Where is this work happening?' },
+...etc
+```
 
-Alternatively (and more robustly): each step's header block uses `text-center mb-6` at the top. We can keep the existing padding but simply not center the step titles at the very top where they collide with the X. However, the simplest fix is just ensuring the dialog close button does not overlap by adjusting DialogContent or step padding.
+### 2. Update `WizardProgress.tsx`
+- Accept `description` from the current step
+- Display the step title centered (or left-aligned) with the description below it
+- Layout: "Step X of Y" on the left, step title centered, progress dots below
 
-The cleanest approach: since each step has a centered icon + title + description block, add `pt-2` to the content wrapper so the centered content naturally sits below the X button area. The X button from Radix Dialog typically sits at `top: 1rem; right: 1rem`, so the existing `p-6` should clear it -- but if it doesn't, we'll bump the top padding slightly or move the step descriptions to have more top margin.
+### 3. Remove header blocks from all 8 step files
+Remove the `<div className="text-center mb-6">...</div>` block (icon + title + description) from:
+- `TitleStep.tsx`
+- `LocationStep.tsx`
+- `WorkTypeStep.tsx`
+- `ScopeDetailsStep.tsx`
+- `PricingModeStep.tsx`
+- `ResourcesStep.tsx`
+- `AssignmentStep.tsx`
+- `ReviewStep.tsx`
 
-### Single change in `WorkOrderWizard.tsx`
-- Content div: add extra top spacing (e.g., `pt-8` instead of `p-6`, or `p-6 pt-8`)
+Each step will then start directly with its form content.
 
+### 4. Revert top padding
+Change `pt-8` back to `pt-4` on the content wrapper in `WorkOrderWizard.tsx` since the extra padding was only needed to clear the old in-content header.
