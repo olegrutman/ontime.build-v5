@@ -53,7 +53,10 @@ function ToggleButton({
 export function LocationStep({ data, onChange, projectScope }: LocationStepProps) {
   const isInside = data.location_data.inside_outside === 'inside';
   const isOutside = data.location_data.inside_outside === 'outside';
-  const isMultiFamily = (projectScope?.num_units ?? 0) > 1 || (projectScope?.num_buildings ?? 0) > 1;
+  const isMultiFamily =
+    (projectScope?.num_units ?? 0) > 1 ||
+    (projectScope?.num_buildings ?? 0) > 1 ||
+    /apartment|condo|townhouse|multi|duplex|triplex/i.test(projectScope?.home_type ?? '');
 
   const levelOptions = useMemo(() => getLevelOptions(projectScope), [projectScope]);
 
