@@ -427,7 +427,20 @@ export function CreateInvoiceDialog({
             </div>
           </div>
 
-          {/* Totals */}
+          {/* Notes */}
+          <div className="space-y-2">
+            <Label htmlFor="notes">Notes (Optional)</Label>
+            <Textarea
+              id="notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Additional notes or comments..."
+              rows={3}
+            />
+          </div>
+        </div>
+
+        <div className="shrink-0 border-t bg-background pt-4 space-y-4">
           <div className="flex justify-end">
             <div className="w-64 space-y-2 text-sm">
               <div className="flex justify-between">
@@ -444,28 +457,15 @@ export function CreateInvoiceDialog({
               </div>
             </div>
           </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes (Optional)</Label>
-            <Textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Additional notes or comments..."
-              rows={3}
-            />
-          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSubmit} disabled={loading}>
+              {loading ? 'Creating...' : 'Create Invoice'}
+            </Button>
+          </DialogFooter>
         </div>
-
-        <DialogFooter className="border-t bg-background pt-4 shrink-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Creating...' : 'Create Invoice'}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
