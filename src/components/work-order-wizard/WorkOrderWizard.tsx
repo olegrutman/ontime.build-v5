@@ -19,14 +19,14 @@ import { AssignmentStep } from './steps/AssignmentStep';
 import { ReviewStep } from './steps/ReviewStep';
 
 const STEPS = [
-  { title: 'Title', key: 'title' },
-  { title: 'Location', key: 'location' },
-  { title: 'Work Type', key: 'worktype' },
-  { title: 'Scope', key: 'scope' },
-  { title: 'Pricing', key: 'pricing' },
-  { title: 'Resources', key: 'resources' },
-  { title: 'Assignment', key: 'assignment' },
-  { title: 'Review', key: 'review' },
+  { title: 'Work Order Title', key: 'title', description: 'Give this work order a descriptive name' },
+  { title: 'Location of Work', key: 'location', description: 'Where will this work be performed?' },
+  { title: 'Scope of Work', key: 'worktype', description: 'What type of work needs to be done?' },
+  { title: 'Scope Details', key: 'scope', description: 'Optional details to help generate a precise description' },
+  { title: 'Pricing Mode', key: 'pricing', description: 'How will this work order be priced?' },
+  { title: 'Materials & Equipment', key: 'resources', description: 'Assign who is responsible for costs' },
+  { title: 'Assignment', key: 'assignment', description: 'Assign this work order to a team member' },
+  { title: 'Review & Create', key: 'review', description: 'Review your work order details before creating' },
 ];
 
 interface WorkOrderWizardProps {
@@ -144,7 +144,7 @@ export function WorkOrderWizard({
           steps={STEPS}
         />
 
-        <div className="px-6 pb-6 pt-8 min-h-[400px] max-h-[60vh] overflow-y-auto">
+        <div className="px-6 pb-6 pt-4 min-h-[400px] max-h-[60vh] overflow-y-auto">
           {currentStep === 1 && (
             <TitleStep data={formData} onChange={handleChange} />
           )}

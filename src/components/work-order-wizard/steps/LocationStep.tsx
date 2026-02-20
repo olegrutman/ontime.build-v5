@@ -77,16 +77,6 @@ export function LocationStep({ data, onChange, projectScope }: LocationStepProps
 
   return (
     <div className="space-y-6">
-      <div className="text-center mb-6">
-        <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-          <MapPin className="w-6 h-6 text-primary" />
-        </div>
-        <h2 className="text-xl font-semibold">Location of Work</h2>
-        <p className="text-muted-foreground text-sm mt-1">
-          Where will this work be performed?
-        </p>
-      </div>
-
       {/* Inside/Outside Toggle */}
       <div>
         <Label className="text-sm text-muted-foreground mb-2 block">

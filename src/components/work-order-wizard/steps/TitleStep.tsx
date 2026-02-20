@@ -11,16 +11,6 @@ interface TitleStepProps {
 export function TitleStep({ data, onChange }: TitleStepProps) {
   return (
     <div className="space-y-6">
-      <div className="text-center mb-6">
-        <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-          <FileText className="w-6 h-6 text-primary" />
-        </div>
-        <h2 className="text-xl font-semibold">Work Order Title</h2>
-        <p className="text-muted-foreground text-sm mt-1">
-          Give this work order a descriptive name
-        </p>
-      </div>
-
       <div className="space-y-2">
         <Label htmlFor="title">Title (Optional)</Label>
         <Input

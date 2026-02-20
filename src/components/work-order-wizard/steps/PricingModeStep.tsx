@@ -26,13 +26,6 @@ const OPTIONS = [
 export function PricingModeStep({ data, onChange }: PricingModeStepProps) {
   return (
     <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-semibold">Pricing Mode</h3>
-        <p className="text-sm text-muted-foreground mt-1">
-          How will this work order be priced?
-        </p>
-      </div>
-
       <div className="grid grid-cols-2 gap-4">
         {OPTIONS.map((opt) => {
           const selected = data.pricing_mode === opt.value;

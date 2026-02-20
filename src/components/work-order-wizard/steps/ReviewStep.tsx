@@ -147,16 +147,6 @@ export function ReviewStep({
 
   return (
     <div className="space-y-6">
-      <div className="text-center mb-6">
-        <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-          <ClipboardCheck className="w-6 h-6 text-primary" />
-        </div>
-        <h2 className="text-xl font-semibold">Review & Create</h2>
-        <p className="text-muted-foreground text-sm mt-1">
-          Review your work order details before creating
-        </p>
-      </div>
-
       {/* Summary Section */}
       <div className="bg-muted/30 rounded-lg p-4 space-y-1">
         <h3 className="font-semibold text-sm mb-3">Summary</h3>
