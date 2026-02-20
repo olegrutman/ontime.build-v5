@@ -1,42 +1,40 @@
 
+# Make Totals Section Sticky with Footer Buttons
 
-# Make Create Invoice Button Always Visible (Sticky Footer)
-
-## Problem
-When creating a new invoice, the "Create Invoice" and "Cancel" buttons are inside the scrollable dialog content. On long forms (many SOV line items), users must scroll all the way to the bottom to find the action buttons. This is a poor UX on both desktop and mobile.
-
-## Solution
-Make the `DialogFooter` in both invoice creation dialogs sticky at the bottom of the dialog, so the action buttons are always visible regardless of scroll position. This follows best practice for long forms in modals.
+## Overview
+Move the gross amount / retainage / net totals out of the scrollable area and into the sticky footer section of both invoice creation dialogs. This way users always see the running totals alongside the action buttons without scrolling.
 
 ## Changes
 
-### File: `src/components/invoices/CreateInvoiceFromSOV.tsx`
-- Restructure the `DialogContent` so the scrollable area only wraps the form content (header + body), not the footer
-- Remove `overflow-y-auto` from `DialogContent` and instead wrap the form body in its own scrollable container
-- Make the `DialogFooter` sticky with a top border and background so it stays pinned at the bottom with a visual separator
-
 ### File: `src/components/invoices/CreateInvoiceDialog.tsx`
-- Apply the same sticky footer pattern: move scroll to the form body only, keep `DialogFooter` fixed at the bottom with a border separator
+- Move the "Totals" block (Subtotal, Retainage, Total Due) from inside the scrollable `div` to above the `DialogFooter`, inside a new sticky footer wrapper
+- Combine the totals and footer into one sticky bottom section with `border-t bg-background pt-4 shrink-0`
+- The Notes field stays inside the scrollable area
+
+### File: `src/components/invoices/CreateInvoiceFromSOV.tsx`
+- Move the "Gross Amount Summary" card (the one showing Gross Amount, retainage, and Net) from inside the scrollable content to a sticky bottom section above the `DialogFooter`
+- Combine the summary card and footer into one sticky wrapper
 
 ## Technical Details
 
-The pattern applied to both files:
+Both files will follow this structure:
 
 ```
-DialogContent (flex flex-col, max-h-[90vh], no overflow)
+DialogContent (flex flex-col, max-h-[90vh], overflow-hidden)
   DialogHeader (static)
-  div.flex-1.overflow-y-auto (scrollable form content)
-  DialogFooter (sticky, border-t, bg-background, pt padding)
+  div.flex-1.overflow-y-auto (scrollable form -- line items, notes, etc.)
+  div.shrink-0.border-t.bg-background.pt-4 (sticky bottom section)
+    Totals summary (gross, retainage, net)
+    DialogFooter (Cancel + Create buttons)
 ```
 
-This ensures:
-- On desktop: footer stays visible at the bottom of the modal
-- On mobile: footer remains accessible without scrolling through all line items
-- A subtle top border on the footer provides visual separation from scrolling content
+For `CreateInvoiceDialog.tsx`: the totals `div` (lines 430-446) moves out of the scrollable area into the sticky footer section, placed above the existing `DialogFooter` buttons.
+
+For `CreateInvoiceFromSOV.tsx`: the Gross Amount Summary `Card` (lines 457-474) moves out of the scrollable area into the sticky footer section. The summary card already exists at the top of the form content; we will relocate it to the bottom sticky area so it updates in view as the user toggles line items.
 
 ## Files Modified
 
 ```
-src/components/invoices/CreateInvoiceFromSOV.tsx  -- Sticky footer
-src/components/invoices/CreateInvoiceDialog.tsx   -- Sticky footer
+src/components/invoices/CreateInvoiceDialog.tsx      -- Move totals to sticky footer
+src/components/invoices/CreateInvoiceFromSOV.tsx      -- Move gross amount card to sticky footer
 ```
