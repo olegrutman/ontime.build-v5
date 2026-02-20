@@ -112,13 +112,16 @@ export function ProductPicker({
       
       fetchEditingProduct();
     } else if (open && !editingItem) {
-      // Normal open - reset state
-      setStep(initialStep);
-      setSelectedVirtualCategory(null);
-      setSelectedSecondary(null);
-      setAppliedFilters({});
-      setProducts([]);
-      setSelectedProduct(null);
+      // Only reset if no pack is loaded (fresh open resets, re-open after pack preserves step)
+      // Don't reset step if we're coming back from a pack load (step is 'estimate')
+      if (step !== 'estimate') {
+        setStep(initialStep);
+        setSelectedVirtualCategory(null);
+        setSelectedSecondary(null);
+        setAppliedFilters({});
+        setProducts([]);
+        setSelectedProduct(null);
+      }
       if (supplierId && !hasApprovedEstimate) {
         fetchCategories();
       }
@@ -367,11 +370,25 @@ export function ProductPicker({
       item_notes: item.catalog_item_id ? undefined : '⚠ Not in catalog',
     }));
     onLoadPack(lineItems, estimateId, pack.name);
-    handleClose();
-  }, [onLoadPack]);
+    // Just close overlay, keep step at 'estimate' so user can return to pack list
+    onOpenChange(false);
+  }, [onLoadPack, onOpenChange]);
 
+  // Soft close: just dismiss overlay without resetting step state
+  const handleSoftClose = () => {
+    onClearEdit();
+    onOpenChange(false);
+  };
+
+  // Full close: reset everything (used when parent resets)
   const handleClose = () => {
     onClearEdit();
+    setStep(initialStep);
+    setSelectedVirtualCategory(null);
+    setSelectedSecondary(null);
+    setAppliedFilters({});
+    setProducts([]);
+    setSelectedProduct(null);
     onOpenChange(false);
   };
 
@@ -410,7 +427,7 @@ export function ProductPicker({
           </Button>
         )}
         <h2 className="text-lg font-semibold flex-1">{getTitle()}</h2>
-        <Button variant="ghost" size="icon" className="h-10 w-10" onClick={handleClose}>
+        <Button variant="ghost" size="icon" className="h-10 w-10" onClick={handleSoftClose}>
           <X className="h-5 w-5" />
         </Button>
       </div>
@@ -505,7 +522,7 @@ export function ProductPicker({
 
   if (isMobile) {
     return (
-      <Sheet open={open} onOpenChange={handleClose}>
+      <Sheet open={open} onOpenChange={handleSoftClose}>
         <SheetContent side="bottom" className="h-[95vh] p-0 rounded-t-2xl">
           {content}
         </SheetContent>
@@ -514,8 +531,8 @@ export function ProductPicker({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="flex flex-col h-[85vh] min-h-0 max-w-lg p-0 gap-0 overflow-hidden">
+    <Dialog open={open} onOpenChange={handleSoftClose}>
+      <DialogContent className="flex flex-col h-[85vh] min-h-0 max-w-lg p-0 gap-0 overflow-hidden [&>button]:hidden">
         {content}
       </DialogContent>
     </Dialog>

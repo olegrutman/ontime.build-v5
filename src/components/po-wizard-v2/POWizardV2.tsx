@@ -258,6 +258,14 @@ export function POWizardV2({
 
   const canAdvanceFromItems = formData.line_items.length > 0;
 
+  // Fix 1: Auto-open picker when arriving at items screen with no items
+  const handleAdvanceToItems = useCallback(() => {
+    setScreen('items');
+    if (formData.line_items.length === 0) {
+      setPickerOpen(true);
+    }
+  }, [formData.line_items.length]);
+
   const content = (
     <div className="flex flex-col h-full">
       {screen === 'header' && (
@@ -266,7 +274,7 @@ export function POWizardV2({
           suppliers={suppliers}
           loadingSuppliers={loadingSuppliers}
           onChange={handleChange}
-          onNext={() => setScreen('items')}
+          onNext={handleAdvanceToItems}
           canAdvance={canAdvanceFromHeader}
           workOrderTitle={workOrderTitle}
         />
@@ -350,7 +358,7 @@ export function POWizardV2({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="flex flex-col h-[90vh] min-h-0 max-w-lg p-0 gap-0 overflow-hidden">
+      <DialogContent className="flex flex-col h-[90vh] min-h-0 max-w-lg p-0 gap-0 overflow-hidden [&>button]:hidden">
         {content}
       </DialogContent>
     </Dialog>
