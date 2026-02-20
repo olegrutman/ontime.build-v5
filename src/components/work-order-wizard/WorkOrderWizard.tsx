@@ -76,7 +76,7 @@ export function WorkOrderWizard({
       case 2: // Location - need at least level or exterior feature
         return !!(
           formData.location_data.level || 
-          formData.location_data.exterior_feature
+          formData.location_data.exterior_level
         );
       case 3: // Work Type - required
         return !!formData.work_type;
