@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, MessageSquareMore } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -91,7 +91,7 @@ export function RFIsTab({ projectId }: RFIsTabProps) {
   if (isLoading) {
     return (
       <div className="space-y-3">
-        {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-24 w-full" />)}
+        {[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 w-full" />)}
       </div>
     );
   }
@@ -117,8 +117,11 @@ export function RFIsTab({ projectId }: RFIsTabProps) {
 
       {/* List */}
       {filtered.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          {rfis.length === 0 ? 'No RFIs yet' : 'No RFIs match the selected filter'}
+        <div className="flex flex-col items-center justify-center py-12 text-center border rounded-lg bg-muted/20">
+          <MessageSquareMore className="h-12 w-12 text-muted-foreground/50 mb-4" />
+          <p className="text-muted-foreground">
+            {rfis.length === 0 ? 'No RFIs yet' : 'No RFIs match the selected filter'}
+          </p>
         </div>
       ) : (
         <div className="space-y-2">

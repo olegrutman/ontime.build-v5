@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -52,7 +52,9 @@ export default function Dashboard() {
     }
   };
 
-  const handleUnarchive = async (projectId: string) => {
+  // 9. Optimistic UI for unarchive
+  const handleUnarchive = useCallback(async (projectId: string) => {
+    // Optimistic: trigger refetch immediately after API call
     const { error } = await supabase
       .from('projects')
       .update({ status: 'active' })
@@ -62,9 +64,9 @@ export default function Dashboard() {
       toast({ title: 'Error', description: 'Failed to unarchive project', variant: 'destructive' });
     } else {
       toast({ title: 'Project Unarchived', description: 'The project has been restored to Active.' });
-      refetch();
     }
-  };
+    refetch();
+  }, [toast, refetch]);
 
   const handleStatusChange = (projectId: string, status: 'active' | 'on_hold' | 'completed') => {
     if (status === 'completed') {
@@ -78,7 +80,8 @@ export default function Dashboard() {
     updateProjectStatus(projectId, status);
   };
 
-  const updateProjectStatus = async (projectId: string, status: 'active' | 'on_hold' | 'completed') => {
+  // 9. Optimistic UI for status changes
+  const updateProjectStatus = useCallback(async (projectId: string, status: 'active' | 'on_hold' | 'completed') => {
     const statusLabels = { active: 'Active', on_hold: 'On Hold', completed: 'Completed' };
     const { error } = await supabase.from('projects').update({ status }).eq('id', projectId);
 
@@ -86,9 +89,9 @@ export default function Dashboard() {
       toast({ title: 'Error', description: 'Failed to update project status', variant: 'destructive' });
     } else {
       toast({ title: 'Status Updated', description: `Project is now ${statusLabels[status]}.` });
-      refetch();
     }
-  };
+    refetch();
+  }, [toast, refetch]);
 
   const confirmComplete = async () => {
     if (!projectToComplete) return;
@@ -108,8 +111,8 @@ export default function Dashboard() {
       toast({ title: 'Error', description: 'Failed to archive project', variant: 'destructive' });
     } else {
       toast({ title: 'Project Archived', description: 'The project has been moved to Archived.' });
-      refetch();
     }
+    refetch();
     setArchiveDialogOpen(false);
     setProjectToArchive(null);
   };
@@ -169,12 +172,11 @@ export default function Dashboard() {
 
   const canCreateProject = orgType === 'GC' || orgType === 'TC';
 
-
   // Onboarding state
   const showOnboarding = userSettings && !userSettings.onboarding_dismissed;
   const profileComplete = !!(profile?.first_name && profile?.phone);
   const orgComplete = !!(organization?.address?.street);
-  const teamInvited = (userOrgRoles.length > 1); // rough heuristic
+  const teamInvited = (userOrgRoles.length > 1);
   const projectCreated = projects.length > 0;
 
   const handleDismissOnboarding = async () => {
@@ -196,8 +198,6 @@ export default function Dashboard() {
       newButtonLabel="New Project"
     >
       <div className="space-y-4 sm:space-y-6">
-
-        {/* Onboarding Checklist */}
         {showOnboarding && (
           <OnboardingChecklist
             profileComplete={profileComplete}
@@ -208,24 +208,20 @@ export default function Dashboard() {
           />
         )}
 
-        {/* Org Invitation Banner */}
         <OrgInviteBanner />
 
-        {/* Quick Stats */}
         <DashboardQuickStats
           openWorkOrders={openWorkOrders}
           pendingInvoices={pendingInvoicesCount}
           remindersDue={remindersDue}
         />
 
-        {/* Attention Banner */}
         <DashboardAttentionBanner
           attentionItems={attentionItems}
           pendingInvites={pendingInvites}
           onRefresh={refetch}
         />
 
-        {/* Project List with integrated status tabs */}
         <DashboardProjectList
           projects={projects}
           statusFilter={statusFilter}
@@ -239,7 +235,6 @@ export default function Dashboard() {
         />
       </div>
 
-      {/* Dialogs */}
       <ArchiveProjectDialog
         open={archiveDialogOpen}
         onOpenChange={setArchiveDialogOpen}

@@ -1,46 +1,134 @@
+import { lazy, Suspense, type ReactNode, Component, type ErrorInfo } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/hooks/useAuth";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { DemoProvider } from "@/contexts/DemoContext";
-import Landing from "./pages/Landing";
-import Dashboard from "./pages/Dashboard";
-import Demo from "./pages/Demo";
-import Auth from "./pages/Auth";
-import Signup from "./pages/Signup";
-import CreateProjectNew from "./pages/CreateProjectNew";
-import ProjectHome from "./pages/ProjectHome";
-import EditProjectScope from "./pages/EditProjectScope";
-import EditProject from "./pages/EditProject";
-import PartnerDirectory from "./pages/PartnerDirectory";
-import OrgTeam from "./pages/OrgTeam";
-import AdminSuppliers from "./pages/AdminSuppliers";
-import CatalogPage from "./pages/CatalogPage";
-
-import SupplierEstimates from "./pages/SupplierEstimates";
-import EstimateApprovals from "./pages/EstimateApprovals";
-import MaterialOrders from "./pages/MaterialOrders";
-import OrderApprovals from "./pages/OrderApprovals";
-import PurchaseOrders from "./pages/PurchaseOrders";
-import ChangeOrders from "./pages/ChangeOrders";
-import Financials from "./pages/Financials";
-import Reminders from "./pages/Reminders";
-import SupplierInventory from "./pages/SupplierInventory";
-import SupplierProjectEstimates from "./pages/SupplierProjectEstimates";
-import RFIs from "./pages/RFIs";
-
-import { WorkItemPage } from "@/components/work-item";
-import { ChangeOrderDetailPage } from "@/components/change-order-detail";
-import Profile from "./pages/Profile";
-import NotFound from "./pages/NotFound";
-import { SashaBubble } from "@/components/sasha";
-import { BoltGuide } from "@/components/bolt";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useDemo } from "@/contexts/DemoContext";
 import { DemoBanner } from "@/components/demo";
+import { SashaBubble } from "@/components/sasha";
+import { BoltGuide } from "@/components/bolt";
+import { Button } from "@/components/ui/button";
 
-const queryClient = new QueryClient();
+// 1. QueryClient with sensible defaults
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
+// 5. Lazy-loaded page components
+const Landing = lazy(() => import("./pages/Landing"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Demo = lazy(() => import("./pages/Demo"));
+const Auth = lazy(() => import("./pages/Auth"));
+const Signup = lazy(() => import("./pages/Signup"));
+const CreateProjectNew = lazy(() => import("./pages/CreateProjectNew"));
+const ProjectHome = lazy(() => import("./pages/ProjectHome"));
+const EditProjectScope = lazy(() => import("./pages/EditProjectScope"));
+const EditProject = lazy(() => import("./pages/EditProject"));
+const PartnerDirectory = lazy(() => import("./pages/PartnerDirectory"));
+const OrgTeam = lazy(() => import("./pages/OrgTeam"));
+const AdminSuppliers = lazy(() => import("./pages/AdminSuppliers"));
+const CatalogPage = lazy(() => import("./pages/CatalogPage"));
+const SupplierEstimates = lazy(() => import("./pages/SupplierEstimates"));
+const EstimateApprovals = lazy(() => import("./pages/EstimateApprovals"));
+const MaterialOrders = lazy(() => import("./pages/MaterialOrders"));
+const OrderApprovals = lazy(() => import("./pages/OrderApprovals"));
+const PurchaseOrders = lazy(() => import("./pages/PurchaseOrders"));
+const ChangeOrders = lazy(() => import("./pages/ChangeOrders"));
+const Financials = lazy(() => import("./pages/Financials"));
+const Reminders = lazy(() => import("./pages/Reminders"));
+const SupplierInventory = lazy(() => import("./pages/SupplierInventory"));
+const SupplierProjectEstimates = lazy(() => import("./pages/SupplierProjectEstimates"));
+const RFIs = lazy(() => import("./pages/RFIs"));
+const Profile = lazy(() => import("./pages/Profile"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+// Lazy-loaded components
+const WorkItemPage = lazy(() =>
+  import("@/components/work-item").then((m) => ({ default: m.WorkItemPage }))
+);
+const ChangeOrderDetailPage = lazy(() =>
+  import("@/components/change-order-detail").then((m) => ({
+    default: m.ChangeOrderDetailPage,
+  }))
+);
+
+// 4. Route protection wrapper
+function RequireAuth({ children }: { children: ReactNode }) {
+  const { user, loading } = useAuth();
+  if (loading)
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Skeleton className="h-8 w-32" />
+      </div>
+    );
+  if (!user) return <Navigate to="/auth" replace />;
+  return <>{children}</>;
+}
+
+// 6. Error Boundary
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  ErrorBoundaryState
+> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("Application error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-6 text-center">
+          <h1 className="text-2xl font-bold">Something went wrong</h1>
+          <p className="text-muted-foreground max-w-md">
+            An unexpected error occurred. Please try refreshing the page.
+          </p>
+          <Button
+            onClick={() => {
+              this.setState({ hasError: false, error: null });
+              window.location.reload();
+            }}
+          >
+            Refresh Page
+          </Button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// Suspense fallback
+function PageLoader() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Skeleton className="h-8 w-32" />
+    </div>
+  );
+}
 
 function AppRoutes() {
   const { isDemoMode } = useDemo();
@@ -48,37 +136,43 @@ function AppRoutes() {
   return (
     <>
       <DemoBanner />
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/demo" element={<Demo />} />
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/create-project" element={<CreateProjectNew />} />
-        <Route path="/project/:id" element={<ProjectHome />} />
-        <Route path="/project/:id/edit" element={<EditProject />} />
-        <Route path="/projects/:id/scope" element={<EditProjectScope />} />
-        <Route path="/partners" element={<PartnerDirectory />} />
-        <Route path="/admin/suppliers" element={<AdminSuppliers />} />
-        <Route path="/org/team" element={<OrgTeam />} />
-        <Route path="/catalog" element={<CatalogPage />} />
-        
-        <Route path="/estimates" element={<SupplierEstimates />} />
-        <Route path="/approvals/estimates" element={<EstimateApprovals />} />
-        <Route path="/orders" element={<MaterialOrders />} />
-        <Route path="/approvals/orders" element={<OrderApprovals />} />
-        <Route path="/purchase-orders" element={<PurchaseOrders />} />
-        <Route path="/change-orders" element={<ChangeOrders />} />
-        <Route path="/financials" element={<Financials />} />
-        <Route path="/reminders" element={<Reminders />} />
-        <Route path="/change-order/:id" element={<ChangeOrderDetailPage />} />
-        <Route path="/work-item/:id" element={<WorkItemPage />} />
-        <Route path="/supplier/inventory" element={<SupplierInventory />} />
-        <Route path="/supplier/estimates" element={<SupplierProjectEstimates />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/rfis" element={<RFIs />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <ErrorBoundary>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/" element={<Landing />} />
+            <Route path="/demo" element={<Demo />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/signup" element={<Signup />} />
+
+            {/* Protected routes */}
+            <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
+            <Route path="/create-project" element={<RequireAuth><CreateProjectNew /></RequireAuth>} />
+            <Route path="/project/:id" element={<RequireAuth><ProjectHome /></RequireAuth>} />
+            <Route path="/project/:id/edit" element={<RequireAuth><EditProject /></RequireAuth>} />
+            <Route path="/projects/:id/scope" element={<RequireAuth><EditProjectScope /></RequireAuth>} />
+            <Route path="/partners" element={<RequireAuth><PartnerDirectory /></RequireAuth>} />
+            <Route path="/admin/suppliers" element={<RequireAuth><AdminSuppliers /></RequireAuth>} />
+            <Route path="/org/team" element={<RequireAuth><OrgTeam /></RequireAuth>} />
+            <Route path="/catalog" element={<RequireAuth><CatalogPage /></RequireAuth>} />
+            <Route path="/estimates" element={<RequireAuth><SupplierEstimates /></RequireAuth>} />
+            <Route path="/approvals/estimates" element={<RequireAuth><EstimateApprovals /></RequireAuth>} />
+            <Route path="/orders" element={<RequireAuth><MaterialOrders /></RequireAuth>} />
+            <Route path="/approvals/orders" element={<RequireAuth><OrderApprovals /></RequireAuth>} />
+            <Route path="/purchase-orders" element={<RequireAuth><PurchaseOrders /></RequireAuth>} />
+            <Route path="/change-orders" element={<RequireAuth><ChangeOrders /></RequireAuth>} />
+            <Route path="/financials" element={<RequireAuth><Financials /></RequireAuth>} />
+            <Route path="/reminders" element={<RequireAuth><Reminders /></RequireAuth>} />
+            <Route path="/change-order/:id" element={<RequireAuth><ChangeOrderDetailPage /></RequireAuth>} />
+            <Route path="/work-item/:id" element={<RequireAuth><WorkItemPage /></RequireAuth>} />
+            <Route path="/supplier/inventory" element={<RequireAuth><SupplierInventory /></RequireAuth>} />
+            <Route path="/supplier/estimates" element={<RequireAuth><SupplierProjectEstimates /></RequireAuth>} />
+            <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
+            <Route path="/rfis" element={<RequireAuth><RFIs /></RequireAuth>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
       <SashaBubble />
       {!isDemoMode && <BoltGuide />}
     </>

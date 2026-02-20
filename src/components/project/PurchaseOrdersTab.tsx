@@ -334,8 +334,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   if (loading) {
     return (
       <div className="space-y-4">
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-64 w-full" />
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-24 w-full" />
+        ))}
       </div>
     );
   }
