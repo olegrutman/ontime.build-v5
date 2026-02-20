@@ -1,58 +1,33 @@
 
 
-# Add Scope Detail Dropdowns for Better AI Descriptions
+# Unify Work Order Creation: Replace Legacy Wizard
 
-## Goal
-Add a new "Scope Details" step to the Work Order wizard (between Work Type and Pricing) with dropdown-only questions that give the AI enough structured context to generate precise, actionable descriptions.
+## Problem
 
-## New Dropdowns (all optional, all using Select pickers)
+There are **two different work order creation components**:
 
-### 1. Structural Element
-What is being worked on?
-- Wall, Header, Beam, Joist, Rafter, Truss, Post/Column, Sill Plate, Top Plate, Stud, Blocking, Sheathing, Subfloor, Stairway, Other
+1. **`WorkOrderWizard`** (8-step wizard with Scope Details) -- used on the **Project Home > Work Orders tab**
+2. **`ChangeOrderWizardDialog`** (old single-page Sheet form, no steps) -- used on the **/change-orders page** (sidebar navigation)
 
-### 2. Scope Size
-How much work is involved?
-- Single Item, Partial Wall/Section, Full Wall, Multiple Walls, Entire Room, Entire Floor, Other
+When a user creates a work order from the `/change-orders` page, they get the old form without the Scope Details dropdowns, progress steps, or AI description generation. This is the "7 steps" (actually 0 steps -- a flat form) the user was seeing.
 
-### 3. Urgency
-How urgent is this work?
-- Standard, Priority, Urgent, Emergency
+## Solution
 
-### 4. Access Conditions
-Any special access needed?
-- Clear Access, Scaffold Required, Lift Required, Ladder Only, Confined Space, Other
+Replace the `ChangeOrderWizardDialog` usage on the `/change-orders` page with the `WorkOrderWizard` component, so **all work order creation flows use the same 8-step wizard**.
 
-### 5. Existing Conditions
-What is the current state?
-- New Construction, Partially Complete, Needs Demo First, Damaged/Compromised, Standing but Incorrect, Other
+## Changes
 
-## Technical Changes
+### 1. Update `/change-orders` page (`src/pages/ChangeOrders.tsx`)
 
-### 1. Update types (`src/types/workOrderWizard.ts`)
-- Add new fields to `WorkOrderWizardData`: `structural_element`, `scope_size`, `urgency`, `access_conditions`, `existing_conditions`
-- Add option arrays for each field (e.g., `STRUCTURAL_ELEMENT_OPTIONS`, `SCOPE_SIZE_OPTIONS`, etc.)
-- Update `INITIAL_WIZARD_DATA` with empty defaults
+- Replace import of `ChangeOrderWizardDialog` with `WorkOrderWizard`
+- Swap the component in the render (line ~351), passing the same props
+- The `WorkOrderWizard` already accepts `projectId`, `projectName`, `onComplete`, and `isSubmitting` -- same interface
 
-### 2. Create new step (`src/components/work-order-wizard/steps/ScopeDetailsStep.tsx`)
-- New component with 5 `Select` dropdowns, each with a label and icon
-- All fields optional so the user can skip through quickly
-- Clean layout matching the existing wizard step style
+### 2. No other files need changes
 
-### 3. Update wizard flow (`src/components/work-order-wizard/WorkOrderWizard.tsx`)
-- Insert "Scope Details" as step 4 (between Work Type and Pricing)
-- Update `STEPS` array (now 8 steps total)
-- Import and render `ScopeDetailsStep`
-- Shift step numbers for Pricing, Resources, Assignment, Review
+The `WorkOrderWizard` already handles both GC and TC roles internally (it checks `currentRole` via `useAuth`), so the swap is straightforward.
 
-### 4. Update AI prompt (`supabase/functions/generate-work-order-description/index.ts`)
-- Accept new fields in the request body
-- Add them to the context sent to the AI (e.g., "Structural Element: Header", "Scope Size: Partial Wall")
-- This gives the AI much richer context for precise descriptions
+### 3. Optional cleanup (deferred)
 
-### 5. Update Review step (`src/components/work-order-wizard/steps/ReviewStep.tsx`)
-- Pass the new fields to the edge function call
-- Show the new details in the summary section
+The old `ChangeOrderWizardDialog` component and its supporting code could eventually be removed, but that can happen later to keep this change small and safe.
 
-## Result
-The AI will receive structured data like "Re-frame a Header on Floor 2, Kitchen, Partial Wall scope, needs demo first, scaffold required, priority urgency" and generate a much more precise description than the current generic output.
