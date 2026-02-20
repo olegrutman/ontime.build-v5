@@ -4,15 +4,15 @@ import {
   Home,
   DollarSign,
   Handshake,
-  Users,
-  Bell,
+  ClipboardList,
   LayoutDashboard,
   ListChecks,
-  ClipboardList,
   FileText,
   ShoppingCart,
   MessageSquareMore,
   MoreHorizontal,
+  Bell,
+  Users,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -38,12 +38,18 @@ export function BottomNav() {
   const projectId = isProjectPage ? location.pathname.split('/')[2] : null;
   const activeTab = searchParams.get('tab') || 'overview';
 
-  const dashboardItems: NavItem[] = [
+  // 10. Updated dashboard items with global pages
+  const dashboardPrimaryItems: NavItem[] = [
     { label: 'Dashboard', icon: Home, path: '/dashboard' },
     { label: 'Financials', icon: DollarSign, path: '/financials' },
+    { label: 'Work Orders', icon: ClipboardList, path: '/change-orders' },
     { label: 'Partners', icon: Handshake, path: '/partners' },
-    ...(canManageOrg ? [{ label: 'My Team', icon: Users, path: '/org/team' }] : []),
+  ];
+
+  const dashboardMoreItems: NavItem[] = [
     { label: 'Reminders', icon: Bell, path: '/reminders' },
+    ...(canManageOrg ? [{ label: 'My Team', icon: Users, path: '/org/team' }] : []),
+    { label: 'RFIs', icon: MessageSquareMore, path: '/rfis' },
   ];
 
   const primaryProjectItems: NavItem[] = [
@@ -59,8 +65,11 @@ export function BottomNav() {
     { label: 'RFIs', icon: MessageSquareMore, tab: 'rfis' },
   ];
 
-  const items = isProjectPage ? primaryProjectItems : dashboardItems;
-  const moreIsActive = isProjectPage && moreProjectItems.some(i => i.tab === activeTab);
+  const items = isProjectPage ? primaryProjectItems : dashboardPrimaryItems;
+  const moreItems = isProjectPage ? moreProjectItems : dashboardMoreItems;
+  const moreIsActive = isProjectPage
+    ? moreProjectItems.some(i => i.tab === activeTab)
+    : dashboardMoreItems.some(i => i.path === location.pathname);
 
   const isActive = (item: NavItem) => {
     if (item.path) return location.pathname === item.path;
@@ -99,20 +108,19 @@ export function BottomNav() {
               </button>
             );
           })}
-          {isProjectPage && (
-            <button
-              onClick={() => setMoreOpen(true)}
-              className={cn(
-                'flex flex-col items-center justify-center gap-0.5 flex-1 min-h-[44px] transition-colors',
-                moreIsActive
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
-            >
-              <MoreHorizontal className="w-5 h-5" />
-              <span className="text-[10px] font-medium">More</span>
-            </button>
-          )}
+          {/* More button — always shown */}
+          <button
+            onClick={() => setMoreOpen(true)}
+            className={cn(
+              'flex flex-col items-center justify-center gap-0.5 flex-1 min-h-[44px] transition-colors',
+              moreIsActive
+                ? 'text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <MoreHorizontal className="w-5 h-5" />
+            <span className="text-[10px] font-medium">More</span>
+          </button>
         </div>
       </nav>
 
@@ -120,7 +128,7 @@ export function BottomNav() {
         <DrawerContent>
           <DrawerTitle className="sr-only">More options</DrawerTitle>
           <div className="flex flex-col gap-1 p-4 pb-8">
-            {moreProjectItems.map((item) => {
+            {moreItems.map((item) => {
               const active = isActive(item);
               const Icon = item.icon;
               return (

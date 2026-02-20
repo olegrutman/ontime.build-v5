@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useChangeOrderProject } from '@/hooks/useChangeOrderProject';
@@ -35,7 +35,7 @@ interface WorkOrdersTabProps {
 
 export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrdersTabProps) {
   const navigate = useNavigate();
-  const { currentRole, user, permissions } = useAuth();
+  const { currentRole, user, permissions, userOrgRoles } = useAuth();
   const [showWizard, setShowWizard] = useState(false);
   const [showFCDialog, setShowFCDialog] = useState(false);
   const [activeTab, setActiveTab] = useState<ChangeOrderStatus | 'ALL'>('ALL');
@@ -49,7 +49,6 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
     isCreatingFC,
   } = useChangeOrderProject(projectId);
 
-  const { userOrgRoles } = useAuth();
   const userOrgId = userOrgRoles.length > 0 ? userOrgRoles[0].organization_id : undefined;
 
   const sovReadiness = useSOVReadiness(projectId, userOrgId);
@@ -62,24 +61,7 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
   const canCreate = permissions?.canCreateWorkOrders ?? false;
   const isBlocked = !isFC && !sovReadiness.isReady && !sovReadiness.loading;
 
-  const filteredChangeOrders =
-    activeTab === 'ALL'
-      ? changeOrders
-      : changeOrders.filter((co) => co.status === activeTab);
-
-  // Sort by urgency then by date
-  const sortedOrders = [...filteredChangeOrders].sort((a, b) => {
-    const pa = STATUS_PRIORITY[a.status as ChangeOrderStatus] ?? 99;
-    const pb = STATUS_PRIORITY[b.status as ChangeOrderStatus] ?? 99;
-    if (pa !== pb) return pa - pb;
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  });
-
-  // Separate T&M vs Fixed
-  const fixedOrders = sortedOrders.filter(co => (co as any).pricing_mode !== 'tm');
-  const tmOrders = sortedOrders.filter(co => (co as any).pricing_mode === 'tm');
-
-  const statusCounts = {
+  const statusCounts = useMemo(() => ({
     ALL: changeOrders.length,
     draft: changeOrders.filter((co) => co.status === 'draft').length,
     fc_input: changeOrders.filter((co) => co.status === 'fc_input').length,
@@ -88,7 +70,22 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
     approved: changeOrders.filter((co) => co.status === 'approved').length,
     rejected: changeOrders.filter((co) => co.status === 'rejected').length,
     contracted: changeOrders.filter((co) => co.status === 'contracted').length,
-  };
+  }), [changeOrders]);
+
+  const sortedOrders = useMemo(() => {
+    const filtered = activeTab === 'ALL'
+      ? changeOrders
+      : changeOrders.filter((co) => co.status === activeTab);
+    return [...filtered].sort((a, b) => {
+      const pa = STATUS_PRIORITY[a.status as ChangeOrderStatus] ?? 99;
+      const pb = STATUS_PRIORITY[b.status as ChangeOrderStatus] ?? 99;
+      if (pa !== pb) return pa - pb;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+  }, [changeOrders, activeTab]);
+
+  const fixedOrders = useMemo(() => sortedOrders.filter(co => (co as any).pricing_mode !== 'tm'), [sortedOrders]);
+  const tmOrders = useMemo(() => sortedOrders.filter(co => (co as any).pricing_mode === 'tm'), [sortedOrders]);
 
   const getStatusTabLabel = (status: ChangeOrderStatus | 'ALL') => {
     if (status === 'ALL') return 'All';
