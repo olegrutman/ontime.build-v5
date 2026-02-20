@@ -16,7 +16,36 @@ export interface WorkOrderLocationData extends LocationData {
   custom_room_area?: string;
   exterior_feature?: string;
   custom_exterior?: string;
+  exterior_level?: string;
+  exterior_feature_type?: string;
+  exterior_direction?: string;
 }
+
+export const EXTERIOR_FEATURE_OPTIONS = [
+  'Balcony',
+  'Deck',
+  'Porch',
+  'Siding',
+  'Roof',
+  'Windows',
+  'Doors',
+  'Fascia',
+  'Soffit',
+  'Gutters',
+  'Other',
+];
+
+export const EXTERIOR_DIRECTION_OPTIONS = [
+  'Front',
+  'Back',
+  'Left',
+  'Right',
+  'North',
+  'South',
+  'East',
+  'West',
+  'General',
+];
 
 // Work Order Wizard step data
 export interface WorkOrderWizardData {
