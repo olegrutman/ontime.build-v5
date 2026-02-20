@@ -1,49 +1,16 @@
 
 
-# Restructure Outside Location to a Stepped Flow
+# Add Optional Unit Field for Multifamily Projects (Outside Location)
 
-## Problem
-When selecting "Outside" in the work order location step, the current UI shows a single flat dropdown combining feature and direction (e.g., "Balcony - North", "Siding - Front"). This is hard to navigate and doesn't follow logical construction thinking.
+## What Changes
+When a project is multifamily (has `num_units` or `num_buildings` set in the project scope), show an optional "Unit ID" input field in the **Outside** location flow -- the same way it already exists for Inside locations.
 
-## New Flow for Outside
-A three-step progressive selection:
+## File: `src/components/work-order-wizard/steps/LocationStep.tsx`
 
-1. **Floor / Level** -- Which floor is the exterior work on? (Floor 1, Floor 2, Roof, etc.)
-2. **Feature** -- What exterior feature? (Balcony, Deck, Porch, Siding, Roof, Windows, Doors, Fascia, Soffit, Other)
-3. **Side / Direction** -- Which side? (Front, Back, Left, Right, North, South, East, West)
+- Derive a boolean `isMultiFamily` from `projectScope` by checking if `num_units > 1` or `num_buildings > 1`
+- In the Outside section, after the Floor/Level select and before the Feature select, add an optional Unit ID input (same style as the Inside unit field) -- only shown when `isMultiFamily` is true
+- The field reuses the existing `data.location_data.unit` property (same field used by Inside), so no type changes needed
+- The unit value will also appear in the location summary breadcrumb when filled in
 
-Each step only appears after the previous one is selected, using the same progressive reveal pattern already used for Inside locations.
-
-## Changes
-
-### File: `src/types/workOrderWizard.ts`
-- Add new fields to `WorkOrderLocationData`:
-  - `exterior_level?: string` -- floor for exterior work
-  - `exterior_feature_type?: string` -- the feature category (balcony, siding, etc.)
-  - `exterior_direction?: string` -- front/back/north/south etc.
-- Add constants:
-  - `EXTERIOR_FEATURE_OPTIONS` -- Balcony, Deck, Porch, Siding, Roof, Windows, Doors, Fascia, Soffit, Gutters, Other
-  - `EXTERIOR_DIRECTION_OPTIONS` -- Front, Back, Left, Right, North, South, East, West, General
-
-### File: `src/components/work-order-wizard/steps/LocationStep.tsx`
-- Replace the single exterior feature dropdown with three progressive selects:
-  1. Level select (reusing `levelOptions` from project scope)
-  2. Feature select (from new `EXTERIOR_FEATURE_OPTIONS`)
-  3. Direction select (from new `EXTERIOR_DIRECTION_OPTIONS`)
-- Show "Other" text input when feature is "Other"
-- Update the location summary at the bottom to show the breadcrumb: `Floor 2 > Balcony > Front`
-- When user changes a parent selection, clear child selections (e.g., changing level clears feature and direction)
-
-### File: `src/hooks/useProjectScope.ts`
-- No changes needed -- `getLevelOptions()` already provides floor options that work for exterior too
-
-### Backward Compatibility
-- The old `exterior_feature` field (combined value like `balcony_north`) is kept in the type but the work order wizard will write the new separate fields instead
-- The RFI location step and change order location step are not affected by this change
-
-## Summary Display
-The location summary will show:
-```
-Outside > Floor 2 > Balcony > Front
-```
+No changes needed to types or other files since the `unit` field already exists on `WorkOrderLocationData`.
 
