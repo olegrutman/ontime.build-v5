@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+
 import { Button } from '@/components/ui/button';
 
 import { Skeleton } from '@/components/ui/skeleton';
@@ -172,15 +172,9 @@ export function PackSelector({
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {allMatched ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
-                          {totalCount - matchedCount} unmatched
-                        </Badge>
-                      )}
-                    </div>
+                    {allMatched && (
+                      <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                    )}
                   </div>
                 </CardContent>
               </Card>
