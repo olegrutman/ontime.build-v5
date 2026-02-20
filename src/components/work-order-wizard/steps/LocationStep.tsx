@@ -53,6 +53,7 @@ function ToggleButton({
 export function LocationStep({ data, onChange, projectScope }: LocationStepProps) {
   const isInside = data.location_data.inside_outside === 'inside';
   const isOutside = data.location_data.inside_outside === 'outside';
+  const isMultiFamily = (projectScope?.num_units ?? 0) > 1 || (projectScope?.num_buildings ?? 0) > 1;
 
   const levelOptions = useMemo(() => getLevelOptions(projectScope), [projectScope]);
 
@@ -203,6 +204,19 @@ export function LocationStep({ data, onChange, projectScope }: LocationStepProps
             </Select>
           </div>
 
+          {/* Unit ID for multifamily (optional) */}
+          {data.location_data.exterior_level && isMultiFamily && (
+            <div className="animate-in fade-in slide-in-from-top-2">
+              <Label className="mb-2 block">Unit ID (Optional)</Label>
+              <Input
+                placeholder="e.g., 201, B, 456 Main St"
+                value={data.location_data.unit || ''}
+                onChange={(e) => updateLocation('unit', e.target.value)}
+                className="h-11"
+              />
+            </div>
+          )}
+
           {/* Step 2: Feature (shown after level selected) */}
           {data.location_data.exterior_level && (
             <div className="animate-in fade-in slide-in-from-top-2">
@@ -285,6 +299,7 @@ export function LocationStep({ data, onChange, projectScope }: LocationStepProps
                   .join(' → ')
               : [
                   data.location_data.exterior_level,
+                  data.location_data.unit ? `Unit ${data.location_data.unit}` : null,
                   data.location_data.exterior_feature_type === 'Other'
                     ? data.location_data.custom_exterior || 'Other'
                     : data.location_data.exterior_feature_type,
