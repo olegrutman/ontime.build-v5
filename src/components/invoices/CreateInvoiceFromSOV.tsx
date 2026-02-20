@@ -422,7 +422,7 @@ export function CreateInvoiceFromSOV({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>Create Invoice from SOV</DialogTitle>
           <DialogDescription>
@@ -430,6 +430,7 @@ export function CreateInvoiceFromSOV({
           </DialogDescription>
         </DialogHeader>
 
+        <div className="flex-1 overflow-y-auto min-h-0">
         {loading ? (
           <div className="space-y-4 py-4">
             <Skeleton className="h-10 w-full" />
@@ -744,8 +745,9 @@ export function CreateInvoiceFromSOV({
             </div>
           </div>
         )}
+        </div>
 
-        <DialogFooter>
+        <DialogFooter className="border-t bg-background pt-4 shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
