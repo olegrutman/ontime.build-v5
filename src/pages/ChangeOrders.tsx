@@ -6,7 +6,7 @@ import { AppLayout } from '@/components/layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChangeOrderWizardDialog } from '@/components/change-order-wizard';
+import { WorkOrderWizard } from '@/components/work-order-wizard';
 import { Plus, FileEdit, Building2 } from 'lucide-react';
 import {
   Select,
@@ -348,7 +348,7 @@ const ChangeOrders = () => {
 
         {/* Change Order Wizard */}
         {selectedProject && (
-          <ChangeOrderWizardDialog
+          <WorkOrderWizard
             open={showWizard}
             onOpenChange={setShowWizard}
             projectId={selectedProject.id}
