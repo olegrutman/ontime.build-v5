@@ -453,29 +453,6 @@ export function CreateInvoiceFromSOV({
           </Alert>
         ) : (
           <div className="space-y-6 py-4">
-            {/* Gross Amount Summary */}
-            <Card className="bg-primary/5 border-primary/20">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                      <DollarSign className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Gross Amount</p>
-                      <p className="text-2xl font-bold">{formatCurrency(grossAmount)}</p>
-                    </div>
-                  </div>
-                  {retainagePercent > 0 && grossAmount > 0 && (
-                    <div className="text-right text-sm">
-                      <p className="text-muted-foreground">Less {retainagePercent}% retainage</p>
-                      <p className="font-medium">Net: {formatCurrency(netAmount)}</p>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Contract Selection - Always show for upstream invoicing */}
             <div className="space-y-2">
               <Label>Select Contract to Invoice</Label>
@@ -747,17 +724,40 @@ export function CreateInvoiceFromSOV({
         )}
         </div>
 
-        <DialogFooter className="border-t bg-background pt-4 shrink-0">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSubmit} 
-            disabled={saving || !hasSelectedItems || hasErrors || !selectedContractId}
-          >
-            {saving ? 'Creating...' : 'Create Invoice'}
-          </Button>
-        </DialogFooter>
+        <div className="shrink-0 border-t bg-background pt-4 space-y-4">
+          <Card className="bg-primary/5 border-primary/20">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                    <DollarSign className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Gross Amount</p>
+                    <p className="text-2xl font-bold">{formatCurrency(grossAmount)}</p>
+                  </div>
+                </div>
+                {retainagePercent > 0 && grossAmount > 0 && (
+                  <div className="text-right text-sm">
+                    <p className="text-muted-foreground">Less {retainagePercent}% retainage</p>
+                    <p className="font-medium">Net: {formatCurrency(netAmount)}</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={saving || !hasSelectedItems || hasErrors || !selectedContractId}
+            >
+              {saving ? 'Creating...' : 'Create Invoice'}
+            </Button>
+          </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
