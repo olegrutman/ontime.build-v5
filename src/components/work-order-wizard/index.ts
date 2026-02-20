@@ -3,6 +3,7 @@ export { WizardProgress } from './WizardProgress';
 export { TitleStep } from './steps/TitleStep';
 export { LocationStep } from './steps/LocationStep';
 export { WorkTypeStep } from './steps/WorkTypeStep';
+export { ScopeDetailsStep } from './steps/ScopeDetailsStep';
 export { PricingModeStep } from './steps/PricingModeStep';
 export { ResourcesStep } from './steps/ResourcesStep';
 export { AssignmentStep } from './steps/AssignmentStep';
