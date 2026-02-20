@@ -10,11 +10,10 @@ import {
 } from '@/components/ui/select';
 import { MapPin, Home, Building2, Layers, DoorOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { WorkOrderWizardData, ROOM_AREA_OPTIONS } from '@/types/workOrderWizard';
+import { WorkOrderWizardData, ROOM_AREA_OPTIONS, EXTERIOR_FEATURE_OPTIONS, EXTERIOR_DIRECTION_OPTIONS } from '@/types/workOrderWizard';
 import { 
   ProjectScopeDetails, 
-  getLevelOptions, 
-  getExteriorOptions 
+  getLevelOptions,
 } from '@/hooks/useProjectScope';
 
 interface LocationStepProps {
@@ -56,16 +55,21 @@ export function LocationStep({ data, onChange, projectScope }: LocationStepProps
   const isOutside = data.location_data.inside_outside === 'outside';
 
   const levelOptions = useMemo(() => getLevelOptions(projectScope), [projectScope]);
-  const exteriorOptions = useMemo(() => getExteriorOptions(projectScope), [projectScope]);
 
-  const updateLocation = (field: string, value: string) => {
+  const updateLocation = (field: string, value: string, clearFields?: string[]) => {
+    const updates: Record<string, string | undefined> = { [field]: value };
+    if (clearFields) {
+      clearFields.forEach((f) => {
+        updates[f] = undefined;
+      });
+    }
     onChange({
-      location_data: { ...data.location_data, [field]: value },
+      location_data: { ...data.location_data, ...updates },
     });
   };
 
   const showCustomRoomArea = data.location_data.room_area === 'Other';
-  const showCustomExterior = data.location_data.exterior_feature === 'other';
+  const showCustomExteriorFeature = data.location_data.exterior_feature_type === 'Other';
 
   return (
     <div className="space-y-6">
@@ -176,44 +180,96 @@ export function LocationStep({ data, onChange, projectScope }: LocationStepProps
       {/* Outside Location Fields */}
       {isOutside && (
         <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+          {/* Step 1: Level */}
           <div>
             <Label className="flex items-center gap-2 mb-2">
-              <Building2 className="w-4 h-4" />
-              Exterior Feature
+              <Layers className="w-4 h-4" />
+              Floor / Level
             </Label>
             <Select
-              value={data.location_data.exterior_feature || ''}
-              onValueChange={(value) => updateLocation('exterior_feature', value)}
+              value={data.location_data.exterior_level || ''}
+              onValueChange={(value) => updateLocation('exterior_level', value, ['exterior_feature_type', 'exterior_direction', 'custom_exterior'])}
             >
               <SelectTrigger className="h-11">
-                <SelectValue placeholder="Select exterior feature..." />
+                <SelectValue placeholder="Select floor..." />
               </SelectTrigger>
               <SelectContent>
-                {exteriorOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
+                {levelOptions.map((level) => (
+                  <SelectItem key={level} value={level}>
+                    {level}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {showCustomExterior && (
+          {/* Step 2: Feature (shown after level selected) */}
+          {data.location_data.exterior_level && (
             <div className="animate-in fade-in slide-in-from-top-2">
-              <Label className="mb-2 block">Specify Location</Label>
+              <Label className="flex items-center gap-2 mb-2">
+                <Building2 className="w-4 h-4" />
+                Exterior Feature
+              </Label>
+              <Select
+                value={data.location_data.exterior_feature_type || ''}
+                onValueChange={(value) => updateLocation('exterior_feature_type', value, ['exterior_direction', 'custom_exterior'])}
+              >
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Select feature..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {EXTERIOR_FEATURE_OPTIONS.map((feature) => (
+                    <SelectItem key={feature} value={feature}>
+                      {feature}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Custom feature input */}
+          {showCustomExteriorFeature && (
+            <div className="animate-in fade-in slide-in-from-top-2">
+              <Label className="mb-2 block">Specify Feature</Label>
               <Input
-                placeholder="Describe the specific exterior location..."
+                placeholder="Describe the exterior feature..."
                 value={data.location_data.custom_exterior || ''}
                 onChange={(e) => updateLocation('custom_exterior', e.target.value)}
                 className="h-11"
               />
             </div>
           )}
+
+          {/* Step 3: Direction (shown after feature selected) */}
+          {data.location_data.exterior_feature_type && (
+            <div className="animate-in fade-in slide-in-from-top-2">
+              <Label className="flex items-center gap-2 mb-2">
+                <MapPin className="w-4 h-4" />
+                Side / Direction
+              </Label>
+              <Select
+                value={data.location_data.exterior_direction || ''}
+                onValueChange={(value) => updateLocation('exterior_direction', value)}
+              >
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Select side..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {EXTERIOR_DIRECTION_OPTIONS.map((dir) => (
+                    <SelectItem key={dir} value={dir}>
+                      {dir}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
       )}
 
       {/* Location Summary */}
-      {(data.location_data.level || data.location_data.exterior_feature) && (
+      {(data.location_data.level || data.location_data.exterior_level) && (
         <div className="border-l-2 border-primary/50 pl-3 py-2 bg-muted/30 rounded-r-lg">
           <p className="text-xs text-muted-foreground">Current selection</p>
           <p className="font-medium">
@@ -227,10 +283,15 @@ export function LocationStep({ data, onChange, projectScope }: LocationStepProps
                 ]
                   .filter(Boolean)
                   .join(' → ')
-              : data.location_data.exterior_feature === 'other'
-              ? data.location_data.custom_exterior || 'Other'
-              : exteriorOptions.find((o) => o.value === data.location_data.exterior_feature)
-                  ?.label || data.location_data.exterior_feature}
+              : [
+                  data.location_data.exterior_level,
+                  data.location_data.exterior_feature_type === 'Other'
+                    ? data.location_data.custom_exterior || 'Other'
+                    : data.location_data.exterior_feature_type,
+                  data.location_data.exterior_direction,
+                ]
+                  .filter(Boolean)
+                  .join(' → ')}
           </p>
         </div>
       )}
