@@ -144,7 +144,7 @@ export function WorkOrderWizard({
           steps={STEPS}
         />
 
-        <div className="p-6 min-h-[400px] max-h-[60vh] overflow-y-auto">
+        <div className="px-6 pb-6 pt-8 min-h-[400px] max-h-[60vh] overflow-y-auto">
           {currentStep === 1 && (
             <TitleStep data={formData} onChange={handleChange} />
           )}
