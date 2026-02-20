@@ -251,7 +251,7 @@ export function CreateInvoiceDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle>Create New Invoice</DialogTitle>
           <DialogDescription>
@@ -259,7 +259,7 @@ export function CreateInvoiceDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="flex-1 overflow-y-auto min-h-0 space-y-6 py-4">
           {/* Invoice Details */}
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
@@ -458,7 +458,7 @@ export function CreateInvoiceDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="border-t bg-background pt-4 shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
