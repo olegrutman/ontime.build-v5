@@ -1,68 +1,83 @@
 
-# Fix: PO Creation RLS Policy for Multi-Org Users
 
-## Root Cause
+# Purge All Project Data for Clean Testing
 
-The INSERT policy on `purchase_orders` uses:
-```
-is_pm_role(auth.uid()) AND (organization_id = get_user_org_id(auth.uid()))
-```
+## Overview
+Delete all data from project-related tables in the correct order to respect foreign key constraints. This is a full data reset across projects, work orders, POs, invoices, RFIs, estimates, and suppliers.
 
-The `get_user_org_id` function does `SELECT organization_id FROM user_org_roles WHERE user_id = _user_id LIMIT 1` -- it returns only ONE org without a deterministic order. For users like `gc@test.com` who belong to multiple organizations, this non-deterministically picks one org. If the frontend sets `organization_id` to the user's other org, the RLS check fails with "new row violates row-level security policy".
+## Deletion Order (respecting foreign keys)
 
-The same problem affects the `po_line_items` INSERT policy and several UPDATE policies.
-
-## Fix
-
-### Part 1: Update PO INSERT policy
-
-Replace `organization_id = get_user_org_id(auth.uid())` with `user_in_org(auth.uid(), organization_id)`. This checks whether the user actually belongs to the org being inserted, regardless of how many orgs they have.
+The SQL migration will delete data in dependency order -- children first, then parents:
 
 ```sql
-DROP POLICY IF EXISTS "PM roles can create POs" ON purchase_orders;
-CREATE POLICY "PM roles can create POs" ON purchase_orders
-  FOR INSERT WITH CHECK (
-    is_pm_role(auth.uid()) AND user_in_org(auth.uid(), organization_id)
-  );
+-- 1. Work order / change order children
+DELETE FROM change_order_fc_hours;
+DELETE FROM change_order_tc_labor;
+DELETE FROM change_order_materials;
+DELETE FROM change_order_equipment;
+DELETE FROM change_order_checklist;
+DELETE FROM change_order_participants;
+DELETE FROM tm_periods;
+DELETE FROM tm_labor_entries;
+DELETE FROM tm_material_entries;
+
+-- 2. Work orders themselves
+DELETE FROM change_order_projects;
+
+-- 3. RFIs
+DELETE FROM project_rfis;
+
+-- 4. Invoices (break linked_po_id references first)
+UPDATE invoices SET linked_po_id = NULL WHERE linked_po_id IS NOT NULL;
+DELETE FROM invoice_line_items;
+DELETE FROM invoices;
+
+-- 5. Purchase orders
+DELETE FROM po_line_items;
+DELETE FROM purchase_orders;
+
+-- 6. SOV
+DELETE FROM project_sov_items;
+DELETE FROM project_sov;
+
+-- 7. Estimates
+DELETE FROM supplier_estimate_items;
+DELETE FROM supplier_estimates;
+
+-- 8. Contracts and relationships
+DELETE FROM project_relationships;
+DELETE FROM project_contracts;
+
+-- 9. Project team and participants
+DELETE FROM project_invites;
+DELETE FROM project_team;
+DELETE FROM project_participants;
+
+-- 10. Notifications
+DELETE FROM notifications;
+
+-- 11. Reminders
+DELETE FROM reminders;
+
+-- 12. Projects
+DELETE FROM projects;
+
+-- 13. Suppliers
+DELETE FROM suppliers;
+
+-- 14. Supplier inventory (catalog items uploaded by suppliers)
+DELETE FROM supplier_products;
 ```
 
-### Part 2: Update PO UPDATE policies that use `get_user_org_id`
+## Important Notes
 
-Same fix for:
-- "PM roles can update active POs"
-- "GC_PM can update any PO"
-- "GC_PM can delete active POs"
+- This deletes ALL data across ALL projects -- not just the current one
+- Organizations and user accounts are preserved so you can log back in
+- Trusted partner relationships are preserved
+- The catalog_items table (shared product catalog) is NOT deleted
+- After running, the dashboard will be empty and ready for fresh testing
 
-Replace `organization_id = get_user_org_id(auth.uid())` with `user_in_org(auth.uid(), organization_id)`.
+## Risk
+- **Irreversible** -- all project data will be permanently removed from the test environment
+- User accounts and org setup remain intact
 
-### Part 3: Update `po_line_items` policies
-
-The INSERT/UPDATE/DELETE policies on `po_line_items` also call `user_in_org(auth.uid(), po.organization_id)` -- these are already correct and don't use `get_user_org_id`, so no changes needed there.
-
-### Part 4: Fix `get_user_org_id` for determinism (defense in depth)
-
-Add `ORDER BY created_at ASC` to `get_user_org_id` so it at least returns a consistent result if used elsewhere:
-
-```sql
-CREATE OR REPLACE FUNCTION public.get_user_org_id(_user_id uuid)
-RETURNS uuid
-LANGUAGE sql
-STABLE SECURITY DEFINER
-SET search_path = public
-AS $$
-  SELECT organization_id
-  FROM public.user_org_roles
-  WHERE user_id = _user_id
-  ORDER BY created_at ASC
-  LIMIT 1
-$$;
-```
-
-## Files Changed
-
-| File | Change |
-|------|--------|
-| SQL Migration | Update 4 RLS policies on `purchase_orders` + fix `get_user_org_id` ordering |
-
-## Risk Assessment
-- **Low risk**: Using `user_in_org` is more correct than `get_user_org_id` -- it checks the actual org being written rather than guessing which org the user "belongs to." The `user_in_org` function is already used throughout other policies.
