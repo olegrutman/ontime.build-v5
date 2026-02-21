@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.send-po]
 verify_jwt = false
+
+[functions.seed-test-users]
+verify_jwt = false
