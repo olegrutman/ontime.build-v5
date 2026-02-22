@@ -35,7 +35,8 @@ export function SupplierPOSummaryCard({ projectId, supplierOrgId }: SupplierPOSu
         .from('purchase_orders')
         .select('status')
         .eq('project_id', projectId)
-        .eq('supplier_id', supplier!.id);
+        .eq('supplier_id', supplier!.id)
+        .neq('status', 'ACTIVE');
 
       if (error) throw error;
 

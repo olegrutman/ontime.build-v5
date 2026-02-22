@@ -101,11 +101,12 @@ export function POSummaryCard({ projectId }: POSummaryCardProps) {
         return;
       }
 
-      // Filter POs for supplier - they only see their own
+      // Filter POs for supplier - they only see their own, and exclude drafts
       let filteredPOs = pos || [];
       if (isSupplierView && currentOrgId) {
         filteredPOs = filteredPOs.filter(po => 
           (po.supplier as { organization_id?: string })?.organization_id === currentOrgId
+          && po.status !== 'ACTIVE'
         );
       }
 
