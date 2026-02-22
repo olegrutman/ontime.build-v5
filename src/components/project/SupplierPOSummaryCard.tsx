@@ -11,8 +11,15 @@ interface SupplierPOSummaryCardProps {
   supplierOrgId: string;
 }
 
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+  }).format(amount);
+}
+
 export function SupplierPOSummaryCard({ projectId, supplierOrgId }: SupplierPOSummaryCardProps) {
-  // First get the supplier_id from the org_id
   const { data: supplier } = useQuery({
     queryKey: ['supplier-by-org', supplierOrgId],
     queryFn: async () => {
@@ -28,29 +35,58 @@ export function SupplierPOSummaryCard({ projectId, supplierOrgId }: SupplierPOSu
     enabled: !!supplierOrgId,
   });
 
-  const { data: statusCounts, isLoading } = useQuery({
-    queryKey: ['supplier-po-status', projectId, supplier?.id],
+  const { data: poData, isLoading } = useQuery({
+    queryKey: ['supplier-po-summary', projectId, supplier?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: pos, error } = await supabase
         .from('purchase_orders')
-        .select('status')
+        .select('id, status, sales_tax_percent')
         .eq('project_id', projectId)
         .eq('supplier_id', supplier!.id)
         .neq('status', 'ACTIVE');
 
       if (error) throw error;
 
-      return {
-        awaiting_pricing: data?.filter((p) => p.status === 'SUBMITTED').length || 0,
-        priced: data?.filter((p) => p.status === 'PRICED').length || 0,
-        finalized: data?.filter((p) => p.status === 'FINALIZED').length || 0,
-        ready_for_delivery: data?.filter((p) => p.status === 'READY_FOR_DELIVERY').length || 0,
-        delivered: data?.filter((p) => p.status === 'DELIVERED').length || 0,
+      const statusCounts = {
+        awaiting_pricing: pos?.filter((p) => p.status === 'SUBMITTED').length || 0,
+        priced: pos?.filter((p) => p.status === 'PRICED').length || 0,
+        finalized: pos?.filter((p) => p.status === 'FINALIZED').length || 0,
+        ready_for_delivery: pos?.filter((p) => p.status === 'READY_FOR_DELIVERY').length || 0,
+        delivered: pos?.filter((p) => p.status === 'DELIVERED').length || 0,
       };
+
+      // Fetch line item totals for financial summary
+      let subtotal = 0;
+      let totalWithTax = 0;
+
+      if (pos && pos.length > 0) {
+        const poIds = pos.map((p) => p.id);
+        const { data: lineItems } = await supabase
+          .from('po_line_items')
+          .select('po_id, line_total')
+          .in('po_id', poIds);
+
+        // Sum line totals per PO, then apply tax
+        const poTotals = new Map<string, number>();
+        (lineItems || []).forEach((item) => {
+          const current = poTotals.get(item.po_id) || 0;
+          poTotals.set(item.po_id, current + (item.line_total || 0));
+        });
+
+        pos.forEach((po) => {
+          const poSubtotal = poTotals.get(po.id) || 0;
+          subtotal += poSubtotal;
+          const taxRate = (po.sales_tax_percent || 0) / 100;
+          totalWithTax += poSubtotal * (1 + taxRate);
+        });
+      }
+
+      return { statusCounts, subtotal, totalWithTax };
     },
     enabled: !!projectId && !!supplier?.id,
   });
 
+  const statusCounts = poData?.statusCounts;
   const urgentCount = statusCounts?.awaiting_pricing || 0;
 
   if (isLoading || !supplier) {
@@ -106,6 +142,22 @@ export function SupplierPOSummaryCard({ projectId, supplierOrgId }: SupplierPOSu
           <Truck className="h-4 w-4" />
           <span className="text-sm">{statusCounts?.delivered || 0} delivered</span>
         </div>
+
+        {/* Financial total with tax */}
+        {(poData?.subtotal || 0) > 0 && (
+          <div className="pt-2 border-t space-y-1">
+            {poData!.totalWithTax !== poData!.subtotal && (
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>Subtotal</span>
+                <span>{formatCurrency(poData!.subtotal)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm font-medium">
+              <span>Total{poData!.totalWithTax !== poData!.subtotal ? ' (incl. tax)' : ''}</span>
+              <span>{formatCurrency(poData!.totalWithTax)}</span>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
