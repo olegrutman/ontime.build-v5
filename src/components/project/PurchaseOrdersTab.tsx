@@ -84,6 +84,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
       if (supplierLinks && supplierLinks.length > 0) {
         const supplierIds = supplierLinks.map(s => s.id);
         query = query.in('supplier_id', supplierIds);
+        query = query.neq('status', 'ACTIVE');
       } else {
         setPurchaseOrders([]);
         setLoading(false);
