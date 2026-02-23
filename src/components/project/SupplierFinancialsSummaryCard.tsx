@@ -46,7 +46,7 @@ export function SupplierFinancialsSummaryCard({
       // Get total from finalized POs (= contract value)
       const { data: pos, error: posError } = await supabase
         .from('purchase_orders')
-        .select('id, po_line_items(line_total)')
+        .select('id, sales_tax_percent, po_line_items(line_total)')
         .eq('project_id', projectId)
         .eq('supplier_id', supplier!.id)
         .in('status', ['FINALIZED', 'DELIVERED']);
@@ -55,7 +55,9 @@ export function SupplierFinancialsSummaryCard({
 
       const totalContract =
         pos?.reduce((sum, po) => {
-          return sum + (po.po_line_items?.reduce((s, li) => s + (li.line_total || 0), 0) || 0);
+          const subtotal = po.po_line_items?.reduce((s, li) => s + (li.line_total || 0), 0) || 0;
+          const taxRate = (po.sales_tax_percent || 0) / 100;
+          return sum + subtotal * (1 + taxRate);
         }, 0) || 0;
 
       // Get invoiced amounts (linked to these POs)
