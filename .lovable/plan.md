@@ -1,97 +1,68 @@
 
 
-# Revise & Resubmit via Invoice Creation Wizard
+# Fix Revision Mode Percentage Bugs in Invoice Wizard
 
-## Overview
-When a rejected invoice's "Revise & Resubmit" button is clicked, instead of just reverting to DRAFT, open the `CreateInvoiceFromSOV` wizard pre-populated with the rejected invoice's existing data (contract, billing period, notes, SOV item percentages). The user adjusts the SOV item percentages and clicks a "Resubmit Invoice" button, which updates the existing invoice record in-place (same invoice number, incremented revision count).
+## Root Cause
 
-## Changes
+A database trigger (`update_sov_completion_from_invoice`) automatically subtracts billing percentages from SOV items when an invoice is rejected. The revision wizard code incorrectly assumes these values are still included, leading to double-subtraction and inflated maximums.
 
-### 1. `src/components/invoices/CreateInvoiceFromSOV.tsx`
+## Bugs Found
 
-Add support for a **revision mode** via new optional props:
+### Bug 1 -- Max Allowed Percent is too high
+**File:** `CreateInvoiceFromSOV.tsx`, line 292-294
 
-- `revisionInvoiceId?: string` -- if set, the wizard is in revision mode
-- `revisionData?: { contractId, invoiceNumber, periodStart, periodEnd, notes, lineItems[], revisionCount }` -- pre-populates the form
+The code adds back `revisionLine.billed_percent` to compensate for the original billing still being in the SOV totals. But the rejection trigger already subtracted it, so this gives extra headroom.
 
-**Behavior in revision mode:**
-- Skip contract selection -- auto-select and lock the contract from the original invoice
-- Pre-fill invoice number, billing period, and notes (all editable except invoice number)
-- Pre-populate SOV item toggles and percentages from the original invoice's line items
-- The SOV `maxAllowedPercent` calculation must add back the original `current_billed` percent (since we're replacing, not stacking)
-- Change the submit button label from "Create Invoice" to "Resubmit Invoice"
-- On submit: UPDATE the existing invoice instead of INSERT, DELETE old line items and INSERT new ones, increment `revision_count`, clear rejection fields, set status to SUBMITTED
-
-### 2. `src/components/invoices/InvoiceDetail.tsx`
-
-- Replace the current `handleRevise` function with one that opens the wizard
-- Add state: `reviseDialogOpen` and pass the invoice's data to the wizard
-- Pass the invoice's contract_id, line items, billing period, notes, and revision count
-- On wizard success: refresh the invoice detail and call `onUpdate`
-
-### 3. `src/components/invoices/InvoicesTab.tsx`
-
-No changes needed -- the revision wizard is opened from InvoiceDetail, not from InvoicesTab.
-
-## Technical Details
-
-### Revision mode submit logic (in CreateInvoiceFromSOV)
-
+**Fix:** Remove the add-back. Use the same formula as non-revision items:
 ```
-// Instead of INSERT:
-1. UPDATE invoices SET
-     status = 'SUBMITTED',
-     billing_period_start, billing_period_end, notes,
-     subtotal, retainage_amount, total_amount,
-     submitted_at = now(), submitted_by = user.id,
-     revision_count = revisionCount + 1,
-     rejected_at = null, rejected_by = null, rejection_reason = null
-   WHERE id = revisionInvoiceId
-
-2. DELETE FROM invoice_line_items WHERE invoice_id = revisionInvoiceId
-
-3. INSERT new line items (same as normal creation)
-
-4. Update SOV billing totals via RPC
+maxAllowedPercent = Math.max(0, 100 - (item.total_completion_percent || 0))
 ```
 
-### Pre-populating SOV percentages
+### Bug 2 -- Previous Billed amount is too low
+**File:** `CreateInvoiceFromSOV.tsx`, lines 408-411
 
-When in revision mode, after SOV items load, match each SOV item against the original invoice's line items by `sov_item_id`. For matched items:
-- Set `enabled = true`
-- Set `thisBillPercent` to the original `billed_percent`
-- Adjust `maxAllowedPercent` by adding back the original percent (since the old billing is being replaced)
+The code subtracts `revisionLine.current_billed` from `total_billed_amount` to exclude the old billing. But the trigger already removed it, so this double-subtracts.
 
-### Props interface change
-
-```typescript
-interface CreateInvoiceFromSOVProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  projectId: string;
-  onSuccess: () => void;
-  // Revision mode
-  revisionInvoiceId?: string;
-  revisionData?: {
-    contractId: string;
-    invoiceNumber: string;
-    periodStart: string;
-    periodEnd: string;
-    notes: string | null;
-    revisionCount: number;
-    lineItems: Array<{
-      sov_item_id: string;
-      billed_percent: number;
-      current_billed: number;
-    }>;
-  };
-}
+**Fix:** Use `total_billed_amount` directly (no subtraction):
 ```
+previousBilled = item.total_billed_amount || 0
+```
+
+### Bug 3 -- Trigger fires with old line items
+**File:** `CreateInvoiceFromSOV.tsx`, lines 376-435
+
+The submit sequence is:
+1. UPDATE invoice status to SUBMITTED (trigger fires, reads OLD line items, adds their percentages)
+2. DELETE old line items
+3. INSERT new line items
+
+The trigger adds the OLD line items' percentages to SOV items, and the new line items are never reflected.
+
+**Fix:** Reorder operations:
+1. DELETE old line items first
+2. INSERT new line items
+3. UPDATE invoice status to SUBMITTED last (trigger fires, reads NEW line items)
 
 ## File Changes
 
 | File | Change |
 |------|--------|
-| `src/components/invoices/CreateInvoiceFromSOV.tsx` | Add revision mode props, pre-populate form, UPDATE instead of INSERT on submit |
-| `src/components/invoices/InvoiceDetail.tsx` | Replace `handleRevise` to open wizard with revision data, add state and dialog |
+| `src/components/invoices/CreateInvoiceFromSOV.tsx` | Fix all 3 bugs in the revision mode logic |
+
+## Technical Details
+
+### CreateInvoiceFromSOV.tsx -- Billing Items Setup (lines 286-304)
+
+Remove the special `adjustedMaxPercent` branch for revision mode. Since the rejection trigger already subtracted the old billing from SOV `total_completion_percent`, the max is simply `100 - total_completion_percent` for all items.
+
+### CreateInvoiceFromSOV.tsx -- Submit Handler (lines 374-444)
+
+Reorder the revision-mode submit to:
+1. Delete old `invoice_line_items`
+2. Insert new `invoice_line_items`
+3. Update invoice record (status, revision_count, clear rejection fields) -- this fires the trigger which correctly reads the new line items
+4. Call `update_sov_billing_totals` RPC
+5. Log activity
+
+Also fix `previousBilled` to not subtract the old `current_billed` since it's already excluded.
 
