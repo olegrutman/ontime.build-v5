@@ -26,6 +26,7 @@ import {
   FinancialHealthCharts,
   OperationalSummary,
   SupplierEstimateVsOrdersCard,
+  SupplierOperationalSummary,
 } from '@/components/project';
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
 import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
@@ -234,6 +235,11 @@ export default function ProjectHome() {
                         <SupplierFinancialsSummaryCard projectId={id!} supplierOrgId={supplierOrgId} />
                         <SupplierPOSummaryCard projectId={id!} supplierOrgId={supplierOrgId} />
                       </div>
+                      <SupplierOperationalSummary
+                        projectId={id!}
+                        supplierOrgId={supplierOrgId}
+                        onNavigate={handleTabChange}
+                      />
                     </>
                   ) : (
                     <>
@@ -272,7 +278,7 @@ export default function ProjectHome() {
               )}
 
               {/* RFIs Tab */}
-              {activeTab === 'rfis' && !isSupplier && (
+              {activeTab === 'rfis' && (
                 isInDemoMode ? <DemoRFIsTab /> : <RFIsTab projectId={id!} />
               )}
 

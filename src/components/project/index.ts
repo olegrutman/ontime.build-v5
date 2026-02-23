@@ -25,3 +25,4 @@ export { OperationalSummary } from './OperationalSummary';
 export { ProjectEstimatesReview } from './ProjectEstimatesReview';
 export { ProjectReadinessCard } from './ProjectReadinessCard';
 export { SupplierEstimateVsOrdersCard } from './SupplierEstimateVsOrdersCard';
+export { SupplierOperationalSummary } from './SupplierOperationalSummary';
