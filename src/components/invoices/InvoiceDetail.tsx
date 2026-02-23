@@ -235,6 +235,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   // - isInvoiceReceiver (to_org - client) can approve/reject/mark paid
   const canSubmit = isInvoiceCreator;
   const canApprove = isInvoiceReceiver;
+  const canRevise = canSubmit || invoice?.created_by === user?.id;
   const status = invoice.status as InvoiceStatus;
 
   return (
@@ -362,7 +363,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
                 <p className="text-sm font-medium text-red-800 dark:text-red-200">Rejection Reason:</p>
                 <p className="text-sm text-red-700 dark:text-red-300">{invoice.rejection_reason}</p>
               </div>
-              {canSubmit && (
+              {canRevise && (
                 <Button onClick={handleRevise} disabled={actionLoading} size="sm">
                   {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RotateCcw className="h-4 w-4 mr-2" />}
                   Revise & Resubmit
