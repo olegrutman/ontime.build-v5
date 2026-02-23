@@ -375,7 +375,15 @@ export function CreateInvoiceFromSOV({
         // IMPORTANT: Order matters! The status-change trigger reads line items,
         // so we must delete old → insert new → then update status.
 
-        // 1. Delete old line items
+        // 1. Set status to DRAFT so RLS allows line item operations
+        const { error: draftError } = await supabase
+          .from('invoices')
+          .update({ status: 'DRAFT' })
+          .eq('id', revisionInvoiceId);
+
+        if (draftError) throw draftError;
+
+        // 2. Delete old line items
         const { error: deleteError } = await supabase
           .from('invoice_line_items')
           .delete()
@@ -383,7 +391,7 @@ export function CreateInvoiceFromSOV({
 
         if (deleteError) throw deleteError;
 
-        // 2. Insert new line items
+        // 3. Insert new line items (RLS passes because status is now DRAFT)
         const lineItemsToInsert = enabledItems.map((item, index) => {
           // The rejection trigger already removed the old billing from total_billed_amount,
           // so use it directly — no subtraction needed.
@@ -410,7 +418,7 @@ export function CreateInvoiceFromSOV({
 
         if (lineItemsError) throw lineItemsError;
 
-        // 3. Update invoice record last — trigger fires here and reads NEW line items
+        // 4. Update invoice to SUBMITTED — trigger fires here and reads NEW line items
         const { error: updateError } = await supabase
           .from('invoices')
           .update({
@@ -432,7 +440,7 @@ export function CreateInvoiceFromSOV({
 
         if (updateError) throw updateError;
 
-        // 4. Update SOV billing totals
+        // 5. Update SOV billing totals
         await supabase.rpc('update_sov_billing_totals', { p_project_id: projectId });
 
         // Log activity
