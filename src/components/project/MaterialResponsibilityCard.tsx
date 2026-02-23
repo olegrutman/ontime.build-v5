@@ -42,7 +42,7 @@ export function MaterialResponsibilityCard({ projectId }: MaterialResponsibility
         to_org:organizations!project_contracts_to_org_id_fkey(name)
       `)
       .eq('project_id', projectId)
-      .eq('from_role', 'TC')
+      .eq('from_role', 'Trade Contractor')
       .limit(1);
 
     if (data && data.length > 0) {
