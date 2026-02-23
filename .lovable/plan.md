@@ -1,66 +1,42 @@
 
-# Fix: GC Should Not See TC-to-FC Contracts on SOV Page
 
-## Problem
-When a GC creates a project and adds a TC, then the TC adds an FC with a contract value, the GC's SOV page incorrectly shows "contract missing SOV" for the TC-to-FC contract. The GC has no role in managing the TC-to-FC relationship and should not see those contracts on their SOV page at all.
+# Add Dedicated Material Responsibility Card to Project Overview
 
-## Root Cause
-The contract filtering logic uses a `creatorMatch` / `isProjectCreator` flag that grants the project creator (GC) visibility into ALL contracts on the project, including TC-to-FC contracts they are not a party to.
+## Goal
+Create a prominent, always-visible card on the project overview page that clearly shows which party (GC or TC) is responsible for materials, replacing the current buried display inside contracts and readiness checklist items.
 
-This affects three locations:
-1. **Contract list** -- GC sees TC-FC contracts in the SOV editor
-2. **Missing SOV warnings** -- GC gets prompted to create SOVs for TC-FC contracts
-3. **SOV readiness check** -- Dashboard shows TC-FC contracts as "missing SOV"
+## What Changes
 
-## Fix
+### 1. New Component: `src/components/project/MaterialResponsibilityCard.tsx`
 
-### File: `src/hooks/useContractSOV.ts`
+A dedicated card that:
+- Queries `project_contracts` for the contract with `material_responsibility` set
+- Displays a prominent Package icon with "Material Responsibility" title
+- Shows the responsible party name and role (e.g., "GC - Acme Builders" or "TC - Smith Framing")
+- If not yet set and user has permission (GC or TC on the contract), shows GC/TC toggle buttons to set it
+- If already set and user has permission, shows a small "Change" button to update it
+- Uses a distinct visual style (e.g., blue-left border, Package icon) so it stands out from other cards
 
-**Line 363-364** -- Contract filter: Remove `creatorMatch` from the visibility filter. Each org should only see contracts where they are directly a party (`from_org_id` or `to_org_id`).
+**Props**: `projectId: string`
 
-Before:
-```
-.filter((c) => c.from_org_id === currentOrgId || c.to_org_id === currentOrgId || creatorMatch)
-```
+**Data fetched**:
+- `project_contracts` where `material_responsibility IS NOT NULL` or where `from_role = 'TC'` (to find the relevant contract even if not yet set)
+- Joins org names via `from_org:organizations!from_org_id(name)` and `to_org:organizations!to_org_id(name)`
 
-After:
-```
-.filter((c) => c.from_org_id === currentOrgId || c.to_org_id === currentOrgId)
-```
+**Display logic**:
+- If `material_responsibility` is set: Show "GC" or "TC" badge with the org name, and a subtle change button
+- If not set: Show "Not assigned" with GC/TC selection buttons
+- Hidden for FC and Supplier roles (they don't manage this)
 
-**Line 464** -- `contractsMissingSOVs`: Remove `isProjectCreator` from the payer check. Only the actual payer (`to_org_id`) should be prompted to create an SOV.
+### 2. Update: `src/pages/ProjectHome.tsx`
 
-Before:
-```
-(c.to_org_id === currentOrgId || isProjectCreator)
-```
+- Import `MaterialResponsibilityCard`
+- Place it in the GC/TC overview section, right after the `ProjectReadinessCard` (or after `AttentionBanner` for active projects), before `FinancialSignalBar`
+- Only render for non-supplier, non-FC, non-demo users
 
-After:
-```
-c.to_org_id === currentOrgId
-```
+### Files Changed
+| File | Change |
+|------|--------|
+| `src/components/project/MaterialResponsibilityCard.tsx` | New component |
+| `src/pages/ProjectHome.tsx` | Import and render the new card |
 
-**Line 478** -- `createAllSOVs`: Same change -- remove `isProjectCreator` from the payer filter.
-
-### File: `src/hooks/useSOVReadiness.ts`
-
-**Line 85-86** -- The readiness check uses `creatorFlag` to show all contracts to the project creator. Remove this so GC only sees contracts where their org is `to_org_id` (the payer).
-
-Before:
-```
-(!userOrgId || c.to_org_id === userOrgId || (creatorFlag && (c.from_org_id === userOrgId || c.to_org_id === userOrgId)))
-```
-
-After:
-```
-(!userOrgId || c.to_org_id === userOrgId)
-```
-
-The `creatorFlag` state variable and related fetch logic can also be cleaned up since it is no longer used.
-
-## Result
-- GC only sees GC-TC contracts on the SOV page (contracts they are paying for)
-- TC sees GC-TC contracts (revenue) and TC-FC contracts (cost) -- both directions where they are a party
-- FC sees TC-FC contracts only
-- No role sees contracts they are not a party to
-- SOV readiness warnings are scoped correctly per org
