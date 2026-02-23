@@ -259,7 +259,10 @@ export default function ProjectHome() {
                         (materialResponsibility === 'GC' && !isSupplier && !isFC && currentOrg?.type !== 'GC') ||
                         (materialResponsibility === 'TC' && currentOrg?.type === 'GC')
                       } />
-                      <FinancialHealthCharts financials={financials} />
+                      <FinancialHealthCharts financials={financials} hideMaterialCards={
+                        (materialResponsibility === 'GC' && !isSupplier && !isFC && currentOrg?.type !== 'GC') ||
+                        (materialResponsibility === 'TC' && currentOrg?.type === 'GC')
+                      } />
                       <OperationalSummary
                         projectId={id!}
                         projectType={project.project_type}
