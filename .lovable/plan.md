@@ -1,24 +1,37 @@
 
-# Show PO Total Including Tax on PO Card
+# Include Tax in PO Totals on Overview Cards
 
-## Change
+## Problem
+The Supplier Financial Summary and Estimates vs Orders cards on the project overview page show PO totals as subtotals only (sum of line items), without applying `sales_tax_percent`.
 
-In `src/components/purchase-orders/POCard.tsx`, update the total calculation (lines 91-93) to include the PO's `sales_tax_percent` when computing the displayed amount.
+## Changes
 
-### Current logic (line 91-93):
+### 1. `src/components/project/SupplierFinancialsSummaryCard.tsx` (line 49)
+Update the PO query to also select `sales_tax_percent`:
+```
+.select('id, sales_tax_percent, po_line_items(line_total)')
+```
+Then update the `totalContract` calculation (lines 56-59) to apply tax per PO:
 ```typescript
-const total = canViewPricing && po.line_items 
-  ? po.line_items.reduce((sum, item) => sum + (item.line_total || 0), 0)
-  : null;
+const totalContract = pos?.reduce((sum, po) => {
+  const subtotal = po.po_line_items?.reduce((s, li) => s + (li.line_total || 0), 0) || 0;
+  const taxRate = (po.sales_tax_percent || 0) / 100;
+  return sum + subtotal * (1 + taxRate);
+}, 0) || 0;
 ```
 
-### New logic:
+### 2. `src/components/project/SupplierEstimateVsOrdersCard.tsx` (line 60)
+Update the PO query to also select `sales_tax_percent`:
+```
+.select('sales_tax_percent, po_line_items(line_total)')
+```
+Then update the `totalOrders` calculation (lines 67-69) to apply tax per PO:
 ```typescript
-const subtotal = canViewPricing && po.line_items 
-  ? po.line_items.reduce((sum, item) => sum + (item.line_total || 0), 0)
-  : null;
-const taxRate = (po.sales_tax_percent || 0) / 100;
-const total = subtotal !== null ? subtotal * (1 + taxRate) : null;
+const totalOrders = pos?.reduce((sum, po) => {
+  const subtotal = po.po_line_items?.reduce((s: number, li: any) => s + (li.line_total || 0), 0) || 0;
+  const taxRate = (po.sales_tax_percent || 0) / 100;
+  return sum + subtotal * (1 + taxRate);
+}, 0) || 0;
 ```
 
-No other files need changes. The `PurchaseOrder` type already has `sales_tax_percent` and it's already fetched in the query.
+No UI template changes needed -- just the data calculations.
