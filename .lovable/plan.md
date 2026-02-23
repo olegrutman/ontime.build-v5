@@ -1,68 +1,68 @@
 
 
-# Fix Revision Mode Percentage Bugs in Invoice Wizard
+# Fix: RLS Policy Blocking Invoice Line Item Insert During Revision
 
-## Root Cause
+## Problem
 
-A database trigger (`update_sov_completion_from_invoice`) automatically subtracts billing percentages from SOV items when an invoice is rejected. The revision wizard code incorrectly assumes these values are still included, leading to double-subtraction and inflated maximums.
+The INSERT RLS policy on `invoice_line_items` requires the parent invoice to be in `DRAFT` status:
 
-## Bugs Found
-
-### Bug 1 -- Max Allowed Percent is too high
-**File:** `CreateInvoiceFromSOV.tsx`, line 292-294
-
-The code adds back `revisionLine.billed_percent` to compensate for the original billing still being in the SOV totals. But the rejection trigger already subtracted it, so this gives extra headroom.
-
-**Fix:** Remove the add-back. Use the same formula as non-revision items:
-```
-maxAllowedPercent = Math.max(0, 100 - (item.total_completion_percent || 0))
+```sql
+i.status = 'DRAFT'
 ```
 
-### Bug 2 -- Previous Billed amount is too low
-**File:** `CreateInvoiceFromSOV.tsx`, lines 408-411
+But after reordering the submit operations (DELETE old items -> INSERT new items -> UPDATE status), the invoice is still in `REJECTED` status when the INSERT happens, causing the RLS violation.
 
-The code subtracts `revisionLine.current_billed` from `total_billed_amount` to exclude the old billing. But the trigger already removed it, so this double-subtracts.
+## Solution
 
-**Fix:** Use `total_billed_amount` directly (no subtraction):
-```
-previousBilled = item.total_billed_amount || 0
-```
+The fix requires a small change to the submission order in `CreateInvoiceFromSOV.tsx`. We need to first update the invoice status to `DRAFT` (which satisfies RLS), then delete old line items, insert new ones, and finally update the status to `SUBMITTED` (which fires the trigger with the correct new line items).
 
-### Bug 3 -- Trigger fires with old line items
-**File:** `CreateInvoiceFromSOV.tsx`, lines 376-435
+### Updated operation order:
 
-The submit sequence is:
-1. UPDATE invoice status to SUBMITTED (trigger fires, reads OLD line items, adds their percentages)
-2. DELETE old line items
-3. INSERT new line items
+1. **UPDATE** invoice status to `DRAFT` (satisfies RLS for line item operations)
+2. **DELETE** old `invoice_line_items`
+3. **INSERT** new `invoice_line_items` (now allowed because invoice is `DRAFT`)
+4. **UPDATE** invoice status to `SUBMITTED` with all other fields (revision_count, cleared rejection, totals) -- trigger fires here and reads new line items
+5. Call `update_sov_billing_totals` RPC
+6. Log activity
 
-The trigger adds the OLD line items' percentages to SOV items, and the new line items are never reflected.
-
-**Fix:** Reorder operations:
-1. DELETE old line items first
-2. INSERT new line items
-3. UPDATE invoice status to SUBMITTED last (trigger fires, reads NEW line items)
-
-## File Changes
+### File Changes
 
 | File | Change |
 |------|--------|
-| `src/components/invoices/CreateInvoiceFromSOV.tsx` | Fix all 3 bugs in the revision mode logic |
+| `src/components/invoices/CreateInvoiceFromSOV.tsx` | Split the invoice update into two steps: first set status to DRAFT, then after line item operations, set to SUBMITTED with all other fields |
 
-## Technical Details
+### Technical Detail
 
-### CreateInvoiceFromSOV.tsx -- Billing Items Setup (lines 286-304)
+In `CreateInvoiceFromSOV.tsx`, the revision-mode submit block (around line 372) will be updated to:
 
-Remove the special `adjustedMaxPercent` branch for revision mode. Since the rejection trigger already subtracted the old billing from SOV `total_completion_percent`, the max is simply `100 - total_completion_percent` for all items.
+```typescript
+// Step 1: Set status to DRAFT so RLS allows line item operations
+await supabase.from('invoices')
+  .update({ status: 'DRAFT' })
+  .eq('id', revisionInvoiceId);
 
-### CreateInvoiceFromSOV.tsx -- Submit Handler (lines 374-444)
+// Step 2: Delete old line items
+await supabase.from('invoice_line_items')
+  .delete()
+  .eq('invoice_id', revisionInvoiceId);
 
-Reorder the revision-mode submit to:
-1. Delete old `invoice_line_items`
-2. Insert new `invoice_line_items`
-3. Update invoice record (status, revision_count, clear rejection fields) -- this fires the trigger which correctly reads the new line items
-4. Call `update_sov_billing_totals` RPC
-5. Log activity
+// Step 3: Insert new line items (RLS passes because status is now DRAFT)
+await supabase.from('invoice_line_items')
+  .insert(lineItemsToInsert);
 
-Also fix `previousBilled` to not subtract the old `current_billed` since it's already excluded.
+// Step 4: Update invoice to SUBMITTED with all fields (trigger fires here)
+await supabase.from('invoices')
+  .update({
+    status: 'SUBMITTED',
+    revision_count: revisionData.revisionCount + 1,
+    rejected_at: null, rejected_by: null, rejection_reason: null,
+    subtotal, retainage_amount, total_amount,
+    billing_period_start, billing_period_end, notes,
+    submitted_at: new Date().toISOString(),
+    submitted_by: user.id,
+  })
+  .eq('id', revisionInvoiceId);
+```
+
+This is a single-file change with no database migration needed.
 
