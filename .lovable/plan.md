@@ -1,34 +1,64 @@
 
 
-# Remove Accept/Decline Buttons from Notifications
+# Enable Full Estimate Workflow in Supplier Project Overview
 
-## Problem
-Users can accept/decline project invites from two places: the notification panel and the dashboard attention banner. This creates confusion because:
-- The notification panel is for awareness (alerting you something happened)
-- The dashboard is where you take action on items requiring your attention
-- Having action buttons in both places leads to inconsistent state and a confusing experience
+## Goal
+Allow suppliers to create, upload, view, and submit estimates directly from the project overview page, matching the same flow available on the "My Estimates" (/supplier/estimates) page.
 
-## Best Practice
-Following standard UX patterns (e.g., Slack, GitHub, Jira), notifications should **inform and navigate**, not duplicate action surfaces. The single source of truth for accepting/declining should remain the dashboard's attention banner, which already has a polished UI with loading states and contextual information.
+## Current State
+The `SupplierEstimatesSection` on the project page only:
+- Creates estimates (name only)
+- Lists them with status badges
+- Deletes draft estimates
 
-## Change
+It does NOT allow suppliers to:
+- Click into an estimate to see line items
+- Upload PDF/CSV files via the EstimateUploadWizard
+- Submit estimates for review
 
-**File: `src/components/notifications/NotificationItem.tsx`**
+All of these features exist on `SupplierProjectEstimates.tsx` but are missing from the in-project section.
 
-1. Remove the `useProjectInvite` import and hook usage (lines 19, 55)
-2. Remove the `handleAccept` and `handleDecline` functions (lines 68-80)
-3. Remove the Accept/Decline button block for `PROJECT_INVITE` notifications (lines 123-144)
-4. Add a small hint text for unread project invites: "Go to Dashboard to respond" -- this guides the user to the right place when they click the notification
+## Changes
 
-The notification will still be clickable and navigate to the project page (via `action_url`). The click behavior and all other notification types remain unchanged.
+### Update `src/components/project/SupplierEstimatesSection.tsx`
 
-## Technical Details
+Add the following capabilities to this existing component:
 
-### What stays the same
-- Clicking any notification still navigates to `notification.action_url`
-- The dashboard attention banner (`DashboardAttentionBanner`) remains the sole place to accept/decline invites
-- The `useProjectInvite` hook and `PendingInvitesPanel` component are untouched
+1. **Estimate Detail Sheet** -- When a supplier clicks an estimate row, open a `Sheet` (slide-over panel) showing:
+   - Estimate name, status badge, and total amount
+   - Action buttons for DRAFT estimates: Upload, Submit for Review, Delete
+   - Line items table grouped by `pack_name` (same layout as the My Estimates page detail sheet)
 
-### What changes
-- `NotificationItem.tsx`: Remove the invite action buttons, add a subtle "Go to Dashboard to respond" hint for `PROJECT_INVITE` type notifications
-- No other files need changes
+2. **EstimateUploadWizard integration** -- Wire up the Upload button to open the `EstimateUploadWizard` dialog with the correct `estimateId`, `supplierId`, `projectName`, and `estimateName` props.
+
+3. **Submit for Review** -- Add a Submit button that updates the estimate status to `SUBMITTED` with a timestamp.
+
+4. **Auto-open upload after creation** -- After creating a new estimate, automatically open the upload wizard (same behavior as the My Estimates page).
+
+### Technical Details
+
+**New state variables:**
+- `selectedEstimate` -- the estimate currently open in the detail sheet
+- `estimateItems` / `loadingItems` -- line items for the selected estimate
+- `uploadWizard` state object (open, estimateId, supplierId, projectName, estimateName)
+
+**Data fetching:**
+- `fetchEstimateItems(estimateId)` -- queries `supplier_estimate_items` filtered by `estimate_id`, ordered by `created_at`
+- Supplier ID lookup: queries `suppliers` table where `organization_id = supplierOrgId` to get the supplier record ID needed by the upload wizard
+
+**New imports:**
+- `Sheet`, `SheetContent`, `SheetHeader`, `SheetTitle` from ui/sheet
+- `EstimateUploadWizard` from estimate-upload
+- `Table`, `TableBody`, `TableCell`, `TableHead`, `TableHeader`, `TableRow` from ui/table
+- `Send`, `Upload`, `Package` from lucide-react
+- `format` from date-fns
+- `SupplierEstimateItem`, `ESTIMATE_STATUS_LABELS`, `ESTIMATE_STATUS_COLORS`, `SupplierEstimateStatus` from types/supplierEstimate
+
+**Component structure mirrors `SupplierProjectEstimates.tsx`:**
+- Detail sheet with status, total, action buttons
+- Items grouped by `pack_name` in a table
+- Upload wizard dialog rendered at component level
+- Submit updates status to SUBMITTED and invalidates queries
+
+### Files Changed
+1. `src/components/project/SupplierEstimatesSection.tsx` -- add detail sheet, upload wizard, submit flow
