@@ -67,6 +67,7 @@ export default function ProjectHome() {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [tabResetKey, setTabResetKey] = useState(0);
+  const [materialResponsibility, setMaterialResponsibility] = useState<string | null>(null);
 
   const { isDemoMode, demoRole } = useDemo();
   const isInDemoMode = isDemoMode && id?.startsWith('demo-');
@@ -253,8 +254,11 @@ export default function ProjectHome() {
                         isSupplier={isSupplier}
                         supplierOrgId={supplierOrgId}
                       />
-                      <MaterialResponsibilityCard projectId={id!} />
-                      <FinancialSignalBar financials={financials} projectId={id!} />
+                      <MaterialResponsibilityCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} />
+                      <FinancialSignalBar financials={financials} projectId={id!} hideMaterialCards={
+                        (materialResponsibility === 'GC' && !isSupplier && !isFC && currentOrg?.type !== 'GC') ||
+                        (materialResponsibility === 'TC' && currentOrg?.type === 'GC')
+                      } />
                       <FinancialHealthCharts financials={financials} />
                       <OperationalSummary
                         projectId={id!}
@@ -289,9 +293,17 @@ export default function ProjectHome() {
                 <SupplierEstimatesSection projectId={id!} projectName={project?.name} supplierOrgId={supplierOrgId} />
               )}
               {activeTab === 'estimates' && !isSupplier && (
-                <ProjectEstimatesReview projectId={id!} />
+                materialResponsibility && (
+                  (currentOrg?.type === 'GC' && materialResponsibility === 'TC') ||
+                  (currentOrg?.type !== 'GC' && materialResponsibility === 'GC')
+                ) ? (
+                  <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
+                    Materials are managed by the {materialResponsibility === 'GC' ? 'General Contractor' : 'Trade Contractor'} on this project.
+                  </div>
+                ) : (
+                  <ProjectEstimatesReview projectId={id!} />
+                )
               )}
-
               {/* Invoices Tab */}
               {activeTab === 'invoices' && (
                 isInDemoMode

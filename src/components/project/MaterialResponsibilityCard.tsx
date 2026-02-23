@@ -1,13 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Package, Pencil, Loader2 } from 'lucide-react';
+import { Package, Loader2, Building2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 interface ContractData {
   id: string;
@@ -20,16 +18,15 @@ interface ContractData {
 
 interface MaterialResponsibilityCardProps {
   projectId: string;
+  onResponsibilityChange?: (value: string | null) => void;
 }
 
-export function MaterialResponsibilityCard({ projectId }: MaterialResponsibilityCardProps) {
+export function MaterialResponsibilityCard({ projectId, onResponsibilityChange }: MaterialResponsibilityCardProps) {
   const { userOrgRoles } = useAuth();
   const { toast } = useToast();
   const [contract, setContract] = useState<ContractData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [editValue, setEditValue] = useState<string>('TC');
+  const [savingValue, setSavingValue] = useState<string | null>(null);
 
   const currentOrgId = userOrgRoles[0]?.organization?.id;
 
@@ -48,10 +45,10 @@ export function MaterialResponsibilityCard({ projectId }: MaterialResponsibility
     if (data && data.length > 0) {
       const c = data[0] as unknown as ContractData;
       setContract(c);
-      setEditValue(c.material_responsibility || 'TC');
+      onResponsibilityChange?.(c.material_responsibility);
     }
     setLoading(false);
-  }, [projectId]);
+  }, [projectId, onResponsibilityChange]);
 
   useEffect(() => {
     fetchContract();
@@ -60,85 +57,82 @@ export function MaterialResponsibilityCard({ projectId }: MaterialResponsibility
   const canEdit = contract && currentOrgId &&
     (contract.from_org_id === currentOrgId || contract.to_org_id === currentOrgId);
 
-  const handleSave = async (value: string) => {
-    if (!contract) return;
-    setSaving(true);
+  const handleSelect = async (value: string) => {
+    if (!contract || !canEdit || savingValue) return;
+    if (contract.material_responsibility === value) return;
+    setSavingValue(value);
     try {
       const { error } = await supabase
         .from('project_contracts')
         .update({ material_responsibility: value })
         .eq('id', contract.id);
       if (error) throw error;
-      setContract({ ...contract, material_responsibility: value });
-      setEditing(false);
-      toast({ title: `Material responsibility set to ${value}` });
+      const updated = { ...contract, material_responsibility: value };
+      setContract(updated);
+      onResponsibilityChange?.(value);
+      toast({ title: `Material responsibility set to ${value === 'GC' ? 'General Contractor' : 'Trade Contractor'}` });
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
     } finally {
-      setSaving(false);
+      setSavingValue(null);
     }
   };
 
   if (loading) {
-    return <Skeleton className="h-16 w-full" />;
+    return <Skeleton className="h-24 w-full" />;
   }
 
-  // No TC contract exists — nothing to show
   if (!contract) return null;
 
   const responsibility = contract.material_responsibility;
-  const responsibleName = responsibility === 'GC'
-    ? contract.to_org?.name
-    : responsibility === 'TC'
-      ? contract.from_org?.name
-      : null;
+
+  const options = [
+    { value: 'GC', label: 'General Contractor', orgName: contract.to_org?.name || 'GC' },
+    { value: 'TC', label: 'Trade Contractor', orgName: contract.from_org?.name || 'TC' },
+  ];
 
   return (
-    <Card className="border-l-4 border-l-blue-500">
-      <CardContent className="p-4 flex items-center gap-3 flex-wrap">
-        <Package className="h-5 w-5 text-blue-500 shrink-0" />
-        <span className="font-medium text-sm">Material Responsibility</span>
+    <Card>
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Package className="h-4 w-4 text-primary shrink-0" />
+          <span className="text-sm font-medium">Who handles materials on this project?</span>
+        </div>
 
-        {responsibility && !editing ? (
-          <div className="flex items-center gap-2 ml-auto">
-            <Badge variant="secondary" className="text-xs">
-              {responsibility}
-            </Badge>
-            {responsibleName && (
-              <span className="text-sm text-muted-foreground">{responsibleName}</span>
-            )}
-            {canEdit && (
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditing(true); setEditValue(responsibility); }}>
-                <Pencil className="h-3.5 w-3.5" />
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 ml-auto">
-            <ToggleGroup
-              type="single"
-              value={editValue}
-              onValueChange={(v) => v && setEditValue(v)}
-              className="gap-1"
-            >
-              <ToggleGroupItem value="GC" className="text-xs h-7 px-3">GC</ToggleGroupItem>
-              <ToggleGroupItem value="TC" className="text-xs h-7 px-3">TC</ToggleGroupItem>
-            </ToggleGroup>
-            <Button
-              size="sm"
-              className="h-7 text-xs"
-              disabled={saving}
-              onClick={() => handleSave(editValue)}
-            >
-              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save'}
-            </Button>
-            {editing && (
-              <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setEditing(false)}>
-                Cancel
-              </Button>
-            )}
-          </div>
-        )}
+        <div className="grid grid-cols-2 gap-3">
+          {options.map((opt) => {
+            const isSelected = responsibility === opt.value;
+            const isSaving = savingValue === opt.value;
+
+            return (
+              <button
+                key={opt.value}
+                disabled={!canEdit || !!savingValue}
+                onClick={() => handleSelect(opt.value)}
+                className={cn(
+                  "relative flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all text-center",
+                  isSelected
+                    ? "border-primary bg-primary/5"
+                    : "border-muted hover:border-primary/40",
+                  canEdit && !savingValue ? "cursor-pointer" : "cursor-default",
+                  !canEdit && "opacity-80"
+                )}
+              >
+                {isSaving ? (
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                ) : (
+                  <Building2 className={cn("h-5 w-5", isSelected ? "text-primary" : "text-muted-foreground")} />
+                )}
+                <span className={cn("text-xs font-semibold", isSelected ? "text-primary" : "text-foreground")}>
+                  {opt.label}
+                </span>
+                <span className="text-[11px] text-muted-foreground truncate max-w-full">
+                  {opt.orgName}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </CardContent>
     </Card>
   );
