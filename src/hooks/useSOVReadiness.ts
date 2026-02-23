@@ -30,7 +30,6 @@ export function useSOVReadiness(
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [sovs, setSovs] = useState<SOV[]>([]);
   const [loading, setLoading] = useState(true);
-  const [creatorFlag, setCreatorFlag] = useState(false);
   const { user } = useAuth();
 
   const fetchData = useCallback(async () => {
@@ -41,7 +40,7 @@ export function useSOVReadiness(
 
     setLoading(true);
     try {
-      const [contractsResult, sovsResult, projectResult] = await Promise.all([
+      const [contractsResult, sovsResult] = await Promise.all([
         supabase
           .from('project_contracts')
           .select('id, contract_sum, trade, to_org_id, from_org_id')
@@ -50,15 +49,7 @@ export function useSOVReadiness(
           .from('project_sov')
           .select('id, contract_id')
           .eq('project_id', projectId),
-        supabase
-          .from('projects')
-          .select('created_by')
-          .eq('id', projectId)
-          .single(),
       ]);
-
-      const isCreator = isProjectCreator || !!(user && projectResult.data?.created_by === user.id);
-      setCreatorFlag(isCreator);
 
       setContracts((contractsResult.data || []) as Contract[]);
       setSovs((sovsResult.data || []) as SOV[]);
@@ -92,7 +83,7 @@ export function useSOVReadiness(
     const primaryContracts = contracts.filter(
       c => (c.contract_sum || 0) > 0 && 
            !isWorkOrderContract(c) &&
-           (!userOrgId || c.to_org_id === userOrgId || (creatorFlag && (c.from_org_id === userOrgId || c.to_org_id === userOrgId)))
+           (!userOrgId || c.to_org_id === userOrgId)
     );
 
     // Edge case: No primary contracts with value - SOV is ready (nothing to configure)
@@ -127,7 +118,7 @@ export function useSOVReadiness(
       loading: false,
       message
     };
-  }, [contracts, sovs, loading, creatorFlag]);
+  }, [contracts, sovs, loading]);
 
   return {
     ...readiness,
