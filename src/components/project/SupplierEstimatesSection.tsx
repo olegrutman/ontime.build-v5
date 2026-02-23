@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { FileText, ChevronDown, ChevronUp, Plus, Trash2 } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { FileText, ChevronDown, ChevronUp, Plus, Trash2, Upload, Send, Package } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -18,34 +18,51 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { EstimateUploadWizard } from '@/components/estimate-upload';
+import {
+  SupplierEstimateItem,
+  ESTIMATE_STATUS_LABELS,
+  ESTIMATE_STATUS_COLORS,
+  SupplierEstimateStatus,
+} from '@/types/supplierEstimate';
 
 interface SupplierEstimatesSectionProps {
   projectId: string;
+  projectName?: string;
   supplierOrgId: string;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  DRAFT: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-  SUBMITTED: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  APPROVED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  REJECTED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-};
+interface UploadWizardState {
+  open: boolean;
+  estimateId: string;
+  supplierId: string;
+  projectName: string;
+  estimateName: string;
+}
 
-const STATUS_LABELS: Record<string, string> = {
-  DRAFT: 'Draft',
-  SUBMITTED: 'Submitted',
-  APPROVED: 'Approved',
-  REJECTED: 'Rejected',
-};
-
-export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierEstimatesSectionProps) {
+export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId }: SupplierEstimatesSectionProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [newEstimateName, setNewEstimateName] = useState('');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  // Detail sheet state
+  const [selectedEstimate, setSelectedEstimate] = useState<{
+    id: string; name: string; status: string; total_amount: number; created_at: string;
+  } | null>(null);
+  const [estimateItems, setEstimateItems] = useState<SupplierEstimateItem[]>([]);
+  const [loadingItems, setLoadingItems] = useState(false);
+
+  // Upload wizard state
+  const [uploadWizard, setUploadWizard] = useState<UploadWizardState>({
+    open: false, estimateId: '', supplierId: '', projectName: '', estimateName: '',
+  });
+
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
@@ -65,6 +82,37 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
     enabled: !!projectId && !!supplierOrgId,
   });
 
+  const fetchEstimateItems = useCallback(async (estimateId: string) => {
+    setLoadingItems(true);
+    const { data, error } = await supabase
+      .from('supplier_estimate_items')
+      .select('*')
+      .eq('estimate_id', estimateId)
+      .order('created_at');
+
+    if (error) {
+      console.error('Error fetching items:', error);
+    } else {
+      setEstimateItems((data || []) as unknown as SupplierEstimateItem[]);
+    }
+    setLoadingItems(false);
+  }, []);
+
+  const getSupplierId = useCallback(async () => {
+    const { data: suppliers } = await supabase
+      .from('suppliers')
+      .select('id')
+      .eq('organization_id', supplierOrgId)
+      .limit(1);
+    return suppliers?.[0]?.id || '';
+  }, [supplierOrgId]);
+
+  const invalidateEstimates = useCallback(() => {
+    queryClient.invalidateQueries({
+      queryKey: ['supplier-project-estimates', projectId, supplierOrgId],
+    });
+  }, [queryClient, projectId, supplierOrgId]);
+
   const createMutation = useMutation({
     mutationFn: async (name: string) => {
       const { data, error } = await supabase
@@ -80,12 +128,19 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
       toast({ title: 'Success', description: 'Estimate created' });
       setShowCreate(false);
       setNewEstimateName('');
-      queryClient.invalidateQueries({ 
-        queryKey: ['supplier-project-estimates', projectId, supplierOrgId] 
+      invalidateEstimates();
+      // Auto-open upload wizard
+      const sid = await getSupplierId();
+      setUploadWizard({
+        open: true,
+        estimateId: data.id,
+        supplierId: sid,
+        projectName: projectName || '',
+        estimateName: data.name,
       });
     },
     onError: () => {
@@ -104,15 +159,47 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
     onSuccess: () => {
       toast({ title: 'Deleted', description: 'Estimate deleted' });
       setDeleteConfirmId(null);
-      queryClient.invalidateQueries({
-        queryKey: ['supplier-project-estimates', projectId, supplierOrgId],
-      });
+      setSelectedEstimate(null);
+      invalidateEstimates();
     },
     onError: () => {
       toast({ title: 'Error', description: 'Failed to delete estimate', variant: 'destructive' });
       setDeleteConfirmId(null);
     },
   });
+
+  const handleOpenEstimate = (estimate: typeof selectedEstimate) => {
+    setSelectedEstimate(estimate);
+    if (estimate) fetchEstimateItems(estimate.id);
+  };
+
+  const handleSubmitEstimate = async () => {
+    if (!selectedEstimate) return;
+    const { error } = await supabase
+      .from('supplier_estimates')
+      .update({ status: 'SUBMITTED', submitted_at: new Date().toISOString() })
+      .eq('id', selectedEstimate.id);
+
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to submit estimate', variant: 'destructive' });
+    } else {
+      toast({ title: 'Success', description: 'Estimate submitted for review' });
+      setSelectedEstimate({ ...selectedEstimate, status: 'SUBMITTED' });
+      invalidateEstimates();
+    }
+  };
+
+  const handleUploadClick = async () => {
+    if (!selectedEstimate) return;
+    const sid = await getSupplierId();
+    setUploadWizard({
+      open: true,
+      estimateId: selectedEstimate.id,
+      supplierId: sid,
+      projectName: projectName || '',
+      estimateName: selectedEstimate.name,
+    });
+  };
 
   if (isLoading) {
     return (
@@ -126,6 +213,18 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
       </Card>
     );
   }
+
+  // Group items by pack_name for the detail sheet
+  const groupedItems = (() => {
+    const grouped = new Map<string, SupplierEstimateItem[]>();
+    for (const item of estimateItems) {
+      const key = item.pack_name || 'Ungrouped';
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key)!.push(item);
+    }
+    return grouped;
+  })();
+  const hasMultiplePacks = groupedItems.size > 1 || (groupedItems.size === 1 && !groupedItems.has('Ungrouped'));
 
   return (
     <Card className="overflow-hidden">
@@ -144,9 +243,9 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
               </div>
             </CollapsibleTrigger>
             <div className="flex items-center gap-2">
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="h-9 w-9"
                 onClick={(e) => { e.stopPropagation(); setShowCreate(true); }}
               >
@@ -166,27 +265,20 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
               estimates.map((estimate) => (
                 <div
                   key={estimate.id}
-                  className="flex justify-between items-center py-2 border-b last:border-0"
+                  className="flex justify-between items-center py-2 border-b last:border-0 cursor-pointer hover:bg-muted/30 rounded-md px-2 -mx-2 transition-colors"
+                  onClick={() => handleOpenEstimate(estimate)}
                 >
                   <div className="flex items-center gap-2">
                     <p className="text-base font-medium">{estimate.name}</p>
-                    <Badge className={STATUS_COLORS[estimate.status] || STATUS_COLORS.DRAFT}>
-                      {STATUS_LABELS[estimate.status] || estimate.status}
+                    <Badge className={ESTIMATE_STATUS_COLORS[estimate.status as SupplierEstimateStatus] || ESTIMATE_STATUS_COLORS.DRAFT}>
+                      {ESTIMATE_STATUS_LABELS[estimate.status as SupplierEstimateStatus] || estimate.status}
                     </Badge>
                   </div>
-                  {estimate.status === 'DRAFT' && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 text-muted-foreground hover:text-destructive"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteConfirmId(estimate.id);
-                      }}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">
+                      ${(estimate.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
                 </div>
               ))
             ) : (
@@ -196,6 +288,7 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
         </CollapsibleContent>
       </Collapsible>
 
+      {/* Create Dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent>
           <DialogHeader>
@@ -215,7 +308,7 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
             <Button variant="outline" onClick={() => setShowCreate(false)}>
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={() => createMutation.mutate(newEstimateName)}
               disabled={!newEstimateName.trim() || createMutation.isPending}
             >
@@ -225,6 +318,117 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
         </DialogContent>
       </Dialog>
 
+      {/* Estimate Detail Sheet */}
+      <Sheet open={!!selectedEstimate} onOpenChange={() => setSelectedEstimate(null)}>
+        <SheetContent className="w-full sm:max-w-2xl overflow-auto">
+          <SheetHeader>
+            <SheetTitle>{selectedEstimate?.name}</SheetTitle>
+          </SheetHeader>
+
+          {selectedEstimate && (
+            <div className="space-y-6 mt-6">
+              {/* Status & Total */}
+              <div className="flex items-center justify-between">
+                <Badge className={ESTIMATE_STATUS_COLORS[selectedEstimate.status as SupplierEstimateStatus] || ESTIMATE_STATUS_COLORS.DRAFT}>
+                  {ESTIMATE_STATUS_LABELS[selectedEstimate.status as SupplierEstimateStatus] || selectedEstimate.status}
+                </Badge>
+                <p className="text-lg font-bold">
+                  ${(selectedEstimate.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+
+              {/* Actions for DRAFT */}
+              {selectedEstimate.status === 'DRAFT' && (
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={handleUploadClick}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleSubmitEstimate}
+                    disabled={estimateItems.length === 0}
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    Submit for Review
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setDeleteConfirmId(selectedEstimate.id)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete
+                  </Button>
+                </div>
+              )}
+
+              {/* Line Items */}
+              {loadingItems ? (
+                <Skeleton className="h-32 w-full" />
+              ) : estimateItems.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-8">
+                    <Package className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      No items yet. Upload a file to add line items.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-4">
+                  {Array.from(groupedItems.entries()).map(([packName, packItems]) => (
+                    <div key={packName}>
+                      {hasMultiplePacks && (
+                        <div className="flex items-center gap-2 mb-2">
+                          <Package className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm font-medium">{packName}</span>
+                          <Badge variant="outline" className="text-xs">
+                            {packItems.length} items
+                          </Badge>
+                        </div>
+                      )}
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>SKU</TableHead>
+                            <TableHead>Description</TableHead>
+                            <TableHead className="text-right">Qty</TableHead>
+                            <TableHead>UOM</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {packItems.map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell className="font-mono text-xs">
+                                {item.supplier_sku || '—'}
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <p className="text-sm">{item.description}</p>
+                                  {item.catalog_item_id && (
+                                    <Badge variant="outline" className="text-[10px] mt-0.5 bg-green-50 border-green-200 text-green-700 dark:bg-green-950/20 dark:border-green-800 dark:text-green-400">
+                                      Catalog matched
+                                    </Badge>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right">{item.quantity}</TableCell>
+                              <TableCell>{item.uom}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Delete Confirmation */}
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -244,6 +448,22 @@ export function SupplierEstimatesSection({ projectId, supplierOrgId }: SupplierE
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Upload Wizard */}
+      <EstimateUploadWizard
+        open={uploadWizard.open}
+        onOpenChange={(open) => setUploadWizard(prev => ({ ...prev, open }))}
+        estimateId={uploadWizard.estimateId}
+        supplierId={uploadWizard.supplierId}
+        projectName={uploadWizard.projectName}
+        estimateName={uploadWizard.estimateName}
+        onComplete={() => {
+          if (selectedEstimate) {
+            fetchEstimateItems(selectedEstimate.id);
+          }
+          invalidateEstimates();
+        }}
+      />
     </Card>
   );
 }
