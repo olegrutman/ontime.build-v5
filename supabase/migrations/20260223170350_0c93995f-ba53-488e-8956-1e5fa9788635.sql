@@ -1,0 +1,1 @@
+ALTER TABLE public.invoices ADD COLUMN revision_count integer NOT NULL DEFAULT 0;
