@@ -60,6 +60,7 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
   const [loading, setLoading] = useState(true);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [isResponsible, setIsResponsible] = useState(false);
+  const [canViewEstimates, setCanViewEstimates] = useState(false);
   const [checkingPermission, setCheckingPermission] = useState(true);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
@@ -80,12 +81,19 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
         .not('material_responsibility', 'is', null);
 
       if (contracts && contracts.length > 0) {
+        // Can approve/reject: only the material-responsible party
         const responsible = contracts.some((c: any) => {
           if (c.material_responsibility === 'GC') return c.to_org_id === currentOrgId;
           if (c.material_responsibility === 'TC') return c.from_org_id === currentOrgId;
           return false;
         });
         setIsResponsible(responsible);
+
+        // Can view estimates + pricing: both GC and TC on the contract
+        const canView = contracts.some((c: any) =>
+          c.from_org_id === currentOrgId || c.to_org_id === currentOrgId
+        );
+        setCanViewEstimates(canView);
       }
       setCheckingPermission(false);
     };
@@ -307,7 +315,7 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
                   <CardDescription>
                     {estimate.supplier_org?.name}
                   </CardDescription>
-                  {isResponsible && estimate.total_amount !== null && estimate.total_amount > 0 && (
+                  {canViewEstimates && estimate.total_amount !== null && estimate.total_amount > 0 && (
                     <p className="text-sm font-medium text-foreground mt-1">
                       {formatCurrency(estimate.total_amount)}
                     </p>
@@ -379,7 +387,7 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
                     <CardTitle>{selectedEstimate.name}</CardTitle>
                     <CardDescription>
                       Supplier: {selectedEstimate.supplier_org?.name}
-                      {isResponsible && selectedEstimate.total_amount !== null && selectedEstimate.total_amount > 0 && (
+                      {canViewEstimates && selectedEstimate.total_amount !== null && selectedEstimate.total_amount > 0 && (
                         <span className="ml-2 font-medium text-foreground">
                           • Total: {formatCurrency(selectedEstimate.total_amount)}
                         </span>

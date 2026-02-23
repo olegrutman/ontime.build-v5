@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { useState } from 'react';
 import { LocationData, WORK_TYPE_LABELS } from '@/types/changeOrderProject';
 import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
+import { useChangeOrderRealtime } from '@/hooks/useChangeOrderRealtime';
 
 import { WorkOrderTopBar } from './WorkOrderTopBar';
 import { WorkOrderProgressBar } from './WorkOrderProgressBar';
@@ -92,6 +93,9 @@ export function ChangeOrderDetailPage() {
   } = useChangeOrder(id || null);
 
   const { updateStatus, isUpdating } = useChangeOrderProject(changeOrder?.project_id);
+
+  // Real-time subscriptions for all work order sub-tables
+  useChangeOrderRealtime(id);
 
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [description, setDescription] = useState('');
