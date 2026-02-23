@@ -1,85 +1,66 @@
 
+# Fix: GC Should Not See TC-to-FC Contracts on SOV Page
 
-# Real-Time Updates, SOV Rules, and Material Estimate Visibility
+## Problem
+When a GC creates a project and adds a TC, then the TC adds an FC with a contract value, the GC's SOV page incorrectly shows "contract missing SOV" for the TC-to-FC contract. The GC has no role in managing the TC-to-FC relationship and should not see those contracts on their SOV page at all.
 
-## Analysis Summary
+## Root Cause
+The contract filtering logic uses a `creatorMatch` / `isProjectCreator` flag that grants the project creator (GC) visibility into ALL contracts on the project, including TC-to-FC contracts they are not a party to.
 
-After analyzing the "Main Street Apartments" project (GC_Test, TC_Test, FC_Test, Supplier_Test), I found three areas to address:
+This affects three locations:
+1. **Contract list** -- GC sees TC-FC contracts in the SOV editor
+2. **Missing SOV warnings** -- GC gets prompted to create SOVs for TC-FC contracts
+3. **SOV readiness check** -- Dashboard shows TC-FC contracts as "missing SOV"
 
----
+## Fix
 
-## 1. Real-Time Updates on Work Order Detail Page
+### File: `src/hooks/useContractSOV.ts`
 
-**Problem**: The work order detail page (`ChangeOrderDetailPage`) has zero real-time subscriptions. When multiple roles (GC, TC, FC) are working on the same work order simultaneously, no one sees each other's changes until they manually refresh.
+**Line 363-364** -- Contract filter: Remove `creatorMatch` from the visibility filter. Each org should only see contracts where they are directly a party (`from_org_id` or `to_org_id`).
 
-**Root cause**: The `useProjectRealtime` hook only runs on `ProjectHome`. The sub-tables used by work orders (`change_order_fc_hours`, `change_order_tc_labor`, `change_order_materials`, `change_order_equipment`, `change_order_checklist`, `change_order_participants`) are not even in the `supabase_realtime` publication.
-
-**Fix**:
-
-### A. Database migration -- Add tables to realtime publication
-```sql
-ALTER PUBLICATION supabase_realtime ADD TABLE public.change_order_fc_hours;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.change_order_tc_labor;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.change_order_materials;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.change_order_equipment;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.change_order_checklist;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.change_order_participants;
+Before:
+```
+.filter((c) => c.from_org_id === currentOrgId || c.to_org_id === currentOrgId || creatorMatch)
 ```
 
-### B. New hook -- `src/hooks/useChangeOrderRealtime.ts`
-Create a focused realtime hook that subscribes to the `change_order_projects` table filtered by the specific work order ID, plus the six sub-tables above. On any change, invalidate the relevant React Query keys:
-- `['change-order', changeOrderId]`
-- `['change-order-participants', changeOrderId]`
-- `['change-order-fc-hours', changeOrderId]`
-- `['change-order-tc-labor', changeOrderId]`
-- `['change-order-materials', changeOrderId]`
-- `['change-order-equipment', changeOrderId]`
-- `['change-order-checklist', changeOrderId]`
+After:
+```
+.filter((c) => c.from_org_id === currentOrgId || c.to_org_id === currentOrgId)
+```
 
-### C. Wire it up -- `src/components/change-order-detail/ChangeOrderDetailPage.tsx`
-Import and call `useChangeOrderRealtime(id)` at the top of the component.
+**Line 464** -- `contractsMissingSOVs`: Remove `isProjectCreator` from the payer check. Only the actual payer (`to_org_id`) should be prompted to create an SOV.
 
----
+Before:
+```
+(c.to_org_id === currentOrgId || isProjectCreator)
+```
 
-## 2. SOV for TC and FC Contracts -- No Action Needed
+After:
+```
+c.to_org_id === currentOrgId
+```
 
-**Finding**: The database trigger `convert_co_to_contract` (on `change_order_projects`) already auto-generates:
-- A GC-TC contract with a single-item SOV
-- An FC-TC contract (if FC participated) with a single-item SOV
+**Line 478** -- `createAllSOVs`: Same change -- remove `isProjectCreator` from the payer filter.
 
-This fires automatically when a work order status changes to `approved`. The GC does NOT need to manually create SOV for these auto-generated contracts. No code change required here.
+### File: `src/hooks/useSOVReadiness.ts`
 
----
+**Line 85-86** -- The readiness check uses `creatorFlag` to show all contracts to the project creator. Remove this so GC only sees contracts where their org is `to_org_id` (the payer).
 
-## 3. Material Estimate Visibility -- Both TC and GC Should See Estimates
+Before:
+```
+(!userOrgId || c.to_org_id === userOrgId || (creatorFlag && (c.from_org_id === userOrgId || c.to_org_id === userOrgId)))
+```
 
-**Problem**: The `ProjectEstimatesReview` component uses a single `isResponsible` flag to gate BOTH viewing pricing info AND showing approve/reject buttons. In the Main Street Apartments project, `material_responsibility = 'TC'`, so only TC sees pricing. But the user wants both GC and TC to see material estimates.
+After:
+```
+(!userOrgId || c.to_org_id === userOrgId)
+```
 
-**Fix**: Split the logic into two separate checks in `ProjectEstimatesReview.tsx`:
+The `creatorFlag` state variable and related fetch logic can also be cleaned up since it is no longer used.
 
-### A. `canViewEstimates` -- true for any GC or TC participant
-Both GC and TC on the project should be able to see estimate details and pricing. Check if the user's org is either the `from_org_id` or `to_org_id` on any contract with `material_responsibility` set, OR if the user's org type is GC or TC.
-
-### B. `isResponsible` -- only the material-responsible party (keeps current logic)
-Only the responsible party (GC or TC based on the `material_responsibility` field) gets the approve/reject buttons.
-
-**Changes to `src/components/project/ProjectEstimatesReview.tsx`**:
-- Add `canViewEstimates` state (true if user is GC or TC on the project)
-- Replace `isResponsible` checks that gate pricing visibility with `canViewEstimates`
-- Keep `isResponsible` only for the approve/reject action buttons
-
----
-
-## Files to Change
-
-| File | Change |
-|------|--------|
-| Database migration | Add 6 tables to realtime publication |
-| `src/hooks/useChangeOrderRealtime.ts` | New file -- realtime subscriptions for work order detail |
-| `src/components/change-order-detail/ChangeOrderDetailPage.tsx` | Wire up realtime hook |
-| `src/components/project/ProjectEstimatesReview.tsx` | Split visibility vs. approval permissions |
-
-## No Changes Needed
-- SOV auto-creation is already handled by the `convert_co_to_contract` trigger
-- RLS on `supplier_estimates` already allows all project participants to view
-
+## Result
+- GC only sees GC-TC contracts on the SOV page (contracts they are paying for)
+- TC sees GC-TC contracts (revenue) and TC-FC contracts (cost) -- both directions where they are a party
+- FC sees TC-FC contracts only
+- No role sees contracts they are not a party to
+- SOV readiness warnings are scoped correctly per org
