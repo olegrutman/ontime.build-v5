@@ -5,6 +5,7 @@ import { ProjectFinancials } from '@/hooks/useProjectFinancials';
 
 interface FinancialHealthChartsProps {
   financials: ProjectFinancials;
+  hideMaterialCards?: boolean;
 }
 
 function fmt(v: number): string {
@@ -13,7 +14,7 @@ function fmt(v: number): string {
   return `$${v.toFixed(0)}`;
 }
 
-export function FinancialHealthCharts({ financials }: FinancialHealthChartsProps) {
+export function FinancialHealthCharts({ financials, hideMaterialCards }: FinancialHealthChartsProps) {
   const { viewerRole, materialEstimate, materialOrdered, billedToDate, retainageAmount, workOrderTotal, monthlyWOData } = financials;
 
   if (viewerRole === 'Supplier') return null;
@@ -21,7 +22,7 @@ export function FinancialHealthCharts({ financials }: FinancialHealthChartsProps
   const charts: React.ReactNode[] = [];
 
   // Material Estimate vs Actual (GC + TC)
-  if ((viewerRole === 'Trade Contractor' || viewerRole === 'General Contractor') && (materialEstimate > 0 || materialOrdered > 0)) {
+  if (!hideMaterialCards && (viewerRole === 'Trade Contractor' || viewerRole === 'General Contractor') && (materialEstimate > 0 || materialOrdered > 0)) {
     const overBudget = materialOrdered > materialEstimate;
     const data = [
       { name: 'Estimate', value: materialEstimate },
