@@ -88,9 +88,11 @@ export function POCard({
   const lineItemCount = po.line_items?.length || 0;
   
   // Calculate total from line items if user can view pricing
-  const total = canViewPricing && po.line_items 
+  const subtotal = canViewPricing && po.line_items 
     ? po.line_items.reduce((sum, item) => sum + (item.line_total || 0), 0)
     : null;
+  const taxRate = (po.sales_tax_percent || 0) / 100;
+  const total = subtotal !== null ? subtotal * (1 + taxRate) : null;
   
   const hasPricing = po.line_items?.some(item => item.unit_price !== null);
 
