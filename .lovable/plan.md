@@ -1,30 +1,45 @@
 
-# Hide Material Estimate vs Orders Chart for Non-Responsible Party
+# Revise & Resubmit Flow for Rejected Invoices
 
-## Problem
-The "Material Estimate vs Orders" bar chart in `FinancialHealthCharts` still shows even when the viewer's party is not responsible for materials. This is inconsistent with the hiding already applied to `FinancialSignalBar`.
+## Overview
+When an invoice is rejected, the contractor (from_org) will see a "Revise & Resubmit" button that reverts the invoice back to DRAFT status -- keeping the same invoice number. The contractor can then edit line items and resubmit. The rejection reason remains visible as context.
 
-## Fix
+## Changes
 
-### 1. `src/components/project/FinancialHealthCharts.tsx`
-- Add a new prop: `hideMaterialCards?: boolean`
-- When `hideMaterialCards` is true, skip rendering the "Material Estimate vs Orders" bar chart (lines 24-53)
+### 1. `src/components/invoices/InvoiceDetail.tsx`
 
-### 2. `src/pages/ProjectHome.tsx`
-- Pass the same `hideMaterialCards` logic already used for `FinancialSignalBar` to `FinancialHealthCharts`:
+**Add a "Revise & Resubmit" button** for rejected invoices when the user is the invoice creator (`isInvoiceCreator`):
 
+- After the existing rejection notice card, add a button: "Revise & Resubmit"
+- On click, call `updateInvoiceStatus('DRAFT')` which clears the rejection fields:
+  ```
+  rejected_at: null
+  rejected_by: null
+  rejection_reason: null
+  ```
+- The existing `DRAFT` + `canSubmit` logic already shows the "Submit for Approval" button, so once reverted the normal flow resumes
+- Keep the rejection reason visible in a muted info banner while in DRAFT (if the invoice was previously rejected), so the contractor knows what to fix
+
+**Add a `revision_count` display**: Show "Revision 1", "Revision 2" etc. next to the invoice number if the invoice has been rejected and resubmitted before. This is tracked by counting how many times `rejected_at` has been set (we can add a simple `revision_count` integer column).
+
+### 2. Database Migration
+
+Add a `revision_count` column to the `invoices` table:
+```sql
+ALTER TABLE invoices ADD COLUMN revision_count integer NOT NULL DEFAULT 0;
 ```
-<FinancialHealthCharts
-  financials={financials}
-  hideMaterialCards={
-    (materialResponsibility === 'GC' && !isSupplier && !isFC && currentOrg?.type !== 'GC') ||
-    (materialResponsibility === 'TC' && currentOrg?.type === 'GC')
-  }
-/>
-```
 
-### Files Changed
+When the invoice is reverted to DRAFT after rejection, increment `revision_count` by 1 in the update call.
+
+### 3. Invoice Number Handling
+
+- The invoice number stays the same -- no suffix needed
+- The `revision_count` is displayed in the UI as a small badge (e.g., "Rev 2") next to the status badge when > 0
+- This keeps the numbering clean while providing audit trail
+
+## Summary of File Changes
+
 | File | Change |
 |------|--------|
-| `src/components/project/FinancialHealthCharts.tsx` | Add `hideMaterialCards` prop, skip material chart when true |
-| `src/pages/ProjectHome.tsx` | Pass `hideMaterialCards` to `FinancialHealthCharts` |
+| `src/components/invoices/InvoiceDetail.tsx` | Add "Revise & Resubmit" button for rejected invoices, show revision badge, keep rejection context visible |
+| Database migration | Add `revision_count` integer column to `invoices` table |
