@@ -966,6 +966,7 @@ export type Database = {
           rejected_by: string | null
           rejection_reason: string | null
           retainage_amount: number
+          revision_count: number
           sov_id: string | null
           status: string
           submitted_at: string | null
@@ -992,6 +993,7 @@ export type Database = {
           rejected_by?: string | null
           rejection_reason?: string | null
           retainage_amount?: number
+          revision_count?: number
           sov_id?: string | null
           status?: string
           submitted_at?: string | null
@@ -1018,6 +1020,7 @@ export type Database = {
           rejected_by?: string | null
           rejection_reason?: string | null
           retainage_amount?: number
+          revision_count?: number
           sov_id?: string | null
           status?: string
           submitted_at?: string | null

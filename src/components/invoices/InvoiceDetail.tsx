@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2, FileDown, Package } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2, FileDown, Package, RotateCcw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -186,6 +186,15 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
     });
   };
 
+  const handleRevise = () => {
+    updateInvoiceStatus('DRAFT', {
+      revision_count: ((invoice as any).revision_count || 0) + 1,
+      rejected_at: null,
+      rejected_by: null,
+      rejection_reason: null,
+    });
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -226,6 +235,11 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
             <div className="flex items-center gap-3">
               <h2 className="text-xl font-bold truncate">{invoice.invoice_number}</h2>
               <InvoiceStatusBadge status={status} />
+              {(invoice as any).revision_count > 0 && (
+                <span className="inline-flex items-center rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+                  Rev {(invoice as any).revision_count}
+                </span>
+              )}
             </div>
             <p className="text-sm text-muted-foreground truncate">
               Billing Period: {format(new Date(invoice.billing_period_start), 'MMM d')} -{' '}
@@ -329,8 +343,18 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
       {status === 'REJECTED' && invoice.rejection_reason && (
         <Card className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
           <CardContent className="p-4">
-            <p className="text-sm font-medium text-red-800 dark:text-red-200">Rejection Reason:</p>
-            <p className="text-sm text-red-700 dark:text-red-300">{invoice.rejection_reason}</p>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-red-800 dark:text-red-200">Rejection Reason:</p>
+                <p className="text-sm text-red-700 dark:text-red-300">{invoice.rejection_reason}</p>
+              </div>
+              {canSubmit && (
+                <Button onClick={handleRevise} disabled={actionLoading} size="sm">
+                  {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RotateCcw className="h-4 w-4 mr-2" />}
+                  Revise & Resubmit
+                </Button>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
