@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { InvoiceStatusBadge } from './InvoiceStatusBadge';
+import { CreateInvoiceFromSOV, RevisionData } from './CreateInvoiceFromSOV';
 import { Invoice, InvoiceLineItem, InvoiceStatus } from '@/types/invoice';
 
 interface InvoiceDetailProps {
@@ -48,6 +49,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   const [rejectionReason, setRejectionReason] = useState('');
   const [linkedPO, setLinkedPO] = useState<{ po_number: string; status: string } | null>(null);
   const [exportLoading, setExportLoading] = useState(false);
+  const [reviseDialogOpen, setReviseDialogOpen] = useState(false);
 
   // Get current user's organization ID
   const currentOrgId = userOrgRoles[0]?.organization?.id;
@@ -187,13 +189,25 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   };
 
   const handleRevise = () => {
-    updateInvoiceStatus('DRAFT', {
-      revision_count: ((invoice as any).revision_count || 0) + 1,
-      rejected_at: null,
-      rejected_by: null,
-      rejection_reason: null,
-    });
+    setReviseDialogOpen(true);
   };
+
+  // Build revision data for the wizard
+  const revisionData: RevisionData | undefined = invoice ? {
+    contractId: invoice.contract_id || '',
+    invoiceNumber: invoice.invoice_number,
+    periodStart: invoice.billing_period_start,
+    periodEnd: invoice.billing_period_end,
+    notes: invoice.notes,
+    revisionCount: (invoice as any).revision_count || 0,
+    lineItems: lineItems
+      .filter(li => (li as any).sov_item_id)
+      .map(li => ({
+        sov_item_id: (li as any).sov_item_id,
+        billed_percent: (li as any).billed_percent || 0,
+        current_billed: li.current_billed,
+      })),
+  } : undefined;
 
   if (loading) {
     return (
@@ -468,6 +482,21 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Revision Wizard */}
+      {invoice && revisionData && (
+        <CreateInvoiceFromSOV
+          open={reviseDialogOpen}
+          onOpenChange={setReviseDialogOpen}
+          projectId={projectId}
+          onSuccess={() => {
+            fetchInvoice();
+            onUpdate();
+          }}
+          revisionInvoiceId={invoice.id}
+          revisionData={revisionData}
+        />
+      )}
     </div>
   );
 }

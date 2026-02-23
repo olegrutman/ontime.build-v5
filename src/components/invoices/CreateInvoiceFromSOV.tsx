@@ -65,11 +65,28 @@ interface BillingItem extends SOVItem {
   maxAllowedPercent: number;
 }
 
+export interface RevisionData {
+  contractId: string;
+  invoiceNumber: string;
+  periodStart: string;
+  periodEnd: string;
+  notes: string | null;
+  revisionCount: number;
+  lineItems: Array<{
+    sov_item_id: string;
+    billed_percent: number;
+    current_billed: number;
+  }>;
+}
+
 interface CreateInvoiceFromSOVProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string;
   onSuccess: () => void;
+  // Revision mode
+  revisionInvoiceId?: string;
+  revisionData?: RevisionData;
 }
 
 function formatCurrency(amount: number): string {
@@ -86,10 +103,14 @@ export function CreateInvoiceFromSOV({
   onOpenChange,
   projectId,
   onSuccess,
+  revisionInvoiceId,
+  revisionData,
 }: CreateInvoiceFromSOVProps) {
   const { user, userOrgRoles } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
+  const isRevisionMode = !!revisionInvoiceId && !!revisionData;
   
   // Data
   const [allContracts, setAllContracts] = useState<Contract[]>([]);
@@ -111,32 +132,18 @@ export function CreateInvoiceFromSOV({
   const currentOrgType = userOrgRoles[0]?.organization?.type;
 
   // Filter contracts to only UPSTREAM contracts where user can invoice
-  // Contract structure: from_org (contractor) → to_org (client)
-  // TC (from_org) invoices GC (to_org): from_role='Trade Contractor', to_role='General Contractor'
-  // FC (from_org) invoices TC (to_org): from_role='Field Crew', to_role='Trade Contractor'
-  // Invoice creator must be from_org_id (matches RLS policy)
   const contracts = useMemo(() => {
     if (!currentOrgId) return [];
-    
-    // User must be the from_org (the contractor creating the invoice)
     const userContracts = allContracts.filter(c => c.from_org_id === currentOrgId);
-    
-    // Only include contracts where user invoices their upstream client
-    // AND the contract has a value > 0 (cannot invoice $0 contracts)
     return userContracts.filter(c => {
-      // Must have a contract value to invoice
       if (!c.contract_sum || c.contract_sum <= 0) return false;
-      
       if (currentOrgType === 'TC') {
-        // TC invoices GC: to_role should be 'General Contractor'
         return c.to_role === 'General Contractor';
       }
       if (currentOrgType === 'FC') {
-        // FC invoices TC: to_role should be 'Trade Contractor'
-        // Include ALL FC->TC contracts (primary + work order labor contracts)
         return c.to_role === 'Trade Contractor';
       }
-      return false; // GC and other roles cannot create invoices
+      return false;
     });
   }, [allContracts, currentOrgId, currentOrgType]);
 
@@ -151,7 +158,6 @@ export function CreateInvoiceFromSOV({
     setLoading(true);
     
     try {
-      // Fetch contracts with org IDs and names (via join)
       const { data: contractsData } = await supabase
         .from('project_contracts')
         .select(`
@@ -161,7 +167,6 @@ export function CreateInvoiceFromSOV({
         `)
         .eq('project_id', projectId);
       
-      // Map to Contract interface with org names
       const mappedContracts: Contract[] = (contractsData || []).map((c: any) => ({
         id: c.id,
         from_role: c.from_role,
@@ -177,7 +182,6 @@ export function CreateInvoiceFromSOV({
       
       setAllContracts(mappedContracts);
       
-      // Fetch SOVs
       const { data: sovsData } = await supabase
         .from('project_sov')
         .select('id, contract_id, sov_name')
@@ -185,7 +189,6 @@ export function CreateInvoiceFromSOV({
       
       setSovs((sovsData || []) as SOV[]);
       
-      // Fetch all SOV items
       if (sovsData && sovsData.length > 0) {
         const { data: itemsData } = await supabase
           .from('project_sov_items')
@@ -203,28 +206,37 @@ export function CreateInvoiceFromSOV({
     }
   };
 
-  // Reset selection when dialog opens - always let user choose
+  // Reset/pre-populate when dialog opens
   useEffect(() => {
     if (open) {
-      setSelectedContractId('');
+      if (isRevisionMode) {
+        setSelectedContractId(revisionData.contractId);
+        setInvoiceNumber(revisionData.invoiceNumber);
+        setPeriodStart(new Date(revisionData.periodStart));
+        setPeriodEnd(new Date(revisionData.periodEnd));
+        setNotes(revisionData.notes || '');
+      } else {
+        setSelectedContractId('');
+        setInvoiceNumber('');
+        setNotes('');
+        setPeriodStart(startOfMonth(subMonths(new Date(), 1)));
+        setPeriodEnd(endOfMonth(subMonths(new Date(), 1)));
+      }
     }
-  }, [open]);
+  }, [open, isRevisionMode]);
 
-  // Helper to get initials from company name (first 2 letters, uppercase)
+  // Helper to get initials from company name
   const getOrgInitials = (name: string | undefined): string => {
     if (!name) return 'XX';
-    // Remove common prefixes/suffixes and get first 2 letters
     const cleaned = name.replace(/^(the\s+)/i, '').trim();
     return cleaned.substring(0, 2).toUpperCase();
   };
 
   const generateInvoiceNumber = async (contract: Contract) => {
-    // Get initials from org names
     const fromInitials = getOrgInitials(contract.from_org_name);
     const toInitials = getOrgInitials(contract.to_org_name);
     const prefix = `INV-${fromInitials}-${toInitials}`;
     
-    // Get ALL invoice numbers for this project with the same prefix to find the true max
     const { data } = await supabase
       .from('invoices')
       .select('invoice_number')
@@ -232,7 +244,6 @@ export function CreateInvoiceFromSOV({
     
     let maxNumber = 0;
     if (data && data.length > 0) {
-      // Find the highest number from invoices with matching prefix
       const prefixPattern = new RegExp(`^${prefix}-(\\d+)$`);
       data.forEach(inv => {
         const match = inv.invoice_number.match(prefixPattern);
@@ -256,32 +267,47 @@ export function CreateInvoiceFromSOV({
     [sovs, selectedContractId]
   );
 
-  // Generate invoice number when contract is selected
+  // Generate invoice number when contract is selected (only in create mode)
   useEffect(() => {
+    if (isRevisionMode) return; // Don't regenerate in revision mode
     if (selectedContract) {
       generateInvoiceNumber(selectedContract);
     } else {
       setInvoiceNumber('');
     }
-  }, [selectedContract]);
+  }, [selectedContract, isRevisionMode]);
 
   // Update billing items when contract changes
   useEffect(() => {
     if (selectedSOV) {
       const items = sovItems
         .filter(item => item.sov_id === selectedSOV.id)
-        .map(item => ({
-          ...item,
-          enabled: false,
-          thisBillPercent: 0,
-          thisBillAmount: 0,
-          maxAllowedPercent: Math.max(0, 100 - (item.total_completion_percent || 0)),
-        }));
+        .map(item => {
+          // In revision mode, check if this SOV item was in the original invoice
+          const revisionLine = isRevisionMode
+            ? revisionData.lineItems.find(li => li.sov_item_id === item.id)
+            : null;
+
+          // In revision mode, add back the original billed percent since we're replacing
+          const adjustedMaxPercent = revisionLine
+            ? Math.max(0, 100 - (item.total_completion_percent || 0) + revisionLine.billed_percent)
+            : Math.max(0, 100 - (item.total_completion_percent || 0));
+
+          return {
+            ...item,
+            enabled: revisionLine ? true : false,
+            thisBillPercent: revisionLine ? revisionLine.billed_percent : 0,
+            thisBillAmount: revisionLine
+              ? Math.round((item.value_amount * revisionLine.billed_percent / 100) * 100) / 100
+              : 0,
+            maxAllowedPercent: adjustedMaxPercent,
+          };
+        });
       setBillingItems(items);
     } else {
       setBillingItems([]);
     }
-  }, [selectedSOV, sovItems]);
+  }, [selectedSOV, sovItems, isRevisionMode]);
 
   // Calculate gross amount
   const grossAmount = useMemo(() => 
@@ -295,7 +321,6 @@ export function CreateInvoiceFromSOV({
   const retainageAmount = grossAmount * (retainagePercent / 100);
   const netAmount = grossAmount - retainageAmount;
 
-  // Check if any items have errors
   const hasErrors = billingItems.some(item => 
     item.enabled && item.thisBillPercent > item.maxAllowedPercent
   );
@@ -318,11 +343,8 @@ export function CreateInvoiceFromSOV({
   const handlePercentChange = (itemId: string, percent: number) => {
     setBillingItems(prev => prev.map(item => {
       if (item.id !== itemId) return item;
-      
-      // Clamp to maxAllowedPercent to prevent exceeding 100% total billing
       const clampedPercent = Math.min(Math.max(0, percent), item.maxAllowedPercent);
       const billAmount = Math.round((item.value_amount * clampedPercent / 100) * 100) / 100;
-      
       return {
         ...item,
         thisBillPercent: clampedPercent,
@@ -340,72 +362,145 @@ export function CreateInvoiceFromSOV({
     }
 
     if (hasErrors) {
-      toast.error('Please fix overbilling errors before creating invoice');
+      toast.error('Please fix overbilling errors before submitting');
       return;
     }
 
     setSaving(true);
 
     try {
-      // Create invoice
-      const { data: invoice, error: invoiceError } = await supabase
-        .from('invoices')
-        .insert({
-          project_id: projectId,
-          contract_id: selectedContract.id,
-          sov_id: selectedSOV.id,
-          invoice_number: invoiceNumber,
-          billing_period_start: format(periodStart, 'yyyy-MM-dd'),
-          billing_period_end: format(periodEnd, 'yyyy-MM-dd'),
-          subtotal: grossAmount,
-          retainage_amount: retainageAmount,
-          total_amount: netAmount,
-          notes: notes || null,
-          created_by: user.id,
-        })
-        .select()
-        .single();
-
-      if (invoiceError) throw invoiceError;
-
-      // Create line items for enabled items only
       const enabledItems = billingItems.filter(item => item.enabled && item.thisBillPercent > 0);
-      
-      const lineItemsToInsert = enabledItems.map((item, index) => ({
-        invoice_id: invoice.id,
-        sov_item_id: item.id,
-        description: item.item_name,
-        scheduled_value: item.value_amount,
-        previous_billed: item.total_billed_amount || 0,
-        current_billed: item.thisBillAmount,
-        total_billed: (item.total_billed_amount || 0) + item.thisBillAmount,
-        billed_percent: item.thisBillPercent,
-        retainage_percent: retainagePercent,
-        retainage_amount: item.thisBillAmount * (retainagePercent / 100),
-        sort_order: index,
-      }));
 
-      const { error: lineItemsError } = await supabase
-        .from('invoice_line_items')
-        .insert(lineItemsToInsert);
+      if (isRevisionMode) {
+        // --- REVISION MODE: Update existing invoice ---
+        const { error: updateError } = await supabase
+          .from('invoices')
+          .update({
+            status: 'SUBMITTED',
+            billing_period_start: format(periodStart, 'yyyy-MM-dd'),
+            billing_period_end: format(periodEnd, 'yyyy-MM-dd'),
+            notes: notes || null,
+            subtotal: grossAmount,
+            retainage_amount: retainageAmount,
+            total_amount: netAmount,
+            submitted_at: new Date().toISOString(),
+            submitted_by: user.id,
+            revision_count: revisionData.revisionCount + 1,
+            rejected_at: null,
+            rejected_by: null,
+            rejection_reason: null,
+          })
+          .eq('id', revisionInvoiceId);
 
-      if (lineItemsError) throw lineItemsError;
+        if (updateError) throw updateError;
 
-      // Log activity
-      await supabase.from('project_activity').insert({
-        project_id: projectId,
-        activity_type: 'INVOICE_CREATED',
-        description: `Invoice ${invoiceNumber} created for ${formatCurrency(grossAmount)}`,
-        actor_user_id: user.id,
-      });
+        // Delete old line items
+        const { error: deleteError } = await supabase
+          .from('invoice_line_items')
+          .delete()
+          .eq('invoice_id', revisionInvoiceId);
 
-      toast.success('Invoice created successfully');
+        if (deleteError) throw deleteError;
+
+        // Insert new line items
+        const lineItemsToInsert = enabledItems.map((item, index) => {
+          // In revision mode, adjust previous_billed to exclude the old current_billed
+          const revisionLine = revisionData.lineItems.find(li => li.sov_item_id === item.id);
+          const previousBilled = revisionLine
+            ? (item.total_billed_amount || 0) - revisionLine.current_billed
+            : (item.total_billed_amount || 0);
+
+          return {
+            invoice_id: revisionInvoiceId,
+            sov_item_id: item.id,
+            description: item.item_name,
+            scheduled_value: item.value_amount,
+            previous_billed: previousBilled,
+            current_billed: item.thisBillAmount,
+            total_billed: previousBilled + item.thisBillAmount,
+            billed_percent: item.thisBillPercent,
+            retainage_percent: retainagePercent,
+            retainage_amount: item.thisBillAmount * (retainagePercent / 100),
+            sort_order: index,
+          };
+        });
+
+        const { error: lineItemsError } = await supabase
+          .from('invoice_line_items')
+          .insert(lineItemsToInsert);
+
+        if (lineItemsError) throw lineItemsError;
+
+        // Update SOV billing totals
+        await supabase.rpc('update_sov_billing_totals', { p_project_id: projectId });
+
+        // Log activity
+        await supabase.from('project_activity').insert({
+          project_id: projectId,
+          activity_type: 'INVOICE_SUBMITTED',
+          description: `Invoice ${revisionData.invoiceNumber} revised and resubmitted (Rev ${revisionData.revisionCount + 1})`,
+          actor_user_id: user.id,
+        });
+
+        toast.success('Invoice revised and resubmitted');
+      } else {
+        // --- CREATE MODE: Insert new invoice ---
+        const { data: invoice, error: invoiceError } = await supabase
+          .from('invoices')
+          .insert({
+            project_id: projectId,
+            contract_id: selectedContract.id,
+            sov_id: selectedSOV.id,
+            invoice_number: invoiceNumber,
+            billing_period_start: format(periodStart, 'yyyy-MM-dd'),
+            billing_period_end: format(periodEnd, 'yyyy-MM-dd'),
+            subtotal: grossAmount,
+            retainage_amount: retainageAmount,
+            total_amount: netAmount,
+            notes: notes || null,
+            created_by: user.id,
+          })
+          .select()
+          .single();
+
+        if (invoiceError) throw invoiceError;
+
+        const lineItemsToInsert = enabledItems.map((item, index) => ({
+          invoice_id: invoice.id,
+          sov_item_id: item.id,
+          description: item.item_name,
+          scheduled_value: item.value_amount,
+          previous_billed: item.total_billed_amount || 0,
+          current_billed: item.thisBillAmount,
+          total_billed: (item.total_billed_amount || 0) + item.thisBillAmount,
+          billed_percent: item.thisBillPercent,
+          retainage_percent: retainagePercent,
+          retainage_amount: item.thisBillAmount * (retainagePercent / 100),
+          sort_order: index,
+        }));
+
+        const { error: lineItemsError } = await supabase
+          .from('invoice_line_items')
+          .insert(lineItemsToInsert);
+
+        if (lineItemsError) throw lineItemsError;
+
+        await supabase.from('project_activity').insert({
+          project_id: projectId,
+          activity_type: 'INVOICE_CREATED',
+          description: `Invoice ${invoiceNumber} created for ${formatCurrency(grossAmount)}`,
+          actor_user_id: user.id,
+        });
+
+        toast.success('Invoice created successfully');
+      }
+
       onSuccess();
       onOpenChange(false);
       resetForm();
     } catch (error: any) {
-      console.error('Error creating invoice:', error);
-      toast.error(error.message || 'Failed to create invoice');
+      console.error('Error saving invoice:', error);
+      toast.error(error.message || 'Failed to save invoice');
     } finally {
       setSaving(false);
     }
@@ -424,9 +519,11 @@ export function CreateInvoiceFromSOV({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle>Create Invoice from SOV</DialogTitle>
+          <DialogTitle>{isRevisionMode ? 'Revise & Resubmit Invoice' : 'Create Invoice from SOV'}</DialogTitle>
           <DialogDescription>
-            Select SOV items and set completion percentage to generate an invoice.
+            {isRevisionMode
+              ? `Adjust SOV item percentages for ${revisionData?.invoiceNumber} and resubmit.`
+              : 'Select SOV items and set completion percentage to generate an invoice.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -453,29 +550,46 @@ export function CreateInvoiceFromSOV({
           </Alert>
         ) : (
           <div className="space-y-6 py-4">
-            {/* Contract Selection - Always show for upstream invoicing */}
-            <div className="space-y-2">
-              <Label>Select Contract to Invoice</Label>
-              <Select value={selectedContractId} onValueChange={setSelectedContractId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a contract to bill" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contracts.map(contract => {
-                    const isWorkOrder = contract.trade === 'Work Order' || contract.trade === 'Work Order Labor';
-                    const typeLabel = isWorkOrder ? '[Work Order]' : '[Contract]';
-                    return (
-                      <SelectItem key={contract.id} value={contract.id}>
-                        {typeLabel} {getContractDisplayName(contract.from_role, contract.to_role, contract.from_org_name, contract.to_org_name)} — {formatCurrency(contract.contract_sum || 0)}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Select the contract with your upstream party to create an invoice.
-              </p>
-            </div>
+            {/* Contract Selection - hidden/locked in revision mode */}
+            {isRevisionMode ? (
+              <div className="space-y-2">
+                <Label>Contract</Label>
+                <Input
+                  value={
+                    selectedContract
+                      ? `${getContractDisplayName(selectedContract.from_role, selectedContract.to_role, selectedContract.from_org_name, selectedContract.to_org_name)} — ${formatCurrency(selectedContract.contract_sum || 0)}`
+                      : 'Loading...'
+                  }
+                  disabled
+                />
+                <p className="text-xs text-muted-foreground">
+                  Contract is locked for revision.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Select Contract to Invoice</Label>
+                <Select value={selectedContractId} onValueChange={setSelectedContractId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a contract to bill" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contracts.map(contract => {
+                      const isWorkOrder = contract.trade === 'Work Order' || contract.trade === 'Work Order Labor';
+                      const typeLabel = isWorkOrder ? '[Work Order]' : '[Contract]';
+                      return (
+                        <SelectItem key={contract.id} value={contract.id}>
+                          {typeLabel} {getContractDisplayName(contract.from_role, contract.to_role, contract.from_org_name, contract.to_org_name)} — {formatCurrency(contract.contract_sum || 0)}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Select the contract with your upstream party to create an invoice.
+                </p>
+              </div>
+            )}
 
             {/* Invoice Details */}
             <div className="grid gap-4 md:grid-cols-3">
@@ -485,6 +599,7 @@ export function CreateInvoiceFromSOV({
                   value={invoiceNumber}
                   onChange={(e) => setInvoiceNumber(e.target.value)}
                   placeholder="INV-0001"
+                  disabled={isRevisionMode}
                 />
               </div>
               <div className="space-y-2">
@@ -543,9 +658,19 @@ export function CreateInvoiceFromSOV({
                 <div className="space-y-2">
                   {billingItems.map((item) => {
                     const isOverBilling = item.thisBillPercent > item.maxAllowedPercent;
-                    const previousPercent = item.total_completion_percent || 0;
+                    // In revision mode, show adjusted previous percent (excluding original billing)
+                    const revisionLine = isRevisionMode
+                      ? revisionData.lineItems.find(li => li.sov_item_id === item.id)
+                      : null;
+                    const adjustedPreviousPercent = revisionLine
+                      ? (item.total_completion_percent || 0) - revisionLine.billed_percent
+                      : (item.total_completion_percent || 0);
+                    const previousPercent = adjustedPreviousPercent;
                     const newTotalPercent = previousPercent + item.thisBillPercent;
-                    const previousBilledAmount = item.total_billed_amount || 0;
+                    const adjustedPreviousBilled = revisionLine
+                      ? (item.total_billed_amount || 0) - revisionLine.current_billed
+                      : (item.total_billed_amount || 0);
+                    const previousBilledAmount = adjustedPreviousBilled;
                     
                     return (
                       <Card 
@@ -558,14 +683,12 @@ export function CreateInvoiceFromSOV({
                       >
                         <CardContent className="p-4">
                           <div className="flex items-start gap-4">
-                            {/* Toggle */}
                             <Switch
                               checked={item.enabled}
                               onCheckedChange={(checked) => handleToggleItem(item.id, checked)}
                               className="mt-1"
                             />
 
-                            {/* Item details */}
                             <div className="flex-1 min-w-0 space-y-3">
                               <div className="flex items-center justify-between">
                                 <span className="font-medium truncate">{item.item_name}</span>
@@ -574,7 +697,6 @@ export function CreateInvoiceFromSOV({
                                 </span>
                               </div>
 
-                              {/* Previous billing summary - always visible */}
                               <div className="flex items-center justify-between text-sm">
                                 <span className="text-muted-foreground">
                                   {previousBilledAmount > 0 
@@ -597,7 +719,6 @@ export function CreateInvoiceFromSOV({
 
                               {item.enabled && (
                                 <>
-                                  {/* Fully billed indicator */}
                                   {item.maxAllowedPercent === 0 ? (
                                     <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
                                       <CheckCircle className="h-4 w-4" />
@@ -605,7 +726,6 @@ export function CreateInvoiceFromSOV({
                                     </div>
                                   ) : (
                                     <>
-                                      {/* Visual Progress Bar - Previous vs New Billing */}
                                       <div className="space-y-1.5">
                                         <div className="flex items-center justify-between text-xs">
                                           <div className="flex items-center gap-3">
@@ -635,14 +755,11 @@ export function CreateInvoiceFromSOV({
                                           </span>
                                         </div>
                                         
-                                        {/* Stacked Progress Bar */}
                                         <div className="relative h-3 w-full rounded-full bg-muted overflow-hidden">
-                                          {/* Previous billing (gray) */}
                                           <div 
                                             className="absolute inset-y-0 left-0 bg-muted-foreground/40 transition-all duration-300"
                                             style={{ width: `${Math.min(previousPercent, 100)}%` }}
                                           />
-                                          {/* New billing (primary) */}
                                           <div 
                                             className="absolute inset-y-0 bg-primary transition-all duration-300"
                                             style={{ 
@@ -650,14 +767,12 @@ export function CreateInvoiceFromSOV({
                                               width: `${Math.min(item.thisBillPercent, 100 - previousPercent)}%`
                                             }}
                                           />
-                                          {/* 100% marker */}
                                           {newTotalPercent > 0 && newTotalPercent < 100 && (
                                             <div className="absolute right-0 top-0 bottom-0 w-px bg-border" />
                                           )}
                                         </div>
                                       </div>
 
-                                      {/* Slider and input */}
                                       <div className="flex items-center gap-4">
                                         <div className="flex-1">
                                           <Slider
@@ -683,7 +798,6 @@ export function CreateInvoiceFromSOV({
                                         </div>
                                       </div>
 
-                                      {/* Max available hint */}
                                       <div className="text-xs text-muted-foreground">
                                         Max available: {item.maxAllowedPercent.toFixed(1)}%
                                       </div>
@@ -754,7 +868,9 @@ export function CreateInvoiceFromSOV({
               onClick={handleSubmit} 
               disabled={saving || !hasSelectedItems || hasErrors || !selectedContractId}
             >
-              {saving ? 'Creating...' : 'Create Invoice'}
+              {saving
+                ? (isRevisionMode ? 'Resubmitting...' : 'Creating...')
+                : (isRevisionMode ? 'Resubmit Invoice' : 'Create Invoice')}
             </Button>
           </DialogFooter>
         </div>
