@@ -284,7 +284,7 @@ export default function ProjectHome() {
 
               {/* Estimates Tab */}
               {activeTab === 'estimates' && isSupplier && supplierOrgId && (
-                <SupplierEstimatesSection projectId={id!} supplierOrgId={supplierOrgId} />
+                <SupplierEstimatesSection projectId={id!} projectName={project?.name} supplierOrgId={supplierOrgId} />
               )}
               {activeTab === 'estimates' && !isSupplier && (
                 <ProjectEstimatesReview projectId={id!} />
