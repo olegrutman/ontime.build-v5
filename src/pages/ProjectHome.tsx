@@ -30,6 +30,7 @@ import {
 } from '@/components/project';
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
 import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
+import { MaterialResponsibilityCard } from '@/components/project/MaterialResponsibilityCard';
 import { InvoicesTab } from '@/components/invoices';
 import { ContractSOVEditor } from '@/components/sov';
 import { RFIsTab } from '@/components/rfi';
@@ -252,6 +253,7 @@ export default function ProjectHome() {
                         isSupplier={isSupplier}
                         supplierOrgId={supplierOrgId}
                       />
+                      <MaterialResponsibilityCard projectId={id!} />
                       <FinancialSignalBar financials={financials} projectId={id!} />
                       <FinancialHealthCharts financials={financials} />
                       <OperationalSummary
