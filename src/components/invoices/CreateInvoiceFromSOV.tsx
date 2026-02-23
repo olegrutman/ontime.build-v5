@@ -288,10 +288,9 @@ export function CreateInvoiceFromSOV({
             ? revisionData.lineItems.find(li => li.sov_item_id === item.id)
             : null;
 
-          // In revision mode, add back the original billed percent since we're replacing
-          const adjustedMaxPercent = revisionLine
-            ? Math.max(0, 100 - (item.total_completion_percent || 0) + revisionLine.billed_percent)
-            : Math.max(0, 100 - (item.total_completion_percent || 0));
+          // Max percent is simply what's remaining — the rejection trigger already
+          // subtracted the old billing from total_completion_percent
+          const adjustedMaxPercent = Math.max(0, 100 - (item.total_completion_percent || 0));
 
           return {
             ...item,
@@ -373,28 +372,10 @@ export function CreateInvoiceFromSOV({
 
       if (isRevisionMode) {
         // --- REVISION MODE: Update existing invoice ---
-        const { error: updateError } = await supabase
-          .from('invoices')
-          .update({
-            status: 'SUBMITTED',
-            billing_period_start: format(periodStart, 'yyyy-MM-dd'),
-            billing_period_end: format(periodEnd, 'yyyy-MM-dd'),
-            notes: notes || null,
-            subtotal: grossAmount,
-            retainage_amount: retainageAmount,
-            total_amount: netAmount,
-            submitted_at: new Date().toISOString(),
-            submitted_by: user.id,
-            revision_count: revisionData.revisionCount + 1,
-            rejected_at: null,
-            rejected_by: null,
-            rejection_reason: null,
-          })
-          .eq('id', revisionInvoiceId);
+        // IMPORTANT: Order matters! The status-change trigger reads line items,
+        // so we must delete old → insert new → then update status.
 
-        if (updateError) throw updateError;
-
-        // Delete old line items
+        // 1. Delete old line items
         const { error: deleteError } = await supabase
           .from('invoice_line_items')
           .delete()
@@ -402,13 +383,11 @@ export function CreateInvoiceFromSOV({
 
         if (deleteError) throw deleteError;
 
-        // Insert new line items
+        // 2. Insert new line items
         const lineItemsToInsert = enabledItems.map((item, index) => {
-          // In revision mode, adjust previous_billed to exclude the old current_billed
-          const revisionLine = revisionData.lineItems.find(li => li.sov_item_id === item.id);
-          const previousBilled = revisionLine
-            ? (item.total_billed_amount || 0) - revisionLine.current_billed
-            : (item.total_billed_amount || 0);
+          // The rejection trigger already removed the old billing from total_billed_amount,
+          // so use it directly — no subtraction needed.
+          const previousBilled = item.total_billed_amount || 0;
 
           return {
             invoice_id: revisionInvoiceId,
@@ -431,7 +410,29 @@ export function CreateInvoiceFromSOV({
 
         if (lineItemsError) throw lineItemsError;
 
-        // Update SOV billing totals
+        // 3. Update invoice record last — trigger fires here and reads NEW line items
+        const { error: updateError } = await supabase
+          .from('invoices')
+          .update({
+            status: 'SUBMITTED',
+            billing_period_start: format(periodStart, 'yyyy-MM-dd'),
+            billing_period_end: format(periodEnd, 'yyyy-MM-dd'),
+            notes: notes || null,
+            subtotal: grossAmount,
+            retainage_amount: retainageAmount,
+            total_amount: netAmount,
+            submitted_at: new Date().toISOString(),
+            submitted_by: user.id,
+            revision_count: revisionData.revisionCount + 1,
+            rejected_at: null,
+            rejected_by: null,
+            rejection_reason: null,
+          })
+          .eq('id', revisionInvoiceId);
+
+        if (updateError) throw updateError;
+
+        // 4. Update SOV billing totals
         await supabase.rpc('update_sov_billing_totals', { p_project_id: projectId });
 
         // Log activity
