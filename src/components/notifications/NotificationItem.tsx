@@ -14,9 +14,7 @@ import {
   FileX
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import { Notification } from '@/hooks/useNotifications';
-import { useProjectInvite } from '@/hooks/useProjectInvite';
 
 interface NotificationItemProps {
   notification: Notification;
@@ -52,7 +50,6 @@ const typeColors: Record<string, string> = {
 
 export function NotificationItem({ notification, onMarkRead, onClose }: NotificationItemProps) {
   const navigate = useNavigate();
-  const { acceptInvite, declineInvite, loading: inviteLoading } = useProjectInvite();
   
   const Icon = typeIcons[notification.type] || Circle;
   const iconColor = typeColors[notification.type] || 'text-muted-foreground';
@@ -63,20 +60,6 @@ export function NotificationItem({ notification, onMarkRead, onClose }: Notifica
     }
     onClose();
     navigate(notification.action_url);
-  };
-
-  const handleAccept = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const success = await acceptInvite(notification.entity_id);
-    if (success) {
-      onMarkRead(notification.id);
-    }
-  };
-
-  const handleDecline = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    await declineInvite(notification.entity_id);
-    onMarkRead(notification.id);
   };
 
   const isProjectInvite = notification.type === 'PROJECT_INVITE';
@@ -120,27 +103,11 @@ export function NotificationItem({ notification, onMarkRead, onClose }: Notifica
           {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
         </p>
 
-        {/* Project invite actions */}
+        {/* Guide user to dashboard for project invite actions */}
         {isProjectInvite && !notification.is_read && (
-          <div className="flex gap-2 pt-2">
-            <Button
-              size="sm"
-              onClick={handleAccept}
-              disabled={inviteLoading}
-              className="h-7 text-xs"
-            >
-              Accept
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleDecline}
-              disabled={inviteLoading}
-              className="h-7 text-xs"
-            >
-              Decline
-            </Button>
-          </div>
+          <p className="text-xs text-primary/70 font-medium">
+            Go to Dashboard to respond
+          </p>
         )}
       </div>
     </div>
