@@ -1,29 +1,24 @@
 
+# Show PO Total Including Tax on PO Card
 
-# Hide Non-Submitted POs from Supplier View
+## Change
 
-## Problem
-Suppliers currently see all POs assigned to them, including those in `ACTIVE` (draft) status that haven't been submitted yet. Suppliers should only see POs that have been submitted to them (status `SUBMITTED` or later).
+In `src/components/purchase-orders/POCard.tsx`, update the total calculation (lines 91-93) to include the PO's `sales_tax_percent` when computing the displayed amount.
 
-## Changes
-
-### 1. `src/components/project/PurchaseOrdersTab.tsx`
-In the `fetchPurchaseOrders` function, after the supplier ID filter (line ~91), add a status filter to exclude `ACTIVE` POs for supplier users:
+### Current logic (line 91-93):
 ```typescript
-query = query.neq('status', 'ACTIVE');
+const total = canViewPricing && po.line_items 
+  ? po.line_items.reduce((sum, item) => sum + (item.line_total || 0), 0)
+  : null;
 ```
 
-### 2. `src/components/project/SupplierPOSummaryCard.tsx`
-Update the query that fetches PO status counts to exclude `ACTIVE` POs -- suppliers should not see draft counts.
+### New logic:
+```typescript
+const subtotal = canViewPricing && po.line_items 
+  ? po.line_items.reduce((sum, item) => sum + (item.line_total || 0), 0)
+  : null;
+const taxRate = (po.sales_tax_percent || 0) / 100;
+const total = subtotal !== null ? subtotal * (1 + taxRate) : null;
+```
 
-### 3. `src/components/project/SupplierContractsSection.tsx`
-Already filters to `FINALIZED` and `DELIVERED` only -- no change needed.
-
-### 4. `src/components/project/POSummaryCard.tsx`
-When the viewer is a supplier, filter out `ACTIVE` POs from the counts and totals.
-
-## Technical Detail
-- The `ACTIVE` status means the PO is still being drafted by the GC/TC and has not been sent to the supplier
-- `SUBMITTED` is the first status where the supplier should see the PO
-- This is a frontend filter only -- RLS already controls row access, but the business logic of "don't show drafts to suppliers" is enforced in the UI queries
-
+No other files need changes. The `PurchaseOrder` type already has `sales_tax_percent` and it's already fetched in the query.
