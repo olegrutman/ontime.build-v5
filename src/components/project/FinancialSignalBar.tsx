@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 interface FinancialSignalBarProps {
   financials: ProjectFinancials;
   projectId: string;
+  hideMaterialCards?: boolean;
 }
 
 function fmt(amount: number): string {
@@ -63,7 +64,7 @@ function SignalCard({ label, value, color = 'default', icon, subtext, editable, 
   );
 }
 
-export function FinancialSignalBar({ financials, projectId }: FinancialSignalBarProps) {
+export function FinancialSignalBar({ financials, projectId, hideMaterialCards }: FinancialSignalBarProps) {
   const { toast } = useToast();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editSum, setEditSum] = useState(0);
@@ -228,7 +229,7 @@ export function FinancialSignalBar({ financials, projectId }: FinancialSignalBar
       subtext: !downstreamContract && fcParticipants.length > 0 ? 'Click + to add' : undefined,
     });
     // Material Budget card for TC with material responsibility
-    if (isTCMaterialResponsible) {
+    if (isTCMaterialResponsible && !hideMaterialCards) {
       cards.push({
         label: 'Material Budget',
         value: materialEstimateTotal != null ? fmt(materialEstimateTotal) : 'Set budget',
@@ -238,7 +239,7 @@ export function FinancialSignalBar({ financials, projectId }: FinancialSignalBar
         onEdit: () => { setMatBudgetValue(materialEstimateTotal || 0); setEditingMatBudget(true); },
         subtext: materialEstimateTotal != null ? 'Est. supplier costs' : 'Click to set',
       });
-    } else if (materialEstimate > 0) {
+    } else if (materialEstimate > 0 && !hideMaterialCards) {
       cards.push({ label: 'Supplier Estimate', value: fmt(materialEstimate), icon: <Package className="h-3.5 w-3.5" /> });
     }
     cards.push({ label: 'Total Billed to GC', value: fmt(billedToDate), icon: <Receipt className="h-3.5 w-3.5" /> });
@@ -250,7 +251,7 @@ export function FinancialSignalBar({ financials, projectId }: FinancialSignalBar
       icon: <TrendingUp className="h-3.5 w-3.5" />,
       subtext: 'In − Out − Materials',
     });
-    if (materialEstimate > 0 || materialOrdered > 0) {
+    if ((materialEstimate > 0 || materialOrdered > 0) && !hideMaterialCards) {
       const overBudget = materialOrdered > materialEstimate;
       cards.push({
         label: 'Material Ordered vs Est.',
@@ -283,7 +284,7 @@ export function FinancialSignalBar({ financials, projectId }: FinancialSignalBar
     cards.push({ label: 'Approved Work Orders', value: fmt(workOrderTotal) });
     cards.push({ label: 'Total Invoiced', value: fmt(billedToDate), icon: <Receipt className="h-3.5 w-3.5" /> });
     cards.push({ label: 'Retainage Held', value: fmt(retainageAmount), icon: <Percent className="h-3.5 w-3.5" />, color: retainageAmount > 0 ? 'amber' : 'default' });
-    if (materialEstimate > 0 || materialOrdered > 0) {
+    if ((materialEstimate > 0 || materialOrdered > 0) && !hideMaterialCards) {
       const overBudget = materialOrdered > materialEstimate;
       cards.push({
         label: 'Supplier Est. vs Orders',
