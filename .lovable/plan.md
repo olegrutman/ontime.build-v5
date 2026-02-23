@@ -1,45 +1,97 @@
 
-# Revise & Resubmit Flow for Rejected Invoices
+
+# Revise & Resubmit via Invoice Creation Wizard
 
 ## Overview
-When an invoice is rejected, the contractor (from_org) will see a "Revise & Resubmit" button that reverts the invoice back to DRAFT status -- keeping the same invoice number. The contractor can then edit line items and resubmit. The rejection reason remains visible as context.
+When a rejected invoice's "Revise & Resubmit" button is clicked, instead of just reverting to DRAFT, open the `CreateInvoiceFromSOV` wizard pre-populated with the rejected invoice's existing data (contract, billing period, notes, SOV item percentages). The user adjusts the SOV item percentages and clicks a "Resubmit Invoice" button, which updates the existing invoice record in-place (same invoice number, incremented revision count).
 
 ## Changes
 
-### 1. `src/components/invoices/InvoiceDetail.tsx`
+### 1. `src/components/invoices/CreateInvoiceFromSOV.tsx`
 
-**Add a "Revise & Resubmit" button** for rejected invoices when the user is the invoice creator (`isInvoiceCreator`):
+Add support for a **revision mode** via new optional props:
 
-- After the existing rejection notice card, add a button: "Revise & Resubmit"
-- On click, call `updateInvoiceStatus('DRAFT')` which clears the rejection fields:
-  ```
-  rejected_at: null
-  rejected_by: null
-  rejection_reason: null
-  ```
-- The existing `DRAFT` + `canSubmit` logic already shows the "Submit for Approval" button, so once reverted the normal flow resumes
-- Keep the rejection reason visible in a muted info banner while in DRAFT (if the invoice was previously rejected), so the contractor knows what to fix
+- `revisionInvoiceId?: string` -- if set, the wizard is in revision mode
+- `revisionData?: { contractId, invoiceNumber, periodStart, periodEnd, notes, lineItems[], revisionCount }` -- pre-populates the form
 
-**Add a `revision_count` display**: Show "Revision 1", "Revision 2" etc. next to the invoice number if the invoice has been rejected and resubmitted before. This is tracked by counting how many times `rejected_at` has been set (we can add a simple `revision_count` integer column).
+**Behavior in revision mode:**
+- Skip contract selection -- auto-select and lock the contract from the original invoice
+- Pre-fill invoice number, billing period, and notes (all editable except invoice number)
+- Pre-populate SOV item toggles and percentages from the original invoice's line items
+- The SOV `maxAllowedPercent` calculation must add back the original `current_billed` percent (since we're replacing, not stacking)
+- Change the submit button label from "Create Invoice" to "Resubmit Invoice"
+- On submit: UPDATE the existing invoice instead of INSERT, DELETE old line items and INSERT new ones, increment `revision_count`, clear rejection fields, set status to SUBMITTED
 
-### 2. Database Migration
+### 2. `src/components/invoices/InvoiceDetail.tsx`
 
-Add a `revision_count` column to the `invoices` table:
-```sql
-ALTER TABLE invoices ADD COLUMN revision_count integer NOT NULL DEFAULT 0;
+- Replace the current `handleRevise` function with one that opens the wizard
+- Add state: `reviseDialogOpen` and pass the invoice's data to the wizard
+- Pass the invoice's contract_id, line items, billing period, notes, and revision count
+- On wizard success: refresh the invoice detail and call `onUpdate`
+
+### 3. `src/components/invoices/InvoicesTab.tsx`
+
+No changes needed -- the revision wizard is opened from InvoiceDetail, not from InvoicesTab.
+
+## Technical Details
+
+### Revision mode submit logic (in CreateInvoiceFromSOV)
+
+```
+// Instead of INSERT:
+1. UPDATE invoices SET
+     status = 'SUBMITTED',
+     billing_period_start, billing_period_end, notes,
+     subtotal, retainage_amount, total_amount,
+     submitted_at = now(), submitted_by = user.id,
+     revision_count = revisionCount + 1,
+     rejected_at = null, rejected_by = null, rejection_reason = null
+   WHERE id = revisionInvoiceId
+
+2. DELETE FROM invoice_line_items WHERE invoice_id = revisionInvoiceId
+
+3. INSERT new line items (same as normal creation)
+
+4. Update SOV billing totals via RPC
 ```
 
-When the invoice is reverted to DRAFT after rejection, increment `revision_count` by 1 in the update call.
+### Pre-populating SOV percentages
 
-### 3. Invoice Number Handling
+When in revision mode, after SOV items load, match each SOV item against the original invoice's line items by `sov_item_id`. For matched items:
+- Set `enabled = true`
+- Set `thisBillPercent` to the original `billed_percent`
+- Adjust `maxAllowedPercent` by adding back the original percent (since the old billing is being replaced)
 
-- The invoice number stays the same -- no suffix needed
-- The `revision_count` is displayed in the UI as a small badge (e.g., "Rev 2") next to the status badge when > 0
-- This keeps the numbering clean while providing audit trail
+### Props interface change
 
-## Summary of File Changes
+```typescript
+interface CreateInvoiceFromSOVProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  projectId: string;
+  onSuccess: () => void;
+  // Revision mode
+  revisionInvoiceId?: string;
+  revisionData?: {
+    contractId: string;
+    invoiceNumber: string;
+    periodStart: string;
+    periodEnd: string;
+    notes: string | null;
+    revisionCount: number;
+    lineItems: Array<{
+      sov_item_id: string;
+      billed_percent: number;
+      current_billed: number;
+    }>;
+  };
+}
+```
+
+## File Changes
 
 | File | Change |
 |------|--------|
-| `src/components/invoices/InvoiceDetail.tsx` | Add "Revise & Resubmit" button for rejected invoices, show revision badge, keep rejection context visible |
-| Database migration | Add `revision_count` integer column to `invoices` table |
+| `src/components/invoices/CreateInvoiceFromSOV.tsx` | Add revision mode props, pre-populate form, UPDATE instead of INSERT on submit |
+| `src/components/invoices/InvoiceDetail.tsx` | Replace `handleRevise` to open wizard with revision data, add state and dialog |
+
