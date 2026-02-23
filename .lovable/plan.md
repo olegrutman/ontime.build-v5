@@ -1,37 +1,29 @@
 
-# Include Tax in PO Totals on Overview Cards
+
+# Restrict RFI Answering to Assigned Organization
 
 ## Problem
-The Supplier Financial Summary and Estimates vs Orders cards on the project overview page show PO totals as subtotals only (sum of line items), without applying `sales_tax_percent`.
+Currently, any user viewing an RFI can answer it as long as the status is "OPEN". The answer form should only be shown to users who belong to the organization that the RFI is assigned to (`assigned_to_org_id`).
 
-## Changes
+## Change
 
-### 1. `src/components/project/SupplierFinancialsSummaryCard.tsx` (line 49)
-Update the PO query to also select `sales_tax_percent`:
-```
-.select('id, sales_tax_percent, po_line_items(line_total)')
-```
-Then update the `totalContract` calculation (lines 56-59) to apply tax per PO:
+**File: `src/components/rfi/RFIDetailDialog.tsx`** (line 38)
+
+Update the `canAnswer` logic to also check that the current user's organization matches the RFI's `assigned_to_org_id`:
+
 ```typescript
-const totalContract = pos?.reduce((sum, po) => {
-  const subtotal = po.po_line_items?.reduce((s, li) => s + (li.line_total || 0), 0) || 0;
-  const taxRate = (po.sales_tax_percent || 0) / 100;
-  return sum + subtotal * (1 + taxRate);
-}, 0) || 0;
+// Before:
+const canAnswer = rfi.status === 'OPEN';
+
+// After:
+const canAnswer = rfi.status === 'OPEN' && currentOrgId === rfi.assigned_to_org_id;
 ```
 
-### 2. `src/components/project/SupplierEstimateVsOrdersCard.tsx` (line 60)
-Update the PO query to also select `sales_tax_percent`:
-```
-.select('sales_tax_percent, po_line_items(line_total)')
-```
-Then update the `totalOrders` calculation (lines 67-69) to apply tax per PO:
-```typescript
-const totalOrders = pos?.reduce((sum, po) => {
-  const subtotal = po.po_line_items?.reduce((s: number, li: any) => s + (li.line_total || 0), 0) || 0;
-  const taxRate = (po.sales_tax_percent || 0) / 100;
-  return sum + subtotal * (1 + taxRate);
-}, 0) || 0;
-```
+This is a single-line change. The `currentOrgId` prop is already passed into this component and `rfi.assigned_to_org_id` is already available on the RFI object. No other files need changes.
 
-No UI template changes needed -- just the data calculations.
+## Technical Details
+- `currentOrgId` comes from `useAuth().userOrgRoles[0]?.organization?.id` in the parent `RFIsTab` component
+- `assigned_to_org_id` is set during RFI creation via the routing step wizard
+- Users not in the assigned org will see "Awaiting response" instead of the answer form
+- Closing an RFI (status ANSWERED -> CLOSED) remains available to all team members since that is a separate action
+
