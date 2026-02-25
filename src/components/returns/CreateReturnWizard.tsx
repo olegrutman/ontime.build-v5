@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -58,6 +58,25 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
   const userOrgId = userOrgRoles[0]?.organization?.id || null;
 
   const [step, setStep] = useState(0);
+
+  // Reset all state when dialog opens
+  useEffect(() => {
+    if (open) {
+      setStep(0);
+      setSupplierOrgId(null);
+      setSelectedItems([]);
+      setItemSearch('');
+      setReason('');
+      setWrongType('');
+      setReasonNotes('');
+      setPickupType('');
+      setUrgency('Standard');
+      setPickupDate('');
+      setContactName('');
+      setContactPhone('');
+      setInstructions('');
+    }
+  }, [open]);
   const [supplierOrgId, setSupplierOrgId] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [itemSearch, setItemSearch] = useState('');
@@ -81,7 +100,7 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
     queryFn: async () => {
       const { data, error } = await supabase
         .from('project_team')
-        .select('organization_id, organizations!inner(id, name)')
+        .select('org_id, organizations!inner(id, name)')
         .eq('project_id', projectId)
         .eq('role', 'Supplier')
         .eq('status', 'Accepted');
@@ -205,7 +224,7 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
 
   const updateItemQty = (itemId: string, qty: number) => {
     setSelectedItems(prev => prev.map(si =>
-      si.id === itemId ? { ...si, qty_requested: Math.min(qty, si.available) } : si
+      si.id === itemId ? { ...si, qty_requested: Math.max(1, Math.min(qty, si.available)) } : si
     ));
   };
 

@@ -40,9 +40,9 @@ export function ReturnCard({ returnData, onClick, canViewPricing }: ReturnCardPr
               {format(new Date(returnData.pickup_date), 'MMM d')}
             </span>
           )}
-          {(returnData as any).urgency && (returnData as any).urgency !== 'Standard' && (
-            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${URGENCY_COLORS[(returnData as any).urgency as UrgencyType] || ''}`}>
-              {(returnData as any).urgency}
+          {returnData.urgency && returnData.urgency !== 'Standard' && (
+            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${URGENCY_COLORS[returnData.urgency as UrgencyType] || ''}`}>
+              {returnData.urgency}
             </Badge>
           )}
         </div>
