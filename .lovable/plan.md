@@ -1,46 +1,76 @@
 
 
-# Fix: GC Cannot See PO Pricing Despite Being Material Responsible
+# Sasha Page-Aware Greetings
 
-## Root Cause
+## Goal
 
-The existing PO (`PO-GCTEST-260223-0048`) has `pricing_owner_org_id` set to the **TC** organization (`ab07e031...`), even though the project contract specifies `material_responsibility = "GC"`. The GC org (`96a802b8...`) should be the pricing owner.
+When Sasha opens (or the user asks "where am I?"), she should proactively announce what page the user is on and list the key elements visible on that page.
 
-The PO creation code was fixed in a previous update to correctly derive `pricing_owner_org_id` from the contract's `material_responsibility` setting, but this PO was created **before** that fix was applied — so it has stale, incorrect data.
+## Changes
 
-## Fix (Two Parts)
+### 1. Enrich `useSashaContext` with detailed page content descriptions
 
-### 1. Fix Existing Data
+**File: `src/hooks/useSashaContext.ts`**
 
-Use the data insert tool to update the existing PO's `pricing_owner_org_id` to the correct GC organization:
+Expand each context string to include a bullet-point summary of what the user can see/do on that page. For example:
 
-```sql
-UPDATE purchase_orders
-SET pricing_owner_org_id = '96a802b8-72a4-42e5-aa00-b7c675a9bb62'
-WHERE id = 'c7d15aba-2cf5-4364-a7b4-32ab6230253b';
+| Page | Current context | New context |
+|------|----------------|-------------|
+| Dashboard | `Dashboard -- their list of projects` | `Dashboard -- Shows: list of projects with status badges, quick stats (active projects, pending items), financial snapshot tiles, needs-attention panel, reminders, and a "New Project" button.` |
+| Project Overview | `Project Overview -- summary of a single project` | `Project Overview -- Shows: attention banner (items needing action), financial signal cards (contract value, billed, retainage), operational summary, team members, contracts section, readiness checklist, and project scope.` |
+| Work Orders tab | `Project Work Orders tab -- list of all Work Orders` | `Project Work Orders tab -- Shows: list of Work Orders with status badges (Draft, In Progress, Complete), each card shows title, location, pricing mode, and completion progress. Users can create new Work Orders or click into any existing one.` |
+| Purchase Orders tab | `Project Purchase Orders tab -- list of all POs` | `Project Purchase Orders tab -- Shows: PO cards with PO number, supplier name, status, and total amount. Users can create new POs, filter by status, and click into any PO for line-item details.` |
+
+Similar enrichment for all routes: Invoices, SOV, RFIs, Estimates, Financials, Team, Work Order detail, Work Item detail, Partner Directory, Catalog, Profile, Material Orders, Create Project, and Supplier pages.
+
+### 2. Update Sasha system prompt to proactively describe the page
+
+**File: `supabase/functions/sasha-guide/index.ts`**
+
+Add to the CONTEXT-AWARE HELP section:
+
+```
+PAGE AWARENESS:
+When the conversation starts or the user asks "where am I" / "what's on this page" / "what can I do here":
+1. Name the page they're on
+2. List the key sections and elements they can see (use the context provided)
+3. Suggest 2-3 things they can do right now
+4. Offer action buttons for the most logical next steps
+
+Example response for Dashboard:
+{
+  "text": "You're on your **Dashboard** -- this is home base.\n\nHere's what you can see:\n- **Your projects** listed with status badges\n- **Quick stats** showing active projects and items needing attention\n- **Financial snapshot** with billing totals\n- **Needs Attention** panel highlighting urgent items\n\nYou can click any project to dive in, or create a new one.",
+  "actions": ["Create a new project", "What do the status badges mean?", "Explain the financial snapshot"]
+}
 ```
 
-### 2. Add Fallback in PO Card Visibility
+### 3. Update initial greeting to be page-aware
 
-Update `PurchaseOrdersTab.tsx` (line 422-424) to also grant pricing visibility to the PO's `created_by_org_id`. This is a safety net so the org that created the PO can always see its pricing, even if `pricing_owner_org_id` is somehow misconfigured:
+**File: `src/components/sasha/SashaBubble.tsx`**
 
+Instead of a static `INITIAL_GREETING`, make it dynamic based on `useSashaContext()`. When the bubble is opened, the first message sent to the AI will include the page context, so Sasha can greet with page-specific info.
+
+Change approach: When the panel opens for the first time, automatically send a silent "init" message to the edge function with the current context, so Sasha's first response is tailored to the current page rather than always showing the generic greeting.
+
+Alternatively (simpler): Keep the static greeting but add a quick-action button **"What's on this page?"** that triggers a context-aware response. This avoids an automatic API call on every open.
+
+**Chosen approach**: Add "What's on this page?" as a default action button in the initial greeting, and enrich the context strings so the AI has enough information to give a detailed answer.
+
+Update `INITIAL_GREETING.actions` to:
 ```typescript
-const isPricingOwner = po.pricing_owner_org_id === currentOrgId;
-const isCreator = po.created_by_org_id === currentOrgId;
-const isPoSupplier = (po.supplier as { organization_id?: string })?.organization_id === currentOrgId;
-const canViewPricing = isPricingOwner || isPoSupplier || isCreator;
+actions: [
+  "What's on this page?",
+  "Explore a demo project",
+  "Explain work orders",
+  "Explain purchase orders",
+]
 ```
-
-Apply the same fallback in `POCard.tsx` (line 98) where pricing total is calculated — it already receives `canViewPricing` as a prop, so no change needed there.
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| (Data fix) | UPDATE `pricing_owner_org_id` on the existing PO |
-| `src/components/project/PurchaseOrdersTab.tsx` | Add `isCreator` fallback to pricing visibility check (line 422-424) |
-
-### Result
-
-After the fix, the GC will see the PO total price on the Purchase Orders tab instead of "Pricing managed by another party."
+| `src/hooks/useSashaContext.ts` | Enrich all context strings with detailed page content descriptions |
+| `supabase/functions/sasha-guide/index.ts` | Add PAGE AWARENESS instructions to system prompt |
+| `src/components/sasha/SashaBubble.tsx` | Add "What's on this page?" action to initial greeting |
 
