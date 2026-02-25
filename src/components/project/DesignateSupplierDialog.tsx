@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Profile {
-  id: string;
+  user_id: string;
   full_name: string | null;
   email: string | null;
 }
@@ -40,6 +40,7 @@ export function DesignateSupplierDialog({
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Profile[]>([]);
   const [searching, setSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -51,13 +52,13 @@ export function DesignateSupplierDialog({
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, email')
+        .select('user_id, full_name, email')
         .or(`full_name.ilike.%${query}%,email.ilike.%${query}%`)
         .limit(10);
 
       if (error) throw error;
-      // Filter out current user
-      setResults((data || []).filter(p => p.id !== user?.id));
+      setResults((data || []).filter(p => p.user_id !== user?.id));
+      setHasSearched(true);
     } catch {
       toast.error('Failed to search users');
     } finally {
@@ -123,6 +124,7 @@ export function DesignateSupplierDialog({
     setSelectedUser(null);
     setInviteEmail('');
     setInviteName('');
+    setHasSearched(false);
     setTab('search');
   };
 
@@ -168,7 +170,7 @@ export function DesignateSupplierDialog({
               <div className="border rounded-md divide-y max-h-48 overflow-y-auto">
                 {results.map((profile) => (
                   <button
-                    key={profile.id}
+                    key={profile.user_id}
                     className="w-full text-left px-3 py-2 hover:bg-muted/50 transition-colors"
                     onClick={() => setSelectedUser(profile)}
                     disabled={saving}
@@ -180,13 +182,22 @@ export function DesignateSupplierDialog({
               </div>
             )}
 
+            {hasSearched && results.length === 0 && !searching && (
+              <p className="text-sm text-muted-foreground">
+                No users found.{' '}
+                <button type="button" className="text-primary hover:underline" onClick={() => setTab('invite')}>
+                  Invite by email instead
+                </button>
+              </p>
+            )}
+
             {selectedUser && (
               <div className="border rounded-md p-3 bg-muted/30 space-y-2">
                 <p className="text-sm">
                   Designate <strong>{selectedUser.full_name || selectedUser.email}</strong> as supplier contact?
                 </p>
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={() => handleDesignateUser(selectedUser.id, selectedUser.full_name)} disabled={saving}>
+                  <Button size="sm" onClick={() => handleDesignateUser(selectedUser.user_id, selectedUser.full_name)} disabled={saving}>
                     {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
                     Confirm
                   </Button>
