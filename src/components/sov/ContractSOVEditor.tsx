@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Trash2, GripVertical, FileSpreadsheet, Pencil, Check, X, AlertCircle, ChevronDown, ChevronRight, Lock, Unlock, DollarSign } from 'lucide-react';
+import { UploadSOVDialog } from './UploadSOVDialog';
+import { Plus, Trash2, GripVertical, FileSpreadsheet, Pencil, Check, X, AlertCircle, ChevronDown, ChevronRight, Lock, Unlock, DollarSign, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -52,7 +53,8 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
     reorderItems,
     getSOVTotals,
     toggleSOVLock,
-    hasBillingActivity
+    hasBillingActivity,
+    refresh
   } = useContractSOV(projectId);
 
   const [expandedSovs, setExpandedSovs] = useState<Set<string>>(new Set());
@@ -63,6 +65,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
   const [editingPercentValue, setEditingPercentValue] = useState('');
   const [draggedItem, setDraggedItem] = useState<ContractSOVItem | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<{ sovId: string; index: number } | null>(null);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -220,6 +223,18 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
+              <p className="text-xs text-muted-foreground my-2">— or —</p>
+              <Button variant="outline" onClick={() => setUploadDialogOpen(true)} disabled={saving}>
+                <Upload className="mr-2 h-4 w-4" />
+                Upload Your SOV
+              </Button>
+              <UploadSOVDialog
+                open={uploadDialogOpen}
+                onOpenChange={setUploadDialogOpen}
+                contracts={contractsMissingSOVs.length > 0 ? contractsMissingSOVs : contracts}
+                projectId={projectId}
+                onCreated={refresh}
+              />
             </>
           )}
         </CardContent>
