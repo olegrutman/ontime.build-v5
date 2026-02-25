@@ -2875,6 +2875,186 @@ export type Database = {
           },
         ]
       }
+      return_items: {
+        Row: {
+          condition: string
+          condition_notes: string | null
+          created_at: string
+          credit_line_total: number | null
+          credit_unit_price: number | null
+          description_snapshot: string
+          id: string
+          nonreturnable_reason: string | null
+          po_id: string
+          po_line_item_id: string
+          qty_requested: number
+          return_id: string
+          returnable_flag: string
+          uom: string
+        }
+        Insert: {
+          condition?: string
+          condition_notes?: string | null
+          created_at?: string
+          credit_line_total?: number | null
+          credit_unit_price?: number | null
+          description_snapshot: string
+          id?: string
+          nonreturnable_reason?: string | null
+          po_id: string
+          po_line_item_id: string
+          qty_requested?: number
+          return_id: string
+          returnable_flag?: string
+          uom?: string
+        }
+        Update: {
+          condition?: string
+          condition_notes?: string | null
+          created_at?: string
+          credit_line_total?: number | null
+          credit_unit_price?: number | null
+          description_snapshot?: string
+          id?: string
+          nonreturnable_reason?: string | null
+          po_id?: string
+          po_line_item_id?: string
+          qty_requested?: number
+          return_id?: string
+          returnable_flag?: string
+          uom?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "return_items_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_items_po_line_item_id_fkey"
+            columns: ["po_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "po_line_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "return_items_return_id_fkey"
+            columns: ["return_id"]
+            isOneToOne: false
+            referencedRelation: "returns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      returns: {
+        Row: {
+          closed_at: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          created_by_org_id: string
+          created_by_user_id: string
+          credit_subtotal: number | null
+          id: string
+          instructions: string | null
+          net_credit_total: number | null
+          pickup_date: string | null
+          pickup_type: string | null
+          pricing_owner_org_id: string | null
+          project_id: string
+          reason: string
+          reason_notes: string | null
+          restocking_total: number | null
+          restocking_type: string | null
+          restocking_value: number | null
+          return_number: string | null
+          status: string
+          supplier_org_id: string
+          wrong_type: string | null
+        }
+        Insert: {
+          closed_at?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          created_by_org_id: string
+          created_by_user_id: string
+          credit_subtotal?: number | null
+          id?: string
+          instructions?: string | null
+          net_credit_total?: number | null
+          pickup_date?: string | null
+          pickup_type?: string | null
+          pricing_owner_org_id?: string | null
+          project_id: string
+          reason: string
+          reason_notes?: string | null
+          restocking_total?: number | null
+          restocking_type?: string | null
+          restocking_value?: number | null
+          return_number?: string | null
+          status?: string
+          supplier_org_id: string
+          wrong_type?: string | null
+        }
+        Update: {
+          closed_at?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          created_by_org_id?: string
+          created_by_user_id?: string
+          credit_subtotal?: number | null
+          id?: string
+          instructions?: string | null
+          net_credit_total?: number | null
+          pickup_date?: string | null
+          pickup_type?: string | null
+          pricing_owner_org_id?: string | null
+          project_id?: string
+          reason?: string
+          reason_notes?: string | null
+          restocking_total?: number | null
+          restocking_type?: string | null
+          restocking_value?: number | null
+          return_number?: string | null
+          status?: string
+          supplier_org_id?: string
+          wrong_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "returns_created_by_org_id_fkey"
+            columns: ["created_by_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "returns_pricing_owner_org_id_fkey"
+            columns: ["pricing_owner_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "returns_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "returns_supplier_org_id_fkey"
+            columns: ["supplier_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sov_templates: {
         Row: {
           created_at: string

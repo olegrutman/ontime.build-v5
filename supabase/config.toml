@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.seed-test-users]
 verify_jwt = false
+
+[functions.return-credit-memo]
+verify_jwt = false

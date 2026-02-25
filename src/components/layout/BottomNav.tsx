@@ -13,6 +13,7 @@ import {
   MoreHorizontal,
   Bell,
   Users,
+  Undo2,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -62,6 +63,7 @@ export function BottomNav() {
     { label: 'SOV', icon: ListChecks, tab: 'sov' },
     { label: 'Invoices', icon: FileText, tab: 'invoices' },
     { label: 'POs', icon: ShoppingCart, tab: 'purchase-orders' },
+    { label: 'Returns', icon: Undo2, tab: 'returns' },
     { label: 'RFIs', icon: MessageSquareMore, tab: 'rfis' },
   ];
 

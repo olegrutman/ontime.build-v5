@@ -191,6 +191,13 @@ export function ProjectTopBar({
                 <span className="lg:hidden">POs</span>
                 <span className="hidden lg:inline">Purchase Orders</span>
               </TabsTrigger>
+              <TabsTrigger
+                value="returns"
+                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
+                onClick={() => onTabChange('returns')}
+              >
+                Returns
+              </TabsTrigger>
             </TabsList>
           </div>
         </Tabs>
