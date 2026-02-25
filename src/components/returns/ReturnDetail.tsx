@@ -164,9 +164,9 @@ export function ReturnDetail({ returnId, projectId, onBack }: ReturnDetailProps)
               {returnData.reason}{returnData.wrong_type ? ` – ${returnData.wrong_type}` : ''}
               {returnData.reason_notes ? ` • ${returnData.reason_notes}` : ''}
             </p>
-            {(returnData as any).urgency && (returnData as any).urgency !== 'Standard' && (
-              <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${URGENCY_COLORS[(returnData as any).urgency as UrgencyType] || ''}`}>
-                {(returnData as any).urgency}
+            {returnData.urgency && returnData.urgency !== 'Standard' && (
+              <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${URGENCY_COLORS[returnData.urgency as UrgencyType] || ''}`}>
+                {returnData.urgency}
               </Badge>
             )}
           </div>
