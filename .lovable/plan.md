@@ -1,28 +1,46 @@
 
 
-# Designated Supplier Satisfies "Supplier Assigned" Readiness
+# Fix: GC Cannot See PO Pricing Despite Being Material Responsible
 
-## Problem
+## Root Cause
 
-The readiness engine in `useProjectReadiness.ts` checks for supplier assignment by looking at `project_participants` with role `'SUPPLIER'`. When a user designates a supplier contact via `project_designated_suppliers`, no participant record is created, so the checklist still shows "Supplier not yet assigned" and the project can't activate.
+The existing PO (`PO-GCTEST-260223-0048`) has `pricing_owner_org_id` set to the **TC** organization (`ab07e031...`), even though the project contract specifies `material_responsibility = "GC"`. The GC org (`96a802b8...`) should be the pricing owner.
 
-## Fix
+The PO creation code was fixed in a previous update to correctly derive `pricing_owner_org_id` from the contract's `material_responsibility` setting, but this PO was created **before** that fix was applied — so it has stale, incorrect data.
 
-Update `useProjectReadiness.ts` to also query `project_designated_suppliers` for the project. If a designated supplier exists with status `'active'`, treat it as equivalent to having a supplier assigned.
+## Fix (Two Parts)
 
-### File: `src/hooks/useProjectReadiness.ts`
+### 1. Fix Existing Data
 
-1. Add a query for `project_designated_suppliers` in the parallel fetch (alongside projects, contracts, SOV, participants, estimates)
-2. Update the `hasSupplier` logic:
-   ```
-   const hasDesignatedSupplier = designatedSupplierData && designatedSupplierData.status === 'active';
-   const hasSupplier = supplierParticipants.length > 0 || hasDesignatedSupplier;
-   ```
-3. For the downstream checks when only a designated supplier exists (no real SUPPLIER participant):
-   - **supplier_accepted**: Mark as complete (designated suppliers are directly assigned, no invite acceptance needed)
-   - **supplier_estimate**: Skip this item entirely (designated suppliers use the system catalog, no estimate upload expected)
+Use the data insert tool to update the existing PO's `pricing_owner_org_id` to the correct GC organization:
+
+```sql
+UPDATE purchase_orders
+SET pricing_owner_org_id = '96a802b8-72a4-42e5-aa00-b7c675a9bb62'
+WHERE id = 'c7d15aba-2cf5-4364-a7b4-32ab6230253b';
+```
+
+### 2. Add Fallback in PO Card Visibility
+
+Update `PurchaseOrdersTab.tsx` (line 422-424) to also grant pricing visibility to the PO's `created_by_org_id`. This is a safety net so the org that created the PO can always see its pricing, even if `pricing_owner_org_id` is somehow misconfigured:
+
+```typescript
+const isPricingOwner = po.pricing_owner_org_id === currentOrgId;
+const isCreator = po.created_by_org_id === currentOrgId;
+const isPoSupplier = (po.supplier as { organization_id?: string })?.organization_id === currentOrgId;
+const canViewPricing = isPricingOwner || isPoSupplier || isCreator;
+```
+
+Apply the same fallback in `POCard.tsx` (line 98) where pricing total is calculated — it already receives `canViewPricing` as a prop, so no change needed there.
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| (Data fix) | UPDATE `pricing_owner_org_id` on the existing PO |
+| `src/components/project/PurchaseOrdersTab.tsx` | Add `isCreator` fallback to pricing visibility check (line 422-424) |
 
 ### Result
 
-After designating a supplier contact, the readiness checklist will show "Supplier assigned" as complete. The supplier acceptance and estimate steps are only required when a real supplier organization is on the team.
+After the fix, the GC will see the PO total price on the Purchase Orders tab instead of "Pricing managed by another party."
 
