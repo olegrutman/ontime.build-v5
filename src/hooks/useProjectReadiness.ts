@@ -39,12 +39,14 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
         sovRes,
         participantsRes,
         estimatesRes,
+        designatedSupplierRes,
       ] = await Promise.all([
         supabase.from('projects').select('status, created_by_org_id, organization_id').eq('id', projectId).single(),
         supabase.from('project_contracts').select('id, contract_sum, material_responsibility, from_org_id, to_org_id, from_role, to_role, status').eq('project_id', projectId),
         supabase.from('project_sov').select('id, contract_id').eq('project_id', projectId),
         supabase.from('project_participants').select('id, role, invite_status, no_estimate_confirmed, organization_id, organizations:organization_id(name, type)').eq('project_id', projectId),
         supabase.from('supplier_estimates').select('id, supplier_org_id, status').eq('project_id', projectId),
+        supabase.from('project_designated_suppliers').select('id, status').eq('project_id', projectId).limit(1),
       ]);
 
       const project = projectRes.data;
@@ -115,12 +117,17 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
 
       // Check supplier status
       const supplierParticipants = getParticipantsByRole('SUPPLIER');
-      const hasSupplier = supplierParticipants.length > 0;
-      const supplierAccepted = hasSupplier && supplierParticipants.every(p => p.invite_status === 'ACCEPTED');
+      const designatedSuppliers = designatedSupplierRes.data || [];
+      const hasDesignatedSupplier = designatedSuppliers.some((ds: any) => ds.status === 'active');
+      const hasRealSupplier = supplierParticipants.length > 0;
+      const hasSupplier = hasRealSupplier || hasDesignatedSupplier;
+      const supplierAccepted = hasRealSupplier
+        ? supplierParticipants.every(p => p.invite_status === 'ACCEPTED')
+        : hasDesignatedSupplier; // designated suppliers are directly assigned
       const supplierPendingNames = getRolePendingNames('SUPPLIER');
 
-      // Check supplier estimate status
-      const supplierHasEstimate = hasSupplier && supplierParticipants.some(sp => {
+      // Check supplier estimate status (only relevant for real supplier participants)
+      const supplierHasEstimate = hasRealSupplier && supplierParticipants.some(sp => {
         const hasUploadedEstimate = estimates.some(e => (e as any).supplier_org_id === sp.organization_id);
         const confirmedNoEstimate = (sp as any).no_estimate_confirmed === true;
         return hasUploadedEstimate || confirmedNoEstimate;
@@ -196,8 +203,8 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
           });
         }
 
-        // 10. Supplier estimate (if supplier assigned)
-        if (hasSupplier) {
+        // 10. Supplier estimate (if real supplier participant assigned)
+        if (hasRealSupplier) {
           items.push({
             key: 'supplier_estimate',
             label: supplierHasEstimate ? 'Supplier estimate uploaded' : 'Awaiting supplier estimate',
@@ -241,8 +248,8 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
           });
         }
 
-        // 7. Supplier estimate (if supplier assigned)
-        if (hasSupplier) {
+        // 7. Supplier estimate (if real supplier participant assigned)
+        if (hasRealSupplier) {
           items.push({
             key: 'supplier_estimate',
             label: supplierHasEstimate ? 'Supplier estimate uploaded' : 'Awaiting supplier estimate',
