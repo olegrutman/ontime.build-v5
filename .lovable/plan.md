@@ -1,40 +1,41 @@
 
 
-# Fix: Make Sasha's Chat Panel Scrollable
+# Fix: Sasha Chat Panel Scrolling (Take 2)
 
 ## Problem
 
-The Sasha chat panel messages area doesn't scroll when content overflows. Two issues:
+The Sasha chat panel content overflows below the input area instead of scrolling. The previous fix added `min-h-0 overflow-hidden` to the ScrollArea but it's still not constraining properly.
 
-1. **Flex layout issue**: The `ScrollArea` has `flex-1` but the parent flex container needs `min-h-0` / `overflow-hidden` on the scrollable child for flex shrinking to work properly in CSS.
-2. **Scroll ref target**: The `scrollRef` is attached to the `ScrollArea` root, but `scrollTo()` needs to target the actual scrollable viewport element inside Radix's ScrollArea.
+## Root Cause
+
+The outer panel container (`fixed ... flex flex-col max-h-[60vh]`) needs `overflow-hidden` itself to enforce the max-height constraint on its flex children. Without it, the flex children can grow beyond the container's max-height. Additionally, the `p-4` padding on ScrollArea should be on the inner content div instead, so the scroll viewport sizing is correct.
 
 ## Changes
 
 ### File: `src/components/sasha/SashaBubble.tsx`
 
-1. Add `min-h-0 overflow-hidden` to the `ScrollArea` wrapper so it properly constrains within the flex column
-2. Fix the auto-scroll logic to target the Radix viewport element (the actual scrollable child) instead of the root
+1. **Add `overflow-hidden` to the outer panel container** (line 206) to enforce the max-height constraint on flex children:
+   ```
+   // Before
+   <div className="fixed z-50 shadow-xl rounded-2xl border bg-background flex flex-col animate-in ..."
 
-**ScrollArea change (line 221):**
-```
-// Before
-<ScrollArea className="flex-1 p-4" ref={scrollRef as any}>
+   // After — add overflow-hidden
+   <div className="fixed z-50 shadow-xl rounded-2xl border bg-background flex flex-col overflow-hidden animate-in ..."
+   ```
 
-// After
-<ScrollArea className="flex-1 min-h-0 overflow-hidden p-4" ref={scrollRef as any}>
-```
+2. **Move padding from ScrollArea to inner div** (lines 222-240) so the scroll viewport calculates its height correctly:
+   ```
+   // Before
+   <ScrollArea className="flex-1 min-h-0 overflow-hidden p-4" ref={scrollRef as any}>
+     <div className="space-y-3">
 
-**Scroll-to-bottom fix (around line 50):**
-```typescript
-// Before
-scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+   // After
+   <ScrollArea className="flex-1 min-h-0 overflow-hidden" ref={scrollRef as any}>
+     <div className="space-y-3 p-4">
+   ```
 
-// After — target the viewport element inside ScrollArea
-const viewport = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-if (viewport) viewport.scrollTop = viewport.scrollHeight;
-```
+These two changes together ensure that:
+- The flex container respects its max-height
+- The ScrollArea fills available space and scrolls when content overflows
+- Padding is on the content, not the scroll container (which can interfere with height calculation)
 
-### Result
-
-Messages will scroll as conversation grows, and new messages will auto-scroll to the bottom.
