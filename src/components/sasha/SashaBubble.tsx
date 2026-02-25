@@ -3,7 +3,7 @@ import { X, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import sashaAvatar from '@/assets/sasha-avatar.png';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
+
 import { useAuth } from '@/hooks/useAuth';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useDemo } from '@/contexts/DemoContext';
@@ -47,8 +47,7 @@ export function SashaBubble() {
 
   // Scroll to bottom on new messages
   useEffect(() => {
-    const viewport = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
-    if (viewport) viewport.scrollTop = viewport.scrollHeight;
+    if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
   }, [messages]);
 
   // Focus input when panel opens
@@ -219,7 +218,7 @@ export function SashaBubble() {
           </div>
 
           {/* Messages */}
-          <ScrollArea className="flex-1 min-h-0 overflow-hidden" ref={scrollRef as any}>
+          <div className="flex-1 min-h-0 overflow-y-auto" ref={scrollRef}>
             <div className="space-y-3 p-4">
               {messages.map((msg, i) => (
                 <SashaMessage
@@ -238,7 +237,7 @@ export function SashaBubble() {
                 </div>
               )}
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Input */}
           <form
