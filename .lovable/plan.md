@@ -1,51 +1,35 @@
 
 
-# Surface the "Designate Supplier Contact" Button
+# Fix Designated Supplier Search
 
 ## Problem
 
-The `DesignateSupplierDialog` and the "Designate Supplier Contact" button were built inside `ProjectTeamSection.tsx`, but that component is never rendered on any page. The project overview uses `OperationalSummary.tsx` which has its own compact Team tile -- and that tile has no supplier designation option.
+Two bugs in `DesignateSupplierDialog.tsx`:
+
+1. **Wrong ID column**: The search selects `id` (profiles table primary key) instead of `user_id` (auth user ID). This means:
+   - The current-user filter never works (compares profile PK to auth uid)
+   - If a user is designated, the wrong ID gets stored in `project_designated_suppliers.user_id`, so the designated user would never be recognized when they log in
+
+2. **No "no results" feedback**: When a search returns zero results, the UI shows nothing — no message telling the user nothing was found or suggesting they try the "Invite by Email" tab instead.
 
 ## Fix
 
-Add the "Designate Supplier Contact" button directly into the Team tile inside `OperationalSummary.tsx`, so GC/TC users can see and use it from the project overview.
+### File: `src/components/project/DesignateSupplierDialog.tsx`
 
-### File: `src/components/project/OperationalSummary.tsx`
+1. Change the query from `.select('id, full_name, email')` to `.select('user_id, full_name, email')`
+2. Update the `Profile` interface: rename `id` to `user_id`
+3. Update all references: `profile.id` becomes `profile.user_id`, `p.id` becomes `p.user_id`
+4. Add an empty-state message after search completes with zero results, suggesting "Invite by Email" instead
+5. Add `hasSearched` state to track whether the user has performed at least one search (so the empty message only shows after an actual search, not on initial load)
 
-1. Import `DesignateSupplierDialog` and `ROLE_PERMISSIONS` / `OrgType`
-2. Add state for `designateDialogOpen` and `designatedSupplier`
-3. Fetch designated supplier data alongside team data (query `project_designated_suppliers`)
-4. Below the team member list (after line 282), add:
-   - If a designated supplier exists: show their name/email and a "Change" button
-   - If no supplier is on the team and user is GC/TC with invite permissions: show the "Designate Supplier Contact" button
-5. Render `DesignateSupplierDialog` alongside the existing `AddTeamMemberDialog`
+### Changes Summary
 
-### Visual Result
-
-The Team tile on the project Overview will show:
-
-```text
-+-----------------------------------+
-| TEAM                 (2 active)   |
-| * GC  Acme Builders               |
-| * TC  Smith Electric               |
-|                                    |
-| [Designate Supplier Contact]       |
-+-----------------------------------+
-```
-
-Or if already designated:
-
-```text
-| Supplier Contact: John Doe        |
-|   Active             [Change]      |
-```
-
-### Technical Details
-
-| File | Change |
-|------|--------|
-| `src/components/project/OperationalSummary.tsx` | Add designated supplier query, button, and dialog integration |
-
-No new files needed -- the `DesignateSupplierDialog` component already exists and works correctly.
+| Line | Current | Fixed |
+|------|---------|-------|
+| 19-23 | `id: string` | `user_id: string` |
+| 54 | `.select('id, full_name, email')` | `.select('user_id, full_name, email')` |
+| 60 | `p.id !== user?.id` | `p.user_id !== user?.id` |
+| 170 | `key={profile.id}` | `key={profile.user_id}` |
+| 189 | `handleDesignateUser(selectedUser.id, ...)` | `handleDesignateUser(selectedUser.user_id, ...)` |
+| After results list | (nothing) | "No users found" message with link to Invite tab |
 
