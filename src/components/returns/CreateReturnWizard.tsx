@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { formatPhone } from '@/lib/formatPhone';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,15 +11,20 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Search } from 'lucide-react';
 import {
   ReturnReason,
   ReturnCondition,
   RETURN_REASONS,
+  RETURN_REASON_DETAILS,
   RETURN_CONDITIONS,
   CONDITIONS_REQUIRING_NOTES,
   WrongType,
   PickupType,
+  UrgencyType,
+  URGENCY_OPTIONS,
 } from '@/types/return';
 
 interface CreateReturnWizardProps {
@@ -51,9 +57,10 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
 
   const userOrgId = userOrgRoles[0]?.organization?.id || null;
 
-  const [step, setStep] = useState(0); // 0=Select Items, 1=Reason, 2=Condition, 3=Logistics, 4=Review
+  const [step, setStep] = useState(0);
   const [supplierOrgId, setSupplierOrgId] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
+  const [itemSearch, setItemSearch] = useState('');
 
   // Reason
   const [reason, setReason] = useState<ReturnReason | ''>('');
@@ -62,29 +69,35 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
 
   // Logistics
   const [pickupType, setPickupType] = useState<PickupType | ''>('');
+  const [urgency, setUrgency] = useState<UrgencyType>('Standard');
   const [pickupDate, setPickupDate] = useState('');
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [instructions, setInstructions] = useState('');
 
-  // Fetch suppliers with delivered POs on this project
+  // Fetch suppliers from project team (role = Supplier, status = Accepted)
   const { data: suppliers = [] } = useQuery({
-    queryKey: ['return-suppliers', projectId],
+    queryKey: ['return-team-suppliers', projectId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('purchase_orders')
-        .select('supplier_id, suppliers!inner(id, name, organization_id)')
+        .from('project_team')
+        .select('organization_id, organizations!inner(id, name)')
         .eq('project_id', projectId)
-        .eq('status', 'DELIVERED');
+        .eq('role', 'Supplier')
+        .eq('status', 'Accepted');
       if (error) throw error;
-      // Deduplicate
-      const map = new Map<string, { id: string; name: string; organization_id: string }>();
+      const map = new Map<string, string>();
       (data || []).forEach((row: any) => {
-        if (row.suppliers?.organization_id) {
-          map.set(row.suppliers.organization_id, row.suppliers);
+        if (row.organizations?.id) {
+          map.set(row.organizations.id, row.organizations.name);
         }
       });
-      return Array.from(map.entries()).map(([orgId, s]) => ({ orgId, supplierName: s.name, supplierId: s.id }));
+      const result = Array.from(map.entries()).map(([orgId, name]) => ({ orgId, supplierName: name }));
+      // Auto-select if only one supplier
+      if (result.length === 1 && !supplierOrgId) {
+        setSupplierOrgId(result[0].orgId);
+      }
+      return result;
     },
   });
 
@@ -93,7 +106,6 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
     queryKey: ['delivered-items', projectId, supplierOrgId],
     enabled: !!supplierOrgId,
     queryFn: async () => {
-      // Get delivered POs for this supplier org on this project
       const { data: pos, error: poErr } = await supabase
         .from('purchase_orders')
         .select('id, po_number, supplier_id, suppliers!inner(organization_id)')
@@ -108,15 +120,13 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
 
       const poIds = supplierPOs.map((po: any) => po.id);
 
-      // Get line items
       const { data: lineItems, error: liErr } = await supabase
         .from('po_line_items')
         .select('*')
         .in('po_id', poIds);
       if (liErr) throw liErr;
 
-      // Get already-returned quantities (non-DRAFT returns)
-      const { data: existingReturns, error: retErr } = await supabase
+      const { data: existingReturns } = await supabase
         .from('return_items')
         .select('po_line_item_id, qty_requested, return_id, returns!inner(status)')
         .in('po_line_item_id', (lineItems || []).map((li: any) => li.id));
@@ -148,6 +158,37 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
       }).filter((item: DeliveredLineItem) => item.available > 0);
     },
   });
+
+  // Filter items by search
+  const filteredItems = useMemo(() => {
+    if (!itemSearch.trim()) return deliveredItems;
+    const q = itemSearch.toLowerCase();
+    return deliveredItems.filter(item =>
+      item.description.toLowerCase().includes(q) || item.po_number.toLowerCase().includes(q)
+    );
+  }, [deliveredItems, itemSearch]);
+
+  const allFilteredSelected = filteredItems.length > 0 && filteredItems.every(item =>
+    selectedItems.some(si => si.id === item.id)
+  );
+
+  const toggleSelectAllFiltered = (checked: boolean) => {
+    if (checked) {
+      const newItems = filteredItems.filter(item => !selectedItems.some(si => si.id === item.id));
+      setSelectedItems(prev => [
+        ...prev,
+        ...newItems.map(item => ({
+          ...item,
+          qty_requested: 1,
+          condition: 'Unknown' as ReturnCondition,
+          condition_notes: '',
+        })),
+      ]);
+    } else {
+      const filteredIds = new Set(filteredItems.map(i => i.id));
+      setSelectedItems(prev => prev.filter(si => !filteredIds.has(si.id)));
+    }
+  };
 
   const toggleItem = (item: DeliveredLineItem, checked: boolean) => {
     if (checked) {
@@ -186,11 +227,10 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
   const canProceedStep2 = selectedItems.every(i =>
     i.condition && (!CONDITIONS_REQUIRING_NOTES.includes(i.condition) || i.condition_notes.trim())
   );
-  const canProceedStep3 = pickupType && pickupDate && contactName.trim() && contactPhone.trim();
+  const canProceedStep3 = pickupType && contactName.trim() && contactPhone.trim();
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      // Create return record
       const { data: returnRecord, error: retErr } = await supabase
         .from('returns')
         .insert({
@@ -202,10 +242,11 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
           wrong_type: reason === 'Wrong' ? wrongType as string : null,
           reason_notes: reason === 'Other' ? reasonNotes : null,
           pickup_type: pickupType as string,
-          pickup_date: pickupDate,
+          pickup_date: pickupDate || null,
           contact_name: contactName,
           contact_phone: contactPhone,
           instructions: instructions || null,
+          urgency: urgency,
           status: 'SUBMITTED',
           pricing_owner_org_id: userOrgId,
         })
@@ -213,7 +254,6 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
         .single();
       if (retErr) throw retErr;
 
-      // Create return items
       const items = selectedItems.map(si => ({
         return_id: returnRecord.id,
         po_line_item_id: si.id,
@@ -250,68 +290,90 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
         {/* Step 0: Select Items */}
         {step === 0 && (
           <div className="space-y-4">
-            <div>
-              <Label>Supplier</Label>
-              <Select value={supplierOrgId || ''} onValueChange={v => { setSupplierOrgId(v); setSelectedItems([]); }}>
-                <SelectTrigger><SelectValue placeholder="Select supplier" /></SelectTrigger>
-                <SelectContent>
-                  {suppliers.map(s => (
-                    <SelectItem key={s.orgId} value={s.orgId}>{s.supplierName}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {suppliers.length > 1 && (
+              <div>
+                <Label>Supplier</Label>
+                <Select value={supplierOrgId || ''} onValueChange={v => { setSupplierOrgId(v); setSelectedItems([]); }}>
+                  <SelectTrigger><SelectValue placeholder="Select supplier" /></SelectTrigger>
+                  <SelectContent>
+                    {suppliers.map(s => (
+                      <SelectItem key={s.orgId} value={s.orgId}>{s.supplierName}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {suppliers.length === 1 && (
+              <p className="text-sm text-muted-foreground">Supplier: <span className="font-medium text-foreground">{suppliers[0].supplierName}</span></p>
+            )}
 
             {supplierOrgId && deliveredItems.length === 0 && (
               <p className="text-sm text-muted-foreground">No delivered items available for return.</p>
             )}
 
             {deliveredItems.length > 0 && (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-10"></TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead className="w-16">PO</TableHead>
-                      <TableHead className="w-16">Delivered</TableHead>
-                      <TableHead className="w-16">Available</TableHead>
-                      <TableHead className="w-20">Return Qty</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {deliveredItems.map(item => {
-                      const selected = selectedItems.find(si => si.id === item.id);
-                      return (
-                        <TableRow key={item.id}>
-                          <TableCell>
-                            <Checkbox
-                              checked={!!selected}
-                              onCheckedChange={checked => toggleItem(item, !!checked)}
-                            />
-                          </TableCell>
-                          <TableCell className="text-sm">{item.description}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{item.po_number}</TableCell>
-                          <TableCell>{item.quantity}</TableCell>
-                          <TableCell>{item.available}</TableCell>
-                          <TableCell>
-                            {selected && (
-                              <Input
-                                type="number"
-                                min={1}
-                                max={item.available}
-                                value={selected.qty_requested}
-                                onChange={e => updateItemQty(item.id, Number(e.target.value))}
-                                className="w-16 h-8"
+              <>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search items or PO number..."
+                    value={itemSearch}
+                    onChange={e => setItemSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10">
+                          <Checkbox
+                            checked={allFilteredSelected}
+                            onCheckedChange={checked => toggleSelectAllFiltered(!!checked)}
+                          />
+                        </TableHead>
+                        <TableHead>Description</TableHead>
+                        <TableHead className="w-16">PO</TableHead>
+                        <TableHead className="w-16">Delivered</TableHead>
+                        <TableHead className="w-16">Available</TableHead>
+                        <TableHead className="w-20">Return Qty</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredItems.map(item => {
+                        const selected = selectedItems.find(si => si.id === item.id);
+                        return (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              <Checkbox
+                                checked={!!selected}
+                                onCheckedChange={checked => toggleItem(item, !!checked)}
                               />
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
+                            </TableCell>
+                            <TableCell className="text-sm">{item.description}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{item.po_number}</TableCell>
+                            <TableCell>{item.quantity}</TableCell>
+                            <TableCell>{item.available}</TableCell>
+                            <TableCell>
+                              {selected && (
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={item.available}
+                                  value={selected.qty_requested}
+                                  onChange={e => updateItemQty(item.id, Number(e.target.value))}
+                                  className="w-16 h-8"
+                                />
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+              </>
             )}
           </div>
         )}
@@ -319,25 +381,34 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
         {/* Step 1: Reason */}
         {step === 1 && (
           <div className="space-y-4">
-            <div>
-              <Label>Reason for Return</Label>
-              <Select value={reason} onValueChange={v => setReason(v as ReturnReason)}>
-                <SelectTrigger><SelectValue placeholder="Select reason" /></SelectTrigger>
-                <SelectContent>
-                  {RETURN_REASONS.map(r => (
-                    <SelectItem key={r} value={r}>{r}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <Label>Reason for Return</Label>
+            <RadioGroup value={reason} onValueChange={v => setReason(v as ReturnReason)} className="grid gap-2">
+              {RETURN_REASONS.map(r => {
+                const detail = RETURN_REASON_DETAILS[r];
+                return (
+                  <label
+                    key={r}
+                    className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
+                      reason === r ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/30'
+                    }`}
+                  >
+                    <RadioGroupItem value={r} className="mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium">{detail.label}</p>
+                      <p className="text-xs text-muted-foreground">{detail.description}</p>
+                    </div>
+                  </label>
+                );
+              })}
+            </RadioGroup>
             {reason === 'Wrong' && (
               <div>
                 <Label>Wrong Type</Label>
                 <Select value={wrongType} onValueChange={v => setWrongType(v as WrongType)}>
                   <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Supplier Error">Supplier Error</SelectItem>
-                    <SelectItem value="Contractor Error">Contractor Error</SelectItem>
+                    <SelectItem value="Not Per Specification">Not Per Specification</SelectItem>
+                    <SelectItem value="Wrong Item Shipped">Wrong Item Shipped</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -395,7 +466,18 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
               </Select>
             </div>
             <div>
-              <Label>Pickup Date</Label>
+              <Label>Urgency</Label>
+              <Select value={urgency} onValueChange={v => setUrgency(v as UrgencyType)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {URGENCY_OPTIONS.map(u => (
+                    <SelectItem key={u} value={u}>{u}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Pickup Date <span className="text-muted-foreground text-xs">(Optional)</span></Label>
               <Input type="date" value={pickupDate} onChange={e => setPickupDate(e.target.value)} />
             </div>
             <div>
@@ -404,10 +486,15 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
             </div>
             <div>
               <Label>Contact Phone</Label>
-              <Input value={contactPhone} onChange={e => setContactPhone(e.target.value)} />
+              <Input
+                type="tel"
+                value={contactPhone}
+                onChange={e => setContactPhone(formatPhone(e.target.value))}
+                placeholder="(555)555-5555"
+              />
             </div>
             <div>
-              <Label>Site Instructions (Optional)</Label>
+              <Label>Site Instructions <span className="text-muted-foreground text-xs">(Optional)</span></Label>
               <Textarea value={instructions} onChange={e => setInstructions(e.target.value)} />
             </div>
           </div>
@@ -417,10 +504,14 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
         {step === 4 && (
           <div className="space-y-3 text-sm">
             <div>
-              <span className="text-muted-foreground">Reason:</span> {reason}{wrongType ? ` – ${wrongType}` : ''}{reasonNotes ? ` (${reasonNotes})` : ''}
+              <span className="text-muted-foreground">Reason:</span>{' '}
+              {reason ? RETURN_REASON_DETAILS[reason as ReturnReason]?.label : ''}{wrongType ? ` – ${wrongType}` : ''}{reasonNotes ? ` (${reasonNotes})` : ''}
             </div>
             <div>
-              <span className="text-muted-foreground">Pickup:</span> {pickupType} on {pickupDate}
+              <span className="text-muted-foreground">Pickup:</span> {pickupType}{pickupDate ? ` on ${pickupDate}` : ' — date TBD'}
+            </div>
+            <div>
+              <span className="text-muted-foreground">Urgency:</span> {urgency}
             </div>
             <div>
               <span className="text-muted-foreground">Contact:</span> {contactName} • {contactPhone}

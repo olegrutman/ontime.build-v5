@@ -1,6 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { ReturnStatusBadge } from './ReturnStatusBadge';
-import { Return } from '@/types/return';
+import { Return, UrgencyType, URGENCY_COLORS } from '@/types/return';
+import { Badge } from '@/components/ui/badge';
 import { Package, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -28,7 +29,7 @@ export function ReturnCard({ returnData, onClick, canViewPricing }: ReturnCardPr
           {returnData.reason}{returnData.wrong_type ? ` – ${returnData.wrong_type}` : ''}
         </p>
 
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+        <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
             <Package className="h-3.5 w-3.5" />
             {itemCount} item{itemCount !== 1 ? 's' : ''}
@@ -38,6 +39,11 @@ export function ReturnCard({ returnData, onClick, canViewPricing }: ReturnCardPr
               <Calendar className="h-3.5 w-3.5" />
               {format(new Date(returnData.pickup_date), 'MMM d')}
             </span>
+          )}
+          {(returnData as any).urgency && (returnData as any).urgency !== 'Standard' && (
+            <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${URGENCY_COLORS[(returnData as any).urgency as UrgencyType] || ''}`}>
+              {(returnData as any).urgency}
+            </Badge>
           )}
         </div>
 

@@ -1,0 +1,1 @@
+ALTER TABLE public.returns ADD COLUMN IF NOT EXISTS urgency text;

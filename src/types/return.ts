@@ -9,9 +9,10 @@ export type ReturnStatus =
   | 'CLOSED';
 
 export type ReturnReason = 'Extra' | 'Wrong' | 'Estimate Over' | 'Damaged' | 'Other';
-export type WrongType = 'Supplier Error' | 'Contractor Error';
+export type WrongType = 'Not Per Specification' | 'Wrong Item Shipped';
 export type PickupType = 'Supplier Pickup' | 'Contractor Drop-off';
 export type RestockingType = 'Percent' | 'Flat' | 'None';
+export type UrgencyType = 'Standard' | 'Priority' | 'Urgent' | 'Emergency';
 
 export type ReturnCondition =
   | 'New Unopened'
@@ -41,6 +42,7 @@ export interface Return {
   contact_name?: string | null;
   contact_phone?: string | null;
   instructions?: string | null;
+  urgency?: UrgencyType | null;
   status: ReturnStatus;
   credit_subtotal: number;
   restocking_type: RestockingType;
@@ -96,6 +98,23 @@ export const RETURN_STATUS_COLORS: Record<ReturnStatus, string> = {
 };
 
 export const RETURN_REASONS: ReturnReason[] = ['Extra', 'Wrong', 'Estimate Over', 'Damaged', 'Other'];
+
+export const RETURN_REASON_DETAILS: Record<ReturnReason, { label: string; description: string }> = {
+  Extra: { label: 'Extra Material', description: 'Ordered more than needed for the job' },
+  Wrong: { label: 'Wrong Product', description: 'Item does not match specification or what was ordered' },
+  'Estimate Over': { label: 'Estimate Overage', description: 'Estimated quantities exceeded actual usage' },
+  Damaged: { label: 'Damaged on Delivery', description: 'Material arrived damaged or defective' },
+  Other: { label: 'Other', description: 'None of the above — provide explanation' },
+};
+
+export const URGENCY_OPTIONS: UrgencyType[] = ['Standard', 'Priority', 'Urgent', 'Emergency'];
+
+export const URGENCY_COLORS: Record<UrgencyType, string> = {
+  Standard: 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+  Priority: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  Urgent: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  Emergency: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+};
 
 export const RETURN_CONDITIONS: ReturnCondition[] = [
   'New Unopened', 'New Opened', 'Good', 'Damaged', 'Wet', 'Cut', 'Painted', 'Mixed', 'Unknown',
