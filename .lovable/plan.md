@@ -1,66 +1,53 @@
 
 
-# Fix: Create Return Wizard — 5 Improvements
+# Bug Report: Create Return Wizard
 
-## 1. Supplier auto-populated from project team (not PO-based lookup)
+## Bug 1 (CRITICAL): Wrong column name in supplier query -- no suppliers shown
 
-**Problem**: The current wizard queries the `purchase_orders` table to find suppliers, which returns wrong results and requires a DELIVERED PO to exist.
+**File**: `src/components/returns/CreateReturnWizard.tsx` (line 84)
 
-**Fix**: Query `project_team` where `role = 'Supplier'` and `status = 'Accepted'` (same pattern used in `useChangeOrderProject.ts`). If only one supplier is on the team, auto-select it and skip the dropdown. Then fetch delivered PO line items for that supplier org.
+The supplier query uses `.select('organization_id, organizations!inner(id, name)')` but the `project_team` table column is `org_id`, not `organization_id`. This means the query silently returns rows with `organization_id` as `null`, the map stays empty, and no suppliers appear in the wizard.
 
-## 2. Add search/filter to item list (match PO material picker UX)
+**Fix**: Change `organization_id` to `org_id` in the select clause, and update the mapping logic to use `row.organizations` correctly with the foreign key on `org_id`.
 
-**Problem**: The flat table of delivered items can be very long and hard to scan.
-
-**Fix**: Add a search input above the items table that filters by description. Also add a "Select All (filtered)" checkbox in the header. This keeps it simple without importing the full PO product picker (which is catalog-based and not applicable here since we're selecting from already-delivered PO line items).
-
-## 3. Expand reason descriptions with examples
-
-**Problem**: Current reason labels are terse (e.g., "Wrong") and don't guide the user.
-
-**Fix**: Update `RETURN_REASONS` to include a label and description. Display as radio cards instead of a plain select:
-
-| Value | Label | Description |
-|-------|-------|-------------|
-| Extra | Extra Material | Ordered more than needed for the job |
-| Wrong | Wrong Product | Item does not match specification or what was ordered |
-| Estimate Over | Estimate Overage | Estimated quantities exceeded actual usage |
-| Damaged | Damaged on Delivery | Material arrived damaged or defective |
-| Other | Other | None of the above -- provide explanation |
-
-Also rename "Wrong Type" sub-selector labels to "Not Per Specification" and "Wrong Item Shipped" for clarity.
-
-## 4. Pickup date optional with urgency selector
-
-**Problem**: Pickup date is currently required, blocking submission when the date isn't known yet. No urgency signal.
-
-**Fix**:
-- Make `pickupDate` optional (remove from `canProceedStep3` validation)
-- Add an urgency selector: `Standard`, `Priority`, `Urgent`, `Emergency` (same options as work orders)
-- Add urgency field to the `returns` table via migration (nullable text column)
-- Show urgency in review step and on ReturnCard/ReturnDetail
-
-## 5. Phone field with formatting
-
-**Problem**: Contact phone is a plain text input with no formatting.
-
-**Fix**: Import and use the existing `formatPhone` utility. Set `type="tel"` and apply formatting on change, matching the pattern used in Profile, AuthSection, and AccountStep.
-
-## Technical Details
-
-### Database Migration
-
-```sql
-ALTER TABLE public.returns ADD COLUMN IF NOT EXISTS urgency text;
+```text
+Before: .select('organization_id, organizations!inner(id, name)')
+After:  .select('org_id, organizations!inner(id, name)')
 ```
 
-### Files to modify
+Also update the `forEach` to reference `row.organizations` (which is joined via `org_id`).
 
-| Action | File | Changes |
-|--------|------|---------|
-| Edit | `src/types/return.ts` | Add `RETURN_REASON_DETAILS` map with label+description per reason. Add `UrgencyType`. Rename WrongType values. |
-| Edit | `src/components/returns/CreateReturnWizard.tsx` | All 5 changes: team-based supplier query, search filter on items, reason radio cards, optional date + urgency, phone formatting |
-| Edit | `src/components/returns/ReturnCard.tsx` | Show urgency badge if set |
-| Edit | `src/components/returns/ReturnDetail.tsx` | Show urgency in header |
-| Create | `supabase/migrations/XXXXXX_add_returns_urgency.sql` | Add urgency column |
+## Bug 2 (Medium): Wizard state not reset on close/reopen
+
+When the dialog is closed and reopened, all state (step, selectedItems, reason, logistics fields) persists from the previous session. The user sees stale data from a prior abandoned return.
+
+**Fix**: Add a `useEffect` that resets all state when `open` changes to `true`.
+
+## Bug 3 (Minor): `qty_requested` allows 0 or negative via direct typing
+
+The number input has `min={1}` but HTML min/max only affects spinner arrows, not typed values. A user can type `0` or `-5` and bypass `canProceedStep0` validation (which checks `> 0`). Also, `updateItemQty` caps at `max` but doesn't enforce `min >= 1`.
+
+**Fix**: Clamp the value in `updateItemQty`: `Math.max(1, Math.min(qty, si.available))`.
+
+## Bug 4 (Minor): Console warning -- ReturnStatusBadge ref forwarding
+
+Console shows: "Function components cannot be given refs" for `ReturnStatusBadge`. This is because `ReturnCard` (or a parent) is trying to pass a ref to it.
+
+**Fix**: Not critical, but wrap `ReturnStatusBadge` with `React.forwardRef` if needed, or the parent should stop passing a ref.
+
+## Bug 5 (Minor): `urgency` field accessed via `(returnData as any).urgency`
+
+In `ReturnCard.tsx` and `ReturnDetail.tsx`, urgency is accessed with `(returnData as any).urgency`. This is because the `Return` type already has `urgency` as an optional field, so the cast is unnecessary and hides potential type errors.
+
+**Fix**: Remove the `as any` casts and use `returnData.urgency` directly.
+
+---
+
+## Files to modify
+
+| File | Changes |
+|------|---------|
+| `src/components/returns/CreateReturnWizard.tsx` | Fix `org_id` column name (Bug 1), add state reset on open (Bug 2), clamp qty min to 1 (Bug 3) |
+| `src/components/returns/ReturnCard.tsx` | Remove `(returnData as any)` casts for urgency (Bug 5) |
+| `src/components/returns/ReturnDetail.tsx` | Remove `(returnData as any)` casts for urgency (Bug 5) |
 
