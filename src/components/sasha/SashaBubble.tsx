@@ -18,10 +18,10 @@ const INITIAL_GREETING: SashaChatMessage = {
   content:
     "Hi, I'm Sasha.\nI'll guide you through Ontime.Build step by step.\nYou can explore safely — nothing you do here can break anything.",
   actions: [
+    "What's on this page?",
     'Explore a demo project',
     'Explain work orders',
     'Explain purchase orders',
-    'Explain invoices',
   ],
 };
 
