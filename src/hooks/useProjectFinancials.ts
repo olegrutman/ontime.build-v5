@@ -198,15 +198,20 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       );
       setMaterialEstimate(materialContract ? (materialContract as any).material_estimate_total : matEstimate);
 
-      const woIdsWithPO = wos.filter(wo => wo.linked_po_id).map(wo => wo.linked_po_id!);
-      if (woIdsWithPO.length > 0) {
-        const { data: poItems } = await supabase
-          .from('po_line_items')
-          .select('po_id, line_total')
-          .in('po_id', woIdsWithPO);
-        const matOrdered = (poItems || []).reduce((sum, li) => sum + (li.line_total || 0), 0);
-        setMaterialOrdered(matOrdered);
-      }
+      const { data: orderedPOs } = await supabase
+        .from('purchase_orders')
+        .select('id, sales_tax_percent, po_line_items(line_total)')
+        .eq('project_id', projectId)
+        .in('status', ['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED', 'FINALIZED']);
+
+      const matOrdered = (orderedPOs || []).reduce((sum, po: any) => {
+        const subtotal = (po.po_line_items || []).reduce(
+          (s: number, li: any) => s + (li.line_total || 0), 0
+        );
+        const taxRate = (po.sales_tax_percent || 0) / 100;
+        return sum + subtotal * (1 + taxRate);
+      }, 0);
+      setMaterialOrdered(matOrdered);
 
       // FC costs (TC view)
       if (detectedRole === 'Trade Contractor') {
