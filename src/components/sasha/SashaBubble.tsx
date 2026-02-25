@@ -47,7 +47,8 @@ export function SashaBubble() {
 
   // Scroll to bottom on new messages
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
+    const viewport = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]');
+    if (viewport) viewport.scrollTop = viewport.scrollHeight;
   }, [messages]);
 
   // Focus input when panel opens
@@ -218,7 +219,7 @@ export function SashaBubble() {
           </div>
 
           {/* Messages */}
-          <ScrollArea className="flex-1 p-4" ref={scrollRef as any}>
+          <ScrollArea className="flex-1 min-h-0 overflow-hidden p-4" ref={scrollRef as any}>
             <div className="space-y-3">
               {messages.map((msg, i) => (
                 <SashaMessage
