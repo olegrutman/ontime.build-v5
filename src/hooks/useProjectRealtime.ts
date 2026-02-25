@@ -73,6 +73,20 @@ export function useProjectRealtime(projectId: string | undefined) {
           bump();
         }
       )
+      // Returns
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'returns',
+          filter: `project_id=eq.${projectId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['returns'] });
+          bump();
+        }
+      )
       .subscribe();
 
     return () => {

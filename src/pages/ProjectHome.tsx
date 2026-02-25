@@ -32,6 +32,7 @@ import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesRev
 import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
 import { MaterialResponsibilityCard } from '@/components/project/MaterialResponsibilityCard';
 import { InvoicesTab } from '@/components/invoices';
+import { ReturnsTab } from '@/components/returns';
 import { ContractSOVEditor } from '@/components/sov';
 import { RFIsTab } from '@/components/rfi';
 import { useToast } from '@/hooks/use-toast';
@@ -334,6 +335,11 @@ export default function ProjectHome() {
                           : ''
                       }
                     />
+              )}
+
+              {/* Returns Tab */}
+              {activeTab === 'returns' && (
+                <ReturnsTab projectId={id!} />
               )}
 
             </div>
