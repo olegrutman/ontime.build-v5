@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ClipboardList, Receipt, Users, Edit, FileText, Plus, Sparkles, Loader2, RefreshCw, MessageSquareMore } from 'lucide-react';
+import { ClipboardList, Receipt, Users, Edit, FileText, Plus, Sparkles, Loader2, RefreshCw, MessageSquareMore, UserPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useAuth } from '@/hooks/useAuth';
 import { AddTeamMemberDialog } from '@/components/project/AddTeamMemberDialog';
+import { DesignateSupplierDialog } from '@/components/project/DesignateSupplierDialog';
 import { toast } from '@/hooks/use-toast';
 
 interface OperationalSummaryProps {
@@ -82,11 +83,24 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
   const [loadingTeam, setLoadingTeam] = useState(true);
   const [loadingScope, setLoadingScope] = useState(true);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  const [isDesignateOpen, setIsDesignateOpen] = useState(false);
+  const [designatedSupplier, setDesignatedSupplier] = useState<{ invited_name: string | null; invited_email: string | null; status: string } | null>(null);
   const [generatingDescription, setGeneratingDescription] = useState(false);
   const [openRfiCount, setOpenRfiCount] = useState(0);
   const [loadingRfis, setLoadingRfis] = useState(true);
 
   const creatorOrgType = userOrgRoles[0]?.organization?.type ?? null;
+  const isGcOrTc = creatorOrgType === 'GC' || creatorOrgType === 'TC';
+
+  const fetchDesignatedSupplier = useCallback(async () => {
+    const { data } = await supabase
+      .from('project_designated_suppliers')
+      .select('invited_name, invited_email, status')
+      .eq('project_id', projectId)
+      .neq('status', 'removed')
+      .maybeSingle();
+    setDesignatedSupplier(data);
+  }, [projectId]);
 
   const fetchTeam = useCallback(async () => {
     const { data } = await supabase
@@ -109,6 +123,7 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
     };
     fetchTeam();
     fetchScope();
+    fetchDesignatedSupplier();
 
     const fetchRfiCount = async () => {
       const { count, error } = await supabase
@@ -278,6 +293,25 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
                 <span className="text-sm truncate">{members.map(m => m.invited_org_name || 'Unknown').join(', ')}</span>
               </div>
             ))}
+            {/* Designated supplier section */}
+            {designatedSupplier ? (
+              <div className="flex items-center justify-between pt-1 border-t mt-1">
+                <div className="flex items-center gap-1.5">
+                  <span className={cn("h-2 w-2 rounded-full shrink-0 bg-amber-500")} />
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase w-7">SUP</span>
+                  <span className="text-sm truncate">{designatedSupplier.invited_name || designatedSupplier.invited_email || 'Designated'}</span>
+                  <Badge variant="outline" className="text-[9px] px-1 py-0">{designatedSupplier.status}</Badge>
+                </div>
+                {isGcOrTc && (
+                  <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px]" onClick={() => setIsDesignateOpen(true)}>Change</Button>
+                )}
+              </div>
+            ) : isGcOrTc && !team.some(m => m.role === 'Supplier') ? (
+              <Button variant="ghost" size="sm" className="h-6 w-full mt-1 text-[11px] text-muted-foreground" onClick={() => setIsDesignateOpen(true)}>
+                <UserPlus className="h-3 w-3 mr-1" />
+                Designate Supplier Contact
+              </Button>
+            ) : null}
           </div>
         )}
       </div>
@@ -334,6 +368,12 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
         projectId={projectId}
         creatorOrgType={creatorOrgType}
         onMemberAdded={fetchTeam}
+      />
+      <DesignateSupplierDialog
+        open={isDesignateOpen}
+        onOpenChange={setIsDesignateOpen}
+        projectId={projectId}
+        onDesignated={fetchDesignatedSupplier}
       />
     </div>
   );
