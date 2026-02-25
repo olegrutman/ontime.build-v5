@@ -1,105 +1,186 @@
 
 
-# Upload SOV and AI-Build from User Document
+# Generic Supplier + Designated Supplier User
 
-## Overview
+## What This Does
 
-Add a "Upload Your SOV" option alongside the existing "Create SOVs from Template" button. Users upload a PDF or CSV of their own Schedule of Values, an AI edge function parses it into structured line items (name + percentage), and the system creates `project_sov` + `project_sov_items` records automatically -- mapped to the selected contract.
+When a project has no real Supplier company on the team, GC or TC users currently see "No Supplier Assigned" and can't create Purchase Orders. This feature solves that by:
+
+1. **System-wide Generic Supplier**: A built-in supplier record that uses the existing catalog (~1700 items). Any project can use it without needing a real supplier org on the team.
+2. **Designated Supplier User**: The GC/TC can assign any user in the system (or invite one by email) to act as the supplier for that project. That person gets full supplier capabilities on the project -- except they cannot edit the product catalog.
 
 ## User Flow
 
 ```text
-SOV Tab (no SOVs yet)
-  +-----------------------------------------+
-  |  Create Schedule of Values              |
-  |                                         |
-  |  [Create SOVs from Template]            |
-  |          -- or --                       |
-  |  [Upload Your SOV]                      |
-  +-----------------------------------------+
+Project has no Supplier on team
+  -> PO Wizard shows "Generic Supplier (System Catalog)" as an option
+  -> GC/TC can create POs using the system catalog
 
-User clicks "Upload Your SOV"
-  -> File picker dialog opens (PDF/CSV)
-  -> Select which contract to apply to
-  -> Upload file
-  -> Loading spinner: "AI is reading your SOV..."
-  -> AI returns parsed items
-  -> Review screen: table of item names + percentages
-  -> User can edit/remove items, percentages must total 100%
-  -> "Apply SOV" button creates records
+Project Team page
+  -> GC/TC clicks "Designate Supplier Contact"
+  -> Search for existing user OR invite by email
+  -> Designated user gets supplier-level access to this project
+  -> They can view estimates, manage POs, respond to RFIs, etc.
+  -> They CANNOT edit the product catalog (read-only)
 ```
 
-## Changes
+## Database Changes
 
-### 1. New Edge Function: `supabase/functions/parse-sov-document/index.ts`
+### 1. Add `is_system` flag to `suppliers` table
 
-Accepts a base64-encoded PDF/CSV file and the contract amount. Uses Lovable AI (Gemini Flash) with tool calling to extract structured SOV line items:
-
-- **Input**: `{ file_base64, file_type, contract_sum }`
-- **AI prompt**: "Extract Schedule of Values line items from this document. Each item has a name/description and either a dollar amount or percentage of total contract."
-- **Tool schema**: Returns `{ items: [{ name: string, percent: number }] }` normalized to 100%
-- **Output**: `{ items: [{ name, percent }], warnings: string[] }`
-
-Handles rate limits (429) and credit exhaustion (402) with proper error responses.
-
-### 2. New Component: `src/components/sov/UploadSOVDialog.tsx`
-
-A dialog with three stages:
-1. **Upload**: File input (PDF/CSV), contract selector dropdown (if multiple contracts exist)
-2. **Processing**: Spinner while AI parses
-3. **Review**: Editable table of parsed items (name, percent, calculated dollar value). Percentage total indicator. Users can delete rows, edit names/percents. "Apply" button is enabled only when total = 100%.
-
-On apply, creates `project_sov` and `project_sov_items` records using the same pattern as `createAllSOVs` in the hook.
-
-### 3. Update: `src/hooks/useContractSOV.ts`
-
-Add a new `createSOVFromUpload` function that accepts:
-- `contractId: string`
-- `items: { name: string; percent: number }[]`
-
-Creates the SOV record and items, same as template creation but using user-provided items instead of template-generated ones. Exposed from the hook.
-
-### 4. Update: `src/components/sov/ContractSOVEditor.tsx`
-
-In the empty state (lines 180-228), add the "Upload Your SOV" button below the existing "Create SOVs from Template" button with an "-- or --" divider. Wire it to open the `UploadSOVDialog`.
-
-Also add an upload option in the "missing SOVs" alert for individual contracts.
-
-### 5. Config: `supabase/config.toml`
-
-Add entry for the new edge function:
-```toml
-[functions.parse-sov-document]
-verify_jwt = false
+```sql
+ALTER TABLE suppliers ADD COLUMN is_system boolean NOT NULL DEFAULT false;
 ```
 
-### 6. Export: `src/components/sov/index.ts`
+This flags the one system-wide generic supplier. The existing supplier record stays untouched.
 
-Add `UploadSOVDialog` export.
+### 2. Create the system supplier record
 
-## Technical Details
+```sql
+INSERT INTO suppliers (id, organization_id, supplier_code, name, is_system)
+VALUES (
+  gen_random_uuid(),
+  (SELECT id FROM organizations LIMIT 1), -- placeholder org
+  'SYSTEM-CATALOG',
+  'Generic Supplier (System Catalog)',
+  true
+);
+```
+
+Wait -- the `suppliers` table requires `organization_id NOT NULL`. We need a system org or make it nullable for system suppliers. Better approach: create a system organization.
+
+Actually, simpler: we'll link the system supplier to the existing supplier's `organization_id` since the catalog items already belong to that supplier. OR we create a dedicated system org. Let me reconsider...
+
+**Revised approach**: Instead of a new supplier record, we use a **convention**: when no project supplier exists, the PO wizard falls back to the first supplier marked `is_system = true`. We'll update the existing supplier (the only one with the 1700-item catalog) to be the system supplier.
+
+### 3. Add `designated_supplier_user_id` to `project_team`
+
+```sql
+ALTER TABLE project_team ADD COLUMN designated_supplier_user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL;
+```
+
+This lets a GC/TC project team record point to a user who acts as the supplier contact. When this user logs in, if they're the designated supplier on a project, they see that project with supplier-level access.
+
+**Actually, better approach**: Create a new table for clarity:
+
+```sql
+CREATE TABLE project_designated_suppliers (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id uuid NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  invited_email text,
+  invited_name text,
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'invited', 'removed')),
+  designated_by uuid NOT NULL REFERENCES auth.users(id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(project_id)
+);
+
+ALTER TABLE project_designated_suppliers ENABLE ROW LEVEL SECURITY;
+
+-- Project participants can view
+CREATE POLICY "Project participants can view designated suppliers"
+ON project_designated_suppliers FOR SELECT TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM project_team pt
+    WHERE pt.project_id = project_designated_suppliers.project_id
+    AND pt.org_id IN (
+      SELECT organization_id FROM user_org_roles WHERE user_id = auth.uid()
+    )
+  )
+  OR user_id = auth.uid()
+);
+
+-- GC/TC PMs can manage
+CREATE POLICY "PMs can manage designated suppliers"
+ON project_designated_suppliers FOR ALL TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM project_team pt
+    JOIN user_org_roles uor ON uor.organization_id = pt.org_id
+    WHERE pt.project_id = project_designated_suppliers.project_id
+    AND uor.user_id = auth.uid()
+    AND pt.role IN ('General Contractor', 'Trade Contractor')
+    AND pt.status = 'Accepted'
+  )
+);
+```
+
+## Code Changes
+
+### 1. Migration: Add `is_system` to suppliers + create `project_designated_suppliers` table
+
+Single migration with:
+- `is_system` boolean column on `suppliers`
+- Update existing supplier to `is_system = true` (it owns the 1700-item catalog)
+- New `project_designated_suppliers` table with RLS
+
+### 2. Update PO Wizard supplier loading (`POWizardV2.tsx`)
+
+Currently fetches suppliers only from `project_team` with role `Supplier`. Change to:
+- First try project team suppliers (existing logic)
+- If none found, fetch the system supplier (`is_system = true`) as fallback
+- Display it as "Generic Supplier (System Catalog)" in the header
+
+### 3. Update `HeaderScreen.tsx`
+
+When using the system supplier, show a slightly different card indicating it's the system catalog (no "No Supplier Assigned" error).
+
+### 4. New Component: `DesignateSupplierDialog.tsx`
+
+A dialog accessible from the Project Team section that lets GC/TC:
+- Search for any user in the system (using existing `search_existing_team_targets` RPC or profiles search)
+- OR enter an email to invite someone
+- Saves to `project_designated_suppliers`
+
+### 5. Update Project access logic
+
+When loading a project, check if the current user is a designated supplier. If so, render the supplier view (estimates, POs, RFIs) but with a flag `isDesignatedSupplier = true` that:
+- Grants supplier-level project access
+- Hides the "My Product Catalog" / inventory editing pages
+- Shows in the sidebar as a project they have supplier access to
+
+### 6. Update `ProjectHome.tsx`
+
+Add designated supplier detection alongside the existing `isSupplier` check:
+```
+const isDesignatedSupplier = check project_designated_suppliers for current user
+```
+If `isDesignatedSupplier`, render the supplier overview but skip catalog editing.
+
+### 7. Update Dashboard project list
+
+The dashboard fetches projects via `project_team`. For designated suppliers, also query `project_designated_suppliers` to include those projects in the list.
+
+### 8. Guard `SupplierInventory.tsx`
+
+Add check: if user is a designated supplier (not a real SUPPLIER org), block access to the catalog editing page with a message like "You have supplier access to specific projects but cannot edit the product catalog."
+
+## Files Summary
 
 | File | Action | Description |
 |------|--------|-------------|
-| `supabase/functions/parse-sov-document/index.ts` | Create | AI edge function to parse uploaded SOV documents |
-| `supabase/config.toml` | Edit | Add function config entry |
-| `src/components/sov/UploadSOVDialog.tsx` | Create | Upload dialog with file input, AI processing, and review table |
-| `src/components/sov/ContractSOVEditor.tsx` | Edit | Add upload button to empty state and missing-SOV alerts |
-| `src/hooks/useContractSOV.ts` | Edit | Add `createSOVFromUpload` function |
-| `src/components/sov/index.ts` | Edit | Export new component |
+| Migration SQL | Create | Add `is_system` to suppliers, create `project_designated_suppliers` table |
+| `src/components/po-wizard-v2/POWizardV2.tsx` | Edit | Fallback to system supplier when no project supplier exists |
+| `src/components/po-wizard-v2/HeaderScreen.tsx` | Edit | Show system supplier card instead of error |
+| `src/components/project/DesignateSupplierDialog.tsx` | Create | Dialog to search/invite a designated supplier user |
+| `src/components/project/ProjectTeamSection.tsx` | Edit | Add "Designate Supplier Contact" button |
+| `src/pages/ProjectHome.tsx` | Edit | Detect designated supplier, render supplier view |
+| `src/hooks/useDashboardData.ts` | Edit | Include designated supplier projects in dashboard |
+| `src/pages/SupplierInventory.tsx` | Edit | Block catalog editing for designated suppliers |
+| `src/components/project/index.ts` | Edit | Export new component |
 
-### AI Parsing Strategy
+## What the Designated Supplier Can Do
 
-The edge function uses tool calling (same pattern as `parse-estimate-pdf`) to extract structured data:
+- View project overview (supplier view with estimates vs orders, PO summary, etc.)
+- View and respond to RFIs assigned to them
+- View Purchase Orders (SUBMITTED and beyond)
+- View supplier estimates
+- View invoices linked to their POs
 
-- System prompt tells AI to identify SOV line item names and their dollar amounts or percentages
-- If the document has dollar amounts, the function converts them to percentages using the contract sum
-- Percentages are normalized to sum to exactly 100% (last item gets remainder)
-- Warnings are returned for items that couldn't be parsed or if total seems off
+## What They Cannot Do
 
-### File Size / Format Handling
-
-- PDF: Sent as base64 image content to the AI model (same as estimate parser)
-- CSV: Parsed server-side into text, sent as user message content
-- Max file size enforced client-side (10MB)
+- Edit the product catalog (SupplierInventory page blocked)
+- They don't belong to a SUPPLIER organization, so org-level supplier features are not available
 
