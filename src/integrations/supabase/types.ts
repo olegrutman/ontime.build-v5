@@ -2972,6 +2972,7 @@ export type Database = {
           return_number: string | null
           status: string
           supplier_org_id: string
+          urgency: string | null
           wrong_type: string | null
         }
         Insert: {
@@ -2997,6 +2998,7 @@ export type Database = {
           return_number?: string | null
           status?: string
           supplier_org_id: string
+          urgency?: string | null
           wrong_type?: string | null
         }
         Update: {
@@ -3022,6 +3024,7 @@ export type Database = {
           return_number?: string | null
           status?: string
           supplier_org_id?: string
+          urgency?: string | null
           wrong_type?: string | null
         }
         Relationships: [

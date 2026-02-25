@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useReturnPricingVisibility } from '@/hooks/useReturnPricingVisibility';
-import { Return, ReturnItem, ReturnStatus, RETURN_STATUS_LABELS } from '@/types/return';
+import { Return, ReturnItem, ReturnStatus, RETURN_STATUS_LABELS, UrgencyType, URGENCY_COLORS } from '@/types/return';
 import { ReturnStatusBadge } from './ReturnStatusBadge';
 import { ReturnPricingPanel } from './ReturnPricingPanel';
 import { ReturnSupplierReview } from './ReturnSupplierReview';
@@ -159,10 +159,17 @@ export function ReturnDetail({ returnId, projectId, onBack }: ReturnDetailProps)
             <h2 className="text-lg font-semibold">{returnData.return_number}</h2>
             <ReturnStatusBadge status={returnData.status} />
           </div>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {returnData.reason}{returnData.wrong_type ? ` – ${returnData.wrong_type}` : ''}
-            {returnData.reason_notes ? ` • ${returnData.reason_notes}` : ''}
-          </p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <p className="text-xs text-muted-foreground">
+              {returnData.reason}{returnData.wrong_type ? ` – ${returnData.wrong_type}` : ''}
+              {returnData.reason_notes ? ` • ${returnData.reason_notes}` : ''}
+            </p>
+            {(returnData as any).urgency && (returnData as any).urgency !== 'Standard' && (
+              <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${URGENCY_COLORS[(returnData as any).urgency as UrgencyType] || ''}`}>
+                {(returnData as any).urgency}
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
 
