@@ -75,9 +75,11 @@ export default function ProjectHome() {
 
   // Detect if current org is a supplier
   const currentOrg = userOrgRoles[0]?.organization;
-  const isSupplier = isInDemoMode ? demoRole === 'SUPPLIER' : currentOrg?.type === 'SUPPLIER';
+  const isRealSupplier = isInDemoMode ? demoRole === 'SUPPLIER' : currentOrg?.type === 'SUPPLIER';
   const isFC = isInDemoMode ? demoRole === 'FC' : currentOrg?.type === 'FC';
-  const supplierOrgId = isSupplier ? (isInDemoMode ? 'demo-org-supplier' : currentOrg?.id) : null;
+  const [isDesignatedSupplier, setIsDesignatedSupplier] = useState(false);
+  const isSupplier = isRealSupplier || isDesignatedSupplier;
+  const supplierOrgId = isRealSupplier ? (isInDemoMode ? 'demo-org-supplier' : currentOrg?.id) : null;
 
   // Realtime subscriptions – refreshKey bumps when any project entity changes
   const realtimeKey = useProjectRealtime(id);
@@ -113,6 +115,22 @@ export default function ProjectHome() {
     setProject({ ...project, status: newStatus });
     toast({ title: 'Project status updated' });
   };
+
+  // Check if current user is a designated supplier for this project
+  useEffect(() => {
+    if (!id || !user || isRealSupplier || isInDemoMode) return;
+    const checkDesignated = async () => {
+      const { data } = await supabase
+        .from('project_designated_suppliers')
+        .select('id')
+        .eq('project_id', id)
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+      setIsDesignatedSupplier(!!data);
+    };
+    checkDesignated();
+  }, [id, user, isRealSupplier, isInDemoMode]);
 
   useEffect(() => {
     if (isInDemoMode && id) {

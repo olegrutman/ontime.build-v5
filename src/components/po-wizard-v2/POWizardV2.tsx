@@ -106,28 +106,45 @@ export function POWizardV2({
 
         if (teamError) throw teamError;
 
-        if (!teamData || teamData.length === 0) {
-          setSuppliers([]);
-          setLoadingSuppliers(false);
-          return;
+        const orgIds = (teamData || []).map(t => t.org_id);
+
+        let projectSuppliers: ProjectSupplier[] = [];
+
+        if (orgIds.length > 0) {
+          // Get supplier records for these orgs
+          const { data: supplierData, error: supplierError } = await supabase
+            .from('suppliers')
+            .select('id, name, supplier_code, organization_id')
+            .in('organization_id', orgIds);
+
+          if (supplierError) throw supplierError;
+
+          projectSuppliers = (supplierData || []).map(s => ({
+            id: s.id,
+            name: s.name,
+            supplier_code: s.supplier_code,
+            organization_id: s.organization_id,
+          }));
         }
 
-        const orgIds = teamData.map(t => t.org_id);
+        // Fallback to system supplier if no project suppliers
+        if (projectSuppliers.length === 0) {
+          const { data: systemSupplier } = await supabase
+            .from('suppliers')
+            .select('id, name, supplier_code, organization_id')
+            .eq('is_system', true)
+            .limit(1)
+            .maybeSingle();
 
-        // Get supplier records for these orgs
-        const { data: supplierData, error: supplierError } = await supabase
-          .from('suppliers')
-          .select('id, name, supplier_code, organization_id')
-          .in('organization_id', orgIds);
-
-        if (supplierError) throw supplierError;
-
-        const projectSuppliers: ProjectSupplier[] = (supplierData || []).map(s => ({
-          id: s.id,
-          name: s.name,
-          supplier_code: s.supplier_code,
-          organization_id: s.organization_id,
-        }));
+          if (systemSupplier) {
+            projectSuppliers = [{
+              id: systemSupplier.id,
+              name: systemSupplier.name,
+              supplier_code: systemSupplier.supplier_code,
+              organization_id: systemSupplier.organization_id,
+            }];
+          }
+        }
 
         setSuppliers(projectSuppliers);
 

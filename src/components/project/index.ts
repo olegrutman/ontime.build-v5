@@ -26,3 +26,4 @@ export { ProjectEstimatesReview } from './ProjectEstimatesReview';
 export { ProjectReadinessCard } from './ProjectReadinessCard';
 export { SupplierEstimateVsOrdersCard } from './SupplierEstimateVsOrdersCard';
 export { SupplierOperationalSummary } from './SupplierOperationalSummary';
+export { DesignateSupplierDialog } from './DesignateSupplierDialog';
