@@ -10,6 +10,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { AddTeamMemberDialog } from './AddTeamMemberDialog';
+import { DesignateSupplierDialog } from './DesignateSupplierDialog';
 import { ROLE_PERMISSIONS, OrgType } from '@/types/organization';
 import { cn } from '@/lib/utils';
 
@@ -56,6 +57,8 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
   const [loading, setLoading] = useState(true);
   const [resending, setResending] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [designateDialogOpen, setDesignateDialogOpen] = useState(false);
+  const [designatedSupplier, setDesignatedSupplier] = useState<{ invited_name: string | null; invited_email: string | null; status: string } | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
   // Get current user's org type and permissions
@@ -65,28 +68,31 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
   const canInviteMembers = currentRole ? ROLE_PERMISSIONS[currentRole]?.canInviteMembers : false;
 
   const fetchTeam = async () => {
-    const { data, error } = await supabase
-      .from('project_team')
-      .select('*')
-      .eq('project_id', projectId);
+    const [teamResult, dsResult] = await Promise.all([
+      supabase.from('project_team').select('*').eq('project_id', projectId),
+      supabase.from('project_designated_suppliers').select('invited_name, invited_email, status').eq('project_id', projectId).maybeSingle(),
+    ]);
 
-    if (error) {
-      console.error('Error fetching team:', error);
+    if (teamResult.error) {
+      console.error('Error fetching team:', teamResult.error);
     } else {
-      // Sort by role order
-      const sorted = (data || []).sort((a, b) => {
+      const sorted = (teamResult.data || []).sort((a, b) => {
         const orderA = ROLE_ORDER[a.role] || 99;
         const orderB = ROLE_ORDER[b.role] || 99;
         return orderA - orderB;
       });
       setTeam(sorted);
     }
+    setDesignatedSupplier(dsResult.data || null);
     setLoading(false);
   };
 
   useEffect(() => {
     fetchTeam();
   }, [projectId]);
+
+  const hasSupplierOnTeam = team.some(m => m.role === 'Supplier');
+  const canDesignateSupplier = canInviteMembers && !hasSupplierOnTeam && (currentOrgType === 'GC' || currentOrgType === 'TC');
 
   const handleResendInvite = async (member: TeamMember) => {
     setResending(member.id);
@@ -257,6 +263,32 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
                     ))}
                 </div>
               )}
+
+              {/* Designated Supplier Section */}
+              {canDesignateSupplier && (
+                <div className="p-3 border-t">
+                  {designatedSupplier && designatedSupplier.status !== 'removed' ? (
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Designated Supplier Contact</p>
+                        <p className="text-sm font-medium">{designatedSupplier.invited_name || designatedSupplier.invited_email || 'Assigned'}</p>
+                        <p className="text-xs text-muted-foreground">{designatedSupplier.status === 'invited' ? 'Invitation pending' : 'Active'}</p>
+                      </div>
+                      <Button size="sm" variant="ghost" onClick={() => setDesignateDialogOpen(true)}>Change</Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setDesignateDialogOpen(true)}
+                    >
+                      <UserPlus className="h-4 w-4 mr-1.5" />
+                      Designate Supplier Contact
+                    </Button>
+                  )}
+                </div>
+              )}
             </CardContent>
           </CollapsibleContent>
         </Collapsible>
@@ -268,6 +300,13 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
         projectId={projectId}
         creatorOrgType={currentOrgType || null}
         onMemberAdded={fetchTeam}
+      />
+
+      <DesignateSupplierDialog
+        open={designateDialogOpen}
+        onOpenChange={setDesignateDialogOpen}
+        projectId={projectId}
+        onDesignated={fetchTeam}
       />
     </>
   );

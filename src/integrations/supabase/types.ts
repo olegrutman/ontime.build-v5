@@ -1867,6 +1867,47 @@ export type Database = {
           },
         ]
       }
+      project_designated_suppliers: {
+        Row: {
+          created_at: string
+          designated_by: string
+          id: string
+          invited_email: string | null
+          invited_name: string | null
+          project_id: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          designated_by: string
+          id?: string
+          invited_email?: string | null
+          invited_name?: string | null
+          project_id: string
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          designated_by?: string
+          id?: string
+          invited_email?: string | null
+          invited_name?: string | null
+          project_id?: string
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_designated_suppliers_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_estimates: {
         Row: {
           approved_at: string | null
@@ -3280,6 +3321,7 @@ export type Database = {
           contact_info: string | null
           created_at: string
           id: string
+          is_system: boolean
           name: string
           organization_id: string
           supplier_code: string
@@ -3289,6 +3331,7 @@ export type Database = {
           contact_info?: string | null
           created_at?: string
           id?: string
+          is_system?: boolean
           name: string
           organization_id: string
           supplier_code: string
@@ -3298,6 +3341,7 @@ export type Database = {
           contact_info?: string | null
           created_at?: string
           id?: string
+          is_system?: boolean
           name?: string
           organization_id?: string
           supplier_code?: string

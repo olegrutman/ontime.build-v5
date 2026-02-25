@@ -108,16 +108,16 @@ export function HeaderScreen({
         {loadingSuppliers ? (
           <Skeleton className="h-20 w-full" />
         ) : noSuppliers ? (
-          <Card className="border-destructive bg-destructive/5">
+          <Card className="border-amber-500 bg-amber-500/5">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-destructive/10">
-                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                <div className="p-2 rounded-lg bg-amber-500/10">
+                  <AlertTriangle className="h-5 w-5 text-amber-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-destructive">No Supplier Assigned</p>
+                  <p className="font-medium text-amber-700">No Supplier Available</p>
                   <p className="text-sm text-muted-foreground">
-                    Contact your project manager to add a supplier.
+                    No supplier or system catalog found. Add a supplier to the project team first.
                   </p>
                 </div>
               </div>

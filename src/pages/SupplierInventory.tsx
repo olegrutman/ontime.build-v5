@@ -83,7 +83,7 @@ const ensureSupplierRecord = async (orgId: string, orgName: string): Promise<str
 
 export default function SupplierInventory() {
   const navigate = useNavigate();
-  const { userOrgRoles, loading: authLoading } = useAuth();
+  const { user, userOrgRoles, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -101,15 +101,40 @@ export default function SupplierInventory() {
 
   const currentOrg = userOrgRoles[0]?.organization;
   const isSupplier = currentOrg?.type === 'SUPPLIER';
+  const [isDesignatedOnly, setIsDesignatedOnly] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && !isSupplier) {
+    // Check if user is a designated supplier (not a real SUPPLIER org)
+    const checkDesignatedSupplier = async () => {
+      if (!authLoading && !isSupplier && user?.id) {
+        const { data } = await supabase
+          .from('project_designated_suppliers')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .limit(1);
+        if (data && data.length > 0) {
+          setIsDesignatedOnly(true);
+          return;
+        }
+      }
+    };
+    checkDesignatedSupplier();
+  }, [authLoading, isSupplier, user]);
+
+  useEffect(() => {
+    if (!authLoading && !isSupplier && !isDesignatedOnly) {
       toast({
         title: 'Access Denied',
         description: 'This page is only available to Supplier organizations.',
         variant: 'destructive',
       });
       navigate('/dashboard');
+      return;
+    }
+
+    if (!authLoading && isDesignatedOnly && !isSupplier) {
+      // Designated suppliers can't edit catalog
       return;
     }
 
@@ -342,7 +367,7 @@ export default function SupplierInventory() {
 
   const defaultOpen = useDefaultSidebarOpen();
 
-  if (authLoading || (!isSupplier && loading)) {
+  if (authLoading || (!isSupplier && !isDesignatedOnly && loading)) {
     return (
       <SidebarProvider defaultOpen={defaultOpen}>
         <div className="min-h-screen flex w-full">
@@ -351,6 +376,34 @@ export default function SupplierInventory() {
             <TopBar title="My Inventory" />
             <main className="flex-1 overflow-auto container mx-auto px-4 py-6">
               <Skeleton className="h-64 w-full" />
+            </main>
+          </SidebarInset>
+        </div>
+      </SidebarProvider>
+    );
+  }
+
+  if (isDesignatedOnly && !isSupplier) {
+    return (
+      <SidebarProvider defaultOpen={defaultOpen}>
+        <div className="min-h-screen flex w-full">
+          <AppSidebar />
+          <SidebarInset className="flex flex-col flex-1 bg-background">
+            <TopBar title="Product Catalog" />
+            <main className="flex-1 overflow-auto">
+              <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 pb-20">
+                <Card>
+                  <CardContent className="py-12 text-center space-y-3">
+                    <AlertCircle className="h-10 w-10 mx-auto text-muted-foreground" />
+                    <h2 className="text-lg font-semibold">Read-Only Access</h2>
+                    <p className="text-muted-foreground max-w-md mx-auto">
+                      You have supplier access to specific projects but cannot edit the product catalog. 
+                      Visit your assigned projects to manage purchase orders and estimates.
+                    </p>
+                    <Button variant="outline" onClick={() => navigate('/dashboard')}>Go to Dashboard</Button>
+                  </CardContent>
+                </Card>
+              </div>
             </main>
           </SidebarInset>
         </div>
