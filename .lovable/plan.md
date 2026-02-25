@@ -1,53 +1,95 @@
 
 
-# Bug Report: Create Return Wizard
+# Add Category-Based Material Picker to Create Return Wizard
 
-## Bug 1 (CRITICAL): Wrong column name in supplier query -- no suppliers shown
+## Current Problem
 
-**File**: `src/components/returns/CreateReturnWizard.tsx` (line 84)
+Step 0 of the Create Return Wizard shows a flat table of all delivered PO line items. When a project has many delivered items (dozens to hundreds), this is overwhelming and hard to navigate.
 
-The supplier query uses `.select('organization_id, organizations!inner(id, name)')` but the `project_team` table column is `org_id`, not `organization_id`. This means the query silently returns rows with `organization_id` as `null`, the map stays empty, and no suppliers appear in the wizard.
+## Solution
 
-**Fix**: Change `organization_id` to `org_id` in the select clause, and update the mapping logic to use `row.organizations` correctly with the foreign key on `org_id`.
+Replace the flat table with a two-level category browser:
+
+1. **Category Grid** -- Shows categories (Framing Lumber, Hardware, Engineered Wood, etc.) with item counts, using the same icons/layout as the PO wizard's `CategoryGrid`
+2. **Items within Category** -- Shows only items in the selected category, with checkboxes, search, and quantity inputs
+
+Users can navigate back from items to categories to pick from multiple categories. A chip/badge bar at the top shows how many items are selected so far.
+
+## How Categories Are Determined
+
+`po_line_items` have a `supplier_sku` field. We join to `catalog_items` via `supplier_sku` to get the `category` field. Items that don't match a catalog entry are grouped under "Uncategorized."
+
+## UI Flow
 
 ```text
-Before: .select('organization_id, organizations!inner(id, name)')
-After:  .select('org_id, organizations!inner(id, name)')
++----------------------------------+
+|  Create Return - Select Items    |
+|----------------------------------|
+|  Supplier: ABC Supply            |
+|  [3 items selected]              |
+|----------------------------------|
+|  +------------+ +------------+   |
+|  | FRAMING    | | HARDWARE   |   |
+|  | LUMBER 🪵  | | 🔩         |   |
+|  | 12 items   | | 5 items    |   |
+|  +------------+ +------------+   |
+|  +------------+ +------------+   |
+|  | SHEATHING  | | OTHER      |   |
+|  | 📦         | | 📋         |   |
+|  | 3 items    | | 2 items    |   |
+|  +------------+ +------------+   |
++----------------------------------+
+
+    User taps "FRAMING LUMBER"
+
++----------------------------------+
+|  < Back   FRAMING LUMBER         |
+|  [3 items selected total]        |
+|----------------------------------|
+|  [Search items...]               |
+|  [x] Select All                  |
+|----------------------------------|
+|  [x] 2X4X12 #2 DF  (PO-001)     |
+|      Del: 50  Avail: 45  Qty:[5] |
+|  [ ] 2X4X16 #2 DF  (PO-001)     |
+|      Del: 30  Avail: 30          |
+|  ...                             |
++----------------------------------+
 ```
 
-Also update the `forEach` to reference `row.organizations` (which is joined via `org_id`).
+## Technical Details
 
-## Bug 2 (Medium): Wizard state not reset on close/reopen
+### Data Flow
 
-When the dialog is closed and reopened, all state (step, selectedItems, reason, logistics fields) persists from the previous session. The user sees stale data from a prior abandoned return.
+1. Fetch delivered `po_line_items` (existing query -- unchanged)
+2. Extract unique `supplier_sku` values from results
+3. Batch-query `catalog_items` to get `category` for each SKU
+4. Group delivered items by category
+5. Build `CategoryCount[]` array with display names and icons from `VIRTUAL_CATEGORIES`
 
-**Fix**: Add a `useEffect` that resets all state when `open` changes to `true`.
+### Files to Modify
 
-## Bug 3 (Minor): `qty_requested` allows 0 or negative via direct typing
+| Action | File | Changes |
+|--------|------|---------|
+| Edit | `src/components/returns/CreateReturnWizard.tsx` | Replace flat table in Step 0 with category grid + category detail view. Add `activeCategory` state. Add catalog category lookup query. Reuse `VIRTUAL_CATEGORIES` icons/names. |
 
-The number input has `min={1}` but HTML min/max only affects spinner arrows, not typed values. A user can type `0` or `-5` and bypass `canProceedStep0` validation (which checks `> 0`). Also, `updateItemQty` caps at `max` but doesn't enforce `min >= 1`.
+### New State Variables
 
-**Fix**: Clamp the value in `updateItemQty`: `Math.max(1, Math.min(qty, si.available))`.
+- `activeCategory: string | null` -- which category is being browsed (null = show grid)
 
-## Bug 4 (Minor): Console warning -- ReturnStatusBadge ref forwarding
+### Category Grid Rendering
 
-Console shows: "Function components cannot be given refs" for `ReturnStatusBadge`. This is because `ReturnCard` (or a parent) is trying to pass a ref to it.
+Reuse the icon and display name mappings from `VIRTUAL_CATEGORIES` in `src/types/poWizardV2.ts`. The grid will be rendered inline (not a separate component) to keep it simple, using the same styling pattern as `CategoryGrid`.
 
-**Fix**: Not critical, but wrap `ReturnStatusBadge` with `React.forwardRef` if needed, or the parent should stop passing a ref.
+### Item List Within Category
 
-## Bug 5 (Minor): `urgency` field accessed via `(returnData as any).urgency`
+When a category is selected, show:
+- Back button to return to category grid
+- Search input filtering items within that category
+- Select-all checkbox for filtered items
+- Item rows with checkbox, description, PO number, delivered/available quantities, and return qty input
 
-In `ReturnCard.tsx` and `ReturnDetail.tsx`, urgency is accessed with `(returnData as any).urgency`. This is because the `Return` type already has `urgency` as an optional field, so the cast is unnecessary and hides potential type errors.
+### Selected Items Badge
 
-**Fix**: Remove the `as any` casts and use `returnData.urgency` directly.
-
----
-
-## Files to modify
-
-| File | Changes |
-|------|---------|
-| `src/components/returns/CreateReturnWizard.tsx` | Fix `org_id` column name (Bug 1), add state reset on open (Bug 2), clamp qty min to 1 (Bug 3) |
-| `src/components/returns/ReturnCard.tsx` | Remove `(returnData as any)` casts for urgency (Bug 5) |
-| `src/components/returns/ReturnDetail.tsx` | Remove `(returnData as any)` casts for urgency (Bug 5) |
+A summary bar above the grid/list showing "N items selected" so the user knows their progress across categories.
 
