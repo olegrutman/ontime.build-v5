@@ -13,7 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Search, ArrowLeft } from 'lucide-react';
+import { VIRTUAL_CATEGORIES, CategoryCount } from '@/types/poWizardV2';
 import {
   ReturnReason,
   ReturnCondition,
@@ -42,6 +44,8 @@ interface DeliveredLineItem {
   uom: string;
   already_returned: number;
   available: number;
+  supplier_sku: string | null;
+  category: string; // resolved from catalog_items or 'Uncategorized'
 }
 
 interface SelectedItem extends DeliveredLineItem {
@@ -49,6 +53,12 @@ interface SelectedItem extends DeliveredLineItem {
   condition: ReturnCondition;
   condition_notes: string;
 }
+
+// Build a dbCategory→VirtualCategory lookup
+const DB_CATEGORY_MAP: Record<string, { displayName: string; icon: string }> = {};
+Object.values(VIRTUAL_CATEGORIES).forEach(vc => {
+  DB_CATEGORY_MAP[vc.dbCategory] = { displayName: vc.displayName, icon: vc.icon };
+});
 
 export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateReturnWizardProps) {
   const { user, userOrgRoles } = useAuth();
@@ -75,11 +85,14 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
       setContactName('');
       setContactPhone('');
       setInstructions('');
+      setActiveCategory(null);
     }
   }, [open]);
+
   const [supplierOrgId, setSupplierOrgId] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<SelectedItem[]>([]);
   const [itemSearch, setItemSearch] = useState('');
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
   // Reason
   const [reason, setReason] = useState<ReturnReason | ''>('');
@@ -112,7 +125,6 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
         }
       });
       const result = Array.from(map.entries()).map(([orgId, name]) => ({ orgId, supplierName: name }));
-      // Auto-select if only one supplier
       if (result.length === 1 && !supplierOrgId) {
         setSupplierOrgId(result[0].orgId);
       }
@@ -120,7 +132,7 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
     },
   });
 
-  // Fetch delivered line items for the selected supplier
+  // Fetch delivered line items for the selected supplier, with category from catalog_items
   const { data: deliveredItems = [] } = useQuery({
     queryKey: ['delivered-items', projectId, supplierOrgId],
     enabled: !!supplierOrgId,
@@ -145,6 +157,23 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
         .in('po_id', poIds);
       if (liErr) throw liErr;
 
+      // Lookup categories from catalog_items via supplier_sku
+      const skus = [...new Set((lineItems || []).map((li: any) => li.supplier_sku).filter(Boolean))];
+      const skuCategoryMap = new Map<string, string>();
+      if (skus.length > 0) {
+        // batch in chunks of 100
+        for (let i = 0; i < skus.length; i += 100) {
+          const chunk = skus.slice(i, i + 100);
+          const { data: catalogRows } = await supabase
+            .from('catalog_items')
+            .select('supplier_sku, category')
+            .in('supplier_sku', chunk);
+          (catalogRows || []).forEach((row: any) => {
+            if (row.category) skuCategoryMap.set(row.supplier_sku, row.category);
+          });
+        }
+      }
+
       const { data: existingReturns } = await supabase
         .from('return_items')
         .select('po_line_item_id, qty_requested, return_id, returns!inner(status)')
@@ -164,6 +193,7 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
 
       return (lineItems || []).map((li: any) => {
         const alreadyReturned = returnedMap.get(li.id) || 0;
+        const category = (li.supplier_sku && skuCategoryMap.get(li.supplier_sku)) || 'Uncategorized';
         return {
           id: li.id,
           po_id: li.po_id,
@@ -173,27 +203,59 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
           uom: li.uom,
           already_returned: alreadyReturned,
           available: li.quantity - alreadyReturned,
+          supplier_sku: li.supplier_sku,
+          category,
         } as DeliveredLineItem;
       }).filter((item: DeliveredLineItem) => item.available > 0);
     },
   });
 
-  // Filter items by search
-  const filteredItems = useMemo(() => {
-    if (!itemSearch.trim()) return deliveredItems;
-    const q = itemSearch.toLowerCase();
-    return deliveredItems.filter(item =>
-      item.description.toLowerCase().includes(q) || item.po_number.toLowerCase().includes(q)
-    );
-  }, [deliveredItems, itemSearch]);
+  // Build category counts for the grid
+  const categoryGrid = useMemo<CategoryCount[]>(() => {
+    const countMap = new Map<string, number>();
+    deliveredItems.forEach(item => {
+      countMap.set(item.category, (countMap.get(item.category) || 0) + 1);
+    });
 
-  const allFilteredSelected = filteredItems.length > 0 && filteredItems.every(item =>
+    const result: CategoryCount[] = [];
+    countMap.forEach((count, dbCat) => {
+      const display = DB_CATEGORY_MAP[dbCat];
+      result.push({
+        category: dbCat,
+        count,
+        displayName: display?.displayName || dbCat.toUpperCase(),
+        icon: display?.icon || '📋',
+      });
+    });
+
+    // Sort: known categories first (by displayName), Uncategorized last
+    return result.sort((a, b) => {
+      if (a.category === 'Uncategorized') return 1;
+      if (b.category === 'Uncategorized') return -1;
+      return a.displayName.localeCompare(b.displayName);
+    });
+  }, [deliveredItems]);
+
+  // Items filtered by active category + search
+  const categoryItems = useMemo(() => {
+    if (!activeCategory) return [];
+    let items = deliveredItems.filter(item => item.category === activeCategory);
+    if (itemSearch.trim()) {
+      const q = itemSearch.toLowerCase();
+      items = items.filter(item =>
+        item.description.toLowerCase().includes(q) || item.po_number.toLowerCase().includes(q)
+      );
+    }
+    return items;
+  }, [deliveredItems, activeCategory, itemSearch]);
+
+  const allCategorySelected = categoryItems.length > 0 && categoryItems.every(item =>
     selectedItems.some(si => si.id === item.id)
   );
 
-  const toggleSelectAllFiltered = (checked: boolean) => {
+  const toggleSelectAllCategory = (checked: boolean) => {
     if (checked) {
-      const newItems = filteredItems.filter(item => !selectedItems.some(si => si.id === item.id));
+      const newItems = categoryItems.filter(item => !selectedItems.some(si => si.id === item.id));
       setSelectedItems(prev => [
         ...prev,
         ...newItems.map(item => ({
@@ -204,8 +266,8 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
         })),
       ]);
     } else {
-      const filteredIds = new Set(filteredItems.map(i => i.id));
-      setSelectedItems(prev => prev.filter(si => !filteredIds.has(si.id)));
+      const catIds = new Set(categoryItems.map(i => i.id));
+      setSelectedItems(prev => prev.filter(si => !catIds.has(si.id)));
     }
   };
 
@@ -306,13 +368,13 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
           <DialogTitle>Create Return — {stepTitles[step]}</DialogTitle>
         </DialogHeader>
 
-        {/* Step 0: Select Items */}
+        {/* Step 0: Select Items with Category Browser */}
         {step === 0 && (
           <div className="space-y-4">
             {suppliers.length > 1 && (
               <div>
                 <Label>Supplier</Label>
-                <Select value={supplierOrgId || ''} onValueChange={v => { setSupplierOrgId(v); setSelectedItems([]); }}>
+                <Select value={supplierOrgId || ''} onValueChange={v => { setSupplierOrgId(v); setSelectedItems([]); setActiveCategory(null); }}>
                   <SelectTrigger><SelectValue placeholder="Select supplier" /></SelectTrigger>
                   <SelectContent>
                     {suppliers.map(s => (
@@ -327,12 +389,57 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
               <p className="text-sm text-muted-foreground">Supplier: <span className="font-medium text-foreground">{suppliers[0].supplierName}</span></p>
             )}
 
+            {/* Selected items summary badge */}
+            {selectedItems.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-sm">
+                  {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected
+                </Badge>
+              </div>
+            )}
+
             {supplierOrgId && deliveredItems.length === 0 && (
               <p className="text-sm text-muted-foreground">No delivered items available for return.</p>
             )}
 
-            {deliveredItems.length > 0 && (
+            {/* Category Grid View */}
+            {deliveredItems.length > 0 && !activeCategory && (
+              <div className="grid grid-cols-2 gap-3">
+                {categoryGrid.map(cat => {
+                  const selectedInCat = selectedItems.filter(si => si.category === cat.category).length;
+                  return (
+                    <button
+                      key={cat.category}
+                      onClick={() => { setActiveCategory(cat.category); setItemSearch(''); }}
+                      className="relative flex flex-col items-center justify-center p-4 h-24 rounded-xl border bg-card hover:bg-accent hover:border-accent-foreground/20 transition-colors text-center active:scale-[0.98]"
+                    >
+                      <span className="text-2xl mb-1">{cat.icon}</span>
+                      <span className="font-medium text-sm leading-tight">{cat.displayName}</span>
+                      <span className="text-xs text-muted-foreground">{cat.count} items</span>
+                      {selectedInCat > 0 && (
+                        <Badge className="absolute top-2 right-2 h-5 min-w-5 flex items-center justify-center text-[10px] px-1.5">
+                          {selectedInCat}
+                        </Badge>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Category Detail View */}
+            {deliveredItems.length > 0 && activeCategory && (
               <>
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => { setActiveCategory(null); setItemSearch(''); }}>
+                    <ArrowLeft className="h-4 w-4 mr-1" /> Back
+                  </Button>
+                  <span className="font-medium text-sm">
+                    {DB_CATEGORY_MAP[activeCategory]?.icon || '📋'}{' '}
+                    {DB_CATEGORY_MAP[activeCategory]?.displayName || activeCategory.toUpperCase()}
+                  </span>
+                </div>
+
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -342,14 +449,15 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
                     className="pl-9"
                   />
                 </div>
+
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-10">
                           <Checkbox
-                            checked={allFilteredSelected}
-                            onCheckedChange={checked => toggleSelectAllFiltered(!!checked)}
+                            checked={allCategorySelected}
+                            onCheckedChange={checked => toggleSelectAllCategory(!!checked)}
                           />
                         </TableHead>
                         <TableHead>Description</TableHead>
@@ -360,7 +468,7 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredItems.map(item => {
+                      {categoryItems.map(item => {
                         const selected = selectedItems.find(si => si.id === item.id);
                         return (
                           <TableRow key={item.id}>
@@ -389,6 +497,13 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
                           </TableRow>
                         );
                       })}
+                      {categoryItems.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
+                            No items match your search.
+                          </TableCell>
+                        </TableRow>
+                      )}
                     </TableBody>
                   </Table>
                 </div>
