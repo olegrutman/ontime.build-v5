@@ -1,60 +1,71 @@
 
 
-# Fix: Returns RLS Policy Blocking Submission
+# Fix: Returns UPDATE RLS Policy Blocking Status Transitions
 
 ## Root Cause
 
-Two bugs are preventing return creation:
+The `returns` UPDATE policy uses only a `USING` clause (no explicit `WITH CHECK`). PostgreSQL applies `USING` for both the "can I read this row?" and "is the new row valid?" checks.
 
-### Bug 1: Case mismatch in project_team status check
-The `returns` INSERT policy checks `pt.status = 'accepted'` (lowercase), but the actual `project_team` data stores `status = 'Accepted'` (capital A). This causes the policy to never match, blocking all INSERT operations.
+When the supplier changes status from `SUPPLIER_REVIEW` to `APPROVED`:
+- **USING check (old row)**: Passes -- supplier org + status `SUPPLIER_REVIEW` is allowed
+- **WITH CHECK (new row)**: Fails -- `APPROVED` is not in the supplier's allowed status list
 
-### Bug 2: Status conflict between return and return_items
-The `CreateReturnWizard` inserts the return record with `status: 'SUBMITTED'`, but the `return_items` INSERT policy requires the parent return to be in `DRAFT` status. So even if Bug 1 were fixed, the return_items insert would fail immediately after the return is created.
+The same problem affects the creator org transitioning `PRICED` to `CLOSED`.
 
 ## Fix
 
-### Database Migration (single SQL file)
+Add an explicit `WITH CHECK` clause that permits the valid target statuses for each org role. The `USING` clause controls which rows the org can select for update; the `WITH CHECK` clause controls what the row can look like after the update.
 
-**Fix the returns INSERT policy** -- change `'accepted'` to `'Accepted'`:
+### Database Migration
 
 ```sql
-DROP POLICY "GC/TC can create returns" ON public.returns;
-CREATE POLICY "GC/TC can create returns" ON public.returns
-  FOR INSERT WITH CHECK (
-    created_by_user_id = auth.uid()
-    AND user_in_org(auth.uid(), created_by_org_id)
-    AND EXISTS (
-      SELECT 1 FROM project_team pt
-      WHERE pt.project_id = returns.project_id
-        AND pt.org_id = returns.created_by_org_id
-        AND pt.status = 'Accepted'
-        AND pt.role IN ('General Contractor', 'Trade Contractor')
-    )
+DROP POLICY "Authorized orgs can update returns" ON public.returns;
+
+CREATE POLICY "Authorized orgs can update returns" ON public.returns
+  FOR UPDATE
+  USING (
+    (user_in_org(auth.uid(), created_by_org_id)
+      AND status IN ('DRAFT','APPROVED','SCHEDULED','PRICED'))
+    OR
+    (user_in_org(auth.uid(), supplier_org_id)
+      AND status IN ('SUBMITTED','SUPPLIER_REVIEW','PICKED_UP','SCHEDULED'))
+  )
+  WITH CHECK (
+    (user_in_org(auth.uid(), created_by_org_id)
+      AND status IN ('DRAFT','SUBMITTED','SCHEDULED','CLOSED'))
+    OR
+    (user_in_org(auth.uid(), supplier_org_id)
+      AND status IN ('SUPPLIER_REVIEW','APPROVED','PICKED_UP','PRICED'))
   );
 ```
 
-**Fix the return_items INSERT policy** -- allow inserts when the parent return is in `DRAFT` or `SUBMITTED` status:
+**USING** (which rows can be selected for update):
+- Creator org: DRAFT, APPROVED, SCHEDULED, PRICED
+- Supplier org: SUBMITTED, SUPPLIER_REVIEW, PICKED_UP, SCHEDULED
 
-```sql
-DROP POLICY "Creator can add return items to draft returns" ON public.return_items;
-CREATE POLICY "Creator can add return items" ON public.return_items
-  FOR INSERT WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM returns r
-      WHERE r.id = return_items.return_id
-        AND r.status IN ('DRAFT', 'SUBMITTED')
-        AND user_in_org(auth.uid(), r.created_by_org_id)
-    )
-  );
-```
+**WITH CHECK** (what the new row can look like):
+- Creator org: DRAFT, SUBMITTED, SCHEDULED, CLOSED
+- Supplier org: SUPPLIER_REVIEW, APPROVED, PICKED_UP, PRICED
+
+This allows each valid transition:
+
+| Who | From (USING) | To (WITH CHECK) |
+|-----|-------------|-----------------|
+| Creator | DRAFT | SUBMITTED |
+| Supplier | SUBMITTED | SUPPLIER_REVIEW |
+| Supplier | SUPPLIER_REVIEW | APPROVED |
+| Creator | APPROVED | SCHEDULED |
+| Supplier | SCHEDULED | PICKED_UP |
+| Supplier | PICKED_UP | PRICED |
+| Creator | PRICED | CLOSED |
 
 ### No code changes needed
-The `CreateReturnWizard.tsx` logic is correct -- only the RLS policies need updating.
+
+The `ReturnSupplierReview.tsx` logic is correct -- only the RLS policy needs the WITH CHECK clause.
 
 ## Files
 
 | Action | File |
 |--------|------|
-| Create | `supabase/migrations/XXXXXX_fix_returns_rls.sql` |
+| Create | `supabase/migrations/XXXXXX_fix_returns_update_rls.sql` |
 
