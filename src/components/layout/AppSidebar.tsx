@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { NavLink } from '@/components/NavLink';
+import { usePendingJoinRequests } from '@/hooks/usePendingJoinRequests';
+import { Badge } from '@/components/ui/badge';
 import {
   Sidebar,
   SidebarContent,
@@ -70,10 +72,13 @@ export function AppSidebar() {
   const collapsed = state === 'collapsed';
 
   const currentOrg = userOrgRoles.length > 0 ? userOrgRoles[0].organization : null;
+  const orgId = currentOrg?.id;
   const isSupplier = currentOrg?.type === 'SUPPLIER';
   const canManageSuppliers = currentRole === 'GC_PM' || currentRole === 'TC_PM';
   const isGC = currentRole === 'GC_PM';
   const canManageOrg = currentRole ? ROLE_PERMISSIONS[currentRole]?.canManageOrg : false;
+  const isAdmin = userOrgRoles[0]?.is_admin ?? false;
+  const pendingJoinCount = usePendingJoinRequests(isAdmin ? orgId : undefined);
 
   const getInitials = (name?: string | null) => {
     if (!name) return 'U';
@@ -154,7 +159,14 @@ export function AppSidebar() {
                       activeClassName="nav-active"
                     >
                       <Users className="h-4 w-4 shrink-0" />
-                      {!collapsed && <span>My Team</span>}
+                      {!collapsed && (
+                        <span className="flex-1">My Team</span>
+                      )}
+                      {!collapsed && pendingJoinCount > 0 && (
+                        <Badge variant="destructive" className="ml-auto h-5 min-w-5 px-1.5 text-[10px] font-semibold">
+                          {pendingJoinCount}
+                        </Badge>
+                      )}
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
