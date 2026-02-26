@@ -87,7 +87,7 @@ export function FinancialSignalBar({ financials, projectId, hideMaterialCards }:
     materialEstimate, materialOrdered, totalPaidToFC,
     supplierOrderValue, supplierInvoiced, supplierPaid,
     fcParticipants, updateContract, createFcContract,
-    isTCMaterialResponsible, materialEstimateTotal, updateMaterialEstimate,
+    isTCMaterialResponsible, isGCMaterialResponsible, materialEstimateTotal, updateMaterialEstimate,
   } = financials;
 
   if (loading) {
@@ -284,6 +284,18 @@ export function FinancialSignalBar({ financials, projectId, hideMaterialCards }:
     cards.push({ label: 'Approved Work Orders', value: fmt(workOrderTotal) });
     cards.push({ label: 'Total Invoiced', value: fmt(billedToDate), icon: <Receipt className="h-3.5 w-3.5" /> });
     cards.push({ label: 'Retainage Held', value: fmt(retainageAmount), icon: <Percent className="h-3.5 w-3.5" />, color: retainageAmount > 0 ? 'amber' : 'default' });
+    // Material Budget card for GC with material responsibility
+    if (isGCMaterialResponsible && !hideMaterialCards) {
+      cards.push({
+        label: 'Material Budget',
+        value: materialEstimateTotal != null ? fmt(materialEstimateTotal) : 'Set budget',
+        icon: <Package className="h-3.5 w-3.5" />,
+        color: materialEstimateTotal != null ? 'default' : 'amber',
+        editable: true,
+        onEdit: () => { setMatBudgetValue(materialEstimateTotal || 0); setEditingMatBudget(true); },
+        subtext: materialEstimateTotal != null ? 'Est. supplier costs' : 'Click to set',
+      });
+    }
     if ((materialEstimate > 0 || materialOrdered > 0) && !hideMaterialCards) {
       const overBudget = materialOrdered > materialEstimate;
       cards.push({

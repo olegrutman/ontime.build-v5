@@ -53,6 +53,7 @@ export interface ProjectFinancials {
 
   // Material responsibility
   isTCMaterialResponsible: boolean;
+  isGCMaterialResponsible: boolean;
 
   // Actions
   refetch: () => void;
@@ -82,6 +83,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [fcParticipants, setFcParticipants] = useState<{ org_id: string; org_name: string }[]>([]);
   const [materialEstimateTotal, setMaterialEstimateTotal] = useState<number | null>(null);
   const [isTCMaterialResponsible, setIsTCMaterialResponsible] = useState(false);
+  const [isGCMaterialResponsible, setIsGCMaterialResponsible] = useState(false);
 
   const fetchData = async () => {
     if (!user || !projectId) { setLoading(false); return; }
@@ -159,7 +161,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       })) as Contract[];
       setContracts(contractsWithNames);
 
-      // Detect TC material responsibility
+      // Detect material responsibility
       if (detectedRole === 'Trade Contractor' && orgIds.length > 0) {
         const tcContract = contractsWithNames.find((c: any) =>
           c.material_responsibility === 'TC' &&
@@ -168,6 +170,16 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         if (tcContract) {
           setIsTCMaterialResponsible(true);
           setMaterialEstimateTotal((tcContract as any).material_estimate_total ?? null);
+        }
+      }
+      if (detectedRole === 'General Contractor' && orgIds.length > 0) {
+        const gcContract = contractsWithNames.find((c: any) =>
+          c.material_responsibility === 'GC' &&
+          (orgIds.includes(c.from_org_id || '') || orgIds.includes(c.to_org_id || ''))
+        );
+        if (gcContract) {
+          setIsGCMaterialResponsible(true);
+          setMaterialEstimateTotal((gcContract as any).material_estimate_total ?? null);
         }
       }
 
@@ -320,7 +332,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     loading, viewerRole, contracts, upstreamContract, downstreamContract, userOrgIds,
     billedToDate, workOrderTotal, workOrderFCCost, retainageAmount, outstanding,
     materialEstimate, materialOrdered, totalPaidToFC,
-    materialEstimateTotal, isTCMaterialResponsible,
+    materialEstimateTotal, isTCMaterialResponsible, isGCMaterialResponsible,
     supplierOrderValue, supplierInvoiced, supplierPaid,
     recentWorkOrders, recentInvoices, monthlyWOData, fcParticipants,
     refetch: fetchData, updateContract, createFcContract, updateMaterialEstimate,
