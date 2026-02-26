@@ -244,13 +244,14 @@ export function FinancialSignalBar({ financials, projectId, hideMaterialCards }:
       cards.push({ label: 'Supplier Estimate', value: fmt(materialEstimate), icon: <Package className="h-3.5 w-3.5" /> });
     }
     cards.push({ label: 'Total Billed to GC', value: fmt(billedToDate), icon: <Receipt className="h-3.5 w-3.5" /> });
-    const livePosition = gcContractValue - fcContractValue - materialOrdered;
+    const woProfit = workOrderTotal - workOrderFCCost;
+    const livePosition = gcContractValue - fcContractValue + woProfit;
     cards.push({
       label: 'Live Position',
       value: fmt(livePosition),
       color: livePosition > 0 ? 'green' : livePosition < 0 ? 'red' : 'default',
       icon: <TrendingUp className="h-3.5 w-3.5" />,
-      subtext: 'In − Out − Materials',
+      subtext: 'Contract margin + WO profit',
     });
     if ((materialEstimate > 0 || materialOrdered > 0) && !hideMaterialCards) {
       const overBudget = materialOrdered > materialEstimate;
