@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 export function LandingHeader() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
 
@@ -43,9 +43,14 @@ export function LandingHeader() {
           {/* Actions */}
           <div className="hidden md:flex items-center gap-3">
             {user ? (
-              <Button onClick={() => navigate('/dashboard')} className="shadow-purple">
-                Go to Dashboard
-              </Button>
+              <>
+                <Button onClick={() => navigate('/dashboard')} className="shadow-purple">
+                  Go to Dashboard
+                </Button>
+                <Button variant="ghost" onClick={() => signOut()}>
+                  Sign out
+                </Button>
+              </>
             ) : (
               <>
                 <Button variant="ghost" asChild>
@@ -76,9 +81,14 @@ export function LandingHeader() {
                 ))}
                 <hr className="my-4" />
                 {user ? (
-                  <Button onClick={() => { navigate('/dashboard'); setOpen(false); }} className="w-full">
-                    Go to Dashboard
-                  </Button>
+                  <>
+                    <Button onClick={() => { navigate('/dashboard'); setOpen(false); }} className="w-full">
+                      Go to Dashboard
+                    </Button>
+                    <Button variant="ghost" className="w-full" onClick={() => { signOut(); setOpen(false); }}>
+                      Sign out
+                    </Button>
+                  </>
                 ) : (
                   <>
                     <Button variant="outline" asChild className="w-full" onClick={() => setOpen(false)}>
