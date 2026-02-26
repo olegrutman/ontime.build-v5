@@ -88,6 +88,7 @@ export function FinancialSignalBar({ financials, projectId, hideMaterialCards }:
     supplierOrderValue, supplierInvoiced, supplierPaid,
     fcParticipants, updateContract, createFcContract,
     isTCMaterialResponsible, isGCMaterialResponsible, materialEstimateTotal, updateMaterialEstimate,
+    approvedEstimateSum, isDesignatedSupplier,
   } = financials;
 
   if (loading) {
@@ -286,12 +287,15 @@ export function FinancialSignalBar({ financials, projectId, hideMaterialCards }:
     cards.push({ label: 'Retainage Held', value: fmt(retainageAmount), icon: <Percent className="h-3.5 w-3.5" />, color: retainageAmount > 0 ? 'amber' : 'default' });
     // Material Budget card for GC with material responsibility
     if (isGCMaterialResponsible && !hideMaterialCards) {
+      const budgetValue = materialEstimateTotal ?? approvedEstimateSum;
       cards.push({
         label: 'Material Budget',
-        value: fmt(materialEstimateTotal || 0),
+        value: fmt(budgetValue || 0),
         icon: <Package className="h-3.5 w-3.5" />,
-        color: (materialEstimateTotal || 0) > 0 ? 'default' : 'amber',
-        subtext: 'From approved estimates',
+        color: budgetValue > 0 ? 'default' : 'amber',
+        editable: true,
+        onEdit: () => { setMatBudgetValue(budgetValue || 0); setEditingMatBudget(true); },
+        subtext: materialEstimateTotal != null ? 'Manual override' : 'From approved estimates',
       });
     }
     if ((materialEstimate > 0 || materialOrdered > 0) && !hideMaterialCards) {
@@ -311,6 +315,20 @@ export function FinancialSignalBar({ financials, projectId, hideMaterialCards }:
     cards.push({ label: 'Paid', value: fmt(supplierPaid), color: 'green' });
     const outstanding = supplierInvoiced - supplierPaid;
     cards.push({ label: 'Outstanding', value: fmt(outstanding), color: outstanding > 0 ? 'amber' : 'default' });
+
+    // Designated supplier can see and edit the material budget
+    if (isDesignatedSupplier && upstreamContract) {
+      const budgetValue = materialEstimateTotal ?? approvedEstimateSum;
+      cards.push({
+        label: 'Material Budget',
+        value: fmt(budgetValue || 0),
+        icon: <Package className="h-3.5 w-3.5" />,
+        color: budgetValue > 0 ? 'default' : 'amber',
+        editable: true,
+        onEdit: () => { setMatBudgetValue(budgetValue || 0); setEditingMatBudget(true); },
+        subtext: materialEstimateTotal != null ? 'Manual override' : 'From approved estimates',
+      });
+    }
   }
 
   return (

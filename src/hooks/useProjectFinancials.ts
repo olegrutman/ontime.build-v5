@@ -35,6 +35,7 @@ export interface ProjectFinancials {
   materialOrdered: number;
   totalPaidToFC: number;
   materialEstimateTotal: number | null; // TC's project-level material budget
+  approvedEstimateSum: number; // Sum of approved supplier estimates
 
   // Supplier-specific
   supplierOrderValue: number;
@@ -54,6 +55,9 @@ export interface ProjectFinancials {
   // Material responsibility
   isTCMaterialResponsible: boolean;
   isGCMaterialResponsible: boolean;
+
+  // Designated supplier
+  isDesignatedSupplier: boolean;
 
   // Actions
   refetch: () => void;
@@ -84,6 +88,8 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [materialEstimateTotal, setMaterialEstimateTotal] = useState<number | null>(null);
   const [isTCMaterialResponsible, setIsTCMaterialResponsible] = useState(false);
   const [isGCMaterialResponsible, setIsGCMaterialResponsible] = useState(false);
+  const [approvedEstimateSum, setApprovedEstimateSum] = useState(0);
+  const [isDesignatedSupplier, setIsDesignatedSupplier] = useState(false);
 
   const fetchData = async () => {
     if (!user || !projectId) { setLoading(false); return; }
@@ -183,7 +189,41 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         }
       }
 
-      // Invoices
+      // Fetch approved estimate sum as fallback for material budget
+      const { data: approvedEsts } = await supabase
+        .from('supplier_estimates')
+        .select('total_amount')
+        .eq('project_id', projectId)
+        .eq('status', 'APPROVED');
+      const estSum = (approvedEsts || []).reduce((s: number, e: any) => s + (e.total_amount || 0), 0);
+      setApprovedEstimateSum(estSum);
+
+      // If material_estimate_total is null but we have approved estimates, use that as materialEstimate
+      const materialEstTotalFromContract = contractsWithNames.find((c: any) =>
+        c.material_responsibility != null &&
+        (detectedRole === 'Trade Contractor'
+          ? (orgIds.includes(c.from_org_id || '') || orgIds.includes(c.to_org_id || ''))
+          : true)
+      );
+      const matEstTotalValue = (materialEstTotalFromContract as any)?.material_estimate_total ?? null;
+      if (matEstTotalValue == null && estSum > 0) {
+        // No manual override set, use estimate sum
+        setMaterialEstimate(estSum);
+      }
+
+      // Detect designated supplier
+      if (user) {
+        const { data: designatedRows } = await supabase
+          .from('project_designated_suppliers')
+          .select('id')
+          .eq('project_id', projectId)
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+        setIsDesignatedSupplier(!!designatedRows);
+      }
+
+
       const allInvoices = invoicesRes.data || [];
       const submitted = allInvoices.filter(i => ['SUBMITTED', 'APPROVED', 'PAID'].includes(i.status));
       setBilledToDate(submitted.reduce((sum, inv) => sum + (inv.total_amount || 0), 0));
@@ -332,7 +372,8 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     loading, viewerRole, contracts, upstreamContract, downstreamContract, userOrgIds,
     billedToDate, workOrderTotal, workOrderFCCost, retainageAmount, outstanding,
     materialEstimate, materialOrdered, totalPaidToFC,
-    materialEstimateTotal, isTCMaterialResponsible, isGCMaterialResponsible,
+    materialEstimateTotal, approvedEstimateSum, isTCMaterialResponsible, isGCMaterialResponsible,
+    isDesignatedSupplier,
     supplierOrderValue, supplierInvoiced, supplierPaid,
     recentWorkOrders, recentInvoices, monthlyWOData, fcParticipants,
     refetch: fetchData, updateContract, createFcContract, updateMaterialEstimate,
