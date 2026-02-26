@@ -1,39 +1,72 @@
 
 
-# Fix: GC Can't Select Trade Contractor in Assignment Step
-
-## Problem
-
-In the Work Order Wizard's Assignment step (step 7), clicking a Trade Contractor option in the dropdown closes it without selecting the value. The data is present in the database (IMIS, LLC is an accepted TC on this project), but the selection doesn't register.
+# Fix: TC Organization Name Not Visible to GC in Assignment Step
 
 ## Root Cause
 
-The `SelectItem` component contains a nested `<div className="flex flex-col">` with block-level layout. Radix UI's Select component doesn't handle complex children inside `SelectItem` well -- the click event gets intercepted by the inner div, preventing the selection from completing.
+The `organizations` table RLS policy checks if two orgs share a project by querying `project_participants`. However, `project_participants` has its own RLS that restricts the GC user to only see rows where their own org is the participant (or where their org owns the project). Since this project is owned by the TC org, the GC user can only see their own participant row in the subquery -- so the TC org is never found and returns "Unknown".
 
-## Fix
+This is a nested RLS visibility problem, not a frontend bug.
 
-**File: `src/components/work-order-wizard/steps/AssignmentStep.tsx`**
+## Fix: Security Definer Function
 
-Replace the nested `div` inside each `SelectItem` with inline elements (`span`) that don't interfere with Radix's click handling:
+Create a `SECURITY DEFINER` function that checks whether an organization shares a project with the current user, bypassing the nested RLS issue. Then update the `organizations` SELECT policy to use this function instead of the raw subquery through `project_participants`.
 
-Before:
-```tsx
-<SelectItem key={member.org_id} value={member.org_id}>
-  <div className="flex flex-col">
-    <span>{member.org_name}</span>
-    {member.trade && (
-      <span className="text-xs text-muted-foreground">{member.trade}</span>
-    )}
-  </div>
-</SelectItem>
+### Step 1: Create `org_shares_project_with_user` function
+
+```sql
+CREATE OR REPLACE FUNCTION public.org_shares_project_with_user(_org_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM project_participants pp1
+    JOIN project_participants pp2 ON pp1.project_id = pp2.project_id
+    WHERE pp1.organization_id IN (
+      SELECT organization_id FROM user_org_roles WHERE user_id = auth.uid()
+    )
+    AND pp2.organization_id = _org_id
+  )
+$$;
 ```
 
-After:
-```tsx
-<SelectItem key={member.org_id} value={member.org_id}>
-  {member.org_name}{member.trade ? ` (${member.trade})` : ''}
-</SelectItem>
+### Step 2: Update the organizations SELECT policy
+
+Replace the current `project_participants` subquery in the RLS policy with a call to the new function:
+
+```sql
+DROP POLICY "Users can view related organizations" ON public.organizations;
+
+CREATE POLICY "Users can view related organizations"
+ON public.organizations FOR SELECT
+TO authenticated
+USING (
+  -- User belongs to this org
+  id IN (SELECT organization_id FROM user_org_roles WHERE user_id = auth.uid())
+  -- Org shares a project with user (via security definer)
+  OR org_shares_project_with_user(id)
+  -- Org is a trusted partner
+  OR id IN (
+    SELECT partner_org_id FROM trusted_partners
+    WHERE organization_id IN (
+      SELECT organization_id FROM user_org_roles WHERE user_id = auth.uid()
+    )
+  )
+);
 ```
 
-This flattens the content to a single text string, which Radix Select handles reliably. The trade info is still visible as parenthetical text.
+### No Frontend Changes Needed
+
+Once the RLS is fixed, the existing `AssignmentStep.tsx` code (which queries `organizations` directly) will correctly return the TC org name. The "Unknown" label and the direct/fallback query pattern already in the component will work as intended.
+
+## Technical Details
+
+- The `SECURITY DEFINER` function runs with the privileges of its creator, bypassing the nested RLS on `project_participants`
+- This is the standard Supabase pattern for avoiding recursive/nested RLS issues
+- The function is `STABLE` (safe for query optimization) and has `search_path = public` (security best practice)
+- The trusted_partners subquery does not have the same nested RLS issue, so it can remain as-is
 
