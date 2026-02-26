@@ -288,12 +288,10 @@ export function FinancialSignalBar({ financials, projectId, hideMaterialCards }:
     if (isGCMaterialResponsible && !hideMaterialCards) {
       cards.push({
         label: 'Material Budget',
-        value: materialEstimateTotal != null ? fmt(materialEstimateTotal) : 'Set budget',
+        value: fmt(materialEstimateTotal || 0),
         icon: <Package className="h-3.5 w-3.5" />,
-        color: materialEstimateTotal != null ? 'default' : 'amber',
-        editable: true,
-        onEdit: () => { setMatBudgetValue(materialEstimateTotal || 0); setEditingMatBudget(true); },
-        subtext: materialEstimateTotal != null ? 'Est. supplier costs' : 'Click to set',
+        color: (materialEstimateTotal || 0) > 0 ? 'default' : 'amber',
+        subtext: 'From approved estimates',
       });
     }
     if ((materialEstimate > 0 || materialOrdered > 0) && !hideMaterialCards) {
