@@ -1,23 +1,39 @@
 
 
-# Fix Signup "Database error finding user"
+# Make "Invite a Team Member" Optional in Onboarding
 
-## The Problem
+## What Changes
 
-There are 4 orphaned records in the `auth.identities` table -- identity rows that reference users who were previously deleted from `auth.users`. When a new user tries to sign up, the auth system checks for duplicate emails by scanning identities, finds an orphaned one, tries to load the matching user, and crashes with "User not found."
+The onboarding checklist currently requires inviting a team member before it considers setup complete. This change makes it optional by adding a "I'm the sole member" option.
 
-This affects any new email that doesn't conflict with these orphans too if the internal check fails broadly, but most critically it blocks signups for those specific emails.
+## Changes
 
-## The Fix
+### 1. Update OnboardingChecklist (src/components/dashboard/OnboardingChecklist.tsx)
+- Change the "Invite a team member" step to "Invite a team member (optional)"
+- Add a small "I'm a sole member" link/button next to it that marks it as done
+- When clicked, save this preference to `user_settings` or local storage so it stays dismissed
 
-A single database migration to delete the orphaned identity records:
+### 2. Update Dashboard logic (src/pages/Dashboard.tsx)
+- Change `teamInvited` logic: consider it done if either `userOrgRoles.length > 1` OR the user has opted out by marking themselves as sole member
+- Store the "sole member" flag in the database (`org_settings` table) or use `localStorage` for simplicity
 
-```sql
-DELETE FROM auth.identities
-WHERE user_id NOT IN (SELECT id FROM auth.users);
-```
+### 3. Recommended approach: Use `org_settings`
+- Add a `sole_member` boolean column to `org_settings` via migration (or use localStorage if we want to keep it simple)
+- When user clicks "I'm the sole member", set this flag and mark the step complete
 
-This removes the 4 orphaned records (olegrutman@gmail.com, olegrutman+testfc@gmail.com, olegrutman+testtc@gmail.com, davin@builders.com) and restores normal signup behavior.
+## Simplest Implementation (localStorage)
 
-No code changes needed -- this is a data cleanup only.
+To avoid a migration, use `localStorage`:
+- Key: `ontime_sole_member_{orgId}` 
+- When clicked, set to `"true"` and mark `teamInvited` as done
+- This keeps the change to just 2 files with no database changes
+
+## Technical Details
+
+**OnboardingChecklist.tsx**: Add an `onMarkSoleMember` callback prop. Render a "I'm the sole member" button below the invite step when it's not done. Clicking it calls the callback.
+
+**Dashboard.tsx**: 
+- Read `localStorage.getItem(\`ontime_sole_member_\${orgId}\`)` 
+- Pass `teamInvited = userOrgRoles.length > 1 || soleMemberFlag` 
+- Pass `onMarkSoleMember` handler that sets localStorage and updates state
 
