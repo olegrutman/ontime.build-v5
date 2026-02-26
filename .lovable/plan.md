@@ -1,38 +1,39 @@
 
-# Fix: Unable to Sign Out in Preview
+
+# Fix: GC Can't Select Trade Contractor in Assignment Step
 
 ## Problem
 
-When you try to sign out, the server returns a 403 "Session not found" error (because the server-side session has already expired). The current `signOut` code calls `supabase.auth.signOut()` but doesn't handle this failure -- so the local auth tokens in localStorage may not get fully cleared. After the page reload, the stale tokens get picked up again and you appear "stuck" logged in.
+In the Work Order Wizard's Assignment step (step 7), clicking a Trade Contractor option in the dropdown closes it without selecting the value. The data is present in the database (IMIS, LLC is an accepted TC on this project), but the selection doesn't register.
+
+## Root Cause
+
+The `SelectItem` component contains a nested `<div className="flex flex-col">` with block-level layout. Radix UI's Select component doesn't handle complex children inside `SelectItem` well -- the click event gets intercepted by the inner div, preventing the selection from completing.
 
 ## Fix
 
-### 1. Update `signOut` in `src/hooks/useAuth.tsx`
+**File: `src/components/work-order-wizard/steps/AssignmentStep.tsx`**
 
-- Use `supabase.auth.signOut({ scope: 'local' })` which forces clearing the local session regardless of what the server returns. This is the correct approach when the server session may already be expired.
-- Wrap in try/catch so even if the call throws, we still clear state and redirect.
+Replace the nested `div` inside each `SelectItem` with inline elements (`span`) that don't interfere with Radix's click handling:
 
-### 2. Add a "Sign Out" option to the Landing page header
-
-Currently the landing page (`LandingHeader`) doesn't show a sign-out option when a user is logged in. If the router sends a logged-in user to `/`, they see the marketing page with no way to sign out. We'll add a small "Sign Out" button or link in the landing header when a session exists.
-
-## Changes
-
-**`src/hooks/useAuth.tsx`** -- Update signOut:
-```
-const signOut = async () => {
-  try {
-    await supabase.auth.signOut({ scope: 'local' });
-  } catch (_) {
-    // Force-clear even if server rejects
-  }
-  setUser(null);
-  setSession(null);
-  setProfile(null);
-  setUserOrgRoles([]);
-  setMemberPermissions(null);
-  window.location.href = '/';
-};
+Before:
+```tsx
+<SelectItem key={member.org_id} value={member.org_id}>
+  <div className="flex flex-col">
+    <span>{member.org_name}</span>
+    {member.trade && (
+      <span className="text-xs text-muted-foreground">{member.trade}</span>
+    )}
+  </div>
+</SelectItem>
 ```
 
-**`src/components/landing/LandingHeader.tsx`** -- Show a "Sign Out" button when user is logged in, so they can escape the stuck state from the landing page too.
+After:
+```tsx
+<SelectItem key={member.org_id} value={member.org_id}>
+  {member.org_name}{member.trade ? ` (${member.trade})` : ''}
+</SelectItem>
+```
+
+This flattens the content to a single text string, which Radix Select handles reliably. The trade info is still visible as parenthetical text.
+
