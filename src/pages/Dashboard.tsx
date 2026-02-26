@@ -215,6 +215,7 @@ export default function Dashboard() {
             orgComplete={orgComplete}
             teamInvited={teamInvited}
             projectCreated={projectCreated}
+            orgType={orgType}
             onDismiss={handleDismissOnboarding}
             onMarkSoleMember={handleMarkSoleMember}
           />

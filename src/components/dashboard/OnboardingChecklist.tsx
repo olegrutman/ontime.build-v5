@@ -9,6 +9,7 @@ interface OnboardingChecklistProps {
   orgComplete: boolean;
   teamInvited: boolean;
   projectCreated: boolean;
+  orgType?: string | null;
   onDismiss: () => void;
   onMarkSoleMember?: () => void;
 }
@@ -18,16 +19,21 @@ export function OnboardingChecklist({
   orgComplete,
   teamInvited,
   projectCreated,
+  orgType,
   onDismiss,
   onMarkSoleMember,
 }: OnboardingChecklistProps) {
   const navigate = useNavigate();
 
+  const isProjectOrg = orgType === 'GC' || orgType === 'TC';
+
   const steps = [
     { label: 'Complete your profile', done: profileComplete, path: '/profile' },
     { label: 'Set up organization details', done: orgComplete, path: '/profile' },
     { label: 'Invite a team member (optional)', done: teamInvited, path: '/profile', isSoleMemberStep: true },
-    { label: 'Create your first project', done: projectCreated, path: '/create-project' },
+    ...(isProjectOrg
+      ? [{ label: 'Create or join your first project', done: projectCreated, path: '/create-project' }]
+      : []),
   ];
 
   const completedCount = steps.filter((s) => s.done).length;
