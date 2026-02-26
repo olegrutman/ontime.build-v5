@@ -57,9 +57,64 @@ export default function Signup() {
   // Redirect if already fully set up
   useEffect(() => {
     if (!authLoading && user && userOrgRoles.length > 0) {
+      localStorage.removeItem('ontime_pending_signup');
       navigate('/dashboard');
     }
   }, [authLoading, user, userOrgRoles, navigate]);
+
+  // Restore saved signup context after email verification
+  useEffect(() => {
+    if (authLoading || !user || userOrgRoles.length > 0) return;
+    const saved = localStorage.getItem('ontime_pending_signup');
+    if (!saved) return;
+
+    try {
+      const parsed = JSON.parse(saved);
+      const savedData = parsed.data as SignupWizardData;
+      const savedPath = parsed.signupPath as 'new' | 'join';
+
+      setData(prev => ({ ...prev, ...savedData }));
+      setSignupPath(savedPath);
+
+      if (savedPath === 'join' && savedData.joinOrgId) {
+        // Auto-submit join request
+        setLoading(true);
+        (async () => {
+          await supabase.from('profiles').update({
+            first_name: savedData.firstName,
+            last_name: savedData.lastName,
+            phone: savedData.phone || null,
+            full_name: `${savedData.firstName} ${savedData.lastName}`.trim(),
+            job_title: savedData.jobTitle || null,
+          }).eq('user_id', user.id);
+
+          const { error: joinError } = await supabase.from('org_join_requests').insert({
+            organization_id: savedData.joinOrgId!,
+            user_id: user.id,
+            job_title: savedData.jobTitle || null,
+          });
+
+          localStorage.removeItem('ontime_pending_signup');
+          setLoading(false);
+
+          if (joinError) {
+            toast({ variant: 'destructive', title: 'Error', description: joinError.message });
+          } else {
+            toast({
+              title: 'Join request sent!',
+              description: `Your request to join ${savedData.joinOrgName} has been submitted. You'll be notified when approved.`,
+            });
+            navigate('/auth');
+          }
+        })();
+      } else if (savedPath === 'new') {
+        // Resume at company step
+        setStep(1);
+      }
+    } catch {
+      localStorage.removeItem('ontime_pending_signup');
+    }
+  }, [authLoading, user, userOrgRoles]);
 
   const updateData = (fields: Partial<SignupWizardData>) => {
     setData(prev => ({ ...prev, ...fields }));
@@ -94,7 +149,7 @@ export default function Signup() {
       email: data.email,
       password: data.password,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: window.location.origin + '/signup',
         data: { full_name: `${data.firstName} ${data.lastName}`.trim() },
       },
     });
@@ -116,6 +171,11 @@ export default function Signup() {
     }
 
     if (!session) {
+      // Save wizard state so we can resume after email verification
+      localStorage.setItem('ontime_pending_signup', JSON.stringify({
+        data,
+        signupPath,
+      }));
       setLoading(false);
       toast({
         title: 'Check your email',
@@ -142,6 +202,7 @@ export default function Signup() {
         job_title: data.jobTitle || null,
       });
 
+      localStorage.removeItem('ontime_pending_signup');
       setLoading(false);
       if (joinError) {
         toast({ variant: 'destructive', title: 'Error', description: joinError.message });
@@ -226,6 +287,7 @@ export default function Signup() {
       return;
     }
 
+    localStorage.removeItem('ontime_pending_signup');
     await refreshUserData();
     setLoading(false);
 
