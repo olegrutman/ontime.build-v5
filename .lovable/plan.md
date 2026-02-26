@@ -1,44 +1,63 @@
 
-
-# Fix: Preserve Signup Context After Email Verification
+# Fix: Join Organization Flow -- Add "Pending Approval" State
 
 ## Problem
 
-When a user chooses the "Join an existing company" path and creates their account, they must verify their email before getting a session. After clicking the verification link, they land on the root URL and get redirected to `/signup` -- but all wizard state (selected organization, name, phone, etc.) is lost. They have to start the entire process over.
+After a new user submits a join request to an organization, they have no org roles yet (approval is pending). Every time they sign in:
+1. Auth page detects `needsOrgSetup` (no org roles) and redirects to `/signup`
+2. `/signup` shows the choice screen again since there's no saved context
+3. User is stuck in an infinite loop with no indication their request is pending
 
-The same issue affects the "New to Ontime.Build" path: after email verification, company and role data entered before verification is gone.
+## Root Cause
+
+No code path handles the "authenticated user with a pending join request but no org role" state.
 
 ## Solution
 
-Persist the signup wizard data in `localStorage` before showing the "check your email" toast. When the signup page loads and detects an authenticated user with no org roles, check for saved data and automatically resume where they left off.
+### 1. Add a check for pending join requests in Auth.tsx (src/pages/Auth.tsx)
 
-## Changes
+Before redirecting to `/signup` when `needsOrgSetup` is true, query `org_join_requests` for the current user with status = 'pending'. If found, show a "Pending Approval" card instead of redirecting to signup.
 
-### 1. `src/pages/Signup.tsx`
+The card will display:
+- "Your request to join [org name] is pending"  
+- "You'll be notified when approved"
+- A "Sign Out" button
+- A "Cancel & Start Over" option (deletes the join request and redirects to `/signup`)
 
-**Save data before showing email toast (in `handleAccountNext`, around line 118-125):**
-- Before showing the "Check your email" toast, save the full wizard `data` object, `signupPath`, and current `step` to `localStorage` under a key like `ontime_pending_signup`
+### 2. Add the same check in Signup.tsx (src/pages/Signup.tsx)
 
-**Restore data on load (new `useEffect` after line 58-62):**
-- When the page loads, if `user` exists and `userOrgRoles.length === 0` (authenticated but no org), check `localStorage` for `ontime_pending_signup`
-- If found, restore `data`, `signupPath`, and advance to the correct step:
-  - For "join" path: auto-submit the join request immediately (user already verified, we have orgId and profile data)
-  - For "new" path: restore to step 1 (company step) so they can continue the wizard
+When the signup page loads with an authenticated user who has no org roles and no localStorage data, check for pending join requests. If found, show the pending approval state instead of the choice screen.
 
-**Clean up localStorage:**
-- After successful signup completion (in `handleFinalSubmit` and the join-request block), remove the `ontime_pending_signup` key
+### 3. Update the post-join-request navigation (src/pages/Signup.tsx)
 
-### 2. Also update `emailRedirectTo`
+After successfully submitting a join request (both in `handleAccountNext` and the restore `useEffect`), instead of navigating to `/auth`, stay on `/signup` and show the pending approval state directly. This avoids the redirect loop entirely.
 
-- Change `emailRedirectTo` from `window.location.origin` to `window.location.origin + '/signup'` so verified users land directly on the signup page instead of going through `/` -> redirect chain
+## Technical Details
 
-## Flow After Fix
+### New component: PendingApprovalCard
 
-1. User selects org, fills account details, clicks Continue
-2. Email verification required -- data saved to localStorage, toast shown
-3. User clicks verification link in email -> lands on `/signup`
-4. Signup page detects: authenticated user + no org + saved data in localStorage
-5. **Join path**: automatically submits join request with saved org ID, shows success
-6. **New path**: restores to company step so user continues from where they left off
-7. localStorage cleaned up after completion
+Create a simple card component at `src/components/signup-wizard/PendingApprovalStep.tsx` that shows:
+- Icon and heading: "Request Pending"
+- Organization name
+- Message about waiting for admin approval  
+- "Sign Out" button
+- "Cancel Request" link
 
+### Changes to Auth.tsx (lines 62-75)
+
+Add a query for pending join requests when `needsOrgSetup` is true. Show the pending card if found, otherwise redirect to `/signup` as before.
+
+### Changes to Signup.tsx
+
+- Add state `pendingOrg` (string | null) to track if user has a pending request
+- In the restore `useEffect`, after join request submission, set `pendingOrg` instead of navigating away
+- In the choice screen render (line 302-308), first check for pending join requests before showing `ChoiceStep`
+- When `pendingOrg` is set, render the `PendingApprovalStep` component
+
+### Flow After Fix
+
+1. User selects org, creates account, verifies email
+2. Join request auto-submitted from localStorage
+3. User sees "Your request to join IMIS, LLC is pending approval" card
+4. If they sign out and sign back in, Auth.tsx detects the pending request and shows the same card
+5. Once admin approves, `user_org_roles` populates and user gets redirected to dashboard
