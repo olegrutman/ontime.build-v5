@@ -107,6 +107,14 @@ export interface ScopeDetails {
   numUnits?: number;
   storiesPerUnit?: number;
   hasSharedWalls?: boolean;
+  // New sizing & method fields
+  totalSqft?: number;
+  lotSizeAcres?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  garageType?: 'Attached' | 'Detached' | 'None';
+  garageCars?: number;
+  framingMethod?: 'Stick Frame' | 'Panelized' | 'Hybrid';
 }
 
 export interface NewProjectWizardData {
@@ -149,3 +157,7 @@ export const DECKING_TYPES = [
 export const CONSTRUCTION_TYPES = [
   'Wood Frame', 'Podium (wood over concrete)', 'Mixed Use', 'Other'
 ] as const;
+
+export const GARAGE_TYPES = ['Attached', 'Detached', 'None'] as const;
+
+export const FRAMING_METHODS = ['Stick Frame', 'Panelized', 'Hybrid'] as const;
