@@ -4666,6 +4666,7 @@ export type Database = {
         | "INVOICE_REJECTED"
         | "RFI_SUBMITTED"
         | "RFI_ANSWERED"
+        | "JOIN_REQUEST"
       order_status:
         | "DRAFT"
         | "SUBMITTED"
@@ -4846,6 +4847,7 @@ export const Constants = {
         "INVOICE_REJECTED",
         "RFI_SUBMITTED",
         "RFI_ANSWERED",
+        "JOIN_REQUEST",
       ],
       order_status: [
         "DRAFT",
