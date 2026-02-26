@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Mail, Lock, Loader2 } from 'lucide-react';
+import { Mail, Lock, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { OntimeLogo } from '@/components/ui/OntimeLogo';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
@@ -29,6 +29,9 @@ export default function Auth() {
   const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
   const [checkedPending, setCheckedPending] = useState(false);
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
+  const [resendingVerification, setResendingVerification] = useState(false);
+  const [verificationResent, setVerificationResent] = useState(false);
 
   const [signInForm, setSignInForm] = useState({
     email: '',
@@ -56,11 +59,15 @@ export default function Auth() {
     setLoading(false);
 
     if (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Sign in failed',
-        description: error.message,
-      });
+      if (error.message?.toLowerCase().includes('email not confirmed')) {
+        setUnconfirmedEmail(signInForm.email);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Sign in failed',
+          description: error.message,
+        });
+      }
     }
   };
 
@@ -148,6 +155,49 @@ export default function Auth() {
             <h2 className="text-xl font-semibold">Welcome back</h2>
             <p className="text-sm text-muted-foreground">Sign in to your account</p>
           </div>
+
+          {unconfirmedEmail && (
+            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 space-y-3 mb-4">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Email not verified</p>
+                  <p className="text-xs text-muted-foreground">
+                    Please verify your email address before signing in.
+                  </p>
+                </div>
+              </div>
+              {verificationResent ? (
+                <div className="flex items-center gap-2 text-sm text-primary">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Verification email sent to {unconfirmedEmail}
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  disabled={resendingVerification}
+                  onClick={async () => {
+                    setResendingVerification(true);
+                    await supabase.auth.resend({
+                      type: 'signup',
+                      email: unconfirmedEmail,
+                      options: {
+                        emailRedirectTo: window.location.origin + '/auth/callback',
+                      },
+                    });
+                    setResendingVerification(false);
+                    setVerificationResent(true);
+                  }}
+                >
+                  {resendingVerification && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Resend verification email
+                </Button>
+              )}
+            </div>
+          )}
 
           <form onSubmit={handleSignIn} className="space-y-4">
             <div>

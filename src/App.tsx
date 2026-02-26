@@ -30,6 +30,8 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Demo = lazy(() => import("./pages/Demo"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Signup = lazy(() => import("./pages/Signup"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
+const AuthCallback = lazy(() => import("./pages/AuthCallback"));
 const CreateProjectNew = lazy(() => import("./pages/CreateProjectNew"));
 const ProjectHome = lazy(() => import("./pages/ProjectHome"));
 const EditProjectScope = lazy(() => import("./pages/EditProjectScope"));
@@ -143,6 +145,8 @@ function AppRoutes() {
             <Route path="/" element={<Landing />} />
             <Route path="/demo" element={<Demo />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/signup" element={<Signup />} />
 
             {/* Protected routes */}

@@ -168,7 +168,7 @@ export default function Signup() {
       email: data.email,
       password: data.password,
       options: {
-        emailRedirectTo: window.location.origin + '/signup',
+        emailRedirectTo: window.location.origin + '/auth/callback',
         data: { full_name: `${data.firstName} ${data.lastName}`.trim() },
       },
     });
@@ -196,10 +196,7 @@ export default function Signup() {
         signupPath,
       }));
       setLoading(false);
-      toast({
-        title: 'Check your email',
-        description: 'Please confirm your email address, then sign in.',
-      });
+      navigate(`/verify-email?email=${encodeURIComponent(data.email)}`);
       return;
     }
 
