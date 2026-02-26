@@ -212,6 +212,9 @@ export function ApprovalPanel({
                 <li>Create a contract between you and the Trade Contractor</li>
                 <li>Add a line item to the Schedule of Values</li>
                 <li>Allow the Trade Contractor to submit invoices for this work</li>
+                {changeOrder.linked_po_id && (
+                  <li>Finalize the linked material Purchase Order</li>
+                )}
               </ul>
             </AlertDialogDescription>
           </AlertDialogHeader>
