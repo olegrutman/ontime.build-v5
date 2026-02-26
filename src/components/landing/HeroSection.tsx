@@ -31,7 +31,7 @@ export function HeroSection() {
 
           {/* Headline */}
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 leading-[1.1]">
-            Construction billing
+            Construction
             <br />
             made{' '}
             <span className="relative inline-block">
