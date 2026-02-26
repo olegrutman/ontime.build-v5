@@ -258,7 +258,14 @@ export default function CreateProjectNew() {
         num_units: data.scope.numUnits,
         stories_per_unit: data.scope.storiesPerUnit,
         has_shared_walls: data.scope.hasSharedWalls,
-      });
+        total_sqft: data.scope.totalSqft,
+        lot_size_acres: data.scope.lotSizeAcres,
+        bedrooms: data.scope.bedrooms,
+        bathrooms: data.scope.bathrooms,
+        garage_type: data.scope.garageType,
+        garage_cars: data.scope.garageCars,
+        framing_method: data.scope.framingMethod,
+      } as any);
     } catch (error: any) {
       console.error('Error saving scope:', error);
     }
@@ -391,6 +398,10 @@ export default function CreateProjectNew() {
         await saveTeam(data.projectId);
       } else if (currentStep === 2 && data.projectId) {
         await saveScope(data.projectId);
+        // Fire AI description generation in the background (non-blocking)
+        supabase.functions.invoke('generate-scope-description', {
+          body: { project_id: data.projectId },
+        }).catch(err => console.error('Scope description generation failed:', err));
       } else if (currentStep === 3 && data.projectId) {
         await saveContracts(data.projectId);
       }

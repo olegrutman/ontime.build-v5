@@ -2283,6 +2283,8 @@ export type Database = {
           balcony_type: string | null
           basement_finish: string | null
           basement_type: string | null
+          bathrooms: number | null
+          bedrooms: number | null
           construction_type: string | null
           construction_type_other: string | null
           created_at: string
@@ -2298,6 +2300,9 @@ export type Database = {
           fascia_soffit_material_other: string | null
           floors: number | null
           foundation_type: string | null
+          framing_method: string | null
+          garage_cars: number | null
+          garage_type: string | null
           has_balconies: boolean | null
           has_covered_porches: boolean | null
           has_elevator: boolean | null
@@ -2305,6 +2310,7 @@ export type Database = {
           has_shared_walls: boolean | null
           home_type: string | null
           id: string
+          lot_size_acres: number | null
           num_buildings: number | null
           num_units: number | null
           project_id: string
@@ -2320,6 +2326,7 @@ export type Database = {
           stairs_type: string | null
           stories: number | null
           stories_per_unit: number | null
+          total_sqft: number | null
           updated_at: string
           windows_included: boolean | null
           wrb_included: boolean | null
@@ -2328,6 +2335,8 @@ export type Database = {
           balcony_type?: string | null
           basement_finish?: string | null
           basement_type?: string | null
+          bathrooms?: number | null
+          bedrooms?: number | null
           construction_type?: string | null
           construction_type_other?: string | null
           created_at?: string
@@ -2343,6 +2352,9 @@ export type Database = {
           fascia_soffit_material_other?: string | null
           floors?: number | null
           foundation_type?: string | null
+          framing_method?: string | null
+          garage_cars?: number | null
+          garage_type?: string | null
           has_balconies?: boolean | null
           has_covered_porches?: boolean | null
           has_elevator?: boolean | null
@@ -2350,6 +2362,7 @@ export type Database = {
           has_shared_walls?: boolean | null
           home_type?: string | null
           id?: string
+          lot_size_acres?: number | null
           num_buildings?: number | null
           num_units?: number | null
           project_id: string
@@ -2365,6 +2378,7 @@ export type Database = {
           stairs_type?: string | null
           stories?: number | null
           stories_per_unit?: number | null
+          total_sqft?: number | null
           updated_at?: string
           windows_included?: boolean | null
           wrb_included?: boolean | null
@@ -2373,6 +2387,8 @@ export type Database = {
           balcony_type?: string | null
           basement_finish?: string | null
           basement_type?: string | null
+          bathrooms?: number | null
+          bedrooms?: number | null
           construction_type?: string | null
           construction_type_other?: string | null
           created_at?: string
@@ -2388,6 +2404,9 @@ export type Database = {
           fascia_soffit_material_other?: string | null
           floors?: number | null
           foundation_type?: string | null
+          framing_method?: string | null
+          garage_cars?: number | null
+          garage_type?: string | null
           has_balconies?: boolean | null
           has_covered_porches?: boolean | null
           has_elevator?: boolean | null
@@ -2395,6 +2414,7 @@ export type Database = {
           has_shared_walls?: boolean | null
           home_type?: string | null
           id?: string
+          lot_size_acres?: number | null
           num_buildings?: number | null
           num_units?: number | null
           project_id?: string
@@ -2410,6 +2430,7 @@ export type Database = {
           stairs_type?: string | null
           stories?: number | null
           stories_per_unit?: number | null
+          total_sqft?: number | null
           updated_at?: string
           windows_included?: boolean | null
           wrb_included?: boolean | null

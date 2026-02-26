@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Check, MapPin, Users, FileText, DollarSign, ArrowUp, ArrowDown, Building2, Home, Layers, Mountain, PaintBucket, Package } from 'lucide-react';
+import { Check, MapPin, Users, FileText, DollarSign, ArrowUp, ArrowDown, Building2, Home, Layers, Mountain, PaintBucket, Package, RefreshCw, Sparkles } from 'lucide-react';
 import { NewProjectWizardData, TeamRole, ProjectContract } from '@/types/projectWizard';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -26,6 +27,9 @@ interface ReviewStepProps {
 export function ReviewStepNew({ data, creatorRole = 'General Contractor' }: ReviewStepProps) {
   const [teamMembers, setTeamMembers] = useState<ProjectTeamMember[]>([]);
   const [loading, setLoading] = useState(false);
+  const [scopeDescription, setScopeDescription] = useState<string | null>(null);
+  const [descriptionLoading, setDescriptionLoading] = useState(true);
+  const [regenerating, setRegenerating] = useState(false);
 
   // Fetch team members from database
   const fetchTeamMembers = useCallback(async () => {
@@ -51,6 +55,56 @@ export function ReviewStepNew({ data, creatorRole = 'General Contractor' }: Revi
   useEffect(() => {
     fetchTeamMembers();
   }, [fetchTeamMembers]);
+
+  // Poll for AI-generated description
+  useEffect(() => {
+    if (!data.projectId) return;
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 15;
+
+    const poll = async () => {
+      const { data: scopeData } = await supabase
+        .from('project_scope_details')
+        .select('scope_description')
+        .eq('project_id', data.projectId!)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (scopeData?.scope_description) {
+        setScopeDescription(scopeData.scope_description);
+        setDescriptionLoading(false);
+      } else if (attempts < maxAttempts) {
+        attempts++;
+        setTimeout(poll, 2000);
+      } else {
+        setDescriptionLoading(false);
+      }
+    };
+
+    poll();
+    return () => { cancelled = true; };
+  }, [data.projectId]);
+
+  const regenerateDescription = async () => {
+    if (!data.projectId) return;
+    setRegenerating(true);
+    setScopeDescription(null);
+    try {
+      const { data: result, error } = await supabase.functions.invoke('generate-scope-description', {
+        body: { project_id: data.projectId },
+      });
+      if (error) throw error;
+      if (result?.description) {
+        setScopeDescription(result.description);
+      }
+    } catch (err) {
+      console.error('Failed to regenerate description:', err);
+    } finally {
+      setRegenerating(false);
+    }
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -151,6 +205,43 @@ export function ReviewStepNew({ data, creatorRole = 'General Contractor' }: Revi
           Review your project details before creating.
         </p>
       </div>
+
+      {/* AI-Generated Project Description */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Sparkles className="h-4 w-4" />
+              Project Description
+            </CardTitle>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={regenerateDescription}
+              disabled={regenerating}
+              className="h-8 gap-1.5 text-xs"
+            >
+              <RefreshCw className={`h-3 w-3 ${regenerating ? 'animate-spin' : ''}`} />
+              Regenerate
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {descriptionLoading || regenerating ? (
+            <div className="space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-4/5" />
+              <Skeleton className="h-4 w-3/5" />
+            </div>
+          ) : scopeDescription ? (
+            <p className="text-sm leading-relaxed">{scopeDescription}</p>
+          ) : (
+            <p className="text-sm text-muted-foreground italic">
+              No description generated. Click "Regenerate" to create one.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Basics */}
       <Card>

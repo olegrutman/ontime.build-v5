@@ -83,6 +83,14 @@ Deno.serve(async (req) => {
     if (scope.wrb_included) scopeParts.push("WRB: included");
     if (scope.ext_doors_included) scopeParts.push("Exterior doors: included");
     if (scope.construction_type) scopeParts.push(`Construction type: ${scope.construction_type}`);
+    if (scope.total_sqft) scopeParts.push(`Total square footage: ${scope.total_sqft} SF`);
+    if (scope.lot_size_acres) scopeParts.push(`Lot size: ${scope.lot_size_acres} acres`);
+    if (scope.bedrooms) scopeParts.push(`Bedrooms: ${scope.bedrooms}`);
+    if (scope.bathrooms) scopeParts.push(`Bathrooms: ${scope.bathrooms}`);
+    if (scope.garage_type && scope.garage_type !== 'None') {
+      scopeParts.push(`Garage: ${scope.garage_type}${scope.garage_cars ? `, ${scope.garage_cars}-car` : ''}`);
+    }
+    if (scope.framing_method) scopeParts.push(`Framing method: ${scope.framing_method}`);
 
     const scopeText = scopeParts.join("\n");
 
@@ -95,7 +103,7 @@ Deno.serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "google/gemini-2.5-flash",
           messages: [
             {
               role: "system",

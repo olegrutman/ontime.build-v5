@@ -13,6 +13,8 @@ import {
   BALCONY_TYPES,
   DECKING_TYPES,
   CONSTRUCTION_TYPES,
+  GARAGE_TYPES,
+  FRAMING_METHODS,
 } from '@/types/projectWizard';
 
 interface ScopeStepProps {
@@ -55,6 +57,127 @@ export function ScopeStep({ projectType, scope, onChange }: ScopeStepProps) {
           Framing-relevant details for {projectType}
         </p>
       </div>
+
+      {/* Project Size */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Project Size</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Total Sq Ft</Label>
+              <Input
+                type="number"
+                min="0"
+                placeholder="e.g. 3200"
+                value={scope.totalSqft || ''}
+                onChange={(e) => update({ totalSqft: parseInt(e.target.value) || undefined })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Lot Size (acres)</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="e.g. 0.25"
+                value={scope.lotSizeAcres || ''}
+                onChange={(e) => update({ lotSizeAcres: parseFloat(e.target.value) || undefined })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Bedrooms</Label>
+              <Select
+                value={scope.bedrooms?.toString() || ''}
+                onValueChange={(v) => update({ bedrooms: parseInt(v) })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5, 6].map(n => (
+                    <SelectItem key={n} value={n.toString()}>{n}{n === 6 ? '+' : ''}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Bathrooms</Label>
+              <Select
+                value={scope.bathrooms?.toString() || ''}
+                onValueChange={(v) => update({ bathrooms: parseFloat(v) })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                  {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6].map(n => (
+                    <SelectItem key={n} value={n.toString()}>{n}{n === 6 ? '+' : ''}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Garage */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Garage</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Garage Type</Label>
+            <Select
+              value={scope.garageType || ''}
+              onValueChange={(v: 'Attached' | 'Detached' | 'None') => update({ garageType: v, garageCars: v === 'None' ? undefined : scope.garageCars })}
+            >
+              <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectContent>
+                {GARAGE_TYPES.map(type => (
+                  <SelectItem key={type} value={type}>{type}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {scope.garageType && scope.garageType !== 'None' && (
+            <div className="space-y-2">
+              <Label>Number of Cars</Label>
+              <Select
+                value={scope.garageCars?.toString() || ''}
+                onValueChange={(v) => update({ garageCars: parseInt(v) })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3].map(n => (
+                    <SelectItem key={n} value={n.toString()}>{n}{n === 3 ? '+' : ''}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Framing Method */}
+      {(isSingleFamily || isTownhome || isDuplex) && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Framing Method</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Select
+              value={scope.framingMethod || ''}
+              onValueChange={(v: 'Stick Frame' | 'Panelized' | 'Hybrid') => update({ framingMethod: v })}
+            >
+              <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+              <SelectContent>
+                {FRAMING_METHODS.map(method => (
+                  <SelectItem key={method} value={method}>{method}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Multi-building info (Apartments/Hotels) */}
       {isMultiFamily && (
