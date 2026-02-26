@@ -14,6 +14,7 @@ import { format } from 'date-fns';
 import { useState } from 'react';
 import { LocationData, WORK_TYPE_LABELS } from '@/types/changeOrderProject';
 import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
+import { BottomNav } from '@/components/layout/BottomNav';
 import { useChangeOrderRealtime } from '@/hooks/useChangeOrderRealtime';
 
 import { WorkOrderTopBar } from './WorkOrderTopBar';
@@ -128,6 +129,7 @@ export function ChangeOrderDetailPage() {
               <Skeleton className="h-48 w-full" />
             </main>
           </SidebarInset>
+          <BottomNav />
         </div>
       </SidebarProvider>
     );
@@ -151,6 +153,7 @@ export function ChangeOrderDetailPage() {
               </Card>
             </div>
           </SidebarInset>
+          <BottomNav />
         </div>
       </SidebarProvider>
     );
@@ -479,6 +482,7 @@ export function ChangeOrderDetailPage() {
             </div>
           </main>
         </SidebarInset>
+        <BottomNav />
       </div>
     </SidebarProvider>
   );
