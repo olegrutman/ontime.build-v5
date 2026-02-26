@@ -1,41 +1,99 @@
 
 
-# Fix: Sasha Chat Panel Scrolling (Take 2)
+# Improve Project Scope Questionnaire and Auto-Generate Description
 
-## Problem
+## What This Does (Plain English)
 
-The Sasha chat panel content overflows below the input area instead of scrolling. The previous fix added `min-h-0 overflow-hidden` to the ScrollArea but it's still not constraining properly.
+Right now, when you create a project, the wizard asks about framing details (roof type, siding, etc.) but misses basic sizing info that every contractor needs upfront -- like how big the house is. Also, the project description only gets generated later, after you've already left the wizard. 
 
-## Root Cause
+This plan adds a few key missing questions to the Scope step and then automatically generates a short, professional project description at the end of the wizard -- so when your team opens the project, they immediately know what they're walking into.
 
-The outer panel container (`fixed ... flex flex-col max-h-[60vh]`) needs `overflow-hidden` itself to enforce the max-height constraint on its flex children. Without it, the flex children can grow beyond the container's max-height. Additionally, the `p-4` padding on ScrollArea should be on the inner content div instead, so the scroll viewport sizing is correct.
+## New Questions Being Added
 
-## Changes
+These are standard data points that GCs and estimators use on every bid sheet:
 
-### File: `src/components/sasha/SashaBubble.tsx`
+1. **Total Square Footage** -- The living/conditioned area. This is the single most important sizing metric in residential construction.
+2. **Lot Size (acres)** -- Gives context for site access and grading.
+3. **Number of Bedrooms / Bathrooms** -- Quick shorthand for project complexity.
+4. **Garage** -- Attached, Detached, or None. If attached, how many cars (1, 2, 3+).
+5. **Framing Method** -- Stick Frame, Panelized, or Hybrid. Already exists in the old wizard but is missing from the new one.
 
-1. **Add `overflow-hidden` to the outer panel container** (line 206) to enforce the max-height constraint on flex children:
-   ```
-   // Before
-   <div className="fixed z-50 shadow-xl rounded-2xl border bg-background flex flex-col animate-in ..."
+These fields are all optional (like everything else on the Scope step) so they won't block project creation.
 
-   // After — add overflow-hidden
-   <div className="fixed z-50 shadow-xl rounded-2xl border bg-background flex flex-col overflow-hidden animate-in ..."
-   ```
+## Auto-Generated Description
 
-2. **Move padding from ScrollArea to inner div** (lines 222-240) so the scroll viewport calculates its height correctly:
-   ```
-   // Before
-   <ScrollArea className="flex-1 min-h-0 overflow-hidden p-4" ref={scrollRef as any}>
-     <div className="space-y-3">
+After the scope is saved and the user lands on the Review step, the system calls the existing AI edge function (`generate-scope-description`) in the background. The Review step shows the generated description with a loading spinner while it's working. The description reads like a short bid summary, for example:
 
-   // After
-   <ScrollArea className="flex-1 min-h-0 overflow-hidden" ref={scrollRef as any}>
-     <div className="space-y-3 p-4">
-   ```
+> "3,200 SF custom home, 2 stories on slab foundation with hip roof. Attached 3-car garage. Stick-framed with fiber cement siding, covered porches, and field-built stairs. Scope includes windows, WRB, and exterior doors."
 
-These two changes together ensure that:
-- The flex container respects its max-height
-- The ScrollArea fills available space and scrolls when content overflows
-- Padding is on the content, not the scroll container (which can interfere with height calculation)
+The user can regenerate it from the Review step if they want.
+
+---
+
+## Technical Details
+
+### 1. Database Migration
+
+Add new columns to `project_scope_details`:
+
+```sql
+ALTER TABLE public.project_scope_details
+  ADD COLUMN IF NOT EXISTS total_sqft integer,
+  ADD COLUMN IF NOT EXISTS lot_size_acres numeric(6,2),
+  ADD COLUMN IF NOT EXISTS bedrooms integer,
+  ADD COLUMN IF NOT EXISTS bathrooms numeric(3,1),
+  ADD COLUMN IF NOT EXISTS garage_type text,
+  ADD COLUMN IF NOT EXISTS garage_cars integer,
+  ADD COLUMN IF NOT EXISTS framing_method text;
+```
+
+### 2. Update `src/types/projectWizard.ts`
+
+Add to `ScopeDetails` interface:
+- `totalSqft?: number`
+- `lotSizeAcres?: number`
+- `bedrooms?: number`
+- `bathrooms?: number`
+- `garageType?: 'Attached' | 'Detached' | 'None'`
+- `garageCars?: number`
+- `framingMethod?: 'Stick Frame' | 'Panelized' | 'Hybrid'`
+
+Add new constants: `GARAGE_TYPES`, `FRAMING_METHODS`.
+
+### 3. Update `src/components/project-wizard-new/ScopeStep.tsx`
+
+Add a new "Project Size" card at the top (before Structure Details) with:
+- Total Sq Ft (number input)
+- Lot Size in Acres (number input)
+- Bedrooms (select 1-6+)
+- Bathrooms (select 1-6+)
+
+Add a "Garage" card:
+- Garage Type toggle (Attached / Detached / None)
+- If not None: Number of Cars (1, 2, 3+)
+
+Add a "Framing Method" card (for single family, townhome, duplex):
+- Stick Frame / Panelized / Hybrid select
+
+### 4. Update `src/pages/CreateProjectNew.tsx`
+
+In `saveScope()`, include the new fields in the upsert payload.
+
+When moving from step 2 (Scope) to step 3 (Contracts), after saving scope, fire the `generate-scope-description` edge function in the background (non-blocking).
+
+### 5. Update `src/components/project-wizard-new/ReviewStep.tsx`
+
+- Show a "Project Description" card at the top of the review
+- Display the AI-generated description (fetched from `project_scope_details.scope_description`)
+- Show a loading skeleton while it's being generated
+- Add a "Regenerate" button
+
+### 6. Update `supabase/functions/generate-scope-description/index.ts`
+
+Add the new fields to the prompt context:
+- Total sqft, lot size, bedrooms, bathrooms
+- Garage type and size
+- Framing method
+
+Use model `google/gemini-2.5-flash` instead of `gemini-3-flash-preview` (the preview model has been returning 503 errors).
 
