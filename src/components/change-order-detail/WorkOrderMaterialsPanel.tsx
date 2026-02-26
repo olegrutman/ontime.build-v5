@@ -43,6 +43,7 @@ const STATUS_LABELS: Record<string, { label: string; variant: 'default' | 'secon
   ACTIVE: { label: 'Draft', variant: 'outline' },
   SUBMITTED: { label: 'Awaiting Supplier Pricing', variant: 'secondary' },
   PRICED: { label: 'Priced by Supplier', variant: 'default' },
+  ORDERED: { label: 'Ordered', variant: 'default' },
   FINALIZED: { label: 'Finalized', variant: 'default' },
   READY_FOR_DELIVERY: { label: 'Ready for Delivery', variant: 'default' },
   DELIVERED: { label: 'Delivered', variant: 'default' },
@@ -63,7 +64,7 @@ export function WorkOrderMaterialsPanel({
 }: WorkOrderMaterialsPanelProps) {
   const items = linkedPO.items || [];
   const subtotal = linkedPO.subtotal || 0;
-  const isPriced = linkedPO.status === 'PRICED' || linkedPO.status === 'FINALIZED' || linkedPO.status === 'READY_FOR_DELIVERY' || linkedPO.status === 'DELIVERED';
+  const isPriced = linkedPO.status === 'PRICED' || linkedPO.status === 'ORDERED' || linkedPO.status === 'FINALIZED' || linkedPO.status === 'READY_FOR_DELIVERY' || linkedPO.status === 'DELIVERED';
   
   // Calculate markup amount based on type
   const calculatedMarkup = materialMarkupType === 'percent'
