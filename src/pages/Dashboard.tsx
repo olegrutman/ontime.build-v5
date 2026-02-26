@@ -43,6 +43,10 @@ export default function Dashboard() {
   const { profile, organization, userSettings, updateUserSettings } = useProfile();
   const currentOrg = userOrgRoles[0]?.organization;
   const orgType = currentOrg?.type || null;
+  const orgId = currentOrg?.id;
+  const [soleMember, setSoleMember] = useState(() =>
+    orgId ? localStorage.getItem(`ontime_sole_member_${orgId}`) === 'true' : false
+  );
 
   const handleArchive = (projectId: string) => {
     const project = projects.find((p) => p.id === projectId);
@@ -176,11 +180,18 @@ export default function Dashboard() {
   const showOnboarding = userSettings && !userSettings.onboarding_dismissed;
   const profileComplete = !!(profile?.first_name && profile?.phone);
   const orgComplete = !!(organization?.address?.street);
-  const teamInvited = (userOrgRoles.length > 1);
+  const teamInvited = (userOrgRoles.length > 1) || soleMember;
   const projectCreated = projects.length > 0;
 
   const handleDismissOnboarding = async () => {
     await updateUserSettings({ onboarding_dismissed: true });
+  };
+
+  const handleMarkSoleMember = () => {
+    if (orgId) {
+      localStorage.setItem(`ontime_sole_member_${orgId}`, 'true');
+      setSoleMember(true);
+    }
   };
 
   // Quick stats
@@ -205,6 +216,7 @@ export default function Dashboard() {
             teamInvited={teamInvited}
             projectCreated={projectCreated}
             onDismiss={handleDismissOnboarding}
+            onMarkSoleMember={handleMarkSoleMember}
           />
         )}
 

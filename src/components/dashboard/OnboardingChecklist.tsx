@@ -10,6 +10,7 @@ interface OnboardingChecklistProps {
   teamInvited: boolean;
   projectCreated: boolean;
   onDismiss: () => void;
+  onMarkSoleMember?: () => void;
 }
 
 export function OnboardingChecklist({
@@ -18,13 +19,14 @@ export function OnboardingChecklist({
   teamInvited,
   projectCreated,
   onDismiss,
+  onMarkSoleMember,
 }: OnboardingChecklistProps) {
   const navigate = useNavigate();
 
   const steps = [
     { label: 'Complete your profile', done: profileComplete, path: '/profile' },
     { label: 'Set up organization details', done: orgComplete, path: '/profile' },
-    { label: 'Invite a team member', done: teamInvited, path: '/profile' },
+    { label: 'Invite a team member (optional)', done: teamInvited, path: '/profile', isSoleMemberStep: true },
     { label: 'Create your first project', done: projectCreated, path: '/create-project' },
   ];
 
@@ -52,23 +54,32 @@ export function OnboardingChecklist({
       </CardHeader>
       <CardContent className="pt-0 space-y-2">
         {steps.map((step) => (
-          <button
-            key={step.label}
-            onClick={() => !step.done && navigate(step.path)}
-            className={`flex items-center gap-3 w-full text-left rounded-md px-3 py-2 text-sm transition-colors ${
-              step.done
-                ? 'text-muted-foreground'
-                : 'hover:bg-muted cursor-pointer'
-            }`}
-            disabled={step.done}
-          >
-            {step.done ? (
-              <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-            ) : (
-              <Circle className="h-4 w-4 text-muted-foreground shrink-0" />
+          <div key={step.label} className="flex items-center gap-2">
+            <button
+              onClick={() => !step.done && navigate(step.path)}
+              className={`flex items-center gap-3 flex-1 text-left rounded-md px-3 py-2 text-sm transition-colors ${
+                step.done
+                  ? 'text-muted-foreground'
+                  : 'hover:bg-muted cursor-pointer'
+              }`}
+              disabled={step.done}
+            >
+              {step.done ? (
+                <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+              ) : (
+                <Circle className="h-4 w-4 text-muted-foreground shrink-0" />
+              )}
+              <span className={step.done ? 'line-through' : ''}>{step.label}</span>
+            </button>
+            {step.isSoleMemberStep && !step.done && onMarkSoleMember && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onMarkSoleMember(); }}
+                className="text-xs text-muted-foreground hover:text-foreground underline whitespace-nowrap pr-3"
+              >
+                I'm a sole member
+              </button>
             )}
-            <span className={step.done ? 'line-through' : ''}>{step.label}</span>
-          </button>
+          </div>
         ))}
       </CardContent>
     </Card>
