@@ -1,36 +1,38 @@
 
-
-# Role-Aware Onboarding Checklist
+# Fix: Unable to Sign Out in Preview
 
 ## Problem
 
-The onboarding checklist currently shows "Create your first project" for all organization types, including Suppliers and Field Crews who never create projects. Additionally, for GC/TC users who join a project via invite rather than creating one, the label doesn't reflect that path.
+When you try to sign out, the server returns a 403 "Session not found" error (because the server-side session has already expired). The current `signOut` code calls `supabase.auth.signOut()` but doesn't handle this failure -- so the local auth tokens in localStorage may not get fully cleared. After the page reload, the stale tokens get picked up again and you appear "stuck" logged in.
+
+## Fix
+
+### 1. Update `signOut` in `src/hooks/useAuth.tsx`
+
+- Use `supabase.auth.signOut({ scope: 'local' })` which forces clearing the local session regardless of what the server returns. This is the correct approach when the server session may already be expired.
+- Wrap in try/catch so even if the call throws, we still clear state and redirect.
+
+### 2. Add a "Sign Out" option to the Landing page header
+
+Currently the landing page (`LandingHeader`) doesn't show a sign-out option when a user is logged in. If the router sends a logged-in user to `/`, they see the marketing page with no way to sign out. We'll add a small "Sign Out" button or link in the landing header when a session exists.
 
 ## Changes
 
-### 1. Update `OnboardingChecklist` to accept `orgType` (src/components/dashboard/OnboardingChecklist.tsx)
+**`src/hooks/useAuth.tsx`** -- Update signOut:
+```
+const signOut = async () => {
+  try {
+    await supabase.auth.signOut({ scope: 'local' });
+  } catch (_) {
+    // Force-clear even if server rejects
+  }
+  setUser(null);
+  setSession(null);
+  setProfile(null);
+  setUserOrgRoles([]);
+  setMemberPermissions(null);
+  window.location.href = '/';
+};
+```
 
-- Add `orgType` prop (string | null)
-- For **Supplier** and **FC** org types: Remove the "Create your first project" step entirely. These roles only have 3 steps (profile, org details, team invite).
-- For **GC** and **TC** org types: Change the label to "Create or join your first project" and keep the existing `projectCreated` logic (which already works -- accepted project invites show up in the projects list, so `projects.length > 0` covers both cases).
-
-### 2. Pass `orgType` from Dashboard (src/pages/Dashboard.tsx)
-
-- Pass the existing `orgType` variable to `OnboardingChecklist` as a prop. No new data fetching needed.
-
-## Why This Works Without Backend Changes
-
-- The `projectCreated` flag is based on `projects.length > 0`, which already includes projects the user joined via invite (they appear in `project_team`). No database changes needed.
-- The org type is already available from `userOrgRoles[0]?.organization?.type`.
-
-## Technical Details
-
-### OnboardingChecklist.tsx changes:
-- Add `orgType?: string | null` to the props interface
-- Build the steps array conditionally:
-  - Always include: profile, org details, team invite
-  - Only for GC/TC: add "Create or join your first project"
-- Progress calculation automatically adjusts since `steps.length` changes
-
-### Dashboard.tsx changes:
-- Add `orgType={orgType}` to the `<OnboardingChecklist>` component
+**`src/components/landing/LandingHeader.tsx`** -- Show a "Sign Out" button when user is logged in, so they can escape the stuck state from the landing page too.
