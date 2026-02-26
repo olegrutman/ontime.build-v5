@@ -1,46 +1,43 @@
 
 
-# Fix: GC Material Budget and Estimate vs Orders Visibility
+# Fix: GC Material Budget Should Reflect Estimate Total (Not Manual Entry)
 
 ## Problem
-When GC is designated as material-responsible, they cannot see the "Estimates vs Orders" tile or financial health charts because:
-1. GC has no way to set a material budget (only TC gets an editable "Material Budget" card)
-2. Without a budget set (`material_estimate_total` is null) and no POs in ORDERED+ status, both `materialEstimate` and `materialOrdered` are 0
-3. The cards are gated by `(materialEstimate > 0 || materialOrdered > 0)`, so nothing renders
-4. The hook only tracks `isTCMaterialResponsible` -- there is no equivalent flag for GC
+The Material Budget card we just added for GC shows "Set budget" with a manual edit option. However, the system already auto-populates `material_estimate_total` from approved supplier estimates. The GC should not manually set this value — it should come from the estimate approval flow.
 
 ## Solution
 
-### 1. Add `isGCMaterialResponsible` flag to `useProjectFinancials`
-
-**File: `src/hooks/useProjectFinancials.ts`**
-
-- Add `isGCMaterialResponsible: boolean` to the `ProjectFinancials` interface
-- In the fetch logic (around line 162), add a parallel check for GC:
-  - When `detectedRole === 'General Contractor'`, look for a contract where `material_responsibility === 'GC'` and the user's org is a party
-  - Set the flag and load `material_estimate_total` if available
-- Return the new flag
-
-### 2. Add "Material Budget" editable card for GC in FinancialSignalBar
-
 **File: `src/components/project/FinancialSignalBar.tsx`**
 
-- Destructure `isGCMaterialResponsible` from financials
-- In the GC section (line 276+), add a "Material Budget" card when `isGCMaterialResponsible && !hideMaterialCards`:
-  - Shows the current budget or "Set budget" prompt
-  - Editable, triggers the same material budget edit overlay already built for TC
-- This mirrors the existing TC behavior (lines 232-241)
+Update the GC Material Budget card (lines 288-298) to be **read-only**:
 
-### 3. Ensure FinancialHealthCharts renders for GC with material data
+- Remove `editable: true` and `onEdit` handler
+- Change the label to "Material Budget (from Estimates)"
+- When no estimate is approved yet, show "$0" instead of "Set budget"
+- Add subtext "From approved estimates" to clarify the source
 
-**File: `src/components/project/FinancialHealthCharts.tsx`**
+```typescript
+// Before (manual entry)
+cards.push({
+  label: 'Material Budget',
+  value: materialEstimateTotal != null ? fmt(materialEstimateTotal) : 'Set budget',
+  editable: true,
+  onEdit: () => { ... },
+  subtext: materialEstimateTotal != null ? 'Est. supplier costs' : 'Click to set',
+});
 
-- The chart at line 25 already checks for `(viewerRole === 'Trade Contractor' || viewerRole === 'General Contractor')` -- this is correct
-- Once the GC can set a budget, `materialEstimate` will be > 0 and the chart will appear automatically
-- No changes needed here
+// After (read-only, from estimates)
+cards.push({
+  label: 'Material Budget',
+  value: fmt(materialEstimateTotal || 0),
+  icon: <Package className="h-3.5 w-3.5" />,
+  color: (materialEstimateTotal || 0) > 0 ? 'default' : 'amber',
+  subtext: 'From approved estimates',
+});
+```
 
-## Technical Details
+Also update the visibility condition for the "Supplier Est. vs Orders" card below it: currently gated by `materialEstimate > 0 || materialOrdered > 0`. Since GC's `materialEstimate` comes from `material_estimate_total`, once an estimate is approved the tile and charts will appear automatically. No change needed there.
 
-- The `upstreamContract` derived value in the hook (line 273) already finds the GC-TC primary contract, which is the same contract that holds `material_responsibility` and `material_estimate_total`
-- The `updateMaterialEstimate` function already works for any contract ID, so it can be reused for GC
-- The `materialEstimate` state setter at line 199 already has a fallback path -- the GC budget will be picked up via `materialContract` once `material_estimate_total` is set
+## No Other Changes Needed
+
+The estimate approval flow in `ProjectEstimatesReview.tsx` and `EstimateApprovals.tsx` already auto-syncs the total of all approved estimates into `material_estimate_total` on the contract. The hook (`useProjectFinancials`) already reads this value. The only change is making the GC card read-only.
