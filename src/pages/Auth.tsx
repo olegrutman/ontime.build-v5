@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -10,6 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { lovable } from '@/integrations/lovable/index';
 import { Separator } from '@/components/ui/separator';
+import { PendingApprovalStep } from '@/components/signup-wizard/PendingApprovalStep';
 
 const signInSchema = z.object({
   email: z.string().email('Please enter a valid email'),
@@ -18,11 +20,15 @@ const signInSchema = z.object({
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { signIn, user, userOrgRoles, loading: authLoading, needsOrgSetup } = useAuth();
+  const { signIn, signOut, user, userOrgRoles, loading: authLoading, needsOrgSetup } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [pendingOrg, setPendingOrg] = useState<string | null>(null);
+  const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [checkedPending, setCheckedPending] = useState(false);
 
   const [signInForm, setSignInForm] = useState({
     email: '',
@@ -56,23 +62,74 @@ export default function Auth() {
         description: error.message,
       });
     }
-    // Navigation is handled by useEffect once auth state updates
   };
 
-  // Redirect based on auth state
+  // Check for pending join requests and redirect
   useEffect(() => {
     if (authLoading) return;
 
     if (user) {
       if (userOrgRoles.length > 0) {
-        // User has org - go to dashboard
         navigate('/dashboard');
-      } else if (needsOrgSetup) {
-        // User exists but no org - redirect to landing page sign-up
-        navigate('/signup');
+        return;
+      }
+
+      if (needsOrgSetup && !checkedPending) {
+        // Check for pending join request before redirecting to signup
+        (async () => {
+          const { data: pending } = await supabase
+            .from('org_join_requests')
+            .select('id, organization:organizations(name)')
+            .eq('user_id', user.id)
+            .eq('status', 'pending')
+            .limit(1);
+
+          setCheckedPending(true);
+
+          if (pending && pending.length > 0) {
+            const orgName = (pending[0].organization as any)?.name || 'the organization';
+            setPendingOrg(orgName);
+            setPendingRequestId(pending[0].id);
+          } else {
+            navigate('/signup');
+          }
+        })();
       }
     }
-  }, [authLoading, user, userOrgRoles, needsOrgSetup, navigate]);
+  }, [authLoading, user, userOrgRoles, needsOrgSetup, navigate, checkedPending]);
+
+  const handleCancelRequest = async () => {
+    if (!pendingRequestId || !user) return;
+    setCancelLoading(true);
+    await supabase.from('org_join_requests').delete().eq('id', pendingRequestId);
+    setCancelLoading(false);
+    setPendingOrg(null);
+    setPendingRequestId(null);
+    navigate('/signup');
+  };
+
+  // Show pending approval state
+  if (pendingOrg) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <OntimeLogo className="w-12 h-12" />
+            <div>
+              <h1 className="font-bold text-2xl tracking-tight">OnTime.Build</h1>
+              <p className="text-xs text-muted-foreground uppercase tracking-widest">V1</p>
+            </div>
+          </div>
+          <PendingApprovalStep
+            orgName={pendingOrg}
+            onSignOut={signOut}
+            onCancel={handleCancelRequest}
+            cancelLoading={cancelLoading}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
