@@ -4476,6 +4476,10 @@ export type Database = {
         Returns: undefined
       }
       normalize_phone: { Args: { phone: string }; Returns: string }
+      org_shares_project_with_user: {
+        Args: { _org_id: string }
+        Returns: boolean
+      }
       reject_join_request: { Args: { _request_id: string }; Returns: undefined }
       reject_tm_period: {
         Args: { notes?: string; period_id: string }
