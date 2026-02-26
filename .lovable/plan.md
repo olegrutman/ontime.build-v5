@@ -1,23 +1,46 @@
 
 
-# Fix: Add BottomNav to Work Order Detail Page
+# Fix: GC Material Budget and Estimate vs Orders Visibility
 
 ## Problem
-When a mobile user opens a Work Order detail page, the sticky bottom navigation bar is missing entirely. The `WorkOrderTopBar` hides its tab strip on mobile (`hidden lg:block`), so users have no way to navigate back to the project overview or work orders list.
+When GC is designated as material-responsible, they cannot see the "Estimates vs Orders" tile or financial health charts because:
+1. GC has no way to set a material budget (only TC gets an editable "Material Budget" card)
+2. Without a budget set (`material_estimate_total` is null) and no POs in ORDERED+ status, both `materialEstimate` and `materialOrdered` are 0
+3. The cards are gated by `(materialEstimate > 0 || materialOrdered > 0)`, so nothing renders
+4. The hook only tracks `isTCMaterialResponsible` -- there is no equivalent flag for GC
 
-## Root Cause
-The `ChangeOrderDetailPage` component builds its own layout using `SidebarProvider` + `AppSidebar` + `SidebarInset`, but unlike `AppLayout` and `ProjectHome`, it never renders the `<BottomNav />` component.
+## Solution
 
-## Fix
+### 1. Add `isGCMaterialResponsible` flag to `useProjectFinancials`
 
-**File: `src/components/change-order-detail/ChangeOrderDetailPage.tsx`**
+**File: `src/hooks/useProjectFinancials.ts`**
 
-1. Import `BottomNav` from `@/components/layout/BottomNav`
-2. Add `<BottomNav />` inside each of the three layout branches (loading, error/not-found, and main content) -- right before the closing `</div>` of the `min-h-screen` wrapper
-3. Add `pb-20` to the main content area so nothing is hidden behind the nav bar on mobile
+- Add `isGCMaterialResponsible: boolean` to the `ProjectFinancials` interface
+- In the fetch logic (around line 162), add a parallel check for GC:
+  - When `detectedRole === 'General Contractor'`, look for a contract where `material_responsibility === 'GC'` and the user's org is a party
+  - Set the flag and load `material_estimate_total` if available
+- Return the new flag
 
-This is a small, self-contained change that mirrors what `AppLayout` and `ProjectHome` already do.
+### 2. Add "Material Budget" editable card for GC in FinancialSignalBar
+
+**File: `src/components/project/FinancialSignalBar.tsx`**
+
+- Destructure `isGCMaterialResponsible` from financials
+- In the GC section (line 276+), add a "Material Budget" card when `isGCMaterialResponsible && !hideMaterialCards`:
+  - Shows the current budget or "Set budget" prompt
+  - Editable, triggers the same material budget edit overlay already built for TC
+- This mirrors the existing TC behavior (lines 232-241)
+
+### 3. Ensure FinancialHealthCharts renders for GC with material data
+
+**File: `src/components/project/FinancialHealthCharts.tsx`**
+
+- The chart at line 25 already checks for `(viewerRole === 'Trade Contractor' || viewerRole === 'General Contractor')` -- this is correct
+- Once the GC can set a budget, `materialEstimate` will be > 0 and the chart will appear automatically
+- No changes needed here
 
 ## Technical Details
 
-There are three render paths in the component (loading skeleton at ~line 118, error/not-found at ~line 136, and main content at ~line 170). Each wraps content in `<SidebarProvider><div className="min-h-screen flex w-full">...</div></SidebarProvider>`. The `<BottomNav />` will be placed as a sibling of `<SidebarInset>` inside each wrapper, consistent with the pattern used in `AppLayout` and `ProjectHome`.
+- The `upstreamContract` derived value in the hook (line 273) already finds the GC-TC primary contract, which is the same contract that holds `material_responsibility` and `material_estimate_total`
+- The `updateMaterialEstimate` function already works for any contract ID, so it can be reused for GC
+- The `materialEstimate` state setter at line 199 already has a fallback path -- the GC budget will be picked up via `materialContract` once `material_estimate_total` is set
