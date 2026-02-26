@@ -159,12 +159,7 @@ export function AssignmentStep({
             ) : (
               assigneeOptions.map((member) => (
                 <SelectItem key={member.org_id} value={member.org_id}>
-                  <div className="flex flex-col">
-                    <span>{member.org_name}</span>
-                    {member.trade && (
-                      <span className="text-xs text-muted-foreground">{member.trade}</span>
-                    )}
-                  </div>
+                  {member.org_name}{member.trade ? ` (${member.trade})` : ''}
                 </SelectItem>
               ))
             )}
