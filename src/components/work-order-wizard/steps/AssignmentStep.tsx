@@ -46,15 +46,10 @@ export function AssignmentStep({
 
       setIsLoading(true);
       try {
+        // Fetch team rows
         const { data: teamData, error } = await supabase
           .from('project_team')
-          .select(`
-            id,
-            org_id,
-            role,
-            trade,
-            organization:organizations(id, name)
-          `)
+          .select('id, org_id, role, trade')
           .eq('project_id', projectId)
           .eq('status', 'Accepted');
 
@@ -63,15 +58,43 @@ export function AssignmentStep({
           return;
         }
 
-        const members: TeamMemberOption[] = (teamData || [])
-          .filter((row) => row.org_id && row.organization)
-          .map((row) => ({
-            id: row.id,
-            org_id: row.org_id!,
-            org_name: (row.organization as { id: string; name: string })?.name || 'Unknown',
-            role: row.role || '',
-            trade: row.trade,
-          }));
+        const rows = (teamData || []).filter((row) => row.org_id);
+        const orgIds = [...new Set(rows.map((r) => r.org_id!))];
+
+        // Fetch org names separately to avoid RLS join issues
+        let orgMap: Record<string, string> = {};
+        if (orgIds.length > 0) {
+          const { data: orgData } = await supabase
+            .from('project_team')
+            .select('org_id, organization:organizations(name)')
+            .eq('project_id', projectId)
+            .in('org_id', orgIds);
+
+          // Fallback: query organizations directly
+          const { data: orgsDirectly } = await supabase
+            .from('organizations')
+            .select('id, name')
+            .in('id', orgIds);
+
+          (orgsDirectly || []).forEach((o) => {
+            orgMap[o.id] = o.name;
+          });
+
+          // Also try from join data
+          (orgData || []).forEach((row) => {
+            if (row.org_id && (row.organization as any)?.name) {
+              orgMap[row.org_id] = (row.organization as any).name;
+            }
+          });
+        }
+
+        const members: TeamMemberOption[] = rows.map((row) => ({
+          id: row.id,
+          org_id: row.org_id!,
+          org_name: orgMap[row.org_id!] || 'Unknown',
+          role: row.role || '',
+          trade: row.trade,
+        }));
 
         setTeamMembers(members);
 
