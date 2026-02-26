@@ -40,6 +40,7 @@ export function ScopeStep({ projectType, scope, onChange }: ScopeStepProps) {
   const isMultiFamily = projectType === 'Apartments/Condos' || projectType === 'Hotels';
   const isTownhome = projectType === 'Townhomes';
   const isDuplex = projectType === 'Duplex';
+  const isResidentialUnit = isSingleFamily || isTownhome || isDuplex;
 
   if (!projectType) {
     return (
@@ -66,17 +67,17 @@ export function ScopeStep({ projectType, scope, onChange }: ScopeStepProps) {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label>Total Sq Ft</Label>
+              <Label>{isMultiFamily ? 'Total Project Sq Ft' : 'Living Area Sq Ft'}</Label>
               <Input
                 type="number"
                 min="0"
-                placeholder="e.g. 3200"
+                placeholder={isMultiFamily ? 'e.g. 120000' : 'e.g. 3200'}
                 value={scope.totalSqft || ''}
                 onChange={(e) => update({ totalSqft: parseInt(e.target.value) || undefined })}
               />
             </div>
             <div className="space-y-2">
-              <Label>Lot Size (acres)</Label>
+              <Label>{isMultiFamily ? 'Site Size (acres)' : 'Lot Size (acres)'}</Label>
               <Input
                 type="number"
                 min="0"
@@ -86,76 +87,83 @@ export function ScopeStep({ projectType, scope, onChange }: ScopeStepProps) {
                 onChange={(e) => update({ lotSizeAcres: parseFloat(e.target.value) || undefined })}
               />
             </div>
-            <div className="space-y-2">
-              <Label>Bedrooms</Label>
-              <Select
-                value={scope.bedrooms?.toString() || ''}
-                onValueChange={(v) => update({ bedrooms: parseInt(v) })}
-              >
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>
-                  {[1, 2, 3, 4, 5, 6].map(n => (
-                    <SelectItem key={n} value={n.toString()}>{n}{n === 6 ? '+' : ''}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Bathrooms</Label>
-              <Select
-                value={scope.bathrooms?.toString() || ''}
-                onValueChange={(v) => update({ bathrooms: parseFloat(v) })}
-              >
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>
-                  {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6].map(n => (
-                    <SelectItem key={n} value={n.toString()}>{n}{n === 6 ? '+' : ''}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Bedrooms/Bathrooms — residential unit types only */}
+            {isResidentialUnit && (
+              <>
+                <div className="space-y-2">
+                  <Label>{isTownhome || isDuplex ? 'Bedrooms per Unit' : 'Bedrooms'}</Label>
+                  <Select
+                    value={scope.bedrooms?.toString() || ''}
+                    onValueChange={(v) => update({ bedrooms: parseInt(v) })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4, 5, 6].map(n => (
+                        <SelectItem key={n} value={n.toString()}>{n}{n === 6 ? '+' : ''}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>{isTownhome || isDuplex ? 'Bathrooms per Unit' : 'Bathrooms'}</Label>
+                  <Select
+                    value={scope.bathrooms?.toString() || ''}
+                    onValueChange={(v) => update({ bathrooms: parseFloat(v) })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>
+                      {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 6].map(n => (
+                        <SelectItem key={n} value={n.toString()}>{n}{n === 6 ? '+' : ''}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Garage */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Garage</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Garage Type</Label>
-            <Select
-              value={scope.garageType || ''}
-              onValueChange={(v: 'Attached' | 'Detached' | 'None') => update({ garageType: v, garageCars: v === 'None' ? undefined : scope.garageCars })}
-            >
-              <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-              <SelectContent>
-                {GARAGE_TYPES.map(type => (
-                  <SelectItem key={type} value={type}>{type}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          {scope.garageType && scope.garageType !== 'None' && (
+      {/* Garage — residential unit types only */}
+      {isResidentialUnit && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Garage</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Number of Cars</Label>
+              <Label>Garage Type</Label>
               <Select
-                value={scope.garageCars?.toString() || ''}
-                onValueChange={(v) => update({ garageCars: parseInt(v) })}
+                value={scope.garageType || ''}
+                onValueChange={(v: 'Attached' | 'Detached' | 'None') => update({ garageType: v, garageCars: v === 'None' ? undefined : scope.garageCars })}
               >
                 <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
                 <SelectContent>
-                  {[1, 2, 3].map(n => (
-                    <SelectItem key={n} value={n.toString()}>{n}{n === 3 ? '+' : ''}</SelectItem>
+                  {GARAGE_TYPES.map(type => (
+                    <SelectItem key={type} value={type}>{type}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            {scope.garageType && scope.garageType !== 'None' && (
+              <div className="space-y-2">
+                <Label>Number of Cars</Label>
+                <Select
+                  value={scope.garageCars?.toString() || ''}
+                  onValueChange={(v) => update({ garageCars: parseInt(v) })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3].map(n => (
+                      <SelectItem key={n} value={n.toString()}>{n}{n === 3 ? '+' : ''}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Framing Method */}
       {(isSingleFamily || isTownhome || isDuplex) && (
