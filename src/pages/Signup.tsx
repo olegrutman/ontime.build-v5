@@ -12,6 +12,7 @@ import { RoleStep } from '@/components/signup-wizard/RoleStep';
 import { InviteDetectedStep } from '@/components/signup-wizard/InviteDetectedStep';
 import { ChoiceStep } from '@/components/signup-wizard/ChoiceStep';
 import { JoinSearchStep } from '@/components/signup-wizard/JoinSearchStep';
+import { PendingApprovalStep } from '@/components/signup-wizard/PendingApprovalStep';
 import type { SignupWizardData } from '@/components/signup-wizard/types';
 import { OrgType } from '@/types/organization';
 
@@ -28,13 +29,16 @@ const STEPS_JOIN = [
 
 export default function Signup() {
   const navigate = useNavigate();
-  const { user, userOrgRoles, loading: authLoading, refreshUserData } = useAuth();
+  const { user, userOrgRoles, loading: authLoading, refreshUserData, signOut } = useAuth();
   const { toast } = useToast();
   const [signupPath, setSignupPath] = useState<'new' | 'join' | null>(null);
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [inviteDetected, setInviteDetected] = useState(false);
   const [inviteOrgName, setInviteOrgName] = useState('');
+  const [pendingOrg, setPendingOrg] = useState<string | null>(null);
+  const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
+  const [cancelLoading, setCancelLoading] = useState(false);
 
   const [data, setData] = useState<SignupWizardData>({
     firstName: '',
@@ -62,57 +66,72 @@ export default function Signup() {
     }
   }, [authLoading, user, userOrgRoles, navigate]);
 
-  // Restore saved signup context after email verification
+  // Restore saved signup context OR detect pending join requests
   useEffect(() => {
     if (authLoading || !user || userOrgRoles.length > 0) return;
+
     const saved = localStorage.getItem('ontime_pending_signup');
-    if (!saved) return;
 
-    try {
-      const parsed = JSON.parse(saved);
-      const savedData = parsed.data as SignupWizardData;
-      const savedPath = parsed.signupPath as 'new' | 'join';
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const savedData = parsed.data as SignupWizardData;
+        const savedPath = parsed.signupPath as 'new' | 'join';
 
-      setData(prev => ({ ...prev, ...savedData }));
-      setSignupPath(savedPath);
+        setData(prev => ({ ...prev, ...savedData }));
+        setSignupPath(savedPath);
 
-      if (savedPath === 'join' && savedData.joinOrgId) {
-        // Auto-submit join request
-        setLoading(true);
-        (async () => {
-          await supabase.from('profiles').update({
-            first_name: savedData.firstName,
-            last_name: savedData.lastName,
-            phone: savedData.phone || null,
-            full_name: `${savedData.firstName} ${savedData.lastName}`.trim(),
-            job_title: savedData.jobTitle || null,
-          }).eq('user_id', user.id);
+        if (savedPath === 'join' && savedData.joinOrgId) {
+          // Auto-submit join request
+          setLoading(true);
+          (async () => {
+            await supabase.from('profiles').update({
+              first_name: savedData.firstName,
+              last_name: savedData.lastName,
+              phone: savedData.phone || null,
+              full_name: `${savedData.firstName} ${savedData.lastName}`.trim(),
+              job_title: savedData.jobTitle || null,
+            }).eq('user_id', user.id);
 
-          const { error: joinError } = await supabase.from('org_join_requests').insert({
-            organization_id: savedData.joinOrgId!,
-            user_id: user.id,
-            job_title: savedData.jobTitle || null,
-          });
-
-          localStorage.removeItem('ontime_pending_signup');
-          setLoading(false);
-
-          if (joinError) {
-            toast({ variant: 'destructive', title: 'Error', description: joinError.message });
-          } else {
-            toast({
-              title: 'Join request sent!',
-              description: `Your request to join ${savedData.joinOrgName} has been submitted. You'll be notified when approved.`,
+            const { error: joinError } = await supabase.from('org_join_requests').insert({
+              organization_id: savedData.joinOrgId!,
+              user_id: user.id,
+              job_title: savedData.jobTitle || null,
             });
-            navigate('/auth');
-          }
-        })();
-      } else if (savedPath === 'new') {
-        // Resume at company step
-        setStep(1);
+
+            localStorage.removeItem('ontime_pending_signup');
+            setLoading(false);
+
+            if (joinError) {
+              toast({ variant: 'destructive', title: 'Error', description: joinError.message });
+            } else {
+              // Show pending approval state instead of navigating away
+              setPendingOrg(savedData.joinOrgName || 'the organization');
+            }
+          })();
+        } else if (savedPath === 'new') {
+          // Resume at company step
+          setStep(1);
+        }
+      } catch {
+        localStorage.removeItem('ontime_pending_signup');
       }
-    } catch {
-      localStorage.removeItem('ontime_pending_signup');
+    } else {
+      // No saved data — check for existing pending join requests
+      (async () => {
+        const { data: pending } = await supabase
+          .from('org_join_requests')
+          .select('id, organization:organizations(name)')
+          .eq('user_id', user.id)
+          .eq('status', 'pending')
+          .limit(1);
+
+        if (pending && pending.length > 0) {
+          const orgName = (pending[0].organization as any)?.name || 'the organization';
+          setPendingOrg(orgName);
+          setPendingRequestId(pending[0].id);
+        }
+      })();
     }
   }, [authLoading, user, userOrgRoles]);
 
@@ -139,7 +158,7 @@ export default function Signup() {
       joinOrgId: org.org_id,
       joinOrgName: org.org_name,
     });
-    setStep(1); // Go to account creation
+    setStep(1);
   };
 
   const handleAccountNext = async () => {
@@ -186,7 +205,6 @@ export default function Signup() {
 
     // If join path, submit join request now
     if (signupPath === 'join' && data.joinOrgId) {
-      // Create profile first
       await supabase.from('profiles').update({
         first_name: data.firstName,
         last_name: data.lastName,
@@ -195,7 +213,6 @@ export default function Signup() {
         job_title: data.jobTitle || null,
       }).eq('user_id', session.user.id);
 
-      // Submit join request
       const { error: joinError } = await supabase.from('org_join_requests').insert({
         organization_id: data.joinOrgId,
         user_id: session.user.id,
@@ -207,11 +224,8 @@ export default function Signup() {
       if (joinError) {
         toast({ variant: 'destructive', title: 'Error', description: joinError.message });
       } else {
-        toast({
-          title: 'Join request sent!',
-          description: `Your request to join ${data.joinOrgName} has been submitted. You'll be notified when approved.`,
-        });
-        navigate('/auth');
+        // Show pending approval instead of navigating to /auth
+        setPendingOrg(data.joinOrgName || 'the organization');
       }
       return;
     }
@@ -298,6 +312,29 @@ export default function Signup() {
     });
     navigate('/dashboard');
   };
+
+  const handleCancelRequest = async () => {
+    if (!pendingRequestId || !user) return;
+    setCancelLoading(true);
+    await supabase.from('org_join_requests').delete().eq('id', pendingRequestId);
+    setCancelLoading(false);
+    setPendingOrg(null);
+    setPendingRequestId(null);
+  };
+
+  // Show pending approval state
+  if (pendingOrg) {
+    return (
+      <SignupShell steps={[]} step={-1} signupPath={null}>
+        <PendingApprovalStep
+          orgName={pendingOrg}
+          onSignOut={signOut}
+          onCancel={handleCancelRequest}
+          cancelLoading={cancelLoading}
+        />
+      </SignupShell>
+    );
+  }
 
   // Choice screen (before path is selected)
   if (!signupPath) {
