@@ -126,13 +126,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (_) {
+      // Force-clear even if server rejects
+    }
     setUser(null);
     setSession(null);
     setProfile(null);
     setUserOrgRoles([]);
     setMemberPermissions(null);
-    // Redirect to landing page
     window.location.href = '/';
   };
 
