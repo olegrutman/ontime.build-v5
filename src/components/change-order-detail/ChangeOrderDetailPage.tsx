@@ -414,7 +414,7 @@ export function ChangeOrderDetailPage() {
                   {(changeOrder as any).pricing_mode !== 'tm' && isGC && (tcLabor.length > 0 || (changeOrder.labor_total ?? 0) > 0) && (
                     <GCLaborReviewPanel
                       tcLabor={tcLabor}
-                      tcCompanyName={participants.find(p => p.role === 'TC' && p.is_active)?.organization?.name}
+                      tcCompanyName={participants.find(p => (p.role === 'TC' || p.organization?.type === 'TC') && p.is_active)?.organization?.name}
                       laborTotal={changeOrder.labor_total ?? 0}
                     />
                   )}
