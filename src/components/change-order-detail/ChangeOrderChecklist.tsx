@@ -9,6 +9,7 @@ interface ChangeOrderChecklistProps {
   requiresEquipment: boolean;
   hasFCParticipant: boolean;
   materialsPricingLocked?: boolean;
+  linkedPOIsPriced?: boolean;
 }
 
 export function ChangeOrderChecklist({
@@ -17,9 +18,10 @@ export function ChangeOrderChecklist({
   requiresEquipment,
   hasFCParticipant,
   materialsPricingLocked,
+  linkedPOIsPriced,
 }: ChangeOrderChecklistProps) {
-  // Derive materials_priced from the locked flag as source of truth
-  const effectiveMaterialsPriced = materialsPricingLocked || (checklist?.materials_priced ?? false);
+  // Derive materials_priced from the locked flag, linked PO status, or checklist value
+  const effectiveMaterialsPriced = materialsPricingLocked || linkedPOIsPriced || (checklist?.materials_priced ?? false);
   const items = [
     { key: 'location_complete', label: 'Location complete', required: true },
     { key: 'scope_complete', label: 'Scope complete', required: true },
@@ -30,7 +32,9 @@ export function ChangeOrderChecklist({
   ].filter((item) => item.required);
 
   const completedCount = items.filter(
-    (item) => checklist && checklist[item.key as keyof ChecklistType]
+    (item) => item.key === 'materials_priced'
+      ? effectiveMaterialsPriced
+      : (checklist && checklist[item.key as keyof ChecklistType])
   ).length;
 
   const allComplete = completedCount === items.length;
