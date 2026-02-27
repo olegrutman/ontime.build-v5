@@ -3,11 +3,11 @@ import { useChangeOrder, useChangeOrderProject } from '@/hooks/useChangeOrderPro
 import { useAuth } from '@/hooks/useAuth';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, MapPin, Hammer, Calendar, Building2, Pencil, Check, X } from 'lucide-react';
+import { AlertTriangle, MapPin, Hammer, Calendar, Building2, Pencil, Check, X, ChevronDown, Package, Truck } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -16,6 +16,8 @@ import { LocationData, WORK_TYPE_LABELS } from '@/types/changeOrderProject';
 import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { useChangeOrderRealtime } from '@/hooks/useChangeOrderRealtime';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
 
 import { WorkOrderTopBar } from './WorkOrderTopBar';
 import { WorkOrderProgressBar } from './WorkOrderProgressBar';
@@ -32,6 +34,101 @@ import { MaterialResourceToggle } from './MaterialResourceToggle';
 import { WorkOrderMaterialsPanel } from './WorkOrderMaterialsPanel';
 import { ChangeOrderChecklist } from './ChangeOrderChecklist';
 import { TMTimeCardsPanel } from './TMTimeCardsPanel';
+
+/** Collapsible scope description: shows first 3 lines collapsed */
+function CollapsibleScope({ description }: { description: string | null }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!description) {
+    return (
+      <div className="p-3 bg-muted/30 rounded-lg min-h-[60px]">
+        <p className="text-sm text-muted-foreground italic">No description provided.</p>
+      </div>
+    );
+  }
+  const lines = description.split('\n');
+  const needsCollapse = lines.length > 3;
+  const preview = lines.slice(0, 3).join('\n');
+
+  return (
+    <div className="p-3 bg-muted/30 rounded-lg min-h-[60px]">
+      <p className="text-sm whitespace-pre-wrap">{expanded || !needsCollapse ? description : preview + '…'}</p>
+      {needsCollapse && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="text-xs text-primary mt-1 hover:underline"
+        >
+          {expanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Collapsible wrapper for GC materials view */
+function CollapsibleMaterialsWrapper({ children, materialTotal }: { children: React.ReactNode; materialTotal: number }) {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="pb-3 cursor-pointer hover:bg-muted/30 transition-colors">
+            <CardTitle className="text-base flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Package className="w-4 h-4" />
+                Materials
+              </div>
+              <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', isOpen && 'rotate-180')} />
+            </CardTitle>
+            {!isOpen && (
+              <div className="flex justify-between mt-2 text-sm">
+                <span className="text-muted-foreground">Materials Total</span>
+                <span className="font-semibold">${materialTotal.toFixed(2)}</span>
+              </div>
+            )}
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="pt-0">
+            {children}
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
+  );
+}
+
+/** Collapsible wrapper for GC equipment view */
+function CollapsibleEquipmentWrapper({ children, equipmentTotal, responsibility }: { children: React.ReactNode; equipmentTotal: number; responsibility: string }) {
+  const [isOpen, setIsOpen] = useState(false);
+  return (
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="pb-3 cursor-pointer hover:bg-muted/30 transition-colors">
+            <CardTitle className="text-base flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Truck className="w-4 h-4" />
+                Equipment
+              </div>
+              <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', isOpen && 'rotate-180')} />
+            </CardTitle>
+            {!isOpen && (
+              <div className="flex items-center justify-between mt-2 text-sm">
+                <span className="text-muted-foreground">Responsible: {responsibility}</span>
+                <span className="font-semibold">${equipmentTotal.toFixed(2)}</span>
+              </div>
+            )}
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="pt-0">
+            {children}
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
+  );
+}
 
 function formatLocation(location: LocationData): string {
   const parts: string[] = [];
@@ -228,7 +325,7 @@ export function ChangeOrderDetailPage() {
                         </div>
                       </div>
 
-                      {/* Scope / Description */}
+                      {/* Scope / Description - collapsible for GC */}
                       <div className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-muted-foreground">Description</span>
@@ -274,6 +371,8 @@ export function ChangeOrderDetailPage() {
                               </Button>
                             </div>
                           </div>
+                        ) : isGC && !isEditingDescription ? (
+                          <CollapsibleScope description={changeOrder.description} />
                         ) : (
                           <div className="p-3 bg-muted/30 rounded-lg min-h-[60px]">
                             {changeOrder.description ? (
@@ -346,13 +445,16 @@ export function ChangeOrderDetailPage() {
                     />
                   )}
 
-                  {/* GC Labor Review (fixed price only) */}
+                  {/* GC Labor Review (fixed price only) - collapsible */}
                   {(changeOrder as any).pricing_mode !== 'tm' && isGC && tcLabor.length > 0 && (
-                    <GCLaborReviewPanel tcLabor={tcLabor} />
+                    <GCLaborReviewPanel
+                      tcLabor={tcLabor}
+                      tcCompanyName={participants.find(p => p.role === 'TC' && p.is_active)?.organization?.name}
+                    />
                   )}
 
-                  {/* Materials from linked PO */}
-                  {changeOrder.requires_materials && linkedPO && linkedPO.items && linkedPO.items.length > 0 && (isTC || isGC || isFC) && (
+                  {/* Materials from linked PO - collapsible for GC */}
+                  {changeOrder.requires_materials && linkedPO && linkedPO.items && linkedPO.items.length > 0 && (isTC || isFC) && (
                     <WorkOrderMaterialsPanel
                       linkedPO={linkedPO}
                       materialMarkupType={changeOrder.material_markup_type as 'percent' | 'lump_sum' | null}
@@ -367,87 +469,138 @@ export function ChangeOrderDetailPage() {
                       isLocking={isLockingMaterialsPricing}
                     />
                   )}
+                  {changeOrder.requires_materials && linkedPO && linkedPO.items && linkedPO.items.length > 0 && isGC && (
+                    <CollapsibleMaterialsWrapper materialTotal={changeOrder.material_total ?? 0}>
+                      <WorkOrderMaterialsPanel
+                        linkedPO={linkedPO}
+                        materialMarkupType={changeOrder.material_markup_type as 'percent' | 'lump_sum' | null}
+                        materialMarkupPercent={changeOrder.material_markup_percent ?? 0}
+                        materialMarkupAmount={changeOrder.material_markup_amount ?? 0}
+                        onUpdateMarkup={updateMarkup}
+                        onLockPricing={lockMaterialsPricing}
+                        isLocked={changeOrder.materials_pricing_locked}
+                        canViewPricing={changeOrder.material_cost_responsibility === 'GC'}
+                        canViewMarkedUpTotal={true}
+                        isEditable={false}
+                        isLocking={isLockingMaterialsPricing}
+                      />
+                    </CollapsibleMaterialsWrapper>
+                  )}
 
-                  {/* Equipment */}
-                  {changeOrder.requires_equipment && (isTC || isGC) && (
+                  {/* Equipment - collapsible for GC */}
+                  {changeOrder.requires_equipment && isTC && (
                     <EquipmentPanel
                       equipment={equipment}
                       isEditable={isEditable && isTC}
-                      canViewCosts={isTC || isGC}
+                      canViewCosts={true}
                       onAddEquipment={addEquipment}
                     />
+                  )}
+                  {changeOrder.requires_equipment && isGC && (
+                    <CollapsibleEquipmentWrapper
+                      equipmentTotal={changeOrder.equipment_total ?? 0}
+                      responsibility={changeOrder.equipment_cost_responsibility || 'TBD'}
+                    >
+                      <EquipmentPanel
+                        equipment={equipment}
+                        isEditable={false}
+                        canViewCosts={true}
+                        onAddEquipment={addEquipment}
+                      />
+                    </CollapsibleEquipmentWrapper>
                   )}
                 </div>
 
                 {/* ===== Zone B: Sidebar ===== */}
                 <div className="space-y-6 min-w-0">
-                  {/* 1. Pricing Card (top of sidebar) */}
-                  <ContractedPricingCard
-                    changeOrder={changeOrder}
-                    fcHours={fcHours}
-                    tcLabor={tcLabor}
-                    materials={materials}
-                    equipment={equipment}
-                    participants={participants}
-                    currentRole={currentRole}
-                    linkedPO={linkedPO}
-                  />
-
-                  {/* 2. GC Approval Panel */}
+                  {/* GC sidebar: Checklist first, then Pricing, then Approval */}
                   {isGC && (
-                    <ApprovalPanel
-                      changeOrder={changeOrder}
-                      checklist={checklist}
-                      isGC={isGC}
-                      hasFCParticipant={hasFCParticipant}
-                      onUpdateStatus={updateStatus}
-                      isUpdating={isUpdating}
-                      linkedPOIsPriced={linkedPOIsPriced}
-                    />
+                    <>
+                      <ChangeOrderChecklist
+                        checklist={checklist}
+                        requiresMaterials={changeOrder.requires_materials}
+                        requiresEquipment={changeOrder.requires_equipment}
+                        hasFCParticipant={hasFCParticipant}
+                        materialsPricingLocked={changeOrder.materials_pricing_locked}
+                        linkedPOIsPriced={linkedPOIsPriced}
+                      />
+                      <ContractedPricingCard
+                        changeOrder={changeOrder}
+                        fcHours={fcHours}
+                        tcLabor={tcLabor}
+                        materials={materials}
+                        equipment={equipment}
+                        participants={participants}
+                        currentRole={currentRole}
+                        linkedPO={linkedPO}
+                      />
+                      <ApprovalPanel
+                        changeOrder={changeOrder}
+                        checklist={checklist}
+                        isGC={isGC}
+                        hasFCParticipant={hasFCParticipant}
+                        onUpdateStatus={updateStatus}
+                        isUpdating={isUpdating}
+                        linkedPOIsPriced={linkedPOIsPriced}
+                      />
+                    </>
                   )}
 
-                  {/* 3. TC Pricing Summary */}
-                  {isTC && (
-                    <TCPricingSummary
-                      tcLabor={tcLabor}
-                      materials={materials}
-                      equipment={equipment}
-                      requiresMaterials={changeOrder.requires_materials}
-                      requiresEquipment={changeOrder.requires_equipment}
-                      linkedPO={linkedPO}
-                      materialMarkupType={changeOrder.material_markup_type as 'percent' | 'lump_sum' | null}
-                      materialMarkupPercent={changeOrder.material_markup_percent ?? 0}
-                      materialMarkupAmount={changeOrder.material_markup_amount ?? 0}
-                      onSubmitPricing={() => updateStatus({
-                        id: changeOrder.id,
-                        status: 'ready_for_approval'
-                      })}
-                      isSubmitting={isUpdating}
-                      isEditable={isTCEditable}
-                    />
+                  {/* Non-GC sidebar: original order */}
+                  {!isGC && (
+                    <>
+                      <ContractedPricingCard
+                        changeOrder={changeOrder}
+                        fcHours={fcHours}
+                        tcLabor={tcLabor}
+                        materials={materials}
+                        equipment={equipment}
+                        participants={participants}
+                        currentRole={currentRole}
+                        linkedPO={linkedPO}
+                      />
+
+                      {isTC && (
+                        <TCPricingSummary
+                          tcLabor={tcLabor}
+                          materials={materials}
+                          equipment={equipment}
+                          requiresMaterials={changeOrder.requires_materials}
+                          requiresEquipment={changeOrder.requires_equipment}
+                          linkedPO={linkedPO}
+                          materialMarkupType={changeOrder.material_markup_type as 'percent' | 'lump_sum' | null}
+                          materialMarkupPercent={changeOrder.material_markup_percent ?? 0}
+                          materialMarkupAmount={changeOrder.material_markup_amount ?? 0}
+                          onSubmitPricing={() => updateStatus({
+                            id: changeOrder.id,
+                            status: 'ready_for_approval'
+                          })}
+                          isSubmitting={isUpdating}
+                          isEditable={isTCEditable}
+                        />
+                      )}
+
+                      {isTC && changeOrder.created_by_role === 'FC_PM' && (
+                        <TCApprovalPanel
+                          changeOrder={changeOrder}
+                          fcHours={fcHours}
+                          onUpdateStatus={updateStatus}
+                          isUpdating={isUpdating}
+                        />
+                      )}
+
+                      <ChangeOrderChecklist
+                        checklist={checklist}
+                        requiresMaterials={changeOrder.requires_materials}
+                        requiresEquipment={changeOrder.requires_equipment}
+                        hasFCParticipant={hasFCParticipant}
+                        materialsPricingLocked={changeOrder.materials_pricing_locked}
+                        linkedPOIsPriced={linkedPOIsPriced}
+                      />
+                    </>
                   )}
 
-                  {/* 4. TC Approval Panel (for FC-submitted) */}
-                  {isTC && changeOrder.created_by_role === 'FC_PM' && (
-                    <TCApprovalPanel
-                      changeOrder={changeOrder}
-                      fcHours={fcHours}
-                      onUpdateStatus={updateStatus}
-                      isUpdating={isUpdating}
-                    />
-                  )}
-
-                  {/* 5. Checklist */}
-                  <ChangeOrderChecklist
-                    checklist={checklist}
-                    requiresMaterials={changeOrder.requires_materials}
-                    requiresEquipment={changeOrder.requires_equipment}
-                    hasFCParticipant={hasFCParticipant}
-                    materialsPricingLocked={changeOrder.materials_pricing_locked}
-                    linkedPOIsPriced={linkedPOIsPriced}
-                  />
-
-                  {/* 6. Participants */}
+                  {/* Participants - TC only */}
                   {isTC && (
                     <ParticipantActivationPanel
                       changeOrderId={changeOrder.id}
@@ -462,7 +615,7 @@ export function ChangeOrderDetailPage() {
                     />
                   )}
 
-                  {/* 7. Resource Toggles */}
+                  {/* Resource Toggles */}
                   {(isTC || isFC) && isTCEditable && (
                     <MaterialResourceToggle
                       changeOrder={changeOrder}

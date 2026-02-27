@@ -98,6 +98,14 @@ function GCPricingView({
       <div className="bg-muted/50 p-3 rounded-md">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Total Work Order Cost</p>
         <p className="text-xl font-semibold">{formatCurrency(totalCost)}</p>
+        <div className="mt-2 space-y-1">
+          <p className="text-xs text-muted-foreground">
+            Contract Impact: <span className="text-foreground font-medium">+{formatCurrency(totalCost)}</span>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Schedule Impact: <span className="text-foreground font-medium">Not specified</span>
+          </p>
+        </div>
       </div>
 
       {/* TC Contract Tile */}

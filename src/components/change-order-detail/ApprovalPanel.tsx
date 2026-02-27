@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import { Check, X, AlertTriangle, DollarSign, FileCheck } from 'lucide-react';
+import { Check, X, AlertTriangle, FileCheck } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -82,11 +82,7 @@ export function ApprovalPanel({
     changeOrder.status !== 'contracted' && 
     changeOrder.status !== 'approved';
 
-  // Pricing summary for GC - always show when any pricing exists (draft or submitted)
-  const hasPricing = (changeOrder.labor_total ?? 0) > 0 || 
-                     (changeOrder.material_total ?? 0) > 0 || 
-                     (changeOrder.equipment_total ?? 0) > 0;
-  const showPricingSummary = isGC && hasPricing;
+
 
   return (
     <>
@@ -109,41 +105,34 @@ export function ApprovalPanel({
             </div>
           )}
 
-          {/* Pricing Summary for GC - show immediately when TC saves */}
-          {isGC && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <DollarSign className="w-4 h-4" />
-                Trade Contractor Pricing {!showPricingSummary && '(Draft)'}
+          {/* Approval Summary - always show above buttons */}
+          {canFinalize && (
+            <div className="space-y-2 text-sm">
+              <div className="font-medium text-muted-foreground">Approval Summary</div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Contract Change</span>
+                <span>+${((changeOrder.labor_total ?? 0) + (changeOrder.material_total ?? 0) + (changeOrder.equipment_total ?? 0)).toFixed(2)}</span>
               </div>
-
-              {showPricingSummary ? (
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Labor Total</span>
-                    <span>${changeOrder.labor_total?.toFixed(2) || '0.00'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Material Total</span>
-                    <span>${changeOrder.material_total?.toFixed(2) || '0.00'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Equipment Total</span>
-                    <span>${changeOrder.equipment_total?.toFixed(2) || '0.00'}</span>
-                  </div>
-                  <Separator />
-                  <div className="flex justify-between font-medium text-base">
-                    <span>Final Price</span>
-                    <span className="text-lg">${changeOrder.final_price?.toFixed(2) || '0.00'}</span>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground italic">
-                  Trade Contractor has not entered pricing yet.
-                </p>
-              )}
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Labor</span>
+                <span>${(changeOrder.labor_total ?? 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Materials</span>
+                <span>${(changeOrder.material_total ?? 0).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Equipment</span>
+                <span>${(changeOrder.equipment_total ?? 0).toFixed(2)}</span>
+              </div>
+              <Separator />
+              <div className="flex justify-between font-medium">
+                <span>Total</span>
+                <span>${((changeOrder.labor_total ?? 0) + (changeOrder.material_total ?? 0) + (changeOrder.equipment_total ?? 0)).toFixed(2)}</span>
+              </div>
             </div>
           )}
+
 
           {/* Status messages */}
           {changeOrder.status === 'contracted' && (
