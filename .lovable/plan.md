@@ -1,51 +1,82 @@
 
 
-# Fix: Materials Priced Not Showing on Ready Card
+# Restructure GC Work Order Pricing View
 
 ## Problem
-Work Order "RFI 87" has a linked PO with status `ORDERED` (materials are priced), but the "Ready for Approval" checklist shows "Materials priced" as incomplete. Two root causes:
+The current GC pricing view is a flat list (TC Labor, Materials, Equipment, Total) that doesn't account for cost responsibility. When the GC is responsible for materials or equipment, those costs should be shown separately from the TC contract cost. The GC also can't see TC's hours and hourly rate in the pricing card.
 
-1. **Database**: The sync trigger was created after the PO was already ORDERED, so `materials_priced` is still `false` in the checklist table. Need to backfill.
-2. **UI Logic**: The checklist component only considers `materialsPricingLocked` and `checklist.materials_priced` -- it does not check if the linked PO is already in a priced state (PRICED, ORDERED, etc.). Additionally, the `completedCount` counter doesn't use `effectiveMaterialsPriced`, so even when the individual item shows green, the count is wrong.
-3. **ApprovalPanel**: Same issue -- `isChecklistComplete` reads `checklist.materials_priced` directly without considering PO status.
+## Solution
 
-## Fix
+Restructure the GC view in `ContractedPricingCard.tsx` into a clear layout:
 
-### 1. Database: Backfill existing data
-Run a one-time migration to set `materials_priced = true` for any work order whose linked PO is already in a priced state:
+### Top Section: Total Contracted Price
+Sum of all costs the GC pays for this work order (TC labor + materials + equipment regardless of who is responsible).
 
-```sql
-UPDATE change_order_checklist cl
-SET materials_priced = true, updated_at = now()
-FROM change_order_projects co
-JOIN purchase_orders po ON po.id = co.linked_po_id
-WHERE cl.change_order_id = co.id
-  AND po.status IN ('PRICED','ORDERED','FINALIZED','READY_FOR_DELIVERY','DELIVERED')
-  AND cl.materials_priced = false;
+### Below: Three separate tiles/sections based on cost responsibility
+
+1. **TC Contract** tile
+   - TC labor line items showing hours, hourly rate, and total (or lump sum)
+   - If TC is responsible for equipment, include equipment total here too
+   - Shows the TC company name
+
+2. **Materials** tile (if materials required)
+   - Shows material cost from linked PO or manual materials
+   - Label indicates responsibility (GC or TC)
+
+3. **Equipment** tile (only if GC is responsible for equipment)
+   - Equipment costs shown separately when GC pays directly
+   - If TC is responsible, equipment is already included in the TC Contract tile
+
+## Technical Changes
+
+### File: `src/components/change-order-detail/ContractedPricingCard.tsx`
+
+**Update `GCPricingView` props** to include:
+- `tcLabor: ChangeOrderTCLabor[]` -- to display individual TC labor entries with hours/rates
+- `materialCostResponsibility: 'GC' | 'TC' | null`
+- `equipmentCostResponsibility: 'GC' | 'TC' | null`
+- `requiresMaterials: boolean`
+- `requiresEquipment: boolean`
+
+**Rewrite `GCPricingView` component** to render:
+
+```text
++-------------------------------+
+| TOTAL WORK ORDER COST         |
+| $X,XXX.XX                     |
++-------------------------------+
+
++-------------------------------+
+| TC Contract                   |
+| Labor Entry 1: 8hrs @ $65/hr  |
+|                      $520.00  |
+| Labor Entry 2: Lump Sum       |
+|                      $300.00  |
+| Equipment (TC resp.)  $200.00 |  <-- only if TC responsible
+|                               |
+| Subtotal             $1,020   |
+| Paid to: CompanyName          |
++-------------------------------+
+
++-------------------------------+
+| Materials (GC Responsible)    |
+| PO subtotal + markup  $500   |
++-------------------------------+
+
++-------------------------------+      <-- only if GC responsible
+| Equipment (GC Responsible)    |
+| Total                 $200    |
++-------------------------------+
 ```
 
-### 2. UI: Pass linked PO status to checklist component
-In `ChangeOrderDetailPage.tsx`, compute whether materials are effectively priced based on PO status and pass it down:
+**Update the parent call** in `ContractedPricingCard` to pass the new props from `changeOrder` (cost responsibility fields, requires flags) and `tcLabor` array to `GCPricingView`.
 
-- Add a prop `linkedPOIsPriced` to `ChangeOrderChecklist`
-- Compute it in the detail page from the linked PO data already available
-- Update `effectiveMaterialsPriced` to: `materialsPricingLocked || linkedPOIsPriced || checklist.materials_priced`
+### File: `src/components/change-order-detail/ChangeOrderDetailPage.tsx`
+No changes needed -- `tcLabor` is already passed as a prop to `ContractedPricingCard`.
 
-### 3. Fix completedCount in ChangeOrderChecklist
-Update the `completedCount` calculation to use `effectiveMaterialsPriced` for the `materials_priced` key instead of reading raw checklist data.
-
-### 4. Fix ApprovalPanel isChecklistComplete
-Pass the same `linkedPOIsPriced` prop and use it in the materials check:
-```
-const materialsComplete = !changeOrder.requires_materials || linkedPOIsPriced || (checklist.materials_priced ?? false);
-```
-
-## Files Changed
+## Summary
 
 | File | Change |
 |------|--------|
-| SQL migration | Backfill `materials_priced` for existing work orders |
-| `ChangeOrderDetailPage.tsx` | Compute `linkedPOIsPriced` and pass to checklist + approval |
-| `ChangeOrderChecklist.tsx` | Add `linkedPOIsPriced` prop, fix `completedCount` |
-| `ApprovalPanel.tsx` | Add `linkedPOIsPriced` prop, fix `isChecklistComplete` |
+| `ContractedPricingCard.tsx` | Restructure GC view into Total + TC Contract tile (with hours/rates) + Materials tile + Equipment tile, split by cost responsibility |
 
