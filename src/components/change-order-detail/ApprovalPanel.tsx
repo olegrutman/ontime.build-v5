@@ -24,6 +24,7 @@ interface ApprovalPanelProps {
   hasFCParticipant: boolean;
   onUpdateStatus: (data: { id: string; status: ChangeOrderStatus; rejection_notes?: string }) => void;
   isUpdating?: boolean;
+  linkedPOIsPriced?: boolean;
 }
 
 export function ApprovalPanel({
@@ -33,6 +34,7 @@ export function ApprovalPanel({
   hasFCParticipant,
   onUpdateStatus,
   isUpdating,
+  linkedPOIsPriced,
 }: ApprovalPanelProps) {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectionNotes, setRejectionNotes] = useState('');
@@ -49,7 +51,7 @@ export function ApprovalPanel({
     
     // Conditional items
     const fcHoursComplete = !hasFCParticipant || (checklist.fc_hours_locked ?? false);
-    const materialsComplete = !changeOrder.requires_materials || (checklist.materials_priced ?? false);
+    const materialsComplete = !changeOrder.requires_materials || linkedPOIsPriced || (checklist.materials_priced ?? false);
     const equipmentComplete = !changeOrder.requires_equipment || (checklist.equipment_priced ?? false);
     
     return locationComplete && scopeComplete && tcPricingComplete && 
