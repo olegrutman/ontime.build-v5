@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
-import { HardHat, Clock, DollarSign, ChevronDown } from 'lucide-react';
+import { HardHat, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { ChangeOrderTCLabor } from '@/types/changeOrderProject';
@@ -61,38 +61,38 @@ export function GCLaborReviewPanel({ tcLabor, tcCompanyName, laborTotal }: GCLab
         </CollapsibleTrigger>
         <CollapsibleContent>
           <CardContent className="space-y-4 pt-0">
-            <Table>
-              <TableBody>
-                {tcLabor.map((entry) => (
-                  <TableRow key={entry.id}>
-                    <TableCell className="py-3">
-                      <div className="flex items-start gap-3">
-                        {entry.pricing_type === 'hourly' ? (
-                          <Clock className="h-4 w-4 mt-0.5 text-blue-500 shrink-0" />
-                        ) : (
-                          <DollarSign className="h-4 w-4 mt-0.5 text-green-500 shrink-0" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm">
-                            {entry.description || (entry.pricing_type === 'hourly' ? 'Labor Hours' : 'Labor')}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {entry.pricing_type === 'hourly' ? (
-                              <>{entry.hours} hours @ ${entry.hourly_rate?.toFixed(2)}/hr</>
-                            ) : (
-                              <>Lump Sum</>
-                            )}
-                          </p>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right py-3 font-medium">
-                      ${entry.labor_total?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </TableCell>
+            {tcLabor.length > 0 ? (
+              <Table>
+                <TableBody>
+                  <TableRow className="border-b">
+                    <TableCell className="py-2 text-xs font-medium text-muted-foreground">Description</TableCell>
+                    <TableCell className="py-2 text-xs font-medium text-muted-foreground text-right">Hours</TableCell>
+                    <TableCell className="py-2 text-xs font-medium text-muted-foreground text-right">Rate</TableCell>
+                    <TableCell className="py-2 text-xs font-medium text-muted-foreground text-right">Total</TableCell>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                  {tcLabor.map((entry) => (
+                    <TableRow key={entry.id}>
+                      <TableCell className="py-3">
+                        <p className="font-medium text-sm">
+                          {entry.description || (entry.pricing_type === 'hourly' ? 'Labor Hours' : 'Labor')}
+                        </p>
+                      </TableCell>
+                      <TableCell className="text-right py-3 text-sm">
+                        {entry.pricing_type === 'hourly' ? entry.hours : '—'}
+                      </TableCell>
+                      <TableCell className="text-right py-3 text-sm">
+                        {entry.pricing_type === 'hourly' ? `$${entry.hourly_rate?.toFixed(2)}/hr` : 'Lump Sum'}
+                      </TableCell>
+                      <TableCell className="text-right py-3 font-medium text-sm">
+                        ${entry.labor_total?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-sm text-muted-foreground">Line-item detail not available.</p>
+            )}
 
             <Separator />
 

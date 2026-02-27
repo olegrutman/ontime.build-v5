@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
 import { Check, X, AlertTriangle, FileCheck } from 'lucide-react';
 import {
   AlertDialog,
@@ -107,36 +106,16 @@ export function ApprovalPanel({
             </div>
           )}
 
-          {/* Approval Summary - always show above buttons */}
-          {canFinalize && (() => {
+          {/* Total Work Order Cost - always visible */}
+          {(() => {
             const matTotal = computedMaterialTotal ?? (changeOrder.material_total ?? 0);
             const laborVal = changeOrder.labor_total ?? 0;
             const equipVal = changeOrder.equipment_total ?? 0;
             const total = laborVal + matTotal + equipVal;
             return (
-              <div className="space-y-2 text-sm">
-                <div className="font-medium text-muted-foreground">Approval Summary</div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Contract Change</span>
-                  <span>+${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Labor</span>
-                  <span>${laborVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Materials</span>
-                  <span>${matTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Equipment</span>
-                  <span>${equipVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between font-medium">
-                  <span>Total</span>
-                  <span>${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </div>
+              <div className="flex justify-between items-center p-3 bg-muted/40 rounded-lg">
+                <span className="font-medium">Total Work Order Cost</span>
+                <span className="text-lg font-semibold">${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
             );
           })()}
