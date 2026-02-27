@@ -1,68 +1,79 @@
 
 
-# Fix All Three Issues: TC Labor Visibility, Materials Total Mismatch, forwardRef Warnings
+# Clean Up Work Order GC View: Supplier Name, Labor Detail, Remove Redundancy
 
-## Issue 1: TC Labor Tile Not Rendering
+## Summary
+Three changes: (1) show supplier name on the materials card, (2) show hours/rate detail when the labor card is expanded, and (3) remove redundant pricing info from the sidebar -- the sidebar pricing card duplicates what the main content tiles already show.
 
-**Root cause**: The condition `tcLabor.length > 0` prevents the tile from showing when the `tcLabor` array is empty but `changeOrder.labor_total` is populated (e.g., aggregate was set by a DB trigger but individual entries weren't fetched or exist in a different form).
+## Changes
 
-**Fix in `ChangeOrderDetailPage.tsx` (line 406)**:
-Change condition from:
-```tsx
-(changeOrder as any).pricing_mode !== 'tm' && isGC && tcLabor.length > 0
-```
-To:
-```tsx
-(changeOrder as any).pricing_mode !== 'tm' && isGC && (tcLabor.length > 0 || (changeOrder.labor_total ?? 0) > 0)
-```
+### 1. Materials Card: Show Supplier Name
+**File: `src/components/change-order-detail/ChangeOrderDetailPage.tsx`**
 
-**Fix in `GCLaborReviewPanel.tsx`**: Update the empty-state branch (lines 20-33) to show the stored `labor_total` when `tcLabor` array is empty but a total exists. Add a new `laborTotal` prop so it can display the aggregate value even without line items.
+In `CollapsibleMaterialsWrapper`, add an optional `supplierName` prop and display it in the collapsed summary (e.g., "Supplier: ABC Building Supply") and as a subtitle when expanded.
 
-## Issue 2: Materials Total Mismatch
+The supplier name comes from the participants array: `participants.find(p => p.role === 'SUPPLIER' && p.is_active)?.organization?.name`. Pass this value when rendering the wrapper at line 474.
 
-**Root cause**: `ApprovalPanel` and `CollapsibleMaterialsWrapper` use `changeOrder.material_total` (stale DB value = $0), while `ContractedPricingCard` recalculates from `linkedPO.subtotal + markup` (correct value = $14,884).
+### 2. Labor Card: Show Hours + Hourly Rate When Expanded
+**File: `src/components/change-order-detail/GCLaborReviewPanel.tsx`**
 
-**Fix in `ChangeOrderDetailPage.tsx`**: Compute a `computedMaterialTotal` once at the page level using the same formula as `ContractedPricingCard`, then pass it to:
-- `CollapsibleMaterialsWrapper` (line 473)
-- `ApprovalPanel` as a new `computedMaterialTotal` prop (line 537)
+The expanded view already shows hours and hourly rate per entry (line 80-84: `{entry.hours} hours @ ${entry.hourly_rate}/hr`). However, when `tcLabor` array is empty but `laborTotal > 0`, the expanded view shows nothing useful. Add a fallback that displays the aggregate total with a note that line-item detail is not available. This is already working when entries exist -- no change needed for that case.
 
-**Fix in `ApprovalPanel.tsx`**: Accept optional `computedMaterialTotal` prop and use it instead of `changeOrder.material_total` in the Approval Summary and finalize dialog.
+The real issue may be that the `tcLabor` array has entries but the expanded content isn't visible due to the panel's current state. Verify the data is flowing correctly and ensure the expanded table headers include "Hours" and "Rate" columns for clarity.
 
-The formula (matching `ContractedPricingCard`):
-```tsx
-const baseMatTotal = linkedPO?.subtotal || 0;
-const markupAmount = changeOrder.material_markup_type === 'percent'
-  ? baseMatTotal * ((changeOrder.material_markup_percent || 0) / 100)
-  : changeOrder.material_markup_type === 'lump_sum'
-    ? (changeOrder.material_markup_amount || 0)
-    : 0;
-const computedMaterialTotal = baseMatTotal > 0
-  ? baseMatTotal + markupAmount
-  : (changeOrder.material_total || 0);
-```
+**Specific changes:**
+- Add table header row with Description, Hours, Rate, Total columns
+- Keep the existing per-entry rows with hours/rate detail (already present)
+- When `tcLabor` is empty but `laborTotal > 0`, show the total in a simple row
 
-## Issue 3: forwardRef Console Warnings
+### 3. Remove Redundant Sidebar Pricing Card for GC
+**File: `src/components/change-order-detail/ChangeOrderDetailPage.tsx`**
 
-**Root cause**: `CollapsibleTrigger asChild` tries to pass a `ref` to its child. When the child is a custom component like `CardHeader` wrapped inside `CollapsibleMaterialsWrapper` or used with `PricingRow`, React warns because the component doesn't forward refs.
+The GC sidebar currently shows: Checklist -> ContractedPricingCard -> ApprovalPanel. The `ContractedPricingCard` (GCPricingView) duplicates information that's now in the main content area tiles:
+- Total Work Order Cost (duplicated in ApprovalPanel summary)
+- TC Contract labor detail (duplicated in GCLaborReviewPanel)
+- Materials total (duplicated in CollapsibleMaterialsWrapper)
+- Equipment total (duplicated in CollapsibleEquipmentWrapper)
 
-**Fix**: Use `React.forwardRef` on `CollapsibleMaterialsWrapper` and `CollapsibleEquipmentWrapper` inner `CardHeader` elements. Since `CardHeader` is from shadcn and already forwards refs, the actual fix is simpler: remove `asChild` from `CollapsibleTrigger` and wrap `CardHeader` directly, OR ensure the trigger target properly forwards the ref. The cleanest approach: wrap the `CardHeader` in a plain `div` as the trigger target instead of using `asChild` on `CardHeader`.
+**Remove `ContractedPricingCard` from the GC sidebar** (lines 536-545). Keep it for non-GC users. Move the "Total Work Order Cost" display into the ApprovalPanel's always-visible section (not gated by `canFinalize`) so GCs always see the single total.
+
+### 4. ApprovalPanel: Always Show Total Work Order Cost
+**File: `src/components/change-order-detail/ApprovalPanel.tsx`**
+
+Move the total cost display out of the `canFinalize` gate. Show a compact "Total Work Order Cost: $X" line always (above the approval summary detail). Remove the per-line breakdown (Labor, Materials, Equipment) from the approval summary since those are now in the main content tiles. Keep only the single total + Contract Change line.
 
 ---
 
-## Files Modified
+## Technical Details
 
-1. **`src/components/change-order-detail/ChangeOrderDetailPage.tsx`**
-   - Compute `computedMaterialTotal` once near line 207
-   - Update GCLaborReviewPanel condition (line 406) to also check `changeOrder.labor_total > 0`
-   - Pass `laborTotal={changeOrder.labor_total}` to `GCLaborReviewPanel`
-   - Pass `computedMaterialTotal` to `CollapsibleMaterialsWrapper` and `ApprovalPanel`
-   - Fix `CollapsibleMaterialsWrapper` and `CollapsibleEquipmentWrapper` trigger: replace `asChild` on `CollapsibleTrigger` with a wrapping approach that avoids ref issues
+### Supplier Name Source
+```tsx
+const supplierName = participants.find(p => p.role === 'SUPPLIER' && p.is_active)?.organization?.name;
+```
+Passed to `CollapsibleMaterialsWrapper` as a new prop.
 
-2. **`src/components/change-order-detail/GCLaborReviewPanel.tsx`**
-   - Add optional `laborTotal` prop
-   - When `tcLabor.length === 0` but `laborTotal > 0`, show the stored total instead of "No labor entries"
+### CollapsibleMaterialsWrapper Update
+```tsx
+function CollapsibleMaterialsWrapper({ children, materialTotal, supplierName }: { 
+  children: React.ReactNode; materialTotal: number; supplierName?: string 
+}) {
+  // In collapsed summary, show supplier name
+  // In header subtitle area, show "Supplier: X" when available
+}
+```
 
-3. **`src/components/change-order-detail/ApprovalPanel.tsx`**
-   - Add optional `computedMaterialTotal` prop
-   - Use `computedMaterialTotal ?? changeOrder.material_total` in summary and dialog calculations
+### Sidebar Simplification (GC only)
+Before:
+- Checklist
+- ContractedPricingCard (REMOVE)
+- ApprovalPanel
+
+After:
+- Checklist
+- ApprovalPanel (with total always visible)
+
+### Files Modified
+1. `src/components/change-order-detail/ChangeOrderDetailPage.tsx` -- add supplier name to materials wrapper, remove ContractedPricingCard from GC sidebar
+2. `src/components/change-order-detail/GCLaborReviewPanel.tsx` -- add table headers for hours/rate clarity
+3. `src/components/change-order-detail/ApprovalPanel.tsx` -- always show total cost, simplify summary
 
