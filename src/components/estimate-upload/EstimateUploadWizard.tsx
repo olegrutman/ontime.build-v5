@@ -91,7 +91,7 @@ export function EstimateUploadWizard({
           description: item.description,
           quantity: item.quantity,
           uom: item.uom,
-          unit_price: 0,
+          unit_price: item.unit_price || 0,
           pack_name: pack.name,
           catalog_item_id: item.catalog_item_id,
         }))

@@ -3157,6 +3157,7 @@ export type Database = {
           line_total: number | null
           notes: string | null
           pack_name: string | null
+          pieces_per_unit: number | null
           quantity: number
           supplier_sku: string | null
           unit_price: number
@@ -3171,6 +3172,7 @@ export type Database = {
           line_total?: number | null
           notes?: string | null
           pack_name?: string | null
+          pieces_per_unit?: number | null
           quantity?: number
           supplier_sku?: string | null
           unit_price?: number
@@ -3185,6 +3187,7 @@ export type Database = {
           line_total?: number | null
           notes?: string | null
           pack_name?: string | null
+          pieces_per_unit?: number | null
           quantity?: number
           supplier_sku?: string | null
           unit_price?: number
