@@ -1,27 +1,51 @@
 
 
-# Update Supplier Estimates vs Orders Card and Material Estimate vs Orders Chart
+# Fix: Materials Priced Not Showing on Ready Card
 
-## What Changes
+## Problem
+Work Order "RFI 87" has a linked PO with status `ORDERED` (materials are priced), but the "Ready for Approval" checklist shows "Materials priced" as incomplete. Two root causes:
 
-### 1. Supplier Estimate vs Orders Card (Supplier view)
-**Current:** Sums PO line item totals (subtotal * tax) for FINALIZED/DELIVERED POs.
-**New:** Show the total number of POs and their aggregate value using the PO-level total (simple count + sum), making it a cleaner "list total" rather than computing from line items. Also include PO statuses beyond just FINALIZED/DELIVERED -- show all non-draft POs (SUBMITTED, PRICED, ORDERED, READY_FOR_DELIVERY, FINALIZED, DELIVERED).
+1. **Database**: The sync trigger was created after the PO was already ORDERED, so `materials_priced` is still `false` in the checklist table. Need to backfill.
+2. **UI Logic**: The checklist component only considers `materialsPricingLocked` and `checklist.materials_priced` -- it does not check if the linked PO is already in a priced state (PRICED, ORDERED, etc.). Additionally, the `completedCount` counter doesn't use `effectiveMaterialsPriced`, so even when the individual item shows green, the count is wrong.
+3. **ApprovalPanel**: Same issue -- `isChecklistComplete` reads `checklist.materials_priced` directly without considering PO status.
 
-### 2. Material Estimate vs Orders Chart (GC/TC view)
-**Current:** Shows `materialEstimate` (from project contract's `material_estimate_total` or WO material totals) vs `materialOrdered` (PO line item sums). Label says "Material Estimate vs Orders".
-**New:** Rename to "Material Budget vs Orders" and use the material budget/estimate value from the project contract (`material_estimate_total` or approved supplier estimate sum as fallback) vs PO totals. The data source is already correct (`materialEstimate` in `useProjectFinancials` already resolves to the material budget), but the labeling will be updated to clarify it's the budget being compared.
+## Fix
 
-## Technical Details
+### 1. Database: Backfill existing data
+Run a one-time migration to set `materials_priced = true` for any work order whose linked PO is already in a priced state:
 
-### File: `src/components/project/SupplierEstimateVsOrdersCard.tsx`
-- Change PO query to use broader statuses: `SUBMITTED`, `PRICED`, `ORDERED`, `READY_FOR_DELIVERY`, `FINALIZED`, `DELIVERED` (exclude only `ACTIVE` which is draft)
-- Simplify total calculation: sum `po_line_items(line_total)` subtotals without tax multiplier (show raw order value to match estimate comparison)
-- Keep the rest of the card layout the same
+```sql
+UPDATE change_order_checklist cl
+SET materials_priced = true, updated_at = now()
+FROM change_order_projects co
+JOIN purchase_orders po ON po.id = co.linked_po_id
+WHERE cl.change_order_id = co.id
+  AND po.status IN ('PRICED','ORDERED','FINALIZED','READY_FOR_DELIVERY','DELIVERED')
+  AND cl.materials_priced = false;
+```
 
-### File: `src/components/project/FinancialHealthCharts.tsx`
-- Rename chart title from "Material Estimate vs Orders" to "Material Budget vs Orders"
-- Rename the "Estimate" bar label to "Budget"
-- Update the over-budget warning text to say "Orders exceed budget" instead of "Orders exceed estimate"
+### 2. UI: Pass linked PO status to checklist component
+In `ChangeOrderDetailPage.tsx`, compute whether materials are effectively priced based on PO status and pass it down:
 
-No changes needed to `useProjectFinancials.ts` -- the data sources are already correct.
+- Add a prop `linkedPOIsPriced` to `ChangeOrderChecklist`
+- Compute it in the detail page from the linked PO data already available
+- Update `effectiveMaterialsPriced` to: `materialsPricingLocked || linkedPOIsPriced || checklist.materials_priced`
+
+### 3. Fix completedCount in ChangeOrderChecklist
+Update the `completedCount` calculation to use `effectiveMaterialsPriced` for the `materials_priced` key instead of reading raw checklist data.
+
+### 4. Fix ApprovalPanel isChecklistComplete
+Pass the same `linkedPOIsPriced` prop and use it in the materials check:
+```
+const materialsComplete = !changeOrder.requires_materials || linkedPOIsPriced || (checklist.materials_priced ?? false);
+```
+
+## Files Changed
+
+| File | Change |
+|------|--------|
+| SQL migration | Backfill `materials_priced` for existing work orders |
+| `ChangeOrderDetailPage.tsx` | Compute `linkedPOIsPriced` and pass to checklist + approval |
+| `ChangeOrderChecklist.tsx` | Add `linkedPOIsPriced` prop, fix `completedCount` |
+| `ApprovalPanel.tsx` | Add `linkedPOIsPriced` prop, fix `isChecklistComplete` |
+
