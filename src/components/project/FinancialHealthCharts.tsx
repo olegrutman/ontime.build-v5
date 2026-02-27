@@ -25,13 +25,13 @@ export function FinancialHealthCharts({ financials, hideMaterialCards }: Financi
   if (!hideMaterialCards && (viewerRole === 'Trade Contractor' || viewerRole === 'General Contractor') && (materialEstimate > 0 || materialOrdered > 0)) {
     const overBudget = materialOrdered > materialEstimate;
     const data = [
-      { name: 'Estimate', value: materialEstimate },
+      { name: 'Budget', value: materialEstimate },
       { name: 'Ordered', value: materialOrdered },
     ];
     charts.push(
       <Card key="mat" className="overflow-hidden">
         <CardContent className="p-3">
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-2">Material Estimate vs Orders</p>
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium mb-2">Material Budget vs Orders</p>
           <div className="h-[140px] sm:h-[160px]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data} barCategoryGap="30%">
@@ -45,7 +45,7 @@ export function FinancialHealthCharts({ financials, hideMaterialCards }: Financi
           </div>
           {overBudget && (
             <p className="text-[10px] text-red-600 dark:text-red-400 mt-1 font-medium">
-              ⚠ Orders exceed estimate by {fmt(materialOrdered - materialEstimate)}
+              ⚠ Orders exceed budget by {fmt(materialOrdered - materialEstimate)}
             </p>
           )}
         </CardContent>

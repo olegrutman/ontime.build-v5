@@ -60,14 +60,13 @@ export function SupplierEstimateVsOrdersCard({
         .select('sales_tax_percent, po_line_items(line_total)')
         .eq('project_id', projectId)
         .eq('supplier_id', supplier!.id)
-        .in('status', ['FINALIZED', 'DELIVERED']);
+        .in('status', ['SUBMITTED', 'PRICED', 'ORDERED', 'READY_FOR_DELIVERY', 'FINALIZED', 'DELIVERED']);
 
       if (poError) throw poError;
 
       const totalOrders = pos?.reduce((sum, po) => {
         const subtotal = po.po_line_items?.reduce((s: number, li: any) => s + (li.line_total || 0), 0) || 0;
-        const taxRate = (po.sales_tax_percent || 0) / 100;
-        return sum + subtotal * (1 + taxRate);
+        return sum + subtotal;
       }, 0) || 0;
 
       return { totalEstimates, totalOrders };
