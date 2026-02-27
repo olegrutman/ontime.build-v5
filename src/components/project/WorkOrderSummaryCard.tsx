@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { enrichWorkOrderTotals } from '@/lib/computeWorkOrderTotal';
 
 interface WorkOrderSummaryCardProps {
   projectId: string;
@@ -147,7 +148,7 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
       // For TC and GC: fetch all work orders for this project
       const { data: workOrders, error } = await supabase
         .from('change_order_projects')
-        .select('id, status, final_price, labor_total, material_total, equipment_total, created_by_role')
+        .select('id, status, final_price, labor_total, material_total, equipment_total, created_by_role, linked_po_id, material_markup_type, material_markup_percent, material_markup_amount')
         .eq('project_id', projectId);
 
       if (error) {
@@ -156,6 +157,21 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
         return;
       }
 
+      // Enrich totals with linked PO materials
+      const enrichedTotals = await enrichWorkOrderTotals(
+        (workOrders || []).map(wo => ({
+          id: wo.id,
+          labor_total: wo.labor_total || 0,
+          material_total: wo.material_total || 0,
+          equipment_total: wo.equipment_total || 0,
+          final_price: wo.final_price || 0,
+          linked_po_id: wo.linked_po_id,
+          material_markup_type: wo.material_markup_type,
+          material_markup_percent: wo.material_markup_percent,
+          material_markup_amount: wo.material_markup_amount,
+        }))
+      );
+
       // Calculate totals
       let tcToGcTotal = 0;
       let tcToFcTotal = 0;
@@ -163,7 +179,7 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
       let pendingCount = 0;
 
       for (const wo of workOrders || []) {
-        const total = wo.final_price || 0;
+        const total = enrichedTotals.get(wo.id) || wo.final_price || 0;
         tcToGcTotal += total;
         
         if (wo.status === 'approved' || wo.status === 'contracted') {

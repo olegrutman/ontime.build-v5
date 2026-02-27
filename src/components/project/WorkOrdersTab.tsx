@@ -16,6 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { ChangeOrderStatus, CHANGE_ORDER_STATUS_LABELS } from '@/types/changeOrderProject';
 import { StatusColumn, CHANGE_ORDER_STATUS_OPTIONS } from '@/components/ui/status-column';
 import { HoverActions, HoverAction } from '@/components/ui/hover-actions';
+import { enrichWorkOrderTotals } from '@/lib/computeWorkOrderTotal';
 
 const STATUS_PRIORITY: Record<ChangeOrderStatus, number> = {
   rejected: 0,
@@ -52,10 +53,32 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
   const userOrgId = userOrgRoles.length > 0 ? userOrgRoles[0].organization_id : undefined;
 
   const sovReadiness = useSOVReadiness(projectId, userOrgId);
+  const [enrichedTotals, setEnrichedTotals] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
     sovReadiness.refetch();
   }, [projectId]);
+
+  // Compute true totals including linked PO materials
+  useEffect(() => {
+    if (changeOrders.length === 0) return;
+    const ordersWithPO = changeOrders.filter((co: any) => co.linked_po_id);
+    if (ordersWithPO.length === 0) return;
+    
+    enrichWorkOrderTotals(
+      changeOrders.map((co: any) => ({
+        id: co.id,
+        labor_total: co.labor_total || 0,
+        material_total: co.material_total || 0,
+        equipment_total: co.equipment_total || 0,
+        final_price: co.final_price || 0,
+        linked_po_id: co.linked_po_id || null,
+        material_markup_type: co.material_markup_type || null,
+        material_markup_percent: co.material_markup_percent || null,
+        material_markup_amount: co.material_markup_amount || null,
+      }))
+    ).then(setEnrichedTotals);
+  }, [changeOrders]);
 
   const isFC = currentRole === 'FC_PM' || currentRole === 'FS';
   const canCreate = permissions?.canCreateWorkOrders ?? false;
@@ -172,11 +195,14 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
           </div>
 
           {/* Contract price when contracted */}
-          {isContracted && changeOrder.final_price != null && !isFC && (
-            <p className="text-sm font-medium mt-2 text-foreground">
-              Contract: {formatCurrency(changeOrder.final_price)}
-            </p>
-          )}
+          {isContracted && !isFC && (() => {
+            const displayTotal = enrichedTotals.get(changeOrder.id) || changeOrder.final_price;
+            return displayTotal != null ? (
+              <p className="text-sm font-medium mt-2 text-foreground">
+                Contract: {formatCurrency(displayTotal)}
+              </p>
+            ) : null;
+          })()}
 
           {/* Creator */}
           <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
