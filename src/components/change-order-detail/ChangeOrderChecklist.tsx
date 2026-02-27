@@ -1,7 +1,10 @@
+import { useState, useEffect } from 'react';
 import { ChangeOrderChecklist as ChecklistType } from '@/types/changeOrderProject';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Check, Circle } from 'lucide-react';
+import { Check, Circle, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Progress } from '@/components/ui/progress';
 
 interface ChangeOrderChecklistProps {
   checklist: ChecklistType | null;
@@ -20,7 +23,6 @@ export function ChangeOrderChecklist({
   materialsPricingLocked,
   linkedPOIsPriced,
 }: ChangeOrderChecklistProps) {
-  // Derive materials_priced from the locked flag, linked PO status, or checklist value
   const effectiveMaterialsPriced = materialsPricingLocked || linkedPOIsPriced || (checklist?.materials_priced ?? false);
   const items = [
     { key: 'location_complete', label: 'Location complete', required: true },
@@ -38,40 +40,66 @@ export function ChangeOrderChecklist({
   ).length;
 
   const allComplete = completedCount === items.length;
+  const progressPercent = items.length > 0 ? (completedCount / items.length) * 100 : 0;
+
+  const [isOpen, setIsOpen] = useState(!allComplete);
+
+  // Auto-collapse when all complete
+  useEffect(() => {
+    if (allComplete) setIsOpen(false);
+  }, [allComplete]);
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-medium flex items-center justify-between">
-          <span>Ready for Approval</span>
-          <span className={cn('text-xs', allComplete ? 'text-green-600' : 'text-muted-foreground')}>
-            {completedCount} / {items.length}
-          </span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
-      {items.map((item) => {
-          const isComplete = item.key === 'materials_priced'
-            ? effectiveMaterialsPriced
-            : (checklist && checklist[item.key as keyof ChecklistType]);
-          return (
-            <div
-              key={item.key}
-              className={cn(
-                'flex items-center gap-2 text-sm p-2 rounded',
-                isComplete ? 'text-green-700 bg-green-50' : 'text-muted-foreground'
-              )}
-            >
-              {isComplete ? (
-                <Check className="w-4 h-4 text-green-600" />
-              ) : (
-                <Circle className="w-4 h-4" />
-              )}
-              <span>{item.label}</span>
-            </div>
-          );
-        })}
-      </CardContent>
-    </Card>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card>
+        <CollapsibleTrigger asChild>
+          <CardHeader className="pb-3 cursor-pointer hover:bg-muted/30 transition-colors">
+            <CardTitle className="text-sm font-medium flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {allComplete && <Check className="w-4 h-4 text-green-600" />}
+                <span>Ready for Approval</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className={cn('text-xs', allComplete ? 'text-green-600' : 'text-muted-foreground')}>
+                  {allComplete ? 'All complete' : `${completedCount} of ${items.length}`}
+                </span>
+                <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', isOpen && 'rotate-180')} />
+              </div>
+            </CardTitle>
+            {!allComplete && !isOpen && (
+              <Progress value={progressPercent} className="h-1.5 mt-2" />
+            )}
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="space-y-2 pt-0">
+            {!allComplete && (
+              <Progress value={progressPercent} className="h-1.5 mb-3" />
+            )}
+            {items.map((item) => {
+              const isComplete = item.key === 'materials_priced'
+                ? effectiveMaterialsPriced
+                : (checklist && checklist[item.key as keyof ChecklistType]);
+              return (
+                <div
+                  key={item.key}
+                  className={cn(
+                    'flex items-center gap-2 text-sm p-2 rounded',
+                    isComplete ? 'text-green-700 bg-green-50' : 'text-muted-foreground'
+                  )}
+                >
+                  {isComplete ? (
+                    <Check className="w-4 h-4 text-green-600" />
+                  ) : (
+                    <Circle className="w-4 h-4" />
+                  )}
+                  <span>{item.label}</span>
+                </div>
+              );
+            })}
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 }
