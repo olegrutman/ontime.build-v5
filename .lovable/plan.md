@@ -1,26 +1,29 @@
 
+# Show TC Company Name and Hours/Rate on Labor Card
 
-# Change Logo Color from Orange to Blue
+## Problem
+The labor card shows "Trade Contractor Labor" instead of the TC company name because the code looks for `participants.find(p => p.role === 'TC')`, but the actual participant has `role: 'PARTICIPANT'` (the organization type is `TC` though). This means `tcCompanyName` is always undefined.
 
-## Approach
-The logo is a static PNG (`/ontime-logo.png`) rendered via an `<img>` tag. Since we can't dynamically recolor a PNG natively, the cleanest approach is to apply a CSS `filter` to shift the hue from orange to blue. This avoids needing to create or upload a new image file.
+Additionally, the user wants to see the TC's hours and hourly rate clearly when the card is expanded -- this already works in the code, but the company name issue makes it look generic.
 
-The CSS filter `hue-rotate` combined with `saturate` can shift orange tones to the brand blue (HSL 207). Orange is roughly at hue 30, and the brand blue is at hue 207, so a rotation of approximately 177 degrees will shift orange to blue.
+## Root Cause
+When participants are added as "additional participants" (not the primary assigned TC), their role is stored as `'PARTICIPANT'` rather than `'TC'`. The organization itself has `type: 'TC'`, but the lookup uses the participant role field.
 
-## Changes
+## Fix
 
-### 1. `src/components/ui/OntimeLogo.tsx`
-Add a CSS filter to the `<img>` element to shift the hue from orange to blue:
-- Apply `hue-rotate(177deg)` to rotate orange to blue
-- Fine-tune with `saturate(1.3)` and `brightness(1.1)` so it matches the brand blue
+### File: `src/components/change-order-detail/ChangeOrderDetailPage.tsx`
 
-### 2. `src/index.css`
-Add a utility class `.logo-blue-filter` with the filter values, keeping the component clean.
+Update the TC company name lookup (line 417) to fall back to checking `organization.type`:
 
-### 3. `index.html`
-The favicon also uses `ontime-logo.png` -- this won't be affected by CSS filters (browser chrome). If you'd like the favicon blue too, that would require a separate blue PNG file, which can be done in a follow-up.
+```tsx
+// Before:
+participants.find(p => p.role === 'TC' && p.is_active)?.organization?.name
 
-## Files Modified
-1. `src/components/ui/OntimeLogo.tsx` -- add filter class
-2. `src/index.css` -- add `.logo-blue-filter` utility class
+// After:
+participants.find(p => (p.role === 'TC' || p.organization?.type === 'TC') && p.is_active)?.organization?.name
+```
 
+This single line change ensures the TC company name (e.g., "IMIS, LLC") appears in the labor card title as "Labor - IMIS, LLC" regardless of whether their participant role is stored as `'TC'` or `'PARTICIPANT'`.
+
+### No changes needed to GCLaborReviewPanel
+The expanded view already shows Description, Hours, Rate, and Total columns with the correct data (25 hrs at $55.00/hr = $1,375.00). The only issue was the missing company name, which is fixed by the lookup change above.
