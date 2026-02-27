@@ -106,14 +106,16 @@ function GCPricingView({
         {tcLabor.length > 0 ? (
           <div className="space-y-1.5 pl-1">
             {tcLabor.map((entry) => (
-              <div key={entry.id} className="flex justify-between items-start text-sm">
-                <span className="text-muted-foreground">
-                  {entry.description || 'Labor'}
+              <div key={entry.id} className="text-sm space-y-0.5">
+                <div className="flex justify-between items-center">
+                  <span>{entry.description || 'Labor'}</span>
+                  <span className="shrink-0 ml-2">{formatCurrency(entry.labor_total)}</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
                   {entry.pricing_type === 'lump_sum'
-                    ? ' — Lump Sum'
-                    : ` — ${entry.hours}hrs @ ${formatCurrency(entry.hourly_rate || 0)}/hr`}
-                </span>
-                <span className="shrink-0 ml-2">{formatCurrency(entry.labor_total)}</span>
+                    ? 'Lump Sum'
+                    : `${entry.hours} hrs @ ${formatCurrency(entry.hourly_rate || 0)}/hr`}
+                </p>
               </div>
             ))}
           </div>
