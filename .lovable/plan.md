@@ -1,82 +1,62 @@
 
 
-# Restructure GC Work Order Pricing View
+# Fix GC Work Order Pricing: Include Materials in Total and Restructure TC Tile
 
 ## Problem
-The current GC pricing view is a flat list (TC Labor, Materials, Equipment, Total) that doesn't account for cost responsibility. When the GC is responsible for materials or equipment, those costs should be shown separately from the TC contract cost. The GC also can't see TC's hours and hourly rate in the pricing card.
+1. The "Total Work Order Cost" uses `finalPrice` from the database, which may not include material costs when the GC is responsible for materials. The total should be computed as the sum of all cost components.
+2. The TC Contract section currently embeds labor details inline with equipment. The user wants it restructured as a standalone tile (like the Materials and Equipment tiles), showing TC hours, hourly rate, and cost clearly.
 
-## Solution
+## Changes (single file: `ContractedPricingCard.tsx`)
 
-Restructure the GC view in `ContractedPricingCard.tsx` into a clear layout:
+### 1. Compute Total Work Order Cost from components
+Instead of using `finalPrice` directly, calculate the true total:
 
-### Top Section: Total Contracted Price
-Sum of all costs the GC pays for this work order (TC labor + materials + equipment regardless of who is responsible).
+```
+totalCost = laborTotal 
+          + (requiresMaterials ? materialTotal : 0) 
+          + (requiresEquipment ? equipmentTotal : 0)
+```
 
-### Below: Three separate tiles/sections based on cost responsibility
+This ensures materials are always included in the total when the work order requires them, regardless of who is responsible.
 
-1. **TC Contract** tile
-   - TC labor line items showing hours, hourly rate, and total (or lump sum)
-   - If TC is responsible for equipment, include equipment total here too
-   - Shows the TC company name
+### 2. Restructure TC Contract into a tile matching the style of Materials/Equipment tiles
+Convert the TC Contract section from a mixed block into a clean tile with:
+- Header: "TC Labor" (or "TC Contract")
+- Individual labor entries showing description, hours, hourly rate (or "Lump Sum")
+- If TC is responsible for equipment, show equipment line within this tile
+- Subtotal at bottom
+- "Paid to: CompanyName" footer
 
-2. **Materials** tile (if materials required)
-   - Shows material cost from linked PO or manual materials
-   - Label indicates responsibility (GC or TC)
+The tile styling will use the same `border rounded-md p-3 space-y-2` pattern as Materials and Equipment tiles for visual consistency.
 
-3. **Equipment** tile (only if GC is responsible for equipment)
-   - Equipment costs shown separately when GC pays directly
-   - If TC is responsible, equipment is already included in the TC Contract tile
-
-## Technical Changes
-
-### File: `src/components/change-order-detail/ContractedPricingCard.tsx`
-
-**Update `GCPricingView` props** to include:
-- `tcLabor: ChangeOrderTCLabor[]` -- to display individual TC labor entries with hours/rates
-- `materialCostResponsibility: 'GC' | 'TC' | null`
-- `equipmentCostResponsibility: 'GC' | 'TC' | null`
-- `requiresMaterials: boolean`
-- `requiresEquipment: boolean`
-
-**Rewrite `GCPricingView` component** to render:
+### Layout after changes
 
 ```text
 +-------------------------------+
 | TOTAL WORK ORDER COST         |
-| $X,XXX.XX                     |
+| $X,XXX.XX  (labor+mat+equip) |
 +-------------------------------+
 
 +-------------------------------+
-| TC Contract                   |
-| Labor Entry 1: 8hrs @ $65/hr  |
-|                      $520.00  |
-| Labor Entry 2: Lump Sum       |
-|                      $300.00  |
-| Equipment (TC resp.)  $200.00 |  <-- only if TC responsible
-|                               |
-| Subtotal             $1,020   |
+| TC Labor                      |
+| Entry 1: 8hrs @ $65/hr $520  |
+| Entry 2: Lump Sum      $300  |
+| Equipment (TC)          $200  |  <-- only if TC responsible
+| ----------------------------- |
+| Subtotal              $1,020  |
 | Paid to: CompanyName          |
 +-------------------------------+
 
 +-------------------------------+
 | Materials (GC Responsible)    |
-| PO subtotal + markup  $500   |
+| Total                   $500  |
 +-------------------------------+
 
-+-------------------------------+      <-- only if GC responsible
++-------------------------------+
 | Equipment (GC Responsible)    |
-| Total                 $200    |
+| Total                   $200  |
 +-------------------------------+
 ```
 
-**Update the parent call** in `ContractedPricingCard` to pass the new props from `changeOrder` (cost responsibility fields, requires flags) and `tcLabor` array to `GCPricingView`.
-
-### File: `src/components/change-order-detail/ChangeOrderDetailPage.tsx`
-No changes needed -- `tcLabor` is already passed as a prop to `ContractedPricingCard`.
-
-## Summary
-
-| File | Change |
-|------|--------|
-| `ContractedPricingCard.tsx` | Restructure GC view into Total + TC Contract tile (with hours/rates) + Materials tile + Equipment tile, split by cost responsibility |
+No other files need changes.
 
