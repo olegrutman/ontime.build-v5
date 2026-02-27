@@ -65,7 +65,7 @@ function CollapsibleScope({ description }: { description: string | null }) {
 }
 
 /** Collapsible wrapper for GC materials view */
-function CollapsibleMaterialsWrapper({ children, materialTotal }: { children: React.ReactNode; materialTotal: number }) {
+function CollapsibleMaterialsWrapper({ children, materialTotal, supplierName }: { children: React.ReactNode; materialTotal: number; supplierName?: string }) {
   const [isOpen, setIsOpen] = useState(false);
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -80,10 +80,18 @@ function CollapsibleMaterialsWrapper({ children, materialTotal }: { children: Re
               <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', isOpen && 'rotate-180')} />
             </CardTitle>
             {!isOpen && (
-              <div className="flex justify-between mt-2 text-sm">
-                <span className="text-muted-foreground">Materials Total</span>
-                <span className="font-semibold">${materialTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              <div className="mt-2 text-sm space-y-1">
+                {supplierName && (
+                  <div className="text-muted-foreground">Supplier: {supplierName}</div>
+                )}
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Materials Total</span>
+                  <span className="font-semibold">${materialTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                </div>
               </div>
+            )}
+            {isOpen && supplierName && (
+              <div className="mt-1 text-sm text-muted-foreground">Supplier: {supplierName}</div>
             )}
           </CardHeader>
         </CollapsibleTrigger>
@@ -471,7 +479,7 @@ export function ChangeOrderDetailPage() {
                     />
                   )}
                   {changeOrder.requires_materials && linkedPO && linkedPO.items && linkedPO.items.length > 0 && isGC && (
-                    <CollapsibleMaterialsWrapper materialTotal={(() => {
+                    <CollapsibleMaterialsWrapper supplierName={participants.find(p => p.role === 'SUPPLIER' && p.is_active)?.organization?.name} materialTotal={(() => {
                       const baseMatTotal = linkedPO?.subtotal || 0;
                       const markupAmt = changeOrder.material_markup_type === 'percent'
                         ? baseMatTotal * ((changeOrder.material_markup_percent || 0) / 100)
@@ -532,16 +540,6 @@ export function ChangeOrderDetailPage() {
                         hasFCParticipant={hasFCParticipant}
                         materialsPricingLocked={changeOrder.materials_pricing_locked}
                         linkedPOIsPriced={linkedPOIsPriced}
-                      />
-                      <ContractedPricingCard
-                        changeOrder={changeOrder}
-                        fcHours={fcHours}
-                        tcLabor={tcLabor}
-                        materials={materials}
-                        equipment={equipment}
-                        participants={participants}
-                        currentRole={currentRole}
-                        linkedPO={linkedPO}
                       />
                       <ApprovalPanel
                         changeOrder={changeOrder}
