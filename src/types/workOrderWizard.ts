@@ -104,7 +104,6 @@ export interface WorkOrderWizardData {
   
   // Step 7: Assignment
   assigned_org_id?: string | null;
-  participant_org_ids?: string[];
   
   // Step 8: Review - AI generated description
   description: string;

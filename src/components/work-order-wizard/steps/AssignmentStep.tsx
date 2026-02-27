@@ -1,4 +1,4 @@
-import { useMemo, useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Select,
   SelectContent,
@@ -6,9 +6,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Users, Building2, Loader2 } from 'lucide-react';
+import { Building2, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { WorkOrderWizardData } from '@/types/workOrderWizard';
 
@@ -37,16 +36,13 @@ export function AssignmentStep({
 }: AssignmentStepProps) {
   const [teamMembers, setTeamMembers] = useState<TeamMemberOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [participantToggles, setParticipantToggles] = useState<Record<string, boolean>>({});
 
-  // Fetch team members
   useEffect(() => {
     async function fetchTeamMembers() {
       if (!projectId) return;
 
       setIsLoading(true);
       try {
-        // Fetch team rows
         const { data: teamData, error } = await supabase
           .from('project_team')
           .select('id, org_id, role, trade')
@@ -61,16 +57,8 @@ export function AssignmentStep({
         const rows = (teamData || []).filter((row) => row.org_id);
         const orgIds = [...new Set(rows.map((r) => r.org_id!))];
 
-        // Fetch org names separately to avoid RLS join issues
         let orgMap: Record<string, string> = {};
         if (orgIds.length > 0) {
-          const { data: orgData } = await supabase
-            .from('project_team')
-            .select('org_id, organization:organizations(name)')
-            .eq('project_id', projectId)
-            .in('org_id', orgIds);
-
-          // Fallback: query organizations directly
           const { data: orgsDirectly } = await supabase
             .from('organizations')
             .select('id, name')
@@ -79,31 +67,17 @@ export function AssignmentStep({
           (orgsDirectly || []).forEach((o) => {
             orgMap[o.id] = o.name;
           });
-
-          // Also try from join data
-          (orgData || []).forEach((row) => {
-            if (row.org_id && (row.organization as any)?.name) {
-              orgMap[row.org_id] = (row.organization as any).name;
-            }
-          });
         }
 
-        const members: TeamMemberOption[] = rows.map((row) => ({
-          id: row.id,
-          org_id: row.org_id!,
-          org_name: orgMap[row.org_id!] || 'Unknown',
-          role: row.role || '',
-          trade: row.trade,
-        }));
-
-        setTeamMembers(members);
-
-        // Initialize participant toggles from data
-        const toggles: Record<string, boolean> = {};
-        members.forEach((m) => {
-          toggles[m.org_id] = data.participant_org_ids?.includes(m.org_id) || false;
-        });
-        setParticipantToggles(toggles);
+        setTeamMembers(
+          rows.map((row) => ({
+            id: row.id,
+            org_id: row.org_id!,
+            org_name: orgMap[row.org_id!] || 'Unknown',
+            role: row.role || '',
+            trade: row.trade,
+          }))
+        );
       } finally {
         setIsLoading(false);
       }
@@ -112,42 +86,11 @@ export function AssignmentStep({
     fetchTeamMembers();
   }, [projectId]);
 
-  // Filter assignees based on creator role
   const assigneeOptions = useMemo(() => {
-    if (isGC) {
-      return teamMembers.filter((m) => m.role === 'Trade Contractor');
-    } else if (isTC) {
-      return teamMembers.filter((m) => m.role === 'Field Crew');
-    }
+    if (isGC) return teamMembers.filter((m) => m.role === 'Trade Contractor');
+    if (isTC) return teamMembers.filter((m) => m.role === 'Field Crew');
     return [];
   }, [teamMembers, isGC, isTC]);
-
-  // Filter participant toggles based on role restrictions
-  const toggleableParticipants = useMemo(() => {
-    if (isGC) {
-      return teamMembers.filter(
-        (m) => m.role === 'Trade Contractor' && m.org_id !== data.assigned_org_id
-      );
-    } else if (isTC) {
-      return teamMembers.filter(
-        (m) =>
-          (m.role === 'Field Crew' || m.role === 'Supplier') &&
-          m.org_id !== data.assigned_org_id
-      );
-    }
-    return [];
-  }, [teamMembers, isGC, isTC, data.assigned_org_id]);
-
-  const toggleParticipant = (orgId: string) => {
-    const newToggles = { ...participantToggles, [orgId]: !participantToggles[orgId] };
-    setParticipantToggles(newToggles);
-
-    // Update parent data
-    const enabledParticipants = Object.entries(newToggles)
-      .filter(([_, enabled]) => enabled)
-      .map(([id]) => id);
-    onChange({ participant_org_ids: enabledParticipants });
-  };
 
   const assigneeLabel = isGC ? 'Trade Contractor' : 'Field Crew';
 
@@ -161,7 +104,6 @@ export function AssignmentStep({
 
   return (
     <div className="space-y-6">
-      {/* Primary Assignee */}
       <div className="space-y-2">
         <Label className="flex items-center gap-2">
           <Building2 className="w-4 h-4" />
@@ -189,33 +131,6 @@ export function AssignmentStep({
           </SelectContent>
         </Select>
       </div>
-
-      {/* Additional Participants */}
-      {toggleableParticipants.length > 0 && (
-        <div className="space-y-3 pt-4 border-t">
-          <Label className="text-sm text-muted-foreground">Additional Participants</Label>
-          <div className="space-y-2">
-            {toggleableParticipants.map((member) => (
-              <div
-                key={member.org_id}
-                className="flex items-center justify-between p-3 border rounded-lg"
-              >
-                <div>
-                  <p className="font-medium">{member.org_name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {member.role}
-                    {member.trade ? ` • ${member.trade}` : ''}
-                  </p>
-                </div>
-                <Switch
-                  checked={participantToggles[member.org_id] || false}
-                  onCheckedChange={() => toggleParticipant(member.org_id)}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
