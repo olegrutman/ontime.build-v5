@@ -402,6 +402,14 @@ export function ChangeOrderDetailPage() {
                     </div>
                   </Card>
 
+                  {/* GC Labor Review (fixed price only) - collapsible */}
+                  {(changeOrder as any).pricing_mode !== 'tm' && isGC && tcLabor.length > 0 && (
+                    <GCLaborReviewPanel
+                      tcLabor={tcLabor}
+                      tcCompanyName={participants.find(p => p.role === 'TC' && p.is_active)?.organization?.name}
+                    />
+                  )}
+
                   {/* Rejection Alert */}
                   {changeOrder.status === 'rejected' && changeOrder.rejection_notes && (
                     <Alert variant="destructive">
@@ -442,14 +450,6 @@ export function ChangeOrderDetailPage() {
                       isEditable={isEditable}
                       canViewRates={true}
                       onAddLabor={addTCLabor}
-                    />
-                  )}
-
-                  {/* GC Labor Review (fixed price only) - collapsible */}
-                  {(changeOrder as any).pricing_mode !== 'tm' && isGC && tcLabor.length > 0 && (
-                    <GCLaborReviewPanel
-                      tcLabor={tcLabor}
-                      tcCompanyName={participants.find(p => p.role === 'TC' && p.is_active)?.organization?.name}
                     />
                   )}
 
