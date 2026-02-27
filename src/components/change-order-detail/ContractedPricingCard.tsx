@@ -61,31 +61,90 @@ function PricingRow({
   );
 }
 
-// GC View - Total cost breakdown
+// GC View - Restructured with tiles by cost responsibility
 function GCPricingView({ 
   laborTotal, 
   materialTotal, 
   equipmentTotal, 
   finalPrice,
   tcName,
+  tcLabor,
+  materialCostResponsibility,
+  equipmentCostResponsibility,
+  requiresMaterials,
+  requiresEquipment,
 }: {
   laborTotal: number;
   materialTotal: number;
   equipmentTotal: number;
   finalPrice: number;
   tcName?: string;
+  tcLabor: ChangeOrderTCLabor[];
+  materialCostResponsibility: 'GC' | 'TC' | null;
+  equipmentCostResponsibility: 'GC' | 'TC' | null;
+  requiresMaterials: boolean;
+  requiresEquipment: boolean;
 }) {
+  const equipmentInTC = equipmentCostResponsibility === 'TC' && requiresEquipment;
+  const equipmentInSeparate = equipmentCostResponsibility === 'GC' && requiresEquipment;
+  const tcSubtotal = laborTotal + (equipmentInTC ? equipmentTotal : 0);
+
   return (
-    <div className="space-y-3">
-      <PricingRow label="Trade Contractor Labor" value={laborTotal} />
-      <PricingRow label="Materials" value={materialTotal} />
-      <PricingRow label="Equipment" value={equipmentTotal} />
-      <Separator className="my-2" />
-      <PricingRow label="TOTAL CONTRACTED PRICE" value={finalPrice} isBold />
-      {tcName && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mt-3 pt-3 border-t">
-          <Users className="h-4 w-4" />
-          <span>Paid to: {tcName}</span>
+    <div className="space-y-4">
+      {/* Total Work Order Cost */}
+      <div className="bg-muted/50 p-3 rounded-md">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Total Work Order Cost</p>
+        <p className="text-xl font-semibold">{formatCurrency(finalPrice)}</p>
+      </div>
+
+      {/* TC Contract Tile */}
+      <div className="border rounded-md p-3 space-y-2">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">TC Contract</p>
+        {tcLabor.length > 0 ? (
+          <div className="space-y-1.5 pl-1">
+            {tcLabor.map((entry) => (
+              <div key={entry.id} className="flex justify-between items-start text-sm">
+                <span className="text-muted-foreground">
+                  {entry.description || 'Labor'}
+                  {entry.pricing_type === 'lump_sum'
+                    ? ' — Lump Sum'
+                    : ` — ${entry.hours}hrs @ ${formatCurrency(entry.hourly_rate || 0)}/hr`}
+                </span>
+                <span className="shrink-0 ml-2">{formatCurrency(entry.labor_total)}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <PricingRow label="Labor" value={laborTotal} />
+        )}
+        {equipmentInTC && (
+          <PricingRow label="Equipment (TC)" value={equipmentTotal} />
+        )}
+        <Separator className="my-1" />
+        <PricingRow label="Subtotal" value={tcSubtotal} isBold />
+        {tcName && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground pt-1">
+            <Users className="h-3.5 w-3.5" />
+            <span>Paid to: {tcName}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Materials Tile */}
+      {requiresMaterials && materialTotal > 0 && (
+        <div className="border rounded-md p-3 space-y-2">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            Materials{materialCostResponsibility ? ` (${materialCostResponsibility} Responsible)` : ''}
+          </p>
+          <PricingRow label="Total" value={materialTotal} isBold />
+        </div>
+      )}
+
+      {/* Equipment Tile - only when GC responsible */}
+      {equipmentInSeparate && equipmentTotal > 0 && (
+        <div className="border rounded-md p-3 space-y-2">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Equipment (GC Responsible)</p>
+          <PricingRow label="Total" value={equipmentTotal} isBold />
         </div>
       )}
     </div>
@@ -312,6 +371,11 @@ export function ContractedPricingCard({
           equipmentTotal={equipmentTotal}
           finalPrice={finalPrice}
           tcName={tcParticipant?.organization?.name}
+          tcLabor={tcLabor}
+          materialCostResponsibility={changeOrder.material_cost_responsibility as 'GC' | 'TC' | null}
+          equipmentCostResponsibility={changeOrder.equipment_cost_responsibility as 'GC' | 'TC' | null}
+          requiresMaterials={changeOrder.requires_materials}
+          requiresEquipment={changeOrder.requires_equipment}
         />
       );
     }
