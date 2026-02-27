@@ -1,29 +1,28 @@
 
-# Show TC Company Name and Hours/Rate on Labor Card
+
+# Simplify Work Order Wizard Assignment Step
 
 ## Problem
-The labor card shows "Trade Contractor Labor" instead of the TC company name because the code looks for `participants.find(p => p.role === 'TC')`, but the actual participant has `role: 'PARTICIPANT'` (the organization type is `TC` though). This means `tcCompanyName` is always undefined.
+The Assignment step (Step 7) shows redundant information -- the same team members appear in both the "Assign To" dropdown and the "Additional Participants" toggle list below it. The user wants to keep only the primary assignee selector and remove the Additional Participants section entirely.
 
-Additionally, the user wants to see the TC's hours and hourly rate clearly when the card is expanded -- this already works in the code, but the company name issue makes it look generic.
+## Change
 
-## Root Cause
-When participants are added as "additional participants" (not the primary assigned TC), their role is stored as `'PARTICIPANT'` rather than `'TC'`. The organization itself has `type: 'TC'`, but the lookup uses the participant role field.
+### File: `src/components/work-order-wizard/steps/AssignmentStep.tsx`
 
-## Fix
+Remove the "Additional Participants" section (lines 193-218), including:
+- The `toggleableParticipants` memo (lines 126-139)
+- The `toggleParticipant` handler (lines 141-150)
+- The `participantToggles` state (line 40)
+- The toggle initialization logic in the useEffect (lines 101-106)
+- The JSX block rendering the participant toggles (lines 193-218)
 
-### File: `src/components/change-order-detail/ChangeOrderDetailPage.tsx`
+Keep only the primary "Assign to" dropdown selector.
 
-Update the TC company name lookup (line 417) to fall back to checking `organization.type`:
+### File: `src/types/workOrderWizard.ts`
 
-```tsx
-// Before:
-participants.find(p => p.role === 'TC' && p.is_active)?.organization?.name
+Remove `participant_org_ids` from `WorkOrderWizardData` interface and initial data, since it's no longer used.
 
-// After:
-participants.find(p => (p.role === 'TC' || p.organization?.type === 'TC') && p.is_active)?.organization?.name
-```
+### Files Modified
+1. `src/components/work-order-wizard/steps/AssignmentStep.tsx` -- remove Additional Participants section and related state/logic
+2. `src/types/workOrderWizard.ts` -- remove `participant_org_ids` field
 
-This single line change ensures the TC company name (e.g., "IMIS, LLC") appears in the labor card title as "Labor - IMIS, LLC" regardless of whether their participant role is stored as `'TC'` or `'PARTICIPANT'`.
-
-### No changes needed to GCLaborReviewPanel
-The expanded view already shows Description, Hours, Rate, and Total columns with the correct data (25 hrs at $55.00/hr = $1,375.00). The only issue was the missing company name, which is fixed by the lookup change above.
