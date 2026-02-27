@@ -10,7 +10,7 @@ export function OntimeLogo({ className, variant = 'full' }: OntimeLogoProps) {
     <img
       src="/ontime-logo.png"
       alt="OnTime.Build"
-      className={cn('shrink-0 object-contain', className)}
+      className={cn('shrink-0 object-contain logo-blue-filter', className)}
     />
   );
 }
