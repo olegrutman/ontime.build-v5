@@ -70,7 +70,7 @@ function CollapsibleMaterialsWrapper({ children, materialTotal }: { children: Re
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <Card>
-        <CollapsibleTrigger asChild>
+        <CollapsibleTrigger className="w-full text-left">
           <CardHeader className="pb-3 cursor-pointer hover:bg-muted/30 transition-colors">
             <CardTitle className="text-base flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -82,7 +82,7 @@ function CollapsibleMaterialsWrapper({ children, materialTotal }: { children: Re
             {!isOpen && (
               <div className="flex justify-between mt-2 text-sm">
                 <span className="text-muted-foreground">Materials Total</span>
-                <span className="font-semibold">${materialTotal.toFixed(2)}</span>
+                <span className="font-semibold">${materialTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
             )}
           </CardHeader>
@@ -103,7 +103,7 @@ function CollapsibleEquipmentWrapper({ children, equipmentTotal, responsibility 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <Card>
-        <CollapsibleTrigger asChild>
+        <CollapsibleTrigger className="w-full text-left">
           <CardHeader className="pb-3 cursor-pointer hover:bg-muted/30 transition-colors">
             <CardTitle className="text-base flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -115,7 +115,7 @@ function CollapsibleEquipmentWrapper({ children, equipmentTotal, responsibility 
             {!isOpen && (
               <div className="flex items-center justify-between mt-2 text-sm">
                 <span className="text-muted-foreground">Responsible: {responsibility}</span>
-                <span className="font-semibold">${equipmentTotal.toFixed(2)}</span>
+                <span className="font-semibold">${equipmentTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
             )}
           </CardHeader>
@@ -403,10 +403,11 @@ export function ChangeOrderDetailPage() {
                   </Card>
 
                   {/* GC Labor Review (fixed price only) - collapsible */}
-                  {(changeOrder as any).pricing_mode !== 'tm' && isGC && tcLabor.length > 0 && (
+                  {(changeOrder as any).pricing_mode !== 'tm' && isGC && (tcLabor.length > 0 || (changeOrder.labor_total ?? 0) > 0) && (
                     <GCLaborReviewPanel
                       tcLabor={tcLabor}
                       tcCompanyName={participants.find(p => p.role === 'TC' && p.is_active)?.organization?.name}
+                      laborTotal={changeOrder.labor_total ?? 0}
                     />
                   )}
 
@@ -470,7 +471,15 @@ export function ChangeOrderDetailPage() {
                     />
                   )}
                   {changeOrder.requires_materials && linkedPO && linkedPO.items && linkedPO.items.length > 0 && isGC && (
-                    <CollapsibleMaterialsWrapper materialTotal={changeOrder.material_total ?? 0}>
+                    <CollapsibleMaterialsWrapper materialTotal={(() => {
+                      const baseMatTotal = linkedPO?.subtotal || 0;
+                      const markupAmt = changeOrder.material_markup_type === 'percent'
+                        ? baseMatTotal * ((changeOrder.material_markup_percent || 0) / 100)
+                        : changeOrder.material_markup_type === 'lump_sum'
+                          ? (changeOrder.material_markup_amount || 0)
+                          : 0;
+                      return baseMatTotal > 0 ? baseMatTotal + markupAmt : (changeOrder.material_total ?? 0);
+                    })()}>
                       <WorkOrderMaterialsPanel
                         linkedPO={linkedPO}
                         materialMarkupType={changeOrder.material_markup_type as 'percent' | 'lump_sum' | null}
@@ -542,6 +551,15 @@ export function ChangeOrderDetailPage() {
                         onUpdateStatus={updateStatus}
                         isUpdating={isUpdating}
                         linkedPOIsPriced={linkedPOIsPriced}
+                        computedMaterialTotal={(() => {
+                          const baseMatTotal = linkedPO?.subtotal || 0;
+                          const markupAmt = changeOrder.material_markup_type === 'percent'
+                            ? baseMatTotal * ((changeOrder.material_markup_percent || 0) / 100)
+                            : changeOrder.material_markup_type === 'lump_sum'
+                              ? (changeOrder.material_markup_amount || 0)
+                              : 0;
+                          return baseMatTotal > 0 ? baseMatTotal + markupAmt : undefined;
+                        })()}
                       />
                     </>
                   )}
