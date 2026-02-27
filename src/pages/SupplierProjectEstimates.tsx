@@ -219,6 +219,17 @@ export default function SupplierProjectEstimates() {
       return;
     }
 
+    // Check if an estimate already exists for this project
+    const existing = estimates.find(e => e.project_id === newEstimateProjectId);
+    if (existing) {
+      toast({ title: 'Already exists', description: 'An estimate already exists for this project. Opening it instead.' });
+      setShowCreate(false);
+      setNewEstimateName('');
+      setNewEstimateProjectId('');
+      handleOpenEstimate(existing);
+      return;
+    }
+
     setCreating(true);
     const { data, error } = await supabase
       .from('supplier_estimates')
@@ -592,7 +603,7 @@ export default function SupplierProjectEstimates() {
                           }}
                         >
                           <Upload className="h-4 w-4 mr-2" />
-                          Upload
+                          Update
                         </Button>
                         <Button 
                           size="sm"
