@@ -13,6 +13,8 @@ interface ParsedItem {
   description: string;
   quantity: number;
   uom: string;
+  ext_price: number;
+  unit_price: number;
 }
 
 interface ParsedPack {
@@ -34,11 +36,13 @@ const SYSTEM_PROMPT = `You are a construction materials estimate parser. Your jo
 Rules:
 - Identify section headings, categories, or groupings as pack names. If no clear sections exist, use "General" as the pack name.
 - Extract ONLY material line items — skip headers, footers, page numbers, subtotals, tax lines, terms & conditions, company addresses, and disclaimers.
-- For each item extract: supplier SKU, product description, quantity, and unit of measure (UOM). Do NOT include per-item pricing.
+- For each item extract: supplier SKU, product description, quantity, unit of measure (UOM), and extended price (ext_price — the line total for that item).
+- The ext_price is the total cost for that line item (quantity × unit cost). It is usually the last dollar amount on the line.
 - Normalize SKUs: strip whitespace, convert to UPPERCASE.
 - Common UOMs: EA (each), PC (piece), LF (linear foot), BF (board foot), SF (square foot), BDL (bundle), RL (roll), BX (box), CTN (carton), MSF (thousand square feet), MBF (thousand board feet), GAL (gallon), BAG, SHEET, PAIL.
 - If a UOM is not explicit, infer from context (e.g., lumber is typically BF or LF, sheets are EA or SHEET).
 - If quantity is missing or unclear, default to 0.
+- If ext_price is missing or unclear, default to 0.
 - Clean up descriptions: remove embedded pricing data, page artifacts, and formatting noise.
 - IMPORTANT: Extract the document's GRAND TOTAL / ESTIMATE TOTAL as a single number. Look for the final total amount on the quote (after tax, or the bottom-line total). If no total is found, return null.`;
 
@@ -83,8 +87,12 @@ const EXTRACT_TOOL = {
                       type: "string",
                       description: "Unit of measure (EA, PC, LF, BF, SF, BDL, etc.)",
                     },
+                    ext_price: {
+                      type: "number",
+                      description: "Extended price / line total for this item (the total dollar amount for this line). 0 if not found.",
+                    },
                   },
-                  required: ["supplier_sku", "description", "quantity", "uom"],
+                  required: ["supplier_sku", "description", "quantity", "uom", "ext_price"],
                   additionalProperties: false,
                 },
               },
@@ -225,7 +233,7 @@ serve(async (req) => {
               content: [
                 {
                   type: "text",
-                  text: `Extract all material line items from this supplier quote PDF. Group them by section/category as packs. Ignore all pricing information.`,
+                  text: `Extract all material line items from this supplier quote PDF. Group them by section/category as packs. For each item, extract the extended price (line total). Also extract the grand total.`,
                 },
                 {
                   type: "image_url",
@@ -312,7 +320,7 @@ serve(async (req) => {
       }
     }
 
-    // ── Validate and clean results ───────────────────────────────────
+    // ── Validate, clean, and calculate unit_price ────────────────────
     packs = packs
       .map((pack) => ({
         name: (pack.name || "General").trim(),
@@ -323,12 +331,22 @@ serve(async (req) => {
               item.description &&
               typeof item.quantity === "number"
           )
-          .map((item) => ({
-            supplier_sku: String(item.supplier_sku).replace(/\s+/g, "").toUpperCase(),
-            description: String(item.description).trim(),
-            quantity: Math.max(0, Number(item.quantity) || 0),
-            uom: String(item.uom || "EA").toUpperCase().trim(),
-          })),
+          .map((item) => {
+            const quantity = Math.max(0, Number(item.quantity) || 0);
+            const ext_price = Math.max(0, Number(item.ext_price) || 0);
+            const unit_price = quantity > 0 && ext_price > 0
+              ? Math.round((ext_price / quantity) * 100) / 100
+              : 0;
+
+            return {
+              supplier_sku: String(item.supplier_sku).replace(/\s+/g, "").toUpperCase(),
+              description: String(item.description).trim(),
+              quantity,
+              uom: String(item.uom || "EA").toUpperCase().trim(),
+              ext_price,
+              unit_price,
+            };
+          }),
       }))
       .filter((pack) => pack.items.length > 0);
 

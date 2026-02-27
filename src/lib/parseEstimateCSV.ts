@@ -9,6 +9,8 @@ export interface ParsedEstimateItem {
   description: string;
   quantity: number;
   uom: string;
+  ext_price: number;
+  unit_price: number;
 }
 
 export interface ParsedPack {
@@ -115,6 +117,12 @@ export function parseEstimateCSV(csvText: string): ParseResult {
   const descIdx = headers.findIndex(h => h.includes('desc'));
   const qtyIdx  = headers.findIndex(h => h.includes('qty') || h.includes('quantity'));
   const unitIdx = headers.findIndex(h => h.includes('unit') || h.includes('uom'));
+  const extPriceIdx = headers.findIndex(h =>
+    h.includes('ext') || h.includes('line_total') || h.includes('total') || h.includes('amount')
+  );
+  const unitPriceIdx = headers.findIndex(h =>
+    (h.includes('unit') && h.includes('price')) || h === 'price' || h === 'cost'
+  );
 
   if (packIdx === -1 || descIdx === -1) {
     // Fallback: try without pack column
@@ -149,6 +157,17 @@ export function parseEstimateCSV(csvText: string): ParseResult {
 
     const uom = detectUom(rawDesc, rawQty);
 
+    // Parse pricing
+    const rawExtPrice = extPriceIdx >= 0 ? (cols[extPriceIdx] || '').trim() : '';
+    const rawUnitPrice = unitPriceIdx >= 0 ? (cols[unitPriceIdx] || '').trim() : '';
+    const ext_price = parseFloat(rawExtPrice.replace(/[$,]/g, '')) || 0;
+    let unit_price = parseFloat(rawUnitPrice.replace(/[$,]/g, '')) || 0;
+
+    // Calculate unit_price from ext_price if not directly available
+    if (unit_price <= 0 && ext_price > 0 && quantity > 0) {
+      unit_price = Math.round((ext_price / quantity) * 100) / 100;
+    }
+
     if (!packMap.has(packName)) {
       packMap.set(packName, []);
     }
@@ -158,6 +177,8 @@ export function parseEstimateCSV(csvText: string): ParseResult {
       description,
       quantity,
       uom,
+      ext_price,
+      unit_price,
     });
   }
 

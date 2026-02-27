@@ -28,6 +28,11 @@ interface PackReviewStepProps {
   onRemovePack: (packName: string) => void;
 }
 
+function formatCurrency(value: number): string {
+  if (!value || value === 0) return '—';
+  return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
 export function PackReviewStep({
   packs,
   totalItems,
@@ -36,6 +41,11 @@ export function PackReviewStep({
   onCancel,
   onRemovePack,
 }: PackReviewStepProps) {
+  const grandTotal = packs.reduce(
+    (sum, pack) => sum + pack.items.reduce((s, item) => s + (item.ext_price || 0), 0),
+    0
+  );
+
   return (
     <div className="space-y-4">
       {/* Summary */}
@@ -46,6 +56,11 @@ export function PackReviewStep({
         <Badge variant="secondary" className="text-sm px-3 py-1">
           {totalItems} Items
         </Badge>
+        {grandTotal > 0 && (
+          <Badge variant="secondary" className="text-sm px-3 py-1">
+            Total: {formatCurrency(grandTotal)}
+          </Badge>
+        )}
         {discardedRows > 0 && (
           <Badge variant="outline" className="text-sm px-3 py-1 text-muted-foreground">
             {discardedRows} noise rows removed
@@ -64,56 +79,73 @@ export function PackReviewStep({
           </Card>
         ) : (
           <Accordion type="multiple" className="space-y-2">
-            {packs.map((pack) => (
-              <AccordionItem key={pack.name} value={pack.name} className="border rounded-lg px-1">
-                <AccordionTrigger className="hover:no-underline px-3">
-                  <div className="flex items-center justify-between w-full mr-2">
-                    <div className="flex items-center gap-2">
-                      <Package className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium text-sm">{pack.name}</span>
+            {packs.map((pack) => {
+              const packTotal = pack.items.reduce((s, item) => s + (item.ext_price || 0), 0);
+
+              return (
+                <AccordionItem key={pack.name} value={pack.name} className="border rounded-lg px-1">
+                  <AccordionTrigger className="hover:no-underline px-3">
+                    <div className="flex items-center justify-between w-full mr-2">
+                      <div className="flex items-center gap-2">
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium text-sm">{pack.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {packTotal > 0 && (
+                          <span className="text-xs font-medium text-muted-foreground">
+                            {formatCurrency(packTotal)}
+                          </span>
+                        )}
+                        <Badge variant="outline">{pack.items.length} items</Badge>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRemovePack(pack.name);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">{pack.items.length} items</Badge>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onRemovePack(pack.name);
-                        }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent className="px-2 pb-3">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-xs">SKU</TableHead>
-                        <TableHead className="text-xs">Description</TableHead>
-                        <TableHead className="text-xs text-right">Qty</TableHead>
-                        <TableHead className="text-xs">UOM</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {pack.items.map((item, idx) => (
-                        <TableRow key={idx}>
-                          <TableCell className="font-mono text-xs py-1.5">
-                            {item.supplier_sku}
-                          </TableCell>
-                          <TableCell className="text-xs py-1.5">{item.description}</TableCell>
-                          <TableCell className="text-xs py-1.5 text-right">{item.quantity}</TableCell>
-                          <TableCell className="text-xs py-1.5">{item.uom}</TableCell>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-2 pb-3">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs">SKU</TableHead>
+                          <TableHead className="text-xs">Description</TableHead>
+                          <TableHead className="text-xs text-right">Qty</TableHead>
+                          <TableHead className="text-xs">UOM</TableHead>
+                          <TableHead className="text-xs text-right">Unit Price</TableHead>
+                          <TableHead className="text-xs text-right">Ext Price</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
+                      </TableHeader>
+                      <TableBody>
+                        {pack.items.map((item, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell className="font-mono text-xs py-1.5">
+                              {item.supplier_sku}
+                            </TableCell>
+                            <TableCell className="text-xs py-1.5">{item.description}</TableCell>
+                            <TableCell className="text-xs py-1.5 text-right">{item.quantity}</TableCell>
+                            <TableCell className="text-xs py-1.5">{item.uom}</TableCell>
+                            <TableCell className="text-xs py-1.5 text-right font-medium">
+                              {formatCurrency(item.unit_price)}
+                            </TableCell>
+                            <TableCell className="text-xs py-1.5 text-right font-medium">
+                              {formatCurrency(item.ext_price)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
           </Accordion>
         )}
       </ScrollArea>

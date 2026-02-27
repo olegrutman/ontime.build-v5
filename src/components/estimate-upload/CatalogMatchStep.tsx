@@ -19,6 +19,8 @@ export interface MatchedItem {
   description: string;
   quantity: number;
   uom: string;
+  ext_price: number;
+  unit_price: number;
   catalog_item_id: string | null;
   match_status: 'EXACT' | 'NONE';
   catalog_description?: string;
@@ -201,9 +203,16 @@ export function CatalogMatchStep({
                             </p>
                           )}
                         </div>
-                        <span className="text-xs font-medium shrink-0">
-                          {item.quantity} {item.uom}
-                        </span>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-xs font-medium">
+                            {item.quantity} {item.uom}
+                          </span>
+                          {item.unit_price > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              @ ${item.unit_price.toFixed(2)}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
