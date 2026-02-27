@@ -88,13 +88,16 @@ function GCPricingView({
   const equipmentInTC = equipmentCostResponsibility === 'TC' && requiresEquipment;
   const equipmentInSeparate = equipmentCostResponsibility === 'GC' && requiresEquipment;
   const tcSubtotal = laborTotal + (equipmentInTC ? equipmentTotal : 0);
+  const totalCost = laborTotal
+    + (requiresMaterials ? materialTotal : 0)
+    + (requiresEquipment ? equipmentTotal : 0);
 
   return (
     <div className="space-y-4">
       {/* Total Work Order Cost */}
       <div className="bg-muted/50 p-3 rounded-md">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Total Work Order Cost</p>
-        <p className="text-xl font-semibold">{formatCurrency(finalPrice)}</p>
+        <p className="text-xl font-semibold">{formatCurrency(totalCost)}</p>
       </div>
 
       {/* TC Contract Tile */}
