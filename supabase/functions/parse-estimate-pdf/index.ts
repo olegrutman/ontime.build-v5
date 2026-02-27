@@ -279,7 +279,17 @@ serve(async (req) => {
     }
 
     // ── Parse AI response ────────────────────────────────────────────
-    const aiData = await aiResponse.json();
+    const aiText = await aiResponse.text();
+    let aiData: any;
+    try {
+      aiData = JSON.parse(aiText);
+    } catch {
+      console.error("AI response not valid JSON:", aiText.slice(0, 500));
+      return new Response(
+        JSON.stringify({ error: "AI returned an invalid response. Please try again." }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     const warnings: string[] = [];
 
     // Check for truncation
