@@ -10,14 +10,17 @@ import type { ChangeOrderTCLabor } from '@/types/changeOrderProject';
 interface GCLaborReviewPanelProps {
   tcLabor: ChangeOrderTCLabor[];
   tcCompanyName?: string;
+  laborTotal?: number;
 }
 
-export function GCLaborReviewPanel({ tcLabor, tcCompanyName }: GCLaborReviewPanelProps) {
+export function GCLaborReviewPanel({ tcLabor, tcCompanyName, laborTotal }: GCLaborReviewPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const totalLabor = tcLabor.reduce((sum, entry) => sum + (entry.labor_total || 0), 0);
+  const totalLabor = tcLabor.length > 0
+    ? tcLabor.reduce((sum, entry) => sum + (entry.labor_total || 0), 0)
+    : (laborTotal ?? 0);
   const title = tcCompanyName ? `Labor – ${tcCompanyName}` : 'Trade Contractor Labor';
 
-  if (tcLabor.length === 0) {
+  if (tcLabor.length === 0 && totalLabor <= 0) {
     return (
       <Card>
         <CardHeader className="pb-3">
