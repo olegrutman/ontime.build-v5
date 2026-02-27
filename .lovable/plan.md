@@ -1,79 +1,44 @@
 
+# Fix Work Order Contract Price to Include Materials
 
-# Clean Up Work Order GC View: Supplier Name, Labor Detail, Remove Redundancy
+## Problem
+The Work Order Summary Card and the individual Work Order cards show `final_price` from the database, which is **$6,170** (labor $5,500 + equipment $670). But the linked PO has **$14,884** in materials that are not reflected. The correct total should be approximately **$21,054**.
 
-## Summary
-Three changes: (1) show supplier name on the materials card, (2) show hours/rate detail when the labor card is expanded, and (3) remove redundant pricing info from the sidebar -- the sidebar pricing card duplicates what the main content tiles already show.
+This is because `material_total` in the `change_order_projects` table is `$0.00` -- it was never synced from the linked PO line items. The detail page already recalculates from PO data, but the summary views do not.
 
-## Changes
+## Solution
 
-### 1. Materials Card: Show Supplier Name
-**File: `src/components/change-order-detail/ChangeOrderDetailPage.tsx`**
+### 1. `WorkOrderSummaryCard.tsx` -- Include linked PO materials in totals
 
-In `CollapsibleMaterialsWrapper`, add an optional `supplierName` prop and display it in the collapsed summary (e.g., "Supplier: ABC Building Supply") and as a subtitle when expanded.
+After fetching work orders, also fetch the linked PO subtotals for any work orders that have a `linked_po_id`. Compute the true material total per work order (PO subtotal + markup) and add it to `tcToGcTotal`.
 
-The supplier name comes from the participants array: `participants.find(p => p.role === 'SUPPLIER' && p.is_active)?.organization?.name`. Pass this value when rendering the wrapper at line 474.
+Steps:
+- Select `linked_po_id`, `material_markup_type`, `material_markup_percent`, `material_markup_amount` in the work orders query (already fetches `material_total`)
+- For work orders with `linked_po_id`, batch-fetch PO line item totals from `po_line_items` grouped by `po_id`
+- For each work order, compute: `computedMaterialTotal = poSubtotal + markup` (or fall back to `material_total`)
+- Use `labor_total + computedMaterialTotal + equipment_total` instead of `final_price` for the revenue total
 
-### 2. Labor Card: Show Hours + Hourly Rate When Expanded
-**File: `src/components/change-order-detail/GCLaborReviewPanel.tsx`**
+### 2. `WorkOrdersTab.tsx` -- Show correct contract price on cards
 
-The expanded view already shows hours and hourly rate per entry (line 80-84: `{entry.hours} hours @ ${entry.hourly_rate}/hr`). However, when `tcLabor` array is empty but `laborTotal > 0`, the expanded view shows nothing useful. Add a fallback that displays the aggregate total with a note that line-item detail is not available. This is already working when entries exist -- no change needed for that case.
+The card at line 175 shows `changeOrder.final_price` for contracted orders. This also needs the linked PO material total included.
 
-The real issue may be that the `tcLabor` array has entries but the expanded content isn't visible due to the panel's current state. Verify the data is flowing correctly and ensure the expanded table headers include "Hours" and "Rate" columns for clarity.
+Steps:
+- In `useChangeOrderProject` hook or in the tab itself, compute the true total per work order
+- The `useChangeOrderProject` hook already fetches linked PO data for the detail page; check if it also provides it in the list
+- If not available in the list view, compute it in the tab by fetching PO subtotals for all work orders with `linked_po_id`
+- Display `labor_total + computedMaterialTotal + equipment_total` instead of `final_price`
 
-**Specific changes:**
-- Add table header row with Description, Hours, Rate, Total columns
-- Keep the existing per-entry rows with hours/rate detail (already present)
-- When `tcLabor` is empty but `laborTotal > 0`, show the total in a simple row
+### Technical Detail
 
-### 3. Remove Redundant Sidebar Pricing Card for GC
-**File: `src/components/change-order-detail/ChangeOrderDetailPage.tsx`**
-
-The GC sidebar currently shows: Checklist -> ContractedPricingCard -> ApprovalPanel. The `ContractedPricingCard` (GCPricingView) duplicates information that's now in the main content area tiles:
-- Total Work Order Cost (duplicated in ApprovalPanel summary)
-- TC Contract labor detail (duplicated in GCLaborReviewPanel)
-- Materials total (duplicated in CollapsibleMaterialsWrapper)
-- Equipment total (duplicated in CollapsibleEquipmentWrapper)
-
-**Remove `ContractedPricingCard` from the GC sidebar** (lines 536-545). Keep it for non-GC users. Move the "Total Work Order Cost" display into the ApprovalPanel's always-visible section (not gated by `canFinalize`) so GCs always see the single total.
-
-### 4. ApprovalPanel: Always Show Total Work Order Cost
-**File: `src/components/change-order-detail/ApprovalPanel.tsx`**
-
-Move the total cost display out of the `canFinalize` gate. Show a compact "Total Work Order Cost: $X" line always (above the approval summary detail). Remove the per-line breakdown (Labor, Materials, Equipment) from the approval summary since those are now in the main content tiles. Keep only the single total + Contract Change line.
-
----
-
-## Technical Details
-
-### Supplier Name Source
-```tsx
-const supplierName = participants.find(p => p.role === 'SUPPLIER' && p.is_active)?.organization?.name;
+The material total formula (matching the detail page):
 ```
-Passed to `CollapsibleMaterialsWrapper` as a new prop.
-
-### CollapsibleMaterialsWrapper Update
-```tsx
-function CollapsibleMaterialsWrapper({ children, materialTotal, supplierName }: { 
-  children: React.ReactNode; materialTotal: number; supplierName?: string 
-}) {
-  // In collapsed summary, show supplier name
-  // In header subtitle area, show "Supplier: X" when available
-}
+baseMatTotal = SUM(po_line_items.line_total) WHERE po_id = linked_po_id
+markupAmt = if percent: baseMatTotal * (markup_percent / 100)
+            if lump_sum: markup_amount
+computedMaterialTotal = baseMatTotal > 0 ? baseMatTotal + markupAmt : material_total
+trueTotal = labor_total + computedMaterialTotal + equipment_total
 ```
-
-### Sidebar Simplification (GC only)
-Before:
-- Checklist
-- ContractedPricingCard (REMOVE)
-- ApprovalPanel
-
-After:
-- Checklist
-- ApprovalPanel (with total always visible)
 
 ### Files Modified
-1. `src/components/change-order-detail/ChangeOrderDetailPage.tsx` -- add supplier name to materials wrapper, remove ContractedPricingCard from GC sidebar
-2. `src/components/change-order-detail/GCLaborReviewPanel.tsx` -- add table headers for hours/rate clarity
-3. `src/components/change-order-detail/ApprovalPanel.tsx` -- always show total cost, simplify summary
-
+1. **`src/components/project/WorkOrderSummaryCard.tsx`** -- fetch PO line item subtotals, compute true revenue totals including materials
+2. **`src/components/project/WorkOrdersTab.tsx`** -- compute and display correct contract price per work order card
