@@ -1,60 +1,152 @@
 
-# Fix Three Bugs: Team Redundancy, WO Total, Labor Budget RLS
+# Unified Design System Redesign
 
-## Bug 1: Remove Team section from OperationalSummary
+## Summary
+Bring every page in Ontime.Build to match the Overview page's Apple-style executive dashboard aesthetic. This is a CSS/component styling change only -- no business logic, data, or workflows are touched.
 
-**File**: `src/components/project/OperationalSummary.tsx`
+## Design Reference (Overview Page)
+The Overview page establishes the standard:
+- Soft gray background: `bg-[hsl(240_5%_96%)]`
+- White cards with `rounded-2xl shadow-sm`, no heavy borders
+- Uppercase tracking-wide section labels in `text-xs text-muted-foreground`
+- Large bold financial numbers with `tabular-nums`
+- Generous spacing with `space-y-4` and `gap-4`
 
-Remove the entire Team card block (lines 271-317) including:
-- The team state, fetchTeam, teamByRole logic
-- The AddTeamMemberDialog and DesignateSupplierDialog components and their imports
-- The designated supplier state and fetch
-- Keep: Work Orders, Invoices, RFIs, and Scope sections
+## Implementation Strategy
 
-Also remove unused imports: `Users`, `UserPlus`, `Plus` (if only used for team), `useAuth` (if only used for team), `AddTeamMemberDialog`, `DesignateSupplierDialog`, `Badge`.
+This is a large change spanning 30+ files. To keep it manageable and safe, the work is split into **4 phases**, each touching a specific layer.
 
-## Bug 2: Work Order total missing linked PO materials
+---
 
-**Problem**: `useProjectFinancials` line 255 sums `wo.final_price` directly, but `final_price` does not include linked PO material costs. The `enrichWorkOrderTotals` utility in `src/lib/computeWorkOrderTotal.ts` exists for exactly this purpose but is never called.
+### Phase 1: Foundation Layer (Global Styles + Base Components)
 
-**Fix in `src/hooks/useProjectFinancials.ts`**:
-- Import `enrichWorkOrderTotals` from `@/lib/computeWorkOrderTotal`
-- After fetching work orders (line 253), call `enrichWorkOrderTotals(approvedWOs)` to get the real totals map
-- Sum the enriched totals instead of `wo.final_price`
-- This correctly adds linked PO line item subtotals + markup to the work order totals
+**Goal**: Update the base Card component and global CSS so ALL pages inherit the new look automatically.
 
-The enriched total for "Rfi 87" will be: labor($5,500) + PO materials($14,884) + equipment($670) = $21,054 instead of $6,170.
+**1a. Update `src/components/ui/card.tsx`**
+- Change Card base class from `rounded-none` to `rounded-2xl`
+- Replace `border` with `shadow-sm`
+- Set `bg-white dark:bg-card` as the default background (matching the Overview's custom cards)
 
-## Bug 3: Labor budget RLS policy prevents non-creator updates
+**1b. Update `src/index.css`**
+- Set the main `--background` to the soft gray tone `240 5% 96%` (matching `bg-[hsl(240_5%_96%)]` used on Overview)
+- Ensure `--card` stays white: `0 0% 100%`
+- Adjust dark mode equivalents proportionally
 
-**Problem**: The RLS UPDATE policy on `project_contracts` only allows `created_by_user_id = auth.uid()`. When a GC or TC who didn't create the primary contract tries to update `labor_budget` or `material_estimate_total`, the update silently affects 0 rows and the value is never persisted.
+**1c. Update `src/components/layout/AppLayout.tsx`**
+- The main content area already uses `bg-background`, so once the CSS variable changes, all `AppLayout` pages (Dashboard, Financials, Reminders, Profile, etc.) get the soft gray background automatically
 
-**Fix**: Database migration to update the RLS policy. Replace the restrictive creator-only policy with one that allows updates from any user who belongs to either the `from_org_id` or `to_org_id` organization on the contract:
+**1d. Update `src/pages/ProjectHome.tsx`**
+- Remove the hardcoded `bg-[hsl(240_5%_96%)]` on the overview tab since the global background now matches
+- The non-overview tabs already use the global background
 
-```sql
-DROP POLICY "Contract creators can update contracts" ON project_contracts;
+This single phase will fix ~60% of the visual inconsistency across the entire app, since most pages use Card and AppLayout.
 
-CREATE POLICY "Contract party members can update contracts"
-ON project_contracts FOR UPDATE
-USING (
-  EXISTS (
-    SELECT 1 FROM user_org_roles
-    WHERE user_org_roles.user_id = auth.uid()
-    AND (
-      user_org_roles.organization_id = project_contracts.from_org_id
-      OR user_org_roles.organization_id = project_contracts.to_org_id
-    )
-  )
-);
+---
+
+### Phase 2: Project Tabs (Work Orders, Invoices, POs, RFIs, Returns, SOV)
+
+**Goal**: Standardize the tab content pages within the project to match the Overview's card styling and spacing.
+
+**2a. Work Orders Tab (`src/components/project/WorkOrdersTab.tsx`)**
+- Summary stat cards: Replace `<Card className="p-4">` with styled divs using `bg-white dark:bg-card rounded-2xl shadow-sm p-4`
+- Section headers: Use the same `text-xs uppercase tracking-wide text-muted-foreground font-medium` pattern
+- Work order cards: Already use `<Card>`, which Phase 1 fixes. Add `hover:shadow-md transition-shadow` for consistent hover states
+
+**2b. Invoices Tab (`src/components/invoices/InvoicesTab.tsx`)**
+- Same summary card treatment as Work Orders
+- Invoice cards already use `<Card>`, inherits from Phase 1
+
+**2c. Purchase Orders Tab (`src/components/project/PurchaseOrdersTab.tsx`)**
+- PO cards: Already use `<Card>`, inherits from Phase 1
+- `POCard.tsx`: Replace `hover:border-primary/50` with `hover:shadow-md transition-shadow` (no border change, shadow-based hover)
+
+**2d. RFIs Tab (`src/components/rfi/RFIsTab.tsx` + `RFICard.tsx`)**
+- RFI cards: Replace `hover:border-primary/40` with `hover:shadow-md transition-shadow`
+
+**2e. Returns Tab (`src/components/returns/ReturnCard.tsx`)**
+- Replace `hover:shadow-md` (already correct, just ensure rounded-2xl inherits)
+
+**2f. SOV Editor (`src/components/sov/ContractSOVEditor.tsx`)**
+- Replace `CardHeader`/`CardTitle` usage with the overview-style uppercase label pattern
+- Tables within cards: maintain horizontal scroll, but ensure the parent card follows rounded-2xl
+
+---
+
+### Phase 3: Dashboard + Global Pages
+
+**Goal**: Bring non-project pages to the same standard.
+
+**3a. Dashboard (`src/pages/Dashboard.tsx`)**
+- Background: Handled by Phase 1 (AppLayout + CSS variable)
+- `DashboardQuickStats.tsx`: Cards already use `<Card>`, inherits rounded-2xl from Phase 1. Ensure icon background uses `rounded-xl` instead of `rounded-lg`
+- `DashboardProjectList.tsx`: Status tabs are fine. Project rows use `<Card>` -- inherits from Phase 1
+- `ProjectRow.tsx`: Remove `border-l-4` left border accent (too heavy for the new design). Use a small colored dot or subtle left indicator instead. Keep `hover:bg-accent/50`
+
+**3b. Profile Page (`src/pages/Profile.tsx`)**
+- Uses `Card`, `CardHeader`, `CardTitle` -- inherits rounded-2xl from Phase 1
+- Section titles: Replace `CardTitle` (text-2xl) with the smaller, uppercase label pattern where appropriate
+
+**3c. Other Pages (Financials, OrgTeam, PartnerDirectory, etc.)**
+- All use `AppLayout` + `Card` -- Phase 1 handles the base styling
+- Spot-check each for hardcoded border styles and replace with shadow-based styling
+
+---
+
+### Phase 4: Navigation + Headers
+
+**Goal**: Ensure sticky headers, tabs, and nav feel part of the same system.
+
+**4a. TopBar (`src/components/layout/TopBar.tsx`)**
+- Already uses `bg-card backdrop-blur`, which will now be white. This is correct -- clean header on soft gray body
+- Ensure consistent height: `h-16` (already set)
+
+**4b. ProjectTopBar (`src/components/project/ProjectTopBar.tsx`)**
+- Tab styling: Already uses `data-[state=active]:bg-muted rounded-md` -- this matches the Overview pattern. No changes needed
+
+**4c. WorkOrderTopBar (`src/components/change-order-detail/WorkOrderTopBar.tsx`)**
+- Same header pattern. Already consistent
+
+**4d. BottomNav (`src/components/layout/BottomNav.tsx`)**
+- Ensure it uses `bg-card` (white) with subtle top border/shadow. Should match the TopBar in cleanliness
+
+---
+
+## Technical Details
+
+### Files Modified (estimated ~25 files)
+
+**Core (Phase 1 -- 4 files)**:
+- `src/components/ui/card.tsx` -- rounded-2xl, shadow-sm, bg-white
+- `src/index.css` -- background CSS variable to soft gray
+- `src/components/layout/AppLayout.tsx` -- minor cleanup
+- `src/pages/ProjectHome.tsx` -- remove hardcoded bg
+
+**Project Tabs (Phase 2 -- ~10 files)**:
+- `WorkOrdersTab.tsx`, `InvoicesTab.tsx`, `PurchaseOrdersTab.tsx`
+- `POCard.tsx`, `RFICard.tsx`, `ReturnCard.tsx`
+- `InvoiceCard.tsx`
+- `ContractSOVEditor.tsx`
+- Summary stat card styling in WO and Invoice tabs
+
+**Dashboard + Pages (Phase 3 -- ~6 files)**:
+- `DashboardQuickStats.tsx`, `ProjectRow.tsx`
+- `Profile.tsx`, `Financials.tsx`
+- `OnboardingChecklist.tsx`, `DashboardAttentionBanner.tsx`
+
+**Navigation (Phase 4 -- ~3 files)**:
+- `TopBar.tsx`, `BottomNav.tsx` -- minor tweaks
+
+### Key CSS Changes
+```text
+Card base:     rounded-none border  -->  rounded-2xl shadow-sm border-0
+Background:    209 40% 96%          -->  240 5% 96% (softer, more neutral gray)
+Card bg:       210 40% 98%          -->  0 0% 100% (pure white)
+Hover states:  border-primary/40    -->  shadow-md transition-shadow
 ```
 
-This allows any user belonging to either organization on the contract to update it -- matching the business logic where both GC and TC should be able to edit budgets and contract values.
-
-Additionally, update `updateLaborBudget` and `updateContract` to check the returned row count or error, and show a proper error toast if the update fails instead of appearing to succeed.
-
-## Files Modified
-
-1. **`src/components/project/OperationalSummary.tsx`** -- Remove Team section and related state/imports
-2. **`src/hooks/useProjectFinancials.ts`** -- Use `enrichWorkOrderTotals` for accurate WO totals
-3. **Database migration** -- Fix RLS policy on `project_contracts` to allow party member updates
-4. **`src/hooks/useProjectFinancials.ts`** -- Add error handling for silent update failures
+### What Does NOT Change
+- All business logic, calculations, permissions
+- Database schema, RLS policies, edge functions
+- Component props, data flow, state management
+- Feature set -- nothing removed, nothing added
+- Dark mode variables (adjusted proportionally but not redesigned)
