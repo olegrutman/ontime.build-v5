@@ -281,9 +281,7 @@ export default function ProjectHome() {
                           <ContractHeroCard financials={financials} projectId={id!} />
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <BillingCashCard financials={financials} />
-                            <div className="contents md:block">
-                              <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
-                            </div>
+                            <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
                           </div>
                           <CollapsibleOperations
                             projectId={id!}

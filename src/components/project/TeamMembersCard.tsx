@@ -75,11 +75,13 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
   }, [projectId]);
 
   const fetchContract = useCallback(async () => {
+    // Fetch the primary contract (exclude work-order-level contracts)
     const { data } = await supabase
       .from('project_contracts')
       .select('id, material_responsibility, from_org_id, to_org_id')
       .eq('project_id', projectId)
       .eq('from_role', 'Trade Contractor')
+      .or('trade.is.null,trade.neq.Work Order')
       .limit(1);
 
     if (data && data.length > 0) {
