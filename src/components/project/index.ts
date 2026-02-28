@@ -25,7 +25,6 @@ export { ProjectReadinessCard } from './ProjectReadinessCard';
 export { SupplierEstimateVsOrdersCard } from './SupplierEstimateVsOrdersCard';
 export { SupplierOperationalSummary } from './SupplierOperationalSummary';
 export { DesignateSupplierDialog } from './DesignateSupplierDialog';
-export { FinancialSnapshot } from './FinancialSnapshot';
 export { BudgetTracking } from './BudgetTracking';
 export { ContractHeroCard } from './ContractHeroCard';
 export { BillingCashCard } from './BillingCashCard';
