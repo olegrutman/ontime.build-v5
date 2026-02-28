@@ -34,6 +34,7 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
   const {
     loading, viewerRole, upstreamContract, downstreamContract, userOrgIds,
     workOrderTotal, approvedWOCount, workOrderFCCost,
+    materialDelivered, materialOrderedPending,
     supplierOrderValue, supplierInvoiced, supplierPaid,
     fcParticipants, updateContract, createFcContract,
   } = financials;
@@ -234,7 +235,7 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
 
       {/* TC: Live Position */}
       {isTC && (() => {
-        const woProfit = workOrderTotal - workOrderFCCost;
+        const woProfit = workOrderTotal - workOrderFCCost - materialDelivered - materialOrderedPending;
         const livePosition = gcContractValue - fcContractValue + woProfit;
         return (
           <div className="mt-4 flex items-center justify-between py-2.5 px-3 rounded-xl bg-accent/30">
