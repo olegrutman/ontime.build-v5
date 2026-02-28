@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { enrichWorkOrderTotals } from '@/lib/computeWorkOrderTotal';
 
 export type ViewerRole = 'Trade Contractor' | 'General Contractor' | 'Field Crew' | 'Supplier';
 
@@ -252,7 +253,9 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       // Work orders — only sum approved/contracted for contract total
       const wos = workOrdersRes.data || [];
       const approvedWOs = wos.filter(wo => ['approved', 'contracted'].includes(wo.status));
-      const woTotal = approvedWOs.reduce((sum, wo) => sum + (wo.final_price || 0), 0);
+      // Use enrichWorkOrderTotals to include linked PO materials + markup
+      const enrichedTotals = await enrichWorkOrderTotals(approvedWOs as any);
+      const woTotal = Array.from(enrichedTotals.values()).reduce((sum, v) => sum + v, 0);
       setWorkOrderTotal(woTotal);
       setApprovedWOCount(approvedWOs.length);
       setRecentWorkOrders(wos.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5).map(wo => ({
@@ -400,16 +403,22 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   };
 
   const updateMaterialEstimate = async (contractId: string, amount: number): Promise<boolean> => {
-    const { error } = await supabase.from('project_contracts').update({ material_estimate_total: amount } as any).eq('id', contractId);
-    if (error) return false;
+    const { error } = await supabase.from('project_contracts').update({ material_estimate_total: amount } as any).eq('id', contractId).select('id').maybeSingle();
+    if (error) {
+      console.error('Failed to update material estimate:', error);
+      return false;
+    }
     setMaterialEstimateTotal(amount);
     setMaterialEstimate(amount);
     return true;
   };
 
   const updateLaborBudget = async (contractId: string, amount: number): Promise<boolean> => {
-    const { error } = await supabase.from('project_contracts').update({ labor_budget: amount } as any).eq('id', contractId);
-    if (error) return false;
+    const { error, count } = await supabase.from('project_contracts').update({ labor_budget: amount } as any).eq('id', contractId).select('id').maybeSingle();
+    if (error) {
+      console.error('Failed to update labor budget:', error);
+      return false;
+    }
     setLaborBudget(amount);
     return true;
   };
