@@ -28,9 +28,12 @@ import {
   OperationalSummary,
   SupplierEstimateVsOrdersCard,
   SupplierOperationalSummary,
-  FinancialSnapshot,
   BudgetTracking,
 } from '@/components/project';
+import { ContractHeroCard } from '@/components/project/ContractHeroCard';
+import { BillingCashCard } from '@/components/project/BillingCashCard';
+import { UrgentTasksCard } from '@/components/project/UrgentTasksCard';
+import { TeamMembersCard } from '@/components/project/TeamMembersCard';
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
 import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
 import { MaterialResponsibilityCard } from '@/components/project/MaterialResponsibilityCard';
@@ -73,21 +76,21 @@ function CollapsibleOperations({ projectId, projectType, financials, onNavigate 
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <div className="border bg-card">
-        <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-accent/50 transition-colors">
-          <div className="flex items-center gap-1.5">
-            <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+      <div className="bg-white dark:bg-card rounded-2xl shadow-sm overflow-hidden">
+        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-accent/30 transition-colors">
+          <div className="flex items-center gap-2">
+            <ClipboardList className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs uppercase tracking-wide text-muted-foreground font-medium">
               Activity & Operations
             </span>
-            <span className="text-[10px] text-muted-foreground ml-1">
+            <span className="text-[10px] text-muted-foreground">
               {woCount} WOs · {invCount} Invoices
             </span>
           </div>
           <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="px-3 pb-3">
+          <div className="px-4 pb-4">
             <OperationalSummary
               projectId={projectId}
               projectType={projectType}
@@ -102,7 +105,6 @@ function CollapsibleOperations({ projectId, projectType, financials, onNavigate 
 }
 
 export default function ProjectHome() {
-
   const { id } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -116,7 +118,6 @@ export default function ProjectHome() {
   const { isDemoMode, demoRole } = useDemo();
   const isInDemoMode = isDemoMode && id?.startsWith('demo-');
 
-  // Detect if current org is a supplier
   const currentOrg = userOrgRoles[0]?.organization;
   const isRealSupplier = isInDemoMode ? demoRole === 'SUPPLIER' : currentOrg?.type === 'SUPPLIER';
   const isFC = isInDemoMode ? demoRole === 'FC' : currentOrg?.type === 'FC';
@@ -124,12 +125,10 @@ export default function ProjectHome() {
   const isSupplier = isRealSupplier || isDesignatedSupplier;
   const supplierOrgId = isRealSupplier ? (isInDemoMode ? 'demo-org-supplier' : currentOrg?.id) : null;
 
-  // Realtime subscriptions – refreshKey bumps when any project entity changes
   const realtimeKey = useProjectRealtime(id);
   const financials = useProjectFinancials(id || '', isSupplier, supplierOrgId);
   const readiness = useProjectReadiness(id);
 
-  // Get active tab from URL or default to 'overview'
   const activeTab = searchParams.get('tab') || 'overview';
 
   const handleTabChange = (tab: string) => {
@@ -139,37 +138,23 @@ export default function ProjectHome() {
 
   const handleStatusChange = async (newStatus: string) => {
     if (!project) return;
-    // Prevent manual activation — project activates automatically via readiness engine
     if (newStatus === 'active') {
       toast({ title: 'Projects activate automatically when setup is complete', variant: 'destructive' });
       return;
     }
-
-    const { error } = await supabase
-      .from('projects')
-      .update({ status: newStatus })
-      .eq('id', project.id);
-
+    const { error } = await supabase.from('projects').update({ status: newStatus }).eq('id', project.id);
     if (error) {
       toast({ title: 'Error', description: 'Failed to update project status', variant: 'destructive' });
       return;
     }
-
     setProject({ ...project, status: newStatus });
     toast({ title: 'Project status updated' });
   };
 
-  // Check if current user is a designated supplier for this project
   useEffect(() => {
     if (!id || !user || isRealSupplier || isInDemoMode) return;
     const checkDesignated = async () => {
-      const { data } = await supabase
-        .from('project_designated_suppliers')
-        .select('id')
-        .eq('project_id', id)
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .maybeSingle();
+      const { data } = await supabase.from('project_designated_suppliers').select('id').eq('project_id', id).eq('user_id', user.id).eq('status', 'active').maybeSingle();
       setIsDesignatedSupplier(!!data);
     };
     checkDesignated();
@@ -178,34 +163,17 @@ export default function ProjectHome() {
   useEffect(() => {
     if (isInDemoMode && id) {
       const demoProject = getDemoProjectById(id);
-      if (demoProject) {
-        setProject(demoProject as unknown as Project);
-        setLoading(false);
-      } else {
-        navigate('/demo');
-      }
+      if (demoProject) { setProject(demoProject as unknown as Project); setLoading(false); }
+      else navigate('/demo');
       return;
     }
-
     const fetchProject = async () => {
       if (!id) return;
-
-      const { data: proj, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('id', id)
-        .single();
-
-      if (error) {
-        console.error('Error fetching project:', error);
-        navigate('/dashboard');
-        return;
-      }
-
+      const { data: proj, error } = await supabase.from('projects').select('*').eq('id', id).single();
+      if (error) { console.error('Error fetching project:', error); navigate('/dashboard'); return; }
       setProject(proj as Project);
       setLoading(false);
     };
-
     fetchProject();
   }, [id, navigate, isInDemoMode]);
 
@@ -222,16 +190,14 @@ export default function ProjectHome() {
             </div>
             <main className="flex-1 overflow-auto container mx-auto px-4 py-6 space-y-6">
               <div className="grid gap-4 md:grid-cols-4">
-                {[...Array(4)].map((_, i) => (
-                  <Skeleton key={i} className="h-24" />
-                ))}
+                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}
               </div>
               <Skeleton className="h-96 w-full" />
             </main>
-        </SidebarInset>
-        <BottomNav />
-      </div>
-    </SidebarProvider>
+          </SidebarInset>
+          <BottomNav />
+        </div>
+      </SidebarProvider>
     );
   }
 
@@ -256,98 +222,105 @@ export default function ProjectHome() {
     <SidebarProvider defaultOpen={defaultOpen}>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
-         <SidebarInset className="flex flex-col flex-1 bg-background">
-          {/* Compact mobile project header */}
+        <SidebarInset className="flex flex-col flex-1 bg-background">
           <MobileProjectHeader
             projectName={project.name}
             projectId={id!}
             projectStatus={projectStatus}
             onStatusChange={handleStatusChange}
           />
-
-          {/* Sticky Project Top Bar - desktop only */}
           <div className="hidden lg:block">
-          <ProjectTopBar
-            projectName={project.name}
-            projectId={id!}
-            projectStatus={projectStatus}
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-            onStatusChange={handleStatusChange}
-            isSupplier={isSupplier}
-          />
+            <ProjectTopBar
+              projectName={project.name}
+              projectId={id!}
+              projectStatus={projectStatus}
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+              onStatusChange={handleStatusChange}
+              isSupplier={isSupplier}
+            />
           </div>
 
-          {/* Scrollable content */}
           <main className="flex-1 overflow-auto">
-            <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 pb-20 space-y-6">
+            <div className={cn(
+              "max-w-7xl mx-auto w-full pb-20",
+              activeTab === 'overview' ? 'p-4 sm:p-6 bg-[hsl(240_5%_96%)] dark:bg-background' : 'p-4 sm:p-6 space-y-6'
+            )}>
               {/* Overview Tab */}
               {activeTab === 'overview' && (
-                <div className="space-y-4">
+                <>
                   {isInDemoMode ? (
                     <DemoProjectOverview onNavigate={handleTabChange} />
                   ) : isSupplier && supplierOrgId ? (
-                    <>
-                      <AttentionBanner
-                        projectId={id!}
-                        onNavigate={handleTabChange}
-                        isSupplier={isSupplier}
-                        supplierOrgId={supplierOrgId}
-                      />
+                    <div className="space-y-4">
+                      <AttentionBanner projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
                       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         <SupplierEstimateVsOrdersCard projectId={id!} supplierOrgId={supplierOrgId} />
                         <SupplierFinancialsSummaryCard projectId={id!} supplierOrgId={supplierOrgId} />
                         <SupplierPOSummaryCard projectId={id!} supplierOrgId={supplierOrgId} />
                       </div>
-                      <SupplierOperationalSummary
-                        projectId={id!}
-                        supplierOrgId={supplierOrgId}
-                        onNavigate={handleTabChange}
-                      />
-                    </>
+                      <SupplierOperationalSummary projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
+                    </div>
                   ) : (
-                    <>
+                    <div className="space-y-4">
+                      {/* Setup cards */}
                       {(project.status === 'setup' || project.status === 'draft') && !isFC && (
                         <ProjectReadinessCard readiness={readiness} />
                       )}
-                      <AttentionBanner
-                        projectId={id!}
-                        onNavigate={handleTabChange}
-                        isSupplier={isSupplier}
-                        supplierOrgId={supplierOrgId}
-                      />
                       <MaterialResponsibilityCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} />
-                      <FinancialSnapshot financials={financials} projectId={id!} />
-                      <BudgetTracking financials={financials} projectId={id!} />
-                      <CollapsibleOperations
-                        projectId={id!}
-                        projectType={project.project_type}
-                        financials={financials}
-                        onNavigate={handleTabChange}
-                      />
-                    </>
+
+                      {/* Mobile attention banner */}
+                      <div className="lg:hidden">
+                        <AttentionBanner projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
+                      </div>
+
+                      {/* Main grid: left content + right sidebar */}
+                      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
+                        {/* LEFT COLUMN */}
+                        <div className="space-y-4">
+                          <ContractHeroCard financials={financials} projectId={id!} />
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <BillingCashCard financials={financials} />
+                            <div className="contents md:block">
+                              <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
+                            </div>
+                          </div>
+                          <CollapsibleOperations
+                            projectId={id!}
+                            projectType={project.project_type}
+                            financials={financials}
+                            onNavigate={handleTabChange}
+                          />
+                        </div>
+
+                        {/* RIGHT SIDEBAR — desktop only */}
+                        <div className="hidden lg:flex flex-col gap-4">
+                          <UrgentTasksCard projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
+                          <TeamMembersCard projectId={id!} />
+                        </div>
+                      </div>
+
+                      {/* Mobile: team + urgent below */}
+                      <div className="lg:hidden space-y-4">
+                        <TeamMembersCard projectId={id!} />
+                      </div>
+                    </div>
                   )}
-                </div>
+                </>
               )}
 
-              {/* SOV Tab - hide for suppliers */}
+              {/* Other tabs — unchanged */}
               {activeTab === 'sov' && !isSupplier && (
                 isInDemoMode ? <DemoSOVTab /> : <ContractSOVEditor projectId={id!} />
               )}
-
-              {/* Work Orders Tab - hide for suppliers */}
               {activeTab === 'work-orders' && !isSupplier && (
                 isInDemoMode
                   ? <DemoWorkOrdersTab projectId={id!} projectName={project.name} />
                   : <WorkOrdersTab projectId={id!} projectName={project.name} projectStatus={projectStatus} />
               )}
-
-              {/* RFIs Tab */}
               {activeTab === 'rfis' && (
                 isInDemoMode ? <DemoRFIsTab /> : <RFIsTab projectId={id!} />
               )}
-
-              {/* Estimates Tab */}
               {activeTab === 'estimates' && isSupplier && supplierOrgId && (
                 <SupplierEstimatesSection projectId={id!} projectName={project?.name} supplierOrgId={supplierOrgId} />
               )}
@@ -363,40 +336,18 @@ export default function ProjectHome() {
                   <ProjectEstimatesReview projectId={id!} />
                 )
               )}
-              {/* Invoices Tab */}
               {activeTab === 'invoices' && (
                 isInDemoMode
                   ? <DemoInvoicesTab projectId={id!} />
-                  : <InvoicesTab 
-                      key={`invoices-${tabResetKey}-${realtimeKey}`}
-                      projectId={id!} 
-                      retainagePercent={project.retainage_percent || 0}
-                      projectStatus={projectStatus}
-                    />
+                  : <InvoicesTab key={`invoices-${tabResetKey}-${realtimeKey}`} projectId={id!} retainagePercent={project.retainage_percent || 0} projectStatus={projectStatus} />
               )}
-
-              {/* Purchase Orders Tab */}
               {activeTab === 'purchase-orders' && (
                 isInDemoMode
                   ? <DemoPurchaseOrdersTab projectId={id!} />
-                  : <PurchaseOrdersTab 
-                      key={`po-${tabResetKey}-${realtimeKey}`}
-                      projectId={id!} 
-                      projectName={project?.name}
-                      projectStatus={projectStatus}
-                      projectAddress={
-                        project?.address 
-                          ? `${project.address.street || ''}, ${project.address.city || ''}, ${project.address.state || ''} ${project.address.zip || ''}`.replace(/^,\s*|,\s*$/g, '').trim()
-                          : ''
-                      }
-                    />
+                  : <PurchaseOrdersTab key={`po-${tabResetKey}-${realtimeKey}`} projectId={id!} projectName={project?.name} projectStatus={projectStatus}
+                      projectAddress={project?.address ? `${project.address.street || ''}, ${project.address.city || ''}, ${project.address.state || ''} ${project.address.zip || ''}`.replace(/^,\s*|,\s*$/g, '').trim() : ''} />
               )}
-
-              {/* Returns Tab */}
-              {activeTab === 'returns' && (
-                <ReturnsTab projectId={id!} />
-              )}
-
+              {activeTab === 'returns' && <ReturnsTab projectId={id!} />}
             </div>
           </main>
         </SidebarInset>
