@@ -28,6 +28,7 @@ export interface ProjectFinancials {
   // Aggregated metrics
   billedToDate: number;
   workOrderTotal: number;
+  approvedWOCount: number;
   workOrderFCCost: number;
   retainageAmount: number;
   outstanding: number;
@@ -103,6 +104,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [materialOrderedPending, setMaterialOrderedPending] = useState(0);
   const [actualLaborCost, setActualLaborCost] = useState(0);
   const [laborBudget, setLaborBudget] = useState<number | null>(null);
+  const [approvedWOCount, setApprovedWOCount] = useState(0);
 
   const fetchData = async () => {
     if (!user || !projectId) { setLoading(false); return; }
@@ -247,10 +249,12 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         id: inv.id, invoice_number: inv.invoice_number, status: inv.status, total_amount: inv.total_amount, created_at: inv.created_at,
       })));
 
-      // Work orders
+      // Work orders — only sum approved/contracted for contract total
       const wos = workOrdersRes.data || [];
-      const woTotal = wos.reduce((sum, wo) => sum + (wo.final_price || 0), 0);
+      const approvedWOs = wos.filter(wo => ['approved', 'contracted'].includes(wo.status));
+      const woTotal = approvedWOs.reduce((sum, wo) => sum + (wo.final_price || 0), 0);
       setWorkOrderTotal(woTotal);
+      setApprovedWOCount(approvedWOs.length);
       setRecentWorkOrders(wos.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5).map(wo => ({
         id: wo.id, title: wo.title, status: wo.status, created_at: wo.created_at, final_price: wo.final_price,
       })));
@@ -288,8 +292,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       setMaterialDelivered(calcPOTotal(deliveredPOs));
       setMaterialOrderedPending(calcPOTotal(pendingPOs));
 
-      // Actual labor cost from approved/contracted work orders
-      const approvedWOs = wos.filter(wo => ['approved', 'contracted'].includes(wo.status));
+      // Actual labor cost from approved/contracted work orders (reuse already-filtered list)
       const laborCost = approvedWOs.reduce((sum, wo: any) => sum + (wo.labor_total || 0), 0);
       setActualLaborCost(laborCost);
 
@@ -314,23 +317,23 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         setTotalPaidToFC(paidInvoices.reduce((s, i) => s + (i.total_amount || 0), 0));
 
         // Monthly margin trend (approved WOs by month)
-        const approvedWOs = wos.filter(wo => ['approved', 'contracted'].includes(wo.status));
+        const approvedWOsForTrend = wos.filter(wo => ['approved', 'contracted'].includes(wo.status));
         const byMonth = new Map<string, { revenue: number; cost: number }>();
-        for (const wo of approvedWOs) {
+        for (const wo of approvedWOsForTrend) {
           const month = wo.created_at.slice(0, 7); // YYYY-MM
           const prev = byMonth.get(month) || { revenue: 0, cost: 0 };
           prev.revenue += wo.final_price || 0;
           byMonth.set(month, prev);
         }
         // Add FC costs per month if available
-        if (approvedWOs.length > 0) {
-          const approvedIds = approvedWOs.map(w => w.id);
+        if (approvedWOsForTrend.length > 0) {
+          const approvedIds = approvedWOsForTrend.map(w => w.id);
           const { data: fcEntries } = await supabase.from('change_order_fc_hours').select('change_order_id, labor_total').in('change_order_id', approvedIds);
           const woCostMap = new Map<string, number>();
           for (const fc of fcEntries || []) {
             woCostMap.set(fc.change_order_id, (woCostMap.get(fc.change_order_id) || 0) + (fc.labor_total || 0));
           }
-          for (const wo of approvedWOs) {
+          for (const wo of approvedWOsForTrend) {
             const month = wo.created_at.slice(0, 7);
             const prev = byMonth.get(month)!;
             prev.cost += woCostMap.get(wo.id) || 0;
@@ -413,7 +416,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
 
   return {
     loading, viewerRole, contracts, upstreamContract, downstreamContract, userOrgIds,
-    billedToDate, workOrderTotal, workOrderFCCost, retainageAmount, outstanding,
+    billedToDate, workOrderTotal, approvedWOCount, workOrderFCCost, retainageAmount, outstanding,
     materialEstimate, materialOrdered, totalPaidToFC,
     materialEstimateTotal, approvedEstimateSum, isTCMaterialResponsible, isGCMaterialResponsible,
     isDesignatedSupplier,
