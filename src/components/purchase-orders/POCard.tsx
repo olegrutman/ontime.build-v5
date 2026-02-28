@@ -98,7 +98,7 @@ export function POCard({
 
   return (
     <Card
-      className="group cursor-pointer hover:border-primary/50 transition-colors"
+      className="group cursor-pointer hover:shadow-md transition-shadow"
       onClick={onClick}
     >
       <CardContent className="p-4">
