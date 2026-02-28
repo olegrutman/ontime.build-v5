@@ -40,7 +40,7 @@ export function BudgetTracking({ financials, projectId, onNavigate }: BudgetTrac
     (viewerRole === 'General Contractor' && isGCMaterialResponsible) ||
     (viewerRole === 'Supplier' && isDesignatedSupplier);
 
-  const showLabor = viewerRole === 'General Contractor' || viewerRole === 'Trade Contractor';
+  const showLabor = viewerRole === 'General Contractor' || viewerRole === 'Field Crew';
 
   if (!showMaterial && !showLabor) return null;
 
