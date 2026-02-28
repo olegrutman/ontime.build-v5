@@ -1,30 +1,20 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ClipboardList, Receipt, Users, Edit, FileText, Plus, Sparkles, Loader2, RefreshCw, MessageSquareMore, UserPlus } from 'lucide-react';
+import { ClipboardList, Receipt, Edit, FileText, Sparkles, Loader2, RefreshCw, MessageSquareMore } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { useAuth } from '@/hooks/useAuth';
-import { AddTeamMemberDialog } from '@/components/project/AddTeamMemberDialog';
-import { DesignateSupplierDialog } from '@/components/project/DesignateSupplierDialog';
 import { toast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
 
 interface OperationalSummaryProps {
   projectId: string;
   projectType: string;
   financials: ProjectFinancials;
   onNavigate: (tab: string) => void;
-}
-
-interface TeamMember {
-  id: string;
-  role: string;
-  invited_org_name: string | null;
-  status: string;
 }
 
 interface ScopeInfo {
@@ -35,20 +25,6 @@ interface ScopeInfo {
   num_units: number | null;
   scope_description: string | null;
 }
-
-const roleDotColors: Record<string, string> = {
-  'General Contractor': 'bg-blue-500',
-  'Trade Contractor': 'bg-emerald-500',
-  'Field Crew': 'bg-purple-500',
-  'Supplier': 'bg-amber-500',
-};
-
-const roleAbbrev: Record<string, string> = {
-  'General Contractor': 'GC',
-  'Trade Contractor': 'TC',
-  'Field Crew': 'FC',
-  'Supplier': 'SUP',
-};
 
 const statusColors: Record<string, string> = {
   draft: 'bg-muted text-muted-foreground',
@@ -77,39 +53,11 @@ function fmtCurrency(v: number): string {
 
 export function OperationalSummary({ projectId, projectType, financials, onNavigate }: OperationalSummaryProps) {
   const navigate = useNavigate();
-  const { userOrgRoles } = useAuth();
-  const [team, setTeam] = useState<TeamMember[]>([]);
   const [scope, setScope] = useState<ScopeInfo | null>(null);
-  const [loadingTeam, setLoadingTeam] = useState(true);
   const [loadingScope, setLoadingScope] = useState(true);
-  const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
-  const [isDesignateOpen, setIsDesignateOpen] = useState(false);
-  const [designatedSupplier, setDesignatedSupplier] = useState<{ invited_name: string | null; invited_email: string | null; status: string } | null>(null);
   const [generatingDescription, setGeneratingDescription] = useState(false);
   const [openRfiCount, setOpenRfiCount] = useState(0);
   const [loadingRfis, setLoadingRfis] = useState(true);
-
-  const creatorOrgType = userOrgRoles[0]?.organization?.type ?? null;
-  const isGcOrTc = creatorOrgType === 'GC' || creatorOrgType === 'TC';
-
-  const fetchDesignatedSupplier = useCallback(async () => {
-    const { data } = await supabase
-      .from('project_designated_suppliers')
-      .select('invited_name, invited_email, status')
-      .eq('project_id', projectId)
-      .neq('status', 'removed')
-      .maybeSingle();
-    setDesignatedSupplier(data);
-  }, [projectId]);
-
-  const fetchTeam = useCallback(async () => {
-    const { data } = await supabase
-      .from('project_team')
-      .select('id, role, invited_org_name, status')
-      .eq('project_id', projectId);
-    setTeam(data || []);
-    setLoadingTeam(false);
-  }, [projectId]);
 
   useEffect(() => {
     const fetchScope = async () => {
@@ -121,9 +69,7 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
       setScope(data);
       setLoadingScope(false);
     };
-    fetchTeam();
     fetchScope();
-    fetchDesignatedSupplier();
 
     const fetchRfiCount = async () => {
       const { count, error } = await supabase
@@ -135,7 +81,7 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
       setLoadingRfis(false);
     };
     fetchRfiCount();
-  }, [projectId, fetchTeam]);
+  }, [projectId]);
 
   const { recentWorkOrders, recentInvoices } = financials;
 
@@ -179,13 +125,6 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
       setGeneratingDescription(false);
     }
   };
-
-  // Group team by role
-  const teamByRole = team.reduce<Record<string, TeamMember[]>>((acc, m) => {
-    if (!acc[m.role]) acc[m.role] = [];
-    acc[m.role].push(m);
-    return acc;
-  }, {});
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -268,56 +207,8 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
         )}
       </div>
 
-      <div className="border bg-card p-3">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-1.5">
-            <Users className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Team</span>
-            <span className="text-[10px] text-muted-foreground ml-1">({team.filter(m => m.status === 'Accepted').length} active)</span>
-          </div>
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => setIsAddMemberOpen(true)}>
-            <Plus className="h-3 w-3 mr-1" />
-            Add
-          </Button>
-        </div>
-        {loadingTeam ? (
-          <Skeleton className="h-12" />
-        ) : team.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-2">No team members</p>
-        ) : (
-          <div className="space-y-1">
-            {Object.entries(teamByRole).map(([role, members]) => (
-              <div key={role} className="flex items-center gap-1.5 py-0.5">
-                <span className={cn("h-2 w-2 rounded-full shrink-0", roleDotColors[role])} />
-                <span className="text-[10px] font-medium text-muted-foreground uppercase w-7">{roleAbbrev[role]}</span>
-                <span className="text-sm truncate">{members.map(m => m.invited_org_name || 'Unknown').join(', ')}</span>
-              </div>
-            ))}
-            {/* Designated supplier section */}
-            {designatedSupplier ? (
-              <div className="flex items-center justify-between pt-1 border-t mt-1">
-                <div className="flex items-center gap-1.5">
-                  <span className={cn("h-2 w-2 rounded-full shrink-0 bg-amber-500")} />
-                  <span className="text-[10px] font-medium text-muted-foreground uppercase w-7">SUP</span>
-                  <span className="text-sm truncate">{designatedSupplier.invited_name || designatedSupplier.invited_email || 'Designated'}</span>
-                  <Badge variant="outline" className="text-[9px] px-1 py-0">{designatedSupplier.status}</Badge>
-                </div>
-                {isGcOrTc && (
-                  <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px]" onClick={() => setIsDesignateOpen(true)}>Change</Button>
-                )}
-              </div>
-            ) : isGcOrTc && !team.some(m => m.role === 'Supplier') ? (
-              <Button variant="ghost" size="sm" className="h-6 w-full mt-1 text-[11px] text-muted-foreground" onClick={() => setIsDesignateOpen(true)}>
-                <UserPlus className="h-3 w-3 mr-1" />
-                Designate Supplier Contact
-              </Button>
-            ) : null}
-          </div>
-        )}
-      </div>
-
       {/* Scope Summary */}
-      <div className="border bg-card p-3">
+      <div className="border bg-card p-3 sm:col-span-2">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">
             <FileText className="h-3.5 w-3.5 text-muted-foreground" />
@@ -361,20 +252,6 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
           <p className="text-xs text-muted-foreground py-1">No scope configured</p>
         )}
       </div>
-
-      <AddTeamMemberDialog
-        open={isAddMemberOpen}
-        onOpenChange={setIsAddMemberOpen}
-        projectId={projectId}
-        creatorOrgType={creatorOrgType}
-        onMemberAdded={fetchTeam}
-      />
-      <DesignateSupplierDialog
-        open={isDesignateOpen}
-        onOpenChange={setIsDesignateOpen}
-        projectId={projectId}
-        onDesignated={fetchDesignatedSupplier}
-      />
     </div>
   );
 }
