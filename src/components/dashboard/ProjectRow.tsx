@@ -92,10 +92,7 @@ export function ProjectRow({
 
   return (
     <Card
-      className={cn(
-        "group hover:bg-accent/50 transition-colors cursor-pointer border-l-4",
-        STATUS_BORDER_COLORS[project.status] || STATUS_BORDER_COLORS.draft
-      )}
+      className="group hover:shadow-md transition-shadow cursor-pointer"
       onClick={handleRowClick}
     >
       <CardContent className="p-2.5 sm:p-4">

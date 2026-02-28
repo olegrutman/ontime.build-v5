@@ -60,7 +60,7 @@ export function DashboardQuickStats({ openWorkOrders, pendingInvoices, reminders
             onClick={tile.onClick}
           >
             <CardContent className="flex items-center gap-2 sm:gap-3 p-2.5 sm:p-4">
-              <div className={`rounded-lg p-1.5 sm:p-2.5 hidden sm:block ${tile.bg}`}>
+              <div className={`rounded-xl p-1.5 sm:p-2.5 hidden sm:block ${tile.bg}`}>
                 <Icon className={`h-5 w-5 ${tile.accent}`} />
               </div>
               <div className="min-w-0">

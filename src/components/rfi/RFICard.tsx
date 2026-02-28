@@ -12,7 +12,7 @@ interface RFICardProps {
 export function RFICard({ rfi, onClick }: RFICardProps) {
   return (
     <Card
-      className="cursor-pointer hover:border-primary/40 transition-colors"
+      className="cursor-pointer hover:shadow-md transition-shadow"
       onClick={onClick}
     >
       <CardContent className="p-4">
