@@ -1,16 +1,19 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Users, Plus, UserPlus } from 'lucide-react';
+import { Users, Plus, UserPlus, Package, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 import { AddTeamMemberDialog } from '@/components/project/AddTeamMemberDialog';
 import { DesignateSupplierDialog } from '@/components/project/DesignateSupplierDialog';
 import { cn } from '@/lib/utils';
 
 interface TeamMembersCardProps {
   projectId: string;
+  onResponsibilityChange?: (value: string | null) => void;
 }
 
 interface TeamMember {
@@ -18,6 +21,13 @@ interface TeamMember {
   role: string;
   invited_org_name: string | null;
   status: string;
+}
+
+interface ContractData {
+  id: string;
+  material_responsibility: string | null;
+  from_org_id: string | null;
+  to_org_id: string | null;
 }
 
 const roleDotColors: Record<string, string> = {
@@ -34,14 +44,22 @@ const roleAbbrev: Record<string, string> = {
   'Supplier': 'SUP',
 };
 
-export function TeamMembersCard({ projectId }: TeamMembersCardProps) {
+export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembersCardProps) {
   const { userOrgRoles } = useAuth();
+  const { toast } = useToast();
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isDesignateOpen, setIsDesignateOpen] = useState(false);
   const [designatedSupplier, setDesignatedSupplier] = useState<{ invited_name: string | null; invited_email: string | null; status: string } | null>(null);
 
+  // Material responsibility state
+  const [contract, setContract] = useState<ContractData | null>(null);
+  const [isLocked, setIsLocked] = useState(false);
+  const [savingResp, setSavingResp] = useState<string | null>(null);
+  const [showSelector, setShowSelector] = useState(false);
+
+  const currentOrgId = userOrgRoles[0]?.organization?.id;
   const creatorOrgType = userOrgRoles[0]?.organization?.type ?? null;
   const isGcOrTc = creatorOrgType === 'GC' || creatorOrgType === 'TC';
 
@@ -56,10 +74,68 @@ export function TeamMembersCard({ projectId }: TeamMembersCardProps) {
     setDesignatedSupplier(data);
   }, [projectId]);
 
+  const fetchContract = useCallback(async () => {
+    const { data } = await supabase
+      .from('project_contracts')
+      .select('id, material_responsibility, from_org_id, to_org_id')
+      .eq('project_id', projectId)
+      .eq('from_role', 'Trade Contractor')
+      .limit(1);
+
+    if (data && data.length > 0) {
+      const c = data[0] as ContractData;
+      setContract(c);
+      onResponsibilityChange?.(c.material_responsibility);
+    }
+  }, [projectId, onResponsibilityChange]);
+
+  const fetchLockStatus = useCallback(async () => {
+    const { count } = await supabase
+      .from('purchase_orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('project_id', projectId)
+      .in('status', ['FINALIZED', 'DELIVERED']);
+    setIsLocked((count || 0) > 0);
+  }, [projectId]);
+
   useEffect(() => {
     fetchTeam();
     fetchDesignatedSupplier();
-  }, [fetchTeam, fetchDesignatedSupplier]);
+    fetchContract();
+    fetchLockStatus();
+  }, [fetchTeam, fetchDesignatedSupplier, fetchContract, fetchLockStatus]);
+
+  const materialResp = contract?.material_responsibility;
+
+  // Permission: can current user edit material responsibility?
+  const canEditResp = (() => {
+    if (!contract || !currentOrgId || !isGcOrTc || isLocked) return false;
+    if (!materialResp) return true; // not set yet — creator can set
+    // If set, only the responsible party's org can switch
+    const respOrgId = materialResp === 'TC' ? contract.from_org_id : contract.to_org_id;
+    return currentOrgId === respOrgId;
+  })();
+
+  const handleSetResp = async (value: string) => {
+    if (!contract || savingResp) return;
+    if (materialResp === value) return;
+    setSavingResp(value);
+    try {
+      const { error } = await supabase
+        .from('project_contracts')
+        .update({ material_responsibility: value })
+        .eq('id', contract.id);
+      if (error) throw error;
+      setContract({ ...contract, material_responsibility: value });
+      onResponsibilityChange?.(value);
+      setShowSelector(false);
+      toast({ title: `Material responsibility set to ${value === 'GC' ? 'General Contractor' : 'Trade Contractor'}` });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setSavingResp(null);
+    }
+  };
 
   const teamByRole = team.reduce<Record<string, TeamMember[]>>((acc, m) => {
     if (!acc[m.role]) acc[m.role] = [];
@@ -86,13 +162,78 @@ export function TeamMembersCard({ projectId }: TeamMembersCardProps) {
         <p className="text-sm text-muted-foreground">No team members</p>
       ) : (
         <div className="space-y-1.5">
-          {Object.entries(teamByRole).slice(0, 5).map(([role, members]) => (
-            <div key={role} className="flex items-center gap-2 py-1">
-              <span className={cn("h-2 w-2 rounded-full shrink-0", roleDotColors[role])} />
-              <span className="text-[10px] font-medium text-muted-foreground uppercase w-7">{roleAbbrev[role]}</span>
-              <span className="text-sm truncate">{members.map(m => m.invited_org_name || 'Unknown').join(', ')}</span>
+          {Object.entries(teamByRole).slice(0, 5).map(([role, members]) => {
+            const abbrev = roleAbbrev[role];
+            const hasMaterialIcon = materialResp && abbrev === materialResp;
+
+            return (
+              <div key={role} className="flex items-center gap-2 py-1 group">
+                <span className={cn("h-2 w-2 rounded-full shrink-0", roleDotColors[role])} />
+                <span className="text-[10px] font-medium text-muted-foreground uppercase w-7">{abbrev}</span>
+                <span className="text-sm truncate flex-1">{members.map(m => m.invited_org_name || 'Unknown').join(', ')}</span>
+                {hasMaterialIcon && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Package className="h-3.5 w-3.5 text-primary shrink-0" />
+                      </TooltipTrigger>
+                      <TooltipContent><p className="text-xs">Handles materials</p></TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                {hasMaterialIcon && canEditResp && !showSelector && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 px-1.5 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => setShowSelector(true)}
+                  >
+                    Change
+                  </Button>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Material responsibility selector */}
+          {contract && canEditResp && (!materialResp || showSelector) && (
+            <div className="pt-2 border-t mt-2">
+              <p className="text-[10px] text-muted-foreground mb-1.5">
+                {materialResp ? 'Switch material responsibility' : 'Who handles materials?'}
+              </p>
+              <div className="flex items-center gap-2">
+                {['GC', 'TC'].map(val => (
+                  <button
+                    key={val}
+                    disabled={!!savingResp}
+                    onClick={() => handleSetResp(val)}
+                    className={cn(
+                      "flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md border transition-colors disabled:opacity-50",
+                      materialResp === val
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-muted hover:bg-accent"
+                    )}
+                  >
+                    {savingResp === val ? <Loader2 className="h-3 w-3 animate-spin" /> : <Package className="h-3 w-3" />}
+                    {val}
+                  </button>
+                ))}
+                {showSelector && (
+                  <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[10px]" onClick={() => setShowSelector(false)}>
+                    Cancel
+                  </Button>
+                )}
+              </div>
             </div>
-          ))}
+          )}
+
+          {/* Locked indicator — no edit controls */}
+          {contract && materialResp && isLocked && (
+            <div className="pt-2 border-t mt-2 flex items-center gap-1.5">
+              <Package className="h-3 w-3 text-muted-foreground" />
+              <span className="text-[10px] text-muted-foreground">Material responsibility locked ({materialResp})</span>
+            </div>
+          )}
 
           {designatedSupplier ? (
             <div className="flex items-center justify-between pt-1.5 border-t mt-1.5">

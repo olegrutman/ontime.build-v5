@@ -36,7 +36,7 @@ import { UrgentTasksCard } from '@/components/project/UrgentTasksCard';
 import { TeamMembersCard } from '@/components/project/TeamMembersCard';
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
 import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
-import { MaterialResponsibilityCard } from '@/components/project/MaterialResponsibilityCard';
+
 import { InvoicesTab } from '@/components/invoices';
 import { ReturnsTab } from '@/components/returns';
 import { ContractSOVEditor } from '@/components/sov';
@@ -267,7 +267,7 @@ export default function ProjectHome() {
                       {(project.status === 'setup' || project.status === 'draft') && !isFC && (
                         <ProjectReadinessCard readiness={readiness} />
                       )}
-                      <MaterialResponsibilityCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} />
+                      
 
                       {/* Mobile attention banner */}
                       <div className="lg:hidden">
@@ -296,13 +296,13 @@ export default function ProjectHome() {
                         {/* RIGHT SIDEBAR — desktop only */}
                         <div className="hidden lg:flex flex-col gap-4">
                           <UrgentTasksCard projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
-                          <TeamMembersCard projectId={id!} />
+                          <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} />
                         </div>
                       </div>
 
                       {/* Mobile: team + urgent below */}
                       <div className="lg:hidden space-y-4">
-                        <TeamMembersCard projectId={id!} />
+                        <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} />
                       </div>
                     </div>
                   )}
