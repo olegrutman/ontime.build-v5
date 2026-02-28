@@ -1,162 +1,174 @@
 
-# Project Overview Redesign — Financial Command Center v2
+# Project Overview Visual Redesign — Apple-Style Financial Dashboard
 
-## Issues Found
+## Overview
+Redesign the Project Overview page to match the reference image's premium, Apple-style aesthetic with a 3-column grid layout (desktop), hero contract card, and right sidebar for urgent tasks and team members. All existing financial logic and data sources remain intact — this is purely a visual and layout restructure.
 
-### 1. Work Order Material Total Bug
-Work order `c6afe17f` ("Rfi 87") has a linked PO (`0a8076a0`) but `material_total: 0`. The `workOrderTotal` calculation in `useProjectFinancials` only sums `final_price` from `change_order_projects` — it does not include linked PO line item totals. The `actualLaborCost` only sums `labor_total`, missing the material component entirely from the "Approved Work Orders" line.
+## Current State
+- Single-column stack of cards: ReadinessCard, AttentionBanner, MaterialResponsibilityCard, FinancialSnapshot (collapsible), BudgetTracking (collapsible), CollapsibleOperations
+- Flat `border bg-card` styling with no rounded corners, no shadows
+- No sidebar layout — everything stacks vertically
 
-**Fix**: When calculating work order totals for Contract Summary, sum `final_price` (which already includes materials for fixed-price WOs). For WOs with linked POs, ensure the `final_price` already reflects materials (it does — `final_price: 6170` includes labor `5500` + material markup `670`). The data is actually correct; `material_total: 0` is misleading but `final_price` is the authoritative total.
+## New Layout Structure
 
-### 2. GC Material + Labor Budget When GC Is Responsible
-Currently, `MaterialBudgetTile` and `LaborBudgetTile` only show for the material-responsible party or GC/TC respectively. When GC is responsible for materials, the GC should be able to set both material and labor budgets. This is already working — but the MaterialBudgetTile checks `isGCMaterialResponsible` which requires `material_responsibility = 'GC'` on the contract. On this project it is set to `'TC'`, so GC correctly doesn't see the material budget tile.
+### Desktop (lg+): 3-Column Grid
+```text
++----------------------------------------------+------------------+
+| HERO: Current Contract Total (full span)      | Urgent Tasks     |
+|  $1,248,342                                   |  - item 1        |
+|  Original Contract    + Approved WOs          |  - item 2        |
+|  $1,180,000           + $68,342               |  - item 3        |
++----------------------+-----------------------+                  |
+| Billing & Cash       | Material Budget       |                  |
+| Position             | Control               +------------------+
+| Invoiced  $920,000   | Estimate   $420,000   | Team Members     |
+| Paid      $810,000   | Delivered  $438,000   |  Avatar Name     |
+| Retainage  $92,000   | Variance   +$18K      |  Avatar Name     |
+| Outstanding $110,000 |                       |  Avatar Name     |
++----------------------+-----------------------+------------------+
+| Labor Budget (if set)                         |                  |
++----------------------------------------------+------------------+
+| Scope Preview (collapsed)                                        |
++------------------------------------------------------------------+
+```
 
-### 3. Redundant Information Problem
-The current page stacks 8+ sections with heavily overlapping data:
-- `ContractSummaryTile` shows Original Contract + Work Orders
-- `BillingCashTile` shows Invoiced/Paid/Retainage/Outstanding
-- `MaterialBudgetTile` shows Estimate vs Delivered
-- `LaborBudgetTile` shows Budget vs Actual
-- `FinancialSignalBar` shows Contract, Work Orders, Invoiced, Retainage, Material Budget, Material Ordered, Live Position, Paid to FC (7-8 cards!)
-- `FinancialHealthCharts` shows Material Budget vs Orders chart, Margin Trend
-- `OperationalSummary` shows WOs, Invoices, RFIs, Team, Scope
+### Mobile: Single column, cards stack vertically. Right sidebar content moves below financial cards.
 
-**Problem**: Contract value appears 3 times. Material budget appears 3 times. Invoice totals appear 3 times.
+## Design Tokens (Apple-style)
+- Background: `bg-[#F5F5F7]` (light mode), keep existing dark mode
+- Cards: `bg-white dark:bg-card rounded-2xl shadow-sm border-0`
+- No heavy borders — rely on shadow and spacing
+- Typography: Large `text-3xl font-bold` for hero number, `text-sm font-medium text-muted-foreground` for labels
+- Spacing: `gap-4` between cards, `p-5` internal padding
+- Color coding unchanged: green/amber/red for financial indicators
 
-## Redesigned Overview Layout
+## Files Modified
 
-Consolidate into 3 collapsible sections, role-aware, eliminating all redundancy:
+### 1. `src/pages/ProjectHome.tsx` — New grid layout
+- Replace the single `space-y-4` column with a responsive grid
+- Desktop: `grid grid-cols-[1fr_280px]` — main content left, sidebar right
+- Hero card spans full width of main column
+- Billing and Material Budget sit side-by-side below hero
+- Sidebar contains UrgentTasksCard and TeamMembersCard
+- Mobile: single column, sidebar cards appear after financial cards
+- Remove `CollapsibleOperations` wrapper — OperationalSummary moves into a "Scope & Activity" collapsible at the bottom
+- Apply `bg-[#F5F5F7] dark:bg-background` to the main content area
 
-### Section A: Financial Snapshot (always open by default)
-A single, clean summary card with the key numbers a PM needs at a glance:
+### 2. `src/components/project/FinancialSnapshot.tsx` — Redesign as Hero Card
+- Remove Collapsible wrapper — this is always visible, never collapsed
+- Restructure into a "hero" card layout:
+  - Top: Large "Current Contract Total" number centered
+  - Below: Two-column sub-row: "Original Contract" | "+ Approved Work Orders"
+  - Thin separator line between contract section and billing section
+- Billing section becomes its own visual block within the card OR a separate card (matching reference image which shows Billing & Cash as its own card)
+- **Split into two components**: `ContractHeroCard` and `BillingCashCard`
+- Keep all contract editing (inline edit overlay) and FC contract creation logic
+- All role-based rendering stays (GC/TC/FC/Supplier views)
+- Apply new styling: `rounded-2xl shadow-sm bg-white dark:bg-card p-5`
+
+### 3. `src/components/project/BudgetTracking.tsx` — Visual refresh
+- Remove Collapsible wrapper — always visible
+- Material Budget card gets its own standalone card with `rounded-2xl shadow-sm`
+- Labor Budget card same treatment
+- Side-by-side on desktop (within the main column), stacked on mobile
+- Keep all inline editing logic
+- Add "View Delivered PO Breakdown" link at bottom of material card (navigates to purchase-orders tab)
+- Add projected impact warning line with amber icon when over budget
+
+### 4. NEW: `src/components/project/UrgentTasksCard.tsx` — Right sidebar card
+- Extracts attention items from existing `AttentionBanner` logic
+- Card with "Urgent Tasks" header + three-dot overflow menu
+- Each item: title, short description, assigned person, warning icon, due date
+- Limit to 3-5 items visible
+- Uses same data source as AttentionBanner (pending WOs, submitted invoices, POs awaiting pricing)
+- Styled with `rounded-2xl shadow-sm bg-white dark:bg-card p-5`
+
+### 5. NEW: `src/components/project/TeamMembersCard.tsx` — Right sidebar card
+- Extracts team rendering from OperationalSummary
+- Shows avatar, name, role for up to 5 members
+- "View All" link at bottom
+- Add team member button in header
+- Designated supplier shown separately
+- Styled with `rounded-2xl shadow-sm bg-white dark:bg-card p-5`
+
+### 6. `src/components/project/OperationalSummary.tsx` — Slim down
+- Remove Team section (moved to TeamMembersCard)
+- Keep: Recent Work Orders, Recent Invoices, Open RFIs, Scope
+- Wrap in a collapsible at the bottom of the page
+- This becomes the "Activity & Operations" section
+
+### 7. `src/components/project/AttentionBanner.tsx` — Keep for mobile
+- On desktop (lg+), hide AttentionBanner since UrgentTasksCard handles it
+- On mobile, continue showing the existing banner format
+
+### 8. `src/components/project/index.ts` — Update exports
+- Add UrgentTasksCard, TeamMembersCard exports
+
+## ProjectHome.tsx Layout (Pseudo-JSX)
 
 ```text
-+--------------------------------------------------+
-| FINANCIAL SNAPSHOT                                |
-|                                                   |
-| Contract Value         $125,000                   |
-| + Approved Work Orders  $11,745   (4 WOs)        |
-| = Current Total        $136,745                   |
-|                                                   |
-| Billed to Date          $9,375                    |
-| Paid                       $0                     |
-| Retainage Held             $0                     |
-| Outstanding           $127,370                    |
-|                                                   |
-| [If TC view: Live Position  $X,XXX  green/red]    |
-+--------------------------------------------------+
+<main className="bg-[#F5F5F7] dark:bg-background">
+  <div className="max-w-7xl mx-auto p-4 sm:p-6">
+    {/* Readiness card (setup/draft only) */}
+    {setupMode && <ProjectReadinessCard />}
+    
+    {/* Material responsibility (only if not set) */}
+    <MaterialResponsibilityCard />
+    
+    {/* Main grid */}
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
+      {/* LEFT COLUMN */}
+      <div className="space-y-4">
+        {/* Hero: Contract Total */}
+        <ContractHeroCard financials={financials} />
+        
+        {/* Two-column: Billing + Material */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <BillingCashCard financials={financials} />
+          <MaterialBudgetCard financials={financials} />
+        </div>
+        
+        {/* Labor (if budget set or GC/TC) */}
+        <LaborBudgetCard financials={financials} />
+        
+        {/* Collapsible operations */}
+        <CollapsibleOperations ... />
+      </div>
+      
+      {/* RIGHT SIDEBAR (desktop) */}
+      <div className="space-y-4">
+        <UrgentTasksCard projectId={id} onNavigate={handleTabChange} />
+        <TeamMembersCard projectId={id} />
+      </div>
+    </div>
+    
+    {/* Mobile: Urgent Tasks + Team (shown below on mobile) */}
+    <div className="lg:hidden space-y-4 mt-4">
+      <AttentionBanner ... />
+    </div>
+  </div>
+</main>
 ```
 
-This replaces: ContractSummaryTile + BillingCashTile + half of FinancialSignalBar.
+## Role-Specific Behavior (Unchanged)
+- **GC**: Sees contract hero, billing, material budget (if GC responsible), labor budget
+- **TC**: Same + Live Position in hero card, outgoing FC contract
+- **FC**: Simplified hero (contract with TC, earned WOs, billing)
+- **Supplier**: Order Value/Invoiced/Paid/Outstanding in hero; no budget cards
 
-### Section B: Budget Tracking (collapsible, open by default)
-Side-by-side Material and Labor budget cards — only shown to the responsible party.
+## What Stays the Same
+- All financial calculation logic in `useProjectFinancials.ts`
+- All data sources and queries
+- Contract editing inline flow
+- FC contract creation flow
+- Material/Labor budget inline editing
+- Role detection and visibility rules
+- ProjectReadinessCard logic
+- MaterialResponsibilityCard logic
 
-```text
-+-------------------------+-------------------------+
-| MATERIAL BUDGET         | LABOR BUDGET            |
-| Budget:    $433,091     | Budget:    Not set [edit]|
-| Delivered:      $0      | Actual:    $11,075      |
-| Ordered:        $0      | Variance:  --           |
-| Remaining: $433,091     | % Used:    --           |
-| Status: Under Budget    |                         |
-+-------------------------+-------------------------+
-```
-
-If GC is material-responsible: GC sees material budget + can set it.
-If TC is material-responsible: TC sees material budget.
-Both GC and TC can set labor budget.
-
-This replaces: MaterialBudgetTile + LaborBudgetTile + material cards in FinancialSignalBar + FinancialHealthCharts material chart.
-
-### Section C: Activity & Operations (collapsible, collapsed by default)
-Keep existing OperationalSummary (WOs, Invoices, RFIs, Team, Scope) unchanged but make it collapsible.
-
-### What Gets Removed
-- **FinancialSignalBar** — fully replaced by Section A + B. All data is covered.
-- **FinancialHealthCharts** — material chart is redundant with Section B. Margin trend moves into Section A as a small inline sparkline or stays as a collapsible sub-section for TC only.
-- **ContractSummaryTile** — merged into Section A.
-- **BillingCashTile** — merged into Section A.
-- **MaterialBudgetTile** — merged into Section B.
-- **LaborBudgetTile** — merged into Section B.
-
-### What Stays
-- `ProjectReadinessCard` (setup/draft only) — unchanged
-- `AttentionBanner` — unchanged
-- `MaterialResponsibilityCard` — unchanged (but only shows when not yet set)
-
-## Role-Specific Views
-
-### GC View
-- Section A: Shows contract with TC name, work orders total, billing/cash
-- Section B: Material budget (if GC responsible) + Labor budget (always editable)
-- Section C: Recent WOs, Invoices, RFIs, Team, Scope
-
-### TC View
-- Section A: Shows incoming contract (GC), outgoing contract (FC if exists), work orders, billing/cash, **Live Position**
-- Section B: Material budget (if TC responsible) + Labor budget (always editable)
-- Section C: Recent WOs, Invoices, RFIs, Team, Scope + Margin Trend chart
-
-### FC View
-- Section A: Shows contract with TC, earned (approved WOs), invoiced, retainage, remaining balance
-- Section B: Hidden (FC doesn't manage budgets)
-- Section C: Recent WOs, Invoices, Team
-
-### Supplier View
-- Section A: Order Value, Invoiced, Paid, Outstanding
-- Section B: Material Budget (if designated supplier, editable)
-- Section C: Recent Invoices
-
-## Technical Changes
-
-### Files Modified
-1. **`src/components/project/FinancialSnapshot.tsx`** (NEW) — Consolidated Section A component with collapsible support
-2. **`src/components/project/BudgetTracking.tsx`** (NEW) — Side-by-side material + labor budgets with inline editing
-3. **`src/pages/ProjectHome.tsx`** — Replace 6 separate tiles with 2 new components + collapsible OperationalSummary
-4. **`src/hooks/useProjectFinancials.ts`** — Filter `workOrderTotal` to only approved/contracted WOs (bug fix). Add `approvedWOCount` field.
-5. **`src/components/project/index.ts`** — Update exports
-
-### Files Removed (components no longer needed)
-- `ContractSummaryTile.tsx` — merged into FinancialSnapshot
-- `BillingCashTile.tsx` — merged into FinancialSnapshot
-- `MaterialBudgetTile.tsx` — merged into BudgetTracking
-- `LaborBudgetTile.tsx` — merged into BudgetTracking
-- `FinancialSignalBar.tsx` — fully replaced
-- `FinancialHealthCharts.tsx` — material chart merged into BudgetTracking, margin trend into FinancialSnapshot
-
-### Hook Fix: useProjectFinancials.ts
-```typescript
-// Line 252: Filter to only approved/contracted
-const approvedWOs = wos.filter(wo => 
-  ['approved', 'contracted'].includes(wo.status)
-);
-const woTotal = approvedWOs.reduce((sum, wo) => 
-  sum + (wo.final_price || 0), 0
-);
-```
-Add `approvedWOCount: number` to the interface for display ("4 WOs").
-
-### New Component: FinancialSnapshot
-- Uses Collapsible from radix for expand/collapse
-- Renders different metric rows based on `viewerRole`
-- Includes TC "Live Position" metric with green/red color
-- Contract editing inline (moved from FinancialSignalBar)
-- FC contract creation flow (moved from FinancialSignalBar)
-
-### New Component: BudgetTracking
-- Side-by-side grid (1 col mobile, 2 col desktop)
-- Material budget: only shown to responsible party or designated supplier
-- Labor budget: shown to GC and TC with inline edit
-- Includes over/under indicators, projected impact line
-- Incorporates material budget edit flow from FinancialSignalBar
-
-### OperationalSummary Wrapper
-- Wrap existing OperationalSummary in a Collapsible with a header button
-- Default collapsed to reduce initial scroll depth
-- Shows count badges in header ("4 WOs, 1 Invoice, 0 RFIs")
-
-## Design Pattern
-- All sections use existing `border bg-card p-3` tile style
-- Collapsible headers use `ChevronDown` rotation pattern
-- Color coding: green (healthy), amber (watch), red (over budget) — same as existing
-- No new dependencies needed — uses existing radix Collapsible
+## Technical Notes
+- No database changes needed
+- No new dependencies
+- All new components use existing UI primitives (Button, Input, Badge, Collapsible)
+- The `rounded-2xl shadow-sm` card style is applied at the component level, not globally (preserves rest of app)
+- Mobile responsive: sidebar collapses into single column below financial cards
