@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react';
+import { ChevronDown, ClipboardList } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
 import { useProjectRealtime } from '@/hooks/useProjectRealtime';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -22,15 +25,11 @@ import {
   SupplierEstimatesSection,
   SupplierFinancialsSummaryCard,
   SupplierPOSummaryCard,
-  FinancialSignalBar,
-  FinancialHealthCharts,
   OperationalSummary,
   SupplierEstimateVsOrdersCard,
   SupplierOperationalSummary,
-  ContractSummaryTile,
-  BillingCashTile,
-  MaterialBudgetTile,
-  LaborBudgetTile,
+  FinancialSnapshot,
+  BudgetTracking,
 } from '@/components/project';
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
 import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
@@ -62,8 +61,48 @@ interface Project {
   organization_id: string;
 }
 
+function CollapsibleOperations({ projectId, projectType, financials, onNavigate }: {
+  projectId: string;
+  projectType: string;
+  financials: import('@/hooks/useProjectFinancials').ProjectFinancials;
+  onNavigate: (tab: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const woCount = financials.recentWorkOrders.length;
+  const invCount = financials.recentInvoices.length;
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <div className="border bg-card">
+        <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-accent/50 transition-colors">
+          <div className="flex items-center gap-1.5">
+            <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+              Activity & Operations
+            </span>
+            <span className="text-[10px] text-muted-foreground ml-1">
+              {woCount} WOs · {invCount} Invoices
+            </span>
+          </div>
+          <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="px-3 pb-3">
+            <OperationalSummary
+              projectId={projectId}
+              projectType={projectType}
+              financials={financials}
+              onNavigate={onNavigate}
+            />
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
+  );
+}
 
 export default function ProjectHome() {
+
   const { id } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -278,19 +317,9 @@ export default function ProjectHome() {
                         supplierOrgId={supplierOrgId}
                       />
                       <MaterialResponsibilityCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} />
-                      <ContractSummaryTile financials={financials} />
-                      <BillingCashTile financials={financials} />
-                      <MaterialBudgetTile financials={financials} projectId={id!} />
-                      <LaborBudgetTile financials={financials} projectId={id!} />
-                      <FinancialSignalBar financials={financials} projectId={id!} hideMaterialCards={
-                        (materialResponsibility === 'GC' && !isSupplier && !isFC && currentOrg?.type !== 'GC') ||
-                        (materialResponsibility === 'TC' && currentOrg?.type === 'GC')
-                      } />
-                      <FinancialHealthCharts financials={financials} hideMaterialCards={
-                        (materialResponsibility === 'GC' && !isSupplier && !isFC && currentOrg?.type !== 'GC') ||
-                        (materialResponsibility === 'TC' && currentOrg?.type === 'GC')
-                      } />
-                      <OperationalSummary
+                      <FinancialSnapshot financials={financials} projectId={id!} />
+                      <BudgetTracking financials={financials} projectId={id!} />
+                      <CollapsibleOperations
                         projectId={id!}
                         projectType={project.project_type}
                         financials={financials}
