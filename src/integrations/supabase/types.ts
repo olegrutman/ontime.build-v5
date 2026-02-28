@@ -1784,6 +1784,7 @@ export type Database = {
           from_org_id: string | null
           from_role: string
           id: string
+          labor_budget: number | null
           material_estimate_total: number | null
           material_responsibility: string | null
           notes: string | null
@@ -1804,6 +1805,7 @@ export type Database = {
           from_org_id?: string | null
           from_role: string
           id?: string
+          labor_budget?: number | null
           material_estimate_total?: number | null
           material_responsibility?: string | null
           notes?: string | null
@@ -1824,6 +1826,7 @@ export type Database = {
           from_org_id?: string | null
           from_role?: string
           id?: string
+          labor_budget?: number | null
           material_estimate_total?: number | null
           material_responsibility?: string | null
           notes?: string | null

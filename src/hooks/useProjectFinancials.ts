@@ -34,8 +34,15 @@ export interface ProjectFinancials {
   materialEstimate: number;
   materialOrdered: number;
   totalPaidToFC: number;
-  materialEstimateTotal: number | null; // TC's project-level material budget
-  approvedEstimateSum: number; // Sum of approved supplier estimates
+  materialEstimateTotal: number | null;
+  approvedEstimateSum: number;
+
+  // NEW: Financial command center fields
+  totalPaid: number;
+  materialDelivered: number;
+  materialOrderedPending: number;
+  actualLaborCost: number;
+  laborBudget: number | null;
 
   // Supplier-specific
   supplierOrderValue: number;
@@ -64,6 +71,7 @@ export interface ProjectFinancials {
   updateContract: (id: string, sum: number, retainage: number) => Promise<boolean>;
   createFcContract: (fcOrgId: string, sum: number, retainage: number) => Promise<boolean>;
   updateMaterialEstimate: (contractId: string, amount: number) => Promise<boolean>;
+  updateLaborBudget: (contractId: string, amount: number) => Promise<boolean>;
 }
 
 export function useProjectFinancials(projectId: string, isSupplier?: boolean, supplierOrgId?: string | null): ProjectFinancials {
@@ -90,6 +98,11 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [isGCMaterialResponsible, setIsGCMaterialResponsible] = useState(false);
   const [approvedEstimateSum, setApprovedEstimateSum] = useState(0);
   const [isDesignatedSupplier, setIsDesignatedSupplier] = useState(false);
+  const [totalPaid, setTotalPaid] = useState(0);
+  const [materialDelivered, setMaterialDelivered] = useState(0);
+  const [materialOrderedPending, setMaterialOrderedPending] = useState(0);
+  const [actualLaborCost, setActualLaborCost] = useState(0);
+  const [laborBudget, setLaborBudget] = useState<number | null>(null);
 
   const fetchData = async () => {
     if (!user || !projectId) { setLoading(false); return; }
@@ -152,12 +165,12 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       const [contractsRes, invoicesRes, workOrdersRes, fcParticipantsRes] = await Promise.all([
         supabase.from('project_contracts').select(`
           id, from_role, to_role, contract_sum, retainage_percent, trade, from_org_id, to_org_id,
-          material_responsibility, material_estimate_total,
+          material_responsibility, material_estimate_total, labor_budget,
           from_org:organizations!project_contracts_from_org_id_fkey(name),
           to_org:organizations!project_contracts_to_org_id_fkey(name)
         `).eq('project_id', projectId),
         supabase.from('invoices').select('id, invoice_number, status, total_amount, created_at, paid_at').eq('project_id', projectId),
-        supabase.from('change_order_projects').select('id, title, status, created_at, final_price, material_total, linked_po_id').eq('project_id', projectId),
+        supabase.from('change_order_projects').select('id, title, status, created_at, final_price, material_total, labor_total, linked_po_id').eq('project_id', projectId),
         supabase.from('project_participants').select('organization_id, organizations:organization_id(name)').eq('project_id', projectId).eq('role', 'FC').eq('invite_status', 'ACCEPTED'),
       ]);
 
@@ -227,6 +240,9 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       const allInvoices = invoicesRes.data || [];
       const submitted = allInvoices.filter(i => ['SUBMITTED', 'APPROVED', 'PAID'].includes(i.status));
       setBilledToDate(submitted.reduce((sum, inv) => sum + (inv.total_amount || 0), 0));
+      // Total paid invoices
+      const paidInvoices = allInvoices.filter(i => i.status === 'PAID');
+      setTotalPaid(paidInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0));
       setRecentInvoices(allInvoices.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5).map(inv => ({
         id: inv.id, invoice_number: inv.invoice_number, status: inv.status, total_amount: inv.total_amount, created_at: inv.created_at,
       })));
@@ -252,18 +268,38 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
 
       const { data: orderedPOs } = await supabase
         .from('purchase_orders')
-        .select('id, sales_tax_percent, po_line_items(line_total)')
+        .select('id, status, sales_tax_percent, po_line_items(line_total)')
         .eq('project_id', projectId)
         .in('status', ['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED', 'FINALIZED']);
 
-      const matOrdered = (orderedPOs || []).reduce((sum, po: any) => {
-        const subtotal = (po.po_line_items || []).reduce(
-          (s: number, li: any) => s + (li.line_total || 0), 0
-        );
+      const calcPOTotal = (pos: any[]) => pos.reduce((sum, po: any) => {
+        const subtotal = (po.po_line_items || []).reduce((s: number, li: any) => s + (li.line_total || 0), 0);
         const taxRate = (po.sales_tax_percent || 0) / 100;
         return sum + subtotal * (1 + taxRate);
       }, 0);
+
+      const allPOs = orderedPOs || [];
+      const matOrdered = calcPOTotal(allPOs);
       setMaterialOrdered(matOrdered);
+
+      // Split by delivery status
+      const deliveredPOs = allPOs.filter((po: any) => ['DELIVERED', 'FINALIZED'].includes(po.status));
+      const pendingPOs = allPOs.filter((po: any) => ['ORDERED', 'READY_FOR_DELIVERY'].includes(po.status));
+      setMaterialDelivered(calcPOTotal(deliveredPOs));
+      setMaterialOrderedPending(calcPOTotal(pendingPOs));
+
+      // Actual labor cost from approved/contracted work orders
+      const approvedWOs = wos.filter(wo => ['approved', 'contracted'].includes(wo.status));
+      const laborCost = approvedWOs.reduce((sum, wo: any) => sum + (wo.labor_total || 0), 0);
+      setActualLaborCost(laborCost);
+
+      // Labor budget from primary contract
+      const primaryC = contractsWithNames.find(c =>
+        ((c.from_role === 'General Contractor' && c.to_role === 'Trade Contractor') ||
+         (c.to_role === 'General Contractor' && c.from_role === 'Trade Contractor')) &&
+        c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
+      );
+      setLaborBudget((primaryC as any)?.labor_budget ?? null);
 
       // FC costs (TC view)
       if (detectedRole === 'Trade Contractor') {
@@ -368,15 +404,23 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     return true;
   };
 
+  const updateLaborBudget = async (contractId: string, amount: number): Promise<boolean> => {
+    const { error } = await supabase.from('project_contracts').update({ labor_budget: amount } as any).eq('id', contractId);
+    if (error) return false;
+    setLaborBudget(amount);
+    return true;
+  };
+
   return {
     loading, viewerRole, contracts, upstreamContract, downstreamContract, userOrgIds,
     billedToDate, workOrderTotal, workOrderFCCost, retainageAmount, outstanding,
     materialEstimate, materialOrdered, totalPaidToFC,
     materialEstimateTotal, approvedEstimateSum, isTCMaterialResponsible, isGCMaterialResponsible,
     isDesignatedSupplier,
+    totalPaid, materialDelivered, materialOrderedPending, actualLaborCost, laborBudget,
     supplierOrderValue, supplierInvoiced, supplierPaid,
     recentWorkOrders, recentInvoices, monthlyWOData, fcParticipants,
-    refetch: fetchData, updateContract, createFcContract, updateMaterialEstimate,
+    refetch: fetchData, updateContract, createFcContract, updateMaterialEstimate, updateLaborBudget,
   };
 }
 

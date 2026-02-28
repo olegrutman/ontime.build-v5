@@ -1,0 +1,1 @@
+ALTER TABLE project_contracts ADD COLUMN IF NOT EXISTS labor_budget numeric;

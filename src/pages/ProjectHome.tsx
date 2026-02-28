@@ -27,6 +27,10 @@ import {
   OperationalSummary,
   SupplierEstimateVsOrdersCard,
   SupplierOperationalSummary,
+  ContractSummaryTile,
+  BillingCashTile,
+  MaterialBudgetTile,
+  LaborBudgetTile,
 } from '@/components/project';
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
 import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
@@ -274,6 +278,10 @@ export default function ProjectHome() {
                         supplierOrgId={supplierOrgId}
                       />
                       <MaterialResponsibilityCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} />
+                      <ContractSummaryTile financials={financials} />
+                      <BillingCashTile financials={financials} />
+                      <MaterialBudgetTile financials={financials} projectId={id!} />
+                      <LaborBudgetTile financials={financials} projectId={id!} />
                       <FinancialSignalBar financials={financials} projectId={id!} hideMaterialCards={
                         (materialResponsibility === 'GC' && !isSupplier && !isFC && currentOrg?.type !== 'GC') ||
                         (materialResponsibility === 'TC' && currentOrg?.type === 'GC')
