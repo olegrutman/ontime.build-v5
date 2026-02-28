@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { ChevronDown, Package, Users, Pencil, Check, X, TrendingUp, TrendingDown } from 'lucide-react';
+import { Package, Users, Pencil, Check, X, TrendingUp, TrendingDown } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import { cn } from '@/lib/utils';
@@ -21,78 +20,57 @@ function pct(value: number): string {
 interface BudgetTrackingProps {
   financials: ProjectFinancials;
   projectId: string;
+  onNavigate?: (tab: string) => void;
 }
 
-export function BudgetTracking({ financials, projectId }: BudgetTrackingProps) {
-  const { toast } = useToast();
-  const [open, setOpen] = useState(true);
-
+export function BudgetTracking({ financials, projectId, onNavigate }: BudgetTrackingProps) {
   const {
     loading, viewerRole,
     materialEstimate, materialDelivered, materialOrderedPending,
-    isTCMaterialResponsible, isGCMaterialResponsible,
     materialEstimateTotal, approvedEstimateSum, isDesignatedSupplier,
     upstreamContract, updateMaterialEstimate,
     laborBudget, actualLaborCost, updateLaborBudget,
+    isTCMaterialResponsible, isGCMaterialResponsible,
   } = financials;
 
   if (loading) return null;
 
-  // Material budget visible to responsible party or designated supplier
   const showMaterial =
     (viewerRole === 'Trade Contractor' && isTCMaterialResponsible) ||
     (viewerRole === 'General Contractor' && isGCMaterialResponsible) ||
     (viewerRole === 'Supplier' && isDesignatedSupplier);
 
-  // Labor budget visible to GC and TC
   const showLabor = viewerRole === 'General Contractor' || viewerRole === 'Trade Contractor';
 
   if (!showMaterial && !showLabor) return null;
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <div className="border bg-card">
-        <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-accent/50 transition-colors">
-          <div className="flex items-center gap-1.5">
-            <Package className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
-              Budget Tracking
-            </span>
-          </div>
-          <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="px-3 pb-3">
-            <div className={cn("grid gap-3", showMaterial && showLabor ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1 max-w-md")}>
-              {showMaterial && (
-                <MaterialBudgetCard
-                  materialEstimate={materialEstimate}
-                  materialDelivered={materialDelivered}
-                  materialOrderedPending={materialOrderedPending}
-                  materialEstimateTotal={materialEstimateTotal}
-                  approvedEstimateSum={approvedEstimateSum}
-                  upstreamContract={upstreamContract}
-                  updateMaterialEstimate={updateMaterialEstimate}
-                />
-              )}
-              {showLabor && (
-                <LaborBudgetCard
-                  laborBudget={laborBudget}
-                  actualLaborCost={actualLaborCost}
-                  upstreamContract={upstreamContract}
-                  updateLaborBudget={updateLaborBudget}
-                />
-              )}
-            </div>
-          </div>
-        </CollapsibleContent>
-      </div>
-    </Collapsible>
+    <div className={cn("grid gap-4", showMaterial && showLabor ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1")}>
+      {showMaterial && (
+        <MaterialBudgetCard
+          materialEstimate={materialEstimate}
+          materialDelivered={materialDelivered}
+          materialOrderedPending={materialOrderedPending}
+          materialEstimateTotal={materialEstimateTotal}
+          approvedEstimateSum={approvedEstimateSum}
+          upstreamContract={upstreamContract}
+          updateMaterialEstimate={updateMaterialEstimate}
+          onNavigate={onNavigate}
+        />
+      )}
+      {showLabor && (
+        <LaborBudgetCard
+          laborBudget={laborBudget}
+          actualLaborCost={actualLaborCost}
+          upstreamContract={upstreamContract}
+          updateLaborBudget={updateLaborBudget}
+        />
+      )}
+    </div>
   );
 }
 
-// Material Budget sub-card
-function MaterialBudgetCard({ materialEstimate, materialDelivered, materialOrderedPending, materialEstimateTotal, approvedEstimateSum, upstreamContract, updateMaterialEstimate }: {
+function MaterialBudgetCard({ materialEstimate, materialDelivered, materialOrderedPending, materialEstimateTotal, approvedEstimateSum, upstreamContract, updateMaterialEstimate, onNavigate }: {
   materialEstimate: number;
   materialDelivered: number;
   materialOrderedPending: number;
@@ -100,6 +78,7 @@ function MaterialBudgetCard({ materialEstimate, materialDelivered, materialOrder
   approvedEstimateSum: number;
   upstreamContract: any;
   updateMaterialEstimate: (contractId: string, amount: number) => Promise<boolean>;
+  onNavigate?: (tab: string) => void;
 }) {
   const { toast } = useToast();
   const [editing, setEditing] = useState(false);
@@ -117,29 +96,28 @@ function MaterialBudgetCard({ materialEstimate, materialDelivered, materialOrder
 
   if (editing) {
     return (
-      <div className="border bg-accent/20 rounded p-3 space-y-2">
-        <p className="text-xs font-medium text-muted-foreground uppercase">Set Material Budget</p>
+      <div className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 space-y-3">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Set Material Budget</p>
         <div className="flex gap-2 items-end flex-wrap">
           <div className="relative flex-1 min-w-[100px]">
-            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-            <Input type="number" min="0" step="1000" className="pl-6 h-8 text-sm" value={editValue || ''} onChange={e => setEditValue(parseFloat(e.target.value) || 0)} autoFocus />
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+            <Input type="number" min="0" step="1000" className="pl-7 h-9 text-sm" value={editValue || ''} onChange={e => setEditValue(parseFloat(e.target.value) || 0)} autoFocus />
           </div>
-          <Button size="sm" onClick={handleSave} disabled={saving} className="h-8"><Check className="h-3.5 w-3.5" /></Button>
-          <Button size="sm" variant="ghost" onClick={() => setEditing(false)} disabled={saving} className="h-8"><X className="h-3.5 w-3.5" /></Button>
+          <Button size="sm" onClick={handleSave} disabled={saving} className="h-9"><Check className="h-4 w-4" /></Button>
+          <Button size="sm" variant="ghost" onClick={() => setEditing(false)} disabled={saving} className="h-9"><X className="h-4 w-4" /></Button>
         </div>
       </div>
     );
   }
 
-  const budgetValue = materialEstimateTotal ?? approvedEstimateSum;
   const hasBudget = materialEstimate > 0;
 
-  if (!hasBudget && budgetValue <= 0) {
+  if (!hasBudget && (materialEstimateTotal ?? approvedEstimateSum) <= 0) {
     return (
-      <div className="border bg-accent/20 rounded p-3">
-        <div className="flex items-center gap-1.5 mb-2">
-          <Package className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-xs font-medium uppercase text-muted-foreground">Material Budget</span>
+      <div className="bg-white dark:bg-card rounded-2xl shadow-sm p-5">
+        <div className="flex items-center gap-1.5 mb-3">
+          <Package className="h-4 w-4 text-muted-foreground" />
+          <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Material Budget</span>
         </div>
         <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => { setEditValue(0); setEditing(true); }}>
           Set Material Budget
@@ -159,15 +137,15 @@ function MaterialBudgetCard({ materialEstimate, materialDelivered, materialOrder
   const projectedPctDiff = materialEstimate > 0 ? (projectedDiff / materialEstimate) * 100 : 0;
 
   return (
-    <div className="border bg-accent/20 rounded p-3 space-y-1.5">
+    <div className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 space-y-2.5">
       <div className="flex items-center gap-1.5 mb-1">
-        <Package className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="text-xs font-medium uppercase text-muted-foreground">Material Budget</span>
+        <Package className="h-4 w-4 text-muted-foreground" />
+        <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Material Budget Control</span>
       </div>
 
       <div className="group flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">Budget</span>
-        <div className="flex items-center gap-1">
+        <span className="text-sm text-muted-foreground">Estimated Materials</span>
+        <div className="flex items-center gap-1.5">
           <span className="text-sm font-semibold tabular-nums">{fmt(materialEstimate)}</span>
           <button onClick={() => { setEditValue(materialEstimate); setEditing(true); }} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-accent rounded">
             <Pencil className="h-3 w-3 text-muted-foreground" />
@@ -175,39 +153,45 @@ function MaterialBudgetCard({ materialEstimate, materialDelivered, materialOrder
         </div>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">Delivered</span>
+        <span className="text-sm text-muted-foreground">Delivered POs</span>
         <span className="text-sm font-semibold tabular-nums">{fmt(materialDelivered)}</span>
       </div>
       {materialOrderedPending > 0 && (
         <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">Ordered (pending)</span>
+          <span className="text-sm text-muted-foreground">Ordered (pending)</span>
           <span className="text-sm font-semibold tabular-nums text-amber-600 dark:text-amber-400">{fmt(materialOrderedPending)}</span>
         </div>
       )}
-      <div className="border-t pt-1.5 flex items-center justify-between">
-        <span className="text-xs font-medium">Remaining</span>
+
+      <div className="border-t pt-2.5 flex items-center justify-between">
+        <span className="text-sm font-medium">Variance</span>
         <span className={cn("text-lg font-bold tabular-nums", isOver ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400')}>
-          {isOver ? `-${fmt(diffDollar)}` : fmt(remaining)}
+          {isOver ? `-${fmt(diffDollar)}` : `+${fmt(remaining)}`}
         </span>
       </div>
 
       <div className="flex items-center gap-1.5">
         {isOver ? <TrendingUp className="h-3.5 w-3.5 text-red-500" /> : <TrendingDown className="h-3.5 w-3.5 text-green-500" />}
-        <span className={cn("text-[11px] font-medium", isOver ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400')}>
-          {isOver ? `Over: ${fmt(diffDollar)} (${pct(diffPct)})` : `Under: ${fmt(diffDollar)} (${diffPct.toFixed(1)}% left)`}
+        <span className={cn("text-xs font-medium", isOver ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400')}>
+          {isOver ? `Over budget by ${pct(diffPct)}` : `${diffPct.toFixed(1)}% under budget`}
         </span>
       </div>
 
       {materialOrderedPending > 0 && projectedOver && (
-        <p className="text-[11px] text-red-600 dark:text-red-400 italic">
-          Projected overage: {fmt(projectedDiff)} ({pct(projectedPctDiff)})
+        <p className="text-xs text-amber-600 dark:text-amber-400 italic">
+          ⚠ Projected overage: {fmt(projectedDiff)} ({pct(projectedPctDiff)})
         </p>
+      )}
+
+      {onNavigate && (
+        <button onClick={() => onNavigate('purchase-orders')} className="text-xs text-primary hover:underline mt-1">
+          View Delivered PO Breakdown →
+        </button>
       )}
     </div>
   );
 }
 
-// Labor Budget sub-card
 function LaborBudgetCard({ laborBudget, actualLaborCost, upstreamContract, updateLaborBudget }: {
   laborBudget: number | null;
   actualLaborCost: number;
@@ -230,15 +214,15 @@ function LaborBudgetCard({ laborBudget, actualLaborCost, upstreamContract, updat
 
   if (editing) {
     return (
-      <div className="border bg-accent/20 rounded p-3 space-y-2">
-        <p className="text-xs font-medium text-muted-foreground uppercase">Set Labor Budget</p>
+      <div className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 space-y-3">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Set Labor Budget</p>
         <div className="flex gap-2 items-end flex-wrap">
           <div className="relative flex-1 min-w-[100px]">
-            <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-            <Input type="number" min="0" step="1000" className="pl-6 h-8 text-sm" value={editValue || ''} onChange={e => setEditValue(parseFloat(e.target.value) || 0)} autoFocus />
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+            <Input type="number" min="0" step="1000" className="pl-7 h-9 text-sm" value={editValue || ''} onChange={e => setEditValue(parseFloat(e.target.value) || 0)} autoFocus />
           </div>
-          <Button size="sm" onClick={handleSave} disabled={saving} className="h-8"><Check className="h-3.5 w-3.5" /></Button>
-          <Button size="sm" variant="ghost" onClick={() => setEditing(false)} disabled={saving} className="h-8"><X className="h-3.5 w-3.5" /></Button>
+          <Button size="sm" onClick={handleSave} disabled={saving} className="h-9"><Check className="h-4 w-4" /></Button>
+          <Button size="sm" variant="ghost" onClick={() => setEditing(false)} disabled={saving} className="h-9"><X className="h-4 w-4" /></Button>
         </div>
       </div>
     );
@@ -250,15 +234,15 @@ function LaborBudgetCard({ laborBudget, actualLaborCost, upstreamContract, updat
   const isOver = hasBudget && actualLaborCost > laborBudget;
 
   return (
-    <div className="border bg-accent/20 rounded p-3 space-y-1.5">
+    <div className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 space-y-2.5">
       <div className="flex items-center gap-1.5 mb-1">
-        <Users className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="text-xs font-medium uppercase text-muted-foreground">Labor Budget</span>
+        <Users className="h-4 w-4 text-muted-foreground" />
+        <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Labor Budget</span>
       </div>
 
       <div className="group flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">Budget</span>
-        <div className="flex items-center gap-1">
+        <span className="text-sm text-muted-foreground">Budget</span>
+        <div className="flex items-center gap-1.5">
           <span className={cn("text-sm font-semibold tabular-nums", !hasBudget && 'text-amber-600 dark:text-amber-400')}>
             {hasBudget ? fmt(laborBudget) : 'Not set'}
           </span>
@@ -268,20 +252,20 @@ function LaborBudgetCard({ laborBudget, actualLaborCost, upstreamContract, updat
         </div>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">Actual</span>
+        <span className="text-sm text-muted-foreground">Actual</span>
         <span className="text-sm font-semibold tabular-nums">{fmt(actualLaborCost)}</span>
       </div>
 
       {hasBudget && (
         <>
-          <div className="border-t pt-1.5 flex items-center justify-between">
-            <span className="text-xs font-medium">Variance</span>
+          <div className="border-t pt-2.5 flex items-center justify-between">
+            <span className="text-sm font-medium">Remaining</span>
             <span className={cn("text-lg font-bold tabular-nums", isOver ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400')}>
               {isOver ? `-${fmt(Math.abs(variance))}` : fmt(variance)}
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">% Used</span>
+            <span className="text-sm text-muted-foreground">% Used</span>
             <span className={cn("text-xs font-semibold", pctUsed > 100 ? 'text-red-600 dark:text-red-400' : pctUsed > 80 ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400')}>
               {pctUsed.toFixed(1)}%
             </span>
