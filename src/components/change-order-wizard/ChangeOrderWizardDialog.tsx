@@ -1,11 +1,10 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+  Dialog,
+  DialogContent,
+} from '@/components/ui/dialog';
+import { WizardProgress } from '@/components/work-order-wizard/WizardProgress';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -91,7 +90,7 @@ function SectionCard({
   className?: string;
 }) {
   return (
-    <div className={cn("bg-card border rounded-xl p-5", className)}>
+    <div className={cn("bg-card rounded-2xl shadow-sm p-5", className)}>
       <div className="flex items-center gap-2 mb-4">
         <Icon className="w-5 h-5 text-primary" />
         <h3 className="font-semibold">{title}</h3>
@@ -357,14 +356,15 @@ export function ChangeOrderWizardDialog({
   const assigneeSectionTitle = isGC ? 'Assign to Trade Contractor' : 'Assign to Field Crew';
 
   return (
-    <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="right" className="w-full sm:max-w-xl md:max-w-2xl overflow-y-auto p-0">
-        <SheetHeader className="sticky top-0 z-10 bg-background border-b px-6 py-4">
-          <SheetTitle className="text-lg">New Work Order</SheetTitle>
-          <p className="text-sm text-muted-foreground">{projectName}</p>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-2xl max-h-[85vh] p-0 gap-0 overflow-hidden flex flex-col">
+        <WizardProgress
+          currentStep={1}
+          totalSteps={1}
+          steps={[{ title: 'New Work Order', description: projectName }]}
+        />
 
-        <div className="p-6 space-y-5 pb-32">
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
           {/* Location Section */}
           <SectionCard icon={MapPin} title="Location of Work">
             {hasLocationData && !isLocationEditing ? (
@@ -535,7 +535,7 @@ export function ChangeOrderWizardDialog({
           </SectionCard>
 
           {/* Description Section */}
-          <div className="bg-card border rounded-xl p-5">
+          <div className="bg-card rounded-2xl shadow-sm p-5">
             <div className="flex items-center justify-between mb-4">
               <Label className="font-semibold">Description of Work</Label>
               <Button variant="outline" size="sm" className="gap-1.5 text-xs">
@@ -760,8 +760,9 @@ export function ChangeOrderWizardDialog({
           </SectionCard>
         </div>
 
+
         {/* Sticky Footer */}
-        <div className="fixed bottom-0 left-0 right-0 sm:left-auto sm:right-0 sm:w-full sm:max-w-xl md:max-w-2xl bg-background border-t shadow-lg">
+        <div className="border-t bg-muted/30">
           {/* Total Row - Only show for TC with labor */}
           {isTC && laborTotal > 0 && (
             <div className="flex items-center justify-between px-6 py-3 bg-muted/50">
@@ -799,7 +800,7 @@ export function ChangeOrderWizardDialog({
             </Button>
           </div>
         </div>
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

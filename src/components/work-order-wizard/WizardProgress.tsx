@@ -10,9 +10,9 @@ export function WizardProgress({ currentStep, totalSteps, steps }: WizardProgres
   const current = steps[currentStep - 1];
 
   return (
-    <div className="px-6 py-4 border-b bg-muted/30">
+    <div className="px-6 py-4 border-b bg-background">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs font-medium text-muted-foreground">
+        <span className="text-xs uppercase tracking-wide font-medium text-muted-foreground">
           Step {currentStep} of {totalSteps}
         </span>
       </div>
@@ -32,7 +32,7 @@ export function WizardProgress({ currentStep, totalSteps, steps }: WizardProgres
             <div
               key={index}
               className={cn(
-                'h-1.5 flex-1 rounded-full transition-colors',
+                'h-2 flex-1 rounded-full transition-colors',
                 isCompleted ? 'bg-primary' : isCurrent ? 'bg-primary/50' : 'bg-muted'
               )}
             />

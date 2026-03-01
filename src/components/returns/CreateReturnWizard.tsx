@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { formatPhone } from '@/lib/formatPhone';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Search, ArrowLeft } from 'lucide-react';
+import { WizardProgress } from '@/components/work-order-wizard/WizardProgress';
 import { VIRTUAL_CATEGORIES, CategoryCount } from '@/types/poWizardV2';
 import {
   ReturnReason,
@@ -359,15 +360,20 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
     },
   });
 
-  const stepTitles = ['Select Items', 'Reason', 'Condition', 'Logistics', 'Review'];
+  const wizardSteps = [
+    { title: 'Select Items', description: 'Choose items to return' },
+    { title: 'Reason', description: 'Why are you returning?' },
+    { title: 'Condition', description: 'Item condition details' },
+    { title: 'Logistics', description: 'Pickup & contact info' },
+    { title: 'Review', description: 'Confirm & submit' },
+  ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Create Return — {stepTitles[step]}</DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[85vh] p-0 gap-0 overflow-hidden flex flex-col">
+        <WizardProgress currentStep={step + 1} totalSteps={5} steps={wizardSteps} />
 
+        <div className="flex-1 overflow-y-auto px-6 py-4">
         {/* Step 0: Select Items with Category Browser */}
         {step === 0 && (
           <div className="space-y-4">
@@ -411,7 +417,7 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
                     <button
                       key={cat.category}
                       onClick={() => { setActiveCategory(cat.category); setItemSearch(''); }}
-                      className="relative flex flex-col items-center justify-center p-4 h-24 rounded-xl border bg-card hover:bg-accent hover:border-accent-foreground/20 transition-colors text-center active:scale-[0.98]"
+                      className="relative flex flex-col items-center justify-center p-4 h-24 rounded-2xl bg-card shadow-sm hover:shadow-md transition-shadow text-center active:scale-[0.98]"
                     >
                       <span className="text-2xl mb-1">{cat.icon}</span>
                       <span className="font-medium text-sm leading-tight">{cat.displayName}</span>
@@ -672,8 +678,10 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
           </div>
         )}
 
-        {/* Navigation */}
-        <div className="flex justify-between pt-4 border-t">
+        </div>
+
+        {/* Sticky Footer */}
+        <div className="flex items-center justify-between p-4 border-t bg-muted/30">
           <Button variant="ghost" onClick={() => step === 0 ? onOpenChange(false) : setStep(s => s - 1)}>
             {step === 0 ? 'Cancel' : 'Back'}
           </Button>

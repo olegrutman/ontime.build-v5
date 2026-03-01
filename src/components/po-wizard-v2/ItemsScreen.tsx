@@ -37,11 +37,13 @@ export function ItemsScreen({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-4 py-3 border-b bg-muted/30 space-y-2">
+      <div className="px-4 py-3 border-b bg-background space-y-2">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold">Items</h2>
-            <p className="text-sm text-muted-foreground">Step 2 of 3 • Add Materials</p>
+            <span className="text-xs uppercase tracking-wide font-medium text-muted-foreground">
+              Step 2 of 3
+            </span>
+            <h2 className="text-lg font-semibold mt-1">Items</h2>
           </div>
           {items.length > 0 && (
             <Badge variant="secondary" className="text-base px-3 py-1">
