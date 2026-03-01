@@ -23,11 +23,11 @@ import {
   PurchaseOrdersTab,
   AttentionBanner,
   SupplierEstimatesSection,
-  SupplierFinancialsSummaryCard,
   SupplierPOSummaryCard,
   OperationalSummary,
-  SupplierEstimateVsOrdersCard,
   SupplierOperationalSummary,
+  SupplierMaterialsControlCard,
+  SupplierMaterialsChart,
   BudgetTracking,
 } from '@/components/project';
 import { ContractHeroCard } from '@/components/project/ContractHeroCard';
@@ -254,11 +254,9 @@ export default function ProjectHome() {
                   ) : isSupplier && supplierOrgId ? (
                     <div className="space-y-4">
                       <AttentionBanner projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
-                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        <SupplierEstimateVsOrdersCard projectId={id!} supplierOrgId={supplierOrgId} />
-                        <SupplierFinancialsSummaryCard projectId={id!} supplierOrgId={supplierOrgId} />
-                        <SupplierPOSummaryCard projectId={id!} supplierOrgId={supplierOrgId} />
-                      </div>
+                      <SupplierMaterialsControlCard projectId={id!} supplierOrgId={supplierOrgId} />
+                      <SupplierMaterialsChart projectId={id!} supplierOrgId={supplierOrgId} />
+                      <SupplierPOSummaryCard projectId={id!} supplierOrgId={supplierOrgId} />
                       <SupplierOperationalSummary projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
                     </div>
                   ) : (
