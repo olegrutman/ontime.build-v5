@@ -25,6 +25,7 @@ interface PackSummary {
 
 export function EstimateSummaryCard({ items, salesTaxPercent, estimateId, onTaxUpdate }: EstimateSummaryCardProps) {
   const [taxInput, setTaxInput] = useState<string>(String(salesTaxPercent ?? 0));
+  const [totalInput, setTotalInput] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const { toast } = useToast();
 
@@ -57,22 +58,36 @@ export function EstimateSummaryCard({ items, salesTaxPercent, estimateId, onTaxU
   const taxAmount = subtotal * (taxPercent / 100);
   const grandTotal = subtotal + taxAmount;
 
-  const handleTaxBlur = async () => {
-    const newPercent = parseFloat(taxInput) || 0;
+  const saveTaxPercent = async (newPercent: number) => {
     if (newPercent === (salesTaxPercent ?? 0)) return;
-
     setSaving(true);
     const { error } = await supabase
       .from('supplier_estimates')
       .update({ sales_tax_percent: newPercent } as Record<string, unknown>)
       .eq('id', estimateId);
-
     if (error) {
       toast({ title: 'Error', description: 'Failed to save tax rate', variant: 'destructive' });
     } else {
       onTaxUpdate(newPercent);
     }
     setSaving(false);
+  };
+
+  const handleTaxBlur = () => {
+    const newPercent = parseFloat(taxInput) || 0;
+    setTotalInput('');
+    saveTaxPercent(newPercent);
+  };
+
+  const handleTotalBlur = () => {
+    const totalWithTax = parseFloat(totalInput);
+    if (!totalWithTax || subtotal === 0) { setTotalInput(''); return; }
+    const taxAmount = totalWithTax - subtotal;
+    const calcPercent = Math.round((taxAmount / subtotal) * 10000) / 100; // 2 decimal places
+    const clamped = Math.max(0, Math.min(100, calcPercent));
+    setTaxInput(String(clamped));
+    setTotalInput('');
+    saveTaxPercent(clamped);
   };
 
   const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -116,9 +131,26 @@ export function EstimateSummaryCard({ items, salesTaxPercent, estimateId, onTaxU
 
           <Separator />
 
-          <div className="flex justify-between text-sm font-semibold">
-            <span>Total (incl. tax)</span>
-            <span>${fmt(grandTotal)}</span>
+          <div className="flex justify-between items-center text-sm font-semibold">
+            <div className="flex items-center gap-2">
+              <span>Total (incl. tax)</span>
+              <span className="text-[10px] text-muted-foreground font-normal">or enter total →</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="text-muted-foreground">$</span>
+              <Input
+                type="number"
+                min={0}
+                step={0.01}
+                value={totalInput}
+                placeholder={fmt(grandTotal)}
+                onChange={(e) => setTotalInput(e.target.value)}
+                onBlur={handleTotalBlur}
+                onKeyDown={(e) => e.key === 'Enter' && handleTotalBlur()}
+                className="h-7 w-24 text-xs text-right font-semibold"
+                disabled={saving || subtotal === 0}
+              />
+            </div>
           </div>
         </div>
 
