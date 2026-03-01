@@ -20,6 +20,7 @@ interface EstimatePackItem {
   uom: string;
   catalog_item_id: string | null;
   pack_name: string | null;
+  unit_price: number | null;
 }
 
 interface PackSelectorProps {
@@ -86,7 +87,7 @@ export function PackSelector({
     // Fetch ALL items for the approved estimate (no pack_name filter)
     const { data: items } = await supabase
       .from('supplier_estimate_items')
-      .select('id, supplier_sku, description, quantity, uom, catalog_item_id, pack_name')
+      .select('id, supplier_sku, description, quantity, uom, catalog_item_id, pack_name, unit_price')
       .eq('estimate_id', estimate.id)
       .order('created_at');
 

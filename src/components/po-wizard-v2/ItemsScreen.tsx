@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,8 +9,17 @@ import {
   Pencil, 
   Trash2,
   Package,
+  AlertTriangle,
 } from 'lucide-react';
 import { POWizardV2LineItem } from '@/types/poWizardV2';
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
 
 interface ItemsScreenProps {
   items: POWizardV2LineItem[];
@@ -34,6 +44,45 @@ export function ItemsScreen({
   sourcePackName,
   onClearPack,
 }: ItemsScreenProps) {
+  // Compute live totals
+  const totals = useMemo(() => {
+    let estimateSubtotal = 0;
+    let additionalSubtotal = 0;
+    let unpricedCount = 0;
+
+    for (const item of items) {
+      const lineTotal = item.unit_price != null ? item.quantity * item.unit_price : null;
+      if (item.source_estimate_item_id) {
+        estimateSubtotal += lineTotal ?? 0;
+      } else if (item.unit_price != null) {
+        additionalSubtotal += lineTotal ?? 0;
+      }
+      if (item.unit_price == null) {
+        unpricedCount++;
+      }
+    }
+
+    return {
+      estimateSubtotal,
+      additionalSubtotal,
+      subtotal: estimateSubtotal + additionalSubtotal,
+      unpricedCount,
+    };
+  }, [items]);
+
+  function getSourceTag(item: POWizardV2LineItem) {
+    if (item.price_adjusted_by_supplier) {
+      return <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-700 dark:text-amber-400">Supplier Adjusted</Badge>;
+    }
+    if (item.source_estimate_item_id && item.unit_price != null) {
+      return <Badge variant="outline" className="text-[10px] border-emerald-500/50 text-emerald-700 dark:text-emerald-400">From Estimate</Badge>;
+    }
+    if (!item.source_estimate_item_id && item.unit_price == null) {
+      return <Badge variant="outline" className="text-[10px] border-amber-500/50 text-amber-700 dark:text-amber-400">Needs Pricing</Badge>;
+    }
+    return null;
+  }
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -87,64 +136,90 @@ export function ItemsScreen({
             )}
 
             {/* Item List */}
-            {items.map((item) => (
-              <Card key={item.id} className="overflow-hidden">
-                <CardContent className="p-0">
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{item.name}</p>
-                        <p className="text-sm text-muted-foreground truncate">
-                          {item.specs}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-2 mt-2">
-                          {item.is_engineered && item.length_ft ? (
-                            <>
-                              <Badge variant="outline">
-                                {item.quantity} pcs
-                              </Badge>
-                              <Badge variant="outline">
-                                {item.length_ft}' each
-                              </Badge>
-                              <Badge variant="secondary" className="font-semibold">
-                                = {item.computed_lf} LF
-                              </Badge>
-                            </>
-                          ) : (
-                            <Badge variant="outline">
-                              {item.quantity} {item.unit_mode === 'BUNDLE' ? item.bundle_name || 'BDL' : item.uom}
-                            </Badge>
+            {items.map((item) => {
+              const lineTotal = item.unit_price != null ? item.quantity * item.unit_price : null;
+              return (
+                <Card key={item.id} className="overflow-hidden">
+                  <CardContent className="p-0">
+                    <div className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{item.name}</p>
+                          <p className="text-sm text-muted-foreground truncate">
+                            {item.specs}
+                          </p>
+                          {item.source_pack_name && (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              Pack: {item.source_pack_name}
+                            </p>
                           )}
-                          {item.item_notes && (
-                            <span className="text-xs text-muted-foreground truncate max-w-[120px]">
-                              {item.item_notes}
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
+                            {item.is_engineered && item.length_ft ? (
+                              <>
+                                <Badge variant="outline">
+                                  {item.quantity} pcs
+                                </Badge>
+                                <Badge variant="outline">
+                                  {item.length_ft}' each
+                                </Badge>
+                                <Badge variant="secondary" className="font-semibold">
+                                  = {item.computed_lf} LF
+                                </Badge>
+                              </>
+                            ) : (
+                              <Badge variant="outline">
+                                {item.quantity} {item.unit_mode === 'BUNDLE' ? item.bundle_name || 'BDL' : item.uom}
+                              </Badge>
+                            )}
+                            {getSourceTag(item)}
+                            {item.item_notes && (
+                              <span className="text-xs text-muted-foreground truncate max-w-[120px]">
+                                {item.item_notes}
+                              </span>
+                            )}
+                          </div>
+                          {/* Pricing row */}
+                          <div className="flex items-center gap-3 mt-2 text-sm">
+                            <span className="text-muted-foreground">
+                              {item.unit_price != null
+                                ? `${formatCurrency(item.unit_price)} / ${item.uom}`
+                                : '-- / ' + item.uom}
                             </span>
+                            <span className="font-medium">
+                              {lineTotal != null ? formatCurrency(lineTotal) : '--'}
+                            </span>
+                          </div>
+                          {/* Supplier adjusted delta */}
+                          {item.price_adjusted_by_supplier && item.original_unit_price != null && item.unit_price != null && (
+                            <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                              Adjusted from {formatCurrency(item.original_unit_price)} → {formatCurrency(item.unit_price)}
+                            </p>
                           )}
                         </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-10 w-10"
-                          onClick={() => onEditItem(item)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-10 w-10 text-destructive hover:text-destructive"
-                          onClick={() => onRemoveItem(item.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-10"
+                            onClick={() => onEditItem(item)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-10 w-10 text-destructive hover:text-destructive"
+                            onClick={() => onRemoveItem(item.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
 
             {/* Add More Button */}
             <Button
@@ -155,6 +230,36 @@ export function ItemsScreen({
               <Plus className="h-5 w-5 mr-2" />
               Add Another Item
             </Button>
+
+            {/* Sticky Totals Summary */}
+            {items.length > 0 && (
+              <Card className="bg-muted/30">
+                <CardContent className="p-3 space-y-1.5 text-sm">
+                  {totals.estimateSubtotal > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Estimate Items</span>
+                      <span>{formatCurrency(totals.estimateSubtotal)}</span>
+                    </div>
+                  )}
+                  {totals.additionalSubtotal > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Additional Items</span>
+                      <span>{formatCurrency(totals.additionalSubtotal)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-semibold border-t pt-1.5">
+                    <span>Subtotal</span>
+                    <span>{formatCurrency(totals.subtotal)}</span>
+                  </div>
+                  {totals.unpricedCount > 0 && (
+                    <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-xs mt-1">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      <span>{totals.unpricedCount} item{totals.unpricedCount !== 1 ? 's' : ''} need supplier pricing</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </>
         )}
       </div>

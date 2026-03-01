@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,9 +13,18 @@ import {
   CalendarDays,
   Clock,
   Pencil,
+  AlertTriangle,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { POWizardV2Data } from '@/types/poWizardV2';
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+  }).format(amount);
+}
 
 interface ReviewScreenProps {
   data: POWizardV2Data;
@@ -33,6 +43,29 @@ export function ReviewScreen({
   onSubmit,
   isSubmitting,
 }: ReviewScreenProps) {
+  // Compute totals
+  const totals = useMemo(() => {
+    let estimateSubtotal = 0;
+    let additionalSubtotal = 0;
+    let unpricedCount = 0;
+
+    for (const item of data.line_items) {
+      const lineTotal = item.unit_price != null ? item.quantity * item.unit_price : null;
+      if (item.source_estimate_item_id) {
+        estimateSubtotal += lineTotal ?? 0;
+      } else if (item.unit_price != null) {
+        additionalSubtotal += lineTotal ?? 0;
+      }
+      if (item.unit_price == null) {
+        unpricedCount++;
+      }
+    }
+
+    const subtotal = estimateSubtotal + additionalSubtotal;
+
+    return { estimateSubtotal, additionalSubtotal, subtotal, unpricedCount };
+  }, [data.line_items]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -122,22 +155,65 @@ export function ReviewScreen({
             </div>
 
             <div className="space-y-3">
-              {data.line_items.map((item, idx) => (
-                <div key={item.id} className="flex items-start gap-3">
-                  <span className="text-sm text-muted-foreground w-5">{idx + 1}.</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate text-sm">{item.name}</p>
-                    <p className="text-xs text-muted-foreground truncate">{item.specs}</p>
+              {data.line_items.map((item, idx) => {
+                const lineTotal = item.unit_price != null ? item.quantity * item.unit_price : null;
+                return (
+                  <div key={item.id} className="flex items-start gap-3">
+                    <span className="text-sm text-muted-foreground w-5">{idx + 1}.</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate text-sm">{item.name}</p>
+                      <p className="text-xs text-muted-foreground truncate">{item.specs}</p>
+                      <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+                        <span>
+                          {item.unit_price != null
+                            ? `${formatCurrency(item.unit_price)} / ${item.uom}`
+                            : `-- / ${item.uom}`}
+                        </span>
+                        <span className="font-medium text-foreground">
+                          {lineTotal != null ? formatCurrency(lineTotal) : '--'}
+                        </span>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="shrink-0">
+                      {item.is_engineered && item.length_ft
+                        ? `${item.quantity} pcs @ ${item.length_ft}' = ${item.computed_lf} LF`
+                        : `${item.quantity} ${item.unit_mode === 'BUNDLE' ? item.bundle_name || 'BDL' : item.uom}`
+                      }
+                    </Badge>
                   </div>
-                  <Badge variant="outline" className="shrink-0">
-                    {item.is_engineered && item.length_ft
-                      ? `${item.quantity} pcs @ ${item.length_ft}' = ${item.computed_lf} LF`
-                      : `${item.quantity} ${item.unit_mode === 'BUNDLE' ? item.bundle_name || 'BDL' : item.uom}`
-                    }
-                  </Badge>
-                </div>
-              ))}
+                );
+              })}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Totals Card */}
+        <Card>
+          <CardContent className="p-4 space-y-2 text-sm">
+            <h3 className="font-medium mb-2">Totals</h3>
+            {totals.estimateSubtotal > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Subtotal (Estimate Items)</span>
+                <span>{formatCurrency(totals.estimateSubtotal)}</span>
+              </div>
+            )}
+            {totals.additionalSubtotal > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Subtotal (Additional Items)</span>
+                <span>{formatCurrency(totals.additionalSubtotal)}</span>
+              </div>
+            )}
+            <Separator />
+            <div className="flex justify-between font-bold text-base">
+              <span>{totals.unpricedCount > 0 ? 'Total (Pending Pricing)' : 'Total'}</span>
+              <span>{formatCurrency(totals.subtotal)}</span>
+            </div>
+            {totals.unpricedCount > 0 && (
+              <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-xs mt-2">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                <span>{totals.unpricedCount} item{totals.unpricedCount !== 1 ? 's' : ''} need supplier pricing to finalize total</span>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

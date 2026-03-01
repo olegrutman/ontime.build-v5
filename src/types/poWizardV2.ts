@@ -39,6 +39,15 @@ export interface POWizardV2LineItem {
   length_ft?: number;         // Length per piece in feet
   computed_lf?: number;       // Total linear feet (quantity * length_ft)
   is_engineered?: boolean;    // Flag for display purposes
+
+  // Pricing traceability
+  unit_price?: number | null;
+  line_total?: number | null;
+  source_estimate_item_id?: string | null;
+  source_pack_name?: string | null;
+  price_source?: 'FROM_ESTIMATE' | 'SUPPLIER_MANUAL' | 'CATALOG_DEFAULT' | null;
+  price_adjusted_by_supplier?: boolean;
+  original_unit_price?: number | null;
 }
 
 export interface ProjectSupplier {

@@ -29,6 +29,7 @@ interface EstimateItem {
   supplier_sku: string | null;
   catalog_item_id: string | null;
   pack_name: string | null;
+  unit_price: number | null;
 }
 
 type PSMStep = 'category' | 'secondary' | 'filter-step' | 'products' | 'quantity' | 'unmatched-list';
@@ -106,7 +107,7 @@ export function PSMBrowser({
       // Fetch all estimate items
       const { data: items } = await supabase
         .from('supplier_estimate_items')
-        .select('id, description, quantity, uom, supplier_sku, catalog_item_id, pack_name')
+        .select('id, description, quantity, uom, supplier_sku, catalog_item_id, pack_name, unit_price')
         .eq('estimate_id', estId);
 
       if (!items || items.length === 0) {
@@ -382,6 +383,7 @@ export function PSMBrowser({
   }, [onAddItem]);
 
   const handleAddUnmatchedItem = useCallback((estimateItem: EstimateItem, quantity: number) => {
+    const unitPrice = estimateItem.unit_price;
     const lineItem: POWizardV2LineItem = {
       id: `psm-unmatched-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       catalog_item_id: '',
@@ -392,6 +394,12 @@ export function PSMBrowser({
       unit_mode: 'EACH',
       uom: estimateItem.uom,
       item_notes: '⚠ Not in catalog',
+      unit_price: unitPrice,
+      line_total: unitPrice != null ? quantity * unitPrice : null,
+      source_estimate_item_id: estimateItem.id,
+      source_pack_name: estimateItem.pack_name,
+      price_source: unitPrice != null ? 'FROM_ESTIMATE' : null,
+      original_unit_price: unitPrice,
     };
     onAddItem(lineItem);
   }, [onAddItem]);
