@@ -1,51 +1,68 @@
 
 
-# Supplier PO Pricing Button Flow Fix
+# Estimate Summary After Upload
 
-## What Changes
+## Overview
 
-### 1. Rename "Add Pricing" button to "Add / Edit Pricing"
-When a supplier sees a PO in SUBMITTED or PRICED status, the button label should read **"Add / Edit Pricing"** instead of just "Add Pricing".
+After an estimate is uploaded, show a rich summary card in the estimate detail sheet with financial totals, pack breakdown, and tax details. Also add a `sales_tax_percent` field to the estimate so tax can be stored and edited.
 
-### 2. Separate Save from status change
-Currently, saving pricing immediately sets the PO to PRICED. Instead:
-- Show a **"Save Pricing"** button while editing that saves prices without changing status
-- Show a separate **"Lock Pricing"** button that saves AND sets status to PRICED
-- This gives suppliers a chance to save their work and come back to it
+## Phase 1: Database Migration
 
-### 3. Allow supplier to re-edit pricing when PRICED
-Currently, the supplier can only edit pricing when status is SUBMITTED. Extend this so the supplier can also click "Add / Edit Pricing" when status is PRICED to go back and adjust.
+Add a new column to `supplier_estimates`:
+- `sales_tax_percent` (numeric, nullable, default 0) -- tax rate set by the supplier
 
-### 4. Block all pricing edits after ORDERED
-Once a PO reaches ORDERED status or beyond, no pricing editing is allowed. The "Add / Edit Pricing" button will not appear.
+## Phase 2: Type Update
 
-## Technical Details
+Update `SupplierProjectEstimate` in `src/types/supplierEstimate.ts`:
+- Add `sales_tax_percent?: number | null`
 
-**File:** `src/components/purchase-orders/PODetail.tsx`
+## Phase 3: Estimate Summary Component
 
-**Changes to action buttons (lines 491-497, 499-523):**
-- Merge the SUBMITTED and PRICED supplier buttons into one block: show "Add / Edit Pricing" button when `effectiveIsSupplier && (status === 'SUBMITTED' || status === 'PRICED')`
-- When `editingPrices` is true, show two buttons:
-  - "Save Pricing" -- calls a new `handleSavePricesOnly` that updates line items and PO totals but does NOT change the status
-  - "Lock Pricing" -- calls existing `handleSavePrices` which saves AND sets status to PRICED
+Create a new component `src/components/estimate-summary/EstimateSummaryCard.tsx` that receives the estimate items array and `sales_tax_percent`, then computes and displays:
 
-**Changes to `usePOPricingVisibility` hook:**
-- Update `canEditPricing` to return true when supplier and status is SUBMITTED **or** PRICED (currently only SUBMITTED)
+**Financial Totals:**
+- Subtotal (before tax): sum of all `quantity * unit_price`
+- Tax %: editable input (saves to `supplier_estimates.sales_tax_percent`)
+- Tax Amount: subtotal x tax%
+- Total (including tax): subtotal + tax amount
 
-**File:** `src/hooks/usePOPricingVisibility.ts` (line 41)
-- Change: `const canEditPricing = isSupplier && po.status === 'SUBMITTED';`
-- To: `const canEditPricing = isSupplier && (po.status === 'SUBMITTED' || po.status === 'PRICED');`
+**Pack Breakdown (table or card list):**
+- For each pack:
+  - Pack name
+  - Number of items in the pack
+  - Pack subtotal (sum of qty x unit_price for items in that pack)
+  - Percentage of total estimate: `(pack_subtotal / estimate_subtotal) * 100`
+
+**Overall Stats:**
+- Total number of packs
+- Total number of items across all packs
+
+The tax % input will be an inline editable field. When changed, it saves to the database and recalculates the displayed tax amount and grand total.
+
+## Phase 4: Integrate Into Estimate Detail Sheet
+
+In `src/pages/SupplierProjectEstimates.tsx`, inside the estimate detail Sheet (between the status/actions area and the line items table), render the `EstimateSummaryCard` when `estimateItems.length > 0`.
+
+Pass:
+- `items={estimateItems}`
+- `salesTaxPercent={selectedEstimate.sales_tax_percent}`
+- `estimateId={selectedEstimate.id}`
+- `onTaxUpdate={(newPercent) => ...}` -- callback to save and refresh
+
+Also update `total_amount` on the estimate record whenever items are loaded (recalculate from items to keep it in sync).
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/hooks/usePOPricingVisibility.ts` | Allow pricing edit in PRICED status |
-| `src/components/purchase-orders/PODetail.tsx` | Rename button, add Save vs Lock, show edit button for PRICED |
+| Migration SQL | Add `sales_tax_percent` to `supplier_estimates` |
+| `src/types/supplierEstimate.ts` | Add `sales_tax_percent` field |
+| `src/components/estimate-summary/EstimateSummaryCard.tsx` | New component with full summary |
+| `src/pages/SupplierProjectEstimates.tsx` | Render summary card in detail sheet |
 
 ## What Does NOT Change
-- PO status flow order
-- How pricing data is stored
-- Non-supplier user experience
-- Any other wizard or component
+- Estimate upload wizard flow
+- Item table display (stays below the summary)
+- Estimate status flow
+- Any PO wizard behavior
 
