@@ -29,6 +29,7 @@ interface EstimatePackItem {
   uom: string;
   catalog_item_id: string | null;
   pack_name: string | null;
+  unit_price: number | null;
 }
 
 interface EstimatePack {
@@ -368,6 +369,12 @@ export function ProductPicker({
       unit_mode: 'EACH' as const,
       uom: item.uom,
       item_notes: item.catalog_item_id ? undefined : '⚠ Not in catalog',
+      unit_price: item.unit_price,
+      line_total: item.unit_price != null ? item.quantity * item.unit_price : null,
+      source_estimate_item_id: item.id,
+      source_pack_name: item.pack_name,
+      price_source: item.unit_price != null ? 'FROM_ESTIMATE' as const : null,
+      original_unit_price: item.unit_price,
     }));
     onLoadPack(lineItems, estimateId, pack.name);
     // Just close overlay, keep step at 'estimate' so user can return to pack list
