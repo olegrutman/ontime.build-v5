@@ -107,11 +107,18 @@ export function EstimateUploadWizard({
 
       if (error) throw error;
 
-      // Save estimate_total if extracted from PDF
+      // Save estimate_total and auto-calculate tax percent
       if (estimateTotal != null && estimateTotal > 0) {
+        const itemSubtotal = items.reduce((sum, i) => sum + (i.quantity * (i.unit_price || 0)), 0);
+        const calculatedTaxPercent = itemSubtotal > 0
+          ? Math.round(((estimateTotal - itemSubtotal) / itemSubtotal) * 10000) / 100
+          : 0;
         await supabase
           .from('supplier_estimates')
-          .update({ total_amount: estimateTotal })
+          .update({
+            total_amount: estimateTotal,
+            sales_tax_percent: Math.max(0, calculatedTaxPercent),
+          } as Record<string, unknown>)
           .eq('id', estimateId);
       }
 
