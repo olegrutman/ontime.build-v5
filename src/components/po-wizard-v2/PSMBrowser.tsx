@@ -61,6 +61,7 @@ export function PSMBrowser({
   const [estimateId, setEstimateId] = useState<string | null>(null);
   const [estimateCatalogIds, setEstimateCatalogIds] = useState<string[]>([]);
   const [unmatchedItems, setUnmatchedItems] = useState<EstimateItem[]>([]);
+  const [catalogToEstimateMap, setCatalogToEstimateMap] = useState<Map<string, EstimateItem>>(new Map());
 
   // Load estimate items and build categories on mount
   useEffect(() => {
@@ -132,6 +133,15 @@ export function PSMBrowser({
 
       setEstimateCatalogIds(catalogIds);
       setUnmatchedItems(unmatched);
+
+      // Build catalog_item_id -> EstimateItem lookup for pricing
+      const lookupMap = new Map<string, EstimateItem>();
+      for (const m of matched) {
+        if (m.catalog_item_id) {
+          lookupMap.set(m.catalog_item_id, m);
+        }
+      }
+      setCatalogToEstimateMap(lookupMap);
 
       // Build categories from matched catalog items
       if (catalogIds.length > 0) {
@@ -489,13 +499,19 @@ export function PSMBrowser({
         />
       )}
 
-      {step === 'quantity' && selectedProduct && (
-        <QuantityPanel
-          product={selectedProduct}
-          onAdd={handleAddPSMItem}
-          onClose={() => setStep('products')}
-        />
-      )}
+      {step === 'quantity' && selectedProduct && (() => {
+        const matchedEstItem = catalogToEstimateMap.get(selectedProduct.id);
+        return (
+          <QuantityPanel
+            product={selectedProduct}
+            onAdd={handleAddPSMItem}
+            onClose={() => setStep('products')}
+            estimateUnitPrice={matchedEstItem?.unit_price}
+            estimateItemId={matchedEstItem?.id}
+            estimatePackName={matchedEstItem?.pack_name}
+          />
+        );
+      })()}
 
       {step === 'unmatched-list' && (
         <PSMUnmatchedList
