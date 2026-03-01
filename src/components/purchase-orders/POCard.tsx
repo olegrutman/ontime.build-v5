@@ -1,7 +1,8 @@
 import { format } from 'date-fns';
-import { Package, Eye, Edit, Download, Send, Loader2, Building2, FileText, DollarSign, Lock, PackageCheck, Truck, Receipt } from 'lucide-react';
+import { Package, Eye, Edit, Download, Send, Loader2, Building2, FileText, DollarSign, Lock, PackageCheck, Truck, Receipt, ClipboardList, ArrowRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { POStatusBadge } from './POStatusBadge';
 import { PurchaseOrder, POStatus } from '@/types/purchaseOrder';
 import { HoverActions, HoverAction } from '@/components/ui/hover-actions';
@@ -96,6 +97,22 @@ export function POCard({
   
   const hasPricing = po.line_items?.some(item => item.unit_price !== null);
 
+  // Estimate/pack origin calculations
+  const isFromEstimate = !!po.source_estimate_id;
+  const estimateItems = po.line_items?.filter(item => item.source_estimate_item_id) || [];
+  const estimateItemCount = estimateItems.length;
+  const addedItemCount = lineItemCount - estimateItemCount;
+  
+  const originalTotal = estimateItems.reduce((sum, item) => {
+    if (item.original_unit_price != null && item.quantity != null) {
+      return sum + item.original_unit_price * item.quantity;
+    }
+    return sum;
+  }, 0);
+  const finalTotal = estimateItems.reduce((sum, item) => sum + (item.line_total || 0), 0);
+  const adjustment = finalTotal - originalTotal;
+  const hasOriginalPricing = estimateItems.some(item => item.original_unit_price != null);
+
   return (
     <Card
       className="group cursor-pointer hover:shadow-md transition-shadow"
@@ -143,6 +160,46 @@ export function POCard({
             </div>
           </div>
         </div>
+
+        {/* Estimate/Pack Origin Info */}
+        {isFromEstimate && (
+          <div className="mt-3 pt-3 border-t space-y-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border-transparent text-xs">
+                <ClipboardList className="h-3 w-3 mr-1" />
+                From Estimate
+              </Badge>
+              {po.source_pack_name && (
+                <span className="text-xs text-muted-foreground font-medium">
+                  Pack: {po.source_pack_name}
+                </span>
+              )}
+            </div>
+
+            {canViewPricing && hasOriginalPricing && (
+              <div className="flex items-center gap-1.5 text-xs">
+                <span className="text-muted-foreground">
+                  Est: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(originalTotal)}
+                </span>
+                <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                <span className="font-medium">
+                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(finalTotal)}
+                </span>
+                {adjustment !== 0 && (
+                  <span className={adjustment > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}>
+                    ({adjustment > 0 ? '+' : ''}{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(adjustment)})
+                  </span>
+                )}
+              </div>
+            )}
+
+            <div className="text-xs text-muted-foreground">
+              {addedItemCount > 0
+                ? `${estimateItemCount} est items + ${addedItemCount} added`
+                : `${estimateItemCount} est items`}
+            </div>
+          </div>
+        )}
 
         {/* Pricing Display - Only if user can view pricing */}
         {hasPricing && (

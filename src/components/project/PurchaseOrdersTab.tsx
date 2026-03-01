@@ -69,7 +69,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         *,
         supplier:suppliers(id, name, supplier_code, contact_info, organization_id),
         work_item:work_items(id, title),
-        line_items:po_line_items(id, unit_price, line_total)
+        line_items:po_line_items(id, unit_price, line_total, quantity, source_estimate_item_id, source_pack_name, original_unit_price, price_adjusted_by_supplier)
       `)
       .eq('project_id', projectId)
       .order('created_at', { ascending: false });

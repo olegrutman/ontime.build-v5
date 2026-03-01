@@ -22,6 +22,10 @@ export interface PurchaseOrder {
   ready_for_delivery_at?: string | null;
   download_token?: string;
   sales_tax_percent?: number | null;
+  // Estimate/pack origin
+  source_estimate_id?: string | null;
+  source_pack_name?: string | null;
+  pack_modified?: boolean | null;
   created_at: string;
   updated_at: string;
   // Pricing visibility
