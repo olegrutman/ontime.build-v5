@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { EstimateUploadWizard } from '@/components/estimate-upload';
+import { EstimateSummaryCard } from '@/components/estimate-summary/EstimateSummaryCard';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { TopBar } from '@/components/layout/TopBar';
@@ -638,6 +639,17 @@ export default function SupplierProjectEstimates() {
                       </Card>
                     ) : (
                       <>
+                        {/* Estimate Summary */}
+                        <EstimateSummaryCard
+                          items={estimateItems}
+                          salesTaxPercent={(selectedEstimate as any).sales_tax_percent}
+                          estimateId={selectedEstimate.id}
+                          onTaxUpdate={(newPercent) => {
+                            setSelectedEstimate({ ...selectedEstimate, sales_tax_percent: newPercent } as any);
+                            fetchEstimates();
+                          }}
+                        />
+                      <>
                         {/* Group items by pack_name */}
                         {(() => {
                           const grouped = new Map<string, SupplierEstimateItem[]>();
@@ -697,6 +709,7 @@ export default function SupplierProjectEstimates() {
                             </div>
                           );
                         })()}
+                      </>
                       </>
                     )}
                   </div>

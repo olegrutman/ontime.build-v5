@@ -3265,6 +3265,7 @@ export type Database = {
           name: string
           notes: string | null
           project_id: string
+          sales_tax_percent: number | null
           status: string
           submitted_at: string | null
           supplier_org_id: string
@@ -3280,6 +3281,7 @@ export type Database = {
           name: string
           notes?: string | null
           project_id: string
+          sales_tax_percent?: number | null
           status?: string
           submitted_at?: string | null
           supplier_org_id: string
@@ -3295,6 +3297,7 @@ export type Database = {
           name?: string
           notes?: string | null
           project_id?: string
+          sales_tax_percent?: number | null
           status?: string
           submitted_at?: string | null
           supplier_org_id?: string

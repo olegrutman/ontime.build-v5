@@ -19,6 +19,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { EstimateSummaryCard } from '@/components/estimate-summary/EstimateSummaryCard';
 import { EstimateUploadWizard } from '@/components/estimate-upload';
 import {
   SupplierEstimateItem,
@@ -60,7 +61,7 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
     queryFn: async () => {
       const { data, error } = await supabase
         .from('supplier_estimates')
-        .select('id, name, status, total_amount, created_at')
+        .select('id, name, status, total_amount, sales_tax_percent, created_at')
         .eq('project_id', projectId)
         .eq('supplier_org_id', supplierOrgId)
         .maybeSingle();
@@ -317,6 +318,12 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
                 </Card>
               ) : (
                 <div className="space-y-4">
+                  <EstimateSummaryCard
+                    items={estimateItems}
+                    salesTaxPercent={(estimate as any).sales_tax_percent}
+                    estimateId={estimate.id}
+                    onTaxUpdate={() => invalidateEstimate()}
+                  />
                   {Array.from(groupedItems.entries()).map(([packName, packItems]) => (
                     <div key={packName}>
                       {hasMultiplePacks && (
