@@ -1,45 +1,58 @@
 
 
-# Expandable Packs in Estimate Summary
+# Show Estimate Details Directly on Page with Auto-Calculated Tax
 
-## What Changes
+## What You Asked For (Plain English)
 
-### 1. Make packs clickable/expandable in EstimateSummaryCard
-Each pack row in the "Pack Breakdown" section becomes an accordion-style toggle. Clicking a pack expands it to reveal all items in that pack, showing description, quantity, UOM, unit price, and line total per item.
+You want the estimate details (summary, packs, items, pricing) shown directly on the estimate page -- not hidden behind a clickable tile that opens a side panel. And the tax should be fully automatic: we already know the subtotal (from the items) and the total (from the PDF upload), so we can calculate the tax amount and tax percentage ourselves. Nothing about tax should be editable.
 
-### 2. Remove duplicate item tables from detail sheet
-Currently, the SupplierProjectEstimates page renders both the EstimateSummaryCard AND a separate grouped item table below it. Since the summary card will now contain the expandable item details, the separate table block (lines 652-712) will be removed to avoid duplication.
+## Changes
 
-### 3. Add unit price and line total columns to item display
-Each expanded pack will show a mini table with columns: SKU, Description, Qty, UOM, Unit Price, Line Total. This gives the supplier full pricing visibility per item.
+### 1. Update EstimateSummaryCard to remove all editable tax/total fields
 
-## Technical Details
+**File:** `src/components/estimate-summary/EstimateSummaryCard.tsx`
 
-### File: `src/components/estimate-summary/EstimateSummaryCard.tsx`
+- Remove the editable tax % input and the editable total input
+- Accept a new prop: `totalWithTax` (the `total_amount` from the estimate, i.e. the grand total extracted from the PDF)
+- Auto-calculate:
+  - `taxAmount = totalWithTax - subtotal`
+  - `taxPercent = (taxAmount / subtotal) * 100`
+- Display all values as read-only text: Subtotal, Tax % (auto-calculated), Tax Amount, Total (incl. tax)
+- Remove the `onTaxUpdate`, `estimateId`, and `salesTaxPercent` props since nothing is editable anymore
+- Keep the expandable pack breakdown with item details (already implemented)
 
-**Changes:**
-- Accept `items` (already does) and compute a `packItems` map: `Map<string, SupplierEstimateItem[]>` alongside the existing `PackSummary` data
-- Add `expandedPacks` state: `Set<string>` tracking which packs are open
-- Make each pack row clickable with a chevron icon that rotates on expand
-- When expanded, render a compact table below the pack row showing each item with: SKU, Description, Qty, UOM, Unit Price ($X.XX), Line Total ($X.XX)
-- Add a Collapsible component (from Radix) around each pack's item list
+### 2. Show estimate details inline on SupplierProjectEstimates page (not in a Sheet)
 
-### File: `src/pages/SupplierProjectEstimates.tsx`
+**File:** `src/pages/SupplierProjectEstimates.tsx`
 
-**Changes:**
-- Remove the separate grouped items table block (lines 652-712, the fragment with pack headers and Table components)
-- The EstimateSummaryCard now serves as both summary and item browser
+- When user clicks an estimate card, instead of opening a Sheet, navigate to a detail view within the page (or show it inline below the list)
+- Remove the `<Sheet>` component for estimate details
+- Show the estimate header (name, status, project, actions) and the `EstimateSummaryCard` directly in the main content area
+- Pass `totalWithTax={selectedEstimate.total_amount}` to `EstimateSummaryCard`
 
-### File: `src/components/project/SupplierEstimatesSection.tsx`
+### 3. Same change for SupplierEstimatesSection
 
-**Changes:**
-- Same removal of the duplicate grouped items table that appears after EstimateSummaryCard in the detail sheet
+**File:** `src/components/project/SupplierEstimatesSection.tsx`
 
-## Files Changed
+- Remove the Sheet-based detail view
+- Show EstimateSummaryCard inline within the card when items are loaded
+- Pass `totalWithTax={estimate.total_amount}` instead of `salesTaxPercent`
+
+### 4. Auto-save calculated tax % on upload (optional cleanup)
+
+**File:** `src/components/estimate-upload/EstimateUploadWizard.tsx`
+
+- After saving items and the estimate total, also compute and save `sales_tax_percent` to the database so it's available for reporting:
+  - `subtotal = sum of all item line totals`
+  - `taxPercent = ((estimateTotal - subtotal) / subtotal) * 100`
+  - Save alongside `total_amount`
+
+## Technical Summary
 
 | File | Change |
 |------|--------|
-| `src/components/estimate-summary/EstimateSummaryCard.tsx` | Add expandable pack rows with item details |
-| `src/pages/SupplierProjectEstimates.tsx` | Remove duplicate item tables below summary |
-| `src/components/project/SupplierEstimatesSection.tsx` | Remove duplicate item tables below summary |
+| `EstimateSummaryCard.tsx` | Remove editable inputs; accept `totalWithTax` prop; auto-calculate tax amount and % as read-only |
+| `SupplierProjectEstimates.tsx` | Replace Sheet with inline detail view; pass `totalWithTax` |
+| `SupplierEstimatesSection.tsx` | Replace Sheet with inline detail; pass `totalWithTax` |
+| `EstimateUploadWizard.tsx` | Auto-save computed `sales_tax_percent` on upload |
 
