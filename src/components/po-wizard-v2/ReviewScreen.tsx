@@ -36,9 +36,11 @@ export function ReviewScreen({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-4 py-3 border-b bg-muted/30">
-        <h2 className="text-lg font-semibold">Review Purchase Order</h2>
-        <p className="text-sm text-muted-foreground">Step 3 of 3 • Confirm & Submit</p>
+      <div className="px-4 py-3 border-b bg-background">
+        <span className="text-xs uppercase tracking-wide font-medium text-muted-foreground">
+          Step 3 of 3
+        </span>
+        <h2 className="text-lg font-semibold mt-1">Review Purchase Order</h2>
       </div>
 
       {/* Scrollable Content */}

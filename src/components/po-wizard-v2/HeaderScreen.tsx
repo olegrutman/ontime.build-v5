@@ -53,13 +53,13 @@ export function HeaderScreen({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-4 py-3 border-b bg-muted/30">
-        <h2 className="text-lg font-semibold">
+      <div className="px-4 py-3 border-b bg-background">
+        <span className="text-xs uppercase tracking-wide font-medium text-muted-foreground">
+          Step 1 of 3
+        </span>
+        <h2 className="text-lg font-semibold mt-1">
           {workOrderTitle ? `Materials for ${workOrderTitle}` : 'Create Purchase Order'}
         </h2>
-        <p className="text-sm text-muted-foreground">
-          Step 1 of 3 • {workOrderTitle ? 'Work Order Materials' : 'PO Details'}
-        </p>
       </div>
 
       {/* Scrollable Content */}

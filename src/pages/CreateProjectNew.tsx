@@ -512,42 +512,42 @@ export default function CreateProjectNew() {
 
           {/* Main content */}
           <div className="col-span-12 md:col-span-9">
-            <Card>
+            <Card className="overflow-hidden">
               <CardContent className="p-6">
                 {renderStep()}
               </CardContent>
+
+              {/* Navigation Footer */}
+              <div className="flex items-center justify-between p-4 border-t bg-muted/30">
+                <Button
+                  variant="outline"
+                  onClick={prevStep}
+                  disabled={currentStep === 0 || saving}
+                >
+                  <ChevronLeft className="h-4 w-4 mr-2" />
+                  Back
+                </Button>
+
+                {currentStep < WIZARD_STEPS.length - 1 ? (
+                  <Button
+                    onClick={nextStep}
+                    disabled={!canProceed() || saving}
+                  >
+                    {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-2" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={createProject}
+                    disabled={saving}
+                  >
+                    {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Create Project
+                  </Button>
+                )}
+              </div>
             </Card>
-
-            {/* Navigation */}
-            <div className="flex justify-between mt-6">
-              <Button
-                variant="outline"
-                onClick={prevStep}
-                disabled={currentStep === 0 || saving}
-              >
-                <ChevronLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-
-              {currentStep < WIZARD_STEPS.length - 1 ? (
-                <Button
-                  onClick={nextStep}
-                  disabled={!canProceed() || saving}
-                >
-                  {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Next
-                  <ChevronRight className="h-4 w-4 ml-2" />
-                </Button>
-              ) : (
-                <Button
-                  onClick={createProject}
-                  disabled={saving}
-                >
-                  {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Create Project
-                </Button>
-              )}
-            </div>
           </div>
         </div>
       </div>

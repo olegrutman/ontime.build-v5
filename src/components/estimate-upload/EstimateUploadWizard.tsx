@@ -2,12 +2,11 @@ import { useState, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText } from 'lucide-react';
 import { toast } from 'sonner';
+import { WizardProgress } from '@/components/work-order-wizard/WizardProgress';
 import { parseEstimateCSV, ParsedPack, ParseResult } from '@/lib/parseEstimateCSV';
 import { PackReviewStep } from './PackReviewStep';
 import { PdfUploadStep } from './PdfUploadStep';
@@ -142,26 +141,20 @@ export function EstimateUploadWizard({
 
   const totalItems = packs.reduce((sum, p) => sum + p.items.length, 0);
 
-  const stepTitle: Record<WizardStep, string> = {
-    'upload': 'Upload Estimate',
-    'review': 'Review Packs',
-    'match': 'Catalog Matching',
-  };
+  const wizardSteps = [
+    { title: 'Upload Estimate', description: projectName || estimateName || 'Upload file' },
+    { title: 'Review Packs', description: 'Verify parsed data' },
+    { title: 'Catalog Matching', description: 'Match to catalog' },
+  ];
+
+  const stepIndex = step === 'upload' ? 1 : step === 'review' ? 2 : 3;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle>{stepTitle[step]}</DialogTitle>
-          {(projectName || estimateName) && (
-            <div className="flex flex-col gap-0.5 text-sm text-muted-foreground pt-1">
-              {projectName && <span>Project: <span className="font-medium text-foreground">{projectName}</span></span>}
-              {estimateName && <span>Estimate: <span className="font-medium text-foreground">{estimateName}</span></span>}
-            </div>
-          )}
-        </DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[85vh] p-0 gap-0 overflow-hidden flex flex-col">
+        <WizardProgress currentStep={stepIndex} totalSteps={3} steps={wizardSteps} />
 
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto px-6 py-4">
           {/* ── Upload step (unified PDF + CSV) ───────────────── */}
           {step === 'upload' && (
             <div className="space-y-4">
