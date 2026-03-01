@@ -1,148 +1,61 @@
 
+# Fix: PO Wizard Estimate Pricing Data Loss
 
-# PO Wizard Pricing + Totals Fix
+## Problem Summary
 
-## Overview
+There are 3 bugs preventing estimate line prices from flowing into PO line items:
 
-Add line-item pricing visibility, live totals, source tags, and audit columns to the PO Wizard and PO Detail screens. No redesign -- same layout, same flow, just richer data on each item row and a totals summary.
+1. **Pack loading drops all pricing**: When a user selects an estimate pack, `ProductPicker.handleSelectPack` converts pack items to `POWizardV2LineItem` but omits `unit_price`, `source_estimate_item_id`, `source_pack_name`, and `price_source`. The `EstimatePackItem` interface inside `ProductPicker.tsx` doesn't even include `unit_price`.
 
-## Phase 1: Database Migration
+2. **PSM matched items have no pricing**: When browsing matched estimate items through PSMBrowser's category/filter flow, the QuantityPanel receives no estimate pricing props. The estimate data (including `unit_price`) is loaded at startup but never looked up when a specific catalog product is selected.
 
-Add new columns to support pricing traceability and totals.
+3. **Duplicate interfaces out of sync**: `PackSelector.tsx` defines `EstimatePackItem` WITH `unit_price`. `ProductPicker.tsx` defines its own `EstimatePackItem` WITHOUT `unit_price`. They should be unified.
 
-**`po_line_items` -- new columns:**
-- `source_estimate_item_id` (uuid, nullable, FK to `supplier_estimate_items.id`)
-- `source_pack_name` (text, nullable)
-- `price_source` (text, nullable, values: `FROM_ESTIMATE`, `SUPPLIER_MANUAL`, `CATALOG_DEFAULT`)
-- `original_unit_price` (numeric, nullable) -- price at time of creation
-- `price_adjusted_by_supplier` (boolean, default false)
-- `adjustment_reason` (text, nullable)
+## Fixes
 
-**`purchase_orders` -- new columns:**
-- `po_subtotal_estimate_items` (numeric, nullable)
-- `po_subtotal_non_estimate_items` (numeric, nullable)
-- `po_subtotal_total` (numeric, nullable)
-- `po_tax_total` (numeric, nullable)
-- `po_total` (numeric, nullable)
-- `tax_percent_applied` (numeric, nullable)
+### Fix 1: ProductPicker.tsx -- Add pricing to pack loading
 
-## Phase 2: Type Updates
+**File**: `src/components/po-wizard-v2/ProductPicker.tsx`
 
-**`POWizardV2LineItem`** -- add fields to carry pricing through the wizard:
-- `unit_price?: number | null` -- from estimate or catalog
-- `line_total?: number | null` -- computed (qty x unit_price)
-- `source_estimate_item_id?: string | null`
-- `source_pack_name?: string | null`
-- `price_source?: 'FROM_ESTIMATE' | 'SUPPLIER_MANUAL' | 'CATALOG_DEFAULT'`
+- Add `unit_price: number | null` to the local `EstimatePackItem` interface (line 24-32)
+- In `handleSelectPack` (line 359-375), include pricing fields when mapping items:
+  - `unit_price: item.unit_price`
+  - `line_total: item.unit_price != null ? item.quantity * item.unit_price : null`
+  - `source_estimate_item_id: item.id`
+  - `source_pack_name: item.pack_name`
+  - `price_source: item.unit_price != null ? 'FROM_ESTIMATE' : null`
+  - `original_unit_price: item.unit_price`
 
-**`POLineItem`** (types/purchaseOrder.ts) -- add matching DB columns.
+### Fix 2: PSMBrowser.tsx -- Pass estimate pricing to QuantityPanel for matched items
 
-## Phase 3: Carry Estimate Pricing Into Items
+**File**: `src/components/po-wizard-v2/PSMBrowser.tsx`
 
-When items are loaded from an estimate pack (PSMBrowser / PSMUnmatchedList / PackSelector), carry `unit_price` from `supplier_estimate_items` into the `POWizardV2LineItem`.
+- Build a lookup map from `catalog_item_id` to `EstimateItem` during `loadEstimateData` (from the already-fetched matched items array)
+- Store this map in state (e.g., `catalogToEstimateMap: Map<string, EstimateItem>`)
+- When rendering the QuantityPanel for a selected product (line 492-497), look up the estimate item by `selectedProduct.id` and pass:
+  - `estimateUnitPrice={matchedEstItem?.unit_price}`
+  - `estimateItemId={matchedEstItem?.id}`
+  - `estimatePackName={matchedEstItem?.pack_name}`
 
-**Files changed:**
-- `src/components/po-wizard-v2/PSMBrowser.tsx` -- fetch `unit_price` from estimate items, pass to QuantityPanel and unmatched handler
-- `src/components/po-wizard-v2/PackSelector.tsx` -- include `unit_price` when loading pack items
-- `src/components/po-wizard-v2/QuantityPanel.tsx` -- preserve `unit_price`/`source_estimate_item_id` when building the line item
+### Fix 3: PackSelector.tsx -- Include unit_price in onSelectPack callback data
 
-Items added from the full catalog (no estimate) get `unit_price: null` and `price_source: null` (will become `SUPPLIER_MANUAL` when supplier prices them).
+**File**: `src/components/po-wizard-v2/PackSelector.tsx`
 
-## Phase 4: Items Screen -- Show Pricing + Source Tags
+The `PackSelector` already fetches `unit_price` and includes it in its `EstimatePackItem` interface. However, verify the `onSelectPack` prop type accepts items with `unit_price`. The `ProductPicker`'s `EstimatePack` type must also include `unit_price` in its items -- this is handled by Fix 1 above.
 
-**File:** `src/components/po-wizard-v2/ItemsScreen.tsx`
+### No database changes needed
 
-For each item row, add below the existing quantity badges:
-- **Unit Price**: `$X.XX / {uom}` or `--` if null
-- **Line Total**: `$X.XX` or `--` if null
-- **Source Tag** (small Badge):
-  - `source_estimate_item_id` present + `unit_price` set: "From Estimate" (green outline)
-  - `source_estimate_item_id` null + `unit_price` null: "Needs Supplier Pricing" (amber outline)
-  - `price_adjusted_by_supplier` true: "Supplier Adjusted" + delta line
+All the columns (`source_estimate_item_id`, `price_source`, `original_unit_price`, `unit_price`, `line_total`) already exist in `po_line_items`. The persistence code in `PurchaseOrdersTab.handleCreatePO` already saves these fields correctly. The only problem is that the data never reaches the line items during wizard item creation.
 
-Add a sticky totals summary above the footer:
-- Subtotal (Estimate Items): sum of line_totals where source_estimate_item_id is set
-- Subtotal (Additional): sum of line_totals where source_estimate_item_id is null and unit_price is set
-- Unpriced count warning if any items have no unit_price
-- Tax % (from estimate header if available)
-- Grand Total
-
-All calculations are live -- changing qty in QuantityPanel recalculates immediately.
-
-## Phase 5: Review Screen -- Full Totals Panel
-
-**File:** `src/components/po-wizard-v2/ReviewScreen.tsx`
-
-Add a "Totals" card below the Items card showing:
-- Subtotal (Estimate Items)
-- Subtotal (Additional Items)
-- Subtotal (All)
-- Tax (X%) -- amount
-- **Total** (bold)
-- Warning banner if unpriced items exist: "X items need supplier pricing to finalize total"
-
-The Submit PO button remains enabled even with unpriced items (PO submits as-is; supplier prices later). The total shows as "Pending Pricing" if any items lack unit_price.
-
-## Phase 6: PO Creation -- Persist New Fields
-
-**Files:** `src/components/project/PurchaseOrdersTab.tsx`, `src/pages/PurchaseOrders.tsx`, `src/components/change-order-detail/MaterialResourceToggle.tsx`
-
-When inserting `po_line_items`, include:
-- `source_estimate_item_id`
-- `source_pack_name`
-- `price_source`
-- `original_unit_price` (= unit_price at creation time)
-- `unit_price`
-- `line_total` (qty x unit_price, or null)
-
-When inserting `purchase_orders`, compute and store:
-- `po_subtotal_estimate_items`
-- `po_subtotal_non_estimate_items`
-- `po_subtotal_total`
-- `po_tax_total` (subtotal x sales_tax_percent from estimate header)
-- `po_total`
-- `tax_percent_applied`
-
-## Phase 7: Supplier Pricing Screen (PODetail) -- Audit Fields
-
-**File:** `src/components/purchase-orders/PODetail.tsx`
-
-When supplier saves pricing (`handleSavePrices`):
-- If item had an `original_unit_price` and supplier changed it, set `price_adjusted_by_supplier = true`
-- Store the new `unit_price` and recompute `line_total`
-- If `original_unit_price` was null, set it to the supplier's price and set `price_source = 'SUPPLIER_MANUAL'`
-- Add optional `adjustment_reason` input field per line item
-- On "Mark as Priced", compute and save all PO-level totals (`po_subtotal_estimate_items`, etc.) and `tax_percent_applied`
-
-Show "Adjusted from $old -> $new" inline for items where supplier changed the price.
-
-## Phase 8: Edit Mode Preservation
-
-**File:** `src/components/project/PurchaseOrdersTab.tsx` (handleEditPO)
-
-When loading existing PO line items for editing, map the new DB columns back to `POWizardV2LineItem` fields so pricing/source data round-trips correctly through the wizard.
-
-## Summary of Files Changed
+## Files Changed
 
 | File | Change |
 |------|--------|
-| Migration SQL | Add 6 columns to `po_line_items`, 6 to `purchase_orders` |
-| `src/types/poWizardV2.ts` | Add pricing fields to `POWizardV2LineItem` |
-| `src/types/purchaseOrder.ts` | Add new DB columns to `POLineItem` and `PurchaseOrder` |
-| `src/components/po-wizard-v2/PSMBrowser.tsx` | Fetch + carry `unit_price` from estimate items |
-| `src/components/po-wizard-v2/PackSelector.tsx` | Include `unit_price` when loading pack |
-| `src/components/po-wizard-v2/QuantityPanel.tsx` | Preserve pricing fields on item build |
-| `src/components/po-wizard-v2/ItemsScreen.tsx` | Show unit price, line total, source tags, sticky totals |
-| `src/components/po-wizard-v2/ReviewScreen.tsx` | Add totals card with tax + warnings |
-| `src/components/project/PurchaseOrdersTab.tsx` | Persist new fields on create + edit |
-| `src/pages/PurchaseOrders.tsx` | Persist new fields on create |
-| `src/components/change-order-detail/MaterialResourceToggle.tsx` | Persist new fields on auto-PO |
-| `src/components/purchase-orders/PODetail.tsx` | Supplier adjustment tracking + totals save |
+| `src/components/po-wizard-v2/ProductPicker.tsx` | Add `unit_price` to `EstimatePackItem`, include pricing fields in `handleSelectPack` |
+| `src/components/po-wizard-v2/PSMBrowser.tsx` | Build catalog-to-estimate lookup, pass pricing props to QuantityPanel |
 
 ## What Does NOT Change
-- Wizard step flow (Header -> Items -> Review)
-- Overall layout and styling
-- ProductPicker, CategoryGrid, StepByStepFilter internals
-- PO status flow (ACTIVE -> SUBMITTED -> PRICED -> etc.)
-- Any existing features
-
+- QuantityPanel (already handles these props correctly)
+- PurchaseOrdersTab persistence code (already saves these fields)
+- Database schema (columns already exist)
+- Wizard flow, layout, or styling
