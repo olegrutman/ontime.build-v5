@@ -59,12 +59,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
 import { format } from 'date-fns';
 import { 
   SupplierProjectEstimate, 
@@ -459,8 +453,8 @@ export default function SupplierProjectEstimates() {
               </div>
             </div>
 
-            {/* Estimates List */}
-            {loading ? (
+            {/* Estimates List (hidden when detail is open) */}
+            {selectedEstimate ? null : loading ? (
               <Skeleton className="h-64 w-full" />
             ) : filteredEstimates.length === 0 ? (
               <Card>
@@ -557,104 +551,86 @@ export default function SupplierProjectEstimates() {
               </DialogContent>
             </Dialog>
 
-            {/* Estimate Detail Sheet */}
-            <Sheet open={!!selectedEstimate} onOpenChange={() => setSelectedEstimate(null)}>
-              <SheetContent className="w-full sm:max-w-2xl overflow-auto">
-                <SheetHeader>
-                  <SheetTitle>{selectedEstimate?.name}</SheetTitle>
-                </SheetHeader>
-                
-                {selectedEstimate && (
-                  <div className="space-y-6 mt-6">
-                    {/* Estimate Info */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Badge className={ESTIMATE_STATUS_COLORS[selectedEstimate.status as SupplierEstimateStatus]}>
-                          {ESTIMATE_STATUS_LABELS[selectedEstimate.status as SupplierEstimateStatus]}
-                        </Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {selectedEstimate.project?.name}
-                        </span>
-                      </div>
-                      <p className="text-lg font-bold">
-                        ${(selectedEstimate.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                      </p>
-                    </div>
+            {/* Estimate Detail Inline */}
+            {selectedEstimate && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedEstimate(null)}>
+                      ← Back
+                    </Button>
+                    <h2 className="text-lg font-semibold">{selectedEstimate.name}</h2>
+                    <Badge className={ESTIMATE_STATUS_COLORS[selectedEstimate.status as SupplierEstimateStatus]}>
+                      {ESTIMATE_STATUS_LABELS[selectedEstimate.status as SupplierEstimateStatus]}
+                    </Badge>
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    {selectedEstimate.project?.name}
+                  </span>
+                </div>
 
-                    {/* Actions */}
-                    {selectedEstimate.status === 'DRAFT' && (
-                      <div className="flex items-center gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={async () => {
-                            const { data: suppliers } = await supabase
-                              .from('suppliers')
-                              .select('id')
-                              .eq('organization_id', currentOrg?.id)
-                              .limit(1);
-                            const sid = suppliers?.[0]?.id || '';
-                            setUploadWizard({
-                              open: true,
-                              estimateId: selectedEstimate.id,
-                              supplierId: sid,
-                              projectName: selectedEstimate.project?.name || '',
-                              estimateName: selectedEstimate.name,
-                            });
-                          }}
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Update
-                        </Button>
-                        <Button 
-                          size="sm"
-                          onClick={handleSubmitEstimate}
-                          disabled={estimateItems.length === 0}
-                        >
-                          <Send className="h-4 w-4 mr-2" />
-                          Submit for Review
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => setDeleteConfirmId(selectedEstimate.id)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </Button>
-                      </div>
-                    )}
-
-                    {/* Line Items */}
-                    {loadingItems ? (
-                      <Skeleton className="h-32 w-full" />
-                    ) : estimateItems.length === 0 ? (
-                      <Card>
-                        <CardContent className="flex flex-col items-center justify-center py-8">
-                          <Package className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                          <p className="text-sm text-muted-foreground">
-                            No items yet. Upload a file to add line items.
-                          </p>
-                        </CardContent>
-                      </Card>
-                    ) : (
-                      <>
-                        {/* Estimate Summary */}
-                        <EstimateSummaryCard
-                          items={estimateItems}
-                          salesTaxPercent={(selectedEstimate as any).sales_tax_percent}
-                          estimateId={selectedEstimate.id}
-                          onTaxUpdate={(newPercent) => {
-                            setSelectedEstimate({ ...selectedEstimate, sales_tax_percent: newPercent } as any);
-                            fetchEstimates();
-                          }}
-                        />
-                      </>
-                    )}
+                {selectedEstimate.status === 'DRAFT' && (
+                  <div className="flex items-center gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={async () => {
+                        const { data: suppliers } = await supabase
+                          .from('suppliers')
+                          .select('id')
+                          .eq('organization_id', currentOrg?.id)
+                          .limit(1);
+                        const sid = suppliers?.[0]?.id || '';
+                        setUploadWizard({
+                          open: true,
+                          estimateId: selectedEstimate.id,
+                          supplierId: sid,
+                          projectName: selectedEstimate.project?.name || '',
+                          estimateName: selectedEstimate.name,
+                        });
+                      }}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Update
+                    </Button>
+                    <Button 
+                      size="sm"
+                      onClick={handleSubmitEstimate}
+                      disabled={estimateItems.length === 0}
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Submit for Review
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setDeleteConfirmId(selectedEstimate.id)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </Button>
                   </div>
                 )}
-              </SheetContent>
-            </Sheet>
+
+                {loadingItems ? (
+                  <Skeleton className="h-32 w-full" />
+                ) : estimateItems.length === 0 ? (
+                  <Card>
+                    <CardContent className="flex flex-col items-center justify-center py-8">
+                      <Package className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                      <p className="text-sm text-muted-foreground">
+                        No items yet. Upload a file to add line items.
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <EstimateSummaryCard
+                    items={estimateItems}
+                    totalWithTax={selectedEstimate.total_amount || 0}
+                  />
+                )}
+              </div>
+            )}
 
             {/* CSV Preview Dialog */}
             <Dialog open={showCsvPreview} onOpenChange={setShowCsvPreview}>

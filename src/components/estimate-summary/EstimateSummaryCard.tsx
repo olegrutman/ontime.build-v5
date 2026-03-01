@@ -1,20 +1,15 @@
 import { useMemo, useState } from 'react';
-import { Package, Receipt, Percent, ChevronRight } from 'lucide-react';
+import { Package, Receipt, ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import type { SupplierEstimateItem } from '@/types/supplierEstimate';
 
 interface EstimateSummaryCardProps {
   items: SupplierEstimateItem[];
-  salesTaxPercent: number | null | undefined;
-  estimateId: string;
-  onTaxUpdate: (newPercent: number) => void;
+  totalWithTax: number;
 }
 
 interface PackSummary {
@@ -24,14 +19,8 @@ interface PackSummary {
   percentOfTotal: number;
 }
 
-export function EstimateSummaryCard({ items, salesTaxPercent, estimateId, onTaxUpdate }: EstimateSummaryCardProps) {
-  const [taxInput, setTaxInput] = useState<string>(String(salesTaxPercent ?? 0));
-  const [totalInput, setTotalInput] = useState<string>('');
-  const [saving, setSaving] = useState(false);
+export function EstimateSummaryCard({ items, totalWithTax }: EstimateSummaryCardProps) {
   const [expandedPacks, setExpandedPacks] = useState<Set<string>>(new Set());
-  const { toast } = useToast();
-
-  const taxPercent = parseFloat(taxInput) || 0;
 
   const { subtotal, packs, totalItems, packItems } = useMemo(() => {
     let subtotal = 0;
@@ -61,40 +50,8 @@ export function EstimateSummaryCard({ items, salesTaxPercent, estimateId, onTaxU
     return { subtotal, packs, totalItems: items.length, packItems: packItemsMap };
   }, [items]);
 
-  const taxAmount = subtotal * (taxPercent / 100);
-  const grandTotal = subtotal + taxAmount;
-
-  const saveTaxPercent = async (newPercent: number) => {
-    if (newPercent === (salesTaxPercent ?? 0)) return;
-    setSaving(true);
-    const { error } = await supabase
-      .from('supplier_estimates')
-      .update({ sales_tax_percent: newPercent } as Record<string, unknown>)
-      .eq('id', estimateId);
-    if (error) {
-      toast({ title: 'Error', description: 'Failed to save tax rate', variant: 'destructive' });
-    } else {
-      onTaxUpdate(newPercent);
-    }
-    setSaving(false);
-  };
-
-  const handleTaxBlur = () => {
-    const newPercent = parseFloat(taxInput) || 0;
-    setTotalInput('');
-    saveTaxPercent(newPercent);
-  };
-
-  const handleTotalBlur = () => {
-    const totalWithTax = parseFloat(totalInput);
-    if (!totalWithTax || subtotal === 0) { setTotalInput(''); return; }
-    const taxAmt = totalWithTax - subtotal;
-    const calcPercent = Math.round((taxAmt / subtotal) * 10000) / 100;
-    const clamped = Math.max(0, Math.min(100, calcPercent));
-    setTaxInput(String(clamped));
-    setTotalInput('');
-    saveTaxPercent(clamped);
-  };
+  const taxAmount = totalWithTax > 0 && subtotal > 0 ? totalWithTax - subtotal : 0;
+  const taxPercent = subtotal > 0 && taxAmount > 0 ? (taxAmount / subtotal) * 100 : 0;
 
   const togglePack = (packName: string) => {
     setExpandedPacks(prev => {
@@ -122,50 +79,16 @@ export function EstimateSummaryCard({ items, salesTaxPercent, estimateId, onTaxU
             <span className="font-medium">${fmt(subtotal)}</span>
           </div>
 
-          <div className="flex justify-between items-center text-sm">
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">Tax</span>
-              <div className="flex items-center gap-1">
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={0.01}
-                  value={taxInput}
-                  onChange={(e) => setTaxInput(e.target.value)}
-                  onBlur={handleTaxBlur}
-                  onKeyDown={(e) => e.key === 'Enter' && handleTaxBlur()}
-                  className="h-7 w-16 text-xs text-right"
-                  disabled={saving}
-                />
-                <Percent className="h-3 w-3 text-muted-foreground" />
-              </div>
-            </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Tax ({taxPercent.toFixed(2)}%)</span>
             <span className="font-medium">${fmt(taxAmount)}</span>
           </div>
 
           <Separator />
 
-          <div className="flex justify-between items-center text-sm font-semibold">
-            <div className="flex items-center gap-2">
-              <span>Total (incl. tax)</span>
-              <span className="text-[10px] text-muted-foreground font-normal">or enter total →</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="text-muted-foreground">$</span>
-              <Input
-                type="number"
-                min={0}
-                step={0.01}
-                value={totalInput}
-                placeholder={fmt(grandTotal)}
-                onChange={(e) => setTotalInput(e.target.value)}
-                onBlur={handleTotalBlur}
-                onKeyDown={(e) => e.key === 'Enter' && handleTotalBlur()}
-                className="h-7 w-24 text-xs text-right font-semibold"
-                disabled={saving || subtotal === 0}
-              />
-            </div>
+          <div className="flex justify-between text-sm font-semibold">
+            <span>Total (incl. tax)</span>
+            <span>${fmt(totalWithTax > 0 ? totalWithTax : subtotal)}</span>
           </div>
         </div>
 

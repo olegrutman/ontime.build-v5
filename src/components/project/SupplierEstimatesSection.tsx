@@ -15,7 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -45,6 +45,7 @@ interface UploadWizardState {
 export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId }: SupplierEstimatesSectionProps) {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [showDetail, setShowDetail] = useState(false);
+  /* showDetail now controls inline expansion, not a Sheet */
   const [estimateItems, setEstimateItems] = useState<SupplierEstimateItem[]>([]);
   const [loadingItems, setLoadingItems] = useState(false);
 
@@ -259,66 +260,51 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
         )}
       </CardContent>
 
-      {/* Estimate Detail Sheet */}
-      <Sheet open={showDetail} onOpenChange={setShowDetail}>
-        <SheetContent className="w-full sm:max-w-2xl overflow-auto">
-          <SheetHeader>
-            <SheetTitle>{estimate?.name}</SheetTitle>
-          </SheetHeader>
+      {/* Estimate Detail Inline */}
+      {showDetail && estimate && (
+        <CardContent className="border-t p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <Badge className={ESTIMATE_STATUS_COLORS[estimate.status as SupplierEstimateStatus] || ESTIMATE_STATUS_COLORS.DRAFT}>
+              {ESTIMATE_STATUS_LABELS[estimate.status as SupplierEstimateStatus] || estimate.status}
+            </Badge>
+          </div>
 
-          {estimate && (
-            <div className="space-y-6 mt-6">
-              <div className="flex items-center justify-between">
-                <Badge className={ESTIMATE_STATUS_COLORS[estimate.status as SupplierEstimateStatus] || ESTIMATE_STATUS_COLORS.DRAFT}>
-                  {ESTIMATE_STATUS_LABELS[estimate.status as SupplierEstimateStatus] || estimate.status}
-                </Badge>
-                <p className="text-lg font-bold">
-                  ${(estimate.total_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                </p>
-              </div>
-
-              {estimate.status === 'DRAFT' && (
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={handleUploadClick}>
-                    <Upload className="h-4 w-4 mr-2" />
-                    Update
-                  </Button>
-                  <Button size="sm" onClick={handleSubmitEstimate} disabled={estimateItems.length === 0}>
-                    <Send className="h-4 w-4 mr-2" />
-                    Submit for Review
-                  </Button>
-                  <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmId(estimate.id)}>
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
-                  </Button>
-                </div>
-              )}
-
-              {loadingItems ? (
-                <Skeleton className="h-32 w-full" />
-              ) : estimateItems.length === 0 ? (
-                <Card>
-                  <CardContent className="flex flex-col items-center justify-center py-8">
-                    <Package className="h-8 w-8 text-muted-foreground/50 mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      No items yet. Upload a file to add line items.
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-4">
-                  <EstimateSummaryCard
-                    items={estimateItems}
-                    salesTaxPercent={(estimate as any).sales_tax_percent}
-                    estimateId={estimate.id}
-                    onTaxUpdate={() => invalidateEstimate()}
-                  />
-                </div>
-              )}
+          {estimate.status === 'DRAFT' && (
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={handleUploadClick}>
+                <Upload className="h-4 w-4 mr-2" />
+                Update
+              </Button>
+              <Button size="sm" onClick={handleSubmitEstimate} disabled={estimateItems.length === 0}>
+                <Send className="h-4 w-4 mr-2" />
+                Submit for Review
+              </Button>
+              <Button variant="destructive" size="sm" onClick={() => setDeleteConfirmId(estimate.id)}>
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
             </div>
           )}
-        </SheetContent>
-      </Sheet>
+
+          {loadingItems ? (
+            <Skeleton className="h-32 w-full" />
+          ) : estimateItems.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-8">
+                <Package className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  No items yet. Upload a file to add line items.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <EstimateSummaryCard
+              items={estimateItems}
+              totalWithTax={estimate.total_amount || 0}
+            />
+          )}
+        </CardContent>
+      )}
 
       {/* Delete Confirmation */}
       <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
