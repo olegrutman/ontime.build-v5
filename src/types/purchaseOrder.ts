@@ -24,9 +24,16 @@ export interface PurchaseOrder {
   sales_tax_percent?: number | null;
   created_at: string;
   updated_at: string;
-  // New fields for pricing visibility
+  // Pricing visibility
   created_by_org_id?: string | null;
   pricing_owner_org_id?: string | null;
+  // PO-level totals
+  po_subtotal_estimate_items?: number | null;
+  po_subtotal_non_estimate_items?: number | null;
+  po_subtotal_total?: number | null;
+  po_tax_total?: number | null;
+  po_total?: number | null;
+  tax_percent_applied?: number | null;
   // Relations
   organization?: { name: string; org_code: string } | null;
   supplier?: { id: string; name: string; supplier_code: string; contact_info?: string | null; organization_id?: string } | null;
@@ -50,9 +57,16 @@ export interface POLineItem {
   unit_price?: number | null;
   line_total?: number | null;
   notes?: string | null;
-  // New fields for supplier pricing
+  // Supplier pricing
   lead_time_days?: number | null;
   supplier_notes?: string | null;
+  // Pricing traceability
+  source_estimate_item_id?: string | null;
+  source_pack_name?: string | null;
+  price_source?: string | null;
+  original_unit_price?: number | null;
+  price_adjusted_by_supplier?: boolean;
+  adjustment_reason?: string | null;
   created_at: string;
 }
 

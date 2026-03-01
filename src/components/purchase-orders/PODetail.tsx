@@ -70,6 +70,7 @@ interface PriceEdit {
   unit_price: number;
   lead_time_days: number | null;
   supplier_notes: string;
+  adjustment_reason: string;
 }
 
 function formatCurrency(amount: number): string {
@@ -259,6 +260,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
         unit_price: item.unit_price ?? 0,
         lead_time_days: item.lead_time_days ?? null,
         supplier_notes: item.supplier_notes ?? '',
+        adjustment_reason: item.adjustment_reason ?? '',
       };
     });
     setPriceEdits(edits);
@@ -271,11 +273,23 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
 
     setActionLoading(true);
     try {
-      // Update each line item with its price and lead time
+      let estSubtotal = 0;
+      let addSubtotal = 0;
+
+      // Update each line item with its price, audit fields, and lead time
       for (const [itemId, edit] of Object.entries(priceEdits)) {
         const item = lineItems.find((li) => li.id === itemId);
         if (item) {
           const lineTotal = edit.unit_price * item.quantity;
+          const wasAdjusted = item.original_unit_price != null && edit.unit_price !== item.original_unit_price;
+          const isNewPrice = item.original_unit_price == null;
+
+          if (item.source_estimate_item_id) {
+            estSubtotal += lineTotal;
+          } else {
+            addSubtotal += lineTotal;
+          }
+
           const { error: lineError } = await supabase
             .from('po_line_items')
             .update({
@@ -283,13 +297,21 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
               line_total: lineTotal,
               lead_time_days: edit.lead_time_days,
               supplier_notes: edit.supplier_notes || null,
+              original_unit_price: isNewPrice ? edit.unit_price : item.original_unit_price,
+              price_adjusted_by_supplier: wasAdjusted,
+              adjustment_reason: wasAdjusted ? (edit.adjustment_reason || null) : null,
+              price_source: isNewPrice ? 'SUPPLIER_MANUAL' : (item.price_source || null),
             })
             .eq('id', itemId);
           if (lineError) throw lineError;
         }
       }
 
-      // Update PO status to PRICED with sales tax
+      const poSubtotalTotal = estSubtotal + addSubtotal;
+      const taxAmount = poSubtotalTotal * (salesTaxPercent / 100);
+      const poTotal = poSubtotalTotal + taxAmount;
+
+      // Update PO status to PRICED with sales tax and totals
       const { error: statusError } = await supabase
         .from('purchase_orders')
         .update({
@@ -297,6 +319,12 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
           sales_tax_percent: salesTaxPercent,
           priced_at: new Date().toISOString(),
           priced_by: user.id,
+          po_subtotal_estimate_items: estSubtotal,
+          po_subtotal_non_estimate_items: addSubtotal,
+          po_subtotal_total: poSubtotalTotal,
+          po_tax_total: taxAmount,
+          po_total: poTotal,
+          tax_percent_applied: salesTaxPercent,
         })
         .eq('id', poId);
       if (statusError) throw statusError;

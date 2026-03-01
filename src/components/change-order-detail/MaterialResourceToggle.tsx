@@ -138,6 +138,12 @@ export function MaterialResourceToggle({
           length_ft: item.length_ft || null,
           computed_lf: item.computed_lf || null,
           notes: item.item_notes || null,
+          unit_price: item.unit_price ?? null,
+          line_total: item.unit_price != null ? item.quantity * item.unit_price : null,
+          source_estimate_item_id: item.source_estimate_item_id || null,
+          source_pack_name: item.source_pack_name || null,
+          price_source: item.price_source || null,
+          original_unit_price: item.unit_price ?? null,
         }));
 
         const { error: lineError } = await supabase.from('po_line_items').insert(lineItems);

@@ -12,9 +12,12 @@ interface QuantityPanelProps {
   onUpdate?: (item: POWizardV2LineItem) => void;
   onClose: () => void;
   editingItem?: POWizardV2LineItem | null;
+  estimateUnitPrice?: number | null;
+  estimateItemId?: string | null;
+  estimatePackName?: string | null;
 }
 
-export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem }: QuantityPanelProps) {
+export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, estimateUnitPrice, estimateItemId, estimatePackName }: QuantityPanelProps) {
   const isEditing = !!editingItem;
   
   // Detection
@@ -72,8 +75,14 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem }
   };
 
   const handleSubmit = () => {
+    // Determine pricing fields
+    const resolvedUnitPrice = editingItem?.unit_price ?? estimateUnitPrice ?? null;
+    const resolvedEstItemId = editingItem?.source_estimate_item_id ?? estimateItemId ?? null;
+    const resolvedPackName = editingItem?.source_pack_name ?? estimatePackName ?? null;
+    const resolvedPriceSource = editingItem?.price_source ?? (resolvedUnitPrice != null && resolvedEstItemId ? 'FROM_ESTIMATE' as const : null);
+
     if (isEngineered) {
-      // Engineered lumber - track pieces and length
+      const computedLineTotal = resolvedUnitPrice != null ? pieces * lengthFt * resolvedUnitPrice : null;
       const item: POWizardV2LineItem = {
         id: editingItem?.id || crypto.randomUUID(),
         catalog_item_id: product.id,
@@ -82,11 +91,17 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem }
         specs: formatSpecs(),
         quantity: pieces,
         unit_mode: 'EACH',
-        uom: 'LF', // Use LF for engineered
+        uom: 'LF',
         length_ft: lengthFt,
         computed_lf: computedLf,
         is_engineered: true,
         item_notes: notes || undefined,
+        unit_price: resolvedUnitPrice,
+        line_total: computedLineTotal,
+        source_estimate_item_id: resolvedEstItemId,
+        source_pack_name: resolvedPackName,
+        price_source: resolvedPriceSource,
+        original_unit_price: editingItem?.original_unit_price ?? resolvedUnitPrice,
       };
       
       if (isEditing && onUpdate) {
@@ -95,7 +110,7 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem }
         onAdd(item);
       }
     } else {
-      // Standard or Bundle
+      const computedLineTotal = resolvedUnitPrice != null ? quantity * resolvedUnitPrice : null;
       const item: POWizardV2LineItem = {
         id: editingItem?.id || crypto.randomUUID(),
         catalog_item_id: product.id,
@@ -108,6 +123,12 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem }
         bundle_name: isFullBundle ? product.bundle_type ?? undefined : undefined,
         uom: product.uom_default,
         item_notes: notes || undefined,
+        unit_price: resolvedUnitPrice,
+        line_total: computedLineTotal,
+        source_estimate_item_id: resolvedEstItemId,
+        source_pack_name: resolvedPackName,
+        price_source: resolvedPriceSource,
+        original_unit_price: editingItem?.original_unit_price ?? resolvedUnitPrice,
       };
       
       if (isEditing && onUpdate) {

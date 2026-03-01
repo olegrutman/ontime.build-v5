@@ -173,21 +173,47 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
       if (poError) throw poError;
 
       if (data.line_items.length > 0) {
-        const lineItems = data.line_items.map((item, idx) => ({
-          po_id: newPO.id,
-          line_number: idx + 1,
-          supplier_sku: item.supplier_sku,
-          description: item.name,
-          quantity: item.quantity,
-          uom: item.uom,
-          pieces: item.unit_mode === 'BUNDLE' ? item.bundle_count : null,
-          length_ft: item.length_ft || null,
-          computed_lf: item.computed_lf || null,
-          notes: item.item_notes || null,
-        }));
+        let estSubtotal = 0;
+        let addSubtotal = 0;
+        
+        const lineItems = data.line_items.map((item, idx) => {
+          const lineTotal = item.unit_price != null ? item.quantity * item.unit_price : null;
+          if (item.source_estimate_item_id) {
+            estSubtotal += lineTotal ?? 0;
+          } else if (lineTotal != null) {
+            addSubtotal += lineTotal;
+          }
+          return {
+            po_id: newPO.id,
+            line_number: idx + 1,
+            supplier_sku: item.supplier_sku,
+            description: item.name,
+            quantity: item.quantity,
+            uom: item.uom,
+            pieces: item.unit_mode === 'BUNDLE' ? item.bundle_count : null,
+            length_ft: item.length_ft || null,
+            computed_lf: item.computed_lf || null,
+            notes: item.item_notes || null,
+            unit_price: item.unit_price ?? null,
+            line_total: lineTotal,
+            source_estimate_item_id: item.source_estimate_item_id || null,
+            source_pack_name: item.source_pack_name || null,
+            price_source: item.price_source || null,
+            original_unit_price: item.unit_price ?? null,
+          };
+        });
 
         const { error: lineError } = await supabase.from('po_line_items').insert(lineItems);
         if (lineError) throw lineError;
+
+        // Update PO-level totals
+        const poSubtotalTotal = estSubtotal + addSubtotal;
+        await supabase.from('purchase_orders').update({
+          po_subtotal_estimate_items: estSubtotal,
+          po_subtotal_non_estimate_items: addSubtotal,
+          po_subtotal_total: poSubtotalTotal,
+          po_total: poSubtotalTotal,
+        }).eq('id', newPO.id);
       }
 
       toast.success(`PO ${poNumber} created`);
@@ -239,6 +265,13 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         uom: li.uom,
         length_ft: li.length_ft || undefined,
         computed_lf: li.computed_lf || undefined,
+        unit_price: li.unit_price ?? null,
+        line_total: li.line_total ?? null,
+        source_estimate_item_id: li.source_estimate_item_id || null,
+        source_pack_name: li.source_pack_name || null,
+        price_source: li.price_source || null,
+        original_unit_price: li.original_unit_price ?? null,
+        price_adjusted_by_supplier: li.price_adjusted_by_supplier || false,
       }));
 
       setEditingPO(po);
@@ -271,20 +304,46 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
 
       // Insert new line items
       if (data.line_items.length > 0) {
-        const lineItems = data.line_items.map((item, idx) => ({
-          po_id: editingPO.id,
-          line_number: idx + 1,
-          supplier_sku: item.supplier_sku,
-          description: item.name,
-          quantity: item.quantity,
-          uom: item.uom,
-          pieces: item.unit_mode === 'BUNDLE' ? item.bundle_count : null,
-          length_ft: item.length_ft || null,
-          computed_lf: item.computed_lf || null,
-          notes: item.item_notes || null,
-        }));
+        let estSubtotal = 0;
+        let addSubtotal = 0;
+        
+        const lineItems = data.line_items.map((item, idx) => {
+          const lineTotal = item.unit_price != null ? item.quantity * item.unit_price : null;
+          if (item.source_estimate_item_id) {
+            estSubtotal += lineTotal ?? 0;
+          } else if (lineTotal != null) {
+            addSubtotal += lineTotal;
+          }
+          return {
+            po_id: editingPO.id,
+            line_number: idx + 1,
+            supplier_sku: item.supplier_sku,
+            description: item.name,
+            quantity: item.quantity,
+            uom: item.uom,
+            pieces: item.unit_mode === 'BUNDLE' ? item.bundle_count : null,
+            length_ft: item.length_ft || null,
+            computed_lf: item.computed_lf || null,
+            notes: item.item_notes || null,
+            unit_price: item.unit_price ?? null,
+            line_total: lineTotal,
+            source_estimate_item_id: item.source_estimate_item_id || null,
+            source_pack_name: item.source_pack_name || null,
+            price_source: item.price_source || null,
+            original_unit_price: item.original_unit_price ?? null,
+          };
+        });
         const { error: insertErr } = await supabase.from('po_line_items').insert(lineItems);
         if (insertErr) throw insertErr;
+
+        // Update PO-level totals
+        const poSubtotalTotal = estSubtotal + addSubtotal;
+        await supabase.from('purchase_orders').update({
+          po_subtotal_estimate_items: estSubtotal,
+          po_subtotal_non_estimate_items: addSubtotal,
+          po_subtotal_total: poSubtotalTotal,
+          po_total: poSubtotalTotal,
+        }).eq('id', editingPO.id);
       }
 
       // Update PO metadata

@@ -1614,6 +1614,7 @@ export type Database = {
       }
       po_line_items: {
         Row: {
+          adjustment_reason: string | null
           computed_bf: number | null
           computed_lf: number | null
           created_at: string
@@ -1624,15 +1625,21 @@ export type Database = {
           line_number: number
           line_total: number | null
           notes: string | null
+          original_unit_price: number | null
           pieces: number | null
           po_id: string
+          price_adjusted_by_supplier: boolean
+          price_source: string | null
           quantity: number
+          source_estimate_item_id: string | null
+          source_pack_name: string | null
           supplier_notes: string | null
           supplier_sku: string | null
           unit_price: number | null
           uom: string
         }
         Insert: {
+          adjustment_reason?: string | null
           computed_bf?: number | null
           computed_lf?: number | null
           created_at?: string
@@ -1643,15 +1650,21 @@ export type Database = {
           line_number: number
           line_total?: number | null
           notes?: string | null
+          original_unit_price?: number | null
           pieces?: number | null
           po_id: string
+          price_adjusted_by_supplier?: boolean
+          price_source?: string | null
           quantity: number
+          source_estimate_item_id?: string | null
+          source_pack_name?: string | null
           supplier_notes?: string | null
           supplier_sku?: string | null
           unit_price?: number | null
           uom?: string
         }
         Update: {
+          adjustment_reason?: string | null
           computed_bf?: number | null
           computed_lf?: number | null
           created_at?: string
@@ -1662,9 +1675,14 @@ export type Database = {
           line_number?: number
           line_total?: number | null
           notes?: string | null
+          original_unit_price?: number | null
           pieces?: number | null
           po_id?: string
+          price_adjusted_by_supplier?: boolean
+          price_source?: string | null
           quantity?: number
+          source_estimate_item_id?: string | null
+          source_pack_name?: string | null
           supplier_notes?: string | null
           supplier_sku?: string | null
           unit_price?: number | null
@@ -1676,6 +1694,13 @@ export type Database = {
             columns: ["po_id"]
             isOneToOne: false
             referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "po_line_items_source_estimate_item_id_fkey"
+            columns: ["source_estimate_item_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_estimate_items"
             referencedColumns: ["id"]
           },
         ]
@@ -2746,6 +2771,11 @@ export type Database = {
           pack_modified: boolean | null
           po_name: string
           po_number: string
+          po_subtotal_estimate_items: number | null
+          po_subtotal_non_estimate_items: number | null
+          po_subtotal_total: number | null
+          po_tax_total: number | null
+          po_total: number | null
           priced_at: string | null
           priced_by: string | null
           pricing_owner_org_id: string | null
@@ -2760,6 +2790,7 @@ export type Database = {
           submitted_at: string | null
           submitted_by: string | null
           supplier_id: string
+          tax_percent_applied: number | null
           updated_at: string
           work_item_id: string | null
         }
@@ -2778,6 +2809,11 @@ export type Database = {
           pack_modified?: boolean | null
           po_name: string
           po_number: string
+          po_subtotal_estimate_items?: number | null
+          po_subtotal_non_estimate_items?: number | null
+          po_subtotal_total?: number | null
+          po_tax_total?: number | null
+          po_total?: number | null
           priced_at?: string | null
           priced_by?: string | null
           pricing_owner_org_id?: string | null
@@ -2792,6 +2828,7 @@ export type Database = {
           submitted_at?: string | null
           submitted_by?: string | null
           supplier_id: string
+          tax_percent_applied?: number | null
           updated_at?: string
           work_item_id?: string | null
         }
@@ -2810,6 +2847,11 @@ export type Database = {
           pack_modified?: boolean | null
           po_name?: string
           po_number?: string
+          po_subtotal_estimate_items?: number | null
+          po_subtotal_non_estimate_items?: number | null
+          po_subtotal_total?: number | null
+          po_tax_total?: number | null
+          po_total?: number | null
           priced_at?: string | null
           priced_by?: string | null
           pricing_owner_org_id?: string | null
@@ -2824,6 +2866,7 @@ export type Database = {
           submitted_at?: string | null
           submitted_by?: string | null
           supplier_id?: string
+          tax_percent_applied?: number | null
           updated_at?: string
           work_item_id?: string | null
         }
