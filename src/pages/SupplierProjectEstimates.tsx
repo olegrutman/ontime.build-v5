@@ -649,67 +649,6 @@ export default function SupplierProjectEstimates() {
                             fetchEstimates();
                           }}
                         />
-                      <>
-                        {/* Group items by pack_name */}
-                        {(() => {
-                          const grouped = new Map<string, SupplierEstimateItem[]>();
-                          for (const item of estimateItems) {
-                            const key = item.pack_name || 'Ungrouped';
-                            if (!grouped.has(key)) grouped.set(key, []);
-                            grouped.get(key)!.push(item);
-                          }
-                          const hasMultiplePacks = grouped.size > 1 || (grouped.size === 1 && !grouped.has('Ungrouped'));
-
-                          return (
-                            <div className="space-y-4">
-                              {Array.from(grouped.entries()).map(([packName, packItems]) => (
-                                <div key={packName}>
-                                  {hasMultiplePacks && (
-                                    <div className="flex items-center gap-2 mb-2">
-                                      <Package className="h-4 w-4 text-muted-foreground" />
-                                      <span className="text-sm font-medium">{packName}</span>
-                                      <Badge variant="outline" className="text-xs">
-                                        {packItems.length} items
-                                      </Badge>
-                                    </div>
-                                  )}
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow>
-                                        <TableHead>SKU</TableHead>
-                                        <TableHead>Description</TableHead>
-                                        <TableHead className="text-right">Qty</TableHead>
-                                        <TableHead>UOM</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {packItems.map((item) => (
-                                        <TableRow key={item.id}>
-                                          <TableCell className="font-mono text-xs">
-                                            {item.supplier_sku || '—'}
-                                          </TableCell>
-                                          <TableCell>
-                                            <div>
-                                              <p className="text-sm">{item.description}</p>
-                                              {item.catalog_item_id && (
-                                                <Badge variant="outline" className="text-[10px] mt-0.5 bg-green-50 border-green-200 text-green-700 dark:bg-green-950/20 dark:border-green-800 dark:text-green-400">
-                                                  Catalog matched
-                                                </Badge>
-                                              )}
-                                            </div>
-                                          </TableCell>
-                                          <TableCell className="text-right">{item.quantity}</TableCell>
-                                          <TableCell>{item.uom}</TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        })()}
-                      </>
                       </>
                     )}
                   </div>

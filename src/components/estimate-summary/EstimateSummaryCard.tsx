@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Package, Receipt, Percent } from 'lucide-react';
+import { Package, Receipt, Percent, ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { SupplierEstimateItem } from '@/types/supplierEstimate';
@@ -27,13 +28,15 @@ export function EstimateSummaryCard({ items, salesTaxPercent, estimateId, onTaxU
   const [taxInput, setTaxInput] = useState<string>(String(salesTaxPercent ?? 0));
   const [totalInput, setTotalInput] = useState<string>('');
   const [saving, setSaving] = useState(false);
+  const [expandedPacks, setExpandedPacks] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   const taxPercent = parseFloat(taxInput) || 0;
 
-  const { subtotal, packs, totalItems } = useMemo(() => {
+  const { subtotal, packs, totalItems, packItems } = useMemo(() => {
     let subtotal = 0;
     const packMap = new Map<string, { itemCount: number; subtotal: number }>();
+    const packItemsMap = new Map<string, SupplierEstimateItem[]>();
 
     for (const item of items) {
       const lineTotal = (item.quantity || 0) * (item.unit_price || 0);
@@ -43,6 +46,9 @@ export function EstimateSummaryCard({ items, salesTaxPercent, estimateId, onTaxU
       existing.itemCount += 1;
       existing.subtotal += lineTotal;
       packMap.set(packName, existing);
+
+      if (!packItemsMap.has(packName)) packItemsMap.set(packName, []);
+      packItemsMap.get(packName)!.push(item);
     }
 
     const packs: PackSummary[] = Array.from(packMap.entries()).map(([name, data]) => ({
@@ -52,7 +58,7 @@ export function EstimateSummaryCard({ items, salesTaxPercent, estimateId, onTaxU
       percentOfTotal: subtotal > 0 ? (data.subtotal / subtotal) * 100 : 0,
     }));
 
-    return { subtotal, packs, totalItems: items.length };
+    return { subtotal, packs, totalItems: items.length, packItems: packItemsMap };
   }, [items]);
 
   const taxAmount = subtotal * (taxPercent / 100);
@@ -82,12 +88,21 @@ export function EstimateSummaryCard({ items, salesTaxPercent, estimateId, onTaxU
   const handleTotalBlur = () => {
     const totalWithTax = parseFloat(totalInput);
     if (!totalWithTax || subtotal === 0) { setTotalInput(''); return; }
-    const taxAmount = totalWithTax - subtotal;
-    const calcPercent = Math.round((taxAmount / subtotal) * 10000) / 100; // 2 decimal places
+    const taxAmt = totalWithTax - subtotal;
+    const calcPercent = Math.round((taxAmt / subtotal) * 10000) / 100;
     const clamped = Math.max(0, Math.min(100, calcPercent));
     setTaxInput(String(clamped));
     setTotalInput('');
     saveTaxPercent(clamped);
+  };
+
+  const togglePack = (packName: string) => {
+    setExpandedPacks(prev => {
+      const next = new Set(prev);
+      if (next.has(packName)) next.delete(packName);
+      else next.add(packName);
+      return next;
+    });
   };
 
   const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -163,7 +178,7 @@ export function EstimateSummaryCard({ items, salesTaxPercent, estimateId, onTaxU
           <span>{totalItems} item{totalItems !== 1 ? 's' : ''} total</span>
         </div>
 
-        {/* Pack Breakdown */}
+        {/* Pack Breakdown - Expandable */}
         {packs.length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
@@ -171,18 +186,67 @@ export function EstimateSummaryCard({ items, salesTaxPercent, estimateId, onTaxU
               <span className="text-sm font-medium">Pack Breakdown</span>
             </div>
             <div className="space-y-1.5">
-              {packs.map((pack) => (
-                <div key={pack.name} className="flex items-center justify-between text-sm rounded-md bg-muted/50 px-3 py-2">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{pack.name}</span>
-                    <Badge variant="outline" className="text-[10px]">{pack.itemCount} items</Badge>
-                  </div>
-                  <div className="flex items-center gap-3 text-right">
-                    <span className="text-muted-foreground text-xs">{pack.percentOfTotal.toFixed(1)}%</span>
-                    <span className="font-medium">${fmt(pack.subtotal)}</span>
-                  </div>
-                </div>
-              ))}
+              {packs.map((pack) => {
+                const isOpen = expandedPacks.has(pack.name);
+                const items = packItems.get(pack.name) || [];
+                return (
+                  <Collapsible key={pack.name} open={isOpen} onOpenChange={() => togglePack(pack.name)}>
+                    <CollapsibleTrigger asChild>
+                      <div className="flex items-center justify-between text-sm rounded-md bg-muted/50 px-3 py-2 cursor-pointer hover:bg-muted/80 transition-colors">
+                        <div className="flex items-center gap-2">
+                          <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+                          <span className="font-medium">{pack.name}</span>
+                          <Badge variant="outline" className="text-[10px]">{pack.itemCount} items</Badge>
+                        </div>
+                        <div className="flex items-center gap-3 text-right">
+                          <span className="text-muted-foreground text-xs">{pack.percentOfTotal.toFixed(1)}%</span>
+                          <span className="font-medium">${fmt(pack.subtotal)}</span>
+                        </div>
+                      </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="mt-1 ml-2 border rounded-md overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="text-xs">SKU</TableHead>
+                              <TableHead className="text-xs">Description</TableHead>
+                              <TableHead className="text-xs text-right">Qty</TableHead>
+                              <TableHead className="text-xs">UOM</TableHead>
+                              <TableHead className="text-xs text-right">Unit Price</TableHead>
+                              <TableHead className="text-xs text-right">Line Total</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {items.map((item) => {
+                              const lineTotal = (item.quantity || 0) * (item.unit_price || 0);
+                              return (
+                                <TableRow key={item.id}>
+                                  <TableCell className="font-mono text-xs py-1.5">{item.supplier_sku || '—'}</TableCell>
+                                  <TableCell className="text-xs py-1.5">
+                                    <div>
+                                      <span>{item.description}</span>
+                                      {item.catalog_item_id && (
+                                        <Badge variant="outline" className="text-[10px] ml-1.5 bg-green-50 border-green-200 text-green-700 dark:bg-green-950/20 dark:border-green-800 dark:text-green-400">
+                                          Matched
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                  <TableCell className="text-xs text-right py-1.5">{item.quantity}</TableCell>
+                                  <TableCell className="text-xs py-1.5">{item.uom}</TableCell>
+                                  <TableCell className="text-xs text-right py-1.5">${fmt(item.unit_price || 0)}</TableCell>
+                                  <TableCell className="text-xs text-right py-1.5 font-medium">${fmt(lineTotal)}</TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                );
+              })}
             </div>
           </div>
         )}
