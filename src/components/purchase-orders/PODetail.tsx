@@ -268,7 +268,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
     setEditingPrices(true);
   };
 
-  const handleSavePrices = async () => {
+  const savePriceEdits = async (lockPricing: boolean) => {
     if (!user) return;
 
     setActionLoading(true);
@@ -311,25 +311,28 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
       const taxAmount = poSubtotalTotal * (salesTaxPercent / 100);
       const poTotal = poSubtotalTotal + taxAmount;
 
-      // Update PO status to PRICED with sales tax and totals
+      // Update PO totals (and optionally lock status to PRICED)
+      const poUpdate: Record<string, unknown> = {
+        sales_tax_percent: salesTaxPercent,
+        po_subtotal_estimate_items: estSubtotal,
+        po_subtotal_non_estimate_items: addSubtotal,
+        po_subtotal_total: poSubtotalTotal,
+        po_tax_total: taxAmount,
+        po_total: poTotal,
+        tax_percent_applied: salesTaxPercent,
+      };
+      if (lockPricing) {
+        poUpdate.status = 'PRICED';
+        poUpdate.priced_at = new Date().toISOString();
+        poUpdate.priced_by = user.id;
+      }
       const { error: statusError } = await supabase
         .from('purchase_orders')
-        .update({
-          status: 'PRICED',
-          sales_tax_percent: salesTaxPercent,
-          priced_at: new Date().toISOString(),
-          priced_by: user.id,
-          po_subtotal_estimate_items: estSubtotal,
-          po_subtotal_non_estimate_items: addSubtotal,
-          po_subtotal_total: poSubtotalTotal,
-          po_tax_total: taxAmount,
-          po_total: poTotal,
-          tax_percent_applied: salesTaxPercent,
-        })
+        .update(poUpdate)
         .eq('id', poId);
       if (statusError) throw statusError;
 
-      toast.success('Pricing saved');
+      toast.success(lockPricing ? 'Pricing locked' : 'Pricing saved');
       setEditingPrices(false);
       setPriceEdits({});
       fetchPO();
@@ -488,11 +491,11 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
             </>
           )}
 
-          {/* SUBMITTED: Supplier can add pricing */}
-          {status === 'SUBMITTED' && canEditPricing && (
+          {/* SUBMITTED or PRICED: Supplier can add/edit pricing */}
+          {(status === 'SUBMITTED' || status === 'PRICED') && canEditPricing && !editingPrices && (
             <Button onClick={initializePriceEdits}>
               <DollarSign className="h-4 w-4 mr-2" />
-              Add Pricing
+              Add / Edit Pricing
             </Button>
           )}
 
@@ -509,7 +512,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
                   Finalize Order
                 </Button>
               )}
-              {effectiveIsSupplier && (
+              {effectiveIsSupplier && !editingPrices && (
                 <Button onClick={handleMarkOrdered} disabled={actionLoading}>
                   {actionLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -843,9 +846,13 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
           }}>
             Cancel
           </Button>
-          <Button onClick={handleSavePrices} disabled={actionLoading}>
+          <Button variant="outline" onClick={() => savePriceEdits(false)} disabled={actionLoading}>
             {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             Save Pricing
+          </Button>
+          <Button onClick={() => savePriceEdits(true)} disabled={actionLoading}>
+            {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Lock className="h-4 w-4 mr-2" />}
+            Lock Pricing
           </Button>
         </div>
       )}
