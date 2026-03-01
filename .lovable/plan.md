@@ -1,132 +1,121 @@
 
-# Unify All Wizard UI to Match Overview Design System
+
+# Supplier Project Overview: Materials Control Center
+
+## Summary
+
+Replace the current 3-card supplier overview layout with a comprehensive Materials Control Center showing detailed financial metrics (Estimate, Committed, Delivered, Returned, Variances) plus a cumulative materials chart over time.
 
 ## Current State
 
-There are 6 wizards in the app, each with a different visual structure:
+The supplier overview currently shows:
+- `SupplierEstimateVsOrdersCard` -- basic estimate vs orders comparison
+- `SupplierFinancialsSummaryCard` -- order value, invoiced, paid
+- `SupplierPOSummaryCard` -- PO status counts
+- `SupplierOperationalSummary` -- work orders, invoices, RFIs, team, scope tiles
 
-| Wizard | Container | Header Style | Footer Style | Progress |
-|--------|-----------|-------------|-------------|----------|
-| Work Order | Dialog, `max-w-lg p-0` | WizardProgress bar + step title | `border-t bg-muted/30` footer | Segmented bar |
-| RFI | Dialog, `max-w-lg p-0` | Reuses WizardProgress | Same footer pattern | Segmented bar |
-| PO (v2) | Dialog/Sheet, `max-w-lg p-0` | Custom inline header per screen | Per-screen sticky footer | Text "Step X of Y" |
-| Returns | Dialog, `max-w-2xl max-h-[85vh]` | DialogHeader/DialogTitle | Inline `border-t` buttons | None -- title only |
-| Change Order | Sheet (right side) | SheetHeader sticky | Sticky bottom submit bar | None |
-| New Project | Full page with sidebar | Card sidebar with step circles | Below-card nav buttons | Sidebar nav |
+## New Components
 
-## Target Design
+### 1. `SupplierMaterialsControlCard` (new file)
+**File**: `src/components/project/SupplierMaterialsControlCard.tsx`
 
-All wizards should share the same visual DNA:
-- Soft white card container on the neutral gray background
-- Consistent `WizardProgress` top bar (segmented pill bar + centered title/description)
-- Same footer pattern: `border-t bg-muted/30 p-4` with Back/Next buttons
-- `rounded-2xl shadow-sm` dialog styling (inherits from updated Card base)
-- Same content padding and scroll behavior
+A single comprehensive card replacing `SupplierEstimateVsOrdersCard` and `SupplierFinancialsSummaryCard`. It displays:
 
-## Changes
+**Data fetched via `useQuery`:**
+- **Estimate Total**: Sum of `supplier_estimates.total_amount` where `status = 'APPROVED'` and `supplier_org_id` matches
+- **Committed Total**: Sum of PO line_totals where `supplier_id` matches and `status IN ('PRICED','ORDERED','READY_FOR_DELIVERY','FINALIZED','DELIVERED')`
+  - **From Estimate**: POs where `source_estimate_id IS NOT NULL`
+  - **Additional**: POs where `source_estimate_id IS NULL`
+- **Delivered Total**: Sum of PO line_totals where `status = 'DELIVERED'`
+- **Returned/Credited**: Sum of `returns.net_credit_total` where `supplier_org_id` matches and `status = 'CLOSED'`
+- **Net Delivered**: Delivered Total - Returned Total
+- **Committed Variance**: (Committed - Estimate), both $ and %
+- **Delivered Variance**: (Net Delivered - Estimate), both $ and %
 
-### 1. Update shared `WizardProgress` component
-**File**: `src/components/work-order-wizard/WizardProgress.tsx`
+**Layout**: Clean card with rows for each metric, separator between sections, color-coded variances (green = under, amber/red = over).
 
-Update styling to match the unified design system:
-- Background: remove `bg-muted/30`, use clean white with subtle bottom border
-- Step counter: uppercase tracking-wide label (`text-xs uppercase tracking-wide text-muted-foreground font-medium`)
-- Progress pills: slightly larger (`h-2`), keep the `rounded-full` and color scheme
-- Add consistent vertical padding
+### 2. `SupplierMaterialsChart` (new file)
+**File**: `src/components/project/SupplierMaterialsChart.tsx`
 
-### 2. Standardize Returns Wizard
-**File**: `src/components/returns/CreateReturnWizard.tsx`
+A recharts `AreaChart` / `LineChart` inside a Card:
+- **X-axis**: Time (months, based on PO `created_at` for committed, `delivered_at` for delivered)
+- **Y-axis**: Cumulative dollars
+- **Lines**:
+  - Estimate (flat horizontal reference line)
+  - Committed (cumulative over time)
+  - Net Delivered (cumulative over time)
+- **Forecast banner**: Below the chart, conditionally show:
+  - Warning (amber): "Current commitments exceed estimate by $X (+Y%)" if committed > estimate
+  - Success (green): "Currently within estimate" otherwise
 
-This is the most inconsistent wizard. Changes:
-- Replace `DialogHeader`/`DialogTitle` with the shared `WizardProgress` component
-- Restructure layout: `p-0 gap-0 overflow-hidden` on DialogContent (like WO wizard)
-- Move step content into a scrollable `div` with `px-6 pb-6 pt-4 min-h-[400px] max-h-[60vh] overflow-y-auto`
-- Move navigation into a proper sticky footer: `flex items-center justify-between p-4 border-t bg-muted/30`
-- Add step descriptions to `stepTitles` array for WizardProgress
-- Category grid buttons: update to `rounded-2xl shadow-sm hover:shadow-md transition-shadow` (no border)
+Uses `recharts` (already installed) with the existing `ChartContainer`/`ChartTooltip` components.
 
-### 3. Standardize Change Order Wizard
-**File**: `src/components/change-order-wizard/ChangeOrderWizardDialog.tsx`
+### 3. Update `ProjectHome.tsx` supplier overview layout
 
-Currently uses a right-side Sheet with a completely different layout (single scrollable form, no steps). Changes:
-- Switch from `Sheet` to `Dialog` with `max-w-lg p-0 gap-0 overflow-hidden`
-- Add WizardProgress at the top (treat the existing section cards as logical steps: Location, Work Type, Resources, Assignment, Review -- or keep single-page but add the progress bar header for visual consistency)
-- Update the sticky submit footer to use `border-t bg-muted/30 p-4` pattern
-- Replace `SectionCard` border styling: change `border rounded-xl` to `rounded-2xl shadow-sm` (no border)
-- Keep as single-page scrollable form but wrap with consistent header/footer chrome
+Replace the current 3-card grid + `SupplierOperationalSummary` with:
+```
+<SupplierMaterialsControlCard />        (full width or 2-col span)
+<SupplierMaterialsChart />              (full width)
+<SupplierPOSummaryCard />               (keep -- operational PO status tracking)
+<SupplierOperationalSummary />          (keep -- WOs, invoices, RFIs, team, scope)
+```
 
-### 4. Standardize PO Wizard
-**File**: `src/components/po-wizard-v2/HeaderScreen.tsx`, `ReviewScreen.tsx`, `ItemsScreen.tsx`
+Remove `SupplierEstimateVsOrdersCard` and `SupplierFinancialsSummaryCard` from the layout (their data is now in the new control card).
 
-The PO wizard already has the closest design to the target. Minor tweaks:
-- `HeaderScreen`: Update header from `bg-muted/30` to clean white, use uppercase tracking-wide label for step counter
-- `ReviewScreen`: Same header update
-- Cards within screens already use `rounded-2xl shadow-sm` from Phase 1 card update -- just ensure `bg-muted/30` cards match
+## Technical Details
 
-### 5. Standardize New Project Wizard
-**File**: `src/pages/CreateProjectNew.tsx`
+### Database queries (all read-only, no schema changes)
 
-The project wizard is a full-page layout (not a dialog), which is fine for its complexity. Changes:
-- Sidebar progress: Update step circles to match WizardProgress color scheme (use `bg-primary/10` for current step background, not just the circle)
-- Navigation buttons: Use same `border-t bg-muted/30 p-4` sticky footer instead of floating below the card
-- Step content card: inherits `rounded-2xl shadow-sm` from the global Card update
-- Sidebar card: same inheritance
+**Estimate Total:**
+```sql
+SELECT SUM(total_amount) FROM supplier_estimates
+WHERE project_id = X AND supplier_org_id = Y AND status = 'APPROVED'
+```
 
-### 6. Standardize RFI Wizard
-**File**: `src/components/rfi/CreateRFIDialog.tsx`
+**Committed Total (with from-estimate split):**
+```sql
+-- All committed POs
+SELECT id, source_estimate_id, po_line_items(line_total)
+FROM purchase_orders
+WHERE project_id = X AND supplier_id = Z
+  AND status IN ('PRICED','ORDERED','READY_FOR_DELIVERY','FINALIZED','DELIVERED')
+```
+Split client-side by `source_estimate_id` null vs not-null.
 
-Already uses WizardProgress and the same dialog pattern as Work Order. Minor tweaks:
-- Footer already matches. No major changes needed.
+**Delivered Total:**
+```sql
+SELECT po_line_items(line_total)
+FROM purchase_orders
+WHERE project_id = X AND supplier_id = Z AND status = 'DELIVERED'
+```
 
-### 7. Standardize Estimate Upload Wizard
-**File**: `src/components/estimate-upload/EstimateUploadWizard.tsx`
+**Returns:**
+```sql
+SELECT SUM(net_credit_total) FROM returns
+WHERE project_id = X AND supplier_org_id = Y AND status = 'CLOSED'
+```
 
-Uses a basic Dialog with DialogHeader. Changes:
-- Add WizardProgress to match other wizards
-- Update layout to `p-0 gap-0` pattern
-- Move to consistent footer
+**Chart data (cumulative over time):**
+```sql
+SELECT created_at, status, delivered_at, po_line_items(line_total)
+FROM purchase_orders
+WHERE project_id = X AND supplier_id = Z
+  AND status IN ('PRICED','ORDERED','READY_FOR_DELIVERY','FINALIZED','DELIVERED')
+ORDER BY created_at
+```
+Aggregate into monthly buckets client-side and compute running totals.
 
-## Detailed File Changes
+### Files Modified
+1. **`src/components/project/SupplierMaterialsControlCard.tsx`** -- NEW
+2. **`src/components/project/SupplierMaterialsChart.tsx`** -- NEW
+3. **`src/pages/ProjectHome.tsx`** -- Replace supplier overview grid layout
+4. **`src/components/project/index.ts`** -- Add exports for new components
 
-### `src/components/work-order-wizard/WizardProgress.tsx`
-- Update `bg-muted/30` to `bg-white dark:bg-card`
-- Step counter: add `uppercase tracking-wide font-medium`
-- Progress bars: `h-2` instead of `h-1.5`
+### Files NOT Changed
+- `SupplierPOSummaryCard.tsx` -- kept as-is (operational status tracking)
+- `SupplierOperationalSummary.tsx` -- kept as-is (WOs, invoices, RFIs, team)
+- `SupplierEstimateVsOrdersCard.tsx` -- removed from layout but file kept (no deletion)
+- `SupplierFinancialsSummaryCard.tsx` -- removed from layout but file kept
+- No database migrations needed
+- No business logic changes
 
-### `src/components/returns/CreateReturnWizard.tsx`
-- Import and use `WizardProgress`
-- Add steps array with titles and descriptions
-- Restructure DialogContent: `max-w-2xl p-0 gap-0 overflow-hidden max-h-[85vh] flex flex-col`
-- Wrap step content in scrollable div
-- Extract footer to sticky bottom bar
-- Category grid buttons: replace `border bg-card` with `shadow-sm hover:shadow-md`
-
-### `src/components/change-order-wizard/ChangeOrderWizardDialog.tsx`
-- Change from Sheet to Dialog
-- Add WizardProgress header with project name subtitle
-- Update SectionCard styling to borderless shadow cards
-- Standardize footer buttons
-
-### `src/components/po-wizard-v2/HeaderScreen.tsx`
-- Header: change `bg-muted/30` to clean white, uppercase tracking-wide step label
-
-### `src/components/po-wizard-v2/ReviewScreen.tsx`
-- Same header update as HeaderScreen
-
-### `src/components/po-wizard-v2/ItemsScreen.tsx`
-- Same header update (need to check current styling)
-
-### `src/pages/CreateProjectNew.tsx`
-- Wrap navigation in `border-t bg-muted/30 p-4` section
-- Progress sidebar: update current step highlight to match WizardProgress colors
-
-### `src/components/estimate-upload/EstimateUploadWizard.tsx`
-- Replace DialogHeader with WizardProgress
-- Update DialogContent to `p-0 gap-0` pattern
-
-## What Does NOT Change
-- All wizard business logic, validation, data flow
-- Step ordering and content
-- Form fields and their behavior
-- Submit handlers and API calls
-- The PO wizard's mobile Sheet behavior (stays as-is for UX)
