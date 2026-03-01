@@ -13,6 +13,7 @@ export interface SupplierProjectEstimate {
   approved_by?: string | null;
   notes?: string | null;
   created_at: string;
+  sales_tax_percent?: number | null;
   updated_at: string;
   // Joined data
   project?: { id: string; name: string } | null;

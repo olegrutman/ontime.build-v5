@@ -1,0 +1,1 @@
+ALTER TABLE public.supplier_estimates ADD COLUMN sales_tax_percent numeric DEFAULT 0;
