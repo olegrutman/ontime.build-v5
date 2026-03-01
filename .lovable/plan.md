@@ -1,121 +1,148 @@
 
 
-# Supplier Project Overview: Materials Control Center
+# PO Wizard Pricing + Totals Fix
 
-## Summary
+## Overview
 
-Replace the current 3-card supplier overview layout with a comprehensive Materials Control Center showing detailed financial metrics (Estimate, Committed, Delivered, Returned, Variances) plus a cumulative materials chart over time.
+Add line-item pricing visibility, live totals, source tags, and audit columns to the PO Wizard and PO Detail screens. No redesign -- same layout, same flow, just richer data on each item row and a totals summary.
 
-## Current State
+## Phase 1: Database Migration
 
-The supplier overview currently shows:
-- `SupplierEstimateVsOrdersCard` -- basic estimate vs orders comparison
-- `SupplierFinancialsSummaryCard` -- order value, invoiced, paid
-- `SupplierPOSummaryCard` -- PO status counts
-- `SupplierOperationalSummary` -- work orders, invoices, RFIs, team, scope tiles
+Add new columns to support pricing traceability and totals.
 
-## New Components
+**`po_line_items` -- new columns:**
+- `source_estimate_item_id` (uuid, nullable, FK to `supplier_estimate_items.id`)
+- `source_pack_name` (text, nullable)
+- `price_source` (text, nullable, values: `FROM_ESTIMATE`, `SUPPLIER_MANUAL`, `CATALOG_DEFAULT`)
+- `original_unit_price` (numeric, nullable) -- price at time of creation
+- `price_adjusted_by_supplier` (boolean, default false)
+- `adjustment_reason` (text, nullable)
 
-### 1. `SupplierMaterialsControlCard` (new file)
-**File**: `src/components/project/SupplierMaterialsControlCard.tsx`
+**`purchase_orders` -- new columns:**
+- `po_subtotal_estimate_items` (numeric, nullable)
+- `po_subtotal_non_estimate_items` (numeric, nullable)
+- `po_subtotal_total` (numeric, nullable)
+- `po_tax_total` (numeric, nullable)
+- `po_total` (numeric, nullable)
+- `tax_percent_applied` (numeric, nullable)
 
-A single comprehensive card replacing `SupplierEstimateVsOrdersCard` and `SupplierFinancialsSummaryCard`. It displays:
+## Phase 2: Type Updates
 
-**Data fetched via `useQuery`:**
-- **Estimate Total**: Sum of `supplier_estimates.total_amount` where `status = 'APPROVED'` and `supplier_org_id` matches
-- **Committed Total**: Sum of PO line_totals where `supplier_id` matches and `status IN ('PRICED','ORDERED','READY_FOR_DELIVERY','FINALIZED','DELIVERED')`
-  - **From Estimate**: POs where `source_estimate_id IS NOT NULL`
-  - **Additional**: POs where `source_estimate_id IS NULL`
-- **Delivered Total**: Sum of PO line_totals where `status = 'DELIVERED'`
-- **Returned/Credited**: Sum of `returns.net_credit_total` where `supplier_org_id` matches and `status = 'CLOSED'`
-- **Net Delivered**: Delivered Total - Returned Total
-- **Committed Variance**: (Committed - Estimate), both $ and %
-- **Delivered Variance**: (Net Delivered - Estimate), both $ and %
+**`POWizardV2LineItem`** -- add fields to carry pricing through the wizard:
+- `unit_price?: number | null` -- from estimate or catalog
+- `line_total?: number | null` -- computed (qty x unit_price)
+- `source_estimate_item_id?: string | null`
+- `source_pack_name?: string | null`
+- `price_source?: 'FROM_ESTIMATE' | 'SUPPLIER_MANUAL' | 'CATALOG_DEFAULT'`
 
-**Layout**: Clean card with rows for each metric, separator between sections, color-coded variances (green = under, amber/red = over).
+**`POLineItem`** (types/purchaseOrder.ts) -- add matching DB columns.
 
-### 2. `SupplierMaterialsChart` (new file)
-**File**: `src/components/project/SupplierMaterialsChart.tsx`
+## Phase 3: Carry Estimate Pricing Into Items
 
-A recharts `AreaChart` / `LineChart` inside a Card:
-- **X-axis**: Time (months, based on PO `created_at` for committed, `delivered_at` for delivered)
-- **Y-axis**: Cumulative dollars
-- **Lines**:
-  - Estimate (flat horizontal reference line)
-  - Committed (cumulative over time)
-  - Net Delivered (cumulative over time)
-- **Forecast banner**: Below the chart, conditionally show:
-  - Warning (amber): "Current commitments exceed estimate by $X (+Y%)" if committed > estimate
-  - Success (green): "Currently within estimate" otherwise
+When items are loaded from an estimate pack (PSMBrowser / PSMUnmatchedList / PackSelector), carry `unit_price` from `supplier_estimate_items` into the `POWizardV2LineItem`.
 
-Uses `recharts` (already installed) with the existing `ChartContainer`/`ChartTooltip` components.
+**Files changed:**
+- `src/components/po-wizard-v2/PSMBrowser.tsx` -- fetch `unit_price` from estimate items, pass to QuantityPanel and unmatched handler
+- `src/components/po-wizard-v2/PackSelector.tsx` -- include `unit_price` when loading pack items
+- `src/components/po-wizard-v2/QuantityPanel.tsx` -- preserve `unit_price`/`source_estimate_item_id` when building the line item
 
-### 3. Update `ProjectHome.tsx` supplier overview layout
+Items added from the full catalog (no estimate) get `unit_price: null` and `price_source: null` (will become `SUPPLIER_MANUAL` when supplier prices them).
 
-Replace the current 3-card grid + `SupplierOperationalSummary` with:
-```
-<SupplierMaterialsControlCard />        (full width or 2-col span)
-<SupplierMaterialsChart />              (full width)
-<SupplierPOSummaryCard />               (keep -- operational PO status tracking)
-<SupplierOperationalSummary />          (keep -- WOs, invoices, RFIs, team, scope)
-```
+## Phase 4: Items Screen -- Show Pricing + Source Tags
 
-Remove `SupplierEstimateVsOrdersCard` and `SupplierFinancialsSummaryCard` from the layout (their data is now in the new control card).
+**File:** `src/components/po-wizard-v2/ItemsScreen.tsx`
 
-## Technical Details
+For each item row, add below the existing quantity badges:
+- **Unit Price**: `$X.XX / {uom}` or `--` if null
+- **Line Total**: `$X.XX` or `--` if null
+- **Source Tag** (small Badge):
+  - `source_estimate_item_id` present + `unit_price` set: "From Estimate" (green outline)
+  - `source_estimate_item_id` null + `unit_price` null: "Needs Supplier Pricing" (amber outline)
+  - `price_adjusted_by_supplier` true: "Supplier Adjusted" + delta line
 
-### Database queries (all read-only, no schema changes)
+Add a sticky totals summary above the footer:
+- Subtotal (Estimate Items): sum of line_totals where source_estimate_item_id is set
+- Subtotal (Additional): sum of line_totals where source_estimate_item_id is null and unit_price is set
+- Unpriced count warning if any items have no unit_price
+- Tax % (from estimate header if available)
+- Grand Total
 
-**Estimate Total:**
-```sql
-SELECT SUM(total_amount) FROM supplier_estimates
-WHERE project_id = X AND supplier_org_id = Y AND status = 'APPROVED'
-```
+All calculations are live -- changing qty in QuantityPanel recalculates immediately.
 
-**Committed Total (with from-estimate split):**
-```sql
--- All committed POs
-SELECT id, source_estimate_id, po_line_items(line_total)
-FROM purchase_orders
-WHERE project_id = X AND supplier_id = Z
-  AND status IN ('PRICED','ORDERED','READY_FOR_DELIVERY','FINALIZED','DELIVERED')
-```
-Split client-side by `source_estimate_id` null vs not-null.
+## Phase 5: Review Screen -- Full Totals Panel
 
-**Delivered Total:**
-```sql
-SELECT po_line_items(line_total)
-FROM purchase_orders
-WHERE project_id = X AND supplier_id = Z AND status = 'DELIVERED'
-```
+**File:** `src/components/po-wizard-v2/ReviewScreen.tsx`
 
-**Returns:**
-```sql
-SELECT SUM(net_credit_total) FROM returns
-WHERE project_id = X AND supplier_org_id = Y AND status = 'CLOSED'
-```
+Add a "Totals" card below the Items card showing:
+- Subtotal (Estimate Items)
+- Subtotal (Additional Items)
+- Subtotal (All)
+- Tax (X%) -- amount
+- **Total** (bold)
+- Warning banner if unpriced items exist: "X items need supplier pricing to finalize total"
 
-**Chart data (cumulative over time):**
-```sql
-SELECT created_at, status, delivered_at, po_line_items(line_total)
-FROM purchase_orders
-WHERE project_id = X AND supplier_id = Z
-  AND status IN ('PRICED','ORDERED','READY_FOR_DELIVERY','FINALIZED','DELIVERED')
-ORDER BY created_at
-```
-Aggregate into monthly buckets client-side and compute running totals.
+The Submit PO button remains enabled even with unpriced items (PO submits as-is; supplier prices later). The total shows as "Pending Pricing" if any items lack unit_price.
 
-### Files Modified
-1. **`src/components/project/SupplierMaterialsControlCard.tsx`** -- NEW
-2. **`src/components/project/SupplierMaterialsChart.tsx`** -- NEW
-3. **`src/pages/ProjectHome.tsx`** -- Replace supplier overview grid layout
-4. **`src/components/project/index.ts`** -- Add exports for new components
+## Phase 6: PO Creation -- Persist New Fields
 
-### Files NOT Changed
-- `SupplierPOSummaryCard.tsx` -- kept as-is (operational status tracking)
-- `SupplierOperationalSummary.tsx` -- kept as-is (WOs, invoices, RFIs, team)
-- `SupplierEstimateVsOrdersCard.tsx` -- removed from layout but file kept (no deletion)
-- `SupplierFinancialsSummaryCard.tsx` -- removed from layout but file kept
-- No database migrations needed
-- No business logic changes
+**Files:** `src/components/project/PurchaseOrdersTab.tsx`, `src/pages/PurchaseOrders.tsx`, `src/components/change-order-detail/MaterialResourceToggle.tsx`
+
+When inserting `po_line_items`, include:
+- `source_estimate_item_id`
+- `source_pack_name`
+- `price_source`
+- `original_unit_price` (= unit_price at creation time)
+- `unit_price`
+- `line_total` (qty x unit_price, or null)
+
+When inserting `purchase_orders`, compute and store:
+- `po_subtotal_estimate_items`
+- `po_subtotal_non_estimate_items`
+- `po_subtotal_total`
+- `po_tax_total` (subtotal x sales_tax_percent from estimate header)
+- `po_total`
+- `tax_percent_applied`
+
+## Phase 7: Supplier Pricing Screen (PODetail) -- Audit Fields
+
+**File:** `src/components/purchase-orders/PODetail.tsx`
+
+When supplier saves pricing (`handleSavePrices`):
+- If item had an `original_unit_price` and supplier changed it, set `price_adjusted_by_supplier = true`
+- Store the new `unit_price` and recompute `line_total`
+- If `original_unit_price` was null, set it to the supplier's price and set `price_source = 'SUPPLIER_MANUAL'`
+- Add optional `adjustment_reason` input field per line item
+- On "Mark as Priced", compute and save all PO-level totals (`po_subtotal_estimate_items`, etc.) and `tax_percent_applied`
+
+Show "Adjusted from $old -> $new" inline for items where supplier changed the price.
+
+## Phase 8: Edit Mode Preservation
+
+**File:** `src/components/project/PurchaseOrdersTab.tsx` (handleEditPO)
+
+When loading existing PO line items for editing, map the new DB columns back to `POWizardV2LineItem` fields so pricing/source data round-trips correctly through the wizard.
+
+## Summary of Files Changed
+
+| File | Change |
+|------|--------|
+| Migration SQL | Add 6 columns to `po_line_items`, 6 to `purchase_orders` |
+| `src/types/poWizardV2.ts` | Add pricing fields to `POWizardV2LineItem` |
+| `src/types/purchaseOrder.ts` | Add new DB columns to `POLineItem` and `PurchaseOrder` |
+| `src/components/po-wizard-v2/PSMBrowser.tsx` | Fetch + carry `unit_price` from estimate items |
+| `src/components/po-wizard-v2/PackSelector.tsx` | Include `unit_price` when loading pack |
+| `src/components/po-wizard-v2/QuantityPanel.tsx` | Preserve pricing fields on item build |
+| `src/components/po-wizard-v2/ItemsScreen.tsx` | Show unit price, line total, source tags, sticky totals |
+| `src/components/po-wizard-v2/ReviewScreen.tsx` | Add totals card with tax + warnings |
+| `src/components/project/PurchaseOrdersTab.tsx` | Persist new fields on create + edit |
+| `src/pages/PurchaseOrders.tsx` | Persist new fields on create |
+| `src/components/change-order-detail/MaterialResourceToggle.tsx` | Persist new fields on auto-PO |
+| `src/components/purchase-orders/PODetail.tsx` | Supplier adjustment tracking + totals save |
+
+## What Does NOT Change
+- Wizard step flow (Header -> Items -> Review)
+- Overall layout and styling
+- ProductPicker, CategoryGrid, StepByStepFilter internals
+- PO status flow (ACTIVE -> SUBMITTED -> PRICED -> etc.)
+- Any existing features
 
