@@ -1,86 +1,113 @@
 
+# Supplier Materials Overview - Desktop Redesign
 
-# Show Supplier Invoices Correctly Across All Roles
+## Overview
+Redesign the Supplier Project Overview page into a structured Materials Health Dashboard matching the provided reference image. This is a layout-only change -- no database modifications, no workflow changes.
 
-## Summary
+## Architecture
 
-Three issues to fix in `InvoicesTab.tsx`:
+Replace the current vertical stack of cards (`AttentionBanner`, `SupplierMaterialsControlCard`, `SupplierMaterialsChart`, `SupplierPOSummaryCard`, `SupplierOperationalSummary`) with a single new component: `SupplierMaterialsOverview`.
 
-1. **Supplier org sees no invoices** -- PO-based invoices are always classified as "received", but supplier orgs fall through to `sentInvoices` in `currentInvoices`. Need to classify PO-based invoices as "sent" when the current user is the supplier org.
+This new component consolidates all data fetching into one hook (`useSupplierMaterialsOverview`) and renders 6 structured sections.
 
-2. **GC needs a tabbed view** -- GC currently has a single flat list. It should have tabs like TC does: "From Trade Contractors" (contract-based) and "From Suppliers" (PO-based), so they can distinguish invoice sources.
+## New Files
 
-3. **TC "received" tab label** -- Currently says "From Field Crews" but should say "From Field Crews & Suppliers" since PO-based supplier invoices also appear there.
+### 1. `src/hooks/useSupplierMaterialsOverview.ts`
+Central data hook that fetches and computes all metrics in one place:
 
-## Changes
+- **Estimate data**: Sum approved `supplier_estimates.total_amount` and `sales_tax_percent`
+- **PO data**: All POs with `po_line_items` including `source_pack_name`, `source_estimate_item_id`, `line_total`, `unit_price`
+- **Estimate items**: All `supplier_estimate_items` grouped by `pack_name` with `line_total`
+- **Returns**: Sum of `returns.net_credit_total` where `status = 'CLOSED'`
 
-### File: `src/components/invoices/InvoicesTab.tsx`
+Computed values:
+- `estimateTotal` (budget baseline)
+- `materialsOrdered` (sum of PO line totals for PRICED/ORDERED/DELIVERED)
+- `deliveredTotal` (POs with status DELIVERED)
+- `deliveredNet` (deliveredTotal - credits)
+- `orderedVariance` (materialsOrdered - estimateTotal)
+- **Pack-level forecast**: For each pack with PO items, compute `delta_pct = (actual - estimate) / estimate`, then weighted average across ordered packs. Apply to remaining unstarted packs: `forecastFinal = actualOrderedTotal + remainingEstimate * (1 + weightedAvgDeltaPct)`
+- `forecastVariance` (forecastFinal - estimateTotal)
+- `forecastConfidence` (low if < 3 ordered packs)
+- **Packs over budget**: Pack-by-pack comparison (estimate vs ordered)
+- **Materials not in estimate**: PO line items where `source_estimate_item_id IS NULL`
+- **Risk factors**: Count of unpriced items (POs in SUBMITTED status), packs not started, biggest upcoming pack
 
-**1. Fix sent/received classification (lines 91-114)**
+### 2. `src/components/project/SupplierMaterialsOverview.tsx`
+Main container component. Renders all 6 sections using data from the hook.
 
-Update the PO-based invoice classification logic:
-- If the current user is the supplier org linked to the PO, classify as "sent"
-- If the current user is the GC/TC (buyer org on the PO), classify as "received"
-- This requires fetching PO data to know `organization_id` (buyer) and `supplier.organization_id` (seller), or using the org type as a simpler heuristic: if `currentOrgType === 'SUPPLIER'`, PO-based invoices are "sent"; otherwise "received"
-
-**2. Add GC tabbed view**
-
-- Change the dual-view condition from `isTCWithDualView` to also include GC
-- For GC: two tabs -- "From Trade Contractors" (contract-based received invoices) and "From Suppliers" (PO-based received invoices)
-- Split `receivedInvoices` into `receivedFromContracts` and `receivedFromSuppliers` for GC display
-- GC tabs use `Inbox` icon for both, with different labels
-
-**3. Update TC "received" tab label**
-
-- Change "From Field Crews" to "From Field Crews & Suppliers" on the tab trigger and header
-
-**4. Update role context messaging**
-
-- GC messaging per tab: "From TCs" tab shows TC-specific messaging, "From Suppliers" tab shows supplier-specific messaging
-- Supplier org: Add messaging for sent invoices view
-
-**5. Fix `currentInvoices` logic for supplier orgs**
-
-- For `SUPPLIER` org type, return `sentInvoices` (which now correctly contains PO-based invoices)
-
-### Technical Details
-
-Key logic changes in the sent/received memo:
-
+Layout structure:
 ```text
-for (const inv of invoices) {
-  if (inv.contract_id) {
-    // existing contract logic unchanged
-  } else if (inv.po_id) {
-    if (currentOrgType === 'SUPPLIER') {
-      sent.push(inv);       // supplier sees their own PO invoices as "sent"
-    } else {
-      received.push(inv);   // GC/TC sees them as "received"
-    }
-  }
-}
+[SECTION 1: Material Status Banner - full width]
+[SECTION 2: 3 KPI Cards - 3-column grid]
+[SECTION 3: Budget vs Actual Chart | SECTION 4: Materials Not in Estimate - 2-column grid]
+[SECTION 5: Packs Over Budget | SECTION 6: Risk Factors - 2-column grid]
 ```
 
-For GC, split received into sub-categories:
+### Section Details
 
+**Section 1 - Material Status Banner** (full width)
+- Amber/red background if over budget, green if under
+- Large text: "Projected $X (Y%) Over/Under Budget"
+- Subtext with forecast explanation and confidence note
+- Right side: "Currently +$X (Y%) over budget" (actual, not forecast)
+
+**Section 2 - Budget Summary** (3 equal cards)
+- Card 1: Budget (Estimate) -- large dollar value
+- Card 2: Materials Ordered -- with +/- variance vs estimate in red/green
+- Card 3: Materials Delivered (Net) -- with delivered minus credits subline
+
+**Section 3 - Budget vs Actual Chart** (reuses existing `SupplierMaterialsChart` logic)
+- Relabeled: "Materials Budget vs Actual"
+- Subtitle shows estimate total
+- Same LineChart with Budget baseline, Materials Ordered, Materials Delivered lines
+- Legend below
+
+**Section 4 - Materials Not in Estimate** (table card)
+- Toggle: "Ordered View" / "Delivered View"
+- Table: Item description, Ordered Cost (or Delivered Cost), number of POs, First Seen date
+- Data: PO line items where `source_estimate_item_id` is null, aggregated by description
+
+**Section 5 - Packs Over Budget** (table card)
+- Columns: Pack, Budget, Ordered Cost, Over Budget
+- Over Budget column: "+$X (+Y%)" in red
+- Data: Compare PO line items grouped by `source_pack_name` against estimate items grouped by `pack_name`
+
+**Section 6 - Risk Factors** (simple list card)
+- Warning icon bullets:
+  - Unpriced items pending: X items across X POs (from SUBMITTED POs)
+  - Packs not started: X of Y total
+  - Biggest upcoming pack: PackName ($Amount)
+
+## Modified Files
+
+### `src/pages/ProjectHome.tsx` (lines 254-261)
+Replace the supplier overview section:
 ```text
-receivedFromContracts = received invoices where contract_id is not null
-receivedFromSuppliers = received invoices where contract_id is null and po_id is not null
+Before:
+  <AttentionBanner .../>
+  <SupplierMaterialsControlCard .../>
+  <SupplierMaterialsChart .../>
+  <SupplierPOSummaryCard .../>
+  <SupplierOperationalSummary .../>
+
+After:
+  <SupplierMaterialsOverview projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
 ```
 
-GC rendering changes from single view to tabbed:
+### `src/components/project/index.ts`
+Add export for `SupplierMaterialsOverview`.
 
-```text
-Tabs:
-  [From Trade Contractors] -- shows receivedFromContracts
-  [From Suppliers]         -- shows receivedFromSuppliers
-```
+## Styling
+- Clean white cards with `rounded-2xl shadow-sm` (existing design system)
+- Large readable numbers with `tabular-nums` font
+- Uppercase tracking-wide section labels
+- Soft amber/red/green backgrounds for status banners
+- No dense data walls -- generous padding and spacing
 
-The `getInvoicePermissions` for supplier "sent" invoices: `canSubmit = true`, `canApprove = false` (supplier can submit their own drafts).
+## Data Flow
+All queries use the existing `supplier-by-org` pattern (fetch supplier ID from org ID, then query POs/estimates). The hook consolidates what was previously 4 separate queries into a single unified fetch with memoized derived values.
 
-### Files Changed
-
-| File | Action |
-|------|--------|
-| `src/components/invoices/InvoicesTab.tsx` | Update classification, add GC tabbed view, fix supplier visibility |
-
+## Existing Components Preserved
+- `SupplierMaterialsControlCard`, `SupplierMaterialsChart`, `SupplierPOSummaryCard`, `SupplierOperationalSummary`, `SupplierEstimateVsOrdersCard` remain in the codebase (no deletion) but are no longer used on this page
+- No changes to PO workflow, estimate structure, or tax calculations
