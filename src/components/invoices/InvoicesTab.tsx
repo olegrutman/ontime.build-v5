@@ -94,8 +94,21 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
     const sentContractIds = contractsWhereUserCanInvoice.map(c => c.id);
     const receivedContractIds = contractsWhereUserReceivesInvoices.map(c => c.id);
     
-    const sent = invoices.filter(inv => inv.contract_id && sentContractIds.includes(inv.contract_id));
-    const received = invoices.filter(inv => inv.contract_id && receivedContractIds.includes(inv.contract_id));
+    const sent: Invoice[] = [];
+    const received: Invoice[] = [];
+
+    for (const inv of invoices) {
+      if (inv.contract_id) {
+        // Contract-based invoices: classify by contract direction
+        if (sentContractIds.includes(inv.contract_id)) sent.push(inv);
+        else if (receivedContractIds.includes(inv.contract_id)) received.push(inv);
+      } else if (inv.po_id) {
+        // PO-based supplier invoices: received by GC/TC, sent by supplier
+        // For GC/TC orgs these are "received from supplier"
+        // For supplier orgs these would be "sent" (but suppliers typically don't use InvoicesTab)
+        received.push(inv);
+      }
+    }
     
     return { sentInvoices: sent, receivedInvoices: received };
   }, [invoices, currentOrgId, contractsWhereUserCanInvoice, contractsWhereUserReceivesInvoices]);
@@ -251,8 +264,8 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
   const getRoleContext = () => {
     if (currentOrgType === 'GC') {
       return { 
-        message: 'Invoices sent to you by Trade Contractors will appear here.',
-        emptyMessage: 'No invoices received yet. Trade Contractors will submit invoices for their completed work.'
+        message: 'Invoices sent to you by Trade Contractors and Suppliers will appear here.',
+        emptyMessage: 'No invoices received yet. Trade Contractors and Suppliers will submit invoices for their completed work and materials.'
       };
     }
     if (currentOrgType === 'TC') {
@@ -265,8 +278,8 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
         };
       } else {
         return { 
-          message: 'Invoices received from Field Crews for their labor.',
-          emptyMessage: 'No invoices received from Field Crews yet.'
+          message: 'Invoices received from Field Crews and Suppliers.',
+          emptyMessage: 'No invoices received from Field Crews or Suppliers yet.'
         };
       }
     }
@@ -314,10 +327,15 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
 
     // Determine if user can submit (from_org) or approve (to_org)
     const getInvoicePermissions = (invoice: Invoice) => {
-      const contract = contracts.find(c => c.id === invoice.contract_id);
-      const canSubmit = contract?.from_org_id === currentOrgId;
-      const canApprove = contract?.to_org_id === currentOrgId && (permissions?.canApprove ?? false);
-      return { canSubmit, canApprove };
+      if (invoice.contract_id) {
+        const contract = contracts.find(c => c.id === invoice.contract_id);
+        const canSubmit = contract?.from_org_id === currentOrgId;
+        const canApprove = contract?.to_org_id === currentOrgId && (permissions?.canApprove ?? false);
+        return { canSubmit, canApprove };
+      }
+      // PO-based supplier invoice: GC/TC can approve, supplier can submit
+      // Since these show as "received", the current user is the buyer (canApprove)
+      return { canSubmit: false, canApprove: permissions?.canApprove ?? false };
     };
 
     return (
