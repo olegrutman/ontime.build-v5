@@ -178,6 +178,19 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
       if (!pricingOwnerOrgId) {
         pricingOwnerOrgId = currentOrgId;
       }
+
+      // Fetch estimate tax percent if PO is from an estimate
+      let estimateTaxPercent = 0;
+      if (data.source_estimate_id) {
+        const { data: estData } = await supabase
+          .from('supplier_estimates')
+          .select('sales_tax_percent')
+          .eq('id', data.source_estimate_id)
+          .single();
+        if (estData?.sales_tax_percent) {
+          estimateTaxPercent = estData.sales_tax_percent;
+        }
+      }
       
       const { data: poNumber } = await supabase.rpc('generate_po_number', {
         org_id: currentOrgId,
@@ -198,6 +211,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           source_estimate_id: data.source_estimate_id || null,
           source_pack_name: data.source_pack_name || null,
           pack_modified: data.pack_modified || false,
+          sales_tax_percent: estimateTaxPercent,
         })
         .select()
         .single();
@@ -238,13 +252,17 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         const { error: lineError } = await supabase.from('po_line_items').insert(lineItems);
         if (lineError) throw lineError;
 
-        // Update PO-level totals
+        // Update PO-level totals with tax
         const poSubtotalTotal = estSubtotal + addSubtotal;
+        const taxAmount = poSubtotalTotal * (estimateTaxPercent / 100);
+        const poTotal = poSubtotalTotal + taxAmount;
         await supabase.from('purchase_orders').update({
           po_subtotal_estimate_items: estSubtotal,
           po_subtotal_non_estimate_items: addSubtotal,
           po_subtotal_total: poSubtotalTotal,
-          po_total: poSubtotalTotal,
+          po_tax_total: taxAmount,
+          tax_percent_applied: estimateTaxPercent,
+          po_total: poTotal,
         }).eq('id', newPO.id);
       }
 
@@ -368,13 +386,31 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         const { error: insertErr } = await supabase.from('po_line_items').insert(lineItems);
         if (insertErr) throw insertErr;
 
-        // Update PO-level totals
+        // Fetch estimate tax percent for edit
+        let editTaxPercent = editingPO.sales_tax_percent ?? 0;
+        if (data.source_estimate_id) {
+          const { data: estData } = await supabase
+            .from('supplier_estimates')
+            .select('sales_tax_percent')
+            .eq('id', data.source_estimate_id)
+            .single();
+          if (estData?.sales_tax_percent) {
+            editTaxPercent = estData.sales_tax_percent;
+          }
+        }
+
+        // Update PO-level totals with tax
         const poSubtotalTotal = estSubtotal + addSubtotal;
+        const taxAmount = poSubtotalTotal * (editTaxPercent / 100);
+        const poTotal = poSubtotalTotal + taxAmount;
         await supabase.from('purchase_orders').update({
           po_subtotal_estimate_items: estSubtotal,
           po_subtotal_non_estimate_items: addSubtotal,
           po_subtotal_total: poSubtotalTotal,
-          po_total: poSubtotalTotal,
+          sales_tax_percent: editTaxPercent,
+          tax_percent_applied: editTaxPercent,
+          po_tax_total: taxAmount,
+          po_total: poTotal,
         }).eq('id', editingPO.id);
       }
 
