@@ -199,13 +199,15 @@ export function ReturnDetail({ returnId, projectId, onBack }: ReturnDetailProps)
               <TableHeader>
                 <TableRow>
                   <TableHead>Description</TableHead>
+                  <TableHead className="w-16">Reason</TableHead>
                   <TableHead className="w-20">Qty</TableHead>
                   <TableHead className="w-20">UOM</TableHead>
                   <TableHead className="w-28">Condition</TableHead>
                   <TableHead className="w-24">Returnable</TableHead>
                   {pricing.canViewPricing && (
                     <>
-                      <TableHead className="w-24 text-right">Unit Price</TableHead>
+                      <TableHead className="w-24 text-right">Orig. Price</TableHead>
+                      <TableHead className="w-24 text-right">Unit Credit</TableHead>
                       <TableHead className="w-24 text-right">Line Total</TableHead>
                     </>
                   )}
@@ -215,7 +217,13 @@ export function ReturnDetail({ returnId, projectId, onBack }: ReturnDetailProps)
                 {items.map(item => (
                   <TableRow key={item.id}>
                     <TableCell className="text-sm">{item.description_snapshot}</TableCell>
-                    <TableCell>{item.qty_requested}</TableCell>
+                    <TableCell className="text-xs">{item.reason || '—'}</TableCell>
+                    <TableCell>
+                      {item.accepted_qty != null && item.accepted_qty !== item.qty_requested
+                        ? <span>{item.accepted_qty} <span className="text-muted-foreground text-[10px]">/ {item.qty_requested}</span></span>
+                        : item.qty_requested
+                      }
+                    </TableCell>
                     <TableCell>{item.uom}</TableCell>
                     <TableCell>
                       <span className="text-xs">{item.condition}</span>
@@ -237,6 +245,9 @@ export function ReturnDetail({ returnId, projectId, onBack }: ReturnDetailProps)
                     {pricing.canViewPricing && (
                       <>
                         <TableCell className="text-right text-sm">
+                          {item.original_unit_price ? `$${Number(item.original_unit_price).toFixed(2)}` : '—'}
+                        </TableCell>
+                        <TableCell className="text-right text-sm">
                           {item.credit_unit_price ? `$${item.credit_unit_price.toFixed(2)}` : '—'}
                         </TableCell>
                         <TableCell className="text-right text-sm">
@@ -253,7 +264,7 @@ export function ReturnDetail({ returnId, projectId, onBack }: ReturnDetailProps)
       </Card>
 
       {/* Financial summary */}
-      {pricing.canViewPricing && returnData.status === 'PRICED' && (
+      {pricing.canViewPricing && ['APPROVED', 'SCHEDULED', 'PICKED_UP', 'PRICED', 'CLOSED'].includes(returnData.status) && (
         <Card>
           <CardContent className="p-4 space-y-1 text-sm">
             <div className="flex justify-between">
@@ -270,6 +281,9 @@ export function ReturnDetail({ returnId, projectId, onBack }: ReturnDetailProps)
               <span>Net Credit</span>
               <span className="text-emerald-700 dark:text-emerald-400">${returnData.net_credit_total.toFixed(2)}</span>
             </div>
+            {!['PRICED', 'CLOSED'].includes(returnData.status) && (
+              <p className="text-[10px] text-muted-foreground text-right">(subject to final pricing adjustment)</p>
+            )}
           </CardContent>
         </Card>
       )}

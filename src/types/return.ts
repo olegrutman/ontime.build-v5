@@ -3,6 +3,7 @@ export type ReturnStatus =
   | 'SUBMITTED' 
   | 'SUPPLIER_REVIEW' 
   | 'APPROVED' 
+  | 'REJECTED'
   | 'SCHEDULED' 
   | 'PICKED_UP' 
   | 'PRICED' 
@@ -72,6 +73,10 @@ export interface ReturnItem {
   nonreturnable_reason?: string | null;
   credit_unit_price: number;
   credit_line_total: number;
+  reason?: string | null;
+  reason_notes?: string | null;
+  accepted_qty?: number | null;
+  original_unit_price?: number | null;
   created_at: string;
 }
 
@@ -80,6 +85,7 @@ export const RETURN_STATUS_LABELS: Record<ReturnStatus, string> = {
   SUBMITTED: 'Submitted',
   SUPPLIER_REVIEW: 'Supplier Review',
   APPROVED: 'Approved',
+  REJECTED: 'Rejected',
   SCHEDULED: 'Scheduled',
   PICKED_UP: 'Picked Up',
   PRICED: 'Priced',
@@ -91,6 +97,7 @@ export const RETURN_STATUS_COLORS: Record<ReturnStatus, string> = {
   SUBMITTED: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
   SUPPLIER_REVIEW: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
   APPROVED: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+  REJECTED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
   SCHEDULED: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
   PICKED_UP: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
   PRICED: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',

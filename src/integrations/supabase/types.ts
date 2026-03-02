@@ -2985,6 +2985,7 @@ export type Database = {
       }
       return_items: {
         Row: {
+          accepted_qty: number | null
           condition: string
           condition_notes: string | null
           created_at: string
@@ -2993,14 +2994,18 @@ export type Database = {
           description_snapshot: string
           id: string
           nonreturnable_reason: string | null
+          original_unit_price: number | null
           po_id: string
           po_line_item_id: string
           qty_requested: number
+          reason: string | null
+          reason_notes: string | null
           return_id: string
           returnable_flag: string
           uom: string
         }
         Insert: {
+          accepted_qty?: number | null
           condition?: string
           condition_notes?: string | null
           created_at?: string
@@ -3009,14 +3014,18 @@ export type Database = {
           description_snapshot: string
           id?: string
           nonreturnable_reason?: string | null
+          original_unit_price?: number | null
           po_id: string
           po_line_item_id: string
           qty_requested?: number
+          reason?: string | null
+          reason_notes?: string | null
           return_id: string
           returnable_flag?: string
           uom?: string
         }
         Update: {
+          accepted_qty?: number | null
           condition?: string
           condition_notes?: string | null
           created_at?: string
@@ -3025,9 +3034,12 @@ export type Database = {
           description_snapshot?: string
           id?: string
           nonreturnable_reason?: string | null
+          original_unit_price?: number | null
           po_id?: string
           po_line_item_id?: string
           qty_requested?: number
+          reason?: string | null
+          reason_notes?: string | null
           return_id?: string
           returnable_flag?: string
           uom?: string
