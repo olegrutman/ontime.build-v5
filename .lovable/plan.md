@@ -1,113 +1,97 @@
 
-# Supplier Materials Overview - Desktop Redesign
+# Overview Cleanup + Materials Budget Status Card
 
-## Overview
-Redesign the Supplier Project Overview page into a structured Materials Health Dashboard matching the provided reference image. This is a layout-only change -- no database modifications, no workflow changes.
+## Summary
+Remove redundant financial information from the GC/TC project overview and add a new "Materials Budget Status" card with an expanded drawer view. The card is only shown to the material-responsible party.
 
-## Architecture
+## Current State
+The GC/TC overview currently has:
+- **ContractHeroCard**: Current Contract Total, Original Contract, Approved Work Orders, TC live position
+- **BillingCashCard**: Total Invoiced, Paid, Retainage, Outstanding
+- **BudgetTracking**: Contains MaterialBudgetCard (Estimated Materials, Delivered POs, Ordered pending, Variance) AND LaborBudgetCard
+- **CollapsibleOperations**: Activity & Operations section
 
-Replace the current vertical stack of cards (`AttentionBanner`, `SupplierMaterialsControlCard`, `SupplierMaterialsChart`, `SupplierPOSummaryCard`, `SupplierOperationalSummary`) with a single new component: `SupplierMaterialsOverview`.
+The `BudgetTracking` component's `MaterialBudgetCard` already shows material budget info but in a simpler format (no forecast, no pack breakdown). This is the redundancy to address -- it duplicates material totals without the richer insight the new card provides.
 
-This new component consolidates all data fetching into one hook (`useSupplierMaterialsOverview`) and renders 6 structured sections.
+## Changes
 
-## New Files
+### 1. Remove MaterialBudgetCard from BudgetTracking (file: `src/components/project/BudgetTracking.tsx`)
 
-### 1. `src/hooks/useSupplierMaterialsOverview.ts`
-Central data hook that fetches and computes all metrics in one place:
+- Remove the `MaterialBudgetCard` sub-component entirely
+- Keep the `LaborBudgetCard` sub-component
+- Simplify `BudgetTracking` to only render `LaborBudgetCard` when applicable (GC or FC)
+- When only labor is shown, it renders as a single card without the grid wrapper
+- When neither material nor labor is shown, return null (same as now minus material)
 
-- **Estimate data**: Sum approved `supplier_estimates.total_amount` and `sales_tax_percent`
-- **PO data**: All POs with `po_line_items` including `source_pack_name`, `source_estimate_item_id`, `line_total`, `unit_price`
-- **Estimate items**: All `supplier_estimate_items` grouped by `pack_name` with `line_total`
-- **Returns**: Sum of `returns.net_credit_total` where `status = 'CLOSED'`
+### 2. Create MaterialsBudgetStatusCard (new file: `src/components/project/MaterialsBudgetStatusCard.tsx`)
 
-Computed values:
-- `estimateTotal` (budget baseline)
-- `materialsOrdered` (sum of PO line totals for PRICED/ORDERED/DELIVERED)
-- `deliveredTotal` (POs with status DELIVERED)
-- `deliveredNet` (deliveredTotal - credits)
-- `orderedVariance` (materialsOrdered - estimateTotal)
-- **Pack-level forecast**: For each pack with PO items, compute `delta_pct = (actual - estimate) / estimate`, then weighted average across ordered packs. Apply to remaining unstarted packs: `forecastFinal = actualOrderedTotal + remainingEstimate * (1 + weightedAvgDeltaPct)`
-- `forecastVariance` (forecastFinal - estimateTotal)
-- `forecastConfidence` (low if < 3 ordered packs)
-- **Packs over budget**: Pack-by-pack comparison (estimate vs ordered)
-- **Materials not in estimate**: PO line items where `source_estimate_item_id IS NULL`
-- **Risk factors**: Count of unpriced items (POs in SUBMITTED status), packs not started, biggest upcoming pack
+**Collapsed card** shows:
+- Title: "Materials Budget Status"
+- 4 labeled rows: Budget (Estimate), Materials Ordered (+/- %), Materials Delivered Net (+/- %), Projected Final Cost (+/- %)
+- Status line: "On Budget" / "Trending Over Budget" / "Trending Under Budget" with green/amber/red badge
+- One micro-highlight line showing the top cost driver (largest pack over budget or largest unmatched items total)
+- "View details" link at bottom
 
-### 2. `src/components/project/SupplierMaterialsOverview.tsx`
-Main container component. Renders all 6 sections using data from the hook.
+**Badge coloring logic:**
+- Green: forecastFinal <= estimateTotal
+- Amber: 0% < variance <= 5%
+- Red: variance > 5%
 
-Layout structure:
+**Data source:** Uses `useSupplierMaterialsOverview` hook (already exists and works for any org viewing a supplier's materials -- we pass the supplier org ID from the project participants).
+
+**Permissions:** Only rendered when `isTCMaterialResponsible` or `isGCMaterialResponsible` is true (from `financials` prop). If the user is NOT the material-responsible party, show a single muted line: "Materials controlled by {responsiblePartyName}" instead.
+
+### 3. Create MaterialsBudgetDrawer (new file: `src/components/project/MaterialsBudgetDrawer.tsx`)
+
+A Sheet (side drawer) opened by clicking the card. Contains 4 sections, no graph:
+
+**Section 1 - Summary**: Same 4 numbers as collapsed card plus forecast confidence label
+
+**Section 2 - Top Packs Over Budget (Top 5)**: Table with Pack Name, Budget, Ordered, Over/Under columns
+
+**Section 3 - Materials Not in Estimate (Top 5)**: Table with Item, Ordered Cost, # POs, First Seen columns
+
+**Section 4 - Risk Factors**: Bullet list with warning icons (unpriced items, packs not started, biggest upcoming pack)
+
+### 4. Update ProjectHome.tsx layout (file: `src/pages/ProjectHome.tsx`)
+
+Current GC/TC layout:
 ```text
-[SECTION 1: Material Status Banner - full width]
-[SECTION 2: 3 KPI Cards - 3-column grid]
-[SECTION 3: Budget vs Actual Chart | SECTION 4: Materials Not in Estimate - 2-column grid]
-[SECTION 5: Packs Over Budget | SECTION 6: Risk Factors - 2-column grid]
+[ContractHeroCard - full width]
+[BillingCashCard | BudgetTracking(Material+Labor)] -- 2-col grid
+[CollapsibleOperations]
 ```
 
-### Section Details
-
-**Section 1 - Material Status Banner** (full width)
-- Amber/red background if over budget, green if under
-- Large text: "Projected $X (Y%) Over/Under Budget"
-- Subtext with forecast explanation and confidence note
-- Right side: "Currently +$X (Y%) over budget" (actual, not forecast)
-
-**Section 2 - Budget Summary** (3 equal cards)
-- Card 1: Budget (Estimate) -- large dollar value
-- Card 2: Materials Ordered -- with +/- variance vs estimate in red/green
-- Card 3: Materials Delivered (Net) -- with delivered minus credits subline
-
-**Section 3 - Budget vs Actual Chart** (reuses existing `SupplierMaterialsChart` logic)
-- Relabeled: "Materials Budget vs Actual"
-- Subtitle shows estimate total
-- Same LineChart with Budget baseline, Materials Ordered, Materials Delivered lines
-- Legend below
-
-**Section 4 - Materials Not in Estimate** (table card)
-- Toggle: "Ordered View" / "Delivered View"
-- Table: Item description, Ordered Cost (or Delivered Cost), number of POs, First Seen date
-- Data: PO line items where `source_estimate_item_id` is null, aggregated by description
-
-**Section 5 - Packs Over Budget** (table card)
-- Columns: Pack, Budget, Ordered Cost, Over Budget
-- Over Budget column: "+$X (+Y%)" in red
-- Data: Compare PO line items grouped by `source_pack_name` against estimate items grouped by `pack_name`
-
-**Section 6 - Risk Factors** (simple list card)
-- Warning icon bullets:
-  - Unpriced items pending: X items across X POs (from SUBMITTED POs)
-  - Packs not started: X of Y total
-  - Biggest upcoming pack: PackName ($Amount)
-
-## Modified Files
-
-### `src/pages/ProjectHome.tsx` (lines 254-261)
-Replace the supplier overview section:
+New layout:
 ```text
-Before:
-  <AttentionBanner .../>
-  <SupplierMaterialsControlCard .../>
-  <SupplierMaterialsChart .../>
-  <SupplierPOSummaryCard .../>
-  <SupplierOperationalSummary .../>
-
-After:
-  <SupplierMaterialsOverview projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
+[ContractHeroCard - full width]
+[BillingCashCard | LaborBudget (if applicable)] -- 2-col grid (or single col if no labor)
+[MaterialsBudgetStatusCard - full width]
+[CollapsibleOperations]
 ```
 
-### `src/components/project/index.ts`
-Add export for `SupplierMaterialsOverview`.
+- Import new `MaterialsBudgetStatusCard`
+- Place it after the billing/budget row, before CollapsibleOperations
+- Pass `financials`, `projectId`, and the supplier org ID (fetched from project participants)
 
-## Styling
-- Clean white cards with `rounded-2xl shadow-sm` (existing design system)
-- Large readable numbers with `tabular-nums` font
-- Uppercase tracking-wide section labels
-- Soft amber/red/green backgrounds for status banners
-- No dense data walls -- generous padding and spacing
+### 5. Resolve supplier org ID for the materials card
 
-## Data Flow
-All queries use the existing `supplier-by-org` pattern (fetch supplier ID from org ID, then query POs/estimates). The hook consolidates what was previously 4 separate queries into a single unified fetch with memoized derived values.
+The `useSupplierMaterialsOverview` hook needs a `supplierOrgId`. For GC/TC viewing, we need to find the SUPPLIER participant on the project. This is already available from the `project_participants` query visible in the network requests (role=SUPPLIER, organization_id). We'll add a small query or derive it from existing data in `ProjectHome.tsx` to pass the supplier org to the materials card.
 
-## Existing Components Preserved
-- `SupplierMaterialsControlCard`, `SupplierMaterialsChart`, `SupplierPOSummaryCard`, `SupplierOperationalSummary`, `SupplierEstimateVsOrdersCard` remain in the codebase (no deletion) but are no longer used on this page
-- No changes to PO workflow, estimate structure, or tax calculations
+## Technical Details
+
+### Files Created
+| File | Purpose |
+|------|---------|
+| `src/components/project/MaterialsBudgetStatusCard.tsx` | Collapsed card + drawer trigger |
+| `src/components/project/MaterialsBudgetDrawer.tsx` | Expanded drawer with 4 sections |
+
+### Files Modified
+| File | Change |
+|------|--------|
+| `src/components/project/BudgetTracking.tsx` | Remove MaterialBudgetCard, keep only LaborBudgetCard |
+| `src/pages/ProjectHome.tsx` | Add MaterialsBudgetStatusCard, fetch supplier org ID |
+| `src/components/project/index.ts` | Export new components |
+
+### No Database Changes
+All data comes from the existing `useSupplierMaterialsOverview` hook and `useProjectFinancials` hook.
