@@ -1,63 +1,86 @@
 
 
-# Fix Supplier Invoice Creation and Visibility
+# Show Supplier Invoices Correctly Across All Roles
 
-## Two Problems
+## Summary
 
-### Problem 1: `invoice_line_items` RLS blocks supplier inserts
-The invoice itself is created successfully (201), but inserting line items fails (403). All 4 RLS policies on `invoice_line_items` require `JOIN project_contracts pc ON pc.id = i.contract_id`. Since supplier invoices have `contract_id = NULL`, the JOIN returns nothing and the policy blocks the insert.
+Three issues to fix in `InvoicesTab.tsx`:
 
-### Problem 2: Supplier invoices don't appear on GC/TC invoice pages
-The `InvoicesTab` separates invoices into "sent" and "received" buckets based on `contract_id` matching. PO-based invoices with `contract_id = NULL` fall into neither bucket and are invisible.
+1. **Supplier org sees no invoices** -- PO-based invoices are always classified as "received", but supplier orgs fall through to `sentInvoices` in `currentInvoices`. Need to classify PO-based invoices as "sent" when the current user is the supplier org.
 
-### Problem 3: Orphaned invoices in DB
-Two invoices (INV-SU-0001, INV-SU-0002) were created without line items due to the RLS failure. These need cleanup.
+2. **GC needs a tabbed view** -- GC currently has a single flat list. It should have tabs like TC does: "From Trade Contractors" (contract-based) and "From Suppliers" (PO-based), so they can distinguish invoice sources.
 
----
+3. **TC "received" tab label** -- Currently says "From Field Crews" but should say "From Field Crews & Suppliers" since PO-based supplier invoices also appear there.
 
-## Fix 1: Update `invoice_line_items` RLS Policies (Database Migration)
+## Changes
 
-Add the same PO-supplier alternative path to all 4 policies (SELECT, INSERT, UPDATE, DELETE):
+### File: `src/components/invoices/InvoicesTab.tsx`
+
+**1. Fix sent/received classification (lines 91-114)**
+
+Update the PO-based invoice classification logic:
+- If the current user is the supplier org linked to the PO, classify as "sent"
+- If the current user is the GC/TC (buyer org on the PO), classify as "received"
+- This requires fetching PO data to know `organization_id` (buyer) and `supplier.organization_id` (seller), or using the org type as a simpler heuristic: if `currentOrgType === 'SUPPLIER'`, PO-based invoices are "sent"; otherwise "received"
+
+**2. Add GC tabbed view**
+
+- Change the dual-view condition from `isTCWithDualView` to also include GC
+- For GC: two tabs -- "From Trade Contractors" (contract-based received invoices) and "From Suppliers" (PO-based received invoices)
+- Split `receivedInvoices` into `receivedFromContracts` and `receivedFromSuppliers` for GC display
+- GC tabs use `Inbox` icon for both, with different labels
+
+**3. Update TC "received" tab label**
+
+- Change "From Field Crews" to "From Field Crews & Suppliers" on the tab trigger and header
+
+**4. Update role context messaging**
+
+- GC messaging per tab: "From TCs" tab shows TC-specific messaging, "From Suppliers" tab shows supplier-specific messaging
+- Supplier org: Add messaging for sent invoices view
+
+**5. Fix `currentInvoices` logic for supplier orgs**
+
+- For `SUPPLIER` org type, return `sentInvoices` (which now correctly contains PO-based invoices)
+
+### Technical Details
+
+Key logic changes in the sent/received memo:
 
 ```text
-Current: JOIN project_contracts pc ON pc.id = i.contract_id (fails when contract_id is NULL)
-
-New: Add alternative path:
-  OR (i.contract_id IS NULL AND i.po_id IS NOT NULL
-      AND EXISTS (SELECT 1 FROM purchase_orders po
-        JOIN suppliers s ON s.id = po.supplier_id
-        WHERE po.id = i.po_id
-        AND user_in_org(auth.uid(), s.organization_id)))
+for (const inv of invoices) {
+  if (inv.contract_id) {
+    // existing contract logic unchanged
+  } else if (inv.po_id) {
+    if (currentOrgType === 'SUPPLIER') {
+      sent.push(inv);       // supplier sees their own PO invoices as "sent"
+    } else {
+      received.push(inv);   // GC/TC sees them as "received"
+    }
+  }
+}
 ```
 
-For SELECT, also add a path for the GC/buyer org to view supplier invoice line items:
+For GC, split received into sub-categories:
+
 ```text
-  OR (i.contract_id IS NULL AND i.po_id IS NOT NULL
-      AND EXISTS (SELECT 1 FROM purchase_orders po
-        WHERE po.id = i.po_id
-        AND user_in_org(auth.uid(), po.organization_id)))
+receivedFromContracts = received invoices where contract_id is not null
+receivedFromSuppliers = received invoices where contract_id is null and po_id is not null
 ```
 
-## Fix 2: Update `InvoicesTab` to Show Supplier Invoices
+GC rendering changes from single view to tabbed:
 
-**File:** `src/components/invoices/InvoicesTab.tsx`
+```text
+Tabs:
+  [From Trade Contractors] -- shows receivedFromContracts
+  [From Suppliers]         -- shows receivedFromSuppliers
+```
 
-- In the sent/received split logic (lines 91-101): classify invoices with `contract_id = NULL AND po_id != NULL` as "received" for GC/TC users (these are supplier invoices received from suppliers)
-- For suppliers viewing the invoices tab: classify PO-based invoices as "sent"
-- Update GC role context messaging to mention supplier invoices
-- Update `getInvoicePermissions` to handle contract-less invoices (GC can approve PO-based invoices)
+The `getInvoicePermissions` for supplier "sent" invoices: `canSubmit = true`, `canApprove = false` (supplier can submit their own drafts).
 
-## Fix 3: Clean Up Orphaned Invoices
-
-Delete the 2 orphaned invoice records (no line items) via data operation.
-
----
-
-## Files Changed
+### Files Changed
 
 | File | Action |
 |------|--------|
-| Database migration | Update 4 RLS policies on `invoice_line_items` |
-| Database data cleanup | Delete 2 orphaned invoices |
-| `src/components/invoices/InvoicesTab.tsx` | Add PO-based invoice handling to sent/received logic |
+| `src/components/invoices/InvoicesTab.tsx` | Update classification, add GC tabbed view, fix supplier visibility |
 
