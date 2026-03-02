@@ -6,6 +6,7 @@ import { useProjectRealtime } from '@/hooks/useProjectRealtime';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import { useDemo } from '@/contexts/DemoContext';
 import { getDemoProjectById } from '@/data/demoData';
 import { DemoProjectOverview, DemoWorkOrdersTab, DemoPurchaseOrdersTab, DemoInvoicesTab, DemoSOVTab, DemoRFIsTab } from '@/components/demo';
@@ -26,6 +27,7 @@ import {
   OperationalSummary,
   SupplierMaterialsOverview,
   BudgetTracking,
+  MaterialsBudgetStatusCard,
 } from '@/components/project';
 import { ContractHeroCard } from '@/components/project/ContractHeroCard';
 import { BillingCashCard } from '@/components/project/BillingCashCard';
@@ -125,6 +127,23 @@ export default function ProjectHome() {
   const realtimeKey = useProjectRealtime(id);
   const financials = useProjectFinancials(id || '', isSupplier, supplierOrgId);
   const readiness = useProjectReadiness(id);
+
+  // Resolve supplier org for GC/TC materials card
+  const { data: projectSupplierOrgId } = useQuery({
+    queryKey: ['project-supplier-participant', id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('project_participants')
+        .select('organization_id')
+        .eq('project_id', id!)
+        .eq('role', 'SUPPLIER')
+        .eq('invite_status', 'ACCEPTED')
+        .limit(1)
+        .maybeSingle();
+      return data?.organization_id || null;
+    },
+    enabled: !!id && !isSupplier,
+  });
 
   const activeTab = searchParams.get('tab') || 'overview';
 
@@ -272,6 +291,13 @@ export default function ProjectHome() {
                             <BillingCashCard financials={financials} />
                             <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
                           </div>
+                          {projectSupplierOrgId && (
+                            <MaterialsBudgetStatusCard
+                              projectId={id!}
+                              supplierOrgId={projectSupplierOrgId}
+                              financials={financials}
+                            />
+                          )}
                           <CollapsibleOperations
                             projectId={id!}
                             projectType={project.project_type}
