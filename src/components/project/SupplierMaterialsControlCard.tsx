@@ -49,7 +49,7 @@ export function SupplierMaterialsControlCard({ projectId, supplierOrgId }: Props
         .select('id, status, source_estimate_id, created_at, delivered_at, po_line_items(line_total)')
         .eq('project_id', projectId)
         .eq('supplier_id', supplier!.id)
-        .in('status', ['PRICED', 'ORDERED', 'READY_FOR_DELIVERY', 'FINALIZED', 'DELIVERED']);
+        .in('status', ['PRICED', 'ORDERED', 'DELIVERED']);
 
       let committedTotal = 0;
       let committedFromEstimate = 0;

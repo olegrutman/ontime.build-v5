@@ -55,7 +55,7 @@ export function MetricStrip({ projectId, onNavigate, isSupplier, supplierOrgId }
               segments: [
                 { count: pos.filter(p => p.status === 'SUBMITTED').length, label: 'Need Pricing', color: 'text-amber-600' },
                 { count: pos.filter(p => p.status === 'PRICED').length, label: 'Priced', color: 'text-blue-600' },
-                { count: pos.filter(p => ['FINALIZED', 'DELIVERED'].includes(p.status)).length, label: 'Finalized', color: 'text-green-600' },
+                { count: pos.filter(p => ['ORDERED', 'DELIVERED'].includes(p.status)).length, label: 'Completed', color: 'text-green-600' },
               ],
             },
             {
@@ -113,7 +113,7 @@ export function MetricStrip({ projectId, onNavigate, isSupplier, supplierOrgId }
               tab: 'purchase-orders',
               segments: [
                 { count: pos.filter(p => p.status === 'SUBMITTED').length, label: 'Awaiting', color: 'text-amber-600' },
-                { count: pos.filter(p => ['ORDERED', 'READY_FOR_DELIVERY'].includes(p.status)).length, label: 'In Transit', color: 'text-blue-600' },
+                { count: pos.filter(p => p.status === 'ORDERED').length, label: 'In Transit', color: 'text-blue-600' },
                 { count: pos.filter(p => p.status === 'DELIVERED').length, label: 'Delivered', color: 'text-green-600' },
               ],
             },

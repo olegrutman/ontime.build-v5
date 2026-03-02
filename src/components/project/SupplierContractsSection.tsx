@@ -55,7 +55,7 @@ export function SupplierContractsSection({ projectId, supplierOrgId }: SupplierC
         `)
         .eq('project_id', projectId)
         .eq('supplier_id', supplier!.id)
-        .in('status', ['FINALIZED', 'DELIVERED'])
+        .in('status', ['ORDERED', 'DELIVERED'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;

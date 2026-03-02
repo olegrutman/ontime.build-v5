@@ -145,7 +145,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         const supplierId = supplierData?.id;
         if (supplierId) {
           const [posRes, invRes] = await Promise.all([
-            supabase.from('purchase_orders').select('id, po_line_items(line_total)').eq('project_id', projectId).eq('supplier_id', supplierId).in('status', ['FINALIZED', 'DELIVERED']),
+            supabase.from('purchase_orders').select('id, po_line_items(line_total)').eq('project_id', projectId).eq('supplier_id', supplierId).in('status', ['ORDERED', 'DELIVERED']),
             supabase.from('invoices').select('id, invoice_number, status, total_amount, created_at, po_id').eq('project_id', projectId),
           ]);
           const pos = posRes.data || [];
@@ -278,7 +278,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         .from('purchase_orders')
         .select('id, status, sales_tax_percent, po_line_items(line_total)')
         .eq('project_id', projectId)
-        .in('status', ['ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED', 'FINALIZED']);
+        .in('status', ['ORDERED', 'DELIVERED']);
 
       const calcPOTotal = (pos: any[]) => pos.reduce((sum, po: any) => {
         const subtotal = (po.po_line_items || []).reduce((s: number, li: any) => s + (li.line_total || 0), 0);
@@ -291,8 +291,8 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       setMaterialOrdered(matOrdered);
 
       // Split by delivery status
-      const deliveredPOs = allPOs.filter((po: any) => ['DELIVERED', 'FINALIZED'].includes(po.status));
-      const pendingPOs = allPOs.filter((po: any) => ['ORDERED', 'READY_FOR_DELIVERY'].includes(po.status));
+      const deliveredPOs = allPOs.filter((po: any) => po.status === 'DELIVERED');
+      const pendingPOs = allPOs.filter((po: any) => po.status === 'ORDERED');
       setMaterialDelivered(calcPOTotal(deliveredPOs));
       setMaterialOrderedPending(calcPOTotal(pendingPOs));
 

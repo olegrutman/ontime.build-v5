@@ -49,7 +49,7 @@ export function SupplierFinancialsSummaryCard({
         .select('id, sales_tax_percent, po_line_items(line_total)')
         .eq('project_id', projectId)
         .eq('supplier_id', supplier!.id)
-        .in('status', ['FINALIZED', 'DELIVERED']);
+        .in('status', ['ORDERED', 'DELIVERED']);
 
       if (posError) throw posError;
 

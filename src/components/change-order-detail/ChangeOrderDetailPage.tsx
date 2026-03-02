@@ -212,7 +212,7 @@ export function ChangeOrderDetailPage() {
   const isSupplier = currentRole === 'SUPPLIER';
 
   const hasFCParticipant = participants.some((p) => p.role === 'FC' && p.is_active);
-  const PRICED_PO_STATUSES = ['PRICED', 'ORDERED', 'FINALIZED', 'READY_FOR_DELIVERY', 'DELIVERED'];
+  const PRICED_PO_STATUSES = ['PRICED', 'ORDERED', 'DELIVERED'];
   const linkedPOIsPriced = !!(linkedPO && PRICED_PO_STATUSES.includes(linkedPO.status));
   const hasTCParticipant = participants.some((p) => p.role === 'TC' && p.is_active);
   const isFCEditable = changeOrder?.status === 'draft' || changeOrder?.status === 'fc_input';

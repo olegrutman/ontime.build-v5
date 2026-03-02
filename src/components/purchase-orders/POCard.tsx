@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { Eye, Edit, Download, Send, Loader2, Lock, PackageCheck, Truck, Receipt, ClipboardList } from 'lucide-react';
+import { Eye, Edit, Download, Send, Loader2, Lock, Truck, Receipt, ClipboardList } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -175,26 +175,15 @@ export function POCard({
         )}
 
         {/* Delivery tracking */}
-        {(po.ready_for_delivery_at || po.delivered_at) && (
-          <div className="mt-3 pt-3 border-t space-y-1 text-sm">
-            {po.ready_for_delivery_at && (
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <PackageCheck className="h-3.5 w-3.5 text-cyan-600" />
-                  Ready
-                </span>
-                <span className="font-medium">{format(new Date(po.ready_for_delivery_at), 'MMM d')}</span>
-              </div>
-            )}
-            {po.delivered_at && (
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <Truck className="h-3.5 w-3.5 text-green-600" />
-                  Delivered
-                </span>
-                <span className="font-medium text-green-600">{format(new Date(po.delivered_at), 'MMM d')}</span>
-              </div>
-            )}
+        {po.delivered_at && (
+          <div className="mt-3 pt-3 border-t text-sm">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <Truck className="h-3.5 w-3.5 text-green-600" />
+                Delivered
+              </span>
+              <span className="font-medium text-green-600">{format(new Date(po.delivered_at), 'MMM d')}</span>
+            </div>
           </div>
         )}
 
