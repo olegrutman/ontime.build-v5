@@ -394,6 +394,47 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
   };
 
   const [exportLoading, setExportLoading] = useState(false);
+  const [estimateItemsMap, setEstimateItemsMap] = useState<Map<string, { description: string; supplier_sku: string | null; quantity: number; uom: string; unit_price: number }> | null>(null);
+
+  // Fetch original estimate pack items for diff highlighting
+  useEffect(() => {
+    if (!po?.source_estimate_id || !po?.source_pack_name) {
+      setEstimateItemsMap(null);
+      return;
+    }
+    const fetchEstimateItems = async () => {
+      const { data } = await supabase
+        .from('supplier_estimate_items')
+        .select('id, description, supplier_sku, quantity, uom, unit_price')
+        .eq('estimate_id', po.source_estimate_id!)
+        .eq('pack_name', po.source_pack_name!);
+      if (data) {
+        const map = new Map<string, { description: string; supplier_sku: string | null; quantity: number; uom: string; unit_price: number }>();
+        data.forEach((item: any) => map.set(item.id, item));
+        setEstimateItemsMap(map);
+      }
+    };
+    fetchEstimateItems();
+  }, [po?.source_estimate_id, po?.source_pack_name]);
+
+  // Compute row highlight status
+  const getRowStatus = (item: POLineItem): 'edited' | 'added' | null => {
+    if (!estimateItemsMap) return null;
+    if (!item.source_estimate_item_id) return 'added';
+    const orig = estimateItemsMap.get(item.source_estimate_item_id);
+    if (!orig) return 'added';
+    if (item.quantity !== orig.quantity || (item.unit_price ?? 0) !== orig.unit_price) return 'edited';
+    return null;
+  };
+
+  // Compute deleted items (in estimate but not in any PO line item)
+  const deletedEstimateItems = (() => {
+    if (!estimateItemsMap) return [];
+    const usedIds = new Set(lineItems.map(li => li.source_estimate_item_id).filter(Boolean));
+    return Array.from(estimateItemsMap.entries())
+      .filter(([id]) => !usedIds.has(id))
+      .map(([id, item]) => ({ id, ...item }));
+  })();
 
   const handleDownload = async () => {
     setExportLoading(true);
@@ -643,6 +684,14 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
+          {/* Diff legend */}
+          {estimateItemsMap && estimateItemsMap.size > 0 && (
+            <div className="flex flex-wrap gap-4 px-4 py-2 text-xs border-b">
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-yellow-200 dark:bg-yellow-800 inline-block" /> Edited from estimate</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-green-200 dark:bg-green-800 inline-block" /> Added to PO</span>
+              <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-red-200 dark:bg-red-800 inline-block" /> Removed from estimate</span>
+            </div>
+          )}
           <Table>
             <TableHeader>
               <TableRow>
@@ -666,8 +715,15 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
                 const displayPrice = editingPrices ? (edit?.unit_price ?? 0) : (item.unit_price ?? 0);
                 const lineTotal = displayPrice * item.quantity;
 
+                const rowStatus = getRowStatus(item);
+                const rowClass = rowStatus === 'edited'
+                  ? 'bg-yellow-50 dark:bg-yellow-900/20'
+                  : rowStatus === 'added'
+                  ? 'bg-green-50 dark:bg-green-900/20'
+                  : '';
+
                 return (
-                  <TableRow key={item.id}>
+                  <TableRow key={item.id} className={rowClass}>
                     <TableCell className="text-muted-foreground">{item.line_number}</TableCell>
                     <TableCell className="font-mono text-sm">{item.supplier_sku || '—'}</TableCell>
                     <TableCell>
@@ -754,6 +810,25 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
                   </TableRow>
                 );
               })}
+              {/* Deleted estimate items */}
+              {deletedEstimateItems.map((item) => (
+                <TableRow key={`deleted-${item.id}`} className="bg-red-50 dark:bg-red-900/20">
+                  <TableCell className="text-muted-foreground">—</TableCell>
+                  <TableCell className="font-mono text-sm line-through text-muted-foreground">{item.supplier_sku || '—'}</TableCell>
+                  <TableCell>
+                    <p className="font-medium line-through text-muted-foreground">{item.description}</p>
+                  </TableCell>
+                  <TableCell className="text-right font-medium line-through text-muted-foreground">{item.quantity}</TableCell>
+                  <TableCell className="text-muted-foreground">{item.uom}</TableCell>
+                  {showPricingColumns && (
+                    <>
+                      <TableCell className="text-right text-muted-foreground">$0.00</TableCell>
+                      <TableCell className="text-right text-muted-foreground">$0.00</TableCell>
+                      {editingPrices && <TableCell />}
+                    </>
+                  )}
+                </TableRow>
+              ))}
             </TableBody>
             {showPricingColumns && (() => {
               const subtotal = editingPrices
