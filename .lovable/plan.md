@@ -1,80 +1,61 @@
 
 
-# Add "Create Invoice" Option for Suppliers on Delivered POs
+# Fix RLS Policy for Supplier Invoice Creation
 
-## Overview
+## Root Cause
 
-After a supplier marks a PO as delivered, they should be able to generate an invoice for that PO to bill the buyer (GC or TC). This is a simpler flow than the existing "Bill to GC" (which adds markup for TCs) -- the supplier just invoices the PO total directly.
+The current INSERT policy on the `invoices` table only allows inserts when `contract_id` matches a `project_contracts` record where the user belongs to `from_org_id`. Supplier invoices are created with `contract_id = NULL` (suppliers bill directly from POs, not contracts), so the policy blocks them.
 
-## Changes
+## Fix
 
-### 1. New Component: `CreateSupplierInvoiceFromPO`
+### 1. Update the INSERT RLS policy on `invoices`
 
-**File:** `src/components/purchase-orders/CreateSupplierInvoiceFromPO.tsx` (new)
+Add an alternative path: allow INSERT when `contract_id IS NULL` AND the user belongs to the supplier organization linked to the referenced PO.
 
-A simplified invoice creation dialog for suppliers:
-- Pre-fills line items from the PO (read-only, no markup)
-- Shows PO subtotal + tax = total as the invoice amount
-- Auto-generates invoice number using supplier org initials + sequential numbering
-- Billing period defaults to current month
-- Invoice number is editable
-- No contract selection needed (contract_id = null)
-- On submit: creates invoice row with `po_id` set, status = DRAFT, then creates invoice_line_items from PO line items
+```text
+Current policy (contract-based only):
+  EXISTS (SELECT 1 FROM project_contracts pc
+    WHERE pc.id = invoices.contract_id
+    AND pc.from_org_id IN (user's orgs))
 
-### 2. Add Button to PODetail
+New policy (contract-based OR PO-supplier-based):
+  (existing contract check)
+  OR
+  (contract_id IS NULL
+   AND po_id IS NOT NULL
+   AND EXISTS (SELECT 1 FROM purchase_orders po
+     JOIN suppliers s ON s.id = po.supplier_id
+     WHERE po.id = invoices.po_id
+     AND s.organization_id IN (user's orgs)))
+```
 
-**File:** `src/components/purchase-orders/PODetail.tsx`
+### 2. Update SELECT policy to cover contract-less invoices
 
-- Import the new `CreateSupplierInvoiceFromPO` component
-- Add state: `supplierInvoiceOpen`
-- After the "Mark Delivered" button block, add a new block for DELIVERED status + supplier role:
-  - Show "Create Invoice" button (Receipt icon) when:
-    - Status is DELIVERED
-    - User is a supplier (`effectiveIsSupplier`)
-    - PO is not already invoiced (`!alreadyInvoiced`)
-  - Button opens the new dialog
-- Render the dialog at the bottom of the component alongside the existing `CreateInvoiceFromPO` dialog
+The SELECT policy already has a fallback for `contract_id IS NULL` using `project_participants`. This should work for supplier invoices since suppliers are project participants. No change needed here.
 
-### 3. Update POCard to Show Invoiced Badge for Supplier POs
+### 3. Update DELETE policy for supplier draft invoices
 
-No changes needed -- the existing `isInvoiced` badge logic already covers this since the parent `PurchaseOrdersTab` fetches invoice linkage.
+Add the same PO-supplier path so suppliers can delete their own draft invoices.
+
+### 4. Update UPDATE policy for supplier invoices
+
+Add the PO-supplier path so suppliers can update/submit their draft invoices.
 
 ## Technical Details
 
-### Invoice Creation SQL Flow
+### Database migration SQL
 
-```text
-1. INSERT into invoices:
-   - project_id, po_id, invoice_number, billing period
-   - subtotal = po_total (includes tax)
-   - retainage_amount = 0 (no retainage for supplier invoices)
-   - total_amount = po_total
-   - created_by = current user
-   - status = 'DRAFT'
+Drop and recreate the affected policies:
 
-2. INSERT into invoice_line_items:
-   - One row per PO line item
-   - description, scheduled_value = line_total, current_billed = line_total
-   - Tax line item added separately if po_tax_total > 0
+- **INSERT**: Add `OR (contract_id IS NULL AND po_id IS NOT NULL AND user belongs to PO's supplier org)` 
+- **DELETE**: Add same alternative for DRAFT status supplier invoices
+- **UPDATE**: Add alternative path for supplier invoices in both USING and WITH CHECK
 
-3. INSERT into project_activity:
-   - Log the invoice creation event
-```
-
-### Button Placement in PODetail
-
-```text
-Current flow for DELIVERED POs:
-  [Download]
-
-After change:
-  [Download]  [Create Invoice]  (if supplier + not yet invoiced)
-```
-
-## Files
+### Files Changed
 
 | File | Action |
 |------|--------|
-| `src/components/purchase-orders/CreateSupplierInvoiceFromPO.tsx` | New -- simplified invoice dialog for suppliers |
-| `src/components/purchase-orders/PODetail.tsx` | Add "Create Invoice" button for suppliers on DELIVERED POs |
+| Database migration | Update 3 RLS policies on `invoices` table |
+
+No application code changes needed -- the `CreateSupplierInvoiceFromPO` component is correct, it just needs the RLS gate opened.
 
