@@ -13,7 +13,6 @@ import {
   Building2,
   Clock,
   Lock,
-  CalendarIcon,
   Receipt,
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,7 +22,6 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import {
   Table,
@@ -45,16 +43,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
 import { POStatusBadge } from './POStatusBadge';
 import { CreateInvoiceFromPO } from './CreateInvoiceFromPO';
 import { PurchaseOrder, POLineItem, POStatus } from '@/types/purchaseOrder';
@@ -91,8 +79,6 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
   const [editingPrices, setEditingPrices] = useState(false);
   const [priceEdits, setPriceEdits] = useState<Record<string, PriceEdit>>({});
   const [salesTaxPercent, setSalesTaxPercent] = useState<number>(0);
-  const [readyDialogOpen, setReadyDialogOpen] = useState(false);
-  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState<Date | undefined>();
   const [billToGCOpen, setBillToGCOpen] = useState(false);
   const [hasTCtoGCContract, setHasTCtoGCContract] = useState(false);
   const [alreadyInvoiced, setAlreadyInvoiced] = useState(false);
@@ -100,13 +86,11 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
   
-  // Use the pricing visibility hook
-  const { canViewPricing, canEditPricing, canFinalize, isSupplier, isPricingOwner } = usePOPricingVisibility(
+  const { canViewPricing, canEditPricing, isSupplier, isPricingOwner } = usePOPricingVisibility(
     po,
     currentOrgId || null
   );
   
-  // Fall back to legacy supplier check if needed (for backward compatibility)
   const isSupplierOrg = currentOrgType === 'SUPPLIER';
   const effectiveIsSupplier = isSupplier || isSupplierOrg;
   
@@ -117,7 +101,6 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
     fetchPO();
   }, [poId]);
 
-  // Check if TC-to-GC contract exists and if PO is already invoiced
   useEffect(() => {
     if (!currentOrgId || !projectId) return;
     
@@ -148,14 +131,12 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
     const [poRes, lineItemsRes] = await Promise.all([
       supabase
         .from('purchase_orders')
-        .select(
-          `
+        .select(`
           *,
           supplier:suppliers(id, name, supplier_code, contact_info, organization_id),
           project:projects(id, name),
           work_item:work_items(id, title)
-        `
-        )
+        `)
         .eq('id', poId)
         .single(),
       supabase
@@ -204,7 +185,6 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
 
     setActionLoading(true);
     try {
-      // Update status to SUBMITTED - supplier will see it on their project page
       const { error } = await supabase
         .from('purchase_orders')
         .update({
@@ -233,9 +213,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
 
     setActionLoading(true);
     try {
-      // Delete line items first
       await supabase.from('po_line_items').delete().eq('po_id', poId);
-      // Delete PO
       const { error } = await supabase.from('purchase_orders').delete().eq('id', poId);
 
       if (error) throw error;
@@ -276,7 +254,6 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
       let estSubtotal = 0;
       let addSubtotal = 0;
 
-      // Update each line item with its price, audit fields, and lead time
       for (const [itemId, edit] of Object.entries(priceEdits)) {
         const item = lineItems.find((li) => li.id === itemId);
         if (item) {
@@ -311,7 +288,6 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
       const taxAmount = poSubtotalTotal * (salesTaxPercent / 100);
       const poTotal = poSubtotalTotal + taxAmount;
 
-      // Update PO totals (and optionally lock status to PRICED)
       const poUpdate: Record<string, unknown> = {
         sales_tax_percent: salesTaxPercent,
         po_subtotal_estimate_items: estSubtotal,
@@ -354,49 +330,9 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
     updatePOStatus('DELIVERED', { delivered_at: new Date().toISOString() });
   };
 
-  const handleFinalize = () => {
-    updatePOStatus('FINALIZED');
-  };
-
-  const handleMarkReadyForDelivery = async () => {
-    if (!expectedDeliveryDate) {
-      toast.error('Please select an expected delivery date');
-      return;
-    }
-
-    setActionLoading(true);
-    try {
-      const { error } = await supabase
-        .from('purchase_orders')
-        .update({
-          status: 'READY_FOR_DELIVERY',
-          ready_for_delivery_at: new Date().toISOString(),
-          notes: po?.notes 
-            ? `${po.notes}\n\nExpected Delivery: ${format(expectedDeliveryDate, 'PPP')}`
-            : `Expected Delivery: ${format(expectedDeliveryDate, 'PPP')}`,
-        })
-        .eq('id', poId);
-
-      if (error) throw error;
-
-      toast.success('Marked ready for delivery');
-      fetchPO();
-      onUpdate();
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to update PO';
-      console.error('Error updating PO:', error);
-      toast.error(message);
-    } finally {
-      setActionLoading(false);
-      setReadyDialogOpen(false);
-      setExpectedDeliveryDate(undefined);
-    }
-  };
-
   const [exportLoading, setExportLoading] = useState(false);
   const [estimateItemsMap, setEstimateItemsMap] = useState<Map<string, { description: string; supplier_sku: string | null; quantity: number; uom: string; unit_price: number }> | null>(null);
 
-  // Fetch original estimate pack items for diff highlighting
   useEffect(() => {
     if (!po?.source_estimate_id || !po?.source_pack_name) {
       setEstimateItemsMap(null);
@@ -417,7 +353,6 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
     fetchEstimateItems();
   }, [po?.source_estimate_id, po?.source_pack_name]);
 
-  // Compute row highlight status
   const getRowStatus = (item: POLineItem): 'edited' | 'added' | null => {
     if (!estimateItemsMap) return null;
     if (!item.source_estimate_item_id) return 'added';
@@ -427,7 +362,6 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
     return null;
   };
 
-  // Compute deleted items (in estimate but not in any PO line item)
   const deletedEstimateItems = (() => {
     if (!estimateItemsMap) return [];
     const usedIds = new Set(lineItems.map(li => li.source_estimate_item_id).filter(Boolean));
@@ -487,7 +421,6 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
   const total = lineItems.reduce((sum, item) => sum + (item.line_total || 0), 0);
   const hasPricing = lineItems.some((item) => item.unit_price !== null);
   
-  // Only show pricing columns if user can view pricing AND there is pricing data (or editing)
   const showPricingColumns = canViewPricing && (hasPricing || editingPrices);
 
   return (
@@ -552,54 +485,20 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
             </Button>
           )}
 
-          {/* PRICED: Pricing owner can finalize, Supplier can mark ordered */}
-          {status === 'PRICED' && (
-            <>
-              {canFinalize && (
-                <Button onClick={handleFinalize} disabled={actionLoading} variant="default">
-                  {actionLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <Lock className="h-4 w-4 mr-2" />
-                  )}
-                  Finalize Order
-                </Button>
-              )}
-              {effectiveIsSupplier && !editingPrices && (
-                <Button onClick={handleMarkOrdered} disabled={actionLoading}>
-                  {actionLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                  )}
-                  Mark Ordered
-                </Button>
-              )}
-            </>
-          )}
-
-          {/* ORDERED: Supplier can mark delivered (legacy support) */}
-          {status === 'ORDERED' && effectiveIsSupplier && (
-            <Button onClick={handleMarkDelivered} disabled={actionLoading}>
+          {/* PRICED: Supplier can mark ordered */}
+          {status === 'PRICED' && effectiveIsSupplier && !editingPrices && (
+            <Button onClick={handleMarkOrdered} disabled={actionLoading}>
               {actionLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
               ) : (
-                <Truck className="h-4 w-4 mr-2" />
+                <CheckCircle className="h-4 w-4 mr-2" />
               )}
-              Mark Delivered
+              Mark Ordered
             </Button>
           )}
 
-          {/* FINALIZED: Supplier can mark ready for delivery */}
-          {status === 'FINALIZED' && effectiveIsSupplier && (
-            <Button onClick={() => setReadyDialogOpen(true)} disabled={actionLoading}>
-              <Package className="h-4 w-4 mr-2" />
-              Ready for Delivery
-            </Button>
-          )}
-
-          {/* READY_FOR_DELIVERY: Supplier can mark delivered */}
-          {status === 'READY_FOR_DELIVERY' && effectiveIsSupplier && (
+          {/* ORDERED: Supplier can mark delivered */}
+          {status === 'ORDERED' && effectiveIsSupplier && (
             <Button onClick={handleMarkDelivered} disabled={actionLoading}>
               {actionLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -615,7 +514,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
             isPricingOwner &&
             hasTCtoGCContract &&
             !alreadyInvoiced &&
-            ['PRICED', 'FINALIZED', 'ORDERED', 'READY_FOR_DELIVERY', 'DELIVERED'].includes(status) && (
+            ['PRICED', 'ORDERED', 'DELIVERED'].includes(status) && (
               <Button
                 variant="default"
                 onClick={() => setBillToGCOpen(true)}
@@ -651,15 +550,6 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
               <p className="text-sm text-muted-foreground">Created</p>
               <p className="font-medium">{format(new Date(po.created_at), 'MMM d, yyyy')}</p>
             </div>
-            {po.ready_for_delivery_at && (
-              <div>
-              <p className="text-sm text-muted-foreground">Ready for Delivery</p>
-              <p className="font-medium flex items-center gap-1">
-                  <Package className="h-4 w-4" />
-                  {format(new Date(po.ready_for_delivery_at), 'MMM d, yyyy')}
-                </p>
-              </div>
-            )}
             {po.delivered_at && (
               <div>
                 <p className="text-sm text-muted-foreground">Delivered</p>
@@ -749,13 +639,11 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
                         {item.notes && (
                           <p className="text-xs text-muted-foreground">{item.notes}</p>
                         )}
-                        {/* Show supplier notes if viewing and they exist */}
                         {!editingPrices && item.supplier_notes && canViewPricing && (
                           <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                             Supplier: {item.supplier_notes}
                           </p>
                         )}
-                        {/* Show lead time if viewing and it exists */}
                         {!editingPrices && item.lead_time_days && canViewPricing && (
                           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                             <Clock className="h-3 w-3" />
@@ -855,7 +743,6 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
 
               return (
                 <TableFooter>
-                  {/* Subtotal row - only show if tax exists or editing */}
                   {(taxPercent > 0 || editingPrices) && (
                     <TableRow>
                       <TableCell colSpan={5} className="text-right font-medium">
@@ -869,7 +756,6 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
                     </TableRow>
                   )}
                   
-                  {/* Tax row */}
                   {editingPrices ? (
                     <TableRow>
                       <TableCell colSpan={5} className="text-right font-medium">
@@ -906,7 +792,6 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
                     </TableRow>
                   ) : null}
                   
-                  {/* Grand Total row */}
                   <TableRow className="bg-muted/50">
                     <TableCell colSpan={5} className="text-right font-bold">
                       {taxPercent > 0 || editingPrices ? 'Grand Total' : 'Total'}
@@ -977,49 +862,6 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Ready for Delivery Dialog */}
-      <Dialog open={readyDialogOpen} onOpenChange={setReadyDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Ready for Delivery</DialogTitle>
-            <DialogDescription>
-              Confirm that materials are ready and provide the expected delivery date.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Expected Delivery Date *</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start text-left font-normal">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {expectedDeliveryDate ? format(expectedDeliveryDate, 'PPP') : 'Select date'}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={expectedDeliveryDate}
-                    onSelect={setExpectedDeliveryDate}
-                    disabled={(date) => date < new Date()}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setReadyDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleMarkReadyForDelivery} disabled={actionLoading || !expectedDeliveryDate}>
-              {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Confirm Ready
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Bill to GC Dialog */}
       <CreateInvoiceFromPO

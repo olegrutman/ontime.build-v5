@@ -25,10 +25,8 @@ const STATUS_PRIORITY: Record<POStatus, number> = {
   ACTIVE: 0,
   SUBMITTED: 1,
   PRICED: 2,
-  FINALIZED: 3,
-  ORDERED: 4,
-  READY_FOR_DELIVERY: 5,
-  DELIVERED: 6,
+  ORDERED: 3,
+  DELIVERED: 4,
 };
 
 interface PurchaseOrdersTabProps {
@@ -521,9 +519,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
                 <SelectItem value="ACTIVE">Active</SelectItem>
                 <SelectItem value="SUBMITTED">Submitted</SelectItem>
                 <SelectItem value="PRICED">Priced</SelectItem>
-                <SelectItem value="FINALIZED">Finalized</SelectItem>
                 <SelectItem value="ORDERED">Ordered</SelectItem>
-                <SelectItem value="READY_FOR_DELIVERY">Ready for Delivery</SelectItem>
                 <SelectItem value="DELIVERED">Delivered</SelectItem>
               </SelectContent>
             </Select>

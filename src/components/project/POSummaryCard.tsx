@@ -113,7 +113,7 @@ export function POSummaryCard({ projectId }: POSummaryCardProps) {
       // Calculate counts by status
       const awaitingCount = filteredPOs.filter(p => p.status === 'SUBMITTED').length;
       const inTransitCount = filteredPOs.filter(p => 
-        ['ORDERED', 'READY_FOR_DELIVERY'].includes(p.status)
+        p.status === 'ORDERED'
       ).length;
       const deliveredCount = filteredPOs.filter(p => p.status === 'DELIVERED').length;
       const pendingPricingCount = awaitingCount; // SUBMITTED means awaiting pricing
