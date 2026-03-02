@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Receipt, Filter, AlertCircle, Send, Inbox, AlertTriangle, ArrowRight, FileEdit, Clock, CheckCircle2, Wallet, DollarSign } from 'lucide-react';
+import { Plus, Receipt, Filter, AlertCircle, Send, Inbox, AlertTriangle, ArrowRight, FileEdit, Clock, CheckCircle2, Wallet, DollarSign, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -47,86 +47,92 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [invoiceDirection, setInvoiceDirection] = useState<'sent' | 'received'>('sent');
+  // GC sub-tab: 'from_tc' or 'from_supplier'
+  const [gcSubTab, setGcSubTab] = useState<'from_tc' | 'from_supplier'>('from_tc');
 
-  // Get current user's organization ID and type
   const currentOrgId = userOrgRoles[0]?.organization?.id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
 
-  // Check SOV readiness - gates invoice creation (only checks contracts where user's org is payer)
   const sovReadiness = useSOVReadiness(projectId, currentOrgId);
 
-  // TC has both sent and received invoices
-  const isTCWithDualView = currentOrgType === 'TC';
+  const hasDualView = currentOrgType === 'TC' || currentOrgType === 'GC';
 
-  // Contracts where user's org is the "from" party (can create/send invoices)
   const contractsWhereUserCanInvoice = useMemo(() => {
     if (!currentOrgId) return [];
     return contracts.filter(c => c.from_org_id === currentOrgId);
   }, [contracts, currentOrgId]);
 
-  // Contracts where user's org is the "to" party (receives invoices)
   const contractsWhereUserReceivesInvoices = useMemo(() => {
     if (!currentOrgId) return [];
     return contracts.filter(c => c.to_org_id === currentOrgId);
   }, [contracts, currentOrgId]);
 
-  // Contracts where user is a party (can view invoices)
   const contractsWhereUserIsParty = useMemo(() => {
     if (!currentOrgId) return [];
     return contracts.filter(c => c.from_org_id === currentOrgId || c.to_org_id === currentOrgId);
   }, [contracts, currentOrgId]);
 
-  // Can user create invoices? Only if they have contracts where they are from_org
   const canCreateInvoice = useMemo(() => {
     if (currentOrgType === 'GC') return false;
     return contractsWhereUserCanInvoice.length > 0;
   }, [currentOrgType, contractsWhereUserCanInvoice]);
 
   const isProjectNotActive = projectStatus && projectStatus !== 'active';
-
-  // Block invoice creation if SOVs aren't ready
   const isBlocked = isProjectNotActive || (!sovReadiness.isReady && !sovReadiness.loading);
 
-  // Separate invoices into sent and received
-  const { sentInvoices, receivedInvoices } = useMemo(() => {
-    if (!currentOrgId) return { sentInvoices: [], receivedInvoices: [] };
+  // Separate invoices into sent, receivedFromContracts, receivedFromSuppliers
+  const { sentInvoices, receivedFromContracts, receivedFromSuppliers } = useMemo(() => {
+    if (!currentOrgId) return { sentInvoices: [], receivedFromContracts: [], receivedFromSuppliers: [] };
     
     const sentContractIds = contractsWhereUserCanInvoice.map(c => c.id);
     const receivedContractIds = contractsWhereUserReceivesInvoices.map(c => c.id);
     
     const sent: Invoice[] = [];
-    const received: Invoice[] = [];
+    const recContracts: Invoice[] = [];
+    const recSuppliers: Invoice[] = [];
 
     for (const inv of invoices) {
       if (inv.contract_id) {
-        // Contract-based invoices: classify by contract direction
         if (sentContractIds.includes(inv.contract_id)) sent.push(inv);
-        else if (receivedContractIds.includes(inv.contract_id)) received.push(inv);
+        else if (receivedContractIds.includes(inv.contract_id)) recContracts.push(inv);
       } else if (inv.po_id) {
-        // PO-based supplier invoices: received by GC/TC, sent by supplier
-        // For GC/TC orgs these are "received from supplier"
-        // For supplier orgs these would be "sent" (but suppliers typically don't use InvoicesTab)
-        received.push(inv);
+        // PO-based supplier invoices
+        if (currentOrgType === 'SUPPLIER') {
+          sent.push(inv); // Supplier sees their own PO invoices as "sent"
+        } else {
+          recSuppliers.push(inv); // GC/TC sees them as "received from suppliers"
+        }
       }
     }
     
-    return { sentInvoices: sent, receivedInvoices: received };
-  }, [invoices, currentOrgId, contractsWhereUserCanInvoice, contractsWhereUserReceivesInvoices]);
+    return { sentInvoices: sent, receivedFromContracts: recContracts, receivedFromSuppliers: recSuppliers };
+  }, [invoices, currentOrgId, currentOrgType, contractsWhereUserCanInvoice, contractsWhereUserReceivesInvoices]);
 
-  // Get GC org name from contracts for tab label
+  // Combined received for TC view
+  const allReceivedInvoices = useMemo(() => 
+    [...receivedFromContracts, ...receivedFromSuppliers],
+    [receivedFromContracts, receivedFromSuppliers]
+  );
+
   const gcOrgName = useMemo(() => {
     const gcContract = contracts.find(c => c.to_role === 'General Contractor');
     return gcContract?.to_org_name || 'GC';
   }, [contracts]);
 
-  // Current view invoices based on direction
+  // Current view invoices based on direction and role
   const currentInvoices = useMemo(() => {
-    if (!isTCWithDualView) {
-      // GC only receives, FC only sends
-      return currentOrgType === 'GC' ? receivedInvoices : sentInvoices;
+    if (currentOrgType === 'SUPPLIER') {
+      return sentInvoices;
     }
-    return invoiceDirection === 'sent' ? sentInvoices : receivedInvoices;
-  }, [isTCWithDualView, currentOrgType, invoiceDirection, sentInvoices, receivedInvoices]);
+    if (currentOrgType === 'GC') {
+      return gcSubTab === 'from_tc' ? receivedFromContracts : receivedFromSuppliers;
+    }
+    if (currentOrgType === 'TC') {
+      return invoiceDirection === 'sent' ? sentInvoices : allReceivedInvoices;
+    }
+    // FC
+    return sentInvoices;
+  }, [currentOrgType, gcSubTab, invoiceDirection, sentInvoices, receivedFromContracts, receivedFromSuppliers, allReceivedInvoices]);
 
   useEffect(() => {
     const fetchContracts = async () => {
@@ -139,7 +145,6 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
         `)
         .eq('project_id', projectId);
       
-      // Map to Contract interface with org names
       const mappedContracts: Contract[] = (data || []).map((c: any) => ({
         id: c.id,
         from_org_id: c.from_org_id,
@@ -193,7 +198,6 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
     fetchInvoices();
   };
 
-  // Quick submit invoice from card
   const handleQuickSubmit = async (invoice: Invoice) => {
     try {
       const { error } = await supabase
@@ -212,7 +216,6 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
     }
   };
 
-  // Quick approve invoice from card
   const handleQuickApprove = async (invoice: Invoice) => {
     try {
       const { error } = await supabase
@@ -231,12 +234,10 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
     }
   };
 
-  // Edit invoice - opens detail view for editing
   const handleEditInvoice = (invoice: Invoice) => {
     setSelectedInvoiceId(invoice.id);
   };
 
-  // Show invoice detail view
   if (selectedInvoiceId) {
     return (
       <InvoiceDetail
@@ -260,13 +261,19 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
       .reduce((sum, i) => sum + i.total_amount, 0),
   };
 
-  // Role context messaging
   const getRoleContext = () => {
     if (currentOrgType === 'GC') {
-      return { 
-        message: 'Invoices sent to you by Trade Contractors and Suppliers will appear here.',
-        emptyMessage: 'No invoices received yet. Trade Contractors and Suppliers will submit invoices for their completed work and materials.'
-      };
+      if (gcSubTab === 'from_tc') {
+        return { 
+          message: 'Invoices sent to you by Trade Contractors for completed work.',
+          emptyMessage: 'No invoices received from Trade Contractors yet.'
+        };
+      } else {
+        return { 
+          message: 'Invoices sent to you by Suppliers for materials and deliveries.',
+          emptyMessage: 'No invoices received from Suppliers yet.'
+        };
+      }
     }
     if (currentOrgType === 'TC') {
       if (invoiceDirection === 'sent') {
@@ -291,10 +298,31 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
           : 'No contract with a Trade Contractor found.'
       };
     }
+    if (currentOrgType === 'SUPPLIER') {
+      return { 
+        message: 'Invoices you have sent for materials and deliveries.',
+        emptyMessage: 'No invoices created yet. Create an invoice from a Purchase Order.'
+      };
+    }
     return { message: '', emptyMessage: 'No invoices available.' };
   };
 
   const roleContext = getRoleContext();
+
+  const getInvoicePermissions = (invoice: Invoice) => {
+    if (invoice.contract_id) {
+      const contract = contracts.find(c => c.id === invoice.contract_id);
+      const canSubmit = contract?.from_org_id === currentOrgId;
+      const canApprove = contract?.to_org_id === currentOrgId && (permissions?.canApprove ?? false);
+      return { canSubmit, canApprove };
+    }
+    // PO-based supplier invoice
+    if (currentOrgType === 'SUPPLIER') {
+      return { canSubmit: true, canApprove: false };
+    }
+    // GC/TC can approve PO-based invoices
+    return { canSubmit: false, canApprove: permissions?.canApprove ?? false };
+  };
 
   const renderInvoiceList = () => {
     if (loading) {
@@ -315,7 +343,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
           <p className="text-sm text-muted-foreground mb-4 max-w-md">
             {roleContext.emptyMessage}
           </p>
-          {canCreateInvoice && invoiceDirection === 'sent' && (
+          {canCreateInvoice && (currentOrgType !== 'TC' || invoiceDirection === 'sent') && (
             <Button onClick={() => setCreateDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Create Invoice
@@ -324,19 +352,6 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
         </div>
       );
     }
-
-    // Determine if user can submit (from_org) or approve (to_org)
-    const getInvoicePermissions = (invoice: Invoice) => {
-      if (invoice.contract_id) {
-        const contract = contracts.find(c => c.id === invoice.contract_id);
-        const canSubmit = contract?.from_org_id === currentOrgId;
-        const canApprove = contract?.to_org_id === currentOrgId && (permissions?.canApprove ?? false);
-        return { canSubmit, canApprove };
-      }
-      // PO-based supplier invoice: GC/TC can approve, supplier can submit
-      // Since these show as "received", the current user is the buyer (canApprove)
-      return { canSubmit: false, canApprove: permissions?.canApprove ?? false };
-    };
 
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -436,15 +451,10 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
     );
   };
 
-  const renderHeader = (showCreateButton: boolean) => (
+  const renderHeader = (showCreateButton: boolean, title?: string) => (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-    <div>
-        <h3 className="text-xl font-semibold">
-          {isTCWithDualView 
-            ? (invoiceDirection === 'sent' ? `Sent to ${gcOrgName}` : 'Received from Field Crews')
-            : 'Invoices'
-          }
-        </h3>
+      <div>
+        <h3 className="text-xl font-semibold">{title || 'Invoices'}</h3>
         <p className="text-sm text-muted-foreground">
           {stats.total} invoice{stats.total !== 1 ? 's' : ''} •{' '}
           {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(
@@ -493,8 +503,76 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
     </div>
   );
 
-  // For TC: Show tabbed interface
-  if (isTCWithDualView) {
+  const renderTabContent = (showCreate: boolean, title?: string) => (
+    <div className="space-y-6">
+      {renderSOVAlert()}
+      {renderHeader(showCreate, title)}
+      <Alert>
+        <AlertCircle className="h-4 w-4" />
+        <AlertDescription>{roleContext.message}</AlertDescription>
+      </Alert>
+      {renderSummaryCards()}
+      {renderInvoiceList()}
+    </div>
+  );
+
+  // GC: tabbed view separating TC invoices from Supplier invoices
+  if (currentOrgType === 'GC') {
+    return (
+      <div className="space-y-6">
+        {isProjectNotActive && (
+          <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertTitle className="text-amber-800 dark:text-amber-200">Project Setup Incomplete</AlertTitle>
+            <AlertDescription className="text-amber-700 dark:text-amber-300">
+              Project setup incomplete. Waiting for required parties.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <Tabs value={gcSubTab} onValueChange={(v) => setGcSubTab(v as 'from_tc' | 'from_supplier')}>
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="from_tc" className="flex items-center gap-2">
+              <Inbox className="h-4 w-4" />
+              From Trade Contractors
+              {receivedFromContracts.length > 0 && (
+                <span className="ml-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium">
+                  {receivedFromContracts.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="from_supplier" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              From Suppliers
+              {receivedFromSuppliers.length > 0 && (
+                <span className="ml-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium">
+                  {receivedFromSuppliers.length}
+                </span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="from_tc" className="mt-6">
+            {renderTabContent(false, 'From Trade Contractors')}
+          </TabsContent>
+
+          <TabsContent value="from_supplier" className="mt-6">
+            {renderTabContent(false, 'From Suppliers')}
+          </TabsContent>
+        </Tabs>
+
+        <CreateInvoiceFromSOV
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
+          projectId={projectId}
+          onSuccess={handleCreateSuccess}
+        />
+      </div>
+    );
+  }
+
+  // TC: tabbed view — Sent to GC / Received from FC & Suppliers
+  if (currentOrgType === 'TC') {
     return (
       <div className="space-y-6">
         <Tabs value={invoiceDirection} onValueChange={(v) => setInvoiceDirection(v as 'sent' | 'received')}>
@@ -510,35 +588,21 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
             </TabsTrigger>
             <TabsTrigger value="received" className="flex items-center gap-2">
               <Inbox className="h-4 w-4" />
-              From Field Crews
-              {receivedInvoices.length > 0 && (
+              From Field Crews & Suppliers
+              {allReceivedInvoices.length > 0 && (
                 <span className="ml-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium">
-                  {receivedInvoices.length}
+                  {allReceivedInvoices.length}
                 </span>
               )}
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="sent" className="space-y-6 mt-6">
-            {renderSOVAlert()}
-            {renderHeader(true)}
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{roleContext.message}</AlertDescription>
-            </Alert>
-            {renderSummaryCards()}
-            {renderInvoiceList()}
+          <TabsContent value="sent" className="mt-6">
+            {renderTabContent(true, `Sent to ${gcOrgName}`)}
           </TabsContent>
 
-          <TabsContent value="received" className="space-y-6 mt-6">
-            {renderSOVAlert()}
-            {renderHeader(false)}
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{roleContext.message}</AlertDescription>
-            </Alert>
-            {renderSummaryCards()}
-            {renderInvoiceList()}
+          <TabsContent value="received" className="mt-6">
+            {renderTabContent(false, 'From Field Crews & Suppliers')}
           </TabsContent>
         </Tabs>
 
@@ -552,10 +616,9 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
     );
   }
 
-  // For GC and FC: Single view
+  // FC and SUPPLIER: Single view (sent invoices)
   return (
     <div className="space-y-6">
-      {/* Project not active blocking banner */}
       {isProjectNotActive && (
         <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
@@ -567,7 +630,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
       )}
 
       {renderSOVAlert()}
-      {renderHeader(currentOrgType !== 'GC')}
+      {renderHeader(true)}
 
       {roleContext.message && (
         <Alert>
