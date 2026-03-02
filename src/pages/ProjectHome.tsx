@@ -33,6 +33,7 @@ import { UrgentTasksCard } from '@/components/project/UrgentTasksCard';
 import { TeamMembersCard } from '@/components/project/TeamMembersCard';
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
 import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
+import { MaterialsBudgetStatusCard } from '@/components/project/MaterialsBudgetStatusCard';
 
 import { InvoicesTab } from '@/components/invoices';
 import { ReturnsTab } from '@/components/returns';
@@ -272,6 +273,14 @@ export default function ProjectHome() {
                             <BillingCashCard financials={financials} />
                             <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
                           </div>
+                          {/* Materials Budget Status — only for material-responsible party */}
+                          {materialResponsibility && (
+                            (currentOrg?.type === 'GC' && materialResponsibility === 'GC') ||
+                            (currentOrg?.type !== 'GC' && materialResponsibility === 'TC')
+                          ) && (
+                            <MaterialsBudgetStatusCard projectId={id!} />
+                          )}
+
                           <CollapsibleOperations
                             projectId={id!}
                             projectType={project.project_type}
