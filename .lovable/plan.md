@@ -1,53 +1,66 @@
 
 
-# Fix Tax Calculation and Backfill Existing POs
+# Redesign PO Cards for Clarity
 
-## Problem
+## Current Problems
 
-All existing POs linked to estimates show `sales_tax_percent: 0` and `po_tax_total: 0` because they were created before the tax logic was deployed. The estimate they come from has `sales_tax_percent: 5.13%`.
+1. **PO number is too prominent** -- the large icon + bold PO number + date takes up a lot of header space
+2. **Supplier row with icon + label + value is verbose** -- "Supplier" label is obvious from context
+3. **"Items" section with icon + label + value is redundant** -- can be condensed
+4. **Estimate pack comparison is hard to scan** -- "Pack: $40,528.00 (16 items) -> Ordered: $41,020.28 (16 items) (+$492.28)" is a wall of text
+5. **"$ Total" label with DollarSign icon is redundant** -- we already see it's a dollar amount
+6. **Too many border-t dividers** create visual noise
+7. **Package icon in header is unnecessary** -- the card is already on the PO tab
 
-The current code is structurally correct for new POs, but has a silent failure mode: if the `supplier_estimates` query fails (e.g., RLS issue), the error is discarded and tax defaults to 0 with no console warning.
+## Proposed Redesign
 
-## Changes
+### New Layout (compact, scannable)
 
-### 1. Add error logging to tax fetch in handleCreatePO and handleEditComplete
-
-**File:** `src/components/project/PurchaseOrdersTab.tsx`
-
-In `handleCreatePO` (around line 184-193), add error handling:
-- Log a `console.warn` if the supplier_estimates query returns an error, so we can diagnose silent RLS failures
-- Same change in `handleEditComplete` (around line 390)
-
-### 2. Backfill existing POs with correct tax
-
-**Tool:** Database insert/update tool
-
-Run an UPDATE to fix existing POs that have `source_estimate_id` set but `sales_tax_percent = 0`:
-- Join `purchase_orders` with `supplier_estimates` on `source_estimate_id`
-- Set `sales_tax_percent` and `tax_percent_applied` from the estimate
-- Recompute `po_tax_total = po_subtotal_total * (sales_tax_percent / 100)`
-- Recompute `po_total = po_subtotal_total + po_tax_total`
-- Only update POs where `sales_tax_percent = 0` and `source_estimate_id IS NOT NULL` and `po_subtotal_total IS NOT NULL`
-
-SQL:
-```sql
-UPDATE purchase_orders po
-SET
-  sales_tax_percent = se.sales_tax_percent,
-  tax_percent_applied = se.sales_tax_percent,
-  po_tax_total = po.po_subtotal_total * (se.sales_tax_percent / 100),
-  po_total = po.po_subtotal_total + (po.po_subtotal_total * (se.sales_tax_percent / 100))
-FROM supplier_estimates se
-WHERE po.source_estimate_id = se.id
-  AND (po.sales_tax_percent = 0 OR po.sales_tax_percent IS NULL)
-  AND po.source_estimate_id IS NOT NULL
-  AND po.po_subtotal_total IS NOT NULL
-  AND se.sales_tax_percent > 0;
+```text
++--------------------------------------------------+
+| PO-GCTEST-260302-0059        [Submitted] [Invoiced] |
+| Test Building Supply Co.  ·  16 items  ·  Mar 1   |
+|                                                    |
+| From Estimate · Pack: 5th Floor Framing...         |
+| Est $40,528 (16) -> $41,020 (16)  +$492           |
+|                                                    |
+|                              Total   $43,124.62    |
+|                                                    |
+| [Edit]  [Submit to Supplier]                       |
++--------------------------------------------------+
 ```
+
+### Specific Changes
+
+**Header row (line 1):**
+- Remove the 40x40 Package icon box -- saves horizontal space
+- PO number as `text-sm font-semibold` (smaller than current `font-medium` on an h4)
+- Status badge stays on the right, same line
+
+**Subtitle row (line 2):**
+- Combine supplier name, item count, and date into a single muted line separated by dots
+- e.g. "Test Building Supply Co. · 16 items · Mar 1, 2026"
+- Removes two icon+label blocks and the 2-column grid
+
+**Estimate section (if from estimate):**
+- Keep the "From Estimate" badge but make it smaller (inline pill)
+- Simplify the comparison to a single concise line:
+  - "Est $40,528 -> Ordered $41,020 (+$492)" with color on the delta
+- Remove the arrow icon and item counts (they can see items in subtitle)
+
+**Total:**
+- Right-aligned, no DollarSign icon, just "Total" label + bold amount
+- Remove the border-t divider above total -- use spacing instead
+
+**Delivery tracking:**
+- Keep but condense into subtitle-style text if present
+
+**Action buttons:**
+- Keep at bottom, no change needed
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/project/PurchaseOrdersTab.tsx` | Add console.warn on failed estimate tax query in both create and edit flows |
-| Database (backfill) | UPDATE existing POs to apply correct tax from their linked estimates |
+| `src/components/purchase-orders/POCard.tsx` | Restructure layout: remove Package icon, combine supplier/items/date into subtitle, simplify estimate comparison, clean up dividers |
+
