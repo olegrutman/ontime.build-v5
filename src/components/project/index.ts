@@ -33,3 +33,4 @@ export { TeamMembersCard } from './TeamMembersCard';
 export { SupplierMaterialsControlCard } from './SupplierMaterialsControlCard';
 export { SupplierMaterialsChart } from './SupplierMaterialsChart';
 export { SupplierMaterialsOverview } from './SupplierMaterialsOverview';
+export { MaterialsBudgetStatusCard } from './MaterialsBudgetStatusCard';
