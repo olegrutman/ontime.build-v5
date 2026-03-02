@@ -540,6 +540,18 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
             </Button>
           )}
 
+          {/* SUBMITTED: Supplier can skip pricing and mark ordered directly */}
+          {status === 'SUBMITTED' && effectiveIsSupplier && !editingPrices && (
+            <Button onClick={handleMarkOrdered} disabled={actionLoading}>
+              {actionLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <CheckCircle className="h-4 w-4 mr-2" />
+              )}
+              Mark Ordered
+            </Button>
+          )}
+
           {/* PRICED: Pricing owner can finalize, Supplier can mark ordered */}
           {status === 'PRICED' && (
             <>
