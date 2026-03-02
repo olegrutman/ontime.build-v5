@@ -43,6 +43,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [invoicedPOIds, setInvoicedPOIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [estimatePackTotals, setEstimatePackTotals] = useState<Map<string, { total: number; itemCount: number }>>(new Map());
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [wizardOpen, setWizardOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -97,10 +98,41 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     if (error) {
       console.error('Error fetching POs:', error);
     } else {
-      setPurchaseOrders((data || []) as unknown as PurchaseOrder[]);
+      const pos = (data || []) as unknown as PurchaseOrder[];
+      setPurchaseOrders(pos);
+
+      // Fetch estimate pack totals for POs that came from estimates
+      const packKeys = new Set<string>();
+      const estimateIds = new Set<string>();
+      for (const po of pos) {
+        if (po.source_estimate_id && po.source_pack_name) {
+          packKeys.add(`${po.source_estimate_id}|${po.source_pack_name}`);
+          estimateIds.add(po.source_estimate_id);
+        }
+      }
+
+      if (estimateIds.size > 0) {
+        const { data: estItems } = await supabase
+          .from('supplier_estimate_items')
+          .select('estimate_id, pack_name, unit_price, quantity')
+          .in('estimate_id', Array.from(estimateIds));
+
+        const totalsMap = new Map<string, { total: number; itemCount: number }>();
+        for (const item of estItems || []) {
+          const key = `${item.estimate_id}|${item.pack_name || ''}`;
+          if (!packKeys.has(key)) continue;
+          const existing = totalsMap.get(key) || { total: 0, itemCount: 0 };
+          existing.total += (item.unit_price || 0) * (item.quantity || 0);
+          existing.itemCount += 1;
+          totalsMap.set(key, existing);
+        }
+        setEstimatePackTotals(totalsMap);
+      } else {
+        setEstimatePackTotals(new Map());
+      }
 
       // Fetch which POs have been invoiced
-      const poIds = (data || []).map((p: any) => p.id);
+      const poIds = pos.map(p => p.id);
       if (poIds.length > 0) {
         const { data: invoicedData } = await supabase
           .from('invoices')
@@ -482,6 +514,10 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
               const isCreator = po.created_by_org_id === currentOrgId;
               const isPoSupplier = (po.supplier as { organization_id?: string })?.organization_id === currentOrgId;
               const canViewPricing = isPricingOwner || isPoSupplier || isCreator;
+              const packKey = po.source_estimate_id && po.source_pack_name
+                ? `${po.source_estimate_id}|${po.source_pack_name}`
+                : null;
+              const packData = packKey ? estimatePackTotals.get(packKey) : null;
               return (
                 <POCard
                   key={po.id}
@@ -495,6 +531,8 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
                   canViewPricing={canViewPricing}
                   isSupplier={isSupplier}
                   isInvoiced={invoicedPOIds.has(po.id)}
+                  estimatePackTotal={packData?.total ?? null}
+                  estimatePackItemCount={packData?.itemCount ?? null}
                 />
               );
             })}
