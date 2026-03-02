@@ -143,43 +143,6 @@ export function SupplierMaterialsOverview({ projectId, supplierOrgId, onNavigate
         </div>
       </div>
 
-      {/* SECTION 3 — Chart */}
-      <div className="bg-card rounded-2xl shadow-sm p-5">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-sm font-semibold flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              Materials Budget vs Actual
-            </h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Budget baseline: {fmt(data.estimateTotal)}</p>
-          </div>
-        </div>
-        {data.chartData.length > 0 ? (
-          <ChartContainer config={chartConfig} className="aspect-[3/1] w-full">
-            <LineChart data={data.chartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" />
-              <XAxis dataKey="month" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-              <YAxis
-                tick={{ fontSize: 11 }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
-              />
-              <ChartTooltip content={<ChartTooltipContent formatter={(value) => fmt(value as number)} />} />
-              <ReferenceLine
-                y={data.estimateTotal}
-                stroke="hsl(var(--muted-foreground))"
-                strokeDasharray="6 4"
-                label={{ value: 'Budget', position: 'right', fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
-              />
-              <Line type="monotone" dataKey="ordered" stroke="var(--color-ordered)" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="delivered" stroke="var(--color-delivered)" strokeWidth={2} dot={false} />
-            </LineChart>
-          </ChartContainer>
-        ) : (
-          <p className="text-sm text-muted-foreground py-12 text-center">No purchase orders yet</p>
-        )}
-      </div>
 
       {/* SECTION 4 & 5 — Two-column grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
