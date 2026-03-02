@@ -45,6 +45,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { POStatusBadge } from './POStatusBadge';
 import { CreateInvoiceFromPO } from './CreateInvoiceFromPO';
+import { CreateSupplierInvoiceFromPO } from './CreateSupplierInvoiceFromPO';
 import { PurchaseOrder, POLineItem, POStatus } from '@/types/purchaseOrder';
 
 interface PODetailProps {
@@ -80,6 +81,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
   const [priceEdits, setPriceEdits] = useState<Record<string, PriceEdit>>({});
   const [salesTaxPercent, setSalesTaxPercent] = useState<number>(0);
   const [billToGCOpen, setBillToGCOpen] = useState(false);
+  const [supplierInvoiceOpen, setSupplierInvoiceOpen] = useState(false);
   const [hasTCtoGCContract, setHasTCtoGCContract] = useState(false);
   const [alreadyInvoiced, setAlreadyInvoiced] = useState(false);
 
@@ -509,6 +511,14 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
             </Button>
           )}
 
+          {/* DELIVERED: Supplier can create invoice */}
+          {status === 'DELIVERED' && effectiveIsSupplier && !alreadyInvoiced && (
+            <Button onClick={() => setSupplierInvoiceOpen(true)} disabled={actionLoading}>
+              <Receipt className="h-4 w-4 mr-2" />
+              Create Invoice
+            </Button>
+          )}
+
           {/* Bill to GC: TC can create invoice from priced PO */}
           {currentRole === 'TC_PM' &&
             isPricingOwner &&
@@ -867,6 +877,19 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
       <CreateInvoiceFromPO
         open={billToGCOpen}
         onOpenChange={setBillToGCOpen}
+        po={po}
+        lineItems={lineItems}
+        projectId={projectId}
+        onSuccess={() => {
+          setAlreadyInvoiced(true);
+          onUpdate();
+        }}
+      />
+
+      {/* Supplier Invoice Dialog */}
+      <CreateSupplierInvoiceFromPO
+        open={supplierInvoiceOpen}
+        onOpenChange={setSupplierInvoiceOpen}
         po={po}
         lineItems={lineItems}
         projectId={projectId}
