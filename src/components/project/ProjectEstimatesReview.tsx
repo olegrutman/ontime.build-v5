@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Check, X, FileText, Eye, Loader2, Package } from 'lucide-react';
+import { Check, X, FileText, Eye, Loader2 } from 'lucide-react';
+import { EstimateSummaryCard } from '@/components/estimate-summary/EstimateSummaryCard';
 
 interface SupplierEstimate {
   id: string;
@@ -315,7 +315,7 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
                   <CardDescription>
                     {estimate.supplier_org?.name}
                   </CardDescription>
-                  {canViewEstimates && estimate.total_amount !== null && estimate.total_amount > 0 && (
+                  {estimate.total_amount !== null && estimate.total_amount > 0 && (
                     <p className="text-sm font-medium text-foreground mt-1">
                       {formatCurrency(estimate.total_amount)}
                     </p>
@@ -387,7 +387,7 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
                     <CardTitle>{selectedEstimate.name}</CardTitle>
                     <CardDescription>
                       Supplier: {selectedEstimate.supplier_org?.name}
-                      {canViewEstimates && selectedEstimate.total_amount !== null && selectedEstimate.total_amount > 0 && (
+                      {selectedEstimate.total_amount !== null && selectedEstimate.total_amount > 0 && (
                         <span className="ml-2 font-medium text-foreground">
                           • Total: {formatCurrency(selectedEstimate.total_amount)}
                         </span>
@@ -419,57 +419,10 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
                     <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                   </div>
                 ) : lineItems.length > 0 ? (
-                  (() => {
-                    const grouped = new Map<string, EstimateLineItem[]>();
-                    for (const item of lineItems) {
-                      const key = item.pack_name || 'Ungrouped';
-                      if (!grouped.has(key)) grouped.set(key, []);
-                      grouped.get(key)!.push(item);
-                    }
-                    const hasMultiplePacks = grouped.size > 1 || (grouped.size === 1 && !grouped.has('Ungrouped'));
-
-                    return (
-                      <div className="space-y-4">
-                        {Array.from(grouped.entries()).map(([packName, packItems]) => (
-                          <div key={packName}>
-                            {hasMultiplePacks && (
-                              <div className="flex items-center gap-2 mb-2">
-                                <Package className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm font-semibold">{packName}</span>
-                                <Badge variant="outline" className="text-xs">
-                                  {packItems.length} items
-                                </Badge>
-                              </div>
-                            )}
-                            <div className="border rounded-lg overflow-hidden">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>SKU</TableHead>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead className="text-right">Qty</TableHead>
-                                    <TableHead>UOM</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {packItems.map(item => (
-                                    <TableRow key={item.id}>
-                                      <TableCell className="font-mono text-sm">
-                                        {item.supplier_sku || '-'}
-                                      </TableCell>
-                                      <TableCell>{item.description}</TableCell>
-                                      <TableCell className="text-right">{item.quantity ?? '-'}</TableCell>
-                                      <TableCell>{item.uom || '-'}</TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()
+                  <EstimateSummaryCard
+                    items={lineItems as any}
+                    totalWithTax={selectedEstimate.total_amount || 0}
+                  />
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
