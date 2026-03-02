@@ -34,7 +34,6 @@ import { TeamMembersCard } from '@/components/project/TeamMembersCard';
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
 import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
 
-
 import { InvoicesTab } from '@/components/invoices';
 import { ReturnsTab } from '@/components/returns';
 import { ContractSOVEditor } from '@/components/sov';
@@ -273,7 +272,6 @@ export default function ProjectHome() {
                             <BillingCashCard financials={financials} />
                             <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
                           </div>
-
                           <CollapsibleOperations
                             projectId={id!}
                             projectType={project.project_type}
