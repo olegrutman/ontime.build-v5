@@ -1,61 +1,63 @@
 
 
-# Fix RLS Policy for Supplier Invoice Creation
+# Fix Supplier Invoice Creation and Visibility
 
-## Root Cause
+## Two Problems
 
-The current INSERT policy on the `invoices` table only allows inserts when `contract_id` matches a `project_contracts` record where the user belongs to `from_org_id`. Supplier invoices are created with `contract_id = NULL` (suppliers bill directly from POs, not contracts), so the policy blocks them.
+### Problem 1: `invoice_line_items` RLS blocks supplier inserts
+The invoice itself is created successfully (201), but inserting line items fails (403). All 4 RLS policies on `invoice_line_items` require `JOIN project_contracts pc ON pc.id = i.contract_id`. Since supplier invoices have `contract_id = NULL`, the JOIN returns nothing and the policy blocks the insert.
 
-## Fix
+### Problem 2: Supplier invoices don't appear on GC/TC invoice pages
+The `InvoicesTab` separates invoices into "sent" and "received" buckets based on `contract_id` matching. PO-based invoices with `contract_id = NULL` fall into neither bucket and are invisible.
 
-### 1. Update the INSERT RLS policy on `invoices`
+### Problem 3: Orphaned invoices in DB
+Two invoices (INV-SU-0001, INV-SU-0002) were created without line items due to the RLS failure. These need cleanup.
 
-Add an alternative path: allow INSERT when `contract_id IS NULL` AND the user belongs to the supplier organization linked to the referenced PO.
+---
+
+## Fix 1: Update `invoice_line_items` RLS Policies (Database Migration)
+
+Add the same PO-supplier alternative path to all 4 policies (SELECT, INSERT, UPDATE, DELETE):
 
 ```text
-Current policy (contract-based only):
-  EXISTS (SELECT 1 FROM project_contracts pc
-    WHERE pc.id = invoices.contract_id
-    AND pc.from_org_id IN (user's orgs))
+Current: JOIN project_contracts pc ON pc.id = i.contract_id (fails when contract_id is NULL)
 
-New policy (contract-based OR PO-supplier-based):
-  (existing contract check)
-  OR
-  (contract_id IS NULL
-   AND po_id IS NOT NULL
-   AND EXISTS (SELECT 1 FROM purchase_orders po
-     JOIN suppliers s ON s.id = po.supplier_id
-     WHERE po.id = invoices.po_id
-     AND s.organization_id IN (user's orgs)))
+New: Add alternative path:
+  OR (i.contract_id IS NULL AND i.po_id IS NOT NULL
+      AND EXISTS (SELECT 1 FROM purchase_orders po
+        JOIN suppliers s ON s.id = po.supplier_id
+        WHERE po.id = i.po_id
+        AND user_in_org(auth.uid(), s.organization_id)))
 ```
 
-### 2. Update SELECT policy to cover contract-less invoices
+For SELECT, also add a path for the GC/buyer org to view supplier invoice line items:
+```text
+  OR (i.contract_id IS NULL AND i.po_id IS NOT NULL
+      AND EXISTS (SELECT 1 FROM purchase_orders po
+        WHERE po.id = i.po_id
+        AND user_in_org(auth.uid(), po.organization_id)))
+```
 
-The SELECT policy already has a fallback for `contract_id IS NULL` using `project_participants`. This should work for supplier invoices since suppliers are project participants. No change needed here.
+## Fix 2: Update `InvoicesTab` to Show Supplier Invoices
 
-### 3. Update DELETE policy for supplier draft invoices
+**File:** `src/components/invoices/InvoicesTab.tsx`
 
-Add the same PO-supplier path so suppliers can delete their own draft invoices.
+- In the sent/received split logic (lines 91-101): classify invoices with `contract_id = NULL AND po_id != NULL` as "received" for GC/TC users (these are supplier invoices received from suppliers)
+- For suppliers viewing the invoices tab: classify PO-based invoices as "sent"
+- Update GC role context messaging to mention supplier invoices
+- Update `getInvoicePermissions` to handle contract-less invoices (GC can approve PO-based invoices)
 
-### 4. Update UPDATE policy for supplier invoices
+## Fix 3: Clean Up Orphaned Invoices
 
-Add the PO-supplier path so suppliers can update/submit their draft invoices.
+Delete the 2 orphaned invoice records (no line items) via data operation.
 
-## Technical Details
+---
 
-### Database migration SQL
-
-Drop and recreate the affected policies:
-
-- **INSERT**: Add `OR (contract_id IS NULL AND po_id IS NOT NULL AND user belongs to PO's supplier org)` 
-- **DELETE**: Add same alternative for DRAFT status supplier invoices
-- **UPDATE**: Add alternative path for supplier invoices in both USING and WITH CHECK
-
-### Files Changed
+## Files Changed
 
 | File | Action |
 |------|--------|
-| Database migration | Update 3 RLS policies on `invoices` table |
-
-No application code changes needed -- the `CreateSupplierInvoiceFromPO` component is correct, it just needs the RLS gate opened.
+| Database migration | Update 4 RLS policies on `invoice_line_items` |
+| Database data cleanup | Delete 2 orphaned invoices |
+| `src/components/invoices/InvoicesTab.tsx` | Add PO-based invoice handling to sent/received logic |
 
