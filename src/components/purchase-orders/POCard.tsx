@@ -19,6 +19,8 @@ interface POCardProps {
   canViewPricing?: boolean;
   isSupplier?: boolean;
   isInvoiced?: boolean;
+  estimatePackTotal?: number | null;
+  estimatePackItemCount?: number | null;
 }
 
 export function POCard({
@@ -32,6 +34,8 @@ export function POCard({
   canViewPricing = false,
   isSupplier = false,
   isInvoiced = false,
+  estimatePackTotal = null,
+  estimatePackItemCount = null,
 }: POCardProps) {
   const [submitting, setSubmitting] = useState(false);
 
@@ -99,19 +103,10 @@ export function POCard({
 
   // Estimate/pack origin calculations
   const isFromEstimate = !!po.source_estimate_id;
-  const estimateItems = po.line_items?.filter(item => item.source_estimate_item_id) || [];
-  const estimateItemCount = estimateItems.length;
-  const addedItemCount = lineItemCount - estimateItemCount;
-  
-  const originalTotal = estimateItems.reduce((sum, item) => {
-    if (item.original_unit_price != null && item.quantity != null) {
-      return sum + item.original_unit_price * item.quantity;
-    }
-    return sum;
-  }, 0);
-  const finalTotal = estimateItems.reduce((sum, item) => sum + (item.line_total || 0), 0);
-  const adjustment = finalTotal - originalTotal;
-  const hasOriginalPricing = estimateItems.some(item => item.original_unit_price != null);
+  const poSubtotal = po.line_items 
+    ? po.line_items.reduce((sum, item) => sum + (item.line_total || 0), 0)
+    : 0;
+  const adjustment = estimatePackTotal != null ? poSubtotal - estimatePackTotal : null;
 
   return (
     <Card
@@ -176,28 +171,24 @@ export function POCard({
               )}
             </div>
 
-            {canViewPricing && hasOriginalPricing && (
+            {canViewPricing && estimatePackTotal != null && (
               <div className="flex items-center gap-1.5 text-xs">
                 <span className="text-muted-foreground">
-                  Est: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(originalTotal)}
+                  Pack: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(estimatePackTotal)}
+                  {estimatePackItemCount != null && ` (${estimatePackItemCount} items)`}
                 </span>
                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
                 <span className="font-medium">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(finalTotal)}
+                  Ordered: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(poSubtotal)}
+                  {` (${lineItemCount} items)`}
                 </span>
-                {adjustment !== 0 && (
+                {adjustment != null && adjustment !== 0 && (
                   <span className={adjustment > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}>
                     ({adjustment > 0 ? '+' : ''}{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(adjustment)})
                   </span>
                 )}
               </div>
             )}
-
-            <div className="text-xs text-muted-foreground">
-              {addedItemCount > 0
-                ? `${estimateItemCount} est items + ${addedItemCount} added`
-                : `${estimateItemCount} est items`}
-            </div>
           </div>
         )}
 
