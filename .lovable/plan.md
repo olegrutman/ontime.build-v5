@@ -1,46 +1,68 @@
 
 
-# Compare PO Price Against Estimate Pack Price
+# Highlight Edited, Deleted, and Added Items on PO Detail
 
 ## What This Does
 
-Instead of comparing prices item-by-item within the PO itself, the PO cards will now pull the **original pack total from the estimate** (sum of all items in that pack from `supplier_estimate_items`) and compare it against the **total ordered on the PO**.
+When a PO was built from an estimate pack, the line items table in the PO detail view will visually indicate what changed compared to the original pack:
+
+- **Yellow background** -- items from the estimate that were edited (quantity or price changed)
+- **Red background** -- items that were in the original estimate pack but removed from the PO; these are shown as extra rows with $0 cost and strikethrough text
+- **Green background** -- items that were added to the PO but were not in the original estimate pack
 
 ## Changes
 
-### 1. Fetch estimate pack totals in PurchaseOrdersTab
+### 1. Fetch original estimate pack items in PODetail
 
-**File:** `src/components/project/PurchaseOrdersTab.tsx`
+**File:** `src/components/purchase-orders/PODetail.tsx`
 
-After fetching POs (around line 100), add a second query:
-- Collect all unique `(source_estimate_id, source_pack_name)` pairs from the fetched POs
-- For each estimate ID, query `supplier_estimate_items` filtering by `estimate_id` and `pack_name`
-- Compute: `packTotal = sum(unit_price * quantity)` and `packItemCount = count of items`
-- Store results in a Map keyed by `"estimateId|packName"`
-- Pass `estimatePackTotal` and `estimatePackItemCount` as new props to each `POCard`
+- After fetching the PO and line items, check if the PO has `source_estimate_id` and `source_pack_name`
+- If so, query `supplier_estimate_items` where `estimate_id = source_estimate_id` and `pack_name = source_pack_name`
+- Store these original estimate items in state
+- Build a lookup Map keyed by estimate item ID for fast comparison
 
-### 2. Update POCard props and comparison logic
+### 2. Determine item status for each row
 
-**File:** `src/components/purchase-orders/POCard.tsx`
+For each PO line item:
+- If it has `source_estimate_item_id` and that ID exists in the estimate items map:
+  - Compare quantity and unit_price to the original
+  - If either differs -> **yellow** (edited)
+  - If same -> no highlight (unchanged)
+- If it has NO `source_estimate_item_id` -> **green** (added)
 
-- Add two new props: `estimatePackTotal?: number | null` and `estimatePackItemCount?: number | null`
-- Replace the current `originalTotal` calculation (which uses `original_unit_price` from PO line items) with the `estimatePackTotal` prop
-- Replace `estimateItemCount` display with `estimatePackItemCount` (original number of items in the pack)
-- The "ordered" side uses the PO subtotal (sum of all `line_total` on the PO)
-- Display becomes: `Pack: $8,500 (12 items) -> Ordered: $8,720 (14 items) (+$220)`
-- `adjustment = poSubtotal - estimatePackTotal`
+For estimate items NOT found in any PO line item's `source_estimate_item_id`:
+- These are **deleted** items -> show as extra rows with **red** background, quantity from estimate, $0.00 cost, and strikethrough styling
 
-### 3. Pass props in the render
+### 3. Render highlights in the table
 
-**File:** `src/components/project/PurchaseOrdersTab.tsx` (render section ~line 486)
+**File:** `src/components/purchase-orders/PODetail.tsx`
 
-- Look up the pack totals map using `po.source_estimate_id` and `po.source_pack_name`
-- Pass `estimatePackTotal` and `estimatePackItemCount` to each `POCard`
+- Add conditional `className` on each `TableRow`:
+  - Yellow: `bg-yellow-50 dark:bg-yellow-900/20`
+  - Green: `bg-green-50 dark:bg-green-900/20`
+  - Red: `bg-red-50 dark:bg-red-900/20` with `line-through` on description text
+- For deleted items, append extra rows after the regular line items showing the removed items with 0 cost
+- Add a small legend above the table when the PO is from an estimate, explaining the color coding
+
+### 4. Visual layout
+
+```text
++---+--------+------------------+-----+-----+---------+--------+
+| # | SKU    | Description      | Qty | UOM | Unit $  | Total  |
++---+--------+------------------+-----+-----+---------+--------+
+|   (normal row - unchanged from estimate)                      |
++---+--------+------------------+-----+-----+---------+--------+
+| * | 2x4-10 | 2x4 Stud 10ft   |  50 | EA  |  $8.50  |$425.00 |  <- YELLOW (qty was 40)
++---+--------+------------------+-----+-----+---------+--------+
+| * | —      | New bolts        |  20 | EA  |  $2.00  | $40.00 |  <- GREEN (added)
++---+--------+------------------+-----+-----+---------+--------+
+| X | 4x4-8  | 4x4 Post 8ft    |  — | EA  |  $0.00  |  $0.00 |  <- RED (deleted)
++---+--------+------------------+-----+-----+---------+--------+
+```
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/project/PurchaseOrdersTab.tsx` | Query `supplier_estimate_items` for pack totals; pass as props to POCard |
-| `src/components/purchase-orders/POCard.tsx` | Accept new props; use estimate pack total for comparison instead of item-level original prices |
+| `src/components/purchase-orders/PODetail.tsx` | Fetch estimate pack items; compare against PO line items; highlight rows yellow/green/red; show deleted items as $0 rows |
 
