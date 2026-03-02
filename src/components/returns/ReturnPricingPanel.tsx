@@ -32,7 +32,8 @@ export function ReturnPricingPanel({ returnId, items, projectId }: ReturnPricing
   const [restockingValue, setRestockingValue] = useState(0);
 
   const creditSubtotal = returnableItems.reduce((sum, item) => {
-    return sum + (prices[item.id] || 0) * item.qty_requested;
+    const qty = item.accepted_qty ?? item.qty_requested;
+    return sum + (prices[item.id] || 0) * qty;
   }, 0);
 
   const restockingTotal = restockingType === 'Percent'
@@ -50,11 +51,12 @@ export function ReturnPricingPanel({ returnId, items, projectId }: ReturnPricing
       // Update each line item price
       for (const item of returnableItems) {
         const unitPrice = prices[item.id] || 0;
+        const qty = item.accepted_qty ?? item.qty_requested;
         const { error } = await supabase
           .from('return_items')
           .update({
             credit_unit_price: unitPrice,
-            credit_line_total: unitPrice * item.qty_requested,
+            credit_line_total: unitPrice * qty,
           })
           .eq('id', item.id);
         if (error) throw error;
@@ -113,7 +115,7 @@ export function ReturnPricingPanel({ returnId, items, projectId }: ReturnPricing
             {returnableItems.map(item => (
               <TableRow key={item.id}>
                 <TableCell className="text-sm">{item.description_snapshot}</TableCell>
-                <TableCell>{item.qty_requested}</TableCell>
+                <TableCell>{item.accepted_qty ?? item.qty_requested}</TableCell>
                 <TableCell>
                   <Input
                     type="number"
@@ -125,7 +127,7 @@ export function ReturnPricingPanel({ returnId, items, projectId }: ReturnPricing
                   />
                 </TableCell>
                 <TableCell className="text-right text-sm">
-                  ${((prices[item.id] || 0) * item.qty_requested).toFixed(2)}
+                  ${((prices[item.id] || 0) * (item.accepted_qty ?? item.qty_requested)).toFixed(2)}
                 </TableCell>
               </TableRow>
             ))}

@@ -11,10 +11,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, ArrowLeft } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Search, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { WizardProgress } from '@/components/work-order-wizard/WizardProgress';
 import { VIRTUAL_CATEGORIES, CategoryCount } from '@/types/poWizardV2';
 import {
@@ -24,7 +24,6 @@ import {
   RETURN_REASON_DETAILS,
   RETURN_CONDITIONS,
   CONDITIONS_REQUIRING_NOTES,
-  WrongType,
   PickupType,
   UrgencyType,
   URGENCY_OPTIONS,
@@ -46,16 +45,18 @@ interface DeliveredLineItem {
   already_returned: number;
   available: number;
   supplier_sku: string | null;
-  category: string; // resolved from catalog_items or 'Uncategorized'
+  category: string;
+  unit_price: number;
 }
 
 interface SelectedItem extends DeliveredLineItem {
   qty_requested: number;
   condition: ReturnCondition;
   condition_notes: string;
+  reason: ReturnReason | '';
+  reason_notes: string;
 }
 
-// Build a dbCategory→VirtualCategory lookup
 const DB_CATEGORY_MAP: Record<string, { displayName: string; icon: string }> = {};
 Object.values(VIRTUAL_CATEGORIES).forEach(vc => {
   DB_CATEGORY_MAP[vc.dbCategory] = { displayName: vc.displayName, icon: vc.icon };
@@ -70,16 +71,12 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
 
   const [step, setStep] = useState(0);
 
-  // Reset all state when dialog opens
   useEffect(() => {
     if (open) {
       setStep(0);
       setSupplierOrgId(null);
       setSelectedItems([]);
       setItemSearch('');
-      setReason('');
-      setWrongType('');
-      setReasonNotes('');
       setPickupType('');
       setUrgency('Standard');
       setPickupDate('');
@@ -95,11 +92,6 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
   const [itemSearch, setItemSearch] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
 
-  // Reason
-  const [reason, setReason] = useState<ReturnReason | ''>('');
-  const [wrongType, setWrongType] = useState<WrongType | ''>('');
-  const [reasonNotes, setReasonNotes] = useState('');
-
   // Logistics
   const [pickupType, setPickupType] = useState<PickupType | ''>('');
   const [urgency, setUrgency] = useState<UrgencyType>('Standard');
@@ -108,7 +100,7 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
   const [contactPhone, setContactPhone] = useState('');
   const [instructions, setInstructions] = useState('');
 
-  // Fetch suppliers from project team (role = Supplier, status = Accepted)
+  // Fetch suppliers from project team
   const { data: suppliers = [] } = useQuery({
     queryKey: ['return-team-suppliers', projectId],
     queryFn: async () => {
@@ -133,7 +125,7 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
     },
   });
 
-  // Fetch delivered line items for the selected supplier, with category from catalog_items
+  // Fetch delivered line items with unit_price
   const { data: deliveredItems = [] } = useQuery({
     queryKey: ['delivered-items', projectId, supplierOrgId],
     enabled: !!supplierOrgId,
@@ -158,11 +150,10 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
         .in('po_id', poIds);
       if (liErr) throw liErr;
 
-      // Lookup categories from catalog_items via supplier_sku
+      // Lookup categories
       const skus = [...new Set((lineItems || []).map((li: any) => li.supplier_sku).filter(Boolean))];
       const skuCategoryMap = new Map<string, string>();
       if (skus.length > 0) {
-        // batch in chunks of 100
         for (let i = 0; i < skus.length; i += 100) {
           const chunk = skus.slice(i, i + 100);
           const { data: catalogRows } = await supabase
@@ -206,18 +197,18 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
           available: li.quantity - alreadyReturned,
           supplier_sku: li.supplier_sku,
           category,
+          unit_price: Number(li.unit_price) || 0,
         } as DeliveredLineItem;
       }).filter((item: DeliveredLineItem) => item.available > 0);
     },
   });
 
-  // Build category counts for the grid
+  // Category grid
   const categoryGrid = useMemo<CategoryCount[]>(() => {
     const countMap = new Map<string, number>();
     deliveredItems.forEach(item => {
       countMap.set(item.category, (countMap.get(item.category) || 0) + 1);
     });
-
     const result: CategoryCount[] = [];
     countMap.forEach((count, dbCat) => {
       const display = DB_CATEGORY_MAP[dbCat];
@@ -228,8 +219,6 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
         icon: display?.icon || '📋',
       });
     });
-
-    // Sort: known categories first (by displayName), Uncategorized last
     return result.sort((a, b) => {
       if (a.category === 'Uncategorized') return 1;
       if (b.category === 'Uncategorized') return -1;
@@ -237,7 +226,6 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
     });
   }, [deliveredItems]);
 
-  // Items filtered by active category + search
   const categoryItems = useMemo(() => {
     if (!activeCategory) return [];
     let items = deliveredItems.filter(item => item.category === activeCategory);
@@ -264,6 +252,8 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
           qty_requested: 1,
           condition: 'Unknown' as ReturnCondition,
           condition_notes: '',
+          reason: '' as ReturnReason | '',
+          reason_notes: '',
         })),
       ]);
     } else {
@@ -279,6 +269,8 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
         qty_requested: 1,
         condition: 'Unknown' as ReturnCondition,
         condition_notes: '',
+        reason: '' as ReturnReason | '',
+        reason_notes: '',
       }]);
     } else {
       setSelectedItems(prev => prev.filter(si => si.id !== item.id));
@@ -291,25 +283,24 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
     ));
   };
 
-  const updateItemCondition = (itemId: string, condition: ReturnCondition) => {
+  const updateItemField = (itemId: string, field: string, value: any) => {
     setSelectedItems(prev => prev.map(si =>
-      si.id === itemId ? { ...si, condition, condition_notes: '' } : si
+      si.id === itemId ? { ...si, [field]: value } : si
     ));
   };
 
-  const updateItemConditionNotes = (itemId: string, notes: string) => {
-    setSelectedItems(prev => prev.map(si =>
-      si.id === itemId ? { ...si, condition_notes: notes } : si
-    ));
-  };
+  // Totals
+  const creditSubtotal = selectedItems.reduce((sum, item) => sum + item.qty_requested * item.unit_price, 0);
 
   // Validation
   const canProceedStep0 = supplierOrgId && selectedItems.length > 0 && selectedItems.every(i => i.qty_requested > 0);
-  const canProceedStep1 = reason && (reason !== 'Wrong' || wrongType) && (reason !== 'Other' || reasonNotes.trim());
-  const canProceedStep2 = selectedItems.every(i =>
-    i.condition && (!CONDITIONS_REQUIRING_NOTES.includes(i.condition) || i.condition_notes.trim())
+  const canProceedStep1 = selectedItems.every(i =>
+    i.reason &&
+    i.condition &&
+    (!CONDITIONS_REQUIRING_NOTES.includes(i.condition) || i.condition_notes.trim()) &&
+    (i.reason !== 'Other' || i.reason_notes.trim())
   );
-  const canProceedStep3 = pickupType && contactName.trim() && contactPhone.trim();
+  const canProceedStep2 = pickupType && contactName.trim() && contactPhone.trim();
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -320,9 +311,7 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
           supplier_org_id: supplierOrgId!,
           created_by_org_id: userOrgId!,
           created_by_user_id: user!.id,
-          reason: reason as string,
-          wrong_type: reason === 'Wrong' ? wrongType as string : null,
-          reason_notes: reason === 'Other' ? reasonNotes : null,
+          reason: selectedItems[0]?.reason || 'Other',
           pickup_type: pickupType as string,
           pickup_date: pickupDate || null,
           contact_name: contactName,
@@ -331,6 +320,8 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
           urgency: urgency,
           status: 'SUBMITTED',
           pricing_owner_org_id: userOrgId,
+          credit_subtotal: creditSubtotal,
+          net_credit_total: creditSubtotal,
         })
         .select()
         .single();
@@ -345,6 +336,11 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
         qty_requested: si.qty_requested,
         condition: si.condition,
         condition_notes: CONDITIONS_REQUIRING_NOTES.includes(si.condition) ? si.condition_notes : null,
+        reason: si.reason || null,
+        reason_notes: si.reason === 'Other' ? si.reason_notes : null,
+        original_unit_price: si.unit_price,
+        credit_unit_price: si.unit_price,
+        credit_line_total: si.qty_requested * si.unit_price,
       }));
 
       const { error: itemsErr } = await supabase.from('return_items').insert(items);
@@ -362,8 +358,7 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
 
   const wizardSteps = [
     { title: 'Select Items', description: 'Choose items to return' },
-    { title: 'Reason', description: 'Why are you returning?' },
-    { title: 'Condition', description: 'Item condition details' },
+    { title: 'Return Details', description: 'Reason, condition & credit' },
     { title: 'Logistics', description: 'Pickup & contact info' },
     { title: 'Review', description: 'Confirm & submit' },
   ];
@@ -371,7 +366,7 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[85vh] p-0 gap-0 overflow-hidden flex flex-col">
-        <WizardProgress currentStep={step + 1} totalSteps={5} steps={wizardSteps} />
+        <WizardProgress currentStep={step + 1} totalSteps={4} steps={wizardSteps} />
 
         <div className="flex-1 overflow-y-auto px-6 py-4">
         {/* Step 0: Select Items with Category Browser */}
@@ -395,7 +390,6 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
               <p className="text-sm text-muted-foreground">Supplier: <span className="font-medium text-foreground">{suppliers[0].supplierName}</span></p>
             )}
 
-            {/* Selected items summary badge */}
             {selectedItems.length > 0 && (
               <div className="flex items-center gap-2">
                 <Badge variant="secondary" className="text-sm">
@@ -468,8 +462,9 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
                         </TableHead>
                         <TableHead>Description</TableHead>
                         <TableHead className="w-16">PO</TableHead>
-                        <TableHead className="w-16">Delivered</TableHead>
-                        <TableHead className="w-16">Available</TableHead>
+                        <TableHead className="w-16">Avail.</TableHead>
+                        <TableHead className="w-20 text-right">Unit Price</TableHead>
+                        <TableHead className="w-24 text-right">Line Total</TableHead>
                         <TableHead className="w-20">Return Qty</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -486,8 +481,9 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
                             </TableCell>
                             <TableCell className="text-sm">{item.description}</TableCell>
                             <TableCell className="text-xs text-muted-foreground">{item.po_number}</TableCell>
-                            <TableCell>{item.quantity}</TableCell>
                             <TableCell>{item.available}</TableCell>
+                            <TableCell className="text-right text-sm">${item.unit_price.toFixed(2)}</TableCell>
+                            <TableCell className="text-right text-sm">${(item.available * item.unit_price).toFixed(2)}</TableCell>
                             <TableCell>
                               {selected && (
                                 <Input
@@ -505,7 +501,7 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
                       })}
                       {categoryItems.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center text-muted-foreground py-6">
+                          <TableCell colSpan={7} className="text-center text-muted-foreground py-6">
                             No items match your search.
                           </TableCell>
                         </TableRow>
@@ -518,82 +514,76 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
           </div>
         )}
 
-        {/* Step 1: Reason */}
+        {/* Step 1: Return Details (per-item reason + condition + credit preview) */}
         {step === 1 && (
-          <div className="space-y-4">
-            <Label>Reason for Return</Label>
-            <RadioGroup value={reason} onValueChange={v => setReason(v as ReturnReason)} className="grid gap-2">
-              {RETURN_REASONS.map(r => {
-                const detail = RETURN_REASON_DETAILS[r];
-                return (
-                  <label
-                    key={r}
-                    className={`flex items-start gap-3 rounded-lg border p-3 cursor-pointer transition-colors ${
-                      reason === r ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground/30'
-                    }`}
-                  >
-                    <RadioGroupItem value={r} className="mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium">{detail.label}</p>
-                      <p className="text-xs text-muted-foreground">{detail.description}</p>
-                    </div>
-                  </label>
-                );
-              })}
-            </RadioGroup>
-            {reason === 'Wrong' && (
-              <div>
-                <Label>Wrong Type</Label>
-                <Select value={wrongType} onValueChange={v => setWrongType(v as WrongType)}>
-                  <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Not Per Specification">Not Per Specification</SelectItem>
-                    <SelectItem value="Wrong Item Shipped">Wrong Item Shipped</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-            {reason === 'Other' && (
-              <div>
-                <Label>Explanation</Label>
-                <Textarea value={reasonNotes} onChange={e => setReasonNotes(e.target.value)} placeholder="Explain the reason..." />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Step 2: Condition per line */}
-        {step === 2 && (
           <div className="space-y-3">
             {selectedItems.map(item => (
-              <div key={item.id} className="border rounded-lg p-3 space-y-2">
-                <p className="text-sm font-medium">{item.description} <span className="text-muted-foreground">×{item.qty_requested}</span></p>
-                <Select
-                  value={item.condition}
-                  onValueChange={v => updateItemCondition(item.id, v as ReturnCondition)}
-                >
-                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {RETURN_CONDITIONS.map(c => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {CONDITIONS_REQUIRING_NOTES.includes(item.condition) && (
+              <div key={item.id} className="border rounded-lg p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">{item.description}</p>
+                  <span className="text-xs text-muted-foreground">×{item.qty_requested} {item.uom}</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">Reason</Label>
+                    <Select
+                      value={item.reason}
+                      onValueChange={v => updateItemField(item.id, 'reason', v)}
+                    >
+                      <SelectTrigger className="h-9"><SelectValue placeholder="Select reason" /></SelectTrigger>
+                      <SelectContent>
+                        {RETURN_REASONS.map(r => (
+                          <SelectItem key={r} value={r}>{RETURN_REASON_DETAILS[r].label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Condition</Label>
+                    <Select
+                      value={item.condition}
+                      onValueChange={v => updateItemField(item.id, 'condition', v)}
+                    >
+                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {RETURN_CONDITIONS.map(c => (
+                          <SelectItem key={c} value={c}>{c}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {item.reason === 'Other' && (
                   <Textarea
-                    value={item.condition_notes}
-                    onChange={e => updateItemConditionNotes(item.id, e.target.value)}
-                    placeholder="Describe the condition..."
+                    placeholder="Explain the reason..."
+                    value={item.reason_notes}
+                    onChange={e => updateItemField(item.id, 'reason_notes', e.target.value)}
                     className="text-sm"
                   />
                 )}
+
+                {CONDITIONS_REQUIRING_NOTES.includes(item.condition) && (
+                  <Textarea
+                    placeholder="Describe the condition..."
+                    value={item.condition_notes}
+                    onChange={e => updateItemField(item.id, 'condition_notes', e.target.value)}
+                    className="text-sm"
+                  />
+                )}
+
+                <div className="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t">
+                  <span>Unit Price: ${item.unit_price.toFixed(2)}</span>
+                  <span className="font-medium text-foreground">Line Credit: ${(item.qty_requested * item.unit_price).toFixed(2)}</span>
+                </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Step 3: Logistics */}
-        {step === 3 && (
+        {/* Step 2: Logistics */}
+        {step === 2 && (
           <div className="space-y-4">
             <div>
               <Label>Pickup Type</Label>
@@ -640,13 +630,9 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
           </div>
         )}
 
-        {/* Step 4: Review */}
-        {step === 4 && (
-          <div className="space-y-3 text-sm">
-            <div>
-              <span className="text-muted-foreground">Reason:</span>{' '}
-              {reason ? RETURN_REASON_DETAILS[reason as ReturnReason]?.label : ''}{wrongType ? ` – ${wrongType}` : ''}{reasonNotes ? ` (${reasonNotes})` : ''}
-            </div>
+        {/* Step 3: Review & Submit */}
+        {step === 3 && (
+          <div className="space-y-4 text-sm">
             <div>
               <span className="text-muted-foreground">Pickup:</span> {pickupType}{pickupDate ? ` on ${pickupDate}` : ' — date TBD'}
             </div>
@@ -657,12 +643,17 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
               <span className="text-muted-foreground">Contact:</span> {contactName} • {contactPhone}
             </div>
             {instructions && <div><span className="text-muted-foreground">Instructions:</span> {instructions}</div>}
+
+            {/* Items table with pricing */}
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Item</TableHead>
-                  <TableHead>Qty</TableHead>
-                  <TableHead>Condition</TableHead>
+                  <TableHead className="w-12">Qty</TableHead>
+                  <TableHead className="w-24">Reason</TableHead>
+                  <TableHead className="w-24">Condition</TableHead>
+                  <TableHead className="w-20 text-right">Unit Price</TableHead>
+                  <TableHead className="w-24 text-right">Line Credit</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -670,11 +661,45 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
                   <TableRow key={item.id}>
                     <TableCell>{item.description}</TableCell>
                     <TableCell>{item.qty_requested}</TableCell>
-                    <TableCell>{item.condition}</TableCell>
+                    <TableCell className="text-xs">{item.reason ? RETURN_REASON_DETAILS[item.reason as ReturnReason]?.label : '—'}</TableCell>
+                    <TableCell className="text-xs">{item.condition}</TableCell>
+                    <TableCell className="text-right">${item.unit_price.toFixed(2)}</TableCell>
+                    <TableCell className="text-right font-medium">${(item.qty_requested * item.unit_price).toFixed(2)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+
+            {/* Totals Panel */}
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Credit Subtotal</span>
+                  <span className="font-medium">${creditSubtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Restocking Fee</span>
+                  <span className="text-xs italic text-muted-foreground">Pending supplier review</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Tax Adjustment</span>
+                  <span className="text-xs italic text-muted-foreground">Pending</span>
+                </div>
+                <div className="flex justify-between font-semibold border-t pt-2">
+                  <span>Estimated Credit Total</span>
+                  <span>${creditSubtotal.toFixed(2)}</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground text-right">(pending supplier approval)</p>
+              </CardContent>
+            </Card>
+
+            {/* Warning banner */}
+            <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-800 p-3">
+              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+              <p className="text-xs text-amber-800 dark:text-amber-300">
+                Final credit amount will be confirmed by supplier after review.
+              </p>
+            </div>
           </div>
         )}
 
@@ -685,14 +710,13 @@ export function CreateReturnWizard({ projectId, open, onOpenChange }: CreateRetu
           <Button variant="ghost" onClick={() => step === 0 ? onOpenChange(false) : setStep(s => s - 1)}>
             {step === 0 ? 'Cancel' : 'Back'}
           </Button>
-          {step < 4 ? (
+          {step < 3 ? (
             <Button
               onClick={() => setStep(s => s + 1)}
               disabled={
                 (step === 0 && !canProceedStep0) ||
                 (step === 1 && !canProceedStep1) ||
-                (step === 2 && !canProceedStep2) ||
-                (step === 3 && !canProceedStep3)
+                (step === 2 && !canProceedStep2)
               }
             >
               Next

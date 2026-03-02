@@ -21,6 +21,7 @@ const STATUS_FILTER_OPTIONS: { value: string; label: string }[] = [
   { value: 'SUBMITTED', label: 'Submitted' },
   { value: 'SUPPLIER_REVIEW', label: 'Supplier Review' },
   { value: 'APPROVED', label: 'Approved' },
+  { value: 'REJECTED', label: 'Rejected' },
   { value: 'SCHEDULED', label: 'Scheduled' },
   { value: 'PICKED_UP', label: 'Picked Up' },
   { value: 'PRICED', label: 'Priced' },
