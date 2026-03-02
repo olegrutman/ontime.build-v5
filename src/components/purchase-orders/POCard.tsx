@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { Package, Eye, Edit, Download, Send, Loader2, Building2, FileText, DollarSign, Lock, PackageCheck, Truck, Receipt, ClipboardList, ArrowRight } from 'lucide-react';
+import { Eye, Edit, Download, Send, Loader2, Lock, PackageCheck, Truck, Receipt, ClipboardList } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +23,12 @@ interface POCardProps {
   estimatePackItemCount?: number | null;
 }
 
+const fmt = (v: number) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(v);
+
+const fmtFull = (v: number) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(v);
+
 export function POCard({
   po,
   onClick,
@@ -32,10 +38,8 @@ export function POCard({
   canEdit = false,
   canSubmit = false,
   canViewPricing = false,
-  isSupplier = false,
   isInvoiced = false,
   estimatePackTotal = null,
-  estimatePackItemCount = null,
 }: POCardProps) {
   const [submitting, setSubmitting] = useState(false);
 
@@ -56,34 +60,21 @@ export function POCard({
     {
       icon: <Eye className="h-4 w-4" />,
       label: 'View Details',
-      onClick: (e) => {
-        e.stopPropagation();
-        onClick();
-      },
+      onClick: (e) => { e.stopPropagation(); onClick(); },
     },
     ...(onEdit && status === 'ACTIVE' && canEdit
-      ? [
-          {
-            icon: <Edit className="h-4 w-4" />,
-            label: 'Edit PO',
-            onClick: (e: React.MouseEvent) => {
-              e.stopPropagation();
-              onEdit(po);
-            },
-          },
-        ]
+      ? [{
+          icon: <Edit className="h-4 w-4" />,
+          label: 'Edit PO',
+          onClick: (e: React.MouseEvent) => { e.stopPropagation(); onEdit(po); },
+        }]
       : []),
     ...(onDownload
-      ? [
-          {
-            icon: <Download className="h-4 w-4" />,
-            label: 'Download PDF',
-            onClick: (e: React.MouseEvent) => {
-              e.stopPropagation();
-              onDownload(po);
-            },
-          },
-        ]
+      ? [{
+          icon: <Download className="h-4 w-4" />,
+          label: 'Download PDF',
+          onClick: (e: React.MouseEvent) => { e.stopPropagation(); onDownload(po); },
+        }]
       : []),
   ];
 
@@ -91,19 +82,17 @@ export function POCard({
   const showEditButton = canEdit && status === 'ACTIVE' && onEdit;
 
   const lineItemCount = po.line_items?.length || 0;
-  
-  // Calculate total from line items if user can view pricing
-  const subtotal = canViewPricing && po.line_items 
+
+  const subtotal = canViewPricing && po.line_items
     ? po.line_items.reduce((sum, item) => sum + (item.line_total || 0), 0)
     : null;
   const taxRate = (po.sales_tax_percent || 0) / 100;
   const total = subtotal !== null ? subtotal * (1 + taxRate) : null;
-  
+
   const hasPricing = po.line_items?.some(item => item.unit_price !== null);
 
-  // Estimate/pack origin calculations
   const isFromEstimate = !!po.source_estimate_id;
-  const poSubtotal = po.line_items 
+  const poSubtotal = po.line_items
     ? po.line_items.reduce((sum, item) => sum + (item.line_total || 0), 0)
     : 0;
   const adjustment = estimatePackTotal != null ? poSubtotal - estimatePackTotal : null;
@@ -114,19 +103,10 @@ export function POCard({
       onClick={onClick}
     >
       <CardContent className="p-4">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <Package className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <h4 className="font-medium">{po.po_number}</h4>
-              <p className="text-sm text-muted-foreground">
-                {format(new Date(po.created_at), 'MMM d, yyyy')}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
+        {/* Row 1: PO number + badges */}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-sm font-semibold truncate">{po.po_number}</span>
+          <div className="flex items-center gap-1.5 shrink-0">
             <HoverActions actions={hoverActions} />
             {isInvoiced && (
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300">
@@ -138,75 +118,52 @@ export function POCard({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div className="flex items-center gap-2 min-w-0">
-            <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-            <div className="min-w-0">
-              <p className="text-sm text-muted-foreground">Supplier</p>
-              <p className="font-medium truncate">{po.supplier?.name || '—'}</p>
-            </div>
-          </div>
+        {/* Row 2: Supplier · items · date */}
+        <p className="text-sm text-muted-foreground mt-1 truncate">
+          {po.supplier?.name || '—'}
+          <span className="mx-1.5">·</span>
+          {lineItemCount} item{lineItemCount !== 1 ? 's' : ''}
+          <span className="mx-1.5">·</span>
+          {format(new Date(po.created_at), 'MMM d, yyyy')}
+        </p>
 
-          <div className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <p className="text-sm text-muted-foreground">Items</p>
-              <p className="font-medium">{lineItemCount} line item{lineItemCount !== 1 ? 's' : ''}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Estimate/Pack Origin Info */}
+        {/* Estimate origin */}
         {isFromEstimate && (
-          <div className="mt-3 pt-3 border-t space-y-1.5">
-            <div className="flex items-center gap-2 flex-wrap">
-              <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border-transparent text-xs">
-                <ClipboardList className="h-3 w-3 mr-1" />
-                From Estimate
+          <div className="mt-3 space-y-1">
+            <div className="flex items-center gap-2">
+              <Badge className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300 border-transparent text-[11px] px-1.5 py-0">
+                <ClipboardList className="h-3 w-3 mr-0.5" />
+                Estimate
               </Badge>
               {po.source_pack_name && (
-                <span className="text-xs text-muted-foreground font-medium">
-                  Pack: {po.source_pack_name}
+                <span className="text-xs text-muted-foreground truncate">
+                  {po.source_pack_name}
                 </span>
               )}
             </div>
 
             {canViewPricing && estimatePackTotal != null && (
-              <div className="flex items-center gap-1.5 text-xs">
-                <span className="text-muted-foreground">
-                  Pack: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(estimatePackTotal)}
-                  {estimatePackItemCount != null && ` (${estimatePackItemCount} items)`}
-                </span>
-                <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                <span className="font-medium">
-                  Ordered: {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(poSubtotal)}
-                  {` (${lineItemCount} items)`}
-                </span>
+              <p className="text-xs text-muted-foreground">
+                Est {fmt(estimatePackTotal)}
+                <span className="mx-1">→</span>
+                <span className="font-medium text-foreground">{fmt(poSubtotal)}</span>
                 {adjustment != null && adjustment !== 0 && (
-                  <span className={adjustment > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}>
-                    ({adjustment > 0 ? '+' : ''}{new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(adjustment)})
+                  <span className={`ml-1 ${adjustment > 0 ? 'text-destructive' : 'text-green-600 dark:text-green-400'}`}>
+                    ({adjustment > 0 ? '+' : ''}{fmt(adjustment)})
                   </span>
                 )}
-              </div>
+              </p>
             )}
           </div>
         )}
 
-        {/* Pricing Display - Only if user can view pricing */}
+        {/* Total */}
         {hasPricing && (
-          <div className="mt-3 pt-3 border-t">
+          <div className="mt-3">
             {canViewPricing ? (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <DollarSign className="h-4 w-4" />
-                  <span className="text-sm">Total</span>
-                </div>
-                <span className="font-bold text-lg">
-                  {new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: 'USD',
-                  }).format(total || 0)}
-                </span>
+              <div className="flex items-center justify-end gap-2">
+                <span className="text-sm text-muted-foreground">Total</span>
+                <span className="font-bold text-lg">{fmtFull(total || 0)}</span>
               </div>
             ) : (
               <div className="flex items-center gap-2 text-muted-foreground">
@@ -217,73 +174,53 @@ export function POCard({
           </div>
         )}
 
-        {/* Delivery Tracking - Show for READY_FOR_DELIVERY and DELIVERED statuses */}
+        {/* Delivery tracking */}
         {(po.ready_for_delivery_at || po.delivered_at) && (
-          <div className="mt-3 pt-3 border-t space-y-2">
+          <div className="mt-3 pt-3 border-t space-y-1 text-sm">
             {po.ready_for_delivery_at && (
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <PackageCheck className="h-4 w-4 text-cyan-600" />
-                  <span>Ready for Delivery</span>
-                </div>
-                <span className="font-medium">
-                  {format(new Date(po.ready_for_delivery_at), 'MMM d, yyyy')}
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <PackageCheck className="h-3.5 w-3.5 text-cyan-600" />
+                  Ready
                 </span>
+                <span className="font-medium">{format(new Date(po.ready_for_delivery_at), 'MMM d')}</span>
               </div>
             )}
             {po.delivered_at && (
-              <div className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Truck className="h-4 w-4 text-green-600" />
-                  <span>Delivered</span>
-                </div>
-                <span className="font-medium text-green-600">
-                  {format(new Date(po.delivered_at), 'MMM d, yyyy')}
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <Truck className="h-3.5 w-3.5 text-green-600" />
+                  Delivered
                 </span>
+                <span className="font-medium text-green-600">{format(new Date(po.delivered_at), 'MMM d')}</span>
               </div>
             )}
           </div>
         )}
 
-        {/* Quick Action Buttons */}
+        {/* Action buttons */}
         {(showSubmitButton || showEditButton) && (
           <div className="flex items-center gap-2 mt-4 pt-3 border-t">
             {showEditButton && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit!(po);
-                }}
-              >
+              <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onEdit!(po); }}>
                 <Edit className="h-3.5 w-3.5 mr-1.5" />
                 Edit
               </Button>
             )}
             {showSubmitButton && (
-              <Button
-                size="sm"
-                onClick={handleSubmit}
-                disabled={submitting}
-                className="bg-blue-600 hover:bg-blue-700"
-              >
-                {submitting ? (
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                ) : (
-                  <Send className="h-3.5 w-3.5 mr-1.5" />
-                )}
+              <Button size="sm" onClick={handleSubmit} disabled={submitting} className="bg-blue-600 hover:bg-blue-700">
+                {submitting ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}
                 Submit to Supplier
               </Button>
             )}
           </div>
         )}
 
-        {/* Work Item reference */}
+        {/* Work item ref */}
         {po.work_item && (
-          <div className="mt-3 pt-2 border-t text-sm text-muted-foreground">
+          <p className="mt-3 pt-2 border-t text-sm text-muted-foreground">
             Work Order: {po.work_item.title}
-          </div>
+          </p>
         )}
       </CardContent>
     </Card>
