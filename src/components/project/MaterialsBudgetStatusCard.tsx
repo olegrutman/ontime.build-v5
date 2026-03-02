@@ -4,8 +4,7 @@ import { cn } from '@/lib/utils';
 import { useMaterialsBudgetHealth } from '@/hooks/useMaterialsBudgetHealth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { LineChart, Line, XAxis, YAxis, ReferenceLine, CartesianGrid, ResponsiveContainer } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { LineChart, Line, ReferenceLine, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
 
 function fmt(n: number) {
@@ -49,11 +48,6 @@ const statusDot: Record<StatusColor, string> = {
   red: 'bg-destructive',
 };
 
-const chartConfig = {
-  ordered: { label: 'Ordered', color: 'hsl(var(--primary))' },
-  delivered: { label: 'Delivered (Net)', color: 'hsl(142 71% 45%)' },
-  budget: { label: 'Budget', color: 'hsl(var(--muted-foreground))' },
-};
 
 interface Props {
   projectId: string;
@@ -171,23 +165,6 @@ export function MaterialsBudgetStatusCard({ projectId }: Props) {
             </div>
           </div>
 
-          {/* Budget vs Actual Chart */}
-          {data.chartData.length > 0 && (
-            <div>
-              <h4 className="text-xs uppercase tracking-wide text-muted-foreground font-medium mb-2">Budget vs Actual</h4>
-              <ChartContainer config={chartConfig} className="aspect-[2.5/1] w-full">
-                <LineChart data={data.chartData} margin={{ top: 5, right: 10, left: 10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" />
-                  <XAxis dataKey="month" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`} />
-                  <ChartTooltip content={<ChartTooltipContent formatter={(value) => fmt(value as number)} />} />
-                  <ReferenceLine y={data.estimateTotal} stroke="hsl(var(--muted-foreground))" strokeDasharray="6 4" label={{ value: 'Budget', position: 'right', fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
-                  <Line type="monotone" dataKey="ordered" stroke="var(--color-ordered)" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="delivered" stroke="var(--color-delivered)" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ChartContainer>
-            </div>
-          )}
 
           {/* Top 5 Packs Over Budget */}
           <div>
