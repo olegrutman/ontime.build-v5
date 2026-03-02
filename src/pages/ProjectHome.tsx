@@ -23,11 +23,8 @@ import {
   PurchaseOrdersTab,
   AttentionBanner,
   SupplierEstimatesSection,
-  SupplierPOSummaryCard,
   OperationalSummary,
-  SupplierOperationalSummary,
-  SupplierMaterialsControlCard,
-  SupplierMaterialsChart,
+  SupplierMaterialsOverview,
   BudgetTracking,
 } from '@/components/project';
 import { ContractHeroCard } from '@/components/project/ContractHeroCard';
@@ -252,13 +249,7 @@ export default function ProjectHome() {
                   {isInDemoMode ? (
                     <DemoProjectOverview onNavigate={handleTabChange} />
                   ) : isSupplier && supplierOrgId ? (
-                    <div className="space-y-4">
-                      <AttentionBanner projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
-                      <SupplierMaterialsControlCard projectId={id!} supplierOrgId={supplierOrgId} />
-                      <SupplierMaterialsChart projectId={id!} supplierOrgId={supplierOrgId} />
-                      <SupplierPOSummaryCard projectId={id!} supplierOrgId={supplierOrgId} />
-                      <SupplierOperationalSummary projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
-                    </div>
+                    <SupplierMaterialsOverview projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
                   ) : (
                     <div className="space-y-4">
                       {/* Setup cards */}
