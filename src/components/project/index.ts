@@ -30,7 +30,5 @@ export { ContractHeroCard } from './ContractHeroCard';
 export { BillingCashCard } from './BillingCashCard';
 export { UrgentTasksCard } from './UrgentTasksCard';
 export { TeamMembersCard } from './TeamMembersCard';
-export { SupplierMaterialsControlCard } from './SupplierMaterialsControlCard';
 export { SupplierMaterialsChart } from './SupplierMaterialsChart';
 export { SupplierMaterialsOverview } from './SupplierMaterialsOverview';
-export { MaterialsBudgetStatusCard } from './MaterialsBudgetStatusCard';
