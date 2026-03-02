@@ -1,68 +1,66 @@
 
 
-# Highlight Edited, Deleted, and Added Items on PO Detail
+# Add "Mark Ordered" for Suppliers on SUBMITTED + Auto-Apply Estimate Tax on PO Creation
 
-## What This Does
+## Overview
 
-When a PO was built from an estimate pack, the line items table in the PO detail view will visually indicate what changed compared to the original pack:
+Two changes:
+1. Suppliers can mark a PO as "Ordered" directly from SUBMITTED status (skipping pricing if no edits needed)
+2. When creating a PO from an estimate, automatically pull the estimate's `sales_tax_percent` and apply it to the PO totals
 
-- **Yellow background** -- items from the estimate that were edited (quantity or price changed)
-- **Red background** -- items that were in the original estimate pack but removed from the PO; these are shown as extra rows with $0 cost and strikethrough text
-- **Green background** -- items that were added to the PO but were not in the original estimate pack
+---
 
-## Changes
-
-### 1. Fetch original estimate pack items in PODetail
+## Change 1: "Mark Ordered" Button for Suppliers on SUBMITTED
 
 **File:** `src/components/purchase-orders/PODetail.tsx`
 
-- After fetching the PO and line items, check if the PO has `source_estimate_id` and `source_pack_name`
-- If so, query `supplier_estimate_items` where `estimate_id = source_estimate_id` and `pack_name = source_pack_name`
-- Store these original estimate items in state
-- Build a lookup Map keyed by estimate item ID for fast comparison
+Currently, the "Mark Ordered" button only appears when `status === 'PRICED'` (line 556). Add an additional condition so suppliers also see it when `status === 'SUBMITTED'`:
 
-### 2. Determine item status for each row
+- Around line 535-566, add a new block for SUBMITTED status that shows "Mark Ordered" for suppliers (alongside the existing "Add / Edit Pricing" button)
+- The supplier can choose: edit pricing OR skip straight to ordered
+- The button calls the existing `handleMarkOrdered` function which sets status to ORDERED with `ordered_at` timestamp
 
-For each PO line item:
-- If it has `source_estimate_item_id` and that ID exists in the estimate items map:
-  - Compare quantity and unit_price to the original
-  - If either differs -> **yellow** (edited)
-  - If same -> no highlight (unchanged)
-- If it has NO `source_estimate_item_id` -> **green** (added)
-
-For estimate items NOT found in any PO line item's `source_estimate_item_id`:
-- These are **deleted** items -> show as extra rows with **red** background, quantity from estimate, $0.00 cost, and strikethrough styling
-
-### 3. Render highlights in the table
-
-**File:** `src/components/purchase-orders/PODetail.tsx`
-
-- Add conditional `className` on each `TableRow`:
-  - Yellow: `bg-yellow-50 dark:bg-yellow-900/20`
-  - Green: `bg-green-50 dark:bg-green-900/20`
-  - Red: `bg-red-50 dark:bg-red-900/20` with `line-through` on description text
-- For deleted items, append extra rows after the regular line items showing the removed items with 0 cost
-- Add a small legend above the table when the PO is from an estimate, explaining the color coding
-
-### 4. Visual layout
-
-```text
-+---+--------+------------------+-----+-----+---------+--------+
-| # | SKU    | Description      | Qty | UOM | Unit $  | Total  |
-+---+--------+------------------+-----+-----+---------+--------+
-|   (normal row - unchanged from estimate)                      |
-+---+--------+------------------+-----+-----+---------+--------+
-| * | 2x4-10 | 2x4 Stud 10ft   |  50 | EA  |  $8.50  |$425.00 |  <- YELLOW (qty was 40)
-+---+--------+------------------+-----+-----+---------+--------+
-| * | —      | New bolts        |  20 | EA  |  $2.00  | $40.00 |  <- GREEN (added)
-+---+--------+------------------+-----+-----+---------+--------+
-| X | 4x4-8  | 4x4 Post 8ft    |  — | EA  |  $0.00  |  $0.00 |  <- RED (deleted)
-+---+--------+------------------+-----+-----+---------+--------+
+**Logic:**
 ```
+if status === 'SUBMITTED' && effectiveIsSupplier && !editingPrices:
+  show "Mark Ordered" button
+```
+
+---
+
+## Change 2: Auto-Apply Estimate Tax on PO Creation
+
+**File:** `src/components/project/PurchaseOrdersTab.tsx`
+
+In the `handleCreatePO` function (around line 150):
+
+1. After computing `source_estimate_id` from `data`, if it exists, query `supplier_estimates` to get `sales_tax_percent`
+2. Use that tax percent when computing PO totals:
+   - `taxAmount = poSubtotalTotal * (salesTaxPercent / 100)`
+   - `poTotal = poSubtotalTotal + taxAmount`
+3. Save `sales_tax_percent`, `tax_percent_applied`, `po_tax_total`, and `po_total` on the PO record
+
+Current code (line 242-248) sets `po_total = poSubtotalTotal` with no tax. Updated code will:
+```
+const taxPercent = estimateTaxPercent || 0;
+const taxAmount = poSubtotalTotal * (taxPercent / 100);
+const poTotal = poSubtotalTotal + taxAmount;
+
+update PO with:
+  sales_tax_percent: taxPercent,
+  tax_percent_applied: taxPercent,
+  po_tax_total: taxAmount,
+  po_total: poTotal,
+```
+
+Also apply the same tax logic in `handleEditComplete` (around line 355) so edits preserve the tax calculation.
+
+---
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/purchase-orders/PODetail.tsx` | Fetch estimate pack items; compare against PO line items; highlight rows yellow/green/red; show deleted items as $0 rows |
+| `src/components/purchase-orders/PODetail.tsx` | Show "Mark Ordered" button for suppliers when PO status is SUBMITTED |
+| `src/components/project/PurchaseOrdersTab.tsx` | Fetch estimate tax percent on PO creation and edit; compute and save tax totals |
 
