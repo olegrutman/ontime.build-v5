@@ -1,113 +1,80 @@
 
-# Supplier Materials Overview - Desktop Redesign
+# Add Materials Budget Status Card to GC/TC Overview
 
 ## Overview
-Redesign the Supplier Project Overview page into a structured Materials Health Dashboard matching the provided reference image. This is a layout-only change -- no database modifications, no workflow changes.
-
-## Architecture
-
-Replace the current vertical stack of cards (`AttentionBanner`, `SupplierMaterialsControlCard`, `SupplierMaterialsChart`, `SupplierPOSummaryCard`, `SupplierOperationalSummary`) with a single new component: `SupplierMaterialsOverview`.
-
-This new component consolidates all data fetching into one hook (`useSupplierMaterialsOverview`) and renders 6 structured sections.
+Add a compact, clickable "Materials Budget Status" card to the GC/TC project overview page. When clicked, it opens a dialog with full drilldown details. Only visible to the material-responsible party.
 
 ## New Files
 
-### 1. `src/hooks/useSupplierMaterialsOverview.ts`
-Central data hook that fetches and computes all metrics in one place:
+### 1. `src/hooks/useMaterialsBudgetHealth.ts`
+A new hook similar to `useSupplierMaterialsOverview` but queries from the GC/TC perspective (all suppliers on the project, not scoped to one supplier org).
 
-- **Estimate data**: Sum approved `supplier_estimates.total_amount` and `sales_tax_percent`
-- **PO data**: All POs with `po_line_items` including `source_pack_name`, `source_estimate_item_id`, `line_total`, `unit_price`
-- **Estimate items**: All `supplier_estimate_items` grouped by `pack_name` with `line_total`
-- **Returns**: Sum of `returns.net_credit_total` where `status = 'CLOSED'`
+Key differences from the supplier hook:
+- Fetches ALL approved `supplier_estimates` for the project (no org filter)
+- Fetches ALL POs for the project (no supplier filter)
+- Fetches ALL closed returns for the project
+- Same forecast logic (weighted pack delta), same computed values
+- Returns the same shape: `estimateTotal`, `materialsOrdered`, `deliveredNet`, `forecastFinal`, `forecastVariance`, `forecastVariancePct`, `forecastConfidence`, `packsOverBudget` (top 5), `unmatchedItems` (top 5), `riskFactors`, `chartData`
 
-Computed values:
-- `estimateTotal` (budget baseline)
-- `materialsOrdered` (sum of PO line totals for PRICED/ORDERED/DELIVERED)
-- `deliveredTotal` (POs with status DELIVERED)
-- `deliveredNet` (deliveredTotal - credits)
-- `orderedVariance` (materialsOrdered - estimateTotal)
-- **Pack-level forecast**: For each pack with PO items, compute `delta_pct = (actual - estimate) / estimate`, then weighted average across ordered packs. Apply to remaining unstarted packs: `forecastFinal = actualOrderedTotal + remainingEstimate * (1 + weightedAvgDeltaPct)`
-- `forecastVariance` (forecastFinal - estimateTotal)
-- `forecastConfidence` (low if < 3 ordered packs)
-- **Packs over budget**: Pack-by-pack comparison (estimate vs ordered)
-- **Materials not in estimate**: PO line items where `source_estimate_item_id IS NULL`
-- **Risk factors**: Count of unpriced items (POs in SUBMITTED status), packs not started, biggest upcoming pack
+### 2. `src/components/project/MaterialsBudgetStatusCard.tsx`
+Two parts: collapsed card + expanded dialog.
 
-### 2. `src/components/project/SupplierMaterialsOverview.tsx`
-Main container component. Renders all 6 sections using data from the hook.
+**Collapsed Card** (placed in the left column of the overview grid):
+- Title: "Materials Budget Status"
+- Four metric rows: Budget (Estimate), Materials Ordered (+/- %), Materials Delivered Net (+/- %), Projected Final Cost (+/- %)
+- Status line with color: "On Budget" (green) / "Trending Over Budget" (amber/red) / "Trending Under Budget" (green)
+- Small inline sparkline (tiny recharts LineChart, ~60px tall) showing estimate baseline, ordered trend, delivered trend
+- Entire card is clickable (cursor-pointer, hover:shadow-md)
 
-Layout structure:
-```text
-[SECTION 1: Material Status Banner - full width]
-[SECTION 2: 3 KPI Cards - 3-column grid]
-[SECTION 3: Budget vs Actual Chart | SECTION 4: Materials Not in Estimate - 2-column grid]
-[SECTION 5: Packs Over Budget | SECTION 6: Risk Factors - 2-column grid]
-```
+Color logic:
+- Green: forecastFinal <= estimateTotal
+- Amber: forecastFinal > estimateTotal and <= 5% over
+- Red: forecastFinal > 5% over estimateTotal
 
-### Section Details
+**Expanded Dialog** (opens on card click):
+Uses the existing `Dialog` component. Contains 5 sections:
 
-**Section 1 - Material Status Banner** (full width)
-- Amber/red background if over budget, green if under
-- Large text: "Projected $X (Y%) Over/Under Budget"
-- Subtext with forecast explanation and confidence note
-- Right side: "Currently +$X (Y%) over budget" (actual, not forecast)
-
-**Section 2 - Budget Summary** (3 equal cards)
-- Card 1: Budget (Estimate) -- large dollar value
-- Card 2: Materials Ordered -- with +/- variance vs estimate in red/green
-- Card 3: Materials Delivered (Net) -- with delivered minus credits subline
-
-**Section 3 - Budget vs Actual Chart** (reuses existing `SupplierMaterialsChart` logic)
-- Relabeled: "Materials Budget vs Actual"
-- Subtitle shows estimate total
-- Same LineChart with Budget baseline, Materials Ordered, Materials Delivered lines
-- Legend below
-
-**Section 4 - Materials Not in Estimate** (table card)
-- Toggle: "Ordered View" / "Delivered View"
-- Table: Item description, Ordered Cost (or Delivered Cost), number of POs, First Seen date
-- Data: PO line items where `source_estimate_item_id` is null, aggregated by description
-
-**Section 5 - Packs Over Budget** (table card)
-- Columns: Pack, Budget, Ordered Cost, Over Budget
-- Over Budget column: "+$X (+Y%)" in red
-- Data: Compare PO line items grouped by `source_pack_name` against estimate items grouped by `pack_name`
-
-**Section 6 - Risk Factors** (simple list card)
-- Warning icon bullets:
-  - Unpriced items pending: X items across X POs (from SUBMITTED POs)
-  - Packs not started: X of Y total
-  - Biggest upcoming pack: PackName ($Amount)
+1. **Forecast Summary**: Projected Final Cost, Over/Under $, Over/Under %, Confidence indicator
+2. **Budget vs Actual Chart**: Full-width LineChart with Budget baseline, Ordered cumulative, Delivered cumulative lines
+3. **Top 5 Packs Over Budget**: Table with Pack Name, Budget, Ordered, Over/Under columns
+4. **Top 5 Materials Not in Estimate**: Table with Item, Ordered Cost, # POs, First Seen
+5. **Risk Factors**: Same bullet list as supplier dashboard (unpriced items, packs not started, biggest upcoming)
 
 ## Modified Files
 
-### `src/pages/ProjectHome.tsx` (lines 254-261)
-Replace the supplier overview section:
-```text
-Before:
-  <AttentionBanner .../>
-  <SupplierMaterialsControlCard .../>
-  <SupplierMaterialsChart .../>
-  <SupplierPOSummaryCard .../>
-  <SupplierOperationalSummary .../>
-
-After:
-  <SupplierMaterialsOverview projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
-```
+### `src/pages/ProjectHome.tsx`
+- Import `MaterialsBudgetStatusCard`
+- Add it to the left column of the GC/TC overview, after the `BillingCashCard / BudgetTracking` row and before `CollapsibleOperations`
+- Only render when user is material-responsible: `(viewerRole === 'GC' && financials.isGCMaterialResponsible) || (viewerRole === 'TC' && financials.isTCMaterialResponsible)`
+- Uses `materialResponsibility` state already available in the page
 
 ### `src/components/project/index.ts`
-Add export for `SupplierMaterialsOverview`.
+- Add export for `MaterialsBudgetStatusCard`
 
-## Styling
-- Clean white cards with `rounded-2xl shadow-sm` (existing design system)
-- Large readable numbers with `tabular-nums` font
-- Uppercase tracking-wide section labels
-- Soft amber/red/green backgrounds for status banners
-- No dense data walls -- generous padding and spacing
+## Technical Details
 
-## Data Flow
-All queries use the existing `supplier-by-org` pattern (fetch supplier ID from org ID, then query POs/estimates). The hook consolidates what was previously 4 separate queries into a single unified fetch with memoized derived values.
+The hook queries:
+```text
+supplier_estimates: project_id = X, status = 'APPROVED' -> sum total_amount
+supplier_estimate_items: grouped by pack_name -> estimate per pack
+purchase_orders: project_id = X, status IN (PRICED, ORDERED, DELIVERED) -> with po_line_items
+returns: project_id = X, status = 'CLOSED' -> sum net_credit_total
+```
 
-## Existing Components Preserved
-- `SupplierMaterialsControlCard`, `SupplierMaterialsChart`, `SupplierPOSummaryCard`, `SupplierOperationalSummary`, `SupplierEstimateVsOrdersCard` remain in the codebase (no deletion) but are no longer used on this page
-- No changes to PO workflow, estimate structure, or tax calculations
+Forecast formula (same as supplier dashboard):
+```text
+For each ordered pack: delta_pct = (actual - estimate) / estimate
+weighted_avg = SUM(delta_pct * weight)
+forecastFinal = orderedTotal + remainingEstimate * (1 + weighted_avg)
+```
+
+Sparkline: A tiny `LineChart` (~60px height, no axes, no grid) with 3 lines showing cumulative budget/ordered/delivered trend data from `chartData`.
+
+## Files Summary
+
+| File | Action |
+|------|--------|
+| `src/hooks/useMaterialsBudgetHealth.ts` | Create - data hook for GC/TC materials health |
+| `src/components/project/MaterialsBudgetStatusCard.tsx` | Create - card + dialog component |
+| `src/components/project/index.ts` | Edit - add export |
+| `src/pages/ProjectHome.tsx` | Edit - add card to overview layout |
