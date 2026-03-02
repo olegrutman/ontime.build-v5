@@ -1,66 +1,85 @@
 
 
-# Redesign PO Cards for Clarity
+# Simplify PO Statuses: Remove FINALIZED and READY_FOR_DELIVERY
 
-## Current Problems
+## Analysis
 
-1. **PO number is too prominent** -- the large icon + bold PO number + date takes up a lot of header space
-2. **Supplier row with icon + label + value is verbose** -- "Supplier" label is obvious from context
-3. **"Items" section with icon + label + value is redundant** -- can be condensed
-4. **Estimate pack comparison is hard to scan** -- "Pack: $40,528.00 (16 items) -> Ordered: $41,020.28 (16 items) (+$492.28)" is a wall of text
-5. **"$ Total" label with DollarSign icon is redundant** -- we already see it's a dollar amount
-6. **Too many border-t dividers** create visual noise
-7. **Package icon in header is unnecessary** -- the card is already on the PO tab
-
-## Proposed Redesign
-
-### New Layout (compact, scannable)
+Current 7 statuses create two competing workflows:
 
 ```text
-+--------------------------------------------------+
-| PO-GCTEST-260302-0059        [Submitted] [Invoiced] |
-| Test Building Supply Co.  ·  16 items  ·  Mar 1   |
-|                                                    |
-| From Estimate · Pack: 5th Floor Framing...         |
-| Est $40,528 (16) -> $41,020 (16)  +$492           |
-|                                                    |
-|                              Total   $43,124.62    |
-|                                                    |
-| [Edit]  [Submit to Supplier]                       |
-+--------------------------------------------------+
+Path A: ACTIVE -> SUBMITTED -> PRICED -> ORDERED -> DELIVERED
+Path B: ACTIVE -> SUBMITTED -> PRICED -> FINALIZED -> READY_FOR_DELIVERY -> DELIVERED
 ```
 
-### Specific Changes
+Path B adds two extra steps (FINALIZED and READY_FOR_DELIVERY) that don't provide meaningful value over Path A:
+- **FINALIZED** = "GC approved the pricing" -- but the GC already approved by creating/submitting the PO. If the supplier priced it, the next logical step is ordering, not a separate "finalize" gate.
+- **READY_FOR_DELIVERY** = "Supplier says materials are ready to ship" -- this is essentially the same as ORDERED. Once it's ordered, the next meaningful event is delivery.
 
-**Header row (line 1):**
-- Remove the 40x40 Package icon box -- saves horizontal space
-- PO number as `text-sm font-semibold` (smaller than current `font-medium` on an h4)
-- Status badge stays on the right, same line
+**Database confirms this:** No POs are in ACTIVE, PRICED, or READY_FOR_DELIVERY. The 2 FINALIZED POs can be migrated to ORDERED.
 
-**Subtitle row (line 2):**
-- Combine supplier name, item count, and date into a single muted line separated by dots
-- e.g. "Test Building Supply Co. · 16 items · Mar 1, 2026"
-- Removes two icon+label blocks and the 2-column grid
+## Proposed Clean Flow (5 statuses)
 
-**Estimate section (if from estimate):**
-- Keep the "From Estimate" badge but make it smaller (inline pill)
-- Simplify the comparison to a single concise line:
-  - "Est $40,528 -> Ordered $41,020 (+$492)" with color on the delta
-- Remove the arrow icon and item counts (they can see items in subtitle)
+```text
+ACTIVE -> SUBMITTED -> PRICED -> ORDERED -> DELIVERED
+  (draft)   (sent to     (supplier   (order     (materials
+             supplier)    set prices)  placed)    received)
+```
 
-**Total:**
-- Right-aligned, no DollarSign icon, just "Total" label + bold amount
-- Remove the border-t divider above total -- use spacing instead
+## Changes
 
-**Delivery tracking:**
-- Keep but condense into subtitle-style text if present
+### 1. Database migration: Move existing FINALIZED POs to ORDERED
 
-**Action buttons:**
-- Keep at bottom, no change needed
+Update the 2 FINALIZED POs to ORDERED status. No READY_FOR_DELIVERY POs exist, so no migration needed for those.
 
-## Files Changed
+### 2. Update type definitions
 
-| File | Change |
-|------|--------|
-| `src/components/purchase-orders/POCard.tsx` | Restructure layout: remove Package icon, combine supplier/items/date into subtitle, simplify estimate comparison, clean up dividers |
+**File:** `src/types/purchaseOrder.ts`
+- Remove FINALIZED and READY_FOR_DELIVERY from the `POStatus` type
+- Remove their entries from `PO_STATUS_LABELS` and `PO_STATUS_COLORS`
+
+### 3. Update PODetail action buttons
+
+**File:** `src/components/purchase-orders/PODetail.tsx`
+- Remove the "Finalize Order" button (PRICED status section)
+- Remove the "Ready for Delivery" button and dialog (FINALIZED status section)
+- Remove the READY_FOR_DELIVERY -> DELIVERED button block
+- Remove `handleFinalize` and `handleMarkReadyForDelivery` functions
+- Remove `readyDialogOpen`, `expectedDeliveryDate` state variables and the ready-for-delivery dialog
+- Keep the ORDERED -> Mark Delivered flow (supplier marks delivered)
+
+### 4. Update POCard
+
+**File:** `src/components/purchase-orders/POCard.tsx`
+- Remove the `ready_for_delivery_at` tracking display (only keep `delivered_at`)
+
+### 5. Update references across the codebase
+
+**Files with FINALIZED/READY_FOR_DELIVERY references:**
+- `src/components/project/MetricStrip.tsx` -- remove from status filter arrays
+- `src/components/project/POSummaryCard.tsx` -- remove from in-transit filter
+- `src/components/project/SupplierMaterialsControlCard.tsx` -- remove from status list
+- `src/components/project/SupplierEstimateVsOrdersCard.tsx` -- remove from status list
+- `src/components/change-order-detail/WorkOrderMaterialsPanel.tsx` -- remove status entries
+- `src/components/change-order-detail/ChangeOrderDetailPage.tsx` -- remove from priced PO status array
+- `src/components/project/PurchaseOrdersTab.tsx` -- update sort priority array
+
+### 6. Update PO sort priority
+
+**File:** `src/components/project/PurchaseOrdersTab.tsx`
+- Remove FINALIZED and READY_FOR_DELIVERY from the status priority sort order
+- New order: ACTIVE, SUBMITTED, PRICED, ORDERED, DELIVERED
+
+---
+
+## Summary
+
+| Status | Keep/Remove | Reason |
+|--------|-------------|--------|
+| ACTIVE | Keep | Draft state, needed for editing |
+| SUBMITTED | Keep | Core workflow -- sent to supplier |
+| PRICED | Keep | Supplier set prices |
+| FINALIZED | **Remove** | Redundant gate between priced and ordered |
+| ORDERED | Keep | Order placed with supplier |
+| READY_FOR_DELIVERY | **Remove** | Overlaps with ORDERED, no POs use it |
+| DELIVERED | Keep | Final state, materials received |
 
