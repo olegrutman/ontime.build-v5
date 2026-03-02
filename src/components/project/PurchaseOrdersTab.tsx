@@ -182,11 +182,14 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
       // Fetch estimate tax percent if PO is from an estimate
       let estimateTaxPercent = 0;
       if (data.source_estimate_id) {
-        const { data: estData } = await supabase
+        const { data: estData, error: estError } = await supabase
           .from('supplier_estimates')
           .select('sales_tax_percent')
           .eq('id', data.source_estimate_id)
           .single();
+        if (estError) {
+          console.warn('Failed to fetch estimate tax percent:', estError.message);
+        }
         if (estData?.sales_tax_percent) {
           estimateTaxPercent = estData.sales_tax_percent;
         }
@@ -389,11 +392,14 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         // Fetch estimate tax percent for edit
         let editTaxPercent = editingPO.sales_tax_percent ?? 0;
         if (data.source_estimate_id) {
-          const { data: estData } = await supabase
+          const { data: estData, error: estError } = await supabase
             .from('supplier_estimates')
             .select('sales_tax_percent')
             .eq('id', data.source_estimate_id)
             .single();
+          if (estError) {
+            console.warn('Failed to fetch estimate tax percent on edit:', estError.message);
+          }
           if (estData?.sales_tax_percent) {
             editTaxPercent = estData.sales_tax_percent;
           }
