@@ -1,17 +1,24 @@
 
 
-# Remove Chart from Materials Budget Status Dialog
+# Remove Redundant Materials Cards
 
 ## What's Being Removed
 
-The "Budget vs Actual" chart inside the expanded dialog of `MaterialsBudgetStatusCard.tsx` (lines 174-196 approximately).
+1. **MaterialsBudgetStatusCard** — The clickable card on the GC/TC overview page (rendered in `ProjectHome.tsx`)
+2. **SupplierMaterialsControlCard** — Exported but not used on any page; dead code
 
-## Change
+## Changes
 
-### `src/components/project/MaterialsBudgetStatusCard.tsx`
-- Delete the "Budget vs Actual Chart" section inside the Dialog (lines 174-196): the `h4` heading, the `ChartContainer`, `LineChart`, `CartesianGrid`, `XAxis`, `YAxis`, `ChartTooltip`, `ReferenceLine`, and both `Line` elements
-- Remove unused imports: `LineChart`, `Line`, `XAxis`, `YAxis`, `ReferenceLine`, `CartesianGrid`, `ResponsiveContainer` from recharts, and `ChartContainer`, `ChartTooltip`, `ChartTooltipContent` from chart UI -- only keep what the sparkline on the collapsed card still uses (`LineChart`, `Line`, `ReferenceLine`, `ResponsiveContainer`)
-- Remove unused `chartConfig` constant since it's only used by the dialog chart
+### `src/pages/ProjectHome.tsx`
+- Remove the import of `MaterialsBudgetStatusCard` (line 36)
+- Remove the conditional render block (lines 274-282) that displays the card
 
-Everything else (collapsed card with sparkline, forecast summary, tables, risk factors) stays as-is.
+### `src/components/project/index.ts`
+- Remove export for `MaterialsBudgetStatusCard` (line 37)
+- Remove export for `SupplierMaterialsControlCard` (line 33)
+
+### Files to Delete
+- `src/components/project/MaterialsBudgetStatusCard.tsx`
+- `src/components/project/SupplierMaterialsControlCard.tsx`
+- `src/hooks/useMaterialsBudgetHealth.ts` (only used by MaterialsBudgetStatusCard)
 
