@@ -45,12 +45,12 @@ export function BillingCashCard({ financials }: BillingCashCardProps) {
   if (viewerRole === 'Trade Contractor') {
     const {
       receivablesInvoiced, receivablesCollected, receivablesRetainage,
-      payablesInvoiced, payablesPaid,
+      payablesInvoiced, payablesPaid, payablesRetainage,
     } = financials;
 
     const receivablesOutstanding = receivablesInvoiced - receivablesCollected - receivablesRetainage;
-    const payablesOutstanding = payablesInvoiced - payablesPaid;
-    const netCash = receivablesCollected - payablesPaid;
+    const payablesOutstanding = payablesInvoiced - payablesPaid - payablesRetainage;
+    const netCash = receivablesCollected - payablesPaid + payablesRetainage;
 
     return (
       <div className="bg-white dark:bg-card rounded-2xl shadow-sm p-5">
@@ -73,10 +73,11 @@ export function BillingCashCard({ financials }: BillingCashCardProps) {
         {/* Payables */}
         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Payables (to FC & Suppliers)</p>
         <RowList
-          dividerBefore={2}
+          dividerBefore={3}
           rows={[
             { label: 'Invoices Received', value: fmt(payablesInvoiced) },
             { label: 'Paid Out', value: fmt(payablesPaid), color: payablesPaid > 0 ? 'green' : undefined },
+            { label: 'Retainage Held', value: fmt(payablesRetainage), color: payablesRetainage > 0 ? 'amber' : undefined },
             { label: 'Outstanding', value: fmt(payablesOutstanding), color: payablesOutstanding > 0 ? 'amber' : undefined, bold: true },
           ]}
         />
@@ -87,7 +88,7 @@ export function BillingCashCard({ financials }: BillingCashCardProps) {
         <div className="flex items-center justify-between">
           <div>
             <span className="text-sm font-medium text-foreground">Net Cash Position</span>
-            <p className="text-[10px] text-muted-foreground">Collected − Paid Out</p>
+            <p className="text-[10px] text-muted-foreground">Collected − Paid + Retainage Held</p>
           </div>
           <span className={cn("text-lg font-bold tabular-nums", netCash >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
             {fmt(netCash)}
