@@ -20,7 +20,7 @@ interface BudgetTrackingProps {
 }
 
 export function BudgetTracking({ financials, projectId, onNavigate }: BudgetTrackingProps) {
-  const { loading, viewerRole, laborBudget, actualLaborCost, upstreamContract, updateLaborBudget } = financials;
+  const { loading, viewerRole, laborBudget, actualLaborCost, upstreamContract, downstreamContract, updateLaborBudget } = financials;
 
   if (loading) return null;
 
@@ -28,11 +28,14 @@ export function BudgetTracking({ financials, projectId, onNavigate }: BudgetTrac
 
   if (!showLabor) return null;
 
+  // FC updates labor budget on TC↔FC contract; GC on GC↔TC contract
+  const budgetContract = viewerRole === 'Field Crew' ? downstreamContract : upstreamContract;
+
   return (
     <LaborBudgetCard
       laborBudget={laborBudget}
       actualLaborCost={actualLaborCost}
-      upstreamContract={upstreamContract}
+      upstreamContract={budgetContract}
       updateLaborBudget={updateLaborBudget}
     />
   );

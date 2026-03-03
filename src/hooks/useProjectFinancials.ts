@@ -323,7 +323,17 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
          (c.to_role === 'General Contractor' && c.from_role === 'Trade Contractor')) &&
         c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
       );
-      setLaborBudget((primaryC as any)?.labor_budget ?? null);
+      // FC reads labor budget from TC↔FC contract; others from GC↔TC
+      if (detectedRole === 'Field Crew') {
+        const fcContract = contractsWithNames.find(c =>
+          ((c.from_role === 'Trade Contractor' && c.to_role === 'Field Crew') ||
+           (c.to_role === 'Trade Contractor' && c.from_role === 'Field Crew')) &&
+          c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
+        );
+        setLaborBudget((fcContract as any)?.labor_budget ?? null);
+      } else {
+        setLaborBudget((primaryC as any)?.labor_budget ?? null);
+      }
 
       // Extract owner_contract_value and material markup from primary contract
       setOwnerContractValue((primaryC as any)?.owner_contract_value ?? null);
