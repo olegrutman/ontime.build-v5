@@ -66,9 +66,7 @@ export function NeedsAttentionTile({ items, pendingInvitesCount }: NeedsAttentio
   const handleWorkOrdersClick = () => {
     if (groupedItems.change_orders.length > 0) {
       const firstItem = groupedItems.change_orders[0];
-      navigate(`/change-orders?project=${firstItem.projectId}`);
-    } else {
-      navigate('/change-orders');
+      navigate(`/project/${firstItem.projectId}?tab=work-orders`);
     }
   };
 

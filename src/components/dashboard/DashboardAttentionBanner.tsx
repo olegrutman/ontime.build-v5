@@ -51,7 +51,7 @@ export function DashboardAttentionBanner({ attentionItems, pendingInvites, onRef
 
   const handleWorkOrdersClick = () => {
     if (groupedItems.change_orders.length > 0) {
-      navigate(`/change-orders?project=${groupedItems.change_orders[0].projectId}`);
+      navigate(`/project/${groupedItems.change_orders[0].projectId}?tab=work-orders`);
     }
   };
 

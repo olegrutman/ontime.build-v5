@@ -2,13 +2,12 @@ import { useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Home,
-  DollarSign,
   Handshake,
-  ClipboardList,
   LayoutDashboard,
   ListChecks,
   FileText,
   ShoppingCart,
+  ClipboardList,
   MessageSquareMore,
   MoreHorizontal,
   Bell,
@@ -42,15 +41,13 @@ export function BottomNav() {
   // 10. Updated dashboard items with global pages
   const dashboardPrimaryItems: NavItem[] = [
     { label: 'Dashboard', icon: Home, path: '/dashboard' },
-    { label: 'Financials', icon: DollarSign, path: '/financials' },
-    { label: 'Work Orders', icon: ClipboardList, path: '/change-orders' },
     { label: 'Partners', icon: Handshake, path: '/partners' },
+    { label: 'Reminders', icon: Bell, path: '/reminders' },
+    { label: 'RFIs', icon: MessageSquareMore, path: '/rfis' },
   ];
 
   const dashboardMoreItems: NavItem[] = [
-    { label: 'Reminders', icon: Bell, path: '/reminders' },
     ...(canManageOrg ? [{ label: 'My Team', icon: Users, path: '/org/team' }] : []),
-    { label: 'RFIs', icon: MessageSquareMore, path: '/rfis' },
   ];
 
   const primaryProjectItems: NavItem[] = [

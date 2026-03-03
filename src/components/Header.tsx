@@ -135,10 +135,6 @@ export function Header() {
                       <FileText className="mr-2 h-4 w-4" />
                       Purchase Orders
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/change-orders')}>
-                      <FileEdit className="mr-2 h-4 w-4" />
-                      Work Orders
-                    </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => navigate('/work-items')}>
                       <Briefcase className="mr-2 h-4 w-4" />

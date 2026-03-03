@@ -37,7 +37,7 @@ export function NeedsAttentionPanel({ items }: NeedsAttentionPanelProps) {
   const handleItemClick = (item: AttentionItem) => {
     switch (item.type) {
       case 'change_order':
-        navigate(`/change-orders?project=${item.projectId}`);
+        navigate(`/project/${item.projectId}?tab=work-orders`);
         break;
       case 'invoice':
         navigate(`/project/${item.projectId}?tab=invoices`);
