@@ -485,7 +485,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     );
   }
 
-  const isProjectNotActive = projectStatus && projectStatus !== 'active';
+  const isProjectNotActive = projectStatus && projectStatus !== 'active' && !isSupplier;
 
   return (
     <>

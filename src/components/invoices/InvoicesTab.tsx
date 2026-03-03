@@ -77,7 +77,8 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
     return contractsWhereUserCanInvoice.length > 0;
   }, [currentOrgType, contractsWhereUserCanInvoice]);
 
-  const isProjectNotActive = projectStatus && projectStatus !== 'active';
+  const isSupplierOrg = currentOrgType === 'SUPPLIER';
+  const isProjectNotActive = projectStatus && projectStatus !== 'active' && !isSupplierOrg;
   const isBlocked = isProjectNotActive || (!sovReadiness.isReady && !sovReadiness.loading);
 
   // Separate invoices into sent, receivedFromContracts, receivedFromSuppliers
