@@ -1,26 +1,15 @@
 
 
-# Remove Approvals from Sidebar & Routes
+# Show Setup Projects First on Dashboard
 
-## Summary
-Remove the standalone "Approvals" section from the sidebar and delete the `/approvals/estimates` and `/approvals/orders` routes. Approval workflows will be managed within each project's estimate tab instead.
+## What
+Change the default status filter on the dashboard from "Active" to "Setup" when there are projects in setup status, so users see their incomplete projects first.
 
 ## Changes
 
-### 1. `src/components/layout/AppSidebar.tsx`
-- Delete the `gcNavItems` array (lines 60-63) containing "Estimate Approvals"
-- Delete the entire "Approvals Section" collapsible group (~lines 195-230) that renders for GC/TC_PM
-- Remove the `ClipboardCheck` icon import
+### `src/pages/Dashboard.tsx`
+- Change the initial `statusFilter` state to be dynamic: default to `'setup'` if `statusCounts.setup > 0`, otherwise `'active'`
+- Use a `useEffect` to set the filter to `'setup'` once data loads and there are setup projects (since `statusCounts` isn't available at mount time)
 
-### 2. `src/App.tsx`
-- Remove lazy imports for `EstimateApprovals` and `OrderApprovals`
-- Remove the `/approvals/estimates` and `/approvals/orders` route definitions
-
-### 3. `src/components/Header.tsx`
-- Remove the "Estimate Approvals" and "Order Approvals" dropdown menu items and the "Approvals" label from the header dropdown
-
-### 4. `src/components/layout/BottomNav.tsx`
-- Check and remove any approvals references from mobile nav (if present in "More" menu)
-
-**4 files modified, no database changes.**
+**1 file modified.**
 
