@@ -1,27 +1,22 @@
 
-
-# Fix FC Labor Budget Setting
+# Fix: Material Budget Status Not Updating After Estimate Approval
 
 ## Problem
-Two issues prevent FC from setting their labor budget:
+When the GC approves a supplier estimate in `ProjectEstimatesReview`, two things happen in the database:
+1. The estimate status changes to `APPROVED`
+2. The `material_estimate_total` on the contract is updated
 
-1. **Wrong contract used for labor budget** (`useProjectFinancials.ts` lines 321-326): The `laborBudget` state is always read from the GC↔TC contract, regardless of viewer role. For FC users, it should come from the TC↔FC contract.
-
-2. **Wrong contract passed to BudgetTracking** (`BudgetTracking.tsx`): The component receives `upstreamContract` (GC↔TC), but for FC the labor budget lives on the `downstreamContract` (TC↔FC).
+However, the React Query caches for `['supplier-materials-overview', ...]` and `['project-financials', ...]` are **never invalidated** after these updates. The `MaterialsBudgetStatusCard` and financial cards continue showing stale data until the user manually refreshes the page.
 
 ## Changes
 
-### 1. `src/hooks/useProjectFinancials.ts` (line 321-326)
-Read `laborBudget` from the role-appropriate contract:
-- If `detectedRole === 'Field Crew'`, find the TC↔FC contract and read its `labor_budget`
-- Otherwise, keep existing logic (GC↔TC contract)
+### `src/components/project/ProjectEstimatesReview.tsx`
+- Import `useQueryClient` from `@tanstack/react-query`
+- After `handleApprove` and `handleReject` succeed, invalidate:
+  - `['supplier-materials-overview', projectId, ...]` — refreshes the Materials Budget Status card
+  - `['project-financials', projectId]` — refreshes the financial dashboard (materialEstimate, approvedEstimateSum)
+  - `['project-readiness', projectId]` — if readiness depends on estimate status
 
-### 2. `src/components/project/BudgetTracking.tsx` (line 27)
-The component currently only uses `upstreamContract` for the update call. It needs to accept the correct contract based on role. Two options:
-- Change to use `financials.upstreamContract` for GC/TC and `financials.downstreamContract` for FC
-- The simplest fix: pass the role-appropriate contract. Since `BudgetTracking` already checks `viewerRole`, derive the correct contract inside the component.
+Concretely: call `queryClient.invalidateQueries({ queryKey: ['supplier-materials-overview'] })` and `queryClient.invalidateQueries({ queryKey: ['project-financials', projectId] })` after the successful DB update in both `handleApprove` and `handleReject`.
 
-Concrete change: In `BudgetTracking`, pass `downstreamContract` when `viewerRole === 'Field Crew'`, otherwise `upstreamContract`.
-
-**2 files modified. No database changes.**
-
+**1 file modified. No database changes.**
