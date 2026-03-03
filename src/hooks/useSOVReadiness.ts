@@ -83,7 +83,7 @@ export function useSOVReadiness(
     const primaryContracts = contracts.filter(
       c => (c.contract_sum || 0) > 0 && 
            !isWorkOrderContract(c) &&
-           (!userOrgId || c.to_org_id === userOrgId)
+           (!userOrgId || (isProjectCreator ? (c.from_org_id === userOrgId || c.to_org_id === userOrgId) : c.to_org_id === userOrgId))
     );
 
     // Edge case: No primary contracts with value - SOV is ready (nothing to configure)

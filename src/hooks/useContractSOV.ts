@@ -360,8 +360,9 @@ export function useContractSOV(projectId: string | undefined) {
           to_org_name: c.to_org?.name || null,
         }))
         // Filter to only contracts where current user's org is a party
+        // Project creators see ALL project contracts
         .filter((c: ProjectContract) => 
-          c.from_org_id === currentOrgId || c.to_org_id === currentOrgId
+          creatorMatch || c.from_org_id === currentOrgId || c.to_org_id === currentOrgId
         );
       const fetchedSovs = (sovsResult.data || []) as ContractSOV[];
       
@@ -461,7 +462,7 @@ export function useContractSOV(projectId: string | undefined) {
     return contracts.filter(c => 
       (c.contract_sum || 0) > 0 &&
       !isWorkOrderContract(c) &&
-      c.to_org_id === currentOrgId &&  // Current org is payer
+      (isProjectCreator ? (c.from_org_id === currentOrgId || c.to_org_id === currentOrgId) : c.to_org_id === currentOrgId) &&
       !contractsWithSOVs.has(c.id)     // No SOV exists
     );
   })();
@@ -475,7 +476,7 @@ export function useContractSOV(projectId: string | undefined) {
     const contractsWithValue = contracts.filter(c => 
       (c.contract_sum || 0) > 0 && 
       !isWorkOrderContract(c) &&
-      c.to_org_id === currentOrgId  // Payer only
+      (isProjectCreator ? (c.from_org_id === currentOrgId || c.to_org_id === currentOrgId) : c.to_org_id === currentOrgId)
     );
     
     if (contractsWithValue.length === 0) {
