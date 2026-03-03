@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -52,6 +53,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProps) {
   const { user, userOrgRoles } = useAuth();
+  const queryClient = useQueryClient();
   const currentOrgId = userOrgRoles[0]?.organization?.id;
 
   const [estimates, setEstimates] = useState<SupplierEstimate[]>([]);
@@ -179,6 +181,9 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
     }
 
     toast.success('Estimate approved');
+    queryClient.invalidateQueries({ queryKey: ['supplier-materials-overview'] });
+    queryClient.invalidateQueries({ queryKey: ['project-financials', projectId] });
+    queryClient.invalidateQueries({ queryKey: ['project-readiness', projectId] });
 
     // Update material_estimate_total
     try {
@@ -226,6 +231,9 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
     }
 
     toast.success('Estimate rejected');
+    queryClient.invalidateQueries({ queryKey: ['supplier-materials-overview'] });
+    queryClient.invalidateQueries({ queryKey: ['project-financials', projectId] });
+    queryClient.invalidateQueries({ queryKey: ['project-readiness', projectId] });
     setRejectDialogOpen(false);
     setRejectReason('');
     setEstimateToReject(null);
