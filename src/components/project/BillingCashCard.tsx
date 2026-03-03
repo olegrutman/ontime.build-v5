@@ -50,7 +50,7 @@ export function BillingCashCard({ financials }: BillingCashCardProps) {
 
     const receivablesOutstanding = receivablesInvoiced - receivablesCollected - receivablesRetainage;
     const payablesOutstanding = payablesInvoiced - payablesPaid - payablesRetainage;
-    const netCash = receivablesOutstanding - payablesOutstanding;
+    const netCash = receivablesInvoiced - payablesInvoiced;
 
     return (
       <div className="bg-white dark:bg-card rounded-2xl shadow-sm p-5">
@@ -88,7 +88,7 @@ export function BillingCashCard({ financials }: BillingCashCardProps) {
         <div className="flex items-center justify-between">
           <div>
             <span className="text-sm font-medium text-foreground">Net Position</span>
-            <p className="text-[10px] text-muted-foreground">Receivables Outstanding − Payables Outstanding</p>
+            <p className="text-[10px] text-muted-foreground">Total Invoiced to GC − Total Invoiced by FC</p>
           </div>
           <span className={cn("text-lg font-bold tabular-nums", netCash >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
             {fmt(netCash)}
