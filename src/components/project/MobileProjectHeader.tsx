@@ -141,18 +141,13 @@ export function MobileProjectHeader({
               <User className="mr-2 h-4 w-4" />
               Profile
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
             {(currentRole === 'GC_PM' || currentRole === 'TC_PM' || currentRole === 'FC_PM') && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/org/team')}>
-                  <Users className="mr-2 h-4 w-4" />
-                  My Team
-                </DropdownMenuItem>
-              </>
+              <DropdownMenuItem onClick={() => navigate('/org/team')}>
+                <Users className="mr-2 h-4 w-4" />
+                My Team
+              </DropdownMenuItem>
             )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate('/profile')}>
+            <DropdownMenuItem onClick={() => navigate('/settings')}>
               <Settings className="mr-2 h-4 w-4" />
               Settings
             </DropdownMenuItem>

@@ -48,6 +48,7 @@ const SupplierInventory = lazy(() => import("./pages/SupplierInventory"));
 const SupplierProjectEstimates = lazy(() => import("./pages/SupplierProjectEstimates"));
 const RFIs = lazy(() => import("./pages/RFIs"));
 const Profile = lazy(() => import("./pages/Profile"));
+const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 // Lazy-loaded components
@@ -164,6 +165,7 @@ function AppRoutes() {
             <Route path="/supplier/inventory" element={<RequireAuth><SupplierInventory /></RequireAuth>} />
             <Route path="/supplier/estimates" element={<RequireAuth><SupplierProjectEstimates /></RequireAuth>} />
             <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
+            <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
             <Route path="/rfis" element={<RequireAuth><RFIs /></RequireAuth>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
