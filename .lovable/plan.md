@@ -1,52 +1,46 @@
 
 
-# Fix: TC Billing & Cash Position Card — Split Upstream vs Downstream
+# Fix: TC Live Position Incorrectly Deducts GC-Responsible Material Costs
 
 ## Problem
-The current `BillingCashCard` sums **all** project invoices into one "Total Invoiced / Total Paid / Outstanding" view. For a Trade Contractor this is meaningless because it mixes:
-- **Receivables** (invoices TC sent to GC — money coming in)
-- **Payables** (invoices TC received from FC and suppliers — money going out)
+The TC "Live Position" formula in `ContractHeroCard` (line 238) unconditionally deducts `materialDelivered` and `materialOrderedPending` from the TC's profitability:
 
-A TC needs to see both sides separately to understand their actual cash position.
-
-## Real-Life Logic
-A Trade Contractor sits in the middle of the chain: GC pays them, they pay FC + suppliers. The card should show:
-
-```text
-┌──────────────────────────────────┐
-│  Billing & Cash Position         │
-│                                  │
-│  RECEIVABLES (from GC)           │
-│  Invoiced to GC        $120K    │
-│  Collected              $80K    │
-│  Retainage Held         $12K    │
-│  Outstanding            $28K    │
-│  ─────────────────────────────  │
-│  PAYABLES (to FC & Suppliers)    │
-│  Invoices Received      $65K    │
-│  Paid Out               $40K    │
-│  Outstanding            $25K    │
-│  ─────────────────────────────  │
-│  NET CASH POSITION       $3K    │
-│  (Collected − Paid Out)          │
-└──────────────────────────────────┘
 ```
+woProfit = workOrderTotal - workOrderFCCost - materialDelivered - materialOrderedPending
+livePosition = gcContractValue - fcContractValue + woProfit
+```
+
+But `materialDelivered` and `materialOrderedPending` are computed from **all** project POs (line 333-337 in `useProjectFinancials.ts`) with no filter on who is responsible for materials. In the current test project, `material_responsibility = 'GC'`, meaning the GC pays for materials — yet the TC's Live Position still deducts $22K+ in PO costs that the TC never pays for.
+
+The `ProfitCard` component correctly checks `isTCMaterialResponsible` before including material costs. The `ContractHeroCard` does not.
+
+## Formula Audit
+
+| Role | Metric | Formula | Correct? |
+|------|--------|---------|----------|
+| GC | Profit | Owner Contract − Current Total | Yes |
+| GC | Current Total | GC Contract + Approved WOs | Yes |
+| GC | Billing | Invoiced / Paid / Outstanding | Yes |
+| FC | Profit | Contract Total + WOs − Labor Budget | Yes |
+| TC | Profit (ProfitCard) | Labor Margin + Material Margin (only if TC responsible) | Yes |
+| TC | **Live Position** | GC Contract − FC Contract + WOs − FC Cost − **ALL materials** | **BUG** |
+| TC | Billing | Split receivables/payables | Yes |
 
 ## Changes
 
-### 1. `src/hooks/useProjectFinancials.ts`
-- **Expand invoice query** (line 192): Add `contract_id, po_id` to the select so we can classify invoices by direction.
-- **Add new state fields** for TC:
-  - `receivablesInvoiced`, `receivablesCollected`, `payablesInvoiced`, `payablesPaid`
-- **Classify invoices** (around line 260): For TC, split invoices using contract direction:
-  - Invoices where `contract_id` references a GC↔TC contract (TC is `from_org_id`) → **Receivables**
-  - Invoices where `contract_id` references a TC↔FC contract (FC is `from_org_id`) OR `po_id` is set (supplier) → **Payables**
-- **Export new fields** in the return object and `ProjectFinancials` interface.
+### `src/components/project/ContractHeroCard.tsx` (line 237-250)
+Pass `isTCMaterialResponsible` from financials. Only deduct `materialDelivered` and `materialOrderedPending` when `isTCMaterialResponsible === true`. When GC is responsible, the TC's Live Position should be:
 
-### 2. `src/components/project/BillingCashCard.tsx`
-- For `viewerRole === 'Trade Contractor'`: Render a two-section layout (Receivables + Payables + Net Cash Position) instead of the single combined view.
-- For GC and FC: Keep existing single-section layout unchanged.
-- Net Cash Position = receivablesCollected − payablesPaid.
+```
+livePosition = gcContractValue - fcContractValue + workOrderTotal - workOrderFCCost
+```
 
-**2 files modified. No database changes.**
+When TC is responsible:
+```
+livePosition = gcContractValue - fcContractValue + workOrderTotal - workOrderFCCost - materialDelivered - materialOrderedPending
+```
+
+Concrete change: Add `isTCMaterialResponsible` to the destructured props (line 34-40), then update the formula (line 238-239) to conditionally include material costs.
+
+**1 file, ~4 lines changed. No database changes.**
 
