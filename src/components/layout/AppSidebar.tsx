@@ -239,6 +239,18 @@ export function AppSidebar() {
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
+              asChild
+              isActive={isActive('/settings')}
+              tooltip={collapsed ? 'Settings' : undefined}
+            >
+              <NavLink to="/settings" className="gap-3" activeClassName="nav-active">
+                <Settings className="h-4 w-4 shrink-0" />
+                {!collapsed && <span>Settings</span>}
+              </NavLink>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
               onClick={handleSignOut}
               tooltip={collapsed ? 'Sign out' : undefined}
               className="text-destructive hover:text-destructive hover:bg-destructive/10"
