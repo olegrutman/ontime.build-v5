@@ -1,20 +1,24 @@
 
 
-# Fix TopBar Mobile Dropdown
+# Allow TC Project Creator to Create SOVs for All Contracts
 
 ## Problem
-The `TopBar.tsx` component (used on non-project pages like Profile, Dashboard, etc.) was missed during cleanup. Its mobile avatar dropdown still contains:
-1. **"Estimate Approvals"** — removed page, dead link
-2. **"Manage Suppliers"** — removed page, dead link  
-3. **"Settings"** navigates to `/profile` instead of `/settings`
+When a TC creates a project, they can only create SOVs for contracts where they are `to_org_id` (e.g., GC→TC). They cannot create SOVs for contracts where they are `from_org_id` (e.g., TC→FC), even though as project creator they should manage the full setup.
 
 ## Changes
 
-### `src/components/layout/TopBar.tsx`
-- Remove the "Estimate Approvals" menu item (lines 85-90)
-- Remove the "Manage Suppliers" menu item (lines 91-96)
-- Remove now-unused imports (`Shield`, `Package`)
-- Change Settings `navigate('/profile')` → `navigate('/settings')` on line 108
+### 1. `src/hooks/useContractSOV.ts`
+- **Contract visibility (line 363)**: When user is project creator, show ALL project contracts (not just ones where their org is a party)
+- **`contractsMissingSOVs` (line 461)**: When user is project creator, include contracts where their org is `from_org_id` OR `to_org_id` (not just `to_org_id`)
+- **`createAllSOVs` (line 475)**: Same — when project creator, allow creating SOVs for contracts where they are either party
+- The `isProjectCreator` flag already exists (line 307, 341) but isn't used for these filters
 
-**1 file modified.**
+### 2. `src/hooks/useSOVReadiness.ts`
+- **Line 86**: When user is project creator, check readiness across all contracts they're a party to (both `from_org_id` and `to_org_id`), not just `to_org_id`
+- Pass `isProjectCreator` properly from callers (currently defaults to `false`)
+
+### 3. `src/components/project/WorkOrdersTab.tsx`
+- Pass `isProjectCreator` to the `useSOVReadiness` hook call (line 54) — currently not passed
+
+**3 files modified. No database changes.**
 
