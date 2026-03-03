@@ -301,10 +301,10 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           (inv.contract_id && downstreamContractIds.has(inv.contract_id)) || (inv.po_id != null)
         );
 
-        setReceivablesInvoiced(receivableInvs.reduce((s, i) => s + (i.total_amount || 0), 0));
+        setReceivablesInvoiced(receivableInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
         setReceivablesCollected(receivableInvs.filter(i => i.status === 'PAID').reduce((s, i) => s + (i.total_amount || 0), 0));
         setReceivablesRetainage(receivableInvs.reduce((s, i: any) => s + (i.retainage_amount || 0), 0));
-        setPayablesInvoiced(payableInvs.reduce((s, i) => s + (i.total_amount || 0), 0));
+        setPayablesInvoiced(payableInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
         setPayablesPaid(payableInvs.filter(i => i.status === 'PAID').reduce((s, i) => s + (i.total_amount || 0), 0));
         setPayablesRetainage(payableInvs.reduce((s, i: any) => s + (i.retainage_amount || 0), 0));
       }
