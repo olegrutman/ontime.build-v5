@@ -1,22 +1,21 @@
 
-# Fix: Material Budget Status Not Updating After Estimate Approval
+
+# Remove Labor Budget Card from GC View
 
 ## Problem
-When the GC approves a supplier estimate in `ProjectEstimatesReview`, two things happen in the database:
-1. The estimate status changes to `APPROVED`
-2. The `material_estimate_total` on the contract is updated
+The GC sees the Labor Budget card on the project overview, but it serves no purpose for them. Labor budget tracking is an FC concept — the FC sets their internal labor budget against the TC↔FC contract. The GC tracks profit via Owner Contract Value, not labor budgets.
 
-However, the React Query caches for `['supplier-materials-overview', ...]` and `['project-financials', ...]` are **never invalidated** after these updates. The `MaterialsBudgetStatusCard` and financial cards continue showing stale data until the user manually refreshes the page.
+## Change
 
-## Changes
+### `src/components/project/BudgetTracking.tsx` (line 27)
+Change the visibility check from:
+```ts
+const showLabor = viewerRole === 'General Contractor' || viewerRole === 'Field Crew';
+```
+to:
+```ts
+const showLabor = viewerRole === 'Field Crew';
+```
 
-### `src/components/project/ProjectEstimatesReview.tsx`
-- Import `useQueryClient` from `@tanstack/react-query`
-- After `handleApprove` and `handleReject` succeed, invalidate:
-  - `['supplier-materials-overview', projectId, ...]` — refreshes the Materials Budget Status card
-  - `['project-financials', projectId]` — refreshes the financial dashboard (materialEstimate, approvedEstimateSum)
-  - `['project-readiness', projectId]` — if readiness depends on estimate status
+**1 line changed. 1 file. No database changes.**
 
-Concretely: call `queryClient.invalidateQueries({ queryKey: ['supplier-materials-overview'] })` and `queryClient.invalidateQueries({ queryKey: ['project-financials', projectId] })` after the successful DB update in both `handleApprove` and `handleReject`.
-
-**1 file modified. No database changes.**
