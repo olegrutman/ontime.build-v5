@@ -1,69 +1,36 @@
 
 
-# Fix: TC Billing & Cash Position Formulas Are Double-Counting Retainage
+# Implement TC Billing & Cash Position with Outstanding-Based Net Cash
 
-## Problem
+## Summary
 
-The invoice data model stores:
-- `subtotal` = gross billing amount (e.g. $17,064)
-- `retainage_amount` = withheld portion (e.g. $853.20)
-- `total_amount` = subtotal − retainage = net due (e.g. $16,210.80)
+Change the Net Cash formula from `Collected − Paid` to `Receivables Outstanding − Payables Outstanding`, where each "Outstanding" = Invoiced (non-draft) − Paid − Retainage.
 
-The current code has **two double-counting bugs**:
-
-### Bug 1: Outstanding uses `total_amount` (already net of retainage) but then subtracts retainage again
-```
-receivablesInvoiced = sum of total_amount = $16,210.80 (already net)
-receivablesOutstanding = $16,210.80 - $0 collected - $853.20 retainage = $15,357.60  ← WRONG
-```
-Should be $16,210.80 (nothing collected yet, retainage already excluded from total_amount).
-
-Same bug on payables side.
-
-### Bug 2: Net Cash adds `payablesRetainage` which double-counts
-```
-Net Cash = collected($0) - paid($0) + payablesRetainage($682.56) = $682.56  ← WRONG
-```
-No cash has moved — both invoices are APPROVED, not PAID. Net cash should be $0.
-
-Even when invoices ARE paid, the retainage is already implicitly reflected: `payablesPaid` uses `total_amount` (net of retainage), so the TC automatically "keeps" the retainage by paying less. Adding it again double-counts.
-
-## Correct Formulas
-
-**Option: Use `subtotal` (gross) as "Invoiced", subtract retainage for Outstanding**
-
-This is clearer for construction users — they see the full billing and how retainage reduces what's outstanding:
-
-| Row | Formula |
-|-----|---------|
-| Invoiced | sum of `subtotal` (gross amount billed) |
-| Collected/Paid | sum of `total_amount` where status = PAID |
-| Retainage Held | sum of `retainage_amount` (informational) |
-| **Outstanding** | **Invoiced − Collected − Retainage** |
-| **Net Cash** | **receivablesCollected − payablesPaid** (no retainage term) |
-
-Verification with both invoices PAID:
-- Receivables: Invoiced $17,064 − Collected $16,210.80 − Retainage $853.20 = $0 outstanding ✓
-- Payables: Invoiced $13,651.20 − Paid $12,968.64 − Retainage $682.56 = $0 outstanding ✓
-- Net Cash: $16,210.80 − $12,968.64 = $3,242.16 ✓ (TC keeps the spread + retainage is implicit)
+The `submitted` filter already excludes DRAFTs (line 275: keeps SUBMITTED, APPROVED, PAID), so the "Invoiced" totals already match the user's intent.
 
 ## Changes
 
-### 1. `src/hooks/useProjectFinancials.ts`
-- Change `receivablesInvoiced` to sum `subtotal` instead of `total_amount` (line 304)
-- Change `payablesInvoiced` to sum `subtotal` instead of `total_amount` (line 307)
-- Remove `payablesRetainage` state — not needed for calculations; retainage is already tracked per-side
+### 1. `src/components/project/BillingCashCard.tsx` (3 lines)
 
-### 2. `src/components/project/BillingCashCard.tsx`
-- Remove `payablesRetainage` from destructuring
-- Fix Net Cash formula: `receivablesCollected - payablesPaid` (remove `+ payablesRetainage`)
-- Fix payables Outstanding: `payablesInvoiced - payablesPaid - payablesRetainage` → since payablesInvoiced is now gross (subtotal), keep the retainage subtraction
-- Actually, since `payablesRetainage` is being removed from the hook, compute it inline OR keep it in the hook but don't use it in net cash
+- **Line 53**: Change `netCash` from `receivablesCollected - payablesPaid` to `receivablesOutstanding - payablesOutstanding`
+- **Line 91**: Update subtitle from `"Collected − Paid"` to `"Receivables Outstanding − Payables Outstanding"`
+- Optionally rename label from "Net Cash Position" to "Net Position" since it now represents outstanding balances, not actual cash moved
 
-**Revised approach**: Keep `payablesRetainage` in the hook (for the display row) but fix the two formulas:
-- Outstanding formulas stay: `invoiced - collected/paid - retainage` (correct when invoiced = subtotal)
-- Net Cash: `receivablesCollected - payablesPaid` (remove `+ payablesRetainage`)
-- Net Cash subtitle: "Collected − Paid"
+### 2. No hook changes needed
 
-**3 lines in hook, 2 lines in card. No database changes.**
+The hook already computes the right values — `receivablesInvoiced` sums `subtotal` (gross) for non-draft invoices, `receivablesCollected`/`payablesPaid` sum paid amounts, and retainage is tracked. The card already computes `receivablesOutstanding` and `payablesOutstanding` correctly. We just need to subtract them for net.
+
+## Verification
+
+With both invoices APPROVED (not paid):
+- Receivables Outstanding = $17,064 − $0 − $853.20 = $16,210.80
+- Payables Outstanding = $13,651.20 − $0 − $682.56 = $12,968.64
+- Net Position = $16,210.80 − $12,968.64 = **$3,242.16** (TC's spread)
+
+With both PAID:
+- Receivables Outstanding = $17,064 − $16,210.80 − $853.20 = $0
+- Payables Outstanding = $13,651.20 − $12,968.64 − $682.56 = $0
+- Net Position = $0 − $0 = **$0** (everything settled)
+
+**1 file, 2-3 lines changed. No database changes.**
 
