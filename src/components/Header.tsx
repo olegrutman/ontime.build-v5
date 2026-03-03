@@ -1,4 +1,4 @@
-import { Building2, Plus, Search, Bell, LogOut, Users, Settings, Package, Truck, FileText, ShoppingCart, Briefcase, Receipt, Home, Handshake } from 'lucide-react';
+import { Building2, Plus, Search, Bell, LogOut, Users, Settings, Package, FileText, ShoppingCart, Briefcase, Receipt, Home, Handshake } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/useAuth';
@@ -144,15 +144,6 @@ export function Header() {
                       <Receipt className="mr-2 h-4 w-4" />
                       SOV Dashboard
                     </DropdownMenuItem>
-                    {currentRole === 'GC_PM' && (
-                      <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => navigate('/admin/suppliers')}>
-                          <Truck className="mr-2 h-4 w-4" />
-                          Manage Suppliers
-                        </DropdownMenuItem>
-                      </>
-                    )}
                     {currentOrg && (
                       <>
                         <DropdownMenuSeparator />

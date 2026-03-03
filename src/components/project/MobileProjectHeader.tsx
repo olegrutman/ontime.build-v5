@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, Download, Loader2, User, Shield, Users, Settings, LogOut, Package } from 'lucide-react';
+import { ChevronDown, Download, Loader2, User, Users, Settings, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -142,18 +142,6 @@ export function MobileProjectHeader({
               Profile
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            {currentRole === 'GC_PM' && (
-              <DropdownMenuItem onClick={() => navigate('/approvals/estimates')}>
-                <Shield className="mr-2 h-4 w-4" />
-                Estimate Approvals
-              </DropdownMenuItem>
-            )}
-            {(currentRole === 'GC_PM' || currentRole === 'TC_PM') && (
-              <DropdownMenuItem onClick={() => navigate('/admin/suppliers')}>
-                <Package className="mr-2 h-4 w-4" />
-                Manage Suppliers
-              </DropdownMenuItem>
-            )}
             {(currentRole === 'GC_PM' || currentRole === 'TC_PM' || currentRole === 'FC_PM') && (
               <>
                 <DropdownMenuSeparator />
