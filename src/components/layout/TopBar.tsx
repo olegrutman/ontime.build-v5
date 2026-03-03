@@ -1,4 +1,4 @@
-import { Plus, User, Shield, Users, Settings, LogOut, Package } from 'lucide-react';
+import { Plus, User, Users, Settings, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { SidebarTrigger } from '@/components/ui/sidebar';
@@ -82,18 +82,6 @@ export function TopBar({
             </DropdownMenuItem>
             <DropdownMenuSeparator />
 
-            {currentRole === 'GC_PM' && (
-              <DropdownMenuItem onClick={() => navigate('/approvals/estimates')}>
-                <Shield className="mr-2 h-4 w-4" />
-                Estimate Approvals
-              </DropdownMenuItem>
-            )}
-            {(currentRole === 'GC_PM' || currentRole === 'TC_PM') && (
-              <DropdownMenuItem onClick={() => navigate('/admin/suppliers')}>
-                <Package className="mr-2 h-4 w-4" />
-                Manage Suppliers
-              </DropdownMenuItem>
-            )}
             {(currentRole === 'GC_PM' || currentRole === 'TC_PM' || currentRole === 'FC_PM') && (
               <>
                 <DropdownMenuSeparator />
@@ -105,7 +93,7 @@ export function TopBar({
             )}
 
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate('/profile')}>
+            <DropdownMenuItem onClick={() => navigate('/settings')}>
               <Settings className="mr-2 h-4 w-4" />
               Settings
             </DropdownMenuItem>
