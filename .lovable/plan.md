@@ -1,24 +1,28 @@
 
 
-# Allow TC Project Creator to Create SOVs for All Contracts
+# Delete All Projects and Associated Data
 
-## Problem
-When a TC creates a project, they can only create SOVs for contracts where they are `to_org_id` (e.g., GC→TC). They cannot create SOVs for contracts where they are `from_org_id` (e.g., TC→FC), even though as project creator they should manage the full setup.
+## What this does
+Removes all 5 projects and every piece of data linked to them from the database. This is a destructive, irreversible operation.
 
-## Changes
+## Deletion strategy
 
-### 1. `src/hooks/useContractSOV.ts`
-- **Contract visibility (line 363)**: When user is project creator, show ALL project contracts (not just ones where their org is a party)
-- **`contractsMissingSOVs` (line 461)**: When user is project creator, include contracts where their org is `from_org_id` OR `to_org_id` (not just `to_org_id`)
-- **`createAllSOVs` (line 475)**: Same — when project creator, allow creating SOVs for contracts where they are either party
-- The `isProjectCreator` flag already exists (line 307, 341) but isn't used for these filters
+Most child tables have `ON DELETE CASCADE`, so deleting from `projects` will automatically clean up ~18 tables. However, two tables use different FK behavior and must be handled first:
 
-### 2. `src/hooks/useSOVReadiness.ts`
-- **Line 86**: When user is project creator, check readiness across all contracts they're a party to (both `from_org_id` and `to_org_id`), not just `to_org_id`
-- Pass `isProjectCreator` properly from callers (currently defaults to `false`)
+1. **`purchase_orders`** (`ON DELETE NO ACTION`) — 11 rows. Must delete these first, which will cascade to `po_line_items`. Need to also clear `invoice_line_items` referencing work_items and `return_items` referencing POs.
+2. **`supplier_estimates`** (`ON DELETE SET NULL`) — 2 rows. These won't be deleted automatically; they'll just have `project_id` set to NULL, leaving orphan records.
 
-### 3. `src/components/project/WorkOrdersTab.tsx`
-- Pass `isProjectCreator` to the `useSOVReadiness` hook call (line 54) — currently not passed
+## Execution order (single SQL transaction)
 
-**3 files modified. No database changes.**
+1. Delete `return_items` referencing POs in these projects
+2. Delete `returns` in these projects
+3. Delete `invoice_line_items` referencing work_items in these projects
+4. Nullify `source_estimate_id` on POs referencing supplier_estimates in these projects
+5. Delete `supplier_estimate_items`, `estimate_pdf_uploads`, `estimate_line_items`, `estimate_catalog_mapping` for supplier_estimates in these projects
+6. Delete `supplier_estimates` in these projects
+7. Delete `po_line_items` for POs in these projects
+8. Delete `purchase_orders` in these projects
+9. Delete from `projects` — cascades to all remaining child tables (project_team, project_invites, project_contracts, project_sov, project_sov_items, invoices, work_items, change_order_projects, project_participants, project_relationships, project_scope_details, project_activity, reminders, project_rfis, project_guests, project_designated_suppliers, project_estimates, estimate_catalog_mapping)
+
+All done via the data insert tool (not migration), since this is a data operation, not a schema change.
 
