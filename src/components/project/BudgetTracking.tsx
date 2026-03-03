@@ -24,7 +24,7 @@ export function BudgetTracking({ financials, projectId, onNavigate }: BudgetTrac
 
   if (loading) return null;
 
-  const showLabor = viewerRole === 'General Contractor' || viewerRole === 'Field Crew';
+  const showLabor = viewerRole === 'Field Crew';
 
   if (!showLabor) return null;
 
