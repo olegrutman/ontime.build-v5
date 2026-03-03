@@ -221,7 +221,9 @@ export function ContractsStep({ projectId, contracts, onChange, creatorRole }: C
 
   // Separate TC members for material responsibility section (GC only)
   const tcMembers = teamMembers.filter(m => m.role === 'Trade Contractor');
-  const showMaterialSection = creatorRole === 'General Contractor' && tcMembers.length > 0;
+  const gcExists = teamMembers.some(m => m.role === 'General Contractor');
+  const showMaterialSection = (creatorRole === 'General Contractor' && tcMembers.length > 0) ||
+    (creatorRole === 'Trade Contractor' && gcExists && tcMembers.length > 0);
 
   return (
     <div className="space-y-6">
@@ -234,22 +236,24 @@ export function ContractsStep({ projectId, contracts, onChange, creatorRole }: C
         </p>
       </div>
 
-      {/* Material Responsibility section - GC only, when TCs exist */}
+      {/* Material Responsibility section - GC or TC when GC exists */}
       {showMaterialSection && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Package className="h-4 w-4" />
-            <span>Material Responsibility</span>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Who provides and pays for materials on each trade contract?
-          </p>
-          {tcMembers.map((member) => {
-            const contract = getContract(member.id, true);
-            const tradeName = member.trade === 'Other' ? member.trade_custom : member.trade;
-            return (
-              <Card key={member.id}>
-                <CardContent className="p-4 space-y-3">
+        <Card className="border-2 border-primary/30 bg-primary/5">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Package className="h-4 w-4 text-primary" />
+              Material Responsibility
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              This determines who manages and pays for materials on this project.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {tcMembers.map((member) => {
+              const contract = getContract(member.id, true);
+              const tradeName = member.trade === 'Other' ? member.trade_custom : member.trade;
+              return (
+                <div key={member.id} className="space-y-3 p-3 rounded-lg bg-background border">
                   <div className="flex items-center gap-2 font-medium text-sm">
                     <Building2 className="h-4 w-4 text-muted-foreground" />
                     {member.invited_org_name || 'Unknown Company'}
@@ -275,11 +279,11 @@ export function ContractsStep({ projectId, contracts, onChange, creatorRole }: C
                       ? 'GC will manage material ordering and see supplier pricing for this contract.'
                       : 'TC will manage material ordering and see supplier pricing for this contract.'}
                   </p>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
       )}
 
       {/* Separator between material responsibility and contracts */}

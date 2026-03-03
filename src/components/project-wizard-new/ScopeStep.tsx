@@ -15,6 +15,7 @@ import {
   CONSTRUCTION_TYPES,
   GARAGE_TYPES,
   FRAMING_METHODS,
+  EXTERIOR_DOOR_TYPES,
 } from '@/types/projectWizard';
 
 interface ScopeStepProps {
@@ -28,8 +29,8 @@ export function ScopeStep({ projectType, scope, onChange }: ScopeStepProps) {
     onChange({ ...scope, ...updates });
   };
 
-  const toggleArrayItem = (field: 'sidingMaterials' | 'decorativeItems', item: string) => {
-    const current = scope[field] || [];
+  const toggleArrayItem = (field: 'sidingMaterials' | 'decorativeItems' | 'extDoorTypes', item: string) => {
+    const current = (scope[field] as string[] | undefined) || [];
     const updated = current.includes(item) 
       ? current.filter(i => i !== item)
       : [...current, item];
@@ -76,22 +77,11 @@ export function ScopeStep({ projectType, scope, onChange }: ScopeStepProps) {
                 onChange={(e) => update({ totalSqft: parseInt(e.target.value) || undefined })}
               />
             </div>
-            <div className="space-y-2">
-              <Label>{isMultiFamily ? 'Site Size (acres)' : 'Lot Size (acres)'}</Label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                placeholder="e.g. 0.25"
-                value={scope.lotSizeAcres || ''}
-                onChange={(e) => update({ lotSizeAcres: parseFloat(e.target.value) || undefined })}
-              />
-            </div>
-            {/* Bedrooms/Bathrooms — residential unit types only */}
-            {isResidentialUnit && (
+            {/* Bedrooms/Bathrooms — Single Family and Duplex only (not Townhomes) */}
+            {(isSingleFamily || isDuplex) && (
               <>
                 <div className="space-y-2">
-                  <Label>{isTownhome || isDuplex ? 'Bedrooms per Unit' : 'Bedrooms'}</Label>
+                  <Label>{isDuplex ? 'Bedrooms per Unit' : 'Bedrooms'}</Label>
                   <Select
                     value={scope.bedrooms?.toString() || ''}
                     onValueChange={(v) => update({ bedrooms: parseInt(v) })}
@@ -105,7 +95,7 @@ export function ScopeStep({ projectType, scope, onChange }: ScopeStepProps) {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label>{isTownhome || isDuplex ? 'Bathrooms per Unit' : 'Bathrooms'}</Label>
+                  <Label>{isDuplex ? 'Bathrooms per Unit' : 'Bathrooms'}</Label>
                   <Select
                     value={scope.bathrooms?.toString() || ''}
                     onValueChange={(v) => update({ bathrooms: parseFloat(v) })}
@@ -263,20 +253,6 @@ export function ScopeStep({ projectType, scope, onChange }: ScopeStepProps) {
                   />
                 </div>
               )}
-              <div className="space-y-2">
-                <Label>Stories per Unit</Label>
-                <Select
-                  value={scope.storiesPerUnit?.toString() || ''}
-                  onValueChange={(v) => update({ storiesPerUnit: parseInt(v) })}
-                >
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>
-                    {[1, 2, 3, 4].map(n => (
-                      <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
             <div className="flex items-center justify-between">
               <Label>Shared/Party Walls?</Label>
@@ -460,19 +436,34 @@ export function ScopeStep({ projectType, scope, onChange }: ScopeStepProps) {
             />
           </div>
           {scope.hasRoofDeck && (
-            <div className="space-y-2">
-              <Label>Roof Deck Type</Label>
-              <Select
-                value={scope.roofDeckType || ''}
-                onValueChange={(v: 'Framed' | 'Concrete' | 'Other') => update({ roofDeckType: v })}
-              >
-                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Framed">Framed</SelectItem>
-                  <SelectItem value="Concrete">Concrete</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Roof Deck Finish</Label>
+                <Select
+                  value={scope.roofDeckFinish || ''}
+                  onValueChange={(v: 'Finished' | 'Unfinished') => update({ roofDeckFinish: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Finished">Finished</SelectItem>
+                    <SelectItem value="Unfinished">Unfinished</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Decking Type</Label>
+                <Select
+                  value={scope.roofDeckDecking || ''}
+                  onValueChange={(v) => update({ roofDeckDecking: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    {DECKING_TYPES.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
         </CardContent>
@@ -702,12 +693,20 @@ export function ScopeStep({ projectType, scope, onChange }: ScopeStepProps) {
               onCheckedChange={(checked) => update({ wrbIncluded: checked })}
             />
           </div>
-          <div className="flex items-center justify-between">
-            <Label>Framing contractor installs Exterior Doors?</Label>
-            <Switch
-              checked={scope.extDoorsIncluded || false}
-              onCheckedChange={(checked) => update({ extDoorsIncluded: checked })}
-            />
+          <div className="space-y-2">
+            <Label>Exterior Door Types (select all that apply)</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {EXTERIOR_DOOR_TYPES.map(doorType => (
+                <div key={doorType} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={`ext-door-${doorType}`}
+                    checked={(scope.extDoorTypes || []).includes(doorType)}
+                    onCheckedChange={() => toggleArrayItem('extDoorTypes', doorType)}
+                  />
+                  <label htmlFor={`ext-door-${doorType}`} className="text-sm">{doorType}</label>
+                </div>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
