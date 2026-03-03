@@ -1,141 +1,177 @@
 
+# Role-Based Financial Overview with Manual Material Markup
 
-# Returns Wizard Upgrades (PO Wizard Parity)
+## Summary
+Restructure the Project Overview financial cluster into clearly separated blocks per role (GC, TC, FC), add a GC manual "Owner Contract" profit calculation, add project-level TC material markup fields, and add a Work Order summary card. Each role sees: Contract Position, Invoice Health, Profit Position, Work Order Position, and Materials Position (if responsible).
 
-## Current State
-The Returns feature already exists with a 5-step wizard, supplier review, supplier pricing, status flow, and full CRUD. This plan upgrades it to match the PO Wizard's polish and adds missing capabilities.
+## Database Migration
 
-## Database Changes
+Add two columns to `project_contracts` for project-level TC material markup:
 
-### Migration: Add columns to `return_items`
-- `reason` TEXT DEFAULT NULL -- per-item reason (Extra, Wrong, Damaged, Other)
-- `reason_notes` TEXT DEFAULT NULL -- per-item reason explanation
-- `accepted_qty` NUMERIC DEFAULT NULL -- supplier-adjusted qty (cannot exceed qty_requested)
-- `original_unit_price` NUMERIC DEFAULT 0 -- snapshot from PO line item at creation time
+```sql
+ALTER TABLE project_contracts
+  ADD COLUMN material_markup_type TEXT DEFAULT NULL,
+  ADD COLUMN material_markup_value NUMERIC DEFAULT NULL;
+```
 
-### Migration: Add `REJECTED` to return status
-- Update the status check constraint (if any) to include `REJECTED`
-- No new table needed; just allow the value
+Also add a column for GC's owner contract value:
 
-### Migration: Update RLS
-- No RLS changes needed; existing policies cover the new columns
+```sql
+ALTER TABLE project_contracts
+  ADD COLUMN owner_contract_value NUMERIC DEFAULT NULL;
+```
 
-## File Changes
+These go on the primary GC-TC contract record. No new tables needed.
 
-### 1. `src/types/return.ts`
-- Add `REJECTED` to `ReturnStatus` type and status labels/colors
-- Add `reason`, `reason_notes`, `accepted_qty`, `original_unit_price` to `ReturnItem` interface
+## Hook Changes: `useProjectFinancials.ts`
 
-### 2. `src/components/returns/CreateReturnWizard.tsx` -- Major refactor
+### New fields to add to `ProjectFinancials` interface:
+- `ownerContractValue: number | null` -- GC manual entry
+- `materialMarkupType: string | null` -- TC project markup type ('percent' | 'fixed')
+- `materialMarkupValue: number | null` -- TC project markup value
+- `woLaborTotal: number` -- sum of labor_total from approved/contracted WOs
+- `woMaterialTotal: number` -- sum of material_total from approved/contracted WOs
+- `woEquipmentTotal: number` -- derived (total - labor - material)
+- `fcContractValue: number` -- FC contract sum (already available as downstreamContract.contract_sum)
+- `invoicesSent: { total: number; paid: number; retainage: number; outstanding: number }` -- invoices where user org is sender
+- `invoicesReceived: { total: number; paid: number; retainage: number; outstanding: number }` -- invoices where user org is receiver
 
-**Step 1 (Select Items):**
-- Add unit price column to the item table (from `po_line_items.unit_price`)
-- Add "Line Total" column showing `available * unit_price` for context
-- Store `original_unit_price` per selected item from PO data
+### New actions:
+- `updateOwnerContract(contractId: string, value: number): Promise<boolean>` -- saves owner_contract_value
+- `updateMaterialMarkup(contractId: string, type: string, value: number): Promise<boolean>` -- saves markup
 
-**Step 2 (Reason) -- Merge into Details step:**
-- Combine the current Step 1 (Reason) and Step 2 (Condition) into a single "Return Details" step
-- For each selected item, show:
-  - Return qty input (already exists)
-  - Reason dropdown per item (Extra / Wrong / Damaged / Other) -- NEW
-  - Condition dropdown per item (already exists)
-  - Notes (already exists)
-  - Read-only unit price + line credit preview (qty * unit_price)
-- Remove global reason step (Steps 1+2 become one step)
+### Fetch changes:
+- Read `owner_contract_value`, `material_markup_type`, `material_markup_value` from the primary contract select
+- Compute WO labor/material totals from existing approved WOs
+- For TC: split invoices into sent (to GC) vs received (from supplier/FC) by checking org direction on contracts
 
-**Step 3 (Logistics) -- Now Step 2:**
-- No changes, same as current Step 3
+## New Components
 
-**Step 4 (Review/Summary) -- Now Step 3:**
-- Add PO-wizard-style totals panel:
-  - Credit Subtotal: sum of (qty_requested * unit_price) for all items
-  - Restocking Fee: "Pending supplier review"
-  - Tax Adjustment: "Pending"
-  - Estimated Credit Total: same as subtotal with "(pending supplier approval)" label
-- Add warning banner: "Final credit amount will be confirmed by supplier after review."
-- Show items table with unit price and line credit columns
+### 1. `ProfitCard.tsx`
+Role-aware profit display:
 
-**Wizard steps reduced from 5 to 4:**
-1. Select Items (with pricing)
-2. Return Details (per-item reason + condition + credit preview)
-3. Logistics
-4. Review & Submit (with totals panel)
+**GC:** Shows Owner Contract Value (editable), minus Current Contract Total = GC Profit. Hidden if owner contract not set.
 
-**On submit:**
-- Save `original_unit_price` per return_item from PO line item price
-- Save `reason` per return_item
-- Set `credit_unit_price = original_unit_price` and `credit_line_total = qty * original_unit_price` as initial values
+**FC:** Shows Current Contract Total minus Labor Budget = FC Profit. Hidden if labor budget not set.
 
-### 3. `src/components/returns/ReturnSupplierReview.tsx` -- Enhance
+**TC (not material responsible):**
+- Labor Margin = Revenue Total - FC Labor Cost
+- Labor Margin %
 
-Add capabilities:
-- **Adjust accepted qty** per item (input field, max = qty_requested, min = 0)
-- **Set unit credit** per item (default = original_unit_price, editable)
-- **Line credit preview** = accepted_qty * unit_credit
-- **Restocking fee** controls (type + value) -- move from pricing panel to here
-- **Running totals** at bottom: Credit Subtotal, Restocking Fee, Net Credit
-- **Reject Return** button (sets status to REJECTED)
-- **Approve Return** button (saves all adjustments, sets status to APPROVED)
+**TC (material responsible):**
+- Labor Margin = Revenue Labor Portion - FC Labor Cost
+- Material Cost = Delivered PO Net Total
+- Material Revenue = Material Cost x (1 + markup%) OR Material Cost + fixed markup
+- Material Margin = Material Revenue - Material Cost
+- Total Projected Profit = Labor Margin + Material Margin
 
-On approve:
-- Update each `return_item` with `accepted_qty`, `credit_unit_price`, `credit_line_total`
-- Compute and save `credit_subtotal`, `restocking_type/value/total`, `net_credit_total` on the return header
-- Set status to APPROVED
+### 2. `WorkOrderSummaryCard.tsx` (new, distinct from existing WorkOrderSummaryCard)
+Rename existing to avoid conflict or enhance existing. Shows:
 
-### 4. `src/components/returns/ReturnPricingPanel.tsx` -- Simplify
+**GC:** WO Labor Total, WO Materials Total, WO Grand Total
 
-Since pricing is now handled during Supplier Review:
-- This panel is now only shown at PICKED_UP status for final price adjustments
-- Keep existing functionality but pre-populate with values set during review
-- Supplier can make final adjustments before marking as PRICED
+**FC:** Hours Entered, Rate, Earned to Date, Budget vs Actual
 
-### 5. `src/components/returns/ReturnDetail.tsx` -- Minor updates
+**TC (not material responsible):**
+- WO Labor Revenue (from GC), WO Labor Cost (to FC), WO Labor Margin
 
-- Show `original_unit_price` and `credit_unit_price` columns when pricing is visible
-- Show `accepted_qty` vs `qty_requested` when they differ
-- Show per-item reason in the items table
-- Add handler for REJECTED status display
-- Show financial summary for APPROVED status (not just PRICED)
+**TC (material responsible):**
+- WO Labor Revenue/Cost/Margin
+- WO Material Revenue/Cost/Margin (separate from PO materials)
 
-### 6. `src/components/returns/ReturnCard.tsx` -- Minor update
+### 3. `MaterialMarkupEditor.tsx`
+Small inline editor (same pattern as labor budget editor) for TC to set:
+- Markup Type toggle: Percentage / Fixed Amount
+- Markup Value input
+- Only editable when project status is 'setup' or 'draft'; after 'active' requires confirmation dialog
 
-- Show estimated credit on SUBMITTED/APPROVED cards (not just PRICED)
+## Layout Changes: `ProjectHome.tsx`
 
-### 7. `src/components/returns/ReturnStatusBadge.tsx` -- Add REJECTED
+Replace the current financial cluster with structured blocks:
 
-- Add REJECTED status color/label (already in types update)
+```text
+[ContractHeroCard -- same as now, role-aware]
+[Grid 2-col:]
+  [BillingCashCard (Invoice Health)]  |  [ProfitCard]
+[Grid 2-col:]
+  [WorkOrderSummaryCard]  |  [BudgetTracking (Labor, GC/FC only)]
+[MaterialsBudgetStatusCard -- if responsible, full width]
+[MaterialMarkupEditor -- TC only, if material responsible, inline]
+[CollapsibleOperations]
+```
+
+FC layout:
+```text
+[ContractHeroCard (FC version)]
+[Grid 2-col:]
+  [BillingCashCard]  |  [ProfitCard (FC)]
+[WorkOrderSummaryCard (FC)]
+[BudgetTracking (Labor)]
+[CollapsibleOperations]
+```
+
+## Existing Component Updates
+
+### ContractHeroCard
+- No structural changes. Already role-aware for GC/TC/FC/Supplier.
+
+### BillingCashCard
+- Already shows Total Invoiced, Paid, Retainage, Outstanding.
+- For TC: ideally split into "Invoices to GC" and "Invoices from Supplier" but this can remain combined initially to avoid complexity. Label stays "Billing & Cash Position".
+- For FC: label adjusts to show invoice direction. Keep existing implementation.
+
+### BudgetTracking
+- Already shows labor only for GC/FC. No changes needed.
 
 ## Technical Details
 
-### Wizard step mapping (old to new)
-```text
-OLD (5 steps):                    NEW (4 steps):
-0. Select Items                   0. Select Items (+ unit price)
-1. Reason (global)                1. Return Details (per-item reason + condition + credit preview)
-2. Condition (per-item)           2. Logistics
-3. Logistics                      3. Review & Submit (+ totals panel)
-4. Review
-```
+### Files Created
+| File | Purpose |
+|------|---------|
+| `src/components/project/ProfitCard.tsx` | Role-aware profit calculation display |
+| `src/components/project/WorkOrderFinancialsCard.tsx` | WO-level financial summary per role |
+| `src/components/project/MaterialMarkupEditor.tsx` | TC project-level material markup input |
 
-### Data flow for pricing
-```text
-PO Line Item (unit_price) --> Return Item (original_unit_price)
-                          --> Return Item (credit_unit_price = original initially)
-                          --> Supplier adjusts during review
-                          --> Supplier finalizes during pricing (PICKED_UP)
-```
-
-### Files created: None
-### Files modified: 6 files
+### Files Modified
 | File | Change |
-|------|--------|
-| `src/types/return.ts` | Add REJECTED status, new ReturnItem fields |
-| `src/components/returns/CreateReturnWizard.tsx` | 4-step wizard with pricing, per-item reason, totals panel |
-| `src/components/returns/ReturnSupplierReview.tsx` | Accepted qty, unit credit, restocking, reject option |
-| `src/components/returns/ReturnPricingPanel.tsx` | Pre-populate from review, final adjustments only |
-| `src/components/returns/ReturnDetail.tsx` | Show new fields, REJECTED status |
-| `src/components/returns/ReturnCard.tsx` | Show estimated credit earlier |
+|------|---------|
+| `src/hooks/useProjectFinancials.ts` | Add new fields, fetch new contract columns, compute WO breakdowns |
+| `src/pages/ProjectHome.tsx` | Restructure overview layout with new cards |
+| `src/components/project/index.ts` | Export new components |
 
 ### Database: 1 migration
-- Add `reason`, `reason_notes`, `accepted_qty`, `original_unit_price` columns to `return_items`
+- Add `material_markup_type`, `material_markup_value`, `owner_contract_value` to `project_contracts`
 
+### Profit Formulas
+
+**GC Profit:**
+```
+Owner Contract Value - Current Contract Total
+(Current Contract Total = Original Contract + Approved WOs)
+```
+
+**FC Profit:**
+```
+Current Contract Total - Labor Budget
+```
+
+**TC Profit (no materials):**
+```
+Labor Margin = (GC Contract + Approved WOs) - FC Contract Total
+```
+
+**TC Profit (with materials):**
+```
+Labor Margin = Revenue Total - FC Labor Cost
+Material Cost = Delivered PO Net Total (excludes WO materials)
+Material Revenue = 
+  if markup type = percent: Material Cost * (1 + markup%)
+  if markup type = fixed: Material Cost + markup value
+Material Margin = Material Revenue - Material Cost
+Total Profit = Labor Margin + Material Margin
+```
+
+### Key Rule Enforcement
+- WO materials are shown ONLY in the WorkOrderFinancialsCard
+- PO materials tracking (MaterialsBudgetStatusCard) excludes WO materials
+- Profit calculations use delivered PO net (not WO material totals) for material margin
