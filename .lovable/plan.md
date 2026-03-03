@@ -1,42 +1,26 @@
 
 
-# Remove Financials & Work Orders Standalone Pages
+# Remove Approvals from Sidebar & Routes
 
 ## Summary
-Delete the standalone `/financials` and `/change-orders` pages and remove them from all navigation. Work orders are already managed within each project's tab, and financials are handled at the project level.
+Remove the standalone "Approvals" section from the sidebar and delete the `/approvals/estimates` and `/approvals/orders` routes. Approval workflows will be managed within each project's estimate tab instead.
 
 ## Changes
 
-### 1. `src/components/layout/BottomNav.tsx`
-- Remove `Financials` and `Work Orders` from `dashboardPrimaryItems`
-- Update primary items to: Dashboard, Partners (+ move Reminders/RFIs from "More" into primary since we now have space)
+### 1. `src/components/layout/AppSidebar.tsx`
+- Delete the `gcNavItems` array (lines 60-63) containing "Estimate Approvals"
+- Delete the entire "Approvals Section" collapsible group (~lines 195-230) that renders for GC/TC_PM
+- Remove the `ClipboardCheck` icon import
 
-### 2. `src/components/layout/AppSidebar.tsx`
-- Remove `{ title: 'Financials', url: '/financials', icon: DollarSign }` from `mainNavItems`
-- Remove the `DollarSign` import
+### 2. `src/App.tsx`
+- Remove lazy imports for `EstimateApprovals` and `OrderApprovals`
+- Remove the `/approvals/estimates` and `/approvals/orders` route definitions
 
-### 3. `src/App.tsx`
-- Remove the `/change-orders` and `/financials` route entries
-- Remove the lazy imports for `ChangeOrders` and `Financials`
+### 3. `src/components/Header.tsx`
+- Remove the "Estimate Approvals" and "Order Approvals" dropdown menu items and the "Approvals" label from the header dropdown
 
-### 4. `src/components/Header.tsx`
-- Remove the "Work Orders" dropdown menu item that navigates to `/change-orders`
+### 4. `src/components/layout/BottomNav.tsx`
+- Check and remove any approvals references from mobile nav (if present in "More" menu)
 
-### 5. `src/components/dashboard/DashboardQuickStats.tsx`
-- Update the Work Orders stat click to navigate to `/dashboard` instead of `/change-orders`
-- Update the Invoices stat click to navigate to `/dashboard` instead of `/financials`
-
-### 6. `src/components/dashboard/NeedsAttentionTile.tsx`
-- Change work order click handler to navigate to the project's work orders tab: `/project/{projectId}?tab=work-orders`
-
-### 7. `src/components/dashboard/NeedsAttentionPanel.tsx`
-- Same as above — navigate to project work orders tab instead of `/change-orders`
-
-### 8. `src/components/dashboard/DashboardAttentionBanner.tsx`
-- Same redirect update for work order clicks
-
-### Files deleted: None (keep the page files in case they're useful for reference, but remove routes)
-### Files modified: 8 files
-
-No database changes needed.
+**4 files modified, no database changes.**
 
