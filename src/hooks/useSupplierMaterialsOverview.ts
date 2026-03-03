@@ -92,7 +92,7 @@ export function useSupplierMaterialsOverview(projectId: string, supplierOrgId: s
       // 3. POs with line items
       const { data: allPOs } = await supabase
         .from('purchase_orders')
-        .select('id, status, created_at, delivered_at, po_line_items(description, line_total, source_estimate_item_id, source_pack_name, created_at)')
+        .select('id, status, created_at, delivered_at, sales_tax_percent, po_line_items(description, line_total, source_estimate_item_id, source_pack_name, created_at)')
         .eq('project_id', projectId)
         .eq('supplier_id', supplierId)
         .order('created_at', { ascending: true });
@@ -120,31 +120,34 @@ export function useSupplierMaterialsOverview(projectId: string, supplierOrgId: s
 
       activePOs.forEach(po => {
         const items = (po.po_line_items as any[]) || [];
-        let poTotal = 0;
+        const taxMult = 1 + ((po as any).sales_tax_percent || 0) / 100;
+        let poSubtotal = 0;
         items.forEach(li => {
           const cost = li.line_total || 0;
-          poTotal += cost;
+          poSubtotal += cost;
 
-          // Pack tracking
+          // Pack tracking (tax-inclusive)
+          const costWithTax = cost * taxMult;
           const pack = li.source_pack_name || null;
           if (pack) {
-            orderedByPack[pack] = (orderedByPack[pack] || 0) + cost;
+            orderedByPack[pack] = (orderedByPack[pack] || 0) + costWithTax;
           }
 
-          // Unmatched items
+          // Unmatched items (tax-inclusive)
           if (!li.source_estimate_item_id) {
             const key = li.description || 'Unknown Item';
             if (!unmatchedMap[key]) {
               unmatchedMap[key] = { orderedCost: 0, deliveredCost: 0, poIds: new Set(), firstSeen: li.created_at || po.created_at };
             }
-            unmatchedMap[key].orderedCost += cost;
+            unmatchedMap[key].orderedCost += costWithTax;
             unmatchedMap[key].poIds.add(po.id);
             if (po.status === 'DELIVERED') {
-              unmatchedMap[key].deliveredCost += cost;
+              unmatchedMap[key].deliveredCost += costWithTax;
             }
           }
         });
 
+        const poTotal = poSubtotal * taxMult;
         materialsOrdered += poTotal;
         if (po.status === 'DELIVERED') deliveredTotal += poTotal;
 
