@@ -28,6 +28,9 @@ import {
   SupplierMaterialsOverview,
   BudgetTracking,
   MaterialsBudgetStatusCard,
+  ProfitCard,
+  MaterialMarkupEditor,
+  WorkOrderSummaryCard,
 } from '@/components/project';
 import { ContractHeroCard } from '@/components/project/ContractHeroCard';
 import { BillingCashCard } from '@/components/project/BillingCashCard';
@@ -289,6 +292,10 @@ export default function ProjectHome() {
                           <ContractHeroCard financials={financials} projectId={id!} />
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <BillingCashCard financials={financials} />
+                            <ProfitCard financials={financials} projectId={id!} />
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <WorkOrderSummaryCard projectId={id!} />
                             <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
                           </div>
                           {projectSupplierOrgId && (
@@ -298,6 +305,7 @@ export default function ProjectHome() {
                               financials={financials}
                             />
                           )}
+                          <MaterialMarkupEditor financials={financials} projectId={id!} projectStatus={projectStatus} />
                           <CollapsibleOperations
                             projectId={id!}
                             projectType={project.project_type}
