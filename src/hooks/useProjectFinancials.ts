@@ -46,6 +46,14 @@ export interface ProjectFinancials {
   actualLaborCost: number;
   laborBudget: number | null;
 
+  // Role-based financial overview fields
+  ownerContractValue: number | null;
+  materialMarkupType: string | null;
+  materialMarkupValue: number | null;
+  woLaborTotal: number;
+  woMaterialTotal: number;
+  woEquipmentTotal: number;
+
   // Supplier-specific
   supplierOrderValue: number;
   supplierInvoiced: number;
@@ -74,6 +82,8 @@ export interface ProjectFinancials {
   createFcContract: (fcOrgId: string, sum: number, retainage: number) => Promise<boolean>;
   updateMaterialEstimate: (contractId: string, amount: number) => Promise<boolean>;
   updateLaborBudget: (contractId: string, amount: number) => Promise<boolean>;
+  updateOwnerContract: (contractId: string, value: number) => Promise<boolean>;
+  updateMaterialMarkup: (contractId: string, type: string, value: number) => Promise<boolean>;
 }
 
 export function useProjectFinancials(projectId: string, isSupplier?: boolean, supplierOrgId?: string | null): ProjectFinancials {
@@ -106,6 +116,12 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [actualLaborCost, setActualLaborCost] = useState(0);
   const [laborBudget, setLaborBudget] = useState<number | null>(null);
   const [approvedWOCount, setApprovedWOCount] = useState(0);
+  const [ownerContractValue, setOwnerContractValue] = useState<number | null>(null);
+  const [materialMarkupType, setMaterialMarkupType] = useState<string | null>(null);
+  const [materialMarkupValue, setMaterialMarkupValue] = useState<number | null>(null);
+  const [woLaborTotal, setWoLaborTotal] = useState(0);
+  const [woMaterialTotal, setWoMaterialTotal] = useState(0);
+  const [woEquipmentTotal, setWoEquipmentTotal] = useState(0);
 
   const fetchData = async () => {
     if (!user || !projectId) { setLoading(false); return; }
@@ -169,6 +185,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         supabase.from('project_contracts').select(`
           id, from_role, to_role, contract_sum, retainage_percent, trade, from_org_id, to_org_id,
           material_responsibility, material_estimate_total, labor_budget,
+          owner_contract_value, material_markup_type, material_markup_value,
           from_org:organizations!project_contracts_from_org_id_fkey(name),
           to_org:organizations!project_contracts_to_org_id_fkey(name)
         `).eq('project_id', projectId),
@@ -308,6 +325,18 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       );
       setLaborBudget((primaryC as any)?.labor_budget ?? null);
 
+      // Extract owner_contract_value and material markup from primary contract
+      setOwnerContractValue((primaryC as any)?.owner_contract_value ?? null);
+      setMaterialMarkupType((primaryC as any)?.material_markup_type ?? null);
+      setMaterialMarkupValue((primaryC as any)?.material_markup_value ?? null);
+
+      // WO breakdowns (labor, material, equipment) from approved WOs
+      const woLabor = approvedWOs.reduce((sum, wo: any) => sum + (wo.labor_total || 0), 0);
+      const woMaterial = approvedWOs.reduce((sum, wo: any) => sum + (wo.material_total || 0), 0);
+      setWoLaborTotal(woLabor);
+      setWoMaterialTotal(woMaterial);
+      setWoEquipmentTotal(Math.max(0, woTotal - woLabor - woMaterial));
+
       // FC costs (TC view)
       if (detectedRole === 'Trade Contractor') {
         const woIds = wos.map(wo => wo.id);
@@ -424,6 +453,21 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     return true;
   };
 
+  const updateOwnerContract = async (contractId: string, value: number): Promise<boolean> => {
+    const { error } = await supabase.from('project_contracts').update({ owner_contract_value: value } as any).eq('id', contractId).select('id').maybeSingle();
+    if (error) { console.error('Failed to update owner contract:', error); return false; }
+    setOwnerContractValue(value);
+    return true;
+  };
+
+  const updateMaterialMarkup = async (contractId: string, type: string, value: number): Promise<boolean> => {
+    const { error } = await supabase.from('project_contracts').update({ material_markup_type: type, material_markup_value: value } as any).eq('id', contractId).select('id').maybeSingle();
+    if (error) { console.error('Failed to update material markup:', error); return false; }
+    setMaterialMarkupType(type);
+    setMaterialMarkupValue(value);
+    return true;
+  };
+
   return {
     loading, viewerRole, contracts, upstreamContract, downstreamContract, userOrgIds,
     billedToDate, workOrderTotal, approvedWOCount, workOrderFCCost, retainageAmount, outstanding,
@@ -431,9 +475,12 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     materialEstimateTotal, approvedEstimateSum, isTCMaterialResponsible, isGCMaterialResponsible,
     isDesignatedSupplier,
     totalPaid, materialDelivered, materialOrderedPending, actualLaborCost, laborBudget,
+    ownerContractValue, materialMarkupType, materialMarkupValue,
+    woLaborTotal, woMaterialTotal, woEquipmentTotal,
     supplierOrderValue, supplierInvoiced, supplierPaid,
     recentWorkOrders, recentInvoices, monthlyWOData, fcParticipants,
     refetch: fetchData, updateContract, createFcContract, updateMaterialEstimate, updateLaborBudget,
+    updateOwnerContract, updateMaterialMarkup,
   };
 }
 

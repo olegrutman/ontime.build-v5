@@ -1811,8 +1811,11 @@ export type Database = {
           id: string
           labor_budget: number | null
           material_estimate_total: number | null
+          material_markup_type: string | null
+          material_markup_value: number | null
           material_responsibility: string | null
           notes: string | null
+          owner_contract_value: number | null
           project_id: string
           retainage_percent: number | null
           status: string | null
@@ -1832,8 +1835,11 @@ export type Database = {
           id?: string
           labor_budget?: number | null
           material_estimate_total?: number | null
+          material_markup_type?: string | null
+          material_markup_value?: number | null
           material_responsibility?: string | null
           notes?: string | null
+          owner_contract_value?: number | null
           project_id: string
           retainage_percent?: number | null
           status?: string | null
@@ -1853,8 +1859,11 @@ export type Database = {
           id?: string
           labor_budget?: number | null
           material_estimate_total?: number | null
+          material_markup_type?: string | null
+          material_markup_value?: number | null
           material_responsibility?: string | null
           notes?: string | null
+          owner_contract_value?: number | null
           project_id?: string
           retainage_percent?: number | null
           status?: string | null
