@@ -8,7 +8,7 @@ import {
   LogOut,
   ChevronDown,
   FileText,
-  ClipboardCheck,
+  
   Users,
   Bell,
   MessageSquareMore,
@@ -57,10 +57,6 @@ const adminNavItems = [
   { title: 'Manage Suppliers', url: '/admin/suppliers', icon: Truck },
 ];
 
-// GC-only nav items (approval workflows)
-const gcNavItems = [
-  { title: 'Estimate Approvals', url: '/approvals/estimates', icon: ClipboardCheck },
-];
 
 export function AppSidebar() {
   const { state } = useSidebar();
@@ -187,49 +183,6 @@ export function AppSidebar() {
                 <SidebarGroupContent>
                   <SidebarMenu>
                     {supplierNavItems.map((item) => (
-                      <SidebarMenuItem key={item.title}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={isActive(item.url)}
-                          tooltip={collapsed ? item.title : undefined}
-                        >
-                          <NavLink
-                            to={item.url}
-                            className="gap-3"
-                            activeClassName="nav-active"
-                          >
-                            <item.icon className="h-4 w-4 shrink-0" />
-                            {!collapsed && <span>{item.title}</span>}
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </CollapsibleContent>
-            </Collapsible>
-          </SidebarGroup>
-        )}
-
-        {/* Approvals Section - GC_PM and TC_PM */}
-        {(isGC || currentRole === 'TC_PM') && (
-          <SidebarGroup>
-            <Collapsible defaultOpen={isInGroup(gcNavItems)} className="group/collapsible">
-              <CollapsibleTrigger asChild>
-                <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent rounded-md px-2 py-1.5 justify-between">
-                  {!collapsed && (
-                    <>
-                      <span>Approvals</span>
-                      <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
-                    </>
-                  )}
-                  {collapsed && <ClipboardCheck className="h-4 w-4 mx-auto" />}
-                </SidebarGroupLabel>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {gcNavItems.map((item) => (
                       <SidebarMenuItem key={item.title}>
                         <SidebarMenuButton
                           asChild

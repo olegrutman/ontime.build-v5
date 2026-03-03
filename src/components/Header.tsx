@@ -1,4 +1,4 @@
-import { Building2, Plus, Search, Bell, LogOut, Users, Settings, Package, Truck, FileText, CheckSquare, ShoppingCart, FileEdit, Briefcase, Receipt, Home, Handshake } from 'lucide-react';
+import { Building2, Plus, Search, Bell, LogOut, Users, Settings, Package, Truck, FileText, ShoppingCart, Briefcase, Receipt, Home, Handshake } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/useAuth';
@@ -146,18 +146,6 @@ export function Header() {
                     </DropdownMenuItem>
                     {currentRole === 'GC_PM' && (
                       <>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel className="text-xs text-muted-foreground">
-                          Approvals
-                        </DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => navigate('/approvals/estimates')}>
-                          <CheckSquare className="mr-2 h-4 w-4" />
-                          Estimate Approvals
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => navigate('/approvals/orders')}>
-                          <CheckSquare className="mr-2 h-4 w-4" />
-                          Order Approvals
-                        </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => navigate('/admin/suppliers')}>
                           <Truck className="mr-2 h-4 w-4" />

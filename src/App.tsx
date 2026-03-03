@@ -41,9 +41,7 @@ const OrgTeam = lazy(() => import("./pages/OrgTeam"));
 const AdminSuppliers = lazy(() => import("./pages/AdminSuppliers"));
 const CatalogPage = lazy(() => import("./pages/CatalogPage"));
 const SupplierEstimates = lazy(() => import("./pages/SupplierEstimates"));
-const EstimateApprovals = lazy(() => import("./pages/EstimateApprovals"));
 const MaterialOrders = lazy(() => import("./pages/MaterialOrders"));
-const OrderApprovals = lazy(() => import("./pages/OrderApprovals"));
 const PurchaseOrders = lazy(() => import("./pages/PurchaseOrders"));
 const Reminders = lazy(() => import("./pages/Reminders"));
 const SupplierInventory = lazy(() => import("./pages/SupplierInventory"));
@@ -158,9 +156,7 @@ function AppRoutes() {
             <Route path="/org/team" element={<RequireAuth><OrgTeam /></RequireAuth>} />
             <Route path="/catalog" element={<RequireAuth><CatalogPage /></RequireAuth>} />
             <Route path="/estimates" element={<RequireAuth><SupplierEstimates /></RequireAuth>} />
-            <Route path="/approvals/estimates" element={<RequireAuth><EstimateApprovals /></RequireAuth>} />
             <Route path="/orders" element={<RequireAuth><MaterialOrders /></RequireAuth>} />
-            <Route path="/approvals/orders" element={<RequireAuth><OrderApprovals /></RequireAuth>} />
             <Route path="/purchase-orders" element={<RequireAuth><PurchaseOrders /></RequireAuth>} />
             <Route path="/reminders" element={<RequireAuth><Reminders /></RequireAuth>} />
             <Route path="/change-order/:id" element={<RequireAuth><ChangeOrderDetailPage /></RequireAuth>} />
