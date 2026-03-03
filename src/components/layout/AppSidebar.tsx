@@ -3,12 +3,10 @@ import {
   Home,
   Handshake,
   Boxes,
-  Truck,
   Settings,
   LogOut,
   ChevronDown,
   FileText,
-  
   Users,
   Bell,
   MessageSquareMore,
@@ -53,9 +51,6 @@ const supplierNavItems = [
   { title: 'My Estimates', url: '/supplier/estimates', icon: FileText },
 ];
 
-const adminNavItems = [
-  { title: 'Manage Suppliers', url: '/admin/suppliers', icon: Truck },
-];
 
 
 export function AppSidebar() {
@@ -68,7 +63,6 @@ export function AppSidebar() {
   const currentOrg = userOrgRoles.length > 0 ? userOrgRoles[0].organization : null;
   const orgId = currentOrg?.id;
   const isSupplier = currentOrg?.type === 'SUPPLIER';
-  const canManageSuppliers = currentRole === 'GC_PM' || currentRole === 'TC_PM';
   const isGC = currentRole === 'GC_PM';
   const canManageOrg = currentRole ? ROLE_PERMISSIONS[currentRole]?.canManageOrg : false;
   const isAdmin = userOrgRoles[0]?.is_admin ?? false;
@@ -207,48 +201,6 @@ export function AppSidebar() {
           </SidebarGroup>
         )}
 
-        {/* Admin Section - GC_PM and TC_PM only */}
-        {canManageSuppliers && (
-          <SidebarGroup>
-            <Collapsible defaultOpen={isInGroup(adminNavItems)} className="group/collapsible">
-              <CollapsibleTrigger asChild>
-                <SidebarGroupLabel className="cursor-pointer hover:bg-sidebar-accent rounded-md px-2 py-1.5 justify-between">
-                  {!collapsed && (
-                    <>
-                      <span>Admin</span>
-                      <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-180" />
-                    </>
-                  )}
-                  {collapsed && <Settings className="h-4 w-4 mx-auto" />}
-                </SidebarGroupLabel>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {adminNavItems.map((item) => (
-                      <SidebarMenuItem key={item.title}>
-                        <SidebarMenuButton
-                          asChild
-                          isActive={isActive(item.url)}
-                          tooltip={collapsed ? item.title : undefined}
-                        >
-                          <NavLink
-                            to={item.url}
-                            className="gap-3"
-                            activeClassName="nav-active"
-                          >
-                            <item.icon className="h-4 w-4 shrink-0" />
-                            {!collapsed && <span>{item.title}</span>}
-                          </NavLink>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    ))}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </CollapsibleContent>
-            </Collapsible>
-          </SidebarGroup>
-        )}
       </SidebarContent>
 
       {/* Footer with User */}

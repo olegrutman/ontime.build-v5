@@ -38,7 +38,7 @@ const EditProjectScope = lazy(() => import("./pages/EditProjectScope"));
 const EditProject = lazy(() => import("./pages/EditProject"));
 const PartnerDirectory = lazy(() => import("./pages/PartnerDirectory"));
 const OrgTeam = lazy(() => import("./pages/OrgTeam"));
-const AdminSuppliers = lazy(() => import("./pages/AdminSuppliers"));
+
 const CatalogPage = lazy(() => import("./pages/CatalogPage"));
 const SupplierEstimates = lazy(() => import("./pages/SupplierEstimates"));
 const MaterialOrders = lazy(() => import("./pages/MaterialOrders"));
@@ -152,7 +152,7 @@ function AppRoutes() {
             <Route path="/project/:id/edit" element={<RequireAuth><EditProject /></RequireAuth>} />
             <Route path="/projects/:id/scope" element={<RequireAuth><EditProjectScope /></RequireAuth>} />
             <Route path="/partners" element={<RequireAuth><PartnerDirectory /></RequireAuth>} />
-            <Route path="/admin/suppliers" element={<RequireAuth><AdminSuppliers /></RequireAuth>} />
+            
             <Route path="/org/team" element={<RequireAuth><OrgTeam /></RequireAuth>} />
             <Route path="/catalog" element={<RequireAuth><CatalogPage /></RequireAuth>} />
             <Route path="/estimates" element={<RequireAuth><SupplierEstimates /></RequireAuth>} />

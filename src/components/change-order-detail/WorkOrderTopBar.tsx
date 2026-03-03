@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { User, Shield, Users, Settings, LogOut, Package } from 'lucide-react';
+import { User, Users, Settings, LogOut } from 'lucide-react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -87,18 +87,6 @@ export function WorkOrderTopBar({
               Profile
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            {currentRole === 'GC_PM' && (
-              <DropdownMenuItem onClick={() => navigate('/approvals/estimates')}>
-                <Shield className="mr-2 h-4 w-4" />
-                Estimate Approvals
-              </DropdownMenuItem>
-            )}
-            {(currentRole === 'GC_PM' || currentRole === 'TC_PM') && (
-              <DropdownMenuItem onClick={() => navigate('/admin/suppliers')}>
-                <Package className="mr-2 h-4 w-4" />
-                Manage Suppliers
-              </DropdownMenuItem>
-            )}
             {(currentRole === 'GC_PM' || currentRole === 'TC_PM' || currentRole === 'FC_PM') && (
               <>
                 <DropdownMenuSeparator />
