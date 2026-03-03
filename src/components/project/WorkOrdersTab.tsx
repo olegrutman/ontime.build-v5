@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useChangeOrderProject } from '@/hooks/useChangeOrderProject';
@@ -52,7 +53,16 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
 
   const userOrgId = userOrgRoles.length > 0 ? userOrgRoles[0].organization_id : undefined;
 
-  const sovReadiness = useSOVReadiness(projectId, userOrgId);
+  // Check if current user is the project creator
+  const [isProjectCreator, setIsProjectCreator] = useState(false);
+  useEffect(() => {
+    if (!projectId || !user) return;
+    supabase.from('projects').select('created_by').eq('id', projectId).single().then(({ data }) => {
+      setIsProjectCreator(data?.created_by === user.id);
+    });
+  }, [projectId, user]);
+
+  const sovReadiness = useSOVReadiness(projectId, userOrgId, isProjectCreator);
   const [enrichedTotals, setEnrichedTotals] = useState<Map<string, number>>(new Map());
 
   useEffect(() => {
