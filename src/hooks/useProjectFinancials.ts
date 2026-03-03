@@ -59,6 +59,13 @@ export interface ProjectFinancials {
   supplierInvoiced: number;
   supplierPaid: number;
 
+  // TC split billing
+  receivablesInvoiced: number;
+  receivablesCollected: number;
+  receivablesRetainage: number;
+  payablesInvoiced: number;
+  payablesPaid: number;
+
   // Work orders & invoices for charts/lists
   recentWorkOrders: { id: string; title: string; status: string; created_at: string; final_price: number | null }[];
   recentInvoices: { id: string; invoice_number: string; status: string; total_amount: number; created_at: string }[];
@@ -122,6 +129,11 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [woLaborTotal, setWoLaborTotal] = useState(0);
   const [woMaterialTotal, setWoMaterialTotal] = useState(0);
   const [woEquipmentTotal, setWoEquipmentTotal] = useState(0);
+  const [receivablesInvoiced, setReceivablesInvoiced] = useState(0);
+  const [receivablesCollected, setReceivablesCollected] = useState(0);
+  const [receivablesRetainage, setReceivablesRetainage] = useState(0);
+  const [payablesInvoiced, setPayablesInvoiced] = useState(0);
+  const [payablesPaid, setPayablesPaid] = useState(0);
 
   const fetchData = async () => {
     if (!user || !projectId) { setLoading(false); return; }
@@ -189,7 +201,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           from_org:organizations!project_contracts_from_org_id_fkey(name),
           to_org:organizations!project_contracts_to_org_id_fkey(name)
         `).eq('project_id', projectId),
-        supabase.from('invoices').select('id, invoice_number, status, total_amount, created_at, paid_at').eq('project_id', projectId),
+        supabase.from('invoices').select('id, invoice_number, status, total_amount, created_at, paid_at, contract_id, po_id, retainage_amount').eq('project_id', projectId),
         supabase.from('change_order_projects').select('id, title, status, created_at, final_price, material_total, labor_total, linked_po_id').eq('project_id', projectId),
         supabase.from('project_participants').select('organization_id, organizations:organization_id(name)').eq('project_id', projectId).eq('role', 'FC').eq('invite_status', 'ACCEPTED'),
       ]);
@@ -266,6 +278,33 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       setRecentInvoices(allInvoices.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5).map(inv => ({
         id: inv.id, invoice_number: inv.invoice_number, status: inv.status, total_amount: inv.total_amount, created_at: inv.created_at,
       })));
+
+      // TC split: classify invoices as receivables vs payables
+      if (detectedRole === 'Trade Contractor' && orgIds.length > 0) {
+        // Receivables = invoices on contracts where TC is from_org (TC billed GC)
+        // Payables = invoices on contracts where TC is to_org (FC billed TC) OR po_id set (supplier)
+        const upstreamContractIds = new Set(
+          contractsWithNames
+            .filter(c => c.from_org_id && orgIds.includes(c.from_org_id))
+            .map(c => c.id)
+        );
+        const downstreamContractIds = new Set(
+          contractsWithNames
+            .filter(c => c.to_org_id && orgIds.includes(c.to_org_id) && c.from_role === 'Field Crew')
+            .map(c => c.id)
+        );
+
+        const receivableInvs = submitted.filter((inv: any) => inv.contract_id && upstreamContractIds.has(inv.contract_id));
+        const payableInvs = submitted.filter((inv: any) =>
+          (inv.contract_id && downstreamContractIds.has(inv.contract_id)) || (inv.po_id != null)
+        );
+
+        setReceivablesInvoiced(receivableInvs.reduce((s, i) => s + (i.total_amount || 0), 0));
+        setReceivablesCollected(receivableInvs.filter(i => i.status === 'PAID').reduce((s, i) => s + (i.total_amount || 0), 0));
+        setReceivablesRetainage(receivableInvs.reduce((s, i: any) => s + (i.retainage_amount || 0), 0));
+        setPayablesInvoiced(payableInvs.reduce((s, i) => s + (i.total_amount || 0), 0));
+        setPayablesPaid(payableInvs.filter(i => i.status === 'PAID').reduce((s, i) => s + (i.total_amount || 0), 0));
+      }
 
       // Work orders — only sum approved/contracted for contract total
       const wos = workOrdersRes.data || [];
@@ -488,6 +527,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     ownerContractValue, materialMarkupType, materialMarkupValue,
     woLaborTotal, woMaterialTotal, woEquipmentTotal,
     supplierOrderValue, supplierInvoiced, supplierPaid,
+    receivablesInvoiced, receivablesCollected, receivablesRetainage, payablesInvoiced, payablesPaid,
     recentWorkOrders, recentInvoices, monthlyWOData, fcParticipants,
     refetch: fetchData, updateContract, createFcContract, updateMaterialEstimate, updateLaborBudget,
     updateOwnerContract, updateMaterialMarkup,
