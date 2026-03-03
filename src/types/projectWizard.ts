@@ -98,6 +98,9 @@ export interface ScopeDetails {
   windowsIncluded?: boolean;
   wrbIncluded?: boolean;
   extDoorsIncluded?: boolean;
+  extDoorTypes?: string[];
+  roofDeckFinish?: 'Finished' | 'Unfinished';
+  roofDeckDecking?: string;
   // Multi-building fields
   numBuildings?: number;
   stories?: number;
@@ -134,8 +137,7 @@ export const WIZARD_STEPS = [
 ] as const;
 
 export const SIDING_MATERIALS = [
-  'Fiber Cement', 'Vinyl', 'Wood', 'Metal', 'Stucco (Lath)', 
-  'Stone Veneer', 'Brick Veneer', 'Other'
+  'Fiber Cement', 'Vinyl', 'Wood', 'Metal', 'Other'
 ] as const;
 
 export const DECORATIVE_ITEMS = [
@@ -143,8 +145,10 @@ export const DECORATIVE_ITEMS = [
 ] as const;
 
 export const FASCIA_SOFFIT_MATERIALS = [
-  'Wood', 'Fiber Cement', 'Metal', 'Vinyl', 'Other'
+  'Wood', 'Fiber Cement', 'Metal', 'Vinyl', 'T&G Wood', 'Other'
 ] as const;
+
+export const EXTERIOR_DOOR_TYPES = ['Patio Doors', 'Entry Doors', 'Garage Doors'] as const;
 
 export const BALCONY_TYPES = [
   'Cantilever Framed', 'Ledger Supported', 'Pre-fab System', 'Other'
