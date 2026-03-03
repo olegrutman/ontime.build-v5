@@ -65,6 +65,7 @@ export interface ProjectFinancials {
   receivablesRetainage: number;
   payablesInvoiced: number;
   payablesPaid: number;
+  payablesRetainage: number;
 
   // Work orders & invoices for charts/lists
   recentWorkOrders: { id: string; title: string; status: string; created_at: string; final_price: number | null }[];
@@ -134,6 +135,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [receivablesRetainage, setReceivablesRetainage] = useState(0);
   const [payablesInvoiced, setPayablesInvoiced] = useState(0);
   const [payablesPaid, setPayablesPaid] = useState(0);
+  const [payablesRetainage, setPayablesRetainage] = useState(0);
 
   const fetchData = async () => {
     if (!user || !projectId) { setLoading(false); return; }
@@ -304,6 +306,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         setReceivablesRetainage(receivableInvs.reduce((s, i: any) => s + (i.retainage_amount || 0), 0));
         setPayablesInvoiced(payableInvs.reduce((s, i) => s + (i.total_amount || 0), 0));
         setPayablesPaid(payableInvs.filter(i => i.status === 'PAID').reduce((s, i) => s + (i.total_amount || 0), 0));
+        setPayablesRetainage(payableInvs.reduce((s, i: any) => s + (i.retainage_amount || 0), 0));
       }
 
       // Work orders — only sum approved/contracted for contract total
@@ -527,7 +530,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     ownerContractValue, materialMarkupType, materialMarkupValue,
     woLaborTotal, woMaterialTotal, woEquipmentTotal,
     supplierOrderValue, supplierInvoiced, supplierPaid,
-    receivablesInvoiced, receivablesCollected, receivablesRetainage, payablesInvoiced, payablesPaid,
+    receivablesInvoiced, receivablesCollected, receivablesRetainage, payablesInvoiced, payablesPaid, payablesRetainage,
     recentWorkOrders, recentInvoices, monthlyWOData, fcParticipants,
     refetch: fetchData, updateContract, createFcContract, updateMaterialEstimate, updateLaborBudget,
     updateOwnerContract, updateMaterialMarkup,
