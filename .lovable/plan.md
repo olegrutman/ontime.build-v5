@@ -1,34 +1,52 @@
 
 
-# Fix: Supplier Sees "Project Incomplete" Warning and SOV Tab
+# Fix: TC Billing & Cash Position Card — Split Upstream vs Downstream
 
 ## Problem
-Two issues affect the Supplier experience after project setup is completed:
+The current `BillingCashCard` sums **all** project invoices into one "Total Invoiced / Total Paid / Outstanding" view. For a Trade Contractor this is meaningless because it mixes:
+- **Receivables** (invoices TC sent to GC — money coming in)
+- **Payables** (invoices TC received from FC and suppliers — money going out)
 
-1. **"Project Setup Incomplete" banner**: The `PurchaseOrdersTab`, `InvoicesTab`, and `WorkOrdersTab` check `projectStatus !== 'active'` to show a blocking warning. But the project status may still be `'setup'` from the creator's perspective even though the supplier should not be blocked. Suppliers don't control setup — they just need to price POs and manage estimates. The check doesn't account for the viewer's role.
+A TC needs to see both sides separately to understand their actual cash position.
 
-2. **SOV tab visible to suppliers**: The desktop `ProjectTopBar` correctly hides the SOV tab for suppliers (`!isSupplier` guard at line 146). However, the **mobile `BottomNav`** has no role-awareness — it shows SOV in the "More" drawer for all users, including suppliers. Suppliers have no SOV and never will.
+## Real-Life Logic
+A Trade Contractor sits in the middle of the chain: GC pays them, they pay FC + suppliers. The card should show:
+
+```text
+┌──────────────────────────────────┐
+│  Billing & Cash Position         │
+│                                  │
+│  RECEIVABLES (from GC)           │
+│  Invoiced to GC        $120K    │
+│  Collected              $80K    │
+│  Retainage Held         $12K    │
+│  Outstanding            $28K    │
+│  ─────────────────────────────  │
+│  PAYABLES (to FC & Suppliers)    │
+│  Invoices Received      $65K    │
+│  Paid Out               $40K    │
+│  Outstanding            $25K    │
+│  ─────────────────────────────  │
+│  NET CASH POSITION       $3K    │
+│  (Collected − Paid Out)          │
+└──────────────────────────────────┘
+```
 
 ## Changes
 
-### 1. `src/components/project/PurchaseOrdersTab.tsx` (~line 488)
-Pass `isSupplier` or viewer role info so the "Project Setup Incomplete" banner is skipped for suppliers. Simplest fix: the component already receives `projectStatus` — change the blocking condition to also require the viewer is not a supplier. Since this component doesn't currently know the viewer role, we need to either:
-- Add an `isSupplier` prop, or
-- Only show the banner when status is specifically `'draft'` or `'setup'` AND the viewer is not a supplier
+### 1. `src/hooks/useProjectFinancials.ts`
+- **Expand invoice query** (line 192): Add `contract_id, po_id` to the select so we can classify invoices by direction.
+- **Add new state fields** for TC:
+  - `receivablesInvoiced`, `receivablesCollected`, `payablesInvoiced`, `payablesPaid`
+- **Classify invoices** (around line 260): For TC, split invoices using contract direction:
+  - Invoices where `contract_id` references a GC↔TC contract (TC is `from_org_id`) → **Receivables**
+  - Invoices where `contract_id` references a TC↔FC contract (FC is `from_org_id`) OR `po_id` is set (supplier) → **Payables**
+- **Export new fields** in the return object and `ProjectFinancials` interface.
 
-Since the parent `ProjectHome` already knows `isSupplier`, pass it as a prop and skip the banner when `isSupplier === true`.
+### 2. `src/components/project/BillingCashCard.tsx`
+- For `viewerRole === 'Trade Contractor'`: Render a two-section layout (Receivables + Payables + Net Cash Position) instead of the single combined view.
+- For GC and FC: Keep existing single-section layout unchanged.
+- Net Cash Position = receivablesCollected − payablesPaid.
 
-### 2. `src/components/invoices/InvoicesTab.tsx` (~lines 524, 623)
-Same fix — accept `isSupplier` prop and skip the "Project Setup Incomplete" banner for suppliers.
+**2 files modified. No database changes.**
 
-### 3. `src/components/layout/BottomNav.tsx` (~lines 53-65)
-Filter out the SOV and Work Orders tabs for suppliers, same as the desktop TopBar does. The `BottomNav` needs access to the current org type. Options:
-- Use `useAuth()` (already imported) to get `userOrgRoles` and check org type
-- Filter `primaryProjectItems` and `moreProjectItems` based on whether the user is a supplier
-
-Concrete change: Read `userOrgRoles` from `useAuth()`, determine `isSupplier`, then filter out `'sov'` and `'work-orders'` tabs from the mobile nav items when supplier.
-
-### 4. `src/pages/ProjectHome.tsx` (~lines 363-369)
-Pass `isSupplier` to `PurchaseOrdersTab` and `InvoicesTab` so they can conditionally hide the banner.
-
-**4 files modified. No database changes.**
