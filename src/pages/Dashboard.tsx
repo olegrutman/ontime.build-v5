@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -35,6 +35,14 @@ export default function Dashboard() {
   } = useDashboardData();
 
   const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>('active');
+  const hasAutoSwitched = useRef(false);
+
+  useEffect(() => {
+    if (!hasAutoSwitched.current && !dataLoading && statusCounts.setup > 0) {
+      setStatusFilter('setup');
+      hasAutoSwitched.current = true;
+    }
+  }, [dataLoading, statusCounts.setup]);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [projectToArchive, setProjectToArchive] = useState<{ id: string; name: string } | null>(null);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
