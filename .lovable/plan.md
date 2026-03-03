@@ -1,46 +1,23 @@
 
 
-# Fix: TC Live Position Incorrectly Deducts GC-Responsible Material Costs
+# Fix: Include Sales Tax in Materials Budget Status Numbers
 
 ## Problem
-The TC "Live Position" formula in `ContractHeroCard` (line 238) unconditionally deducts `materialDelivered` and `materialOrderedPending` from the TC's profitability:
+The Materials Budget Status card compares **tax-inclusive** estimate totals (`total_amount` includes tax — confirmed: items sum $262K + 4.73% tax ≈ $274.8K = `total_amount`) against **pre-tax** PO line item sums. This makes it look like materials are under budget when they may not be.
 
-```
-woProfit = workOrderTotal - workOrderFCCost - materialDelivered - materialOrderedPending
-livePosition = gcContractValue - fcContractValue + woProfit
-```
+## Change: `src/hooks/useSupplierMaterialsOverview.ts`
 
-But `materialDelivered` and `materialOrderedPending` are computed from **all** project POs (line 333-337 in `useProjectFinancials.ts`) with no filter on who is responsible for materials. In the current test project, `material_responsibility = 'GC'`, meaning the GC pays for materials — yet the TC's Live Position still deducts $22K+ in PO costs that the TC never pays for.
+**1. Expand PO query** (line 95): Add `sales_tax_percent` to the PO select so each PO's tax rate is available.
 
-The `ProfitCard` component correctly checks `isTCMaterialResponsible` before including material costs. The `ContractHeroCard` does not.
+**2. Apply tax to PO totals** (lines 121-157): After summing each PO's line items into `poTotal`, multiply by `(1 + po.sales_tax_percent / 100)` to get the tax-inclusive total. This affects:
+- `materialsOrdered`
+- `deliveredTotal`
+- `orderedByPack` (pack-level tracking)
+- `unmatchedMap` item costs
 
-## Formula Audit
+**3. Apply tax to chart data**: The cumulative ordered/delivered chart values will automatically be correct since they derive from the now-tax-inclusive PO totals.
 
-| Role | Metric | Formula | Correct? |
-|------|--------|---------|----------|
-| GC | Profit | Owner Contract − Current Total | Yes |
-| GC | Current Total | GC Contract + Approved WOs | Yes |
-| GC | Billing | Invoiced / Paid / Outstanding | Yes |
-| FC | Profit | Contract Total + WOs − Labor Budget | Yes |
-| TC | Profit (ProfitCard) | Labor Margin + Material Margin (only if TC responsible) | Yes |
-| TC | **Live Position** | GC Contract − FC Contract + WOs − FC Cost − **ALL materials** | **BUG** |
-| TC | Billing | Split receivables/payables | Yes |
+The forecast, variance, and pack comparison calculations all flow from these base numbers, so they'll be correct once the inputs include tax.
 
-## Changes
-
-### `src/components/project/ContractHeroCard.tsx` (line 237-250)
-Pass `isTCMaterialResponsible` from financials. Only deduct `materialDelivered` and `materialOrderedPending` when `isTCMaterialResponsible === true`. When GC is responsible, the TC's Live Position should be:
-
-```
-livePosition = gcContractValue - fcContractValue + workOrderTotal - workOrderFCCost
-```
-
-When TC is responsible:
-```
-livePosition = gcContractValue - fcContractValue + workOrderTotal - workOrderFCCost - materialDelivered - materialOrderedPending
-```
-
-Concrete change: Add `isTCMaterialResponsible` to the destructured props (line 34-40), then update the formula (line 238-239) to conditionally include material costs.
-
-**1 file, ~4 lines changed. No database changes.**
+**1 file, ~10 lines changed. No database changes.**
 
