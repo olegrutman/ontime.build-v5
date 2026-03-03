@@ -29,10 +29,11 @@ export function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { permissions } = useAuth();
+  const { permissions, userOrgRoles } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
 
   const canManageOrg = permissions?.canManageOrg ?? false;
+  const isSupplier = userOrgRoles[0]?.organization?.type === 'SUPPLIER';
 
   const isProjectPage = location.pathname.startsWith('/project/');
   const projectId = isProjectPage ? location.pathname.split('/')[2] : null;
@@ -53,11 +54,11 @@ export function BottomNav() {
   const primaryProjectItems: NavItem[] = [
     { label: 'Dashboard', icon: Home, path: '/dashboard' },
     { label: 'Overview', icon: LayoutDashboard, tab: 'overview' },
-    { label: 'WOs', icon: ClipboardList, tab: 'work-orders' },
+    ...(!isSupplier ? [{ label: 'WOs', icon: ClipboardList, tab: 'work-orders' }] : []),
   ];
 
   const moreProjectItems: NavItem[] = [
-    { label: 'SOV', icon: ListChecks, tab: 'sov' },
+    ...(!isSupplier ? [{ label: 'SOV', icon: ListChecks, tab: 'sov' }] : []),
     { label: 'Invoices', icon: FileText, tab: 'invoices' },
     { label: 'POs', icon: ShoppingCart, tab: 'purchase-orders' },
     { label: 'Returns', icon: Undo2, tab: 'returns' },
