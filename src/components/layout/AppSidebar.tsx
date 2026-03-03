@@ -10,7 +10,6 @@ import {
   FileText,
   ClipboardCheck,
   Users,
-  DollarSign,
   Bell,
   MessageSquareMore,
 } from 'lucide-react';
@@ -43,7 +42,6 @@ import { OntimeLogo } from '@/components/ui/OntimeLogo';
 
 const mainNavItems = [
   { title: 'Dashboard', url: '/dashboard', icon: Home },
-  { title: 'Financials', url: '/financials', icon: DollarSign },
   { title: 'RFIs', url: '/rfis', icon: MessageSquareMore },
   { title: 'Reminders', url: '/reminders', icon: Bell },
   { title: 'Partners', url: '/partners', icon: Handshake },
@@ -122,12 +120,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {mainNavItems
-                .filter((item) => {
-                  if (item.url === '/financials' && isSupplier) return false;
-                  
-                  return true;
-                })
-                .map((item) => (
+              .map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
