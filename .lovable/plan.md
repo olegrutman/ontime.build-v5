@@ -1,42 +1,20 @@
 
 
-# Clean Up Mobile Dropdown & Split Profile / Settings
+# Fix TopBar Mobile Dropdown
 
 ## Problem
-1. `MobileProjectHeader.tsx` avatar dropdown still has duplicate "Profile" and "Settings" items that both navigate to `/profile`
-2. The current `/profile` page is a single 900-line page combining personal info, org details, pricing, security, notifications, and danger zone -- "Profile" and "Settings" should be separate pages
+The `TopBar.tsx` component (used on non-project pages like Profile, Dashboard, etc.) was missed during cleanup. Its mobile avatar dropdown still contains:
+1. **"Estimate Approvals"** — removed page, dead link
+2. **"Manage Suppliers"** — removed page, dead link  
+3. **"Settings"** navigates to `/profile` instead of `/settings`
 
-## Plan
+## Changes
 
-### 1. Create a new `/settings` page (`src/pages/Settings.tsx`)
-- Move these sections from `Profile.tsx` into the new Settings page:
-  - **Security** (change password)
-  - **Notifications** (all notification toggles)
-  - **Danger Zone** (sign out, delete account)
-- Reuse the same `useProfile` hook and `AppLayout`
-- Title: "Settings" with subtitle "Security, notifications, and account management"
+### `src/components/layout/TopBar.tsx`
+- Remove the "Estimate Approvals" menu item (lines 85-90)
+- Remove the "Manage Suppliers" menu item (lines 91-96)
+- Remove now-unused imports (`Shield`, `Package`)
+- Change Settings `navigate('/profile')` → `navigate('/settings')` on line 108
 
-### 2. Trim `Profile.tsx` to profile-only content
-- Keep only:
-  - **Personal Information** (name, phone, contact method, timezone, job title)
-  - **Organization Information** (company details, trade, license)
-  - **Pricing Defaults** (hourly rate, markup, crew size)
-- Update page title from "Profile & Settings" to "Profile"
-
-### 3. Add `/settings` route in `App.tsx`
-- Add lazy import for `Settings`
-- Add protected route `/settings`
-
-### 4. Fix `MobileProjectHeader.tsx` dropdown
-- "Profile" item navigates to `/profile`
-- "Settings" item navigates to `/settings`
-- Remove duplicate separators
-
-### 5. Update `AppSidebar.tsx` footer
-- Add a Settings icon button/link next to the user avatar in the sidebar footer, navigating to `/settings`
-
-### 6. Update `Header.tsx`
-- Ensure "Settings" menu item navigates to `/settings` (it already does, just verify)
-
-**6 files modified, 1 new file created. No database changes.**
+**1 file modified.**
 
