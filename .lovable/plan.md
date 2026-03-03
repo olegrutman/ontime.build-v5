@@ -1,15 +1,42 @@
 
 
-# Show Setup Projects First on Dashboard
+# Clean Up Mobile Dropdown & Split Profile / Settings
 
-## What
-Change the default status filter on the dashboard from "Active" to "Setup" when there are projects in setup status, so users see their incomplete projects first.
+## Problem
+1. `MobileProjectHeader.tsx` avatar dropdown still has duplicate "Profile" and "Settings" items that both navigate to `/profile`
+2. The current `/profile` page is a single 900-line page combining personal info, org details, pricing, security, notifications, and danger zone -- "Profile" and "Settings" should be separate pages
 
-## Changes
+## Plan
 
-### `src/pages/Dashboard.tsx`
-- Change the initial `statusFilter` state to be dynamic: default to `'setup'` if `statusCounts.setup > 0`, otherwise `'active'`
-- Use a `useEffect` to set the filter to `'setup'` once data loads and there are setup projects (since `statusCounts` isn't available at mount time)
+### 1. Create a new `/settings` page (`src/pages/Settings.tsx`)
+- Move these sections from `Profile.tsx` into the new Settings page:
+  - **Security** (change password)
+  - **Notifications** (all notification toggles)
+  - **Danger Zone** (sign out, delete account)
+- Reuse the same `useProfile` hook and `AppLayout`
+- Title: "Settings" with subtitle "Security, notifications, and account management"
 
-**1 file modified.**
+### 2. Trim `Profile.tsx` to profile-only content
+- Keep only:
+  - **Personal Information** (name, phone, contact method, timezone, job title)
+  - **Organization Information** (company details, trade, license)
+  - **Pricing Defaults** (hourly rate, markup, crew size)
+- Update page title from "Profile & Settings" to "Profile"
+
+### 3. Add `/settings` route in `App.tsx`
+- Add lazy import for `Settings`
+- Add protected route `/settings`
+
+### 4. Fix `MobileProjectHeader.tsx` dropdown
+- "Profile" item navigates to `/profile`
+- "Settings" item navigates to `/settings`
+- Remove duplicate separators
+
+### 5. Update `AppSidebar.tsx` footer
+- Add a Settings icon button/link next to the user avatar in the sidebar footer, navigating to `/settings`
+
+### 6. Update `Header.tsx`
+- Ensure "Settings" menu item navigates to `/settings` (it already does, just verify)
+
+**6 files modified, 1 new file created. No database changes.**
 
