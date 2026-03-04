@@ -1,24 +1,29 @@
 
 
-# Simplify TC Net Position to Total Gross Margin
+# Bug Fix: TC Billing Card Shows $0 — Missing `subtotal` in Invoice Query
 
-## Formula
+## Problem
 
+The invoice query in `useProjectFinancials.ts` (line 206) selects:
 ```
-Net Position = Total Receivables (Invoiced to GC) − Total Payables (Invoiced by FC)
+id, invoice_number, status, total_amount, created_at, paid_at, contract_id, po_id, retainage_amount
 ```
 
-Using real data: $36,850 − $24,066 = **$12,784**
+But lines 304 and 307 reference `i.subtotal` to compute `receivablesInvoiced` and `payablesInvoiced`. Since `subtotal` is never fetched, both are `0`, so Net Position = `$0 - $0 = $0`.
 
-This is the TC's total invoiced profit margin across all billing — simple, clear, always correct.
+Real data confirms `subtotal` exists and has correct values ($17,064, $19,786, $13,651.20, $10,414.80).
 
-## Changes
+## Fix
 
-### `src/components/project/BillingCashCard.tsx` (3 lines)
+### `src/hooks/useProjectFinancials.ts`
 
-1. **Line 52**: Change `netCash` from `receivablesOutstanding - payablesOutstanding` to `receivablesInvoiced - payablesInvoiced`
-2. **Line 90**: Update label to `"Net Position"` (already correct)
-3. **Line 91**: Update subtitle from `"Receivables Outstanding − Payables Outstanding"` to `"Total Invoiced to GC − Total Invoiced by FC"`
+**Line 206**: Add `subtotal` to the invoice select query:
+```
+supabase.from('invoices').select('id, invoice_number, status, subtotal, total_amount, created_at, paid_at, contract_id, po_id, retainage_amount')
+```
 
-No hook changes, no database changes. 1 file, 2-3 lines.
+One field added, one line changed. After this fix:
+- Receivables Invoiced = $17,064 + $19,786 = $36,850
+- Payables Invoiced = $13,651.20 + $10,414.80 = $24,066
+- Net Position = $36,850 - $24,066 = **$12,784**
 
