@@ -39,6 +39,7 @@ export default function Signup() {
   const [pendingOrg, setPendingOrg] = useState<string | null>(null);
   const [pendingRequestId, setPendingRequestId] = useState<string | null>(null);
   const [cancelLoading, setCancelLoading] = useState(false);
+  const [alreadyRegisteredError, setAlreadyRegisteredError] = useState(false);
 
   const [data, setData] = useState<SignupWizardData>({
     firstName: '',
@@ -175,9 +176,14 @@ export default function Signup() {
 
     if (authError) {
       setLoading(false);
-      toast({ variant: 'destructive', title: 'Sign up failed', description: authError.message });
+      if (authError.message?.toLowerCase().includes('already registered') || authError.message?.toLowerCase().includes('already been registered')) {
+        setAlreadyRegisteredError(true);
+      } else {
+        toast({ variant: 'destructive', title: 'Sign up failed', description: authError.message });
+      }
       return;
     }
+    setAlreadyRegisteredError(false);
 
     // Poll for session
     let session = authData.session;
@@ -371,8 +377,10 @@ export default function Signup() {
             data={data}
             onChange={updateData}
             onNext={handleAccountNext}
+            onBack={() => setStep(0)}
             loading={loading}
             showJobTitle
+            alreadyRegisteredError={alreadyRegisteredError}
           />
         )}
       </SignupShell>
@@ -387,7 +395,9 @@ export default function Signup() {
           data={data}
           onChange={updateData}
           onNext={handleAccountNext}
+          onBack={() => setSignupPath(null)}
           loading={loading}
+          alreadyRegisteredError={alreadyRegisteredError}
         />
       )}
       {step === 1 && (
