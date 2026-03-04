@@ -208,10 +208,10 @@ export function useOrgTeam() {
   };
 
   const updateMemberJobTitle = async (userId: string, jobTitle: string) => {
-    const { error } = await supabase
-      .from('profiles')
-      .update({ job_title: jobTitle })
-      .eq('user_id', userId);
+    const { error } = await supabase.rpc('update_member_job_title', {
+      _target_user_id: userId,
+      _job_title: jobTitle,
+    });
 
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
