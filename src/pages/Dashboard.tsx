@@ -188,7 +188,8 @@ export default function Dashboard() {
   const showOnboarding = userSettings && !userSettings.onboarding_dismissed;
   const profileComplete = !!(profile?.first_name && profile?.phone);
   const orgComplete = !!(organization?.address?.street);
-  const teamInvited = (userOrgRoles.length > 1) || soleMember;
+  const isOrgAdmin = userOrgRoles[0]?.is_admin ?? false;
+  const teamInvited = !isOrgAdmin || (userOrgRoles.length > 1) || soleMember;
   const projectCreated = projects.length > 0;
 
   const handleDismissOnboarding = async () => {
