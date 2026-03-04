@@ -4674,6 +4674,10 @@ export type Database = {
       }
       submit_tm_period: { Args: { period_id: string }; Returns: undefined }
       transfer_admin: { Args: { _target_role_id: string }; Returns: undefined }
+      update_member_job_title: {
+        Args: { _job_title: string; _target_user_id: string }
+        Returns: undefined
+      }
       update_member_permissions: {
         Args: {
           _can_approve_invoices?: boolean

@@ -55,6 +55,14 @@ export default function OrgTeam() {
   const [allowJoinRequests, setAllowJoinRequests] = useState(true);
   const [selectedMember, setSelectedMember] = useState<typeof members[0] | null>(null);
 
+  // Sync selectedMember with refreshed members array to avoid stale data in dialog
+  useEffect(() => {
+    if (selectedMember) {
+      const updated = members.find(m => m.id === selectedMember.id);
+      if (updated) setSelectedMember(updated);
+    }
+  }, [members]);
+
   const allowedRoles = orgType ? ALLOWED_ROLES_BY_ORG_TYPE[orgType] : [];
   const singleRoleOrg = allowedRoles.length === 1;
 
