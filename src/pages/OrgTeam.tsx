@@ -38,7 +38,7 @@ interface JoinRequest {
 
 export default function OrgTeam() {
   const { user, userOrgRoles, refreshUserData, permissions } = useAuth();
-  const { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, updateMemberPermissions, transferAdmin, removeMember, refetch } = useOrgTeam();
+  const { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, updateMemberPermissions, transferAdmin, removeMember, updateMemberJobTitle, refetch } = useOrgTeam();
   const { toast } = useToast();
 
   const currentOrg = userOrgRoles[0]?.organization;
@@ -56,6 +56,7 @@ export default function OrgTeam() {
   const [selectedMember, setSelectedMember] = useState<typeof members[0] | null>(null);
 
   const allowedRoles = orgType ? ALLOWED_ROLES_BY_ORG_TYPE[orgType] : [];
+  const singleRoleOrg = allowedRoles.length === 1;
 
   // Fetch join requests and org settings
   const fetchJoinRequests = useCallback(async () => {
@@ -108,12 +109,13 @@ export default function OrgTeam() {
   useEffect(() => { refreshUserData(); }, []);
 
   const handleSendInvite = async () => {
-    if (!email || !role) return;
+    const effectiveRole = singleRoleOrg ? allowedRoles[0] : role;
+    if (!email || !effectiveRole) return;
     setSending(true);
-    const ok = await sendInvite(email, role as AppRole);
+    const ok = await sendInvite(email, effectiveRole as AppRole);
     if (ok) {
       setEmail('');
-      setRole('');
+      if (!singleRoleOrg) setRole('');
     }
     setSending(false);
   };
@@ -308,7 +310,7 @@ export default function OrgTeam() {
                       </Select>
                     ) : (
                       <Badge variant="secondary">
-                        {ROLE_LABELS[m.role]}
+                        {m.profile?.job_title || ROLE_LABELS[m.role]}
                       </Badge>
                     )}
                   </div>
@@ -338,21 +340,23 @@ export default function OrgTeam() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="flex-1"
               />
-              <Select value={role} onValueChange={(v) => setRole(v as AppRole)}>
-                <SelectTrigger className="w-full sm:w-[200px]">
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  {allowedRoles.map((r) => (
-                    <SelectItem key={r} value={r}>
-                      {ROLE_LABELS[r]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {!singleRoleOrg && (
+                <Select value={role} onValueChange={(v) => setRole(v as AppRole)}>
+                  <SelectTrigger className="w-full sm:w-[200px]">
+                    <SelectValue placeholder="Select role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allowedRoles.map((r) => (
+                      <SelectItem key={r} value={r}>
+                        {ROLE_LABELS[r]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <Button
                 onClick={handleSendInvite}
-                disabled={!email || !role || sending}
+                disabled={!email || (!singleRoleOrg && !role) || sending}
               >
                 {sending ? 'Sending…' : 'Send Invite'}
               </Button>
@@ -409,6 +413,9 @@ export default function OrgTeam() {
           const ok = await removeMember(id);
           if (ok) setSelectedMember(null);
           return ok;
+        }}
+        onUpdateJobTitle={async (userId, jobTitle) => {
+          return updateMemberJobTitle(userId, jobTitle);
         }}
         onAfterTransfer={refreshUserData}
         isCurrentUserAdmin={isCurrentUserAdmin}

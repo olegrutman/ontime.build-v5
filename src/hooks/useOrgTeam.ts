@@ -207,7 +207,23 @@ export function useOrgTeam() {
     return true;
   };
 
-  return { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, updateMemberPermissions, transferAdmin, removeMember, refetch: fetchData };
+  const updateMemberJobTitle = async (userId: string, jobTitle: string) => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ job_title: jobTitle })
+      .eq('user_id', userId);
+
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      return false;
+    }
+
+    toast({ title: 'Updated', description: 'Job title has been updated.' });
+    fetchData();
+    return true;
+  };
+
+  return { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, updateMemberPermissions, transferAdmin, removeMember, updateMemberJobTitle, refetch: fetchData };
 }
 
 /** Hook for the dashboard: fetch pending org invites for the current user */

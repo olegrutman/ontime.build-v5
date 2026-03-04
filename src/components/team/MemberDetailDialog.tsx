@@ -17,13 +17,21 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Shield, ArrowRightLeft, Loader2, UserMinus } from 'lucide-react';
+import { Shield, ArrowRightLeft, Loader2, UserMinus, Briefcase } from 'lucide-react';
 import { ROLE_LABELS, ROLE_PERMISSIONS, PERMISSION_TO_DB_COLUMN } from '@/types/organization';
+import { JOB_TITLES } from '@/components/signup-wizard/types';
 import type { OrgMember } from '@/hooks/useOrgTeam';
 
 interface MemberDetailDialogProps {
@@ -33,6 +41,7 @@ interface MemberDetailDialogProps {
   onUpdatePermissions: (targetRoleId: string, perms: Record<string, boolean>) => Promise<boolean>;
   onTransferAdmin: (targetRoleId: string) => Promise<boolean>;
   onRemoveMember?: (targetRoleId: string) => Promise<boolean>;
+  onUpdateJobTitle?: (userId: string, jobTitle: string) => Promise<boolean>;
   onAfterTransfer?: () => void;
   isCurrentUserAdmin: boolean;
   isSelf: boolean;
@@ -55,7 +64,6 @@ function getDefaultDbPerms(role: string): Record<string, boolean> {
   }
   const result: Record<string, boolean> = {};
   for (const dbCol of Object.keys(PERMISSION_LABELS)) {
-    // Find any RolePermissions key that maps to this DB column and use its value
     const entry = Object.entries(PERMISSION_TO_DB_COLUMN).find(([, col]) => col === dbCol);
     result[dbCol] = entry ? (roleDefaults as any)[entry[0]] ?? false : false;
   }
@@ -69,6 +77,7 @@ export function MemberDetailDialog({
   onUpdatePermissions,
   onTransferAdmin,
   onRemoveMember,
+  onUpdateJobTitle,
   onAfterTransfer,
   isCurrentUserAdmin,
   isSelf,
@@ -78,6 +87,7 @@ export function MemberDetailDialog({
   const [transferring, setTransferring] = useState(false);
   const [removing, setRemoving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [savingJobTitle, setSavingJobTitle] = useState(false);
 
   // Reset local state when member changes
   const initPerms = () => {
@@ -91,13 +101,11 @@ export function MemberDetailDialog({
         can_submit_time: member.permissions.can_submit_time,
       });
     } else if (member) {
-      // No DB row yet — initialize from role defaults
       setLocalPerms(getDefaultDbPerms(member.role));
     }
     setDirty(false);
   };
 
-  // Initialize when dialog opens (works for both null and non-null permissions)
   if (open && !dirty && member && Object.keys(localPerms).length === 0) {
     initPerms();
   }
@@ -134,6 +142,13 @@ export function MemberDetailDialog({
     if (ok) onOpenChange(false);
   };
 
+  const handleJobTitleChange = async (value: string) => {
+    if (!member || !onUpdateJobTitle) return;
+    setSavingJobTitle(true);
+    await onUpdateJobTitle(member.user_id, value);
+    setSavingJobTitle(false);
+  };
+
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
       setLocalPerms({});
@@ -163,6 +178,35 @@ export function MemberDetailDialog({
 
         {isCurrentUserAdmin && !isSelf && (
           <>
+            {/* Job Title Section */}
+            {onUpdateJobTitle && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold flex items-center gap-2">
+                    <Briefcase className="h-4 w-4" />
+                    Job Title
+                  </h3>
+                  <Select
+                    value={member.profile?.job_title || ''}
+                    onValueChange={handleJobTitleChange}
+                    disabled={savingJobTitle}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select job title" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {JOB_TITLES.map((title) => (
+                        <SelectItem key={title} value={title}>
+                          {title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
+
             <Separator />
 
             {/* Permissions Section */}
