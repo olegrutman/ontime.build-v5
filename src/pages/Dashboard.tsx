@@ -202,6 +202,13 @@ export default function Dashboard() {
     }
   };
 
+  const handleMarkPartOfTeam = () => {
+    if (orgId) {
+      localStorage.setItem(`ontime_sole_member_${orgId}`, 'true');
+      setSoleMember(true);
+    }
+  };
+
   // Quick stats
   const openWorkOrders = attentionItems.filter(i => i.type === 'change_order').length;
   const pendingInvoicesCount = attentionItems.filter(i => i.type === 'invoice').length;
@@ -226,6 +233,7 @@ export default function Dashboard() {
             orgType={orgType}
             onDismiss={handleDismissOnboarding}
             onMarkSoleMember={handleMarkSoleMember}
+            onMarkPartOfTeam={handleMarkPartOfTeam}
           />
         )}
 
