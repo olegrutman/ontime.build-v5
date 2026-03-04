@@ -131,6 +131,13 @@ export default function ProjectHome() {
   const financials = useProjectFinancials(id || '', isSupplier, supplierOrgId);
   const readiness = useProjectReadiness(id);
 
+  // Sync local project status when auto-activation completes
+  useEffect(() => {
+    if (readiness.isActive && project && project.status !== 'active') {
+      setProject({ ...project, status: 'active' });
+    }
+  }, [readiness.isActive, project]);
+
   // Resolve supplier org for GC/TC materials card
   const { data: projectSupplierOrgId } = useQuery({
     queryKey: ['project-supplier-participant', id],
