@@ -1,30 +1,44 @@
 
 
-# Test Results: Tax-Inclusive Materials Dashboard — All Passing
+# Fix: Apply Tax to PO Card Estimate Comparison
 
-## Verified Numbers
+## Problem
 
-All values on the Materials Budget Status card and detail drawer are tax-inclusive and consistent:
+On the PO card, the estimate-vs-PO comparison line shows **pre-tax** values:
+- "Est $3,693 → $4,137 (+$444)"
 
-| Metric | Value | Status |
-|---|---|---|
-| Budget (Estimate) | $274,888.94 | Already tax-inclusive from `total_amount` |
-| Materials Ordered | $28,181.41 | = $4,332.46 + $23,848.95 (both POs with 4.73% tax) |
-| Materials Delivered (Net) | $23,848.95 | DELIVERED PO only, tax-inclusive |
-| Projected Final Cost | $310,851.13 | +13.1% over budget |
+But the card's **Total** is tax-inclusive ($4,332.46). This is inconsistent — per the rule to apply tax on everything, both sides of the comparison should also be tax-inclusive.
 
-## Pack-Level Comparisons (Apples-to-Apples)
+## What the numbers should be
 
-Both Budget and Ordered columns now include 4.73% tax:
+- Estimate Walkout pack pre-tax: $3,693.29 × 1.0473 = **$3,867.98**
+- PO subtotal pre-tax: $4,136.79 × 1.0473 = **$4,332.46**
+- Delta: +$464.48
 
-- **Basement Framing**: Budget $21,053.12 vs Ordered $23,848.95 → +$2,795.83 (+13%)
-- **Walkout**: Budget $3,867.98 vs Ordered $4,332.46 → +$464.48 (+12%)
+Card should show: **Est $3,868 → $4,332 (+$465)**
 
-## SupplierEstimateVsOrdersCard
+## Changes
 
-This component has the fix applied (PO subtotals now multiplied by each PO's tax rate), but it is **not currently rendered anywhere in the UI** — it's defined but unused. The code change is correct and ready for when it gets wired up.
+### 1. `src/components/project/PurchaseOrdersTab.tsx` (line 119-126)
 
-## Conclusion
+Apply the PO's `sales_tax_percent` to the estimate pack total when building `estimatePackTotals`. For each PO that has a source estimate, look up the tax rate and multiply the pack sum by `(1 + taxRate)`.
 
-No issues found. All material budget comparisons are now consistently tax-inclusive.
+Currently the pack total is `unit_price × quantity` summed. We need to multiply by the estimate's tax rate. Since all POs from the same estimate share the same tax rate, we can grab it from the PO's `sales_tax_percent` field.
+
+Update the loop to:
+- Build the map with pre-tax totals as before
+- After building, iterate over POs and apply each PO's tax rate to its corresponding pack entry
+
+### 2. `src/components/purchase-orders/POCard.tsx` (lines 95-98)
+
+The `poSubtotal` used in the comparison line sums raw `line_total` (pre-tax). Apply the PO's tax rate so it matches the tax-inclusive estimate total and the tax-inclusive Total shown below.
+
+Change:
+```
+const poSubtotal = po.line_items
+  ? po.line_items.reduce(...) : 0;
+```
+to multiply by `(1 + taxRate)` (where `taxRate` is already computed on line 89).
+
+This makes both Est and PO sides tax-inclusive, and the delta reflects the true cost difference.
 
