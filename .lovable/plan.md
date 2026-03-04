@@ -1,34 +1,45 @@
 
 
-# Fix: Project Status Not Syncing After Auto-Activation
+# Fix: Deduct Material Estimate Cost from TC Live Position & Labor Margin
 
 ## Problem
 
-When `useProjectReadiness` auto-activates a project (updates DB status to 'active'), the `project` state in `ProjectHome` is not refreshed. This causes:
-- **Readiness card** shows "Project is active and ready for execution" (correct, uses its own `isActive` state)
-- **PO/WO/Invoice tabs** still show "Project Setup Incomplete" banner (stale `project.status` = 'setup')
+When TC is material-responsible, the **Labor Margin** in the Profit Card doesn't deduct any material costs — it only shows `Revenue - FC Cost`. The **Live Position** in the Contract Hero Card deducts actual PO costs (delivered + pending), but should use the full estimate budget to reflect the true material obligation.
 
-The TC sees conflicting messages: the project appears ready but they can't create POs.
+## Changes
 
-## Root Cause
+### 1. `src/components/project/ProfitCard.tsx` — TC Labor Margin (line 142)
 
-`ProjectHome` fetches the project once on mount (line 189-196). When `useProjectReadiness` auto-activates by writing `status: 'active'` to the DB, the local `project` state is never updated.
-
-## Fix
-
-### `src/pages/ProjectHome.tsx`
-
-When `readiness.isActive` becomes true and the local project status is still 'setup', update the local project state to reflect the activation:
-
-Add an effect after the readiness hook (around line 132):
-
-```typescript
-useEffect(() => {
-  if (readiness.isActive && project && project.status !== 'active') {
-    setProject({ ...project, status: 'active' });
-  }
-}, [readiness.isActive, project]);
+Currently:
+```
+const laborMargin = revenueTotal - fcContractValue - workOrderFCCost;
 ```
 
-This syncs the local state immediately when auto-activation completes, removing the "Project Setup Incomplete" banner from all tabs without requiring a page refresh.
+When `isTCMaterialResponsible`, deduct the material estimate (approved estimate total) from the margin:
+```
+const estimateCost = isTCMaterialResponsible ? (materialEstimate || approvedEstimateSum || 0) : 0;
+const laborMargin = revenueTotal - fcContractValue - workOrderFCCost - estimateCost;
+```
+
+This requires destructuring `materialEstimate` and `approvedEstimateSum` from `financials` (they already exist on the hook).
+
+Also add a "Material Budget" line item in the non-material-responsible TC block (currently hidden) and show it in the material-responsible block too, so the user can see what's being deducted.
+
+### 2. `src/components/project/ContractHeroCard.tsx` — Live Position (line 238)
+
+Currently:
+```
+const materialCosts = isTCMaterialResponsible ? (materialDelivered + materialOrderedPending) : 0;
+```
+
+Change to use the estimate budget as the material cost obligation:
+```
+const materialCosts = isTCMaterialResponsible ? (materialEstimate || approvedEstimateSum || 0) : 0;
+```
+
+This requires destructuring `materialEstimate` and `approvedEstimateSum` from `financials` in the component props (line 34-40).
+
+### Summary
+
+Both places will use the same source: the approved estimate total (material budget) as the cost of materials when TC is responsible, giving a consistent "what materials will cost us" deduction across Live Position and Profit cards.
 
