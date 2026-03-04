@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Building2, MapPin } from 'lucide-react';
 import { z } from 'zod';
 import type { SignupWizardData } from './types';
+import { US_STATES } from '@/types/projectWizard';
 
 const ORG_TYPE_OPTIONS = [
   { value: 'GC', label: 'General Contractor' },
@@ -119,13 +120,16 @@ export function CompanyStep({ data, onChange, onNext, onBack }: Props) {
           </div>
           <div>
             <Label htmlFor="state">State *</Label>
-            <Input
-              id="state"
-              value={data.state}
-              onChange={e => onChange({ state: e.target.value })}
-              placeholder="CO"
-              className="mt-1"
-            />
+            <Select value={data.state} onValueChange={v => onChange({ state: v })}>
+              <SelectTrigger id="state" className="mt-1">
+                <SelectValue placeholder="CO" />
+              </SelectTrigger>
+              <SelectContent>
+                {US_STATES.map(s => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {errors.state && <p className="text-xs text-destructive mt-1">{errors.state}</p>}
           </div>
           <div>

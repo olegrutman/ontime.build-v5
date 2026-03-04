@@ -1,13 +1,30 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Mail, Lock, User, Phone, Loader2 } from 'lucide-react';
+import { Mail, Lock, User, Phone, Loader2, ArrowLeft } from 'lucide-react';
 import { z } from 'zod';
 import { JOB_TITLES, type SignupWizardData } from './types';
 import { formatPhone } from '@/lib/formatPhone';
+import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
+
+function getPasswordStrength(password: string): { score: number; label: string; color: string } {
+  if (!password) return { score: 0, label: '', color: '' };
+  let score = 0;
+  if (password.length >= 6) score++;
+  if (password.length >= 10) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/[0-9]/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+
+  if (score <= 2) return { score, label: 'Weak', color: 'bg-destructive' };
+  if (score <= 3) return { score, label: 'Fair', color: 'bg-yellow-500' };
+  if (score <= 4) return { score, label: 'Good', color: 'bg-blue-500' };
+  return { score, label: 'Strong', color: 'bg-green-500' };
+}
 
 const schema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -24,12 +41,15 @@ interface Props {
   data: SignupWizardData;
   onChange: (fields: Partial<SignupWizardData>) => void;
   onNext: () => void;
+  onBack?: () => void;
   loading: boolean;
   showJobTitle?: boolean;
+  alreadyRegisteredError?: boolean;
 }
 
-export function AccountStep({ data, onChange, onNext, loading, showJobTitle }: Props) {
+export function AccountStep({ data, onChange, onNext, onBack, loading, showJobTitle, alreadyRegisteredError }: Props) {
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const strength = useMemo(() => getPasswordStrength(data.password), [data.password]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +73,17 @@ export function AccountStep({ data, onChange, onNext, loading, showJobTitle }: P
         <h2 className="text-xl font-semibold">Create your account</h2>
         <p className="text-sm text-muted-foreground mt-1">Let's start with your personal information</p>
       </div>
+
+      {alreadyRegisteredError && (
+        <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4">
+          <p className="text-sm font-medium text-destructive">An account with this email already exists.</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Try{' '}
+            <Link to="/auth" className="text-primary hover:underline font-medium">signing in</Link>{' '}
+            instead, or use a different email address.
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
@@ -163,10 +194,49 @@ export function AccountStep({ data, onChange, onNext, loading, showJobTitle }: P
           </div>
         </div>
 
-        <Button type="submit" className="w-full h-11" disabled={loading}>
-          {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-          Continue
-        </Button>
+        {/* Password strength indicator */}
+        {data.password && (
+          <div className="space-y-1">
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map(i => (
+                <div
+                  key={i}
+                  className={cn(
+                    'h-1.5 flex-1 rounded-full transition-colors',
+                    i <= strength.score ? strength.color : 'bg-muted',
+                  )}
+                />
+              ))}
+            </div>
+            <p className={cn(
+              'text-xs',
+              strength.score <= 2 ? 'text-destructive' : 'text-muted-foreground',
+            )}>
+              Password strength: {strength.label}
+            </p>
+          </div>
+        )}
+
+        {/* Terms acknowledgment */}
+        <p className="text-xs text-muted-foreground text-center">
+          By creating an account, you agree to our{' '}
+          <span className="text-primary hover:underline cursor-pointer font-medium">Terms of Service</span>{' '}
+          and{' '}
+          <span className="text-primary hover:underline cursor-pointer font-medium">Privacy Policy</span>.
+        </p>
+
+        <div className={cn('flex gap-3', onBack ? '' : '')}>
+          {onBack && (
+            <Button type="button" variant="outline" onClick={onBack} className="gap-2">
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </Button>
+          )}
+          <Button type="submit" className={cn('h-11', onBack ? 'flex-1' : 'w-full')} disabled={loading}>
+            {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+            Continue
+          </Button>
+        </div>
       </form>
     </Card>
   );

@@ -46,25 +46,23 @@ export function RoleStep({ data, onChange, onSubmit, onBack, loading }: Props) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Job Title - GC only per memory */}
-        {data.orgType === 'GC' && (
-          <div>
-            <Label htmlFor="jobTitle">Job Title</Label>
-            <Select
-              value={data.jobTitle}
-              onValueChange={v => onChange({ jobTitle: v })}
-            >
-              <SelectTrigger id="jobTitle" className="mt-1">
-                <SelectValue placeholder="Select your job title" />
-              </SelectTrigger>
-              <SelectContent>
-                {JOB_TITLES.map(t => (
-                  <SelectItem key={t} value={t}>{t}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+        {/* Job Title - all org types */}
+        <div>
+          <Label htmlFor="jobTitle">Job Title</Label>
+          <Select
+            value={data.jobTitle}
+            onValueChange={v => onChange({ jobTitle: v })}
+          >
+            <SelectTrigger id="jobTitle" className="mt-1">
+              <SelectValue placeholder="Select your job title" />
+            </SelectTrigger>
+            <SelectContent>
+              {JOB_TITLES.map(t => (
+                <SelectItem key={t} value={t}>{t}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {/* Trade - TC/FC only */}
         {showTrade && (
@@ -103,13 +101,13 @@ export function RoleStep({ data, onChange, onSubmit, onBack, loading }: Props) {
           </>
         )}
 
-        {/* Summary for non-GC, non-trade roles */}
-        {!showTrade && data.orgType !== 'GC' && (
+        {/* Summary for non-trade roles */}
+        {!showTrade && (
           <div className="rounded-lg border p-4 bg-muted/30">
             <p className="text-sm text-muted-foreground">
               You're all set! Click "Create Account" below to finish setting up your{' '}
               <span className="font-medium text-foreground">
-                {data.orgType === 'SUPPLIER' ? 'Supplier' : data.orgType}
+                {data.orgType === 'SUPPLIER' ? 'Supplier' : data.orgType === 'GC' ? 'General Contractor' : data.orgType}
               </span>{' '}
               account.
             </p>
