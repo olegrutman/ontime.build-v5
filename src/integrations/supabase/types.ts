@@ -4558,6 +4558,10 @@ export type Database = {
         Args: { notes?: string; period_id: string }
         Returns: undefined
       }
+      remove_org_member: {
+        Args: { _target_role_id: string }
+        Returns: undefined
+      }
       search_catalog: {
         Args: {
           category_filter?: string
