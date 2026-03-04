@@ -1,29 +1,40 @@
 
 
-# Bug Fix: TC Billing Card Shows $0 — Missing `subtotal` in Invoice Query
+# Apply Tax Consistently to Budget vs Orders Comparisons
 
 ## Problem
 
-The invoice query in `useProjectFinancials.ts` (line 206) selects:
+Estimate pack item `line_total` values are **pre-tax**, but PO line items are multiplied by the PO's tax rate. This creates a mismatch in pack-level comparisons — you're comparing taxed PO costs against untaxed estimate costs.
+
+Similarly, in `SupplierEstimateVsOrdersCard`, estimates use `total_amount` (tax-inclusive) but PO line totals are summed **without** tax.
+
+## Changes
+
+### 1. `src/hooks/useSupplierMaterialsOverview.ts`
+
+**Estimate pack totals need tax applied** (lines 86-89):
+
+Currently each pack sums raw `line_total`. Multiply by `(1 + salesTaxPercent / 100)` so pack budgets are tax-inclusive, matching the tax-inclusive PO ordered amounts.
+
+- After computing `salesTaxPercent` (line 76), create `estimateTaxMult = 1 + salesTaxPercent / 100`
+- Line 88: change `(item.line_total || 0)` → `(item.line_total || 0) * estimateTaxMult`
+
+This makes `estimateItemsByPack` tax-inclusive, so pack comparisons, forecast logic, and "Packs Over Budget" table are all apples-to-apples.
+
+### 2. `src/components/project/SupplierEstimateVsOrdersCard.tsx`
+
+**PO totals need tax applied** (lines 67-70):
+
+Currently sums raw `line_total` without tax. Apply each PO's `sales_tax_percent`.
+
+Change the reduce to:
 ```
-id, invoice_number, status, total_amount, created_at, paid_at, contract_id, po_id, retainage_amount
+const totalOrders = pos?.reduce((sum, po) => {
+  const subtotal = po.po_line_items?.reduce((s, li) => s + (li.line_total || 0), 0) || 0;
+  const taxMult = 1 + ((po.sales_tax_percent || 0) / 100);
+  return sum + subtotal * taxMult;
+}, 0) || 0;
 ```
 
-But lines 304 and 307 reference `i.subtotal` to compute `receivablesInvoiced` and `payablesInvoiced`. Since `subtotal` is never fetched, both are `0`, so Net Position = `$0 - $0 = $0`.
-
-Real data confirms `subtotal` exists and has correct values ($17,064, $19,786, $13,651.20, $10,414.80).
-
-## Fix
-
-### `src/hooks/useProjectFinancials.ts`
-
-**Line 206**: Add `subtotal` to the invoice select query:
-```
-supabase.from('invoices').select('id, invoice_number, status, subtotal, total_amount, created_at, paid_at, contract_id, po_id, retainage_amount')
-```
-
-One field added, one line changed. After this fix:
-- Receivables Invoiced = $17,064 + $19,786 = $36,850
-- Payables Invoiced = $13,651.20 + $10,414.80 = $24,066
-- Net Position = $36,850 - $24,066 = **$12,784**
+Both sides are now tax-inclusive → accurate difference and progress bar.
 
