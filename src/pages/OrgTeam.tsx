@@ -38,7 +38,7 @@ interface JoinRequest {
 
 export default function OrgTeam() {
   const { user, userOrgRoles, refreshUserData, permissions } = useAuth();
-  const { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, updateMemberPermissions, transferAdmin, refetch } = useOrgTeam();
+  const { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, updateMemberPermissions, transferAdmin, removeMember, refetch } = useOrgTeam();
   const { toast } = useToast();
 
   const currentOrg = userOrgRoles[0]?.organization;
@@ -405,6 +405,12 @@ export default function OrgTeam() {
         onOpenChange={(open) => { if (!open) setSelectedMember(null); }}
         onUpdatePermissions={updateMemberPermissions}
         onTransferAdmin={transferAdmin}
+        onRemoveMember={async (id) => {
+          const ok = await removeMember(id);
+          if (ok) setSelectedMember(null);
+          return ok;
+        }}
+        onAfterTransfer={refreshUserData}
         isCurrentUserAdmin={isCurrentUserAdmin}
         isSelf={selectedMember?.user_id === user?.id}
       />

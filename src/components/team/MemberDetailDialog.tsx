@@ -22,8 +22,8 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Shield, ArrowRightLeft, Loader2 } from 'lucide-react';
-import { ROLE_LABELS } from '@/types/organization';
+import { Shield, ArrowRightLeft, Loader2, UserMinus } from 'lucide-react';
+import { ROLE_LABELS, ROLE_PERMISSIONS, PERMISSION_TO_DB_COLUMN } from '@/types/organization';
 import type { OrgMember } from '@/hooks/useOrgTeam';
 
 interface MemberDetailDialogProps {
@@ -32,6 +32,8 @@ interface MemberDetailDialogProps {
   onOpenChange: (open: boolean) => void;
   onUpdatePermissions: (targetRoleId: string, perms: Record<string, boolean>) => Promise<boolean>;
   onTransferAdmin: (targetRoleId: string) => Promise<boolean>;
+  onRemoveMember?: (targetRoleId: string) => Promise<boolean>;
+  onAfterTransfer?: () => void;
   isCurrentUserAdmin: boolean;
   isSelf: boolean;
 }
@@ -45,18 +47,36 @@ const PERMISSION_LABELS: Record<string, { label: string; description: string }> 
   can_submit_time: { label: 'Submit Time', description: 'Can log hours and submit time entries' },
 };
 
+/** Build default DB-level permission values from role defaults */
+function getDefaultDbPerms(role: string): Record<string, boolean> {
+  const roleDefaults = ROLE_PERMISSIONS[role as keyof typeof ROLE_PERMISSIONS];
+  if (!roleDefaults) {
+    return Object.fromEntries(Object.keys(PERMISSION_LABELS).map(k => [k, false]));
+  }
+  const result: Record<string, boolean> = {};
+  for (const dbCol of Object.keys(PERMISSION_LABELS)) {
+    // Find any RolePermissions key that maps to this DB column and use its value
+    const entry = Object.entries(PERMISSION_TO_DB_COLUMN).find(([, col]) => col === dbCol);
+    result[dbCol] = entry ? (roleDefaults as any)[entry[0]] ?? false : false;
+  }
+  return result;
+}
+
 export function MemberDetailDialog({
   member,
   open,
   onOpenChange,
   onUpdatePermissions,
   onTransferAdmin,
+  onRemoveMember,
+  onAfterTransfer,
   isCurrentUserAdmin,
   isSelf,
 }: MemberDetailDialogProps) {
   const [localPerms, setLocalPerms] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const [transferring, setTransferring] = useState(false);
+  const [removing, setRemoving] = useState(false);
   const [dirty, setDirty] = useState(false);
 
   // Reset local state when member changes
@@ -70,12 +90,15 @@ export function MemberDetailDialog({
         can_view_financials: member.permissions.can_view_financials,
         can_submit_time: member.permissions.can_submit_time,
       });
+    } else if (member) {
+      // No DB row yet — initialize from role defaults
+      setLocalPerms(getDefaultDbPerms(member.role));
     }
     setDirty(false);
   };
 
-  // Initialize when dialog opens
-  if (open && !dirty && member?.permissions && Object.keys(localPerms).length === 0) {
+  // Initialize when dialog opens (works for both null and non-null permissions)
+  if (open && !dirty && member && Object.keys(localPerms).length === 0) {
     initPerms();
   }
 
@@ -95,9 +118,20 @@ export function MemberDetailDialog({
   const handleTransfer = async () => {
     if (!member) return;
     setTransferring(true);
-    await onTransferAdmin(member.id);
+    const ok = await onTransferAdmin(member.id);
     setTransferring(false);
-    onOpenChange(false);
+    if (ok) {
+      onOpenChange(false);
+      onAfterTransfer?.();
+    }
+  };
+
+  const handleRemove = async () => {
+    if (!member || !onRemoveMember) return;
+    setRemoving(true);
+    const ok = await onRemoveMember(member.id);
+    setRemoving(false);
+    if (ok) onOpenChange(false);
   };
 
   const handleOpenChange = (newOpen: boolean) => {
@@ -196,6 +230,44 @@ export function MemberDetailDialog({
                 </AlertDialogContent>
               </AlertDialog>
             </div>
+
+            {/* Remove Member */}
+            {onRemoveMember && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <h3 className="text-sm font-semibold flex items-center gap-2 text-destructive">
+                    <UserMinus className="h-4 w-4" />
+                    Remove Member
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Remove this person from your organization. They will lose access to all org data.
+                  </p>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="sm" className="w-full">
+                        Remove {member.profile?.full_name?.split(' ')[0] || 'this member'}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Remove Team Member?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          <strong>{member.profile?.full_name}</strong> will be removed from your organization
+                          and will lose access to all organization data. This cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleRemove} disabled={removing} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          {removing ? 'Removing…' : 'Yes, Remove'}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </>
+            )}
           </>
         )}
 

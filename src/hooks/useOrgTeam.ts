@@ -192,7 +192,22 @@ export function useOrgTeam() {
     return true;
   };
 
-  return { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, updateMemberPermissions, transferAdmin, refetch: fetchData };
+  const removeMember = async (targetRoleId: string) => {
+    const { error } = await supabase.rpc('remove_org_member', {
+      _target_role_id: targetRoleId,
+    });
+
+    if (error) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      return false;
+    }
+
+    toast({ title: 'Removed', description: 'Team member has been removed.' });
+    fetchData();
+    return true;
+  };
+
+  return { members, pendingInvites, loading, sendInvite, cancelInvite, changeRole, updateMemberPermissions, transferAdmin, removeMember, refetch: fetchData };
 }
 
 /** Hook for the dashboard: fetch pending org invites for the current user */
