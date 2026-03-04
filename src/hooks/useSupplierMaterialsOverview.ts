@@ -83,9 +83,10 @@ export function useSupplierMaterialsOverview(projectId: string, supplierOrgId: s
           .from('supplier_estimate_items')
           .select('pack_name, line_total')
           .in('estimate_id', estimateIds);
-        (items || []).forEach(item => {
+      const estimateTaxMult = 1 + salesTaxPercent / 100;
+      (items || []).forEach(item => {
           const pack = item.pack_name || 'Uncategorized';
-          estimateItemsByPack[pack] = (estimateItemsByPack[pack] || 0) + (item.line_total || 0);
+          estimateItemsByPack[pack] = (estimateItemsByPack[pack] || 0) + (item.line_total || 0) * estimateTaxMult;
         });
       }
 
