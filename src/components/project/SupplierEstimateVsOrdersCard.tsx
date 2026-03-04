@@ -66,7 +66,8 @@ export function SupplierEstimateVsOrdersCard({
 
       const totalOrders = pos?.reduce((sum, po) => {
         const subtotal = po.po_line_items?.reduce((s: number, li: any) => s + (li.line_total || 0), 0) || 0;
-        return sum + subtotal;
+        const taxMult = 1 + ((po.sales_tax_percent || 0) / 100);
+        return sum + subtotal * taxMult;
       }, 0) || 0;
 
       return { totalEstimates, totalOrders };
