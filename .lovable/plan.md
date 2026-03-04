@@ -1,56 +1,38 @@
 
 
-# Add Remove Member + Analyze Permissions & Admin Transfer
+# Improve Role Display and Job Title Assignment for Team Members
 
-## Current State Analysis
+## Problem
+For GC organizations, the system role is `GC_PM` which displays as "General Contractor Manager" for every member. The actual job title (Project Manager, Office Manager, Foreman, etc.) exists on the profile but:
+1. The member list badge shows the system role, not the job title
+2. Admins cannot edit a team member's job title — only the member themselves can set it on their Profile page
+3. The invite form role dropdown has only one option ("General Contractor Manager") for GC orgs, making it feel broken
 
-### Permissions System
-The permission system is well-structured with two layers:
-1. **Role-based defaults** (`ROLE_PERMISSIONS` in `types/organization.ts`) — baseline per role (GC_PM, TC_PM, FC_PM, FS, SUPPLIER)
-2. **Granular DB overrides** (`member_permissions` table) — per-member toggles that override role defaults
-3. **Admin override** — `is_admin = true` grants ALL permissions automatically
-
-Six permission flags exist in the DB:
-- `can_approve_invoices`, `can_create_work_orders`, `can_create_pos`, `can_manage_team`, `can_view_financials`, `can_submit_time`
-
-The `MemberDetailDialog` lets admins toggle these per member. The `getEffectivePermissions()` function merges role defaults + DB overrides + admin override correctly.
-
-### Admin Transfer
-- Works via `transfer_admin` RPC — sets `is_admin = false` on caller, `is_admin = true` on target
-- UI has a confirmation dialog with clear warning
-- After transfer, the former admin loses the ability to manage permissions/transfers
-
-### Bugs Found
-1. **No "Remove Member" capability** — admins cannot remove team members from their organization. There's no RPC or UI for it.
-2. **Permissions not initialized for members without a `member_permissions` row** — when a member has no row in `member_permissions`, the dialog shows all toggles as `false` (line 78 condition: `member?.permissions && Object.keys(localPerms).length === 0`). If `member.permissions` is `null`, the permissions section is skipped entirely and no toggles appear. This means admins can't set permissions for members who haven't had them set before.
-3. **After admin transfer, auth context is stale** — `refreshUserData()` isn't called after `handleTransfer`, so the former admin's UI still shows admin controls until they refresh the page.
+## Analysis from Live Data
+- Allen Rutman: job_title = "Office Manager" (shows in secondary text but badge says "General Contractor Manager")
+- John Smith: job_title = "Project Manager" (same issue)
+- Greg Clark: job_title = null (no title set at all)
 
 ## Changes
 
-### 1. Database: Create `remove_org_member` RPC
-Create a `SECURITY DEFINER` function that:
-- Validates the caller is admin of the same org
-- Prevents removing yourself
-- Prevents removing the admin (must transfer first)
-- Deletes the `member_permissions` row (cascade should handle, but explicit)
-- Deletes the `user_org_roles` row
+### 1. `src/pages/OrgTeam.tsx` — Show job title prominently, allow admin to edit it
+- In the members list, display `job_title` as the badge instead of the system role label when a job title exists. Fall back to system role label when no job title is set.
+- Hide the role-change dropdown for single-role orgs (it currently hides due to `allowedRoles.length > 1` check, which is correct)
 
-### 2. `src/hooks/useOrgTeam.ts` — Add `removeMember` function
-Add a new function that calls the `remove_org_member` RPC and refreshes the member list.
+### 2. `src/components/team/MemberDetailDialog.tsx` — Add job title editing
+- Add a "Job Title" section visible to admins when viewing another member
+- Show a Select dropdown with the standard `JOB_TITLES` list (Owner, Project Manager, Superintendent, Estimator, Office Manager, Foreman, Other)
+- Save via a direct `supabase.from('profiles').update({ job_title }).eq('user_id', member.user_id)` call
+- Accept a new `onUpdateJobTitle` callback prop
 
-### 3. `src/components/team/MemberDetailDialog.tsx` — Add Remove button + fix bugs
-- Add a "Remove from Team" section with confirmation dialog (destructive action)
-- Accept `onRemoveMember` prop
-- Fix: when `member.permissions` is `null`, initialize `localPerms` from role defaults so admin can still set permissions
-- Fix: after admin transfer, call `refreshUserData` via a new callback prop
+### 3. `src/hooks/useOrgTeam.ts` — Add `updateMemberJobTitle` function
+- New function that updates the profile's `job_title` for a given `user_id` and refetches the member list
 
-### 4. `src/pages/OrgTeam.tsx` — Wire up remove member
-- Pass `onRemoveMember` handler to `MemberDetailDialog`
-- After removal, refetch the members list
+### 4. `src/pages/OrgTeam.tsx` — Wire job title update
+- Pass `onUpdateJobTitle` to the `MemberDetailDialog`
+- After update, refetch members to show the new title
 
-### Summary of deliverables
-- Admin can remove non-admin members from the org
-- Permissions toggles work even for members with no existing `member_permissions` row
-- Auth context refreshes after admin transfer
-- Remove is blocked for self and for the admin (must transfer first)
+### Bugs identified
+- **Job title not shown in badge**: The badge always shows `ROLE_LABELS[m.role]` which is the system role, not the cosmetic job title. For single-role orgs this is redundant and unhelpful.
+- **No admin control over member job titles**: Only the user themselves can set their job title via Profile. Admins should be able to set it for their team members.
 
