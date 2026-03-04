@@ -124,6 +124,20 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           existing.itemCount += 1;
           totalsMap.set(key, existing);
         }
+
+        // Apply each PO's sales tax to its corresponding estimate pack total
+        for (const po of pos) {
+          if (po.source_estimate_id && po.source_pack_name) {
+            const key = `${po.source_estimate_id}|${po.source_pack_name}`;
+            const entry = totalsMap.get(key);
+            if (entry && !((entry as any)._taxApplied)) {
+              const taxMult = 1 + ((po.sales_tax_percent || 0) / 100);
+              entry.total *= taxMult;
+              (entry as any)._taxApplied = true;
+            }
+          }
+        }
+
         setEstimatePackTotals(totalsMap);
       } else {
         setEstimatePackTotals(new Map());

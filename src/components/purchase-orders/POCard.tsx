@@ -93,7 +93,7 @@ export function POCard({
 
   const isFromEstimate = !!po.source_estimate_id;
   const poSubtotal = po.line_items
-    ? po.line_items.reduce((sum, item) => sum + (item.line_total || 0), 0)
+    ? po.line_items.reduce((sum, item) => sum + (item.line_total || 0), 0) * (1 + taxRate)
     : 0;
   const adjustment = estimatePackTotal != null ? poSubtotal - estimatePackTotal : null;
 
