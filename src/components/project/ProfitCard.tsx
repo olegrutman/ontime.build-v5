@@ -26,6 +26,7 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
     ownerContractValue, materialMarkupType, materialMarkupValue,
     materialDelivered, laborBudget,
     isTCMaterialResponsible, updateOwnerContract,
+    materialEstimate, approvedEstimateSum,
   } = financials;
 
   const [editing, setEditing] = useState(false);
@@ -139,7 +140,8 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
   // TC Profit
   if (viewerRole === 'Trade Contractor') {
     const revenueTotal = currentTotal;
-    const laborMargin = revenueTotal - fcContractValue - workOrderFCCost;
+    const estimateCost = isTCMaterialResponsible ? (materialEstimate || approvedEstimateSum || 0) : 0;
+    const laborMargin = revenueTotal - fcContractValue - workOrderFCCost - estimateCost;
     const laborMarginPct = revenueTotal > 0 ? (laborMargin / revenueTotal) * 100 : 0;
 
     if (!isTCMaterialResponsible) {

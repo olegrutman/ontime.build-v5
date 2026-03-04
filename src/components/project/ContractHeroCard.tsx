@@ -35,6 +35,7 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
     loading, viewerRole, upstreamContract, downstreamContract, userOrgIds,
     workOrderTotal, approvedWOCount, workOrderFCCost,
     materialDelivered, materialOrderedPending, isTCMaterialResponsible,
+    materialEstimate, approvedEstimateSum,
     supplierOrderValue, supplierInvoiced, supplierPaid,
     fcParticipants, updateContract, createFcContract,
   } = financials;
@@ -235,7 +236,7 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
 
       {/* TC: Live Position */}
       {isTC && (() => {
-        const materialCosts = isTCMaterialResponsible ? (materialDelivered + materialOrderedPending) : 0;
+        const materialCosts = isTCMaterialResponsible ? (materialEstimate || approvedEstimateSum || 0) : 0;
         const woProfit = workOrderTotal - workOrderFCCost - materialCosts;
         const livePosition = gcContractValue - fcContractValue + woProfit;
         return (
