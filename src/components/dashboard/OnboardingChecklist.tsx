@@ -12,6 +12,7 @@ interface OnboardingChecklistProps {
   orgType?: string | null;
   onDismiss: () => void;
   onMarkSoleMember?: () => void;
+  onMarkPartOfTeam?: () => void;
 }
 
 export function OnboardingChecklist({
@@ -22,6 +23,7 @@ export function OnboardingChecklist({
   orgType,
   onDismiss,
   onMarkSoleMember,
+  onMarkPartOfTeam,
 }: OnboardingChecklistProps) {
   const navigate = useNavigate();
 
@@ -77,13 +79,25 @@ export function OnboardingChecklist({
               )}
               <span className={step.done ? 'line-through' : ''}>{step.label}</span>
             </button>
-            {step.isSoleMemberStep && !step.done && onMarkSoleMember && (
-              <button
-                onClick={(e) => { e.stopPropagation(); onMarkSoleMember(); }}
-                className="text-xs text-muted-foreground hover:text-foreground underline whitespace-nowrap pr-3"
-              >
-                I'm a sole member
-              </button>
+            {step.isSoleMemberStep && !step.done && (
+              <div className="flex items-center gap-2 pr-3">
+                {onMarkPartOfTeam && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onMarkPartOfTeam(); }}
+                    className="text-xs text-muted-foreground hover:text-foreground underline whitespace-nowrap"
+                  >
+                    I'm part of the team
+                  </button>
+                )}
+                {onMarkSoleMember && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onMarkSoleMember(); }}
+                    className="text-xs text-muted-foreground hover:text-foreground underline whitespace-nowrap"
+                  >
+                    I'm a sole member
+                  </button>
+                )}
+              </div>
             )}
           </div>
         ))}
