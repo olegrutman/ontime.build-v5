@@ -1,38 +1,43 @@
 
 
-# Improve Role Display and Job Title Assignment for Team Members
+# Fix Team Management Bugs
 
-## Problem
-For GC organizations, the system role is `GC_PM` which displays as "General Contractor Manager" for every member. The actual job title (Project Manager, Office Manager, Foreman, etc.) exists on the profile but:
-1. The member list badge shows the system role, not the job title
-2. Admins cannot edit a team member's job title — only the member themselves can set it on their Profile page
-3. The invite form role dropdown has only one option ("General Contractor Manager") for GC orgs, making it feel broken
+## Bugs Found During Testing
 
-## Analysis from Live Data
-- Allen Rutman: job_title = "Office Manager" (shows in secondary text but badge says "General Contractor Manager")
-- John Smith: job_title = "Project Manager" (same issue)
-- Greg Clark: job_title = null (no title set at all)
+### Bug 1: Admin cannot update another member's job title (CRITICAL)
+**Root cause**: The `profiles` table RLS policy only allows `user_id = auth.uid()` for updates. When an admin tries to update another member's job title, the query silently affects zero rows — no error, but no update either. The toast falsely reports success.
+
+**Fix**: Create an RPC `update_member_job_title(_target_user_id uuid, _job_title text)` with `SECURITY DEFINER` that:
+- Verifies the caller is admin of the same org as the target user
+- Updates `profiles.job_title` for the target user
+- Update `useOrgTeam.updateMemberJobTitle` to call this RPC instead of direct table update
+
+### Bug 2: `selectedMember` state goes stale after updates
+**Root cause**: In `OrgTeam.tsx`, when permissions or job title are saved, `fetchData()` refreshes the `members` array, but `selectedMember` still holds the old object reference. The dialog shows stale data until closed and reopened.
+
+**Fix**: In `OrgTeam.tsx`, add a `useEffect` that syncs `selectedMember` with the refreshed `members` array:
+```typescript
+useEffect(() => {
+  if (selectedMember) {
+    const updated = members.find(m => m.id === selectedMember.id);
+    if (updated) setSelectedMember(updated);
+  }
+}, [members]);
+```
+
+### Bug 3: Both members show "Admin" badge
+**Status**: This is a data issue, not a code bug. Both Allen and John have `is_admin = true` in the DB for the same org. The `transfer_admin` RPC correctly sets one to false and one to true, but the current data state has both as admin (likely from test setup). No code change needed.
 
 ## Changes
 
-### 1. `src/pages/OrgTeam.tsx` — Show job title prominently, allow admin to edit it
-- In the members list, display `job_title` as the badge instead of the system role label when a job title exists. Fall back to system role label when no job title is set.
-- Hide the role-change dropdown for single-role orgs (it currently hides due to `allowedRoles.length > 1` check, which is correct)
+### 1. Database: Create `update_member_job_title` RPC
+- `SECURITY DEFINER` function
+- Validates caller is admin in same org as target user
+- Updates `profiles.job_title`
 
-### 2. `src/components/team/MemberDetailDialog.tsx` — Add job title editing
-- Add a "Job Title" section visible to admins when viewing another member
-- Show a Select dropdown with the standard `JOB_TITLES` list (Owner, Project Manager, Superintendent, Estimator, Office Manager, Foreman, Other)
-- Save via a direct `supabase.from('profiles').update({ job_title }).eq('user_id', member.user_id)` call
-- Accept a new `onUpdateJobTitle` callback prop
+### 2. `src/hooks/useOrgTeam.ts`
+- Change `updateMemberJobTitle` to call the new RPC instead of direct profile update
 
-### 3. `src/hooks/useOrgTeam.ts` — Add `updateMemberJobTitle` function
-- New function that updates the profile's `job_title` for a given `user_id` and refetches the member list
-
-### 4. `src/pages/OrgTeam.tsx` — Wire job title update
-- Pass `onUpdateJobTitle` to the `MemberDetailDialog`
-- After update, refetch members to show the new title
-
-### Bugs identified
-- **Job title not shown in badge**: The badge always shows `ROLE_LABELS[m.role]` which is the system role, not the cosmetic job title. For single-role orgs this is redundant and unhelpful.
-- **No admin control over member job titles**: Only the user themselves can set their job title via Profile. Admins should be able to set it for their team members.
+### 3. `src/pages/OrgTeam.tsx`
+- Add `useEffect` to sync `selectedMember` with refreshed `members` array after any data change
 
