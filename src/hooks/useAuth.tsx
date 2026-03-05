@@ -2,6 +2,7 @@ import { useState, useEffect, createContext, useContext, type ReactNode } from '
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 import { Profile, UserOrgRole, AppRole, MemberPermissions, RolePermissions, getEffectivePermissions } from '@/types/organization';
+import type { PlatformRole } from '@/types/platform';
 
 interface AuthContextType {
   user: User | null;
@@ -12,6 +13,9 @@ interface AuthContextType {
   permissions: RolePermissions | null;
   memberPermissions: MemberPermissions | null;
   isAdmin: boolean;
+  platformRole: PlatformRole | null;
+  isPlatformUser: boolean;
+  twoFactorVerified: boolean;
   loading: boolean;
   needsOrgSetup: boolean;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
@@ -28,6 +32,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [userOrgRoles, setUserOrgRoles] = useState<UserOrgRole[]>([]);
   const [memberPermissions, setMemberPermissions] = useState<MemberPermissions | null>(null);
+  const [platformRole, setPlatformRole] = useState<PlatformRole | null>(null);
+  const [twoFactorVerified, setTwoFactorVerified] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = async (userId: string) => {
@@ -62,8 +68,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .eq('user_org_role_id', rolesData[0].id)
           .maybeSingle();
 
-        setMemberPermissions(permsData as MemberPermissions | null);
+      setMemberPermissions(permsData as MemberPermissions | null);
       }
+    }
+
+    // Fetch platform user data
+    const { data: platformData } = await supabase
+      .from('platform_users')
+      .select('platform_role, two_factor_verified')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (platformData) {
+      setPlatformRole(platformData.platform_role as PlatformRole);
+      setTwoFactorVerified(platformData.two_factor_verified ?? false);
+    } else {
+      setPlatformRole(null);
+      setTwoFactorVerified(false);
     }
   };
 
@@ -87,6 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setProfile(null);
         setUserOrgRoles([]);
         setMemberPermissions(null);
+        setPlatformRole(null);
+        setTwoFactorVerified(false);
       }
         setLoading(false);
       }
@@ -136,6 +159,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
     setUserOrgRoles([]);
     setMemberPermissions(null);
+    setPlatformRole(null);
+    setTwoFactorVerified(false);
     window.location.href = '/';
   };
 
@@ -143,7 +168,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const currentRole = userOrgRoles.length > 0 ? userOrgRoles[0].role : null;
   const isAdmin = userOrgRoles.length > 0 ? (userOrgRoles[0].is_admin ?? false) : false;
   const permissions = getEffectivePermissions(currentRole, memberPermissions, isAdmin);
-  const needsOrgSetup = !loading && !!user && userOrgRoles.length === 0;
+  const isPlatformUser = !!platformRole && platformRole !== 'NONE';
+  const needsOrgSetup = !loading && !!user && userOrgRoles.length === 0 && !isPlatformUser;
 
   return (
     <AuthContext.Provider
@@ -156,6 +182,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         permissions,
         memberPermissions,
         isAdmin,
+        platformRole,
+        isPlatformUser,
+        twoFactorVerified,
         loading,
         needsOrgSetup,
         signUp,
