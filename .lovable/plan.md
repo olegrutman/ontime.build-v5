@@ -1,16 +1,21 @@
 
 
-# Fix: Upload SOV Button Not Working in Missing Contracts Section
+# Rename System Catalog Supplier
 
-## Problem
+## Change
 
-The "Upload SOV" button in the "Contracts Missing SOV" section does nothing because the `UploadSOVDialog` component is only rendered inside the empty-state block (when no SOVs exist at all). Once at least one SOV exists, that block doesn't render, so clicking the button sets state but there's no dialog to show.
+Update the existing system supplier record from **"Test Building Supply Co."** (code `SUPP-TEST`) to **"Ontime System Supplier"** (code `ONTIME-SYS`).
 
-## Fix
+This is a single data update — no schema or code changes needed, since the supplier name is read dynamically from the database everywhere it appears.
 
-**File: `src/components/sov/ContractSOVEditor.tsx`**
+## Steps
 
-Move (or duplicate) the `UploadSOVDialog` rendering to a location that's always mounted — right before the closing `</div>` of the component (line 888), outside of any conditional block. This ensures the dialog is available regardless of whether SOVs exist or not.
+1. **Update supplier record** — Use the insert/update tool to run:
+   ```sql
+   UPDATE suppliers
+   SET name = 'Ontime System Supplier', supplier_code = 'ONTIME-SYS'
+   WHERE id = 'a1b2c3d4-e5f6-7890-abcd-ef1234567890';
+   ```
 
-The dialog already accepts `contractsMissingSOVs` as its contracts prop in the empty-state path, so the same logic applies. We just need one unconditional render of the dialog at the component root level.
+No file changes required.
 
