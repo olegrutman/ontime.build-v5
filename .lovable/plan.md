@@ -1,50 +1,31 @@
 
 
-# Fix: Platform admin redirect — fetch order race condition
+# Delete and Recreate Platform Owner Account
 
-## Root Cause
-In `useAuth.tsx`, `fetchUserData` runs queries sequentially. `setUserOrgRoles()` fires on line 61 BEFORE the `platform_users` query even starts on line 76. In React 18, state updates across `await` boundaries are NOT batched, so `userOrgRoles` triggers a re-render immediately. The Auth.tsx effect sees `userOrgRoles.length > 0` with `isPlatformUser` still `false`, and redirects to `/dashboard`.
+## Current State
+- **User**: `owner@ontime.build` (user_id: `bd196a35-e30f-4a42-8c5c-d310be318ec3`)
+- **Organization**: "Ontime.build" (id: `4f47c536-01b4-4979-b968-c2ba627e302a`) — no other members, no projects
+- **Platform role**: `PLATFORM_OWNER`
 
-## Fix
-**`src/hooks/useAuth.tsx`** — Fetch platform_users in PARALLEL with org roles (not after), and delay setting `userOrgRoles` until `platformRole` is also ready:
+## Plan
 
-```tsx
-const fetchUserData = async (userId: string) => {
-  // Fetch all data in parallel
-  const [profileResult, rolesResult, platformResult] = await Promise.all([
-    supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
-    supabase.from('user_org_roles').select('*, organization:organizations(*)').eq('user_id', userId),
-    supabase.from('platform_users').select('platform_role, two_factor_verified').eq('user_id', userId).maybeSingle(),
-  ]);
+### Step 1: Delete existing data via edge function
+Create a one-time edge function `admin-reset-owner` that uses the service role key to:
+1. Delete from `platform_users` where user_id matches
+2. Delete from `user_org_roles` where user_id matches
+3. Delete from `profiles` where user_id matches
+4. Delete the organization `4f47c536-01b4-4979-b968-c2ba627e302a`
+5. Delete the auth user via `adminClient.auth.admin.deleteUser()`
+6. Create a new auth user with email `owner@ontime.build`, password `Password123`, email confirmed
+7. Create a `profiles` row for the new user
+8. Create a `platform_users` row with role `PLATFORM_OWNER`
+9. **No organization or org role** — this is a platform-only admin account
 
-  // Set platform role FIRST
-  if (platformResult.data) {
-    setPlatformRole(platformResult.data.platform_role as PlatformRole);
-    setTwoFactorVerified(platformResult.data.two_factor_verified ?? false);
-  } else {
-    setPlatformRole(null);
-    setTwoFactorVerified(false);
-  }
+### Step 2: Invoke the function and verify
 
-  if (profileResult.data) {
-    setProfile(profileResult.data as Profile);
-  }
+### Step 3: Delete the edge function after use
 
-  if (rolesResult.data) {
-    setUserOrgRoles(rolesResult.data as UserOrgRole[]);
-    // Then fetch member_permissions
-    if (rolesResult.data.length > 0) {
-      const { data: permsData } = await supabase
-        .from('member_permissions').select('*')
-        .eq('user_org_role_id', rolesResult.data[0].id).maybeSingle();
-      setMemberPermissions(permsData as MemberPermissions | null);
-    }
-  }
-};
-```
-
-This ensures `platformRole` is set BEFORE `userOrgRoles`, so when the Auth.tsx effect fires on `userOrgRoles` change, `isPlatformUser` is already `true` and the redirect goes to `/platform`.
-
-## Scope
-One function rewrite in `useAuth.tsx`. No other files need changes.
+### Technical Notes
+- Uses `SUPABASE_SERVICE_ROLE_KEY` (already available in edge function env)
+- One-time operation — function will be removed after execution
 
