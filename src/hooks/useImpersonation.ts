@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -20,8 +20,9 @@ export function useImpersonation() {
     () => sessionStorage.getItem(STORAGE_KEYS.targetEmail) || ''
   );
   const [remainingMs, setRemainingMs] = useState(0);
+  const endImpersonationRef = useRef<() => Promise<void>>();
 
-  // Update countdown
+  // Update countdown using ref to avoid stale closure
   useEffect(() => {
     if (!isImpersonating) return;
 
@@ -31,7 +32,7 @@ export function useImpersonation() {
       const remaining = Math.max(0, SESSION_TIMEOUT_MS - elapsed);
       setRemainingMs(remaining);
       if (remaining <= 0) {
-        endImpersonation();
+        endImpersonationRef.current?.();
       }
     };
 
@@ -105,7 +106,7 @@ export function useImpersonation() {
       const stored = sessionStorage.getItem(STORAGE_KEYS.originalSession);
       const targetUserId = sessionStorage.getItem(STORAGE_KEYS.targetUserId);
 
-      // Log end (best-effort, may fail if session is already the target's)
+      // Log end (best-effort)
       try {
         await supabase.functions.invoke('platform-impersonate', {
           body: { operation: 'end', target_user_id: targetUserId },
@@ -114,23 +115,48 @@ export function useImpersonation() {
 
       // Clear storage
       Object.values(STORAGE_KEYS).forEach((k) => sessionStorage.removeItem(k));
-
-      if (stored) {
-        const { access_token, refresh_token } = JSON.parse(stored);
-        await supabase.auth.setSession({ access_token, refresh_token });
-      }
-
       setIsImpersonating(false);
       setTargetEmail('');
 
-      // Navigate to platform
-      window.location.href = '/platform';
+      if (stored) {
+        const { access_token, refresh_token } = JSON.parse(stored);
+
+        // Try setSession first
+        const { error: setErr } = await supabase.auth.setSession({ access_token, refresh_token });
+
+        if (setErr) {
+          // Fallback: use refresh token only
+          const { error: refreshErr } = await supabase.auth.refreshSession({ refresh_token });
+
+          if (refreshErr) {
+            // Both failed — sign out and redirect to auth
+            await supabase.auth.signOut();
+            toast({
+              title: 'Session expired',
+              description: 'Your platform session expired. Please sign in again.',
+              variant: 'destructive',
+            });
+            window.location.href = '/auth';
+            return;
+          }
+        }
+
+        window.location.href = '/platform';
+      } else {
+        // No stored session — sign out
+        await supabase.auth.signOut();
+        window.location.href = '/auth';
+      }
     } catch (err) {
-      // Force reload as fallback
+      // Force sign out as fallback
       Object.values(STORAGE_KEYS).forEach((k) => sessionStorage.removeItem(k));
-      window.location.href = '/platform';
+      await supabase.auth.signOut();
+      window.location.href = '/auth';
     }
   }, []);
+
+  // Keep ref in sync
+  endImpersonationRef.current = endImpersonation;
 
   return {
     isImpersonating,
