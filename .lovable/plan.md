@@ -1,29 +1,16 @@
 
 
-# Route Platform Admins to /platform After Login
+# Fix: Platform admin redirect race condition
 
-## Problem
-When `owner@ontime.build` logs in, they are always sent to `/dashboard` (the GC view) even though they are a `PLATFORM_OWNER` in the `platform_users` table. The post-login redirect in `Auth.tsx` (line 79-81) only checks for org roles and always navigates to `/dashboard`.
+## Root Cause
+In `Auth.tsx`, the post-login useEffect depends on `[authLoading, user, userOrgRoles, needsOrgSetup, navigate, checkedPending]` but does NOT include `isPlatformUser`. When `fetchUserData` completes, `userOrgRoles` updates and triggers the effect, but `isPlatformUser` still reads as `false` (stale). The `userOrgRoles.length > 0` check fires first and sends the user to `/dashboard`.
 
 ## Fix
-
-**1. `src/pages/Auth.tsx`** — Update the redirect logic (lines 78-82) to check `isPlatformUser` before defaulting to `/dashboard`:
+**`src/pages/Auth.tsx`** -- Add `isPlatformUser` to the useEffect dependency array (line ~99):
 
 ```tsx
-if (user) {
-  if (isPlatformUser) {
-    navigate('/platform');
-    return;
-  }
-  if (userOrgRoles.length > 0) {
-    navigate('/dashboard');
-    return;
-  }
-  ...
-}
+}, [authLoading, user, userOrgRoles, needsOrgSetup, isPlatformUser, navigate, checkedPending]);
 ```
 
-Pull `isPlatformUser` from the existing `useAuth()` hook (it's already available but not destructured on line 23).
-
-**2. No other changes needed** — the `/platform` route and `RequirePlatformRole` guard already exist and work correctly.
+One-line change. This ensures the effect re-evaluates when `isPlatformUser` becomes `true`, and the `if (isPlatformUser)` check at the top of the effect correctly redirects to `/platform`.
 
