@@ -1,30 +1,30 @@
 
 
-# Fix: Impersonation Banner Visibility & Return Flow
-
-## Problem
-When the platform owner logs into another user's account via "Login As", the impersonation banner exists but may not be visible because:
-1. The banner uses `relative` positioning — it scrolls away and can be hidden behind the sidebar layout
-2. The banner sits outside `AppLayout` but the layout's `min-h-screen flex` structure can push it off-screen
-3. No visual emphasis makes it easy to miss
+# Plan: Platform Owner — Create Organization & Assign Users
 
 ## Changes
 
-### 1. Make ImpersonationBanner fixed/sticky at the very top (always visible)
-**File: `src/components/platform/ImpersonationBanner.tsx`**
-- Change from `relative` to `sticky top-0` with highest z-index (`z-[100]`)
-- This ensures the banner is always visible regardless of scroll position or layout structure
+### 1. Add `CREATE_ORGANIZATION` action to edge function
+**File: `supabase/functions/platform-support-action/index.ts`**
+- Add `CREATE_ORGANIZATION: "PLATFORM_OWNER"` to `ACTION_MIN_ROLE`
+- Add case that:
+  - Generates an `org_code` from the name (same logic as `complete_signup`)
+  - Inserts into `organizations` table using admin client
+  - Optionally adds an initial admin user (by email) to `user_org_roles` with `is_admin: true`
+  - Returns the new org ID
 
-### 2. Add body padding offset when banner is active
-**File: `src/App.tsx`**
-- Wrap `ImpersonationBanner` + routes in a flex column so the sticky banner doesn't overlap content
+### 2. Add RLS INSERT policy for platform users on `organizations`
+**DB migration** — platform support action uses the service role key so this isn't strictly needed, but it's good practice. Actually, since the edge function uses `adminClient` (service role), no RLS changes are needed.
 
-### 3. Improve the banner UX
-**File: `src/components/platform/ImpersonationBanner.tsx`**
-- Make the "End Session" button more prominent (destructive styling)
-- Add a "Return to Platform" label to clarify what happens on click
-- Keep the countdown timer visible
+### 3. Add "Create Organization" dialog to PlatformOrgs page
+**File: `src/pages/platform/PlatformOrgs.tsx`**
+- Add a "Create Organization" button next to the search bar
+- Dialog with fields: Name, Type (GC/TC/FC/SUPPLIER), optional Phone
+- Optional "Initial Admin Email" field — if provided, that user is automatically added as admin
+- On submit, calls the `SupportActionDialog` for audit reason, then invokes `platform-support-action` with `CREATE_ORGANIZATION`
+- On success, refreshes the org list and navigates to the new org detail page
 
-### No backend changes needed
-The `endImpersonation` function in `useImpersonation.ts` already restores the original session from `sessionStorage` and redirects to `/platform`. The edge function `platform-impersonate` already logs the end event.
+### 4. No other file changes needed
+- Adding members to the new org is already supported via the existing "Add Member (No Verification)" button on the Org Detail page
+- The existing `ALLOWED_ROLES_BY_ORG_TYPE` mapping handles role selection per org type
 
