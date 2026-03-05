@@ -861,14 +861,24 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                     {formatCurrency(contract.contract_sum)}
                   </span>
                 </div>
-                <Button 
-                  size="sm"
-                  onClick={() => createSOVForContract(contract.id)}
-                  disabled={saving}
-                >
-                  <Plus className="mr-1 h-4 w-4" />
-                  Create SOV
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm"
+                    onClick={() => createSOVForContract(contract.id)}
+                    disabled={saving}
+                  >
+                    <Plus className="mr-1 h-4 w-4" />
+                    Create SOV
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setUploadDialogOpen(true)}
+                  >
+                    <Upload className="mr-1 h-4 w-4" />
+                    Upload SOV
+                  </Button>
+                </div>
               </div>
             ))}
           </CardContent>
