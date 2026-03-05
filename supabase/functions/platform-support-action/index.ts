@@ -521,7 +521,7 @@ Deno.serve(async (req) => {
           .from("profiles")
           .select("email, full_name")
           .eq("user_id", user_id)
-          .single();
+          .maybeSingle();
         snapshotBefore = userProfile ? { email: userProfile.email, full_name: userProfile.full_name } : { user_id };
 
         // Delete auth user (cascades to profiles, user_org_roles via FK)
