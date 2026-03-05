@@ -1,21 +1,22 @@
 
 
-# Plan: Allow Platform Owner to Change User Role
+# Plan: Fix Impersonation "Return to Platform" Flow
+
+## Problem
+When a Platform Owner impersonates a user via "Login As", the stored original session tokens (access_token + refresh_token) can expire during the impersonation window. When `endImpersonation` calls `supabase.auth.setSession()` with expired tokens, it silently fails, leaving the platform owner stuck in the target user's account with no way back.
+
+Additionally, the `endImpersonation` function referenced inside the `useEffect` timer is a stale closure (not in the dependency array), which can cause issues with the auto-timeout.
 
 ## Changes
 
-### 1. Add `CHANGE_USER_ROLE` action to edge function
-**File: `supabase/functions/platform-support-action/index.ts`**
-- Add `CHANGE_USER_ROLE: "PLATFORM_OWNER"` to `ACTION_MIN_ROLE`
-- New case that takes `user_org_role_id`, `new_role`, and optional `new_is_admin` (boolean)
-- Snapshots old role/is_admin, updates `user_org_roles` row, snapshots new values
+### 1. Fix `useImpersonation.ts` — use `refreshSession` as fallback
+**File: `src/hooks/useImpersonation.ts`**
+- In `endImpersonation`, after attempting `setSession` with stored tokens, check if it succeeded
+- If `setSession` fails (expired access_token), fall back to `supabase.auth.refreshSession({ refresh_token })` using only the stored refresh_token
+- If both fail, sign out completely and redirect to `/auth` with a toast explaining the session expired
+- Add `endImpersonation` to the `useEffect` dependency array and use a ref or move the function definition to avoid stale closures
 
-### 2. Add role change UI to PlatformUserDetail memberships list
-**File: `src/pages/platform/PlatformUserDetail.tsx`**
-- Add an "Edit" button next to each membership row (visible to `PLATFORM_OWNER`)
-- On click, open a dialog with:
-  - A Select dropdown for the new role (populated from `ALLOWED_ROLES_BY_ORG_TYPE` based on the org's type)
-  - A checkbox for Admin toggle
-- On submit, open `SupportActionDialog` for audit reason
-- On confirm, invoke `platform-support-action` with `CHANGE_USER_ROLE` and refresh memberships
+### 2. Add error handling to the banner's return button
+**File: `src/components/platform/ImpersonationBanner.tsx`**
+- No structural changes needed — the fix is in the hook logic
 
