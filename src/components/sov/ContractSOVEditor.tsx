@@ -885,6 +885,13 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
         </Card>
       )}
 
+      <UploadSOVDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        contracts={contractsMissingSOVs.length > 0 ? contractsMissingSOVs : contracts}
+        projectId={projectId}
+        onCreated={refresh}
+      />
     </div>
   );
 }
