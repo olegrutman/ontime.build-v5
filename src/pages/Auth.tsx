@@ -107,7 +107,7 @@ export default function Auth() {
         })();
       }
     }
-  }, [authLoading, user, userOrgRoles, needsOrgSetup, navigate, checkedPending]);
+  }, [authLoading, user, userOrgRoles, needsOrgSetup, isPlatformUser, navigate, checkedPending]);
 
   const handleCancelRequest = async () => {
     if (!pendingRequestId || !user) return;
