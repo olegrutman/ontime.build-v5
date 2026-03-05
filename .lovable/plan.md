@@ -1,22 +1,21 @@
 
 
-# Fix: Org Creator Should Be Admin
+# Show "Admin" / "Owner" label for org admins
 
 ## Problem
-The `complete_signup` RPC inserts the org creator's `user_org_roles` record with `is_admin` defaulting to `false` (line 130). Since `owner@ontime.build` created "Ontime.build", they should be the admin.
+The sidebar and top bar display the role label (e.g., "General Contractor Manager") based on `currentRole`. Even though `is_admin = true` was set correctly, the UI doesn't reflect admin/owner status visually.
 
-## Fix
+## Changes
 
-**1. Database migration** — two changes in one migration:
+**1. AppSidebar.tsx** (line ~230-233) — When `isAdmin` is true, show "Owner" or "Admin · GC" instead of just the role label:
+```
+{isAdmin ? 'Owner' : ROLE_LABELS[currentRole]}
+```
 
-- **Update the `complete_signup` RPC** to set `is_admin = true` when creating a new org (the `new_org` path). The invite-accepted path stays `is_admin = false` (correct behavior).
+**2. TopBar.tsx** — Similarly update the user menu to reflect admin status if applicable.
 
-- **Fix the existing record** for `owner@ontime.build`:
-  ```sql
-  UPDATE user_org_roles SET is_admin = true
-  WHERE user_id = 'bd196a35-e30f-4a42-8c5c-d310be318ec3'
-    AND organization_id = '4f47c536-01b4-4979-b968-c2ba627e302a';
-  ```
+**3. Optionally update RoleBadge** — Could show "OWNER" instead of "GC" when the user is an admin, or add a small crown/shield icon.
 
-No frontend changes needed — the auth context already reads `is_admin` from `user_org_roles`.
+## Scope
+Frontend-only changes — the data is already correct in the database.
 
