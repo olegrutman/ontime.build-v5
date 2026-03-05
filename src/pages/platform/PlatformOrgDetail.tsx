@@ -64,7 +64,7 @@ export default function PlatformOrgDetail() {
       const projectsRes: { data: any[] | null } = await (supabase
         .from('project_team') as any)
         .select('project_id')
-        .eq('organization_id', orgId!)
+        .eq('org_id', orgId!)
         .limit(50);
 
       setOrg(orgRes.data as unknown as Organization);

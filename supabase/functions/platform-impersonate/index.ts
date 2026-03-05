@@ -24,18 +24,18 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
+    // Verify caller identity using getUser
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: userData, error: userError } = await userClient.auth.getUser();
+    if (userError || !userData?.user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: corsHeaders,
       });
     }
-    const callerId = claimsData.claims.sub as string;
+    const callerId = userData.user.id;
 
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Generate magic link
+      // Generate magic link and extract the OTP token hash
       const { data: linkData, error: linkErr } =
         await adminClient.auth.admin.generateLink({
           type: "magiclink",
@@ -95,6 +95,29 @@ Deno.serve(async (req) => {
           status: 500,
           headers: corsHeaders,
         });
+      }
+
+      // Extract the hashed_token from properties and verify it server-side to get session tokens
+      const hashedToken = linkData.properties?.hashed_token;
+      if (!hashedToken) {
+        return new Response(JSON.stringify({ error: "Failed to extract token from magic link" }), {
+          status: 500,
+          headers: corsHeaders,
+        });
+      }
+
+      // Verify the OTP server-side using a fresh client to get actual session tokens
+      const verifyClient = createClient(supabaseUrl, anonKey);
+      const { data: verifyData, error: verifyErr } = await verifyClient.auth.verifyOtp({
+        type: "magiclink",
+        token_hash: hashedToken,
+      });
+
+      if (verifyErr || !verifyData?.session) {
+        return new Response(
+          JSON.stringify({ error: verifyErr?.message || "Failed to verify magic link token" }),
+          { status: 500, headers: corsHeaders }
+        );
       }
 
       // Update last_impersonation_at
@@ -114,14 +137,11 @@ Deno.serve(async (req) => {
         _snapshot_after: JSON.stringify({ target_email: targetUser.user.email }),
       });
 
-      // Extract the token properties from the link data
-      const properties = linkData.properties;
-
       return new Response(
         JSON.stringify({
           success: true,
-          access_token: properties?.access_token,
-          refresh_token: properties?.refresh_token,
+          access_token: verifyData.session.access_token,
+          refresh_token: verifyData.session.refresh_token,
           target_email: targetUser.user.email,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
