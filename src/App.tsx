@@ -11,6 +11,7 @@ import { useDemo } from "@/contexts/DemoContext";
 import { DemoBanner } from "@/components/demo";
 import { SashaBubble } from "@/components/sasha";
 import { BoltGuide } from "@/components/bolt";
+import { RequirePlatformRole } from "@/components/platform/RequirePlatformRole";
 import { Button } from "@/components/ui/button";
 
 // 1. QueryClient with sensible defaults
@@ -50,6 +51,15 @@ const RFIs = lazy(() => import("./pages/RFIs"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+
+// Platform Admin pages
+const PlatformDashboard = lazy(() => import("./pages/platform/PlatformDashboard"));
+const PlatformOrgs = lazy(() => import("./pages/platform/PlatformOrgs"));
+const PlatformOrgDetail = lazy(() => import("./pages/platform/PlatformOrgDetail"));
+const PlatformUsers = lazy(() => import("./pages/platform/PlatformUsers"));
+const PlatformUserDetail = lazy(() => import("./pages/platform/PlatformUserDetail"));
+const PlatformProjectDetail = lazy(() => import("./pages/platform/PlatformProjectDetail"));
+const PlatformLogs = lazy(() => import("./pages/platform/PlatformLogs"));
 
 // Lazy-loaded components
 const WorkItemPage = lazy(() =>
@@ -167,6 +177,16 @@ function AppRoutes() {
             <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />
             <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
             <Route path="/rfis" element={<RequireAuth><RFIs /></RequireAuth>} />
+
+            {/* Platform Admin routes */}
+            <Route path="/platform" element={<RequirePlatformRole><PlatformDashboard /></RequirePlatformRole>} />
+            <Route path="/platform/orgs" element={<RequirePlatformRole><PlatformOrgs /></RequirePlatformRole>} />
+            <Route path="/platform/orgs/:orgId" element={<RequirePlatformRole><PlatformOrgDetail /></RequirePlatformRole>} />
+            <Route path="/platform/users" element={<RequirePlatformRole><PlatformUsers /></RequirePlatformRole>} />
+            <Route path="/platform/users/:userId" element={<RequirePlatformRole><PlatformUserDetail /></RequirePlatformRole>} />
+            <Route path="/platform/projects/:projectId" element={<RequirePlatformRole><PlatformProjectDetail /></RequirePlatformRole>} />
+            <Route path="/platform/logs" element={<RequirePlatformRole><PlatformLogs /></RequirePlatformRole>} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

@@ -1612,6 +1612,36 @@ export type Database = {
           },
         ]
       }
+      platform_users: {
+        Row: {
+          created_at: string
+          id: string
+          last_impersonation_at: string | null
+          platform_role: Database["public"]["Enums"]["platform_role"]
+          two_factor_verified: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_impersonation_at?: string | null
+          platform_role?: Database["public"]["Enums"]["platform_role"]
+          two_factor_verified?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_impersonation_at?: string | null
+          platform_role?: Database["public"]["Enums"]["platform_role"]
+          two_factor_verified?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       po_line_items: {
         Row: {
           adjustment_reason: string | null
@@ -3451,6 +3481,63 @@ export type Database = {
           },
         ]
       }
+      support_actions_log: {
+        Row: {
+          action_summary: string | null
+          action_type: string
+          after_snapshot: Json | null
+          before_snapshot: Json | null
+          created_at: string
+          created_by_email: string | null
+          created_by_name: string | null
+          created_by_user_id: string
+          id: string
+          reason: string
+          target_org_id: string | null
+          target_org_name: string | null
+          target_project_id: string | null
+          target_project_name: string | null
+          target_user_email: string | null
+          target_user_id: string | null
+        }
+        Insert: {
+          action_summary?: string | null
+          action_type: string
+          after_snapshot?: Json | null
+          before_snapshot?: Json | null
+          created_at?: string
+          created_by_email?: string | null
+          created_by_name?: string | null
+          created_by_user_id: string
+          id?: string
+          reason: string
+          target_org_id?: string | null
+          target_org_name?: string | null
+          target_project_id?: string | null
+          target_project_name?: string | null
+          target_user_email?: string | null
+          target_user_id?: string | null
+        }
+        Update: {
+          action_summary?: string | null
+          action_type?: string
+          after_snapshot?: Json | null
+          before_snapshot?: Json | null
+          created_at?: string
+          created_by_email?: string | null
+          created_by_name?: string | null
+          created_by_user_id?: string
+          id?: string
+          reason?: string
+          target_org_id?: string | null
+          target_org_name?: string | null
+          target_project_id?: string | null
+          target_project_name?: string | null
+          target_user_email?: string | null
+          target_user_id?: string | null
+        }
+        Relationships: []
+      }
       tm_billable_slices: {
         Row: {
           created_at: string
@@ -4479,6 +4566,10 @@ export type Database = {
           type: Database["public"]["Enums"]["notification_type"]
         }[]
       }
+      get_platform_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["platform_role"]
+      }
       get_project_access_level: {
         Args: { _project_id: string; _user_id: string }
         Returns: string
@@ -4542,7 +4633,24 @@ export type Database = {
       }
       is_gc_or_tc_pm: { Args: { _user_id: string }; Returns: boolean }
       is_gc_pm: { Args: { _user_id: string }; Returns: boolean }
+      is_platform_user: { Args: { _user_id: string }; Returns: boolean }
       is_pm_role: { Args: { _user_id: string }; Returns: boolean }
+      log_support_action: {
+        Args: {
+          p_action_summary?: string
+          p_action_type?: string
+          p_after_snapshot?: Json
+          p_before_snapshot?: Json
+          p_reason?: string
+          p_target_org_id?: string
+          p_target_org_name?: string
+          p_target_project_id?: string
+          p_target_project_name?: string
+          p_target_user_email?: string
+          p_target_user_id?: string
+        }
+        Returns: string
+      }
       mark_all_notifications_read: { Args: never; Returns: undefined }
       mark_notification_read: {
         Args: { _notification_id: string }
@@ -4760,6 +4868,11 @@ export type Database = {
         | "CANCELLED"
       org_type: "GC" | "TC" | "SUPPLIER" | "FC"
       pack_type: "LOOSE_MODIFIABLE" | "ENGINEERED_LOCKED"
+      platform_role:
+        | "NONE"
+        | "PLATFORM_OWNER"
+        | "PLATFORM_ADMIN"
+        | "SUPPORT_AGENT"
       po_status:
         | "DRAFT"
         | "SENT"
@@ -4943,6 +5056,12 @@ export const Constants = {
       ],
       org_type: ["GC", "TC", "SUPPLIER", "FC"],
       pack_type: ["LOOSE_MODIFIABLE", "ENGINEERED_LOCKED"],
+      platform_role: [
+        "NONE",
+        "PLATFORM_OWNER",
+        "PLATFORM_ADMIN",
+        "SUPPORT_AGENT",
+      ],
       po_status: [
         "DRAFT",
         "SENT",
