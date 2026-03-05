@@ -7,15 +7,17 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { SupportActionDialog } from '@/components/platform/SupportActionDialog';
 import { supabase } from '@/integrations/supabase/client';
-import { ROLE_LABELS, ORG_TYPE_LABELS, type AppRole, type OrgType } from '@/types/organization';
+import { ROLE_LABELS, ORG_TYPE_LABELS, ALLOWED_ROLES_BY_ORG_TYPE, type AppRole, type OrgType } from '@/types/organization';
 import { useSupportAction } from '@/hooks/useSupportAction';
 import { useImpersonation } from '@/hooks/useImpersonation';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { KeyRound, Mail, LogIn, Trash2 } from 'lucide-react';
+import { KeyRound, Mail, LogIn, Trash2, Pencil } from 'lucide-react';
 
 interface ProfileData {
   user_id: string;
@@ -50,6 +52,12 @@ export default function PlatformUserDetail() {
   const [deleteUserOpen, setDeleteUserOpen] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [changeEmailReasonOpen, setChangeEmailReasonOpen] = useState(false);
+
+  // Role editing state
+  const [editingMembership, setEditingMembership] = useState<OrgMembership | null>(null);
+  const [editRole, setEditRole] = useState<AppRole | ''>('');
+  const [editIsAdmin, setEditIsAdmin] = useState(false);
+  const [changeRoleReasonOpen, setChangeRoleReasonOpen] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -109,6 +117,33 @@ export default function PlatformUserDetail() {
       setDeleteUserOpen(false);
       navigate('/platform/users');
     }
+  };
+
+  const handleChangeRole = async (reason: string) => {
+    if (!editingMembership || !editRole) return;
+    const ok = await execute({
+      action_type: 'CHANGE_USER_ROLE',
+      reason,
+      user_org_role_id: editingMembership.id,
+      new_role: editRole,
+      new_is_admin: editIsAdmin,
+    });
+    if (ok) {
+      setChangeRoleReasonOpen(false);
+      setEditingMembership(null);
+      // Refresh memberships
+      const { data } = await supabase
+        .from('user_org_roles')
+        .select('id, role, is_admin, organization:organizations(id, name, type)')
+        .eq('user_id', userId!);
+      setMemberships((data || []) as unknown as OrgMembership[]);
+    }
+  };
+
+  const openEditRole = (m: OrgMembership) => {
+    setEditingMembership(m);
+    setEditRole(m.role);
+    setEditIsAdmin(m.is_admin);
   };
 
   if (loading) {
@@ -207,6 +242,11 @@ export default function PlatformUserDetail() {
                     {m.is_admin && (
                       <Badge className="text-xs bg-primary/10 text-primary border-0">Admin</Badge>
                     )}
+                    {platformRole === 'PLATFORM_OWNER' && (
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEditRole(m)}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -285,6 +325,60 @@ export default function PlatformUserDetail() {
         title="Delete User"
         description={`Permanently delete ${profile.email} and all associated data (profile, org memberships). This cannot be undone.`}
         onConfirm={handleDeleteUser}
+        loading={actionLoading}
+      />
+
+      {/* Edit Role Dialog */}
+      <Dialog open={!!editingMembership && !changeRoleReasonOpen} onOpenChange={(open) => { if (!open) setEditingMembership(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Role</DialogTitle>
+          </DialogHeader>
+          {editingMembership && (
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-muted-foreground">
+                Organization: <span className="font-medium text-foreground">{editingMembership.organization?.name}</span>
+              </p>
+              <div className="space-y-2">
+                <Label>Role</Label>
+                <Select value={editRole} onValueChange={(v) => setEditRole(v as AppRole)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(ALLOWED_ROLES_BY_ORG_TYPE[editingMembership.organization?.type] || []).map((r) => (
+                      <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-3">
+                <Switch checked={editIsAdmin} onCheckedChange={setEditIsAdmin} id="edit-admin" />
+                <Label htmlFor="edit-admin">Organization Admin</Label>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingMembership(null)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                setChangeRoleReasonOpen(true);
+              }}
+              disabled={!editRole}
+            >
+              Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Role Reason */}
+      <SupportActionDialog
+        open={changeRoleReasonOpen}
+        onOpenChange={setChangeRoleReasonOpen}
+        title="Change User Role"
+        description={`Change role to ${ROLE_LABELS[editRole as AppRole] || editRole}${editIsAdmin ? ' (Admin)' : ''} in ${editingMembership?.organization?.name || 'organization'}.`}
+        onConfirm={handleChangeRole}
         loading={actionLoading}
       />
     </PlatformLayout>

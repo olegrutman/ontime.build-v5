@@ -24,6 +24,7 @@ const ACTION_MIN_ROLE: Record<string, string> = {
   CREATE_USER_AND_ADD: "PLATFORM_OWNER",
   DELETE_ORGANIZATION: "PLATFORM_OWNER",
   DELETE_USER: "PLATFORM_OWNER",
+  CHANGE_USER_ROLE: "PLATFORM_OWNER",
 };
 
 function hasPermission(callerRole: string, requiredRole: string): boolean {
@@ -532,6 +533,48 @@ Deno.serve(async (req) => {
         }
 
         result = { success: true, message: "User deleted" };
+        break;
+      }
+
+      case "CHANGE_USER_ROLE": {
+        const { user_org_role_id, new_role, new_is_admin } = params;
+        if (!user_org_role_id || !new_role) {
+          return new Response(JSON.stringify({ error: "user_org_role_id and new_role are required" }), {
+            status: 400, headers: corsHeaders,
+          });
+        }
+        targetId = user_org_role_id;
+
+        // Snapshot before
+        const { data: oldRole, error: fetchErr } = await adminClient
+          .from("user_org_roles")
+          .select("role, is_admin")
+          .eq("id", user_org_role_id)
+          .single();
+        if (fetchErr || !oldRole) {
+          return new Response(JSON.stringify({ error: "Membership not found" }), {
+            status: 404, headers: corsHeaders,
+          });
+        }
+        snapshotBefore = { role: oldRole.role, is_admin: oldRole.is_admin };
+
+        const updatePayload: Record<string, any> = { role: new_role };
+        if (typeof new_is_admin === "boolean") {
+          updatePayload.is_admin = new_is_admin;
+        }
+
+        const { error: updateErr } = await adminClient
+          .from("user_org_roles")
+          .update(updatePayload)
+          .eq("id", user_org_role_id);
+        if (updateErr) {
+          return new Response(JSON.stringify({ error: updateErr.message }), {
+            status: 500, headers: corsHeaders,
+          });
+        }
+
+        snapshotAfter = { role: new_role, is_admin: typeof new_is_admin === "boolean" ? new_is_admin : oldRole.is_admin };
+        result = { success: true, message: "User role updated" };
         break;
       }
 
