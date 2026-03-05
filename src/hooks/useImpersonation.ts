@@ -105,14 +105,7 @@ export function useImpersonation() {
       const stored = sessionStorage.getItem(STORAGE_KEYS.originalSession);
       const targetUserId = sessionStorage.getItem(STORAGE_KEYS.targetUserId);
 
-      // Log end (best-effort)
-      try {
-        await supabase.functions.invoke('platform-impersonate', {
-          body: { operation: 'end', target_user_id: targetUserId },
-        });
-      } catch {}
-
-      // Clear storage
+      // Clear storage first so UI updates immediately
       Object.values(STORAGE_KEYS).forEach((k) => sessionStorage.removeItem(k));
       setIsImpersonating(false);
       setTargetEmail('');
@@ -120,27 +113,39 @@ export function useImpersonation() {
       if (stored) {
         const { access_token, refresh_token } = JSON.parse(stored);
 
-        // Try setSession first
+        // Restore original platform owner session first
+        let sessionRestored = false;
         const { error: setErr } = await supabase.auth.setSession({ access_token, refresh_token });
 
         if (setErr) {
-          // Fallback: use refresh token only
+          // Access token expired — try refresh token
           const { error: refreshErr } = await supabase.auth.refreshSession({ refresh_token });
-
-          if (refreshErr) {
-            // Both failed — sign out and redirect to auth
-            await supabase.auth.signOut();
-            toast({
-              title: 'Session expired',
-              description: 'Your platform session expired. Please sign in again.',
-              variant: 'destructive',
-            });
-            window.location.href = '/auth';
-            return;
+          if (!refreshErr) {
+            sessionRestored = true;
           }
+        } else {
+          sessionRestored = true;
         }
 
-        window.location.href = '/platform';
+        if (sessionRestored) {
+          // Now log the end using the restored platform owner session (best-effort)
+          try {
+            await supabase.functions.invoke('platform-impersonate', {
+              body: { operation: 'end', target_user_id: targetUserId },
+            });
+          } catch {}
+
+          window.location.href = '/platform';
+        } else {
+          // Both failed — sign out and redirect to auth
+          await supabase.auth.signOut();
+          toast({
+            title: 'Session expired',
+            description: 'Your platform session expired. Please sign in again.',
+            variant: 'destructive',
+          });
+          window.location.href = '/auth';
+        }
       } else {
         // No stored session — sign out
         await supabase.auth.signOut();
