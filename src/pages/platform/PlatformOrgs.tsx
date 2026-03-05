@@ -10,9 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, MapPin } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { ORG_TYPE_LABELS, type OrgType } from '@/types/organization';
+import { US_STATES } from '@/types/projectWizard';
 import { format } from 'date-fns';
 import { toast } from '@/hooks/use-toast';
 
@@ -37,6 +38,10 @@ export default function PlatformOrgs() {
   const [orgName, setOrgName] = useState('');
   const [orgType, setOrgType] = useState<OrgType>('GC');
   const [orgPhone, setOrgPhone] = useState('');
+  const [orgStreet, setOrgStreet] = useState('');
+  const [orgCity, setOrgCity] = useState('');
+  const [orgState, setOrgState] = useState('');
+  const [orgZip, setOrgZip] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   const [reason, setReason] = useState('');
 
@@ -66,6 +71,12 @@ export default function PlatformOrgs() {
           org_name: orgName.trim(),
           org_type: orgType,
           org_phone: orgPhone.trim() || undefined,
+          org_address: orgStreet.trim() ? {
+            street: orgStreet.trim(),
+            city: orgCity.trim(),
+            state: orgState,
+            zip: orgZip.trim(),
+          } : undefined,
           admin_email: adminEmail.trim() || undefined,
         },
       });
@@ -93,6 +104,10 @@ export default function PlatformOrgs() {
     setOrgName('');
     setOrgType('GC');
     setOrgPhone('');
+    setOrgStreet('');
+    setOrgCity('');
+    setOrgState('');
+    setOrgZip('');
     setAdminEmail('');
     setReason('');
   }
@@ -189,6 +204,34 @@ export default function PlatformOrgs() {
             <div className="space-y-2">
               <Label>Phone</Label>
               <Input value={orgPhone} onChange={(e) => setOrgPhone(e.target.value)} placeholder="(555) 123-4567" />
+            </div>
+            <div className="space-y-2">
+              <Label>Address</Label>
+              <div className="relative mt-1">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input value={orgStreet} onChange={(e) => setOrgStreet(e.target.value)} placeholder="123 Main St" className="pl-10" />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <Label>City</Label>
+                <Input value={orgCity} onChange={(e) => setOrgCity(e.target.value)} placeholder="Denver" />
+              </div>
+              <div className="space-y-1">
+                <Label>State</Label>
+                <Select value={orgState} onValueChange={setOrgState}>
+                  <SelectTrigger><SelectValue placeholder="CO" /></SelectTrigger>
+                  <SelectContent>
+                    {US_STATES.map(s => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>ZIP</Label>
+                <Input value={orgZip} onChange={(e) => setOrgZip(e.target.value)} placeholder="80202" />
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Initial Admin Email</Label>

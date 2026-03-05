@@ -350,7 +350,7 @@ Deno.serve(async (req) => {
       }
 
       case "CREATE_ORGANIZATION": {
-        const { org_name, org_type, org_phone, admin_email } = params;
+        const { org_name, org_type, org_phone, org_address, admin_email } = params;
         if (!org_name || !org_type) {
           return new Response(JSON.stringify({ error: "org_name and org_type are required" }), {
             status: 400,
@@ -371,6 +371,7 @@ Deno.serve(async (req) => {
             type: org_type,
             org_code: orgCode,
             phone: org_phone || null,
+            address: org_address || null,
             created_by: callerId,
           })
           .select("id")
