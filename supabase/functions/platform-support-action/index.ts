@@ -524,13 +524,17 @@ Deno.serve(async (req) => {
           .maybeSingle();
         snapshotBefore = userProfile ? { email: userProfile.email, full_name: userProfile.full_name } : { user_id };
 
-        // Delete auth user (cascades to profiles, user_org_roles via FK)
+        // Delete auth user — treat "User not found" as success (already gone)
         const { error: delUserErr } = await adminClient.auth.admin.deleteUser(user_id);
-        if (delUserErr) {
+        if (delUserErr && !delUserErr.message?.toLowerCase().includes("user not found")) {
           return new Response(JSON.stringify({ error: delUserErr.message }), {
             status: 500, headers: corsHeaders,
           });
         }
+
+        // Explicitly clean up in case FK cascade didn't fire (auth record was already absent)
+        await adminClient.from("user_org_roles").delete().eq("user_id", user_id);
+        await adminClient.from("profiles").delete().eq("user_id", user_id);
 
         result = { success: true, message: "User deleted" };
         break;
