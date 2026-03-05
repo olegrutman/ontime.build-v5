@@ -1,21 +1,29 @@
 
 
-# Show "Admin" / "Owner" label for org admins
+# Route Platform Admins to /platform After Login
 
 ## Problem
-The sidebar and top bar display the role label (e.g., "General Contractor Manager") based on `currentRole`. Even though `is_admin = true` was set correctly, the UI doesn't reflect admin/owner status visually.
+When `owner@ontime.build` logs in, they are always sent to `/dashboard` (the GC view) even though they are a `PLATFORM_OWNER` in the `platform_users` table. The post-login redirect in `Auth.tsx` (line 79-81) only checks for org roles and always navigates to `/dashboard`.
 
-## Changes
+## Fix
 
-**1. AppSidebar.tsx** (line ~230-233) — When `isAdmin` is true, show "Owner" or "Admin · GC" instead of just the role label:
+**1. `src/pages/Auth.tsx`** — Update the redirect logic (lines 78-82) to check `isPlatformUser` before defaulting to `/dashboard`:
+
+```tsx
+if (user) {
+  if (isPlatformUser) {
+    navigate('/platform');
+    return;
+  }
+  if (userOrgRoles.length > 0) {
+    navigate('/dashboard');
+    return;
+  }
+  ...
+}
 ```
-{isAdmin ? 'Owner' : ROLE_LABELS[currentRole]}
-```
 
-**2. TopBar.tsx** — Similarly update the user menu to reflect admin status if applicable.
+Pull `isPlatformUser` from the existing `useAuth()` hook (it's already available but not destructured on line 23).
 
-**3. Optionally update RoleBadge** — Could show "OWNER" instead of "GC" when the user is an admin, or add a small crown/shield icon.
-
-## Scope
-Frontend-only changes — the data is already correct in the database.
+**2. No other changes needed** — the `/platform` route and `RequirePlatformRole` guard already exist and work correctly.
 
