@@ -4485,21 +4485,34 @@ export type Database = {
         Returns: undefined
       }
       check_org_setup_needed: { Args: never; Returns: Json }
-      complete_signup: {
-        Args: {
-          _first_name: string
-          _job_title?: string
-          _last_name: string
-          _org_address?: Json
-          _org_name?: string
-          _org_phone?: string
-          _org_type?: Database["public"]["Enums"]["org_type"]
-          _trade?: string
-          _trade_custom?: string
-          _user_phone?: string
-        }
-        Returns: Json
-      }
+      complete_signup:
+        | {
+            Args: {
+              _first_name: string
+              _last_name: string
+              _org_name?: string
+              _org_type?: Database["public"]["Enums"]["org_type"]
+              _phone?: string
+              _trade?: string
+              _trade_custom?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _first_name: string
+              _job_title?: string
+              _last_name: string
+              _org_address?: Json
+              _org_name?: string
+              _org_phone?: string
+              _org_type?: Database["public"]["Enums"]["org_type"]
+              _trade?: string
+              _trade_custom?: string
+              _user_phone?: string
+            }
+            Returns: Json
+          }
       create_organization_and_set_admin:
         | {
             Args: {
