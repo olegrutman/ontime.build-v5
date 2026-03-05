@@ -22,6 +22,8 @@ const ACTION_MIN_ROLE: Record<string, string> = {
   REBUILD_PERMISSIONS: "PLATFORM_ADMIN",
   CREATE_ORGANIZATION: "PLATFORM_OWNER",
   CREATE_USER_AND_ADD: "PLATFORM_OWNER",
+  DELETE_ORGANIZATION: "PLATFORM_OWNER",
+  DELETE_USER: "PLATFORM_OWNER",
 };
 
 function hasPermission(callerRole: string, requiredRole: string): boolean {
@@ -458,6 +460,78 @@ Deno.serve(async (req) => {
         }
 
         result = { success: true, message: "User created" + (addOrgId ? " and added to org" : ""), user_id: newUserId };
+        break;
+      }
+
+      case "DELETE_ORGANIZATION": {
+        const { organization_id } = params;
+        if (!organization_id) {
+          return new Response(JSON.stringify({ error: "organization_id is required" }), {
+            status: 400, headers: corsHeaders,
+          });
+        }
+        targetId = organization_id;
+
+        // Snapshot before deletion
+        const { data: orgData } = await adminClient
+          .from("organizations")
+          .select("name, type")
+          .eq("id", organization_id)
+          .single();
+        if (!orgData) {
+          return new Response(JSON.stringify({ error: "Organization not found" }), {
+            status: 404, headers: corsHeaders,
+          });
+        }
+        snapshotBefore = { name: orgData.name, type: orgData.type };
+
+        // Delete org roles first
+        await adminClient
+          .from("user_org_roles")
+          .delete()
+          .eq("organization_id", organization_id);
+
+        // Delete the organization
+        const { error: delOrgErr } = await adminClient
+          .from("organizations")
+          .delete()
+          .eq("id", organization_id);
+        if (delOrgErr) {
+          return new Response(JSON.stringify({ error: delOrgErr.message }), {
+            status: 500, headers: corsHeaders,
+          });
+        }
+
+        result = { success: true, message: "Organization deleted" };
+        break;
+      }
+
+      case "DELETE_USER": {
+        const { user_id } = params;
+        if (!user_id) {
+          return new Response(JSON.stringify({ error: "user_id is required" }), {
+            status: 400, headers: corsHeaders,
+          });
+        }
+        targetId = user_id;
+
+        // Snapshot before deletion
+        const { data: userProfile } = await adminClient
+          .from("profiles")
+          .select("email, full_name")
+          .eq("user_id", user_id)
+          .single();
+        snapshotBefore = userProfile ? { email: userProfile.email, full_name: userProfile.full_name } : { user_id };
+
+        // Delete auth user (cascades to profiles, user_org_roles via FK)
+        const { error: delUserErr } = await adminClient.auth.admin.deleteUser(user_id);
+        if (delUserErr) {
+          return new Response(JSON.stringify({ error: delUserErr.message }), {
+            status: 500, headers: corsHeaders,
+          });
+        }
+
+        result = { success: true, message: "User deleted" };
         break;
       }
 

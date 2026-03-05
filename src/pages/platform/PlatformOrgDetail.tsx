@@ -17,7 +17,7 @@ import { ORG_TYPE_LABELS, ROLE_LABELS, ALLOWED_ROLES_BY_ORG_TYPE, type Organizat
 import { useSupportAction } from '@/hooks/useSupportAction';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { UserPlus, RefreshCw, UserRoundPlus } from 'lucide-react';
+import { UserPlus, RefreshCw, UserRoundPlus, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface MemberRow {
@@ -64,6 +64,9 @@ export default function PlatformOrgDetail() {
   const [newUserRole, setNewUserRole] = useState<string>('');
   const [newUserReason, setNewUserReason] = useState('');
   const [creatingUser, setCreatingUser] = useState(false);
+
+  // Delete Org dialog
+  const [deleteOrgOpen, setDeleteOrgOpen] = useState(false);
 
   useEffect(() => {
     if (!orgId) return;
@@ -186,7 +189,20 @@ export default function PlatformOrgDetail() {
   }
 
   const canRebuild = platformRole === 'PLATFORM_OWNER' || platformRole === 'PLATFORM_ADMIN';
+  const canDelete = platformRole === 'PLATFORM_OWNER';
   const allowedRoles = ALLOWED_ROLES_BY_ORG_TYPE[org.type] || [];
+
+  const handleDeleteOrg = async (reason: string) => {
+    const ok = await execute({
+      action_type: 'DELETE_ORGANIZATION',
+      reason,
+      organization_id: orgId,
+    });
+    if (ok) {
+      setDeleteOrgOpen(false);
+      navigate('/platform/orgs');
+    }
+  };
 
   return (
     <PlatformLayout
@@ -210,6 +226,11 @@ export default function PlatformOrgDetail() {
         <Button variant="outline" size="sm" onClick={() => setCreateUserOpen(true)}>
           <UserRoundPlus className="h-4 w-4 mr-1" /> Create & Add User
         </Button>
+        {canDelete && (
+          <Button variant="destructive" size="sm" onClick={() => setDeleteOrgOpen(true)}>
+            <Trash2 className="h-4 w-4 mr-1" /> Delete Organization
+          </Button>
+        )}
       </div>
 
       {/* Summary */}
@@ -432,6 +453,16 @@ export default function PlatformOrgDetail() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Organization */}
+      <SupportActionDialog
+        open={deleteOrgOpen}
+        onOpenChange={setDeleteOrgOpen}
+        title="Delete Organization"
+        description={`Permanently delete "${org.name}" and remove all member associations. This cannot be undone.`}
+        onConfirm={handleDeleteOrg}
+        loading={actionLoading}
+      />
     </PlatformLayout>
   );
 }

@@ -15,7 +15,7 @@ import { useSupportAction } from '@/hooks/useSupportAction';
 import { useImpersonation } from '@/hooks/useImpersonation';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { KeyRound, Mail, LogIn } from 'lucide-react';
+import { KeyRound, Mail, LogIn, Trash2 } from 'lucide-react';
 
 interface ProfileData {
   user_id: string;
@@ -47,6 +47,7 @@ export default function PlatformUserDetail() {
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
   const [changeEmailOpen, setChangeEmailOpen] = useState(false);
   const [loginAsOpen, setLoginAsOpen] = useState(false);
+  const [deleteUserOpen, setDeleteUserOpen] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [changeEmailReasonOpen, setChangeEmailReasonOpen] = useState(false);
 
@@ -98,6 +99,18 @@ export default function PlatformUserDetail() {
     await startImpersonation(userId!, reason, navigate);
   };
 
+  const handleDeleteUser = async (reason: string) => {
+    const ok = await execute({
+      action_type: 'DELETE_USER',
+      reason,
+      user_id: userId,
+    });
+    if (ok) {
+      setDeleteUserOpen(false);
+      navigate('/platform/users');
+    }
+  };
+
   if (loading) {
     return (
       <PlatformLayout title="User Detail">
@@ -116,6 +129,7 @@ export default function PlatformUserDetail() {
 
   const canImpersonate = platformRole === 'PLATFORM_OWNER' || platformRole === 'PLATFORM_ADMIN';
   const canChangeEmail = platformRole === 'PLATFORM_OWNER' || platformRole === 'PLATFORM_ADMIN';
+  const canDelete = platformRole === 'PLATFORM_OWNER';
 
   return (
     <PlatformLayout
@@ -139,6 +153,11 @@ export default function PlatformUserDetail() {
         {canImpersonate && (
           <Button variant="outline" size="sm" onClick={() => setLoginAsOpen(true)}>
             <LogIn className="h-4 w-4 mr-1" /> Login As
+          </Button>
+        )}
+        {canDelete && (
+          <Button variant="destructive" size="sm" onClick={() => setDeleteUserOpen(true)}>
+            <Trash2 className="h-4 w-4 mr-1" /> Delete User
           </Button>
         )}
       </div>
@@ -256,6 +275,16 @@ export default function PlatformUserDetail() {
         title="Login As User"
         description={`You will be logged in as ${profile.email}. Your current session will be saved and can be restored. The impersonation session expires after 30 minutes.`}
         onConfirm={handleLoginAs}
+        loading={actionLoading}
+      />
+
+      {/* Delete User Dialog */}
+      <SupportActionDialog
+        open={deleteUserOpen}
+        onOpenChange={setDeleteUserOpen}
+        title="Delete User"
+        description={`Permanently delete ${profile.email} and all associated data (profile, org memberships). This cannot be undone.`}
+        onConfirm={handleDeleteUser}
         loading={actionLoading}
       />
     </PlatformLayout>
