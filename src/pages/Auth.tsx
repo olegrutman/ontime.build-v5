@@ -20,7 +20,7 @@ const signInSchema = z.object({
 
 export default function Auth() {
   const navigate = useNavigate();
-  const { signIn, signOut, user, userOrgRoles, loading: authLoading, needsOrgSetup } = useAuth();
+  const { signIn, signOut, user, userOrgRoles, loading: authLoading, needsOrgSetup, isPlatformUser } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -76,6 +76,10 @@ export default function Auth() {
     if (authLoading) return;
 
     if (user) {
+      if (isPlatformUser) {
+        navigate('/platform');
+        return;
+      }
       if (userOrgRoles.length > 0) {
         navigate('/dashboard');
         return;
