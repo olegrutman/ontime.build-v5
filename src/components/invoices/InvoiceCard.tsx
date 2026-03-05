@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { FileText, Calendar, DollarSign, Eye, Edit, Download, Send, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { FileText, Calendar, DollarSign, Eye, Edit, Download, Send, CheckCircle, XCircle, Loader2, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { InvoiceStatusBadge } from './InvoiceStatusBadge';
@@ -16,6 +16,7 @@ interface InvoiceCardProps {
   onSubmit?: (invoice: Invoice) => Promise<void>;
   onApprove?: (invoice: Invoice) => Promise<void>;
   onReject?: (invoice: Invoice) => Promise<void>;
+  onDelete?: (invoice: Invoice) => Promise<void>;
   canSubmit?: boolean;
   canApprove?: boolean;
 }
@@ -36,6 +37,7 @@ export function InvoiceCard({
   onSubmit,
   onApprove,
   onReject,
+  onDelete,
   canSubmit = false,
   canApprove = false,
 }: InvoiceCardProps) {
@@ -87,6 +89,15 @@ export function InvoiceCard({
       onClick: (e: React.MouseEvent) => {
         e.stopPropagation();
         onDownload(invoice);
+      },
+    }] : []),
+    ...(onDelete && invoice.status === 'DRAFT' && canSubmit ? [{
+      icon: <Trash2 className="h-4 w-4" />,
+      label: 'Delete Invoice',
+      variant: 'destructive' as const,
+      onClick: (e: React.MouseEvent) => {
+        e.stopPropagation();
+        onDelete(invoice);
       },
     }] : []),
   ];
