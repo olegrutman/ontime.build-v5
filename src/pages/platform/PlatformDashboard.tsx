@@ -39,7 +39,7 @@ export default function PlatformDashboard() {
   const tiles = [
     { label: 'Organizations', count: counts.orgs, icon: Building2, href: '/platform/orgs' },
     { label: 'Users', count: counts.users, icon: Users, href: '/platform/users' },
-    { label: 'Projects', count: counts.projects, icon: FolderKanban, href: '/platform/orgs' },
+    { label: 'Projects', count: counts.projects, icon: FolderKanban, href: '/platform/projects' },
     { label: 'Support Logs', count: counts.logs, icon: ScrollText, href: '/platform/logs' },
   ];
 

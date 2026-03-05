@@ -44,19 +44,18 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify caller identity
+    // Verify caller identity using getUser
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: userData, error: userError } = await userClient.auth.getUser();
+    if (userError || !userData?.user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: corsHeaders,
       });
     }
-    const callerId = claimsData.claims.sub as string;
+    const callerId = userData.user.id;
 
     // Admin client for privileged operations
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
@@ -104,13 +103,46 @@ Deno.serve(async (req) => {
     let snapshotAfter: any = null;
 
     switch (action_type) {
+      case "RESEND_INVITE": {
+        const { invite_id } = params;
+        if (!invite_id) {
+          return new Response(JSON.stringify({ error: "invite_id is required" }), {
+            status: 400,
+            headers: corsHeaders,
+          });
+        }
+        targetId = invite_id;
+
+        // Fetch the invite
+        const { data: invite, error: inviteErr } = await adminClient
+          .from("project_invites")
+          .select("*")
+          .eq("id", invite_id)
+          .single();
+
+        if (inviteErr || !invite) {
+          return new Response(JSON.stringify({ error: "Invite not found" }), {
+            status: 404,
+            headers: corsHeaders,
+          });
+        }
+
+        snapshotBefore = { status: invite.status, sent_at: invite.sent_at };
+
+        // Update the invite timestamp to mark as re-sent
+        await adminClient
+          .from("project_invites")
+          .update({ sent_at: new Date().toISOString(), status: "pending" })
+          .eq("id", invite_id);
+
+        snapshotAfter = { status: "pending", resent: true };
+        result = { success: true, message: "Invite resent" };
+        break;
+      }
+
       case "RESET_PASSWORD_LINK": {
         const { user_id } = params;
         targetId = user_id;
-        const { data, error } = await adminClient.auth.admin.generateLink({
-          type: "recovery",
-          email: "", // will be resolved below
-        });
         // We need the email first
         const { data: profileData } = await adminClient
           .from("profiles")
