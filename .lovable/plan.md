@@ -1,28 +1,39 @@
 
 
-# Fix: Organization Address Not Saving on Platform Create
+# Allow Edit and Delete of Draft Invoices
 
-## Bugs Found
+## Current State
 
-1. **Edge Function (`platform-support-action`)**: The `CREATE_ORGANIZATION` case (line 367-376) inserts `name`, `type`, `org_code`, `phone`, and `created_by` but completely omits `address`. Even if the frontend sent address data, it would be ignored.
+- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
+- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
 
-2. **Create Organization Dialog (`PlatformOrgs.tsx`)**: The dialog has no address input fields (street, city, state, zip). There's no way for a Platform Owner to enter an address when creating an organization.
+## Plan
 
-## Fix Plan
+### 1. Add Delete Invoice capability
 
-### 1. Add address fields to the Create Organization dialog in `PlatformOrgs.tsx`
+**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
+- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
+- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
+- Button placed in the action buttons area, styled as destructive/outline
 
-- Add state variables for `orgStreet`, `orgCity`, `orgState`, `orgZip`
-- Add address input fields (street, city, state, zip with US_STATES dropdown) to the dialog form, matching the pattern used in `CompanyStep.tsx`
-- Pass `org_address` object in the `handleCreate` function body sent to the edge function
+**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
+- Add `onDelete` optional prop
+- Add trash icon to `hoverActions` array for DRAFT status
 
-### 2. Update the edge function `platform-support-action/index.ts`
+**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
+- Delete line items then invoice from database
+- Show toast, refresh list
+- Pass `onDelete` to `InvoiceCard`
 
-- In the `CREATE_ORGANIZATION` case (~line 352), destructure `org_address` from params
-- Include `address: org_address || null` in the organization insert statement (line 368-376)
+### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
+
+**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
+- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
+- Show the button when `status === 'DRAFT' && canSubmit`
 
 ### Files to Change
 
-- `src/pages/platform/PlatformOrgs.tsx` -- Add address form fields + pass address in API call
-- `supabase/functions/platform-support-action/index.ts` -- Accept and persist `org_address` field
+- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
+- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
+- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
 
