@@ -1,12 +1,21 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { PlatformLayout } from '@/components/platform/PlatformLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { SupportActionDialog } from '@/components/platform/SupportActionDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { ROLE_LABELS, ORG_TYPE_LABELS, type AppRole, type OrgType } from '@/types/organization';
+import { useSupportAction } from '@/hooks/useSupportAction';
+import { useImpersonation } from '@/hooks/useImpersonation';
+import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
+import { KeyRound, Mail, LogIn } from 'lucide-react';
 
 interface ProfileData {
   user_id: string;
@@ -25,9 +34,21 @@ interface OrgMembership {
 
 export default function PlatformUserDetail() {
   const { userId } = useParams<{ userId: string }>();
+  const navigate = useNavigate();
+  const { platformRole } = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [memberships, setMemberships] = useState<OrgMembership[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Support action state
+  const { execute, loading: actionLoading } = useSupportAction();
+  const { startImpersonation } = useImpersonation();
+
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
+  const [changeEmailOpen, setChangeEmailOpen] = useState(false);
+  const [loginAsOpen, setLoginAsOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState('');
+  const [changeEmailReasonOpen, setChangeEmailReasonOpen] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -46,6 +67,37 @@ export default function PlatformUserDetail() {
     fetch();
   }, [userId]);
 
+  const handleResetPassword = async (reason: string) => {
+    const ok = await execute({
+      action_type: 'RESET_PASSWORD_LINK',
+      reason,
+      user_id: userId,
+    });
+    if (ok) setResetPasswordOpen(false);
+  };
+
+  const handleChangeEmail = async (reason: string) => {
+    const ok = await execute({
+      action_type: 'CHANGE_USER_EMAIL',
+      reason,
+      user_id: userId,
+      new_email: newEmail,
+    });
+    if (ok) {
+      setChangeEmailReasonOpen(false);
+      setChangeEmailOpen(false);
+      setNewEmail('');
+      // Refresh profile
+      const { data } = await supabase.from('profiles').select('*').eq('user_id', userId!).single();
+      if (data) setProfile(data as unknown as ProfileData);
+    }
+  };
+
+  const handleLoginAs = async (reason: string) => {
+    setLoginAsOpen(false);
+    await startImpersonation(userId!, reason, navigate);
+  };
+
   if (loading) {
     return (
       <PlatformLayout title="User Detail">
@@ -62,6 +114,9 @@ export default function PlatformUserDetail() {
     );
   }
 
+  const canImpersonate = platformRole === 'PLATFORM_OWNER' || platformRole === 'PLATFORM_ADMIN';
+  const canChangeEmail = platformRole === 'PLATFORM_OWNER' || platformRole === 'PLATFORM_ADMIN';
+
   return (
     <PlatformLayout
       title={profile.full_name || profile.email}
@@ -71,6 +126,23 @@ export default function PlatformUserDetail() {
         { label: profile.full_name || profile.email },
       ]}
     >
+      {/* Action buttons */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        <Button variant="outline" size="sm" onClick={() => setResetPasswordOpen(true)}>
+          <KeyRound className="h-4 w-4 mr-1" /> Reset Password
+        </Button>
+        {canChangeEmail && (
+          <Button variant="outline" size="sm" onClick={() => setChangeEmailOpen(true)}>
+            <Mail className="h-4 w-4 mr-1" /> Change Email
+          </Button>
+        )}
+        {canImpersonate && (
+          <Button variant="outline" size="sm" onClick={() => setLoginAsOpen(true)}>
+            <LogIn className="h-4 w-4 mr-1" /> Login As
+          </Button>
+        )}
+      </div>
+
       <Card className="mb-6">
         <CardContent className="pt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
@@ -123,6 +195,69 @@ export default function PlatformUserDetail() {
           )}
         </CardContent>
       </Card>
+
+      {/* Reset Password Dialog */}
+      <SupportActionDialog
+        open={resetPasswordOpen}
+        onOpenChange={setResetPasswordOpen}
+        title="Reset Password"
+        description={`Generate a password recovery link for ${profile.email}. The user will receive an email to reset their password.`}
+        onConfirm={handleResetPassword}
+        loading={actionLoading}
+      />
+
+      {/* Change Email - step 1: new email input */}
+      <Dialog open={changeEmailOpen} onOpenChange={setChangeEmailOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change User Email</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label>Current Email</Label>
+            <p className="text-sm text-muted-foreground">{profile.email}</p>
+            <Label htmlFor="new-email">New Email</Label>
+            <Input
+              id="new-email"
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder="new@example.com"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChangeEmailOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                setChangeEmailOpen(false);
+                setChangeEmailReasonOpen(true);
+              }}
+              disabled={!newEmail || !newEmail.includes('@')}
+            >
+              Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Change Email - step 2: reason */}
+      <SupportActionDialog
+        open={changeEmailReasonOpen}
+        onOpenChange={setChangeEmailReasonOpen}
+        title="Change User Email"
+        description={`Change email from ${profile.email} to ${newEmail}. This will update both auth and profile.`}
+        onConfirm={handleChangeEmail}
+        loading={actionLoading}
+      />
+
+      {/* Login As Dialog */}
+      <SupportActionDialog
+        open={loginAsOpen}
+        onOpenChange={setLoginAsOpen}
+        title="Login As User"
+        description={`You will be logged in as ${profile.email}. Your current session will be saved and can be restored. The impersonation session expires after 30 minutes.`}
+        onConfirm={handleLoginAs}
+        loading={actionLoading}
+      />
     </PlatformLayout>
   );
 }

@@ -5,9 +5,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { SupportActionDialog } from '@/components/platform/SupportActionDialog';
 import { supabase } from '@/integrations/supabase/client';
-import { ORG_TYPE_LABELS, ROLE_LABELS, type Organization, type AppRole } from '@/types/organization';
+import { ORG_TYPE_LABELS, ROLE_LABELS, ALLOWED_ROLES_BY_ORG_TYPE, type Organization, type AppRole, type OrgType } from '@/types/organization';
+import { useSupportAction } from '@/hooks/useSupportAction';
+import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
+import { UserPlus, RefreshCw } from 'lucide-react';
 
 interface MemberRow {
   id: string;
@@ -27,10 +36,22 @@ interface ProjectRow {
 export default function PlatformOrgDetail() {
   const { orgId } = useParams<{ orgId: string }>();
   const navigate = useNavigate();
+  const { platformRole } = useAuth();
   const [org, setOrg] = useState<Organization | null>(null);
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [projects, setProjects] = useState<ProjectRow[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const { execute, loading: actionLoading } = useSupportAction();
+
+  // Add Member dialog
+  const [addMemberOpen, setAddMemberOpen] = useState(false);
+  const [memberEmail, setMemberEmail] = useState('');
+  const [memberRole, setMemberRole] = useState<string>('');
+  const [addMemberReasonOpen, setAddMemberReasonOpen] = useState(false);
+
+  // Rebuild Permissions dialog
+  const [rebuildOpen, setRebuildOpen] = useState(false);
 
   useEffect(() => {
     if (!orgId) return;
@@ -48,7 +69,6 @@ export default function PlatformOrgDetail() {
 
       setOrg(orgRes.data as unknown as Organization);
 
-      // Fetch profiles for members separately to avoid deep type instantiation
       const memberRows = (membersRes.data || []) as unknown as MemberRow[];
       if (memberRows.length > 0) {
         const userIds = memberRows.map((m) => m.user_id);
@@ -63,7 +83,6 @@ export default function PlatformOrgDetail() {
       }
       setMembers(memberRows);
 
-      // Fetch projects separately
       const projectIds = (projectsRes.data || []).map((pt: any) => pt.project_id).filter(Boolean);
       const uniqueProjectIds = [...new Set(projectIds)] as string[];
       if (uniqueProjectIds.length > 0) {
@@ -79,6 +98,33 @@ export default function PlatformOrgDetail() {
     }
     fetch();
   }, [orgId]);
+
+  const handleAddMember = async (reason: string) => {
+    const ok = await execute({
+      action_type: 'ADD_MEMBER_NO_VERIFICATION',
+      reason,
+      organization_id: orgId,
+      user_email: memberEmail,
+      role: memberRole,
+    });
+    if (ok) {
+      setAddMemberReasonOpen(false);
+      setAddMemberOpen(false);
+      setMemberEmail('');
+      setMemberRole('');
+      // Refresh members
+      window.location.reload();
+    }
+  };
+
+  const handleRebuildPermissions = async (reason: string) => {
+    const ok = await execute({
+      action_type: 'REBUILD_PERMISSIONS',
+      reason,
+      organization_id: orgId,
+    });
+    if (ok) setRebuildOpen(false);
+  };
 
   if (loading) {
     return (
@@ -96,6 +142,9 @@ export default function PlatformOrgDetail() {
     );
   }
 
+  const canRebuild = platformRole === 'PLATFORM_OWNER' || platformRole === 'PLATFORM_ADMIN';
+  const allowedRoles = ALLOWED_ROLES_BY_ORG_TYPE[org.type] || [];
+
   return (
     <PlatformLayout
       title={org.name}
@@ -105,6 +154,18 @@ export default function PlatformOrgDetail() {
         { label: org.name },
       ]}
     >
+      {/* Action buttons */}
+      <div className="flex flex-wrap gap-2 mb-6">
+        <Button variant="outline" size="sm" onClick={() => setAddMemberOpen(true)}>
+          <UserPlus className="h-4 w-4 mr-1" /> Add Member (No Verification)
+        </Button>
+        {canRebuild && (
+          <Button variant="outline" size="sm" onClick={() => setRebuildOpen(true)}>
+            <RefreshCw className="h-4 w-4 mr-1" /> Rebuild Permissions
+          </Button>
+        )}
+      </div>
+
       {/* Summary */}
       <Card className="mb-6">
         <CardContent className="pt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -204,6 +265,74 @@ export default function PlatformOrgDetail() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Add Member - step 1: email + role */}
+      <Dialog open={addMemberOpen} onOpenChange={setAddMemberOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Member (No Verification)</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div>
+              <Label htmlFor="member-email">User Email</Label>
+              <Input
+                id="member-email"
+                type="email"
+                value={memberEmail}
+                onChange={(e) => setMemberEmail(e.target.value)}
+                placeholder="user@example.com"
+              />
+            </div>
+            <div>
+              <Label>Role</Label>
+              <Select value={memberRole} onValueChange={setMemberRole}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allowedRoles.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {ROLE_LABELS[r]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddMemberOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                setAddMemberOpen(false);
+                setAddMemberReasonOpen(true);
+              }}
+              disabled={!memberEmail || !memberRole}
+            >
+              Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Member - step 2: reason */}
+      <SupportActionDialog
+        open={addMemberReasonOpen}
+        onOpenChange={setAddMemberReasonOpen}
+        title="Add Member (No Verification)"
+        description={`Add ${memberEmail} as ${ROLE_LABELS[memberRole as AppRole] || memberRole} to ${org.name}. This bypasses email verification.`}
+        onConfirm={handleAddMember}
+        loading={actionLoading}
+      />
+
+      {/* Rebuild Permissions */}
+      <SupportActionDialog
+        open={rebuildOpen}
+        onOpenChange={setRebuildOpen}
+        title="Rebuild Permissions"
+        description={`This will delete and re-create all member_permissions rows for ${org.name}. Permissions will be reset to defaults.`}
+        onConfirm={handleRebuildPermissions}
+        loading={actionLoading}
+      />
     </PlatformLayout>
   );
 }

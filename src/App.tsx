@@ -12,6 +12,7 @@ import { DemoBanner } from "@/components/demo";
 import { SashaBubble } from "@/components/sasha";
 import { BoltGuide } from "@/components/bolt";
 import { RequirePlatformRole } from "@/components/platform/RequirePlatformRole";
+import { ImpersonationBanner } from "@/components/platform/ImpersonationBanner";
 import { Button } from "@/components/ui/button";
 
 // 1. QueryClient with sensible defaults
@@ -144,6 +145,7 @@ function AppRoutes() {
 
   return (
     <>
+      <ImpersonationBanner />
       <DemoBanner />
       <ErrorBoundary>
         <Suspense fallback={<PageLoader />}>
