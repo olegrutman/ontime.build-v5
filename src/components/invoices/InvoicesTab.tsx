@@ -239,6 +239,28 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
     setSelectedInvoiceId(invoice.id);
   };
 
+  const handleDeleteInvoice = async (invoice: Invoice) => {
+    try {
+      // Delete line items first, then the invoice
+      const { error: lineError } = await supabase
+        .from('invoice_line_items')
+        .delete()
+        .eq('invoice_id', invoice.id);
+      if (lineError) throw lineError;
+
+      const { error: invError } = await supabase
+        .from('invoices')
+        .delete()
+        .eq('id', invoice.id);
+      if (invError) throw invError;
+
+      toast.success(`Invoice ${invoice.invoice_number} deleted`);
+      fetchInvoices();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete invoice');
+    }
+  };
+
   if (selectedInvoiceId) {
     return (
       <InvoiceDetail
@@ -366,6 +388,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
               onEdit={canSubmit ? handleEditInvoice : undefined}
               onSubmit={canSubmit ? handleQuickSubmit : undefined}
               onApprove={canApprove ? handleQuickApprove : undefined}
+              onDelete={canSubmit ? handleDeleteInvoice : undefined}
               canSubmit={canSubmit}
               canApprove={canApprove}
             />

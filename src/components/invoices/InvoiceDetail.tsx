@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2, FileDown, Package, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2, FileDown, Package, RotateCcw, Trash2, Edit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -50,6 +50,8 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   const [linkedPO, setLinkedPO] = useState<{ po_number: string; status: string } | null>(null);
   const [exportLoading, setExportLoading] = useState(false);
   const [reviseDialogOpen, setReviseDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
 
   // Get current user's organization ID
   const currentOrgId = userOrgRoles[0]?.organization?.id;
@@ -192,6 +194,33 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
     setReviseDialogOpen(true);
   };
 
+  const handleDelete = async () => {
+    if (!invoice) return;
+    setDeleteLoading(true);
+    try {
+      const { error: lineError } = await supabase
+        .from('invoice_line_items')
+        .delete()
+        .eq('invoice_id', invoiceId);
+      if (lineError) throw lineError;
+
+      const { error: invError } = await supabase
+        .from('invoices')
+        .delete()
+        .eq('id', invoiceId);
+      if (invError) throw invError;
+
+      toast.success(`Invoice ${invoice.invoice_number} deleted`);
+      onUpdate();
+      onBack();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete invoice');
+    } finally {
+      setDeleteLoading(false);
+      setDeleteDialogOpen(false);
+    }
+  };
+
   // Build revision data for the wizard
   const revisionData: RevisionData | undefined = invoice ? {
     contractId: invoice.contract_id || '',
@@ -299,10 +328,20 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
           </Button>
 
           {status === 'DRAFT' && canSubmit && (
-            <Button onClick={handleSubmit} disabled={actionLoading}>
-              {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-              Submit for Approval
-            </Button>
+            <>
+              <Button variant="outline" onClick={handleRevise}>
+                <Edit className="h-4 w-4 mr-2" />
+                Edit
+              </Button>
+              <Button variant="outline" onClick={() => setDeleteDialogOpen(true)} className="text-destructive hover:bg-destructive/10">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </Button>
+              <Button onClick={handleSubmit} disabled={actionLoading}>
+                {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                Submit for Approval
+              </Button>
+            </>
           )}
 
           {status === 'SUBMITTED' && canApprove && (
@@ -479,6 +518,29 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleReject} className="bg-destructive text-destructive-foreground">
               Reject Invoice
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Invoice</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete invoice {invoice?.invoice_number}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleteLoading}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Delete Invoice
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
