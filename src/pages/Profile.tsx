@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { formatPhone } from '@/lib/formatPhone';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -91,8 +91,8 @@ export default function Profile() {
   
   const [saving, setSaving] = useState<string | null>(null);
 
-  // Initialize forms when data loads
-  useState(() => {
+  // Sync forms when data loads or changes
+  useEffect(() => {
     if (profile) {
       setPersonalForm({
         first_name: profile.first_name || '',
@@ -103,9 +103,9 @@ export default function Profile() {
         job_title: profile.job_title || '',
       });
     }
-  });
+  }, [profile]);
 
-  useState(() => {
+  useEffect(() => {
     if (organization) {
       const addr = organization.address || {};
       setOrgForm({
@@ -123,9 +123,9 @@ export default function Profile() {
         insurance_expiration_date: organization.insurance_expiration_date || '',
       });
     }
-  });
+  }, [organization]);
 
-  useState(() => {
+  useEffect(() => {
     if (orgSettings) {
       setPricingForm({
         default_hourly_rate: orgSettings.default_hourly_rate?.toString() || '',
@@ -135,47 +135,7 @@ export default function Profile() {
         default_workday_hours: orgSettings.default_workday_hours?.toString() || '8',
       });
     }
-  });
-
-  // Update forms when data changes
-  if (!loading && profile && personalForm.first_name === '' && profile.first_name) {
-    setPersonalForm({
-      first_name: profile.first_name || '',
-      last_name: profile.last_name || '',
-      phone: profile.phone || '',
-      preferred_contact_method: profile.preferred_contact_method || 'email',
-      timezone: profile.timezone || 'America/Denver',
-      job_title: profile.job_title || '',
-    });
-  }
-
-  if (!loading && organization && orgForm.name === '' && organization.name) {
-    const addr = organization.address || {};
-    setOrgForm({
-      name: organization.name || '',
-      address: {
-        street: addr.street || '',
-        city: addr.city || '',
-        state: addr.state || '',
-        zip: addr.zip || '',
-      },
-      phone: organization.phone || '',
-      trade: organization.trade || '',
-      trade_custom: organization.trade_custom || '',
-      license_number: organization.license_number || '',
-      insurance_expiration_date: organization.insurance_expiration_date || '',
-    });
-  }
-
-  if (!loading && orgSettings && pricingForm.default_hourly_rate === '' && orgSettings.default_hourly_rate) {
-    setPricingForm({
-      default_hourly_rate: orgSettings.default_hourly_rate?.toString() || '',
-      labor_markup_percent: orgSettings.labor_markup_percent?.toString() || '',
-      minimum_service_charge: orgSettings.minimum_service_charge?.toString() || '',
-      default_crew_size: orgSettings.default_crew_size?.toString() || '',
-      default_workday_hours: orgSettings.default_workday_hours?.toString() || '8',
-    });
-  }
+  }, [orgSettings]);
 
   const handleSavePersonal = async () => {
     setSaving('personal');
