@@ -435,13 +435,13 @@ Deno.serve(async (req) => {
         const newUserId = newUser.user.id;
 
         // Create profile
-        await adminClient.from("profiles").insert({
+        await adminClient.from("profiles").upsert({
           user_id: newUserId,
           email,
           full_name: full_name || `${first_name || ""} ${last_name || ""}`.trim() || null,
           first_name: first_name || null,
           last_name: last_name || null,
-        });
+        }, { onConflict: 'user_id' });
 
         targetId = newUserId;
         snapshotAfter = { email, user_id: newUserId };
