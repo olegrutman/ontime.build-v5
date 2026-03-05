@@ -78,37 +78,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    let isMounted = true;
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Defer data fetching to avoid blocking
-          setTimeout(() => fetchUserData(session.user.id), 0);
+          // Set loading true so consumers wait for user data before redirecting
+          setLoading(true);
+          const userId = session.user.id;
+          setTimeout(async () => {
+            await fetchUserData(userId);
+            if (isMounted) setLoading(false);
+          }, 0);
         } else {
-        setProfile(null);
-        setUserOrgRoles([]);
-        setMemberPermissions(null);
-        setPlatformRole(null);
-        setTwoFactorVerified(false);
-      }
-        setLoading(false);
+          setProfile(null);
+          setUserOrgRoles([]);
+          setMemberPermissions(null);
+          setPlatformRole(null);
+          setTwoFactorVerified(false);
+          setLoading(false);
+        }
       }
     );
 
     // THEN check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchUserData(session.user.id);
+        await fetchUserData(session.user.id);
       }
-      setLoading(false);
+      if (isMounted) setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
