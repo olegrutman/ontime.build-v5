@@ -229,7 +229,7 @@ export function AppSidebar() {
                     </p>
                     {currentRole && (
                       <p className="text-xs text-sidebar-foreground/60 truncate">
-                        {ROLE_LABELS[currentRole]}
+                        {isAdmin ? 'Owner' : ROLE_LABELS[currentRole]}
                       </p>
                     )}
                   </div>
