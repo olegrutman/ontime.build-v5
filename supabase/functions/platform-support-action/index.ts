@@ -21,6 +21,7 @@ const ACTION_MIN_ROLE: Record<string, string> = {
   CHANGE_USER_EMAIL: "PLATFORM_ADMIN",
   REBUILD_PERMISSIONS: "PLATFORM_ADMIN",
   CREATE_ORGANIZATION: "PLATFORM_OWNER",
+  CREATE_USER_AND_ADD: "PLATFORM_OWNER",
 };
 
 function hasPermission(callerRole: string, requiredRole: string): boolean {
@@ -403,6 +404,60 @@ Deno.serve(async (req) => {
         }
 
         result = { success: true, message: "Organization created", org_id: newOrg.id };
+        break;
+      }
+
+      case "CREATE_USER_AND_ADD": {
+        const { email, full_name, first_name, last_name, password, organization_id: addOrgId, role: addRole } = params;
+        if (!email || !password) {
+          return new Response(JSON.stringify({ error: "email and password are required" }), {
+            status: 400,
+            headers: corsHeaders,
+          });
+        }
+
+        // Create auth user
+        const { data: newUser, error: createErr } = await adminClient.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+        });
+        if (createErr || !newUser?.user) {
+          return new Response(JSON.stringify({ error: createErr?.message || "Failed to create user" }), {
+            status: 500,
+            headers: corsHeaders,
+          });
+        }
+
+        const newUserId = newUser.user.id;
+
+        // Create profile
+        await adminClient.from("profiles").insert({
+          user_id: newUserId,
+          email,
+          full_name: full_name || `${first_name || ""} ${last_name || ""}`.trim() || null,
+          first_name: first_name || null,
+          last_name: last_name || null,
+        });
+
+        targetId = newUserId;
+        snapshotAfter = { email, user_id: newUserId };
+
+        // Optionally add to org
+        if (addOrgId && addRole) {
+          const { error: roleErr } = await adminClient.from("user_org_roles").insert({
+            user_id: newUserId,
+            organization_id: addOrgId,
+            role: addRole,
+            is_admin: false,
+          });
+          if (!roleErr) {
+            snapshotAfter.organization_id = addOrgId;
+            snapshotAfter.role = addRole;
+          }
+        }
+
+        result = { success: true, message: "User created" + (addOrgId ? " and added to org" : ""), user_id: newUserId };
         break;
       }
 

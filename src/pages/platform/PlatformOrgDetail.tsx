@@ -11,12 +11,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { SupportActionDialog } from '@/components/platform/SupportActionDialog';
+import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { ORG_TYPE_LABELS, ROLE_LABELS, ALLOWED_ROLES_BY_ORG_TYPE, type Organization, type AppRole, type OrgType } from '@/types/organization';
 import { useSupportAction } from '@/hooks/useSupportAction';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { UserPlus, RefreshCw } from 'lucide-react';
+import { UserPlus, RefreshCw, UserRoundPlus } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 interface MemberRow {
   id: string;
@@ -52,6 +54,16 @@ export default function PlatformOrgDetail() {
 
   // Rebuild Permissions dialog
   const [rebuildOpen, setRebuildOpen] = useState(false);
+
+  // Create User dialog
+  const [createUserOpen, setCreateUserOpen] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserFirst, setNewUserFirst] = useState('');
+  const [newUserLast, setNewUserLast] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserRole, setNewUserRole] = useState<string>('');
+  const [newUserReason, setNewUserReason] = useState('');
+  const [creatingUser, setCreatingUser] = useState(false);
 
   useEffect(() => {
     if (!orgId) return;
@@ -126,6 +138,37 @@ export default function PlatformOrgDetail() {
     if (ok) setRebuildOpen(false);
   };
 
+  const handleCreateUser = async () => {
+    if (!newUserEmail || !newUserPassword || !newUserRole || !newUserReason) return;
+    setCreatingUser(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('platform-support-action', {
+        body: {
+          action_type: 'CREATE_USER_AND_ADD',
+          reason: newUserReason,
+          email: newUserEmail,
+          first_name: newUserFirst,
+          last_name: newUserLast,
+          password: newUserPassword,
+          organization_id: orgId,
+          role: newUserRole,
+        },
+      });
+      if (error || data?.error) {
+        toast({ title: 'Failed', description: data?.error || error?.message, variant: 'destructive' });
+        return;
+      }
+      toast({ title: 'User created & added', description: data?.message });
+      setCreateUserOpen(false);
+      setNewUserEmail(''); setNewUserFirst(''); setNewUserLast(''); setNewUserPassword(''); setNewUserRole(''); setNewUserReason('');
+      window.location.reload();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
   if (loading) {
     return (
       <PlatformLayout title="Organization">
@@ -164,6 +207,9 @@ export default function PlatformOrgDetail() {
             <RefreshCw className="h-4 w-4 mr-1" /> Rebuild Permissions
           </Button>
         )}
+        <Button variant="outline" size="sm" onClick={() => setCreateUserOpen(true)}>
+          <UserRoundPlus className="h-4 w-4 mr-1" /> Create & Add User
+        </Button>
       </div>
 
       {/* Summary */}
@@ -333,6 +379,59 @@ export default function PlatformOrgDetail() {
         onConfirm={handleRebuildPermissions}
         loading={actionLoading}
       />
+
+      {/* Create & Add User */}
+      <Dialog open={createUserOpen} onOpenChange={setCreateUserOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create New User & Add to {org.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>First Name</Label>
+                <Input value={newUserFirst} onChange={(e) => setNewUserFirst(e.target.value)} />
+              </div>
+              <div>
+                <Label>Last Name</Label>
+                <Input value={newUserLast} onChange={(e) => setNewUserLast(e.target.value)} />
+              </div>
+            </div>
+            <div>
+              <Label>Email *</Label>
+              <Input type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} placeholder="user@company.com" />
+            </div>
+            <div>
+              <Label>Temporary Password *</Label>
+              <Input type="text" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} placeholder="Min 6 characters" />
+            </div>
+            <div>
+              <Label>Role *</Label>
+              <Select value={newUserRole} onValueChange={setNewUserRole}>
+                <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
+                <SelectContent>
+                  {allowedRoles.map((r) => (
+                    <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Reason (audit log) *</Label>
+              <Textarea value={newUserReason} onChange={(e) => setNewUserReason(e.target.value)} rows={2} placeholder="Customer onboarding..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateUserOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handleCreateUser}
+              disabled={creatingUser || !newUserEmail || !newUserPassword || !newUserRole || !newUserReason}
+            >
+              {creatingUser ? 'Creating...' : 'Create User'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PlatformLayout>
   );
 }
