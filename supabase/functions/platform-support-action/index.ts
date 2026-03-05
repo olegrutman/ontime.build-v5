@@ -20,6 +20,7 @@ const ACTION_MIN_ROLE: Record<string, string> = {
   UNLOCK_RECORD: "SUPPORT_AGENT",
   CHANGE_USER_EMAIL: "PLATFORM_ADMIN",
   REBUILD_PERMISSIONS: "PLATFORM_ADMIN",
+  CREATE_ORGANIZATION: "PLATFORM_OWNER",
 };
 
 function hasPermission(callerRole: string, requiredRole: string): boolean {
@@ -341,6 +342,67 @@ Deno.serve(async (req) => {
         }
         snapshotAfter = { [statusField]: newStatus };
         result = { success: true, message: `${record_type} unlocked` };
+        break;
+      }
+
+      case "CREATE_ORGANIZATION": {
+        const { org_name, org_type, org_phone, admin_email } = params;
+        if (!org_name || !org_type) {
+          return new Response(JSON.stringify({ error: "org_name and org_type are required" }), {
+            status: 400,
+            headers: corsHeaders,
+          });
+        }
+
+        // Generate org_code from name (uppercase, no spaces, max 8 chars)
+        const orgCode = org_name
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, "")
+          .slice(0, 8) + "-" + Date.now().toString(36).toUpperCase().slice(-4);
+
+        const { data: newOrg, error: orgErr } = await adminClient
+          .from("organizations")
+          .insert({
+            name: org_name,
+            type: org_type,
+            org_code: orgCode,
+            phone: org_phone || null,
+            created_by: callerId,
+          })
+          .select("id")
+          .single();
+
+        if (orgErr || !newOrg) {
+          return new Response(JSON.stringify({ error: orgErr?.message || "Failed to create org" }), {
+            status: 500,
+            headers: corsHeaders,
+          });
+        }
+
+        targetId = newOrg.id;
+        snapshotAfter = { org_id: newOrg.id, org_code: orgCode, name: org_name, type: org_type };
+
+        // Optionally add initial admin user
+        if (admin_email) {
+          const { data: adminProfile } = await adminClient
+            .from("profiles")
+            .select("user_id")
+            .eq("email", admin_email)
+            .single();
+
+          if (adminProfile) {
+            const roleMap: Record<string, string> = { GC: "GC_PM", TC: "TC_PM", FC: "FC_PM", SUPPLIER: "SUPPLIER" };
+            await adminClient.from("user_org_roles").insert({
+              user_id: adminProfile.user_id,
+              organization_id: newOrg.id,
+              role: roleMap[org_type] || "GC_PM",
+              is_admin: true,
+            });
+            snapshotAfter.admin_email = admin_email;
+          }
+        }
+
+        result = { success: true, message: "Organization created", org_id: newOrg.id };
         break;
       }
 
