@@ -37,54 +37,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = async (userId: string) => {
-    // Fetch profile
-    const { data: profileData } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
+    // Fetch all data in parallel to avoid race conditions
+    const [profileResult, rolesResult, platformResult] = await Promise.all([
+      supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
+      supabase.from('user_org_roles').select('*, organization:organizations(*)').eq('user_id', userId),
+      supabase.from('platform_users').select('platform_role, two_factor_verified').eq('user_id', userId).maybeSingle(),
+    ]);
 
-    if (profileData) {
-      setProfile(profileData as Profile);
-    }
-
-    // Fetch user org roles with organization details
-    const { data: rolesData } = await supabase
-      .from('user_org_roles')
-      .select(`
-        *,
-        organization:organizations(*)
-      `)
-      .eq('user_id', userId);
-
-    if (rolesData) {
-      setUserOrgRoles(rolesData as UserOrgRole[]);
-
-      // Fetch member_permissions for the primary role
-      if (rolesData.length > 0) {
-        const { data: permsData } = await supabase
-          .from('member_permissions')
-          .select('*')
-          .eq('user_org_role_id', rolesData[0].id)
-          .maybeSingle();
-
-      setMemberPermissions(permsData as MemberPermissions | null);
-      }
-    }
-
-    // Fetch platform user data
-    const { data: platformData } = await supabase
-      .from('platform_users')
-      .select('platform_role, two_factor_verified')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (platformData) {
-      setPlatformRole(platformData.platform_role as PlatformRole);
-      setTwoFactorVerified(platformData.two_factor_verified ?? false);
+    // Set platform role FIRST so isPlatformUser is accurate before userOrgRoles triggers re-render
+    if (platformResult.data) {
+      setPlatformRole(platformResult.data.platform_role as PlatformRole);
+      setTwoFactorVerified(platformResult.data.two_factor_verified ?? false);
     } else {
       setPlatformRole(null);
       setTwoFactorVerified(false);
+    }
+
+    if (profileResult.data) {
+      setProfile(profileResult.data as Profile);
+    }
+
+    if (rolesResult.data) {
+      setUserOrgRoles(rolesResult.data as UserOrgRole[]);
+
+      if (rolesResult.data.length > 0) {
+        const { data: permsData } = await supabase
+          .from('member_permissions')
+          .select('*')
+          .eq('user_org_role_id', rolesResult.data[0].id)
+          .maybeSingle();
+        setMemberPermissions(permsData as MemberPermissions | null);
+      }
     }
   };
 
