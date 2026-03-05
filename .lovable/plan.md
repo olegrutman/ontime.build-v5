@@ -1,22 +1,21 @@
 
 
-# Plan: Fix Impersonation "Return to Platform" Flow
+# Fix: First/Last Name Not Saved When Creating Users from Platform
 
-## Problem
-When a Platform Owner impersonates a user via "Login As", the stored original session tokens (access_token + refresh_token) can expire during the impersonation window. When `endImpersonation` calls `supabase.auth.setSession()` with expired tokens, it silently fails, leaving the platform owner stuck in the target user's account with no way back.
+## Root Cause
 
-Additionally, the `endImpersonation` function referenced inside the `useEffect` timer is a stale closure (not in the dependency array), which can cause issues with the auto-timeout.
+There's a race condition between two operations:
 
-## Changes
+1. The `handle_new_user()` trigger fires on `auth.users` INSERT and creates a profile row with NULL first/last name (because no `user_metadata` is passed to `createUser`)
+2. The edge function then tries to `INSERT` into profiles with the first/last name, but silently fails because the row already exists from the trigger
 
-### 1. Fix `useImpersonation.ts` — use `refreshSession` as fallback
-**File: `src/hooks/useImpersonation.ts`**
-- In `endImpersonation`, after attempting `setSession` with stored tokens, check if it succeeded
-- If `setSession` fails (expired access_token), fall back to `supabase.auth.refreshSession({ refresh_token })` using only the stored refresh_token
-- If both fail, sign out completely and redirect to `/auth` with a toast explaining the session expired
-- Add `endImpersonation` to the `useEffect` dependency array and use a ref or move the function definition to avoid stale closures
+## Fix
 
-### 2. Add error handling to the banner's return button
-**File: `src/components/platform/ImpersonationBanner.tsx`**
-- No structural changes needed — the fix is in the hook logic
+**File: `supabase/functions/platform-support-action/index.ts`**
+
+In the `CREATE_USER_AND_ADD` case, change the `profiles.insert` to an `upsert` (or an `update`) so the first/last name values overwrite the trigger-created row:
+
+- Replace `adminClient.from("profiles").insert({...})` with `adminClient.from("profiles").upsert({...}, { onConflict: 'user_id' })`
+
+This ensures the first name, last name, and full name provided in the form are persisted even though the trigger already created the profile row.
 
