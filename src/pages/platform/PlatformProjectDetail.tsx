@@ -5,8 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { SupportActionDialog } from '@/components/platform/SupportActionDialog';
 import { supabase } from '@/integrations/supabase/client';
+import { useSupportAction } from '@/hooks/useSupportAction';
 import { format } from 'date-fns';
+import { CheckCircle } from 'lucide-react';
 
 interface ProjectData {
   id: string;
@@ -34,29 +38,49 @@ export default function PlatformProjectDetail() {
   const [woCount, setWoCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!projectId) return;
-    async function fetch() {
-      const [projRes, teamRes, poRes, invRes, woRes] = await Promise.all([
-        supabase.from('projects').select('*').eq('id', projectId).single(),
-        supabase
-          .from('project_team')
-          .select('id, role, accepted, organization:organizations(id, name, type)')
-          .eq('project_id', projectId),
-        supabase.from('purchase_orders').select('id', { count: 'exact', head: true }).eq('project_id', projectId),
-        supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('project_id', projectId),
-        supabase.from('work_items').select('id', { count: 'exact', head: true }).eq('project_id', projectId),
-      ]);
+  const { execute, loading: actionLoading } = useSupportAction();
+  const [forceAcceptOpen, setForceAcceptOpen] = useState(false);
+  const [forceAcceptTeamId, setForceAcceptTeamId] = useState<string | null>(null);
+  const [forceAcceptOrgName, setForceAcceptOrgName] = useState('');
 
-      setProject(projRes.data as unknown as ProjectData);
-      setTeam((teamRes.data || []) as unknown as TeamMember[]);
-      setPoCount(poRes.count || 0);
-      setInvoiceCount(invRes.count || 0);
-      setWoCount(woRes.count || 0);
-      setLoading(false);
-    }
-    fetch();
+  const fetchData = async () => {
+    if (!projectId) return;
+    const [projRes, teamRes, poRes, invRes, woRes] = await Promise.all([
+      supabase.from('projects').select('*').eq('id', projectId).single(),
+      supabase
+        .from('project_team')
+        .select('id, role, accepted, organization:organizations(id, name, type)')
+        .eq('project_id', projectId),
+      supabase.from('purchase_orders').select('id', { count: 'exact', head: true }).eq('project_id', projectId),
+      supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('project_id', projectId),
+      supabase.from('work_items').select('id', { count: 'exact', head: true }).eq('project_id', projectId),
+    ]);
+
+    setProject(projRes.data as unknown as ProjectData);
+    setTeam((teamRes.data || []) as unknown as TeamMember[]);
+    setPoCount(poRes.count || 0);
+    setInvoiceCount(invRes.count || 0);
+    setWoCount(woRes.count || 0);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchData();
   }, [projectId]);
+
+  const handleForceAccept = async (reason: string) => {
+    if (!forceAcceptTeamId) return;
+    const ok = await execute({
+      action_type: 'FORCE_ACCEPT_PROJECT',
+      reason,
+      team_id: forceAcceptTeamId,
+    });
+    if (ok) {
+      setForceAcceptOpen(false);
+      setForceAcceptTeamId(null);
+      fetchData();
+    }
+  };
 
   if (loading) {
     return (
@@ -121,12 +145,13 @@ export default function PlatformProjectDetail() {
                 <TableHead>Organization</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Accepted</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {team.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center py-4 text-muted-foreground">No team members</TableCell>
+                  <TableCell colSpan={4} className="text-center py-4 text-muted-foreground">No team members</TableCell>
                 </TableRow>
               ) : (
                 team.map((t) => (
@@ -147,6 +172,23 @@ export default function PlatformProjectDetail() {
                         {t.accepted ? 'Accepted' : 'Pending'}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      {!t.accepted && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setForceAcceptTeamId(t.id);
+                            setForceAcceptOrgName(t.organization?.name || 'Unknown');
+                            setForceAcceptOpen(true);
+                          }}
+                        >
+                          <CheckCircle className="h-3.5 w-3.5 mr-1" /> Force Accept
+                        </Button>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))
               )}
@@ -154,6 +196,16 @@ export default function PlatformProjectDetail() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Force Accept Dialog */}
+      <SupportActionDialog
+        open={forceAcceptOpen}
+        onOpenChange={setForceAcceptOpen}
+        title="Force Accept Team Member"
+        description={`Force-accept ${forceAcceptOrgName}'s participation in ${project.name}. This bypasses the normal invitation acceptance flow.`}
+        onConfirm={handleForceAccept}
+        loading={actionLoading}
+      />
     </PlatformLayout>
   );
 }
