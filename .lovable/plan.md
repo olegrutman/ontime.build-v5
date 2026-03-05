@@ -1,75 +1,199 @@
 
 
-# Signup Flow Analysis and UX Improvement Plan
+# Platform Admin Portal — Implementation Plan
 
-## Current Flow Summary
+This is a large feature spanning database schema, auth system changes, new routes, and a full admin UI. It will be implemented in **4 phases** to keep each step testable and avoid breaking existing flows.
 
-The signup has two paths:
-1. **New org**: Choice → Account (name/email/password) → Company (org name/type/address) → Role (job title/trade) → Done
-2. **Join existing**: Choice → Search org → Account (name/email/password/job title) → Join request submitted → Pending approval
+---
 
-Email verification is required. State is persisted to localStorage to survive the verification redirect.
+## Phase 1: Data Model + Auth Layer
 
-## Bugs Found
+### Database Changes
 
-### Bug 1: "Back" button on CompanyStep goes to ChoiceStep, skipping AccountStep
-On the "new" path, CompanyStep's `onBack` calls `setSignupPath(null)` which shows the ChoiceStep. But the user already created an auth account in step 0. Going back to choice is confusing and potentially creates a second account attempt. It should go back to step 0 or be removed entirely since the account is already created.
+**1. New enum: `platform_role`**
+```sql
+CREATE TYPE public.platform_role AS ENUM ('NONE', 'PLATFORM_OWNER', 'PLATFORM_ADMIN', 'SUPPORT_AGENT');
+```
 
-### Bug 2: No password strength indicator
-The password field accepts any 6+ character string. Industry standard is to show strength feedback (weak/medium/strong) to guide users toward better passwords.
+**2. New table: `platform_users`** (separate from profiles — no modification to existing auth tables)
+- `id uuid PK`
+- `user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE, UNIQUE`
+- `platform_role platform_role NOT NULL DEFAULT 'NONE'`
+- `two_factor_verified boolean DEFAULT false`
+- `last_impersonation_at timestamptz`
+- `created_at / updated_at`
 
-### Bug 3: State field is a free-text input, not a dropdown
-In CompanyStep, the State field is a plain text input. The JoinSearchStep already uses `US_STATES` as a dropdown. CompanyStep should do the same for consistency and to prevent typos.
+RLS: Only platform users can SELECT. No public INSERT/UPDATE/DELETE — managed via SECURITY DEFINER RPCs only.
 
-### Bug 4: No "Terms of Service" or "Privacy Policy" acknowledgment
-Industry standard for B2B SaaS signup requires at least a passive acknowledgment ("By signing up you agree to..."). Currently missing.
+**3. New table: `support_actions_log`**
+- `id uuid PK`
+- `created_at timestamptz DEFAULT now()`
+- `created_by_user_id uuid NOT NULL` (platform user)
+- `created_by_name text`
+- `created_by_email text`
+- `target_org_id uuid` (nullable)
+- `target_org_name text`
+- `target_project_id uuid` (nullable)
+- `target_project_name text`
+- `target_user_id uuid` (nullable)
+- `target_user_email text`
+- `action_type text NOT NULL` (using text with app-level validation rather than enum, for extensibility)
+- `action_summary text`
+- `reason text NOT NULL`
+- `before_snapshot jsonb`
+- `after_snapshot jsonb`
 
-### Bug 5: Job title only shown for GC orgs in RoleStep
-The RoleStep only shows job title selection when `orgType === 'GC'`. For Suppliers, there's no job title or trade prompt -- they just see a generic "You're all set" message. This is a missed opportunity to collect useful data. The join path correctly shows job title for all org types via `showJobTitle` prop.
+RLS: Platform users can INSERT and SELECT. No UPDATE or DELETE (append-only).
 
-### Bug 6: No navigation back from AccountStep on the "new" path
-AccountStep has no back button. On the join path, JoinSearchStep has a back button, but when the user moves to AccountStep (step 1) there's no way back to the search step.
+**4. SECURITY DEFINER function: `is_platform_user(uuid)`**
+Returns the platform_role for a given user_id, bypassing RLS. Used in RLS policies and route guards.
 
-### Bug 7: Duplicate auth account creation on retry
-If the user fills out AccountStep, hits signUp, gets an error (e.g., network timeout after the account was created), and retries, they'll get "User already registered." There's no recovery path -- no link to sign in with those credentials.
+**5. SECURITY DEFINER function: `log_support_action(...)`**
+Validates caller is a platform user, then inserts into `support_actions_log`. All support tools call this.
 
-## Recommended UX Improvements
+### Auth Context Changes (`useAuth.tsx`)
 
-### 1. Password strength indicator
-Add a visual strength meter below the password field showing weak/medium/strong based on length, mixed case, numbers, and special characters. This is industry standard (NIST 800-63B recommends guiding users toward stronger passwords without overly restrictive rules).
+- After fetching `userOrgRoles`, also fetch from `platform_users` table
+- Add to context: `platformRole: PlatformRole | null`, `isPlatformUser: boolean`, `twoFactorVerified: boolean`
+- Add new type `PlatformRole = 'NONE' | 'PLATFORM_OWNER' | 'PLATFORM_ADMIN' | 'SUPPORT_AGENT'`
 
-### 2. State dropdown in CompanyStep
-Replace the free-text State input with a `Select` using the existing `US_STATES` array from `types/projectWizard.ts`.
+### Route Protection
 
-### 3. Fix back navigation
-- AccountStep ("new" path): Add a back button that returns to ChoiceStep (`setSignupPath(null)`). This is safe since no auth account exists yet at this point.
-- CompanyStep: Change `onBack` to go to ChoiceStep (which it already does), but add a note that the account was already created so re-entering that flow won't duplicate.
-- AccountStep ("join" path, step 1): Add a back button to return to JoinSearchStep (step 0).
+- New `RequirePlatformRole` component (similar to `RequireAuth`)
+- Checks `platformRole` is not NONE
+- If platform user but `!twoFactorVerified`, shows 2FA setup screen (placeholder flow with admin toggle for now)
+- Permission tiers enforced at component level
 
-### 4. Handle "User already registered" gracefully
-In `handleAccountNext`, catch the "User already registered" error specifically and show a helpful message with a link to sign in, rather than a generic destructive toast.
+### New Types (`src/types/platform.ts`)
+- `PlatformRole`, `PlatformUser`, `SupportActionLog`, `SupportActionType` (string union)
+- Permission maps per tier
 
-### 5. Show job title for all org types in RoleStep
-Move the job title selector out of the `orgType === 'GC'` condition so all org types can set a job title during signup.
+---
 
-### 6. Add Terms/Privacy acknowledgment
-Add a small text line above the "Continue" button on AccountStep: "By creating an account, you agree to our Terms of Service and Privacy Policy."
+## Phase 2: Platform Portal UI (Core Pages)
 
-## Changes
+All under `/platform/*` routes, using a dedicated `PlatformLayout` component (no org sidebar — its own minimal sidebar with: Home, Orgs, Users, Logs, sign out).
 
-### 1. `src/components/signup-wizard/AccountStep.tsx`
-- Add password strength indicator (computed from password value: length, uppercase, lowercase, number, special char)
-- Add back button (accepting optional `onBack` prop)
-- Add "User already registered" recovery link
-- Add terms acknowledgment text below submit button
+### Pages to Create
 
-### 2. `src/components/signup-wizard/CompanyStep.tsx`
-- Replace State `Input` with `Select` using `US_STATES`
+**`/platform` — Dashboard**
+- Global search bar (org name, project name, user email)
+- Tile cards: Organizations, Projects, Users, Support Logs
+- Active impersonation indicator tile
 
-### 3. `src/components/signup-wizard/RoleStep.tsx`
-- Show job title selector for all org types, not just GC
+**`/platform/orgs` — Organizations List**
+- Table: Name, Type (GC/TC/FC/SUPPLIER), # Projects, # Users, Last Activity
+- Click → org detail
 
-### 4. `src/pages/Signup.tsx`
-- Pass `onBack` to AccountStep on both paths
-- In `handleAccountNext`, detect "User already registered" error and show inline recovery UI instead of just a toast
+**`/platform/orgs/:orgId` — Org Detail**
+- Org summary card
+- Members list with roles
+- Projects list
+- Quick Actions panel (Phase 3)
+
+**`/platform/users` — Users Search**
+- Search by email/name
+- Results show org memberships
+- Links to impersonate, reset password
+
+**`/platform/users/:userId` — User Detail**
+- Profile info, org memberships, recent activity
+- Actions: impersonate, send password reset, change email (admin only)
+
+**`/platform/projects/:projectId` — Project Detail**
+- Project summary, team, contracts
+- Links to POs, Invoices, Work Orders
+- Quick Actions panel (Phase 3)
+
+**`/platform/logs` — Support Logs**
+- Filterable table: date range, platform user, org, project, action type
+- Detail view with before/after JSON snapshots
+- Append-only (no edit/delete UI)
+
+### Sidebar & Layout
+- Separate `PlatformSidebar` with platform-specific nav
+- Always show context breadcrumb (which org/project you're viewing)
+- Desktop-first, dense layout
+
+---
+
+## Phase 3: Support Tools & Quick Actions
+
+### Org-Level Actions
+- **Add member without verification**: Creates auth user + profile + user_org_role in one RPC. Logs `ADD_MEMBER_NO_VERIFICATION`.
+- **Resend invitation**: Calls existing invite resend logic. Logs `RESEND_INVITE`.
+- **Rebuild permissions**: Drops and recreates `member_permissions` rows from role defaults. Logs `REBUILD_PERMISSIONS`.
+
+### Project-Level Actions
+- **Force accept project**: Sets participant acceptance to true. Logs `FORCE_ACCEPT_PROJECT`.
+- **Edit project setup**: Modal with editable fields (name, address, material responsibility). Logs `EDIT_PROJECT_SETUP` with before/after.
+
+### Record Actions (Invoice, PO, Work Order)
+- **Unlock record**: Flips locked state, logs `UNLOCK_RECORD`.
+- **Edit record**: Opens existing edit UI but requires reason. Saves `beforeSnapshot`/`afterSnapshot`. Marks record with `edited_by_support = true`, `edited_by_support_at`, `edited_by_support_user_id`.
+
+All actions require a reason text input + confirmation modal. Each calls `log_support_action` RPC.
+
+### Database additions for record tracking
+- Add columns to `purchase_orders`, `invoices`, `work_items`: `edited_by_support boolean DEFAULT false`, `edited_by_support_at timestamptz`, `edited_by_support_user_id uuid`
+- Display "Edited by Ontime Support" badge in normal app UI when these flags are set
+
+---
+
+## Phase 4: Impersonation
+
+### Implementation
+- **RPC `start_impersonation(target_user_id, reason)`**: Validates caller is platform user, target is not a platform user (for Support Agents), logs `LOGIN_AS_USER_START`, returns a signed impersonation token (JWT claim or stored session record).
+- **New table `impersonation_sessions`**: `id, platform_user_id, target_user_id, started_at, expires_at (30 min), ended_at`
+- **Auth context**: Add `impersonatingAs` state. When active, queries use the target user's ID for data access but the platform user's ID for audit.
+- **Persistent banner**: `ImpersonationBanner` component rendered at top of app when `impersonatingAs` is set. Shows target email + "End Session" button.
+- **End session**: Clears impersonation state, logs `LOGIN_AS_USER_END`, navigates back to `/platform`.
+- **Auto-expiry**: Client-side timer checks `expires_at`. If expired, auto-ends session.
+
+### Safety
+- Support Agents cannot impersonate Platform users
+- All impersonation sessions are logged with reason
+- 30-minute inactivity timeout
+
+---
+
+## Files Created/Modified Summary
+
+### New Files (~15-20)
+- `src/types/platform.ts`
+- `src/hooks/usePlatformAuth.ts`
+- `src/hooks/useSupportLogs.ts`
+- `src/hooks/usePlatformSearch.ts`
+- `src/components/platform/PlatformLayout.tsx`
+- `src/components/platform/PlatformSidebar.tsx`
+- `src/components/platform/RequirePlatformRole.tsx`
+- `src/components/platform/ImpersonationBanner.tsx`
+- `src/components/platform/SupportActionDialog.tsx` (reason + confirm)
+- `src/components/platform/SupportBadge.tsx` (for "Edited by Support" display)
+- `src/pages/platform/PlatformDashboard.tsx`
+- `src/pages/platform/PlatformOrgs.tsx`
+- `src/pages/platform/PlatformOrgDetail.tsx`
+- `src/pages/platform/PlatformUsers.tsx`
+- `src/pages/platform/PlatformUserDetail.tsx`
+- `src/pages/platform/PlatformProjectDetail.tsx`
+- `src/pages/platform/PlatformLogs.tsx`
+
+### Modified Files
+- `src/hooks/useAuth.tsx` — fetch platform_users, add platformRole to context
+- `src/App.tsx` — add `/platform/*` routes with `RequirePlatformRole` guard + `ImpersonationBanner`
+- Various detail components (PO, Invoice, Work Order) — show "Edited by Support" badge when flags are set
+
+### Database Migrations
+- Create `platform_role` enum, `platform_users` table, `support_actions_log` table, `impersonation_sessions` table
+- Create RPCs: `is_platform_user`, `log_support_action`, `start_impersonation`, `end_impersonation`
+- Add `edited_by_support*` columns to POs, invoices, work_items
+- RLS policies for all new tables
+
+---
+
+## Implementation Order
+
+I recommend implementing **Phase 1 + Phase 2** first (data model + portal UI with read-only views), then **Phase 3** (support tools), then **Phase 4** (impersonation) — each as a separate approval cycle so we can test incrementally.
+
+Shall I proceed with Phase 1 + Phase 2?
 
