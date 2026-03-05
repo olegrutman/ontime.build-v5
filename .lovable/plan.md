@@ -1,47 +1,28 @@
 
 
-# Bug Report: Profile Updates Don't Persist in the Form
+# Fix: Organization Address Not Saving on Platform Create
 
-## Root Cause
+## Bugs Found
 
-**`useState` is being misused as `useEffect` for form initialization** (lines 95-138 of `Profile.tsx`).
+1. **Edge Function (`platform-support-action`)**: The `CREATE_ORGANIZATION` case (line 367-376) inserts `name`, `type`, `org_code`, `phone`, and `created_by` but completely omits `address`. Even if the frontend sent address data, it would be ignored.
 
-The code calls `useState(() => { ... })` three times to initialize forms from fetched data. This is wrong — `useState`'s initializer runs only once on mount, **before** the async data has loaded. So `profile`, `organization`, and `orgSettings` are all `null` at that point, and the initializers do nothing.
-
-## Why It Appears to "Not Update"
-
-There is a fallback mechanism at lines 141-178 that sets form state during render, but it only triggers when the form field is empty AND the data field is truthy. This means:
-
-1. **First load works** — the fallback populates the form from the fetched data.
-2. **After saving**, the `updateProfile` function updates local state in `useProfile` (e.g., `setProfile(prev => ({ ...prev, ...updates }))`), but the form state in `Profile.tsx` is NOT re-synced because the fallback condition (`personalForm.first_name === ''`) is no longer true — the form already has values.
-3. **The real problem**: if the database update succeeds but the user navigates away and comes back, the data loads correctly. But if they stay on the page, the form doesn't reflect the server state because there's no re-fetch or re-sync after save.
-
-Additionally, there may be an **RLS issue** — the `updateProfile` call may silently fail (returns no error but updates 0 rows) if the profiles table RLS policy doesn't allow the user to update their own row.
+2. **Create Organization Dialog (`PlatformOrgs.tsx`)**: The dialog has no address input fields (street, city, state, zip). There's no way for a Platform Owner to enter an address when creating an organization.
 
 ## Fix Plan
 
-**File: `src/pages/Profile.tsx`**
+### 1. Add address fields to the Create Organization dialog in `PlatformOrgs.tsx`
 
-1. Replace the three misused `useState(() => { ... })` calls (lines 95-138) with proper `useEffect` hooks that re-sync form state whenever the underlying data changes. This ensures forms are populated after async fetch completes and re-populated if data changes after a save.
+- Add state variables for `orgStreet`, `orgCity`, `orgState`, `orgZip`
+- Add address input fields (street, city, state, zip with US_STATES dropdown) to the dialog form, matching the pattern used in `CompanyStep.tsx`
+- Pass `org_address` object in the `handleCreate` function body sent to the edge function
 
-```tsx
-useEffect(() => {
-  if (profile) {
-    setPersonalForm({
-      first_name: profile.first_name || '',
-      last_name: profile.last_name || '',
-      phone: profile.phone || '',
-      preferred_contact_method: profile.preferred_contact_method || 'email',
-      timezone: profile.timezone || 'America/Denver',
-      job_title: profile.job_title || '',
-    });
-  }
-}, [profile]);
-```
+### 2. Update the edge function `platform-support-action/index.ts`
 
-Same pattern for `organization` → `orgForm` and `orgSettings` → `pricingForm`.
+- In the `CREATE_ORGANIZATION` case (~line 352), destructure `org_address` from params
+- Include `address: org_address || null` in the organization insert statement (line 368-376)
 
-2. Remove the redundant render-time fallback sync blocks (lines 141-178) since the `useEffect` hooks handle it properly.
+### Files to Change
 
-**No other files need changes.** The `useProfile` hook's `updateProfile` function correctly updates local state after a successful save, which will trigger the new `useEffect` to re-sync the form.
+- `src/pages/platform/PlatformOrgs.tsx` -- Add address form fields + pass address in API call
+- `supabase/functions/platform-support-action/index.ts` -- Accept and persist `org_address` field
 
