@@ -15,7 +15,7 @@ export function ImpersonationBanner() {
   if (!isImpersonating) return null;
 
   return (
-    <div className="bg-amber-500 text-amber-950 px-4 py-2 flex items-center justify-between text-sm font-medium z-50 relative">
+    <div className="sticky top-0 z-[100] bg-amber-500 text-amber-950 px-4 py-2 flex items-center justify-between text-sm font-medium shadow-md">
       <div className="flex items-center gap-2">
         <Shield className="h-4 w-4" />
         <span>Viewing as <strong>{targetEmail}</strong> — Support Session</span>
@@ -27,11 +27,11 @@ export function ImpersonationBanner() {
         </div>
         <Button
           size="sm"
-          variant="outline"
-          className="h-7 border-amber-700 text-amber-950 hover:bg-amber-600 bg-transparent"
+          variant="destructive"
+          className="h-7 font-semibold"
           onClick={endImpersonation}
         >
-          End Session
+          ← Return to Platform
         </Button>
       </div>
     </div>

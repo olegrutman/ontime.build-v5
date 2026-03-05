@@ -144,7 +144,7 @@ function AppRoutes() {
   const { isDemoMode } = useDemo();
 
   return (
-    <>
+    <div className="flex flex-col min-h-screen">
       <ImpersonationBanner />
       <DemoBanner />
       <ErrorBoundary>
@@ -195,7 +195,7 @@ function AppRoutes() {
       </ErrorBoundary>
       <SashaBubble />
       {!isDemoMode && <BoltGuide />}
-    </>
+    </div>
   );
 }
 
