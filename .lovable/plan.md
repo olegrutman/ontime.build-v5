@@ -1,39 +1,29 @@
 
 
-# Allow Edit and Delete of Draft Invoices
+# Add "% Realized" to TC Profit Position Card
 
-## Current State
+## What
+Show what percentage of the projected labor margin has already been realized, calculated as:
 
-- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
-- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
+```
+% Realized = (Net Position / Labor Margin) × 100
+```
 
-## Plan
+Where **Net Position** = `receivablesInvoiced - payablesInvoiced` (same value shown in Billing & Cash Position card).
 
-### 1. Add Delete Invoice capability
+## Changes
 
-**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
-- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
-- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
-- Button placed in the action buttons area, styled as destructive/outline
+### `src/components/project/ProfitCard.tsx`
 
-**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
-- Add `onDelete` optional prop
-- Add trash icon to `hoverActions` array for DRAFT status
+In the TC Profit section (both the non-material-responsible and material-responsible branches):
 
-**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
-- Delete line items then invoice from database
-- Show toast, refresh list
-- Pass `onDelete` to `InvoiceCard`
+1. Destructure `receivablesInvoiced` and `payablesInvoiced` from `financials` (already available on the prop).
+2. Compute `netPosition = receivablesInvoiced - payablesInvoiced`.
+3. Compute `realizedPct = laborMargin > 0 ? (netPosition / laborMargin) * 100 : 0`.
+4. Add a row below the "Labor Margin" line showing:
+   - Label: "Realized" (or "% Realized")
+   - Value: `fmt(netPosition)` with the percentage beside it, e.g. `$45K (62.3%)`
+   - Color: green if positive, red if negative
 
-### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
-
-**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
-- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
-- Show the button when `status === 'DRAFT' && canSubmit`
-
-### Files to Change
-
-- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
-- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
-- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
+No other files need changes — all required data is already on the `financials` object passed as a prop.
 
