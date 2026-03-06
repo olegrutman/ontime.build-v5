@@ -139,10 +139,16 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
 
   // TC Profit
   if (viewerRole === 'Trade Contractor') {
+    const {
+      receivablesInvoiced, payablesInvoiced,
+    } = financials;
+
     const revenueTotal = currentTotal;
     const estimateCost = isTCMaterialResponsible ? (materialEstimate || approvedEstimateSum || 0) : 0;
     const laborMargin = revenueTotal - fcContractValue - workOrderFCCost - estimateCost;
     const laborMarginPct = revenueTotal > 0 ? (laborMargin / revenueTotal) * 100 : 0;
+    const netPosition = receivablesInvoiced - payablesInvoiced;
+    const realizedPct = laborMargin > 0 ? (netPosition / laborMargin) * 100 : 0;
 
     if (!isTCMaterialResponsible) {
       return (
