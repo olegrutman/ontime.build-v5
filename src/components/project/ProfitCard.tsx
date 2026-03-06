@@ -139,10 +139,16 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
 
   // TC Profit
   if (viewerRole === 'Trade Contractor') {
+    const {
+      receivablesInvoiced, payablesInvoiced,
+    } = financials;
+
     const revenueTotal = currentTotal;
     const estimateCost = isTCMaterialResponsible ? (materialEstimate || approvedEstimateSum || 0) : 0;
     const laborMargin = revenueTotal - fcContractValue - workOrderFCCost - estimateCost;
     const laborMarginPct = revenueTotal > 0 ? (laborMargin / revenueTotal) * 100 : 0;
+    const netPosition = receivablesInvoiced - payablesInvoiced;
+    const realizedPct = laborMargin > 0 ? (netPosition / laborMargin) * 100 : 0;
 
     if (!isTCMaterialResponsible) {
       return (
@@ -168,6 +174,14 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
               <span className="text-xs text-muted-foreground ml-2">({laborMarginPct.toFixed(1)}%)</span>
             </div>
           </div>
+          {laborMargin > 0 && (
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-sm text-muted-foreground">Realized</span>
+              <span className={cn("text-sm font-semibold tabular-nums", netPosition >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
+                {fmt(netPosition)} <span className="text-xs text-muted-foreground">({realizedPct.toFixed(1)}%)</span>
+              </span>
+            </div>
+          )}
         </div>
       );
     }
@@ -217,6 +231,14 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
             {fmt(totalProfit)}
           </span>
         </div>
+        {laborMargin > 0 && (
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-sm text-muted-foreground">Realized</span>
+            <span className={cn("text-sm font-semibold tabular-nums", netPosition >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
+              {fmt(netPosition)} <span className="text-xs text-muted-foreground">({realizedPct.toFixed(1)}%)</span>
+            </span>
+          </div>
+        )}
       </div>
     );
   }
