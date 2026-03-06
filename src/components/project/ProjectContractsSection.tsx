@@ -198,6 +198,8 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
   const [isOpen, setIsOpen] = useState(false);
 
   const currentOrgId = userOrgRoles[0]?.organization?.id;
+  const currentOrgType = userOrgRoles[0]?.organization?.type;
+  const isFC = currentOrgType === 'FC';
 
   const fetchData = useCallback(async () => {
     const [contractsResult, teamResult] = await Promise.all([
