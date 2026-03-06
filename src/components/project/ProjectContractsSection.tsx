@@ -333,7 +333,7 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
                           contract={contract}
                           currentOrgId={currentOrgId}
                           teamMembers={teamMembers}
-                          canEdit={canManageContracts}
+                          canEdit={canManageContracts && !(isFC && contract.from_org_id === currentOrgId)}
                           onContractUpdated={fetchData}
                         />
                       ))}
@@ -354,7 +354,7 @@ export function ProjectContractsSection({ projectId }: ProjectContractsSectionPr
                           contract={contract}
                           currentOrgId={currentOrgId}
                           teamMembers={teamMembers}
-                          canEdit={canManageContracts}
+                          canEdit={canManageContracts && !(isFC && contract.from_org_id === currentOrgId)}
                           onContractUpdated={fetchData}
                         />
                       ))}

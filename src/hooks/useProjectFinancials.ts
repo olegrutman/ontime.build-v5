@@ -464,6 +464,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const outstanding = contractValue - billedToDate;
 
   const updateContract = async (id: string, sum: number, retainage: number): Promise<boolean> => {
+    if (viewerRole === 'Field Crew') return false;
     const { error } = await supabase.from('project_contracts').update({ contract_sum: sum, retainage_percent: retainage }).eq('id', id);
     if (error) return false;
     setContracts(prev => prev.map(c => c.id === id ? { ...c, contract_sum: sum, retainage_percent: retainage } : c));
