@@ -153,13 +153,8 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
           Contract with {getContractCounterpartyName(fcContract, userOrgIds)}
         </p>
-        <div className="group flex items-center gap-2 mb-4">
+        <div className="flex items-center gap-2 mb-4">
           <p className="text-3xl font-bold tabular-nums text-foreground">{fcContract ? fmt(fcValue) : '—'}</p>
-          {fcContract && (
-            <button onClick={() => startEdit(fcContract)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-accent rounded-lg">
-              <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
-            </button>
-          )}
         </div>
         <div className="border-t pt-4">
           <div className="flex items-center justify-between">
