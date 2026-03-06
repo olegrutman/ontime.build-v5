@@ -230,6 +230,14 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
             {fmt(totalProfit)}
           </span>
         </div>
+        {laborMargin > 0 && (
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-sm text-muted-foreground">Realized</span>
+            <span className={cn("text-sm font-semibold tabular-nums", netPosition >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
+              {fmt(netPosition)} <span className="text-xs text-muted-foreground">({realizedPct.toFixed(1)}%)</span>
+            </span>
+          </div>
+        )}
       </div>
     );
   }
