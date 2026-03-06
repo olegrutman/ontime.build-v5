@@ -173,6 +173,7 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
               </span>
               <span className="text-xs text-muted-foreground ml-2">({laborMarginPct.toFixed(1)}%)</span>
             </div>
+          </div>
           {laborMargin > 0 && (
             <div className="flex items-center justify-between mt-1">
               <span className="text-sm text-muted-foreground">Realized</span>
