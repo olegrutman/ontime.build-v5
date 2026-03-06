@@ -1,39 +1,21 @@
 
 
-# Allow Edit and Delete of Draft Invoices
+# Prevent FC from Editing Contract with TC
 
-## Current State
+## Problem
 
-- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
-- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
+In `ContractHeroCard.tsx` (lines 148-174), when the viewer is a Field Crew, they see a pencil edit button on their contract with the Trade Contractor. Clicking it allows them to modify the contract sum and retainage — values that should only be set by the TC (the hiring party).
 
-## Plan
+Similarly, in `ProjectContractsSection.tsx`, the `canEdit` prop is based on `canManageContracts` permission, which FC users may also have.
 
-### 1. Add Delete Invoice capability
+## Fix
 
-**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
-- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
-- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
-- Button placed in the action buttons area, styled as destructive/outline
+### 1. `src/components/project/ContractHeroCard.tsx`
+- Remove the edit pencil button from the FC hero section (lines 158-162). FC should see their contract value as **read-only**.
 
-**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
-- Add `onDelete` optional prop
-- Add trash icon to `hoverActions` array for DRAFT status
+### 2. `src/components/project/ProjectContractsSection.tsx`
+- Add a check so that FC users cannot edit contracts where they are the `from_org` (contractor). The `canEdit` prop passed to `ContractRow` should be `false` when the viewer is FC and the contract is a TC↔FC contract.
 
-**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
-- Delete line items then invoice from database
-- Show toast, refresh list
-- Pass `onDelete` to `InvoiceCard`
-
-### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
-
-**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
-- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
-- Show the button when `status === 'DRAFT' && canSubmit`
-
-### Files to Change
-
-- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
-- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
-- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
+### 3. `src/hooks/useProjectFinancials.ts` (defensive backend check)
+- In the `updateContract` function (line 466), add a guard: if `viewerRole === 'Field Crew'`, return `false` immediately. This prevents FC from updating any contract even if the UI guard is bypassed.
 
