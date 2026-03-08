@@ -90,6 +90,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
 
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
+  const { sendNudge, loading: nudgeLoading, wasSent } = useNudge();
   
   const { canViewPricing, canEditPricing, isSupplier, isPricingOwner } = usePOPricingVisibility(
     po,
