@@ -1737,6 +1737,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: Json | null
           created_at: string
           email: string
           first_name: string | null
@@ -1753,6 +1754,7 @@ export type Database = {
           view_preference: string | null
         }
         Insert: {
+          address?: Json | null
           created_at?: string
           email: string
           first_name?: string | null
@@ -1769,6 +1771,7 @@ export type Database = {
           view_preference?: string | null
         }
         Update: {
+          address?: Json | null
           created_at?: string
           email?: string
           first_name?: string | null
