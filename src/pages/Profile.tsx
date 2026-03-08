@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
-import { ORG_TYPE_LABELS } from '@/types/organization';
+import { ORG_TYPE_LABELS, getJobTitlesForOrgType } from '@/types/organization';
 import { TRADES, Trade } from '@/types/projectWizard';
 
 const TIMEZONES = [
