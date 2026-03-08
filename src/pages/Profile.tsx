@@ -41,7 +41,7 @@ const CONTACT_METHODS = [
 
 
 export default function Profile() {
-  const { userOrgRoles } = useAuth();
+  const { userOrgRoles, refreshUserData } = useAuth();
   const {
     loading,
     profile,
