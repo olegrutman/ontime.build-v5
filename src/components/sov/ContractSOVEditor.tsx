@@ -255,11 +255,11 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
   // For TC: further partition main contracts by direction
   const gcToTcSovs = isTC ? contractSovs.filter(sov => {
     const contract = getContractForSOV(sov);
-    return contract?.to_org_id === currentOrgId; // TC is receiver (GC pays TC)
+    return contract?.from_org_id === currentOrgId; // TC is worker (GC pays TC)
   }) : [];
   const tcToFcSovs = isTC ? contractSovs.filter(sov => {
     const contract = getContractForSOV(sov);
-    return contract?.from_org_id === currentOrgId; // TC is payer (TC pays FC)
+    return contract?.to_org_id === currentOrgId; // TC is payer (TC pays FC)
   }) : [];
 
   // Helper to calculate billing totals for a set of SOVs
