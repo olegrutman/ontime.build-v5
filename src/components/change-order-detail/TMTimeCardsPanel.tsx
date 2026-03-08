@@ -57,7 +57,8 @@ interface TimeCard {
   updated_at: string;
 }
 
-export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC, hasTC = true }: TMTimeCardsPanelProps) {
+export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC, hasTC = true, hasFCParticipant = true }: TMTimeCardsPanelProps) {
+  const selfPerforming = isTC && !hasFCParticipant;
   const { user, userOrgRoles } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
