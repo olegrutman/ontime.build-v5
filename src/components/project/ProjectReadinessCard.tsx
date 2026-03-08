@@ -14,7 +14,7 @@ export function ProjectReadinessCard({ readiness }: ProjectReadinessCardProps) {
   if (loading) {
     return (
       <Card>
-        <CardContent className="p-6 flex items-center justify-center">
+        <CardContent className="p-6 flex items-center justify-center" data-sasha-card="Project Readiness">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
