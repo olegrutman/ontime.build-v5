@@ -262,25 +262,6 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
     return contract?.to_org_id === currentOrgId; // TC is payer (TC pays FC)
   }) : [];
 
-  // Helper to calculate billing totals for a set of SOVs
-  const calcBillingTotals = (sovList: typeof sovs) => {
-    const totals = sovList.reduce((acc, sov) => {
-      const items = sovItems[sov.id] || [];
-      const scheduled = items.reduce((sum, item) => sum + (item.value_amount || 0), 0);
-      const billed = items.reduce((sum, item) => sum + (item.total_billed_amount || 0), 0);
-      return { scheduled: acc.scheduled + scheduled, billed: acc.billed + billed };
-    }, { scheduled: 0, billed: 0 });
-    const percent = totals.scheduled > 0 ? (totals.billed / totals.scheduled) * 100 : 0;
-    return { ...totals, percent };
-  };
-
-  // Calculate main contract billing totals
-  const mainContractBillingTotals = calcBillingTotals(contractSovs);
-  const mainBilledPercent = mainContractBillingTotals.percent;
-
-  // TC-specific billing totals
-  const gcToTcBilling = isTC ? calcBillingTotals(gcToTcSovs) : { scheduled: 0, billed: 0, percent: 0 };
-  const tcToFcBilling = isTC ? calcBillingTotals(tcToFcSovs) : { scheduled: 0, billed: 0, percent: 0 };
 
   const renderSOVCard = (sov: ContractSOV) => {
         const contract = getContractForSOV(sov);
