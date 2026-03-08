@@ -14,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function PlatformDashboard() {
   const navigate = useNavigate();
+  const metrics = usePlatformMetrics();
   const [counts, setCounts] = useState({ orgs: 0, users: 0, projects: 0, logs: 0 });
   const [searchQuery, setSearchQuery] = useState('');
   const { results, searching, search } = usePlatformSearch();
