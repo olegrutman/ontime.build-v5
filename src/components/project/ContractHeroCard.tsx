@@ -142,7 +142,7 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
     const fcContract = downstreamContract;
     const fcValue = fcContract?.contract_sum || 0;
     return (
-      <div className="bg-white dark:bg-card rounded-2xl shadow-sm p-6">
+      <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-6">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
           Contract with {getContractCounterpartyName(fcContract, userOrgIds)}
         </p>
