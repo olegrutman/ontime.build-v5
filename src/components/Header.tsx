@@ -70,13 +70,9 @@ export function Header() {
           <div className="flex items-center gap-2">
             {user ? (
               <>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary-foreground/10"
-                >
-                  <Bell className="w-5 h-5" />
-                </Button>
+                <div className="[&_button]:text-primary-foreground/70 [&_button:hover]:text-primary-foreground [&_button:hover]:bg-primary-foreground/10">
+                  <NotificationSheet />
+                </div>
                 <Button
                   size="sm"
                   className="bg-primary-foreground text-primary hover:bg-primary-foreground/90 gap-1.5"
