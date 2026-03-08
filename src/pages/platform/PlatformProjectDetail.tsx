@@ -140,7 +140,7 @@ export default function PlatformProjectDetail() {
       supabase.from('projects').select('*').eq('id', projectId).single(),
       supabase
         .from('project_team')
-        .select('id, role, accepted, organization:organizations(id, name, type)')
+        .select('id, role, status, accepted_at, organization:organizations!project_team_org_id_fkey(id, name, type)')
         .eq('project_id', projectId),
       supabase
         .from('project_contracts')
