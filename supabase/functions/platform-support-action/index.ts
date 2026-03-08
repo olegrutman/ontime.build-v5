@@ -228,6 +228,7 @@ Deno.serve(async (req) => {
           });
         }
         snapshotAfter = { accepted: true };
+        logMeta = { p_action_summary: `Force-accepted project team membership ${team_id}` };
         result = { success: true, message: "Project team membership accepted" };
         break;
       }
