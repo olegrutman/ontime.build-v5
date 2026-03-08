@@ -1,23 +1,20 @@
 
 
-# Add "Send Nudge" Reminder Feature Across All Processes — COMPLETED
+# Stop Sasha from Bouncing
 
-## What It Does
-Users can send a "Send Reminder" nudge to the other party when an invoice, WO, PO, or return is awaiting action. Server-enforced 24h cooldown prevents spam.
+## Change
 
-## Changes Made
+In `src/components/sasha/SashaBubble.tsx`, stop the bounce/ping animation when the user clicks the Sasha bubble — even without opening the chat. Currently `pulse` only turns off inside the `open` effect. The fix:
 
-### Database (1 migration)
-- Added `NUDGE` to `notification_type` enum
-- Created `nudge_log` table with RLS
-- Created `send_nudge(_entity_type, _entity_id)` RPC (SECURITY DEFINER) that validates state, enforces cooldown, and inserts notification
+1. **On bubble click**, always set `setPulse(false)` regardless of whether the panel opens or closes. This stops the bounce immediately on first interaction.
+2. **Persist dismissal** via `localStorage` key `sasha_pulse_dismissed` so the bounce never returns after the user has dismissed it once.
+3. Initialize `pulse` from `localStorage` — if already dismissed, start with `false`.
 
-### Frontend
-- **`src/hooks/useNudge.ts`** — Shared hook wrapping the RPC call with loading/sent state
-- **`InvoiceDetail.tsx`** — "Send Reminder" button when status=SUBMITTED and user is invoice creator
-- **`PODetail.tsx`** — "Send Reminder" button when status=SUBMITTED and user is buyer (not supplier)
-- **`ReturnDetail.tsx`** — "Send Reminder" button when status=SUBMITTED and user is creator org
-- **`WorkItemActions.tsx`** — "Send Reminder" button when state=PRICED and user is TC
+### File: `src/components/sasha/SashaBubble.tsx`
 
-### Email
-- Added `NUDGE: "notify_email"` to `send-notification-email` edge function
+- Change `pulse` init: `useState(() => !localStorage.getItem('sasha_pulse_dismissed'))`
+- Update the bubble's `onClick` to also call `setPulse(false)` and set `localStorage.setItem('sasha_pulse_dismissed', 'true')`
+- Keep the existing `open` effect that sets `setPulse(false)` as a safety net
+
+Single file change, minimal diff.
+
