@@ -30,6 +30,7 @@ interface TMTimeCardsPanelProps {
   isTC: boolean;
   isFC: boolean;
   hasTC?: boolean;
+  hasFCParticipant?: boolean;
 }
 
 interface TimeCard {
