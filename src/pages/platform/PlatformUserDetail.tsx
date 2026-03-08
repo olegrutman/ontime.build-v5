@@ -217,6 +217,16 @@ export default function PlatformUserDetail() {
             <MapPin className="h-4 w-4 mr-1" /> Edit Address
           </Button>
         )}
+        {isOwner && (
+          <Button variant="outline" size="sm" onClick={() => { setNewJobTitle(profile.job_title || ''); setEditJobTitleOpen(true); }}>
+            <Briefcase className="h-4 w-4 mr-1" /> Edit Job Title
+          </Button>
+        )}
+        {isOwner && (
+          <Button variant="outline" size="sm" onClick={() => { setNewPhone(profile.phone || ''); setEditPhoneOpen(true); }}>
+            <Phone className="h-4 w-4 mr-1" /> Edit Phone
+          </Button>
+        )}
         {canImpersonate && (
           <Button variant="outline" size="sm" onClick={() => setLoginAsOpen(true)}>
             <LogIn className="h-4 w-4 mr-1" /> Login As
