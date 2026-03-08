@@ -47,16 +47,35 @@ export function SashaBubble() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Stop pulse + hide label after first open
-  useEffect(() => {
-    if (open) { setPulse(false); setShowLabel(false); }
-  }, [open]);
+  const isOnDashboard = location.pathname === '/dashboard';
 
-  // Auto-dismiss label after 6 seconds
+  // Stop pulse + hide label after first open; dismiss welcome
+  useEffect(() => {
+    if (open) {
+      setPulse(false);
+      setShowLabel(false);
+      if (showWelcome) {
+        setShowWelcome(false);
+        localStorage.setItem('sasha_welcome_seen', 'true');
+      }
+    }
+  }, [open, showWelcome]);
+
+  // Auto-dismiss label after 6s (or welcome after 8s)
   useEffect(() => {
     const t = setTimeout(() => setShowLabel(false), 6000);
     return () => clearTimeout(t);
   }, []);
+
+  useEffect(() => {
+    if (showWelcome && isOnDashboard) {
+      const t = setTimeout(() => {
+        setShowWelcome(false);
+        localStorage.setItem('sasha_welcome_seen', 'true');
+      }, 8000);
+      return () => clearTimeout(t);
+    }
+  }, [showWelcome, isOnDashboard]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
