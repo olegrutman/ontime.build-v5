@@ -603,15 +603,19 @@ Deno.serve(async (req) => {
         });
     }
 
-    // Log the action
-    await adminClient.rpc("log_support_action", {
-      _performed_by: callerId,
-      _action_type: action_type,
-      _target_type: action_type,
-      _target_id: targetId || "unknown",
-      _reason: reason,
-      _snapshot_before: snapshotBefore ? JSON.stringify(snapshotBefore) : null,
-      _snapshot_after: snapshotAfter ? JSON.stringify(snapshotAfter) : null,
+    // Log the action using user's client so auth.uid() resolves inside the RPC
+    await userClient.rpc("log_support_action", {
+      p_action_type: action_type,
+      p_reason: reason,
+      p_action_summary: logMeta.p_action_summary || `${action_type} on ${targetId}`,
+      p_target_user_id: logMeta.p_target_user_id || null,
+      p_target_user_email: logMeta.p_target_user_email || null,
+      p_target_org_id: logMeta.p_target_org_id || null,
+      p_target_org_name: logMeta.p_target_org_name || null,
+      p_target_project_id: logMeta.p_target_project_id || null,
+      p_target_project_name: logMeta.p_target_project_name || null,
+      p_before_snapshot: snapshotBefore ? JSON.stringify(snapshotBefore) : null,
+      p_after_snapshot: snapshotAfter ? JSON.stringify(snapshotAfter) : null,
     });
 
     return new Response(JSON.stringify(result), {
