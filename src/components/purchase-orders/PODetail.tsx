@@ -575,6 +575,9 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
         </CardContent>
       </Card>
 
+      {/* Activity Timeline */}
+      <POActivityTimeline po={po} />
+
       {/* Pricing Visibility Notice */}
       {!canViewPricing && hasPricing && (
         <Card className="border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800">
