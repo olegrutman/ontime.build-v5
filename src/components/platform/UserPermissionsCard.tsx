@@ -54,7 +54,8 @@ function getEffectiveValue(
   perms: MemberPermissions | null,
 ): boolean {
   if (isAdmin) return true;
-  const roleDefault = ROLE_PERMISSIONS[role]?.[DB_COL_TO_ROLE_KEY[dbCol]] ?? false;
+  const roleKey = DB_COL_TO_ROLE_KEY[dbCol];
+  const roleDefault = roleKey ? (ROLE_PERMISSIONS[role]?.[roleKey] ?? false) : false;
   if (!perms) return roleDefault;
   if (dbCol in perms && typeof (perms as any)[dbCol] === 'boolean') return (perms as any)[dbCol];
   return roleDefault;
