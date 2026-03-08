@@ -17,6 +17,9 @@ interface ProjectData {
   name: string;
   status: string;
   address: any;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
   created_at: string;
   created_by: string | null;
 }
