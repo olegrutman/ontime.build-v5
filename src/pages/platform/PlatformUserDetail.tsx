@@ -307,6 +307,14 @@ export default function PlatformUserDetail() {
         </CardContent>
       </Card>
 
+      <UserPermissionsCard
+        memberships={memberships}
+        permissionsMap={permissionsMap}
+        isOwner={isOwner}
+        onSave={handleEditPermissions}
+        actionLoading={actionLoading}
+      />
+
       {/* Dialogs */}
       <SupportActionDialog open={resetPasswordOpen} onOpenChange={setResetPasswordOpen} title="Reset Password" description={`Generate a password recovery link for ${profile.email}.`} onConfirm={handleResetPassword} loading={actionLoading} />
 
