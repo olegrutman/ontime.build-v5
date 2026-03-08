@@ -61,7 +61,7 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
   // Inline edit overlay
   if (editingId) {
     return (
-      <div className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 space-y-3">
+      <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 space-y-3">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Edit Contract</p>
         <div className="flex gap-2 items-end flex-wrap">
           <div className="relative flex-1 min-w-[120px]">
