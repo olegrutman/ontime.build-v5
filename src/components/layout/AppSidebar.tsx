@@ -34,7 +34,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ROLE_LABELS, ROLE_PERMISSIONS } from '@/types/organization';
+import { ROLE_LABELS } from '@/types/organization';
 import { cn } from '@/lib/utils';
 import { OntimeLogo } from '@/components/ui/OntimeLogo';
 
