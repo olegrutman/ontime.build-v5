@@ -172,6 +172,7 @@ Deno.serve(async (req) => {
             headers: corsHeaders,
           });
         }
+        logMeta = { p_target_user_id: user_id, p_target_user_email: profileData.email, p_action_summary: `Generated recovery link for ${profileData.email}` };
         result = { success: true, message: "Recovery link generated" };
         break;
       }
