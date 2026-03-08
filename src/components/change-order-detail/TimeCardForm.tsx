@@ -20,27 +20,43 @@ interface TimeCardFormProps {
   selfPerforming?: boolean;
 }
 
-export function TimeCardForm({ onSubmit, onCancel, isSubmitting }: TimeCardFormProps) {
+export function TimeCardForm({ onSubmit, onCancel, isSubmitting, selfPerforming = false }: TimeCardFormProps) {
   const [entryDate, setEntryDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [menCount, setMenCount] = useState('');
   const [hoursPerMan, setHoursPerMan] = useState('');
+  const [ownHours, setOwnHours] = useState('');
   const [description, setDescription] = useState('');
 
   const men = parseInt(menCount) || 0;
   const hours = parseFloat(hoursPerMan) || 0;
   const manHours = men * hours;
+  const tcHours = parseFloat(ownHours) || 0;
 
-  const isValid = men > 0 && hours > 0 && entryDate;
+  const isValid = selfPerforming
+    ? tcHours > 0 && entryDate
+    : men > 0 && hours > 0 && entryDate;
 
   const handleSubmit = (submit: boolean) => {
     if (!isValid) return;
-    onSubmit({
-      entry_date: entryDate,
-      fc_men_count: men,
-      fc_hours_per_man: hours,
-      fc_description: description,
-      submit,
-    });
+    if (selfPerforming) {
+      onSubmit({
+        entry_date: entryDate,
+        fc_men_count: 0,
+        fc_hours_per_man: 0,
+        fc_description: description,
+        submit,
+        selfPerforming: true,
+        tc_own_hours: tcHours,
+      });
+    } else {
+      onSubmit({
+        entry_date: entryDate,
+        fc_men_count: men,
+        fc_hours_per_man: hours,
+        fc_description: description,
+        submit,
+      });
+    }
   };
 
   return (
