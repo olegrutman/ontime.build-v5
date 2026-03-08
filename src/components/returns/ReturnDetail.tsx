@@ -331,6 +331,19 @@ export function ReturnDetail({ returnId, projectId, onBack }: ReturnDetailProps)
           </>
         )}
 
+        {/* Creator: Send Reminder (SUBMITTED) */}
+        {isCreatorOrg && returnData.status === 'SUBMITTED' && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => sendNudge('return', returnId)}
+            disabled={nudgeLoading || wasSent('return', returnId)}
+          >
+            <Bell className="h-4 w-4 mr-1" />
+            {wasSent('return', returnId) ? 'Reminder Sent' : 'Send Reminder'}
+          </Button>
+        )}
+
         {/* Supplier: Begin Review (SUBMITTED) */}
         {isSupplierOrg && returnData.status === 'SUBMITTED' && (
           <Button

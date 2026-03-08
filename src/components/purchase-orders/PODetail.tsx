@@ -14,6 +14,7 @@ import {
   Clock,
   Lock,
   Receipt,
+  Bell,
 } from 'lucide-react';
 import { useNudge } from '@/hooks/useNudge';
 import { supabase } from '@/integrations/supabase/client';

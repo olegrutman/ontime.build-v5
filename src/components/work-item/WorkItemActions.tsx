@@ -155,6 +155,19 @@ export function WorkItemActions({ workItem, currentRole, onStateChange }: WorkIt
           </Button>
         )}
 
+        {/* Send Reminder (TC only, PRICED state - waiting for GC approval) */}
+        {isTC && state === 'PRICED' && (
+          <Button
+            className="w-full"
+            variant="outline"
+            onClick={() => sendNudge('work_order', workItem.id)}
+            disabled={nudgeLoading || wasSent('work_order', workItem.id)}
+          >
+            <Bell className="w-4 h-4 mr-2" />
+            {wasSent('work_order', workItem.id) ? 'Reminder Sent' : 'Send Reminder'}
+          </Button>
+        )}
+
         {/* Approve (GC only, PRICED state) */}
         {canApprove && (
           <Button 
