@@ -197,7 +197,7 @@ function AppRoutes() {
           </Routes>
         </Suspense>
       </ErrorBoundary>
-      <SashaBubble />
+      <AuthenticatedSashaBubble />
       {!isDemoMode && <BoltGuide />}
     </div>
   );
