@@ -659,7 +659,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                                     </Button>
 
                                     {/* Delete button - only for unused items (no billing) */}
-                                 total_billed_amountled_amount_date || 0) === 0 ? (
+                                 {(item.total_billed_amount || 0) === 0 ? (
                                       <AlertDialog>
                                         <AlertDialogTrigger asChild>
                                           <Button size="icon" variant="ghost" className="h-10 w-10">
