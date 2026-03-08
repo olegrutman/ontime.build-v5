@@ -176,6 +176,8 @@ function TCPricingView({
   materialMarkup,
   profit,
   fcName,
+  isSelfPerforming,
+  internalCost,
 }: {
   laborTotal: number;
   materialTotal: number;
@@ -186,6 +188,8 @@ function TCPricingView({
   materialMarkup: number;
   profit: number;
   fcName?: string;
+  isSelfPerforming?: boolean;
+  internalCost?: number;
 }) {
   return (
     <div className="space-y-4">
