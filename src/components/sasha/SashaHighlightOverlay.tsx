@@ -68,7 +68,7 @@ export function SashaHighlightOverlay({ onSelect, onCancel }: Props) {
         <>
           <svg className="absolute inset-0 w-full h-full pointer-events-none">
             <defs>
-              <mask id="sasha-highlight-mask">
+              <mask id={maskId}>
                 <rect x="0" y="0" width="100%" height="100%" fill="white" />
                 <rect
                   x={rect.left - padding}
