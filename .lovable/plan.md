@@ -1,39 +1,26 @@
 
 
-# Allow Edit and Delete of Draft Invoices
+# Edit Job Title & Phone for Platform Owner
 
-## Current State
+## Approach
 
-- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
-- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
+Add a single new support action `EDIT_USER_PROFILE` to the edge function that accepts a `fields` object (job_title, phone) and updates the profiles table. This keeps it auditable with the existing reason/logging pattern.
 
-## Plan
+On the UI side, add two action buttons ("Edit Job Title", "Edit Phone") that open simple input dialogs followed by the SupportActionDialog for reason entry.
 
-### 1. Add Delete Invoice capability
+## Changes
 
-**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
-- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
-- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
-- Button placed in the action buttons area, styled as destructive/outline
+### 1. Edge Function — `supabase/functions/platform-support-action/index.ts`
+- Add `EDIT_USER_PROFILE: "PLATFORM_OWNER"` to `ACTION_MIN_ROLE`
+- Add case handler that takes `user_id` and `fields` (object with allowed keys: `job_title`, `phone`), snapshots before, updates profiles table, snapshots after
 
-**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
-- Add `onDelete` optional prop
-- Add trash icon to `hoverActions` array for DRAFT status
+### 2. UI — `src/pages/platform/PlatformUserDetail.tsx`
+- Add state for edit job title dialog and edit phone dialog
+- Add two new action buttons (Phone icon, Briefcase icon) in the Platform Owner actions row
+- Each opens a small Dialog with an Input field, then flows into SupportActionDialog for reason
+- On success, refresh profile data
+- For phone: use `formatPhone` from `src/lib/formatPhone.ts` for formatting
 
-**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
-- Delete line items then invoice from database
-- Show toast, refresh list
-- Pass `onDelete` to `InvoiceCard`
-
-### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
-
-**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
-- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
-- Show the button when `status === 'DRAFT' && canSubmit`
-
-### Files to Change
-
-- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
-- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
-- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
+### 3. No database migration needed
+Both `job_title` and `phone` columns already exist on the profiles table.
 
