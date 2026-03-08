@@ -394,6 +394,19 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       setWoMaterialTotal(woMaterial);
       setWoEquipmentTotal(woEquipment);
 
+      // FC-specific WO earnings (Bug 1/7: FC needs their own hours, not full WO price)
+      if (detectedRole === 'Field Crew') {
+        const approvedWOIds = approvedWOs.map(wo => wo.id);
+        if (approvedWOIds.length > 0) {
+          const { data: fcHoursData } = await supabase
+            .from('change_order_fc_hours')
+            .select('labor_total')
+            .in('change_order_id', approvedWOIds);
+          const fcEarnings = (fcHoursData || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0);
+          setFcWorkOrderEarnings(fcEarnings);
+        }
+      }
+
       // FC costs (TC view)
       if (detectedRole === 'Trade Contractor') {
         const woIds = wos.map(wo => wo.id);
