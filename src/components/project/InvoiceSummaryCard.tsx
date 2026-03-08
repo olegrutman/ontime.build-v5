@@ -127,14 +127,14 @@ export function InvoiceSummaryCard({ projectId }: InvoiceSummaryCardProps) {
             break;
         }
 
-        // Calculate totals based on direction
-        if (isSender) {
+        // Calculate totals based on direction (exclude DRAFT from financial totals)
+        if (isSender && invoice.status !== 'DRAFT') {
           sentTotal += amount;
           if (invoice.status === 'APPROVED' || invoice.status === 'PAID') {
             myEarnings += amount;
           }
         }
-        if (isReceiver) {
+        if (isReceiver && invoice.status !== 'DRAFT') {
           receivedTotal += amount;
         }
       }

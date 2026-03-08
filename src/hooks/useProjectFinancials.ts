@@ -32,6 +32,7 @@ export interface ProjectFinancials {
   approvedWOCount: number;
   workOrderFCCost: number;
   tcInternalCostTotal: number;
+  fcWorkOrderEarnings: number;
   retainageAmount: number;
   outstanding: number;
   materialEstimate: number;
@@ -105,6 +106,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [workOrderTotal, setWorkOrderTotal] = useState(0);
   const [workOrderFCCost, setWorkOrderFCCost] = useState(0);
   const [tcInternalCostTotal, setTcInternalCostTotal] = useState(0);
+  const [fcWorkOrderEarnings, setFcWorkOrderEarnings] = useState(0);
   const [materialEstimate, setMaterialEstimate] = useState(0);
   const [materialOrdered, setMaterialOrdered] = useState(0);
   const [totalPaidToFC, setTotalPaidToFC] = useState(0);
@@ -392,6 +394,19 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       setWoMaterialTotal(woMaterial);
       setWoEquipmentTotal(woEquipment);
 
+      // FC-specific WO earnings (Bug 1/7: FC needs their own hours, not full WO price)
+      if (detectedRole === 'Field Crew') {
+        const approvedWOIds = approvedWOs.map(wo => wo.id);
+        if (approvedWOIds.length > 0) {
+          const { data: fcHoursData } = await supabase
+            .from('change_order_fc_hours')
+            .select('labor_total')
+            .in('change_order_id', approvedWOIds);
+          const fcEarnings = (fcHoursData || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0);
+          setFcWorkOrderEarnings(fcEarnings);
+        }
+      }
+
       // FC costs (TC view)
       if (detectedRole === 'Trade Contractor') {
         const woIds = wos.map(wo => wo.id);
@@ -530,7 +545,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
 
   return {
     loading, viewerRole, contracts, upstreamContract, downstreamContract, userOrgIds,
-    billedToDate, workOrderTotal, approvedWOCount, workOrderFCCost, tcInternalCostTotal, retainageAmount, outstanding,
+    billedToDate, workOrderTotal, approvedWOCount, workOrderFCCost, tcInternalCostTotal, fcWorkOrderEarnings, retainageAmount, outstanding,
     materialEstimate, materialOrdered, totalPaidToFC,
     materialEstimateTotal, approvedEstimateSum, isTCMaterialResponsible, isGCMaterialResponsible,
     isDesignatedSupplier,

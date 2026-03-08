@@ -350,7 +350,7 @@ export function useDashboardData(): DashboardData {
         const projectContracts = contracts.filter(c => c.project_id === project.id);
         
         if (orgType === 'GC') {
-          const gcContract = projectContracts.find(c => c.from_role === 'General Contractor');
+          const gcContract = projectContracts.find(c => c.to_role === 'General Contractor');
           contractValue = gcContract?.contract_sum || null;
         } else if (orgType === 'TC') {
           const tcContract = projectContracts.find(c => c.to_role === 'Trade Contractor');
@@ -540,7 +540,6 @@ export function useDashboardData(): DashboardData {
             const fcLaborCost = (fcHours || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0);
             totalCosts += fcLaborCost;
 
-            // Also sum tc_internal_cost for self-performing WOs
             const tcInternalCost = woList.reduce((sum, wo) => sum + ((wo as any).tc_internal_cost || 0), 0);
             totalCosts += tcInternalCost;
           }
@@ -552,6 +551,89 @@ export function useDashboardData(): DashboardData {
           return contract?.from_org_id === currentOrg.id;
         });
         totalBilled = billedInvoices.reduce((sum, i) => sum + (i.total_amount || 0), 0);
+      } else if (orgType === 'GC') {
+        // GC Revenue = owner_contract_value or sum of contracts where GC is to_org (what TCs bill GC)
+        // GC Costs = sum of contracts where GC is to_org (amounts owed to TCs) + WO totals
+        contracts.forEach(c => {
+          if (c.to_org_id === currentOrg.id) {
+            totalCosts += c.contract_sum || 0;
+          }
+        });
+
+        // Use owner_contract_value as revenue if available
+        const ownerValues = contracts
+          .filter(c => c.to_org_id === currentOrg.id)
+          .map(c => (c as any).owner_contract_value)
+          .filter((v: any) => v != null && v > 0);
+        if (ownerValues.length > 0) {
+          totalRevenue = ownerValues.reduce((sum: number, v: number) => sum + v, 0);
+        } else {
+          totalRevenue = totalCosts; // fallback: show contract obligations
+        }
+
+        if (projectIds.length > 0) {
+          const { data: workOrders } = await supabase
+            .from('change_order_projects')
+            .select('id, final_price, status')
+            .in('project_id', projectIds)
+            .in('status', ['approved', 'contracted']);
+
+          const woList = workOrders || [];
+          totalWorkOrders = woList.length;
+          totalWorkOrderValue = woList.reduce((sum, wo) => sum + (wo.final_price || 0), 0);
+          totalCosts += totalWorkOrderValue;
+        }
+
+        // GC billed = invoices received (where GC is to_org)
+        const receivedInvoices = allInvoices.filter(i => {
+          if (i.status === 'DRAFT' || !i.contract_id) return false;
+          const contract = contractDetailMap.get(i.contract_id);
+          return contract?.to_org_id === currentOrg.id;
+        });
+        totalBilled = receivedInvoices.reduce((sum, i) => sum + (i.total_amount || 0), 0);
+      } else if (orgType === 'FC') {
+        // FC Revenue = contracts where FC is from_org + FC hours from WOs
+        contracts.forEach(c => {
+          if (c.from_org_id === currentOrg.id) {
+            totalRevenue += c.contract_sum || 0;
+          }
+        });
+
+        // FC labor budget as costs
+        const fcContracts = contracts.filter(c => c.from_org_id === currentOrg.id);
+        fcContracts.forEach(c => {
+          totalCosts += (c as any).labor_budget || 0;
+        });
+
+        if (projectIds.length > 0) {
+          const { data: workOrders } = await supabase
+            .from('change_order_projects')
+            .select('id, status')
+            .in('project_id', projectIds)
+            .in('status', ['approved', 'contracted']);
+
+          const woList = workOrders || [];
+          totalWorkOrders = woList.length;
+
+          if (woList.length > 0) {
+            const woIds = woList.map(wo => wo.id);
+            const { data: fcHours } = await supabase
+              .from('change_order_fc_hours')
+              .select('labor_total')
+              .in('change_order_id', woIds);
+            const fcEarnings = (fcHours || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0);
+            totalWorkOrderValue = fcEarnings;
+            totalRevenue += fcEarnings;
+          }
+        }
+
+        // FC billed = invoices sent (where FC is from_org)
+        const sentInvoices = allInvoices.filter(i => {
+          if (i.status === 'DRAFT' || !i.contract_id) return false;
+          const contract = contractDetailMap.get(i.contract_id);
+          return contract?.from_org_id === currentOrg.id;
+        });
+        totalBilled = sentInvoices.reduce((sum, i) => sum + (i.total_amount || 0), 0);
       }
 
       const potentialProfit = totalRevenue - totalCosts;
