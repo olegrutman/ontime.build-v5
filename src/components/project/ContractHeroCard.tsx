@@ -116,7 +116,7 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
   if (isSupplier) {
     const supplierOutstanding = supplierInvoiced - supplierPaid;
     return (
-      <div className="bg-white dark:bg-card rounded-2xl shadow-sm p-6">
+      <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-6">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Order Value</p>
         <p className="text-3xl font-bold tabular-nums text-foreground">{fmt(supplierOrderValue)}</p>
         <div className="border-t mt-4 pt-4 grid grid-cols-3 gap-4">
