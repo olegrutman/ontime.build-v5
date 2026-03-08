@@ -21,27 +21,35 @@ export default function PlatformUsers() {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
+  const PAGE_SIZE = 25;
+
+  useEffect(() => {
+    setPage(0);
+  }, [query]);
 
   useEffect(() => {
     const timer = setTimeout(async () => {
       setLoading(true);
       let request = supabase
         .from('profiles')
-        .select('user_id, email, full_name, created_at')
+        .select('user_id, email, full_name, created_at', { count: 'exact' })
         .order('created_at', { ascending: false })
-        .limit(200);
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (query.trim().length > 0) {
         const q = `%${query.trim()}%`;
         request = request.or(`email.ilike.${q},full_name.ilike.${q}`);
       }
 
-      const { data } = await request;
+      const { data, count } = await request;
       setUsers((data || []) as UserRow[]);
+      setTotalCount(count || 0);
       setLoading(false);
     }, 300);
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, page]);
 
   return (
     <PlatformLayout
