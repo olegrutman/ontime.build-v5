@@ -203,6 +203,13 @@ export default function PlatformProjectDetail() {
       poTotal: poRows.reduce((s: number, r: any) => s + (r.po_total || 0), 0),
     });
 
+    // Fetch supplier estimates
+    const { data: estData } = await supabase
+      .from('supplier_estimates')
+      .select('id, name, status, total_amount, created_at, supplier_org:organizations!supplier_estimates_supplier_org_id_fkey(name)')
+      .eq('project_id', projectId);
+    setEstimates((estData || []) as unknown as SupplierEstimateRow[]);
+
     setLoading(false);
   };
 
