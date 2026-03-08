@@ -111,7 +111,7 @@ export function getContractDisplayName(
 ): string {
   const from = fromOrgName || fromRole;
   const to = toOrgName || toRole;
-  return `${from} → ${to}`;
+  return `${to} → ${from}`;
 }
 
 // Map project type to template key
