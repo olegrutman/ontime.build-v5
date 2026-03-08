@@ -189,6 +189,7 @@ function AppRoutes() {
             <Route path="/platform/orgs/:orgId" element={<RequirePlatformRole><PlatformOrgDetail /></RequirePlatformRole>} />
             <Route path="/platform/users" element={<RequirePlatformRole><PlatformUsers /></RequirePlatformRole>} />
             <Route path="/platform/users/:userId" element={<RequirePlatformRole><PlatformUserDetail /></RequirePlatformRole>} />
+            <Route path="/platform/projects" element={<RequirePlatformRole><PlatformProjects /></RequirePlatformRole>} />
             <Route path="/platform/projects/:projectId" element={<RequirePlatformRole><PlatformProjectDetail /></RequirePlatformRole>} />
             <Route path="/platform/logs" element={<RequirePlatformRole><PlatformLogs /></RequirePlatformRole>} />
 

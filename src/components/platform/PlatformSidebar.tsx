@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { to: '/platform', icon: LayoutDashboard, label: 'Dashboard', end: true },
   { to: '/platform/orgs', icon: Building2, label: 'Organizations' },
   { to: '/platform/users', icon: Users, label: 'Users' },
+  { to: '/platform/projects', icon: FolderKanban, label: 'Projects' },
   { to: '/platform/logs', icon: ScrollText, label: 'Support Logs' },
 ];
 
