@@ -20,9 +20,10 @@ interface TMPeriodActionsProps {
   period: TMPeriod;
   currentRole: AppRole | null;
   onAction: () => void;
+  hasFCParticipant?: boolean;
 }
 
-export function TMPeriodActions({ period, currentRole, onAction }: TMPeriodActionsProps) {
+export function TMPeriodActions({ period, currentRole, onAction, hasFCParticipant = true }: TMPeriodActionsProps) {
   const [loading, setLoading] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectionNotes, setRejectionNotes] = useState('');
@@ -31,23 +32,50 @@ export function TMPeriodActions({ period, currentRole, onAction }: TMPeriodActio
   const isTC = currentRole === 'TC_PM';
   const isFS = currentRole === 'FS';
   const isGC = currentRole === 'GC_PM';
+  const isSelfPerforming = isTC && !hasFCParticipant;
 
   // Action visibility rules
+  // When self-performing (TC with no FC), TC can submit & auto-approve in one step
   const canSubmit = (isTC || isFS) && status === 'OPEN';
-  const canApprove = isTC && status === 'SUBMITTED'; // TC approves periods
-  const canReject = isTC && status === 'SUBMITTED';
+  const canApprove = isTC && status === 'SUBMITTED' && !isSelfPerforming;
+  const canReject = isTC && status === 'SUBMITTED' && !isSelfPerforming;
 
   const handleSubmit = async () => {
     setLoading(true);
-    const { error } = await supabase.rpc('submit_tm_period', {
-      period_id: period.id
-    });
+    
+    if (isSelfPerforming) {
+      // Self-performing TC: submit and immediately approve
+      const { error: submitError } = await supabase.rpc('submit_tm_period', {
+        period_id: period.id
+      });
+      
+      if (submitError) {
+        toast.error(`Failed to submit: ${submitError.message}`);
+        setLoading(false);
+        return;
+      }
 
-    if (error) {
-      toast.error(`Failed to submit: ${error.message}`);
+      const { error: approveError } = await supabase.rpc('approve_tm_period', {
+        period_id: period.id
+      });
+
+      if (approveError) {
+        toast.error(`Failed to auto-approve: ${approveError.message}`);
+      } else {
+        toast.success('Period submitted & approved (self-performing)');
+        onAction();
+      }
     } else {
-      toast.success('Period submitted for approval');
-      onAction();
+      const { error } = await supabase.rpc('submit_tm_period', {
+        period_id: period.id
+      });
+
+      if (error) {
+        toast.error(`Failed to submit: ${error.message}`);
+      } else {
+        toast.success('Period submitted for approval');
+        onAction();
+      }
     }
     setLoading(false);
   };
@@ -99,7 +127,7 @@ export function TMPeriodActions({ period, currentRole, onAction }: TMPeriodActio
       {canSubmit && (
         <Button size="sm" onClick={handleSubmit} disabled={loading}>
           <Send className="w-3 h-3 mr-1" />
-          Submit
+          {isSelfPerforming ? 'Submit & Approve' : 'Submit'}
         </Button>
       )}
 

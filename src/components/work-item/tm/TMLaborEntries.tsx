@@ -4,8 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { TMLaborEntry, TMPeriod } from './types';
@@ -16,17 +16,37 @@ interface TMLaborEntriesProps {
   currentRole: AppRole | null;
   canViewRates: boolean;
   canSubmitTime: boolean;
+  hasFCParticipant?: boolean;
 }
 
-export function TMLaborEntries({ period, currentRole, canViewRates, canSubmitTime }: TMLaborEntriesProps) {
-  const { user } = useAuth();
+export function TMLaborEntries({ period, currentRole, canViewRates, canSubmitTime, hasFCParticipant = true }: TMLaborEntriesProps) {
+  const { user, userOrgRoles } = useAuth();
   const [entries, setEntries] = useState<TMLaborEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [defaultRate, setDefaultRate] = useState<number | null>(null);
 
   const isEditable = period.status === 'OPEN';
   const isTC = currentRole === 'TC_PM';
   const isFS = currentRole === 'FS';
   const canAddEntries = canSubmitTime && isEditable && (isTC || isFS);
+  const isSelfPerforming = isTC && !hasFCParticipant;
+
+  // Fetch default hourly rate from org_settings
+  useEffect(() => {
+    const fetchDefaultRate = async () => {
+      if (!userOrgRoles || userOrgRoles.length === 0) return;
+      const orgId = userOrgRoles[0].organization_id;
+      const { data } = await supabase
+        .from('org_settings')
+        .select('default_hourly_rate')
+        .eq('organization_id', orgId)
+        .maybeSingle();
+      if (data?.default_hourly_rate) {
+        setDefaultRate(data.default_hourly_rate);
+      }
+    };
+    fetchDefaultRate();
+  }, [userOrgRoles]);
 
   useEffect(() => {
     fetchEntries();
@@ -59,6 +79,7 @@ export function TMLaborEntries({ period, currentRole, canViewRates, canSubmitTim
         hours: 0,
         description: '',
         entered_by: user.id,
+        hourly_rate: defaultRate,
       })
       .select()
       .single();
@@ -118,6 +139,9 @@ export function TMLaborEntries({ period, currentRole, canViewRates, canSubmitTim
         <h4 className="text-sm font-medium flex items-center gap-2">
           <Clock className="w-4 h-4" />
           Labor ({totalHours.toFixed(1)} hrs)
+          {isSelfPerforming && (
+            <Badge variant="secondary" className="text-xs">Self-Performing</Badge>
+          )}
           {canViewRates && totalCost !== null && (
             <span className="text-muted-foreground">
               • {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(totalCost)}

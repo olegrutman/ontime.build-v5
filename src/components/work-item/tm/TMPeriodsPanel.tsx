@@ -20,6 +20,7 @@ interface TMPeriodsPanelProps {
 export function TMPeriodsPanel({ workItemId, currentRole, canViewRates, canSubmitTime = true, isWorkItemOpen }: TMPeriodsPanelProps) {
   const [periods, setPeriods] = useState<TMPeriod[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasFCParticipant, setHasFCParticipant] = useState(true);
 
   const isTC = currentRole === 'TC_PM';
   const isFS = currentRole === 'FS';
@@ -28,6 +29,7 @@ export function TMPeriodsPanel({ workItemId, currentRole, canViewRates, canSubmi
 
   useEffect(() => {
     fetchPeriods();
+    fetchFCStatus();
     
     // Set up realtime subscription
     const channel = supabase
@@ -50,6 +52,19 @@ export function TMPeriodsPanel({ workItemId, currentRole, canViewRates, canSubmi
       supabase.removeChannel(channel);
     };
   }, [workItemId]);
+
+  const fetchFCStatus = async () => {
+    // Check if any FC (trade_contractor type org that isn't the TC's own org) is a participant
+    const { data } = await supabase
+      .from('work_item_participants')
+      .select('organization:organizations(id, type)')
+      .eq('work_item_id', workItemId);
+
+    if (data) {
+      const hasFC = data.some((p: any) => p.organization?.type === 'field_contractor');
+      setHasFCParticipant(hasFC);
+    }
+  };
 
   const fetchPeriods = async () => {
     setLoading(true);
@@ -135,6 +150,7 @@ export function TMPeriodsPanel({ workItemId, currentRole, canViewRates, canSubmi
               canViewRates={canViewRates}
               canSubmitTime={canSubmitTime}
               onUpdate={fetchPeriods}
+              hasFCParticipant={hasFCParticipant}
             />
           ))}
         </div>

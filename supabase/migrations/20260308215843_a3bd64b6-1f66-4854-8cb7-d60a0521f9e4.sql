@@ -1,0 +1,1 @@
+ALTER TABLE public.tm_material_entries ADD COLUMN entered_by uuid REFERENCES auth.users(id);

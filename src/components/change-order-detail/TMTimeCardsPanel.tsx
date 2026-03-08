@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -57,7 +57,7 @@ interface TimeCard {
 }
 
 export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC, hasTC = true }: TMTimeCardsPanelProps) {
-  const { user } = useAuth();
+  const { user, userOrgRoles } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
@@ -80,6 +80,42 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC, hasTC = true
     },
     enabled: !!changeOrderId,
   });
+
+  // Auto-populate rates from org_settings when they're not set
+  useEffect(() => {
+    const autoPopulateRate = async () => {
+      if (!workOrder || !userOrgRoles || userOrgRoles.length === 0) return;
+      const orgId = userOrgRoles[0].organization_id;
+      
+      const needsTC = isTC && (workOrder.tc_hourly_rate === null || workOrder.tc_hourly_rate === 0);
+      const needsFC = isFC && (workOrder.fc_hourly_rate === null || workOrder.fc_hourly_rate === 0);
+      
+      if (!needsTC && !needsFC) return;
+
+      const { data: settings } = await supabase
+        .from('org_settings')
+        .select('default_hourly_rate')
+        .eq('organization_id', orgId)
+        .maybeSingle();
+
+      if (!settings?.default_hourly_rate) return;
+
+      const updates: Record<string, number> = {};
+      if (needsTC) updates.tc_hourly_rate = settings.default_hourly_rate;
+      if (needsFC) updates.fc_hourly_rate = settings.default_hourly_rate;
+
+      if (Object.keys(updates).length > 0) {
+        const { error } = await supabase
+          .from('change_order_projects')
+          .update(updates as never)
+          .eq('id', changeOrderId);
+        if (!error) {
+          queryClient.invalidateQueries({ queryKey: ['change-order-rate', changeOrderId] });
+        }
+      }
+    };
+    autoPopulateRate();
+  }, [workOrder, userOrgRoles, isTC, isFC, changeOrderId]);
 
   const tcRate = workOrder?.tc_hourly_rate ?? 0;
   const fcRate = workOrder?.fc_hourly_rate ?? 0;
