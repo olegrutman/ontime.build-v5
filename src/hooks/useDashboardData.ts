@@ -350,7 +350,7 @@ export function useDashboardData(): DashboardData {
         const projectContracts = contracts.filter(c => c.project_id === project.id);
         
         if (orgType === 'GC') {
-          const gcContract = projectContracts.find(c => c.from_role === 'General Contractor');
+          const gcContract = projectContracts.find(c => c.to_role === 'General Contractor');
           contractValue = gcContract?.contract_sum || null;
         } else if (orgType === 'TC') {
           const tcContract = projectContracts.find(c => c.to_role === 'Trade Contractor');
