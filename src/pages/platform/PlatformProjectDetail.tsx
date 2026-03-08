@@ -184,12 +184,12 @@ export default function PlatformProjectDetail() {
     setPos((posRes.data || []) as unknown as PORow[]);
 
     // Build status count maps
-    const buildCounts = (data: any[]) => {
+    const buildCounts = (data: any[], key = 'status') => {
       const map: StatusCounts = {};
-      data.forEach((r) => { map[r.status] = (map[r.status] || 0) + 1; });
+      data.forEach((r) => { const v = r[key]; if (v) map[v] = (map[v] || 0) + 1; });
       return map;
     };
-    setWoCounts(buildCounts(woStatusRes.data || []));
+    setWoCounts(buildCounts(woStatusRes.data || [], 'state'));
     setPoCounts(buildCounts(poStatusRes.data || []));
     setInvCounts(buildCounts(invAllRes.data || []));
 
