@@ -98,11 +98,13 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
     );
   }
 
-  // FC Profit
+  // FC Profit — use fcWorkOrderEarnings (FC's hours), not full WO price
   if (viewerRole === 'Field Crew') {
+    const { fcWorkOrderEarnings } = financials;
     const fcValue = downstreamContract?.contract_sum || 0;
     const hasLaborBudget = laborBudget != null && laborBudget > 0;
-    const fcProfit = hasLaborBudget ? fcValue + workOrderTotal - laborBudget : 0;
+    const fcContractTotal = fcValue + fcWorkOrderEarnings;
+    const fcProfit = hasLaborBudget ? fcContractTotal - laborBudget : 0;
 
     if (!hasLaborBudget) return null;
 
@@ -114,7 +116,7 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
         </div>
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Contract Total</span>
-          <span className="text-sm font-semibold tabular-nums">{fmt(fcValue + workOrderTotal)}</span>
+          <span className="text-sm font-semibold tabular-nums">{fmt(fcContractTotal)}</span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Labor Budget</span>
