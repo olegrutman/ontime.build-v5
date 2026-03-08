@@ -1,39 +1,34 @@
 
 
-# Allow Edit and Delete of Draft Invoices
+# Bug: TC→FC SOV Shows Wrong Billed Total ($28,812)
 
-## Current State
+## Root Cause
 
-- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
-- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
+The `billed_to_date` field on `project_sov_items` is a **project-wide aggregate** — it sums billing across ALL SOVs for the same item name. The **SOV-specific** billed amount is stored in `total_billed_amount`.
 
-## Plan
+**Evidence from network data** for the FC→TC SOV (`7ede55c5`):
+- "First Sub-floor TJI's": `billed_to_date=14,699.50` (cross-SOV), `total_billed_amount=5,950` (this SOV only)
+- "First Sub-floor Sheeting": `billed_to_date=9,862.85` (cross-SOV), `total_billed_amount=3,612.50` (this SOV only)
 
-### 1. Add Delete Invoice capability
+Summing `billed_to_date` for that SOV gives ~$28,812 (the wrong number). Summing `total_billed_amount` gives ~$13,812 (correct).
 
-**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
-- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
-- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
-- Button placed in the action buttons area, styled as destructive/outline
+## Affected Code
 
-**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
-- Add `onDelete` optional prop
-- Add trash icon to `hoverActions` array for DRAFT status
+### 1. `ContractSOVItem` type — `src/hooks/useContractSOV.ts` (line 46)
+Missing `total_billed_amount` and `total_completion_percent` fields. Add them.
 
-**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
-- Delete line items then invoice from database
-- Show toast, refresh list
-- Pass `onDelete` to `InvoiceCard`
+### 2. `calcBillingTotals` — `src/components/sov/ContractSOVEditor.tsx` (line 270)
+Uses `item.billed_to_date` — change to `item.total_billed_amount`.
 
-### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
+### 3. `getSOVTotals` — `src/hooks/useContractSOV.ts` (line 916)
+Uses `item.billed_to_date` — change to `item.total_billed_amount`.
 
-**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
-- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
-- Show the button when `status === 'DRAFT' && canSubmit`
+### 4. `deleteSOV` guard — `src/hooks/useContractSOV.ts` (line 926)
+Uses `billed_to_date` to check if items have billing — change to `total_billed_amount`.
 
-### Files to Change
+### 5. Item-level display — `src/components/sov/ContractSOVEditor.tsx`
+- Line 662: delete guard uses `billed_to_date` — change to `total_billed_amount`
+- Line 709: `SOVProgressBar billedToDate` uses `billed_to_date` — change to `total_billed_amount`
 
-- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
-- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
-- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
+All references to `billed_to_date` in the contract SOV flow should be replaced with `total_billed_amount` since each SOV is per-contract and needs its own billing numbers.
 
