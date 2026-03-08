@@ -355,9 +355,15 @@ export function ContractedPricingCard({
   // Material markup (difference between what GC pays and supplier cost)
   const materialMarkup = materialTotal - materialCost;
   
+  // Self-performing TC detection
+  const isSelfPerforming = !fcParticipant;
+  const tcInternalCost = (changeOrder as any).tc_internal_cost ?? 0;
+  
   // TC profit
   const revenue = finalPrice;
-  const profit = revenue - fcCost - materialCost;
+  const profit = isSelfPerforming
+    ? revenue - tcInternalCost - materialCost
+    : revenue - fcCost - materialCost;
 
   // Check if we have any pricing data
   const hasPricingData = finalPrice > 0 || laborTotal > 0 || materialTotal > 0 || equipmentTotal > 0 || fcCost > 0;
