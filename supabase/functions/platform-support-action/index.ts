@@ -470,6 +470,7 @@ Deno.serve(async (req) => {
           }
         }
 
+        logMeta = { p_target_user_id: newUserId, p_target_user_email: email, p_target_org_id: addOrgId || undefined, p_action_summary: `Created user ${email}` + (addOrgId ? ` and added to org as ${addRole}` : "") };
         result = { success: true, message: "User created" + (addOrgId ? " and added to org" : ""), user_id: newUserId };
         break;
       }
