@@ -376,6 +376,7 @@ export default function ProjectHome() {
                   : <PurchaseOrdersTab key={`po-${tabResetKey}-${realtimeKey}`} projectId={id!} projectName={project?.name} projectStatus={projectStatus}
                       projectAddress={project?.address ? `${project.address.street || ''}, ${project.address.city || ''}, ${project.address.state || ''} ${project.address.zip || ''}`.replace(/^,\s*|,\s*$/g, '').trim() : ''} />
               )}
+              {activeTab === 'schedule' && <ScheduleTab projectId={id!} />}
               {activeTab === 'returns' && <ReturnsTab projectId={id!} />}
             </div>
           </main>

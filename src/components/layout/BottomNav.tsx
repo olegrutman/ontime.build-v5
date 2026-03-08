@@ -13,6 +13,7 @@ import {
   Bell,
   Users,
   Undo2,
+  CalendarDays,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
