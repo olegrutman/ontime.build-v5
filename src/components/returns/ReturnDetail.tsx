@@ -30,6 +30,7 @@ export function ReturnDetail({ returnId, projectId, onBack }: ReturnDetailProps)
 
   const userOrgId = userOrgRoles[0]?.organization?.id || null;
   const isSupplier = userOrgRoles[0]?.organization?.type === 'SUPPLIER';
+  const { sendNudge, loading: nudgeLoading, wasSent } = useNudge();
 
   const { data: returnData, isLoading } = useQuery({
     queryKey: ['return-detail', returnId],
