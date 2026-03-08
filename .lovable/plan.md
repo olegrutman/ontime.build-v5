@@ -1,39 +1,75 @@
 
 
-# Allow Edit and Delete of Draft Invoices
+# Add `data-sasha-card` to All Remaining Cards Across Every Page
 
-## Current State
+## Summary
+Most cards outside the Overview tab are missing the `data-sasha-card` attribute. This plan tags every meaningful card component so Sasha's highlight mode works on all pages and tabs.
 
-- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
-- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
+## Files to Update
 
-## Plan
+### Dashboard Page
+| File | Attribute |
+|------|-----------|
+| `DashboardQuickStats.tsx` | `"Quick Stat"` on each stat Card |
+| `DashboardFinancialCard.tsx` | `"Financial Summary"` on root Card(s) |
+| `NeedsAttentionTile.tsx` | `"Needs Attention"` |
+| `RemindersTile.tsx` | `"Reminders"` |
+| `FinancialSnapshotTile.tsx` | `"Financial Snapshot"` |
+| `FinancialTrendCharts.tsx` | `"Billing Trend"` and `"Work Order Trend"` |
+| `PendingInvitesPanel.tsx` | `"Pending Invites"` |
+| `DashboardAttentionBanner.tsx` | `"Dashboard Attention"` |
+| `OnboardingChecklist.tsx` | `"Onboarding"` |
+| `ProjectRow.tsx` | `"Project"` (if it has a Card wrapper) |
 
-### 1. Add Delete Invoice capability
+### Invoices Tab
+| File | Attribute |
+|------|-----------|
+| `InvoiceCard.tsx` | `"Invoice"` |
+| `InvoicesTab.tsx` | `"Invoice Summary"` on each summary Card |
 
-**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
-- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
-- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
-- Button placed in the action buttons area, styled as destructive/outline
+### SOV Tab
+| File | Attribute |
+|------|-----------|
+| `SOVProgressSummary.tsx` | `"SOV Progress"` |
+| `ProjectSOVEditor.tsx` | `"Schedule of Values"` on the main items Card |
+| `ContractSOVEditor.tsx` | `"Contract SOV"` on each contract Card |
 
-**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
-- Add `onDelete` optional prop
-- Add trash icon to `hoverActions` array for DRAFT status
+### Work Order Detail / Change Order Detail
+| File | Attribute |
+|------|-----------|
+| `ContractedPricingCard.tsx` | `"Work Order Pricing"` |
+| `LinkedPOCard.tsx` | `"Linked PO"` |
+| `EquipmentPanel.tsx` | `"Equipment"` |
+| `ParticipantActivationPanel.tsx` | `"Participants"` |
+| `TMTimeCardsPanel.tsx` | `"Time Cards"` |
+| `TCPricingPanel.tsx` | `"TC Pricing"` |
+| `TCApprovalPanel.tsx` | `"TC Approval"` |
+| `TCPricingSummary.tsx` | `"TC Pricing Summary"` |
+| `FieldCrewHoursPanel.tsx` | `"Field Crew Hours"` |
 
-**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
-- Delete line items then invoice from database
-- Show toast, refresh list
-- Pass `onDelete` to `InvoiceCard`
+### Work Item Detail
+| File | Attribute |
+|------|-----------|
+| `WorkItemPage.tsx` | `"Work Item"` on the header Card, `"Work Item Details"` on details Card, etc. |
+| `TMPeriodCard.tsx` | `"T&M Period"` |
 
-### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
+### Partner Directory
+| File | Attribute |
+|------|-----------|
+| `OrganizationsTab.tsx` | `"Partner Organization"` on each Card |
+| `PeopleTab.tsx` | `"Partner Contact"` on each Card |
 
-**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
-- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
-- Show the button when `status === 'DRAFT' && canSubmit`
+### Other
+| File | Attribute |
+|------|-----------|
+| `EstimateSummaryCard.tsx` | `"Estimate Summary"` |
 
-### Files to Change
+## Approach
+Each file gets a single `data-sasha-card="Type"` attribute added to its root `<Card>` or `<div>` wrapper. No logic changes — the existing overlay and Sasha integration handle the rest automatically.
 
-- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
-- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
-- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
+For components with multiple return branches (e.g. `DashboardFinancialCard` has TC vs default views), the attribute goes on each branch's root element.
+
+## No Changes Needed
+- Wizard dialogs (PO wizard, WO wizard, etc.) don't need tagging — they're modal overlays, not persistent cards
+- The `SashaHighlightOverlay` and `SashaBubble` components need no changes
 
