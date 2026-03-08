@@ -240,9 +240,20 @@ export function SashaBubble() {
                 <p className="text-[11px] text-muted-foreground">Your Ontime.Build guide</p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleClose}>
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant={highlightMode ? 'default' : 'ghost'}
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setHighlightMode((h) => !h)}
+                title="Highlight a card for Sasha to explain"
+              >
+                <MousePointer2 className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           {/* Messages */}
