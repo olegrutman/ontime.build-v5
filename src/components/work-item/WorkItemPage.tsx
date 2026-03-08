@@ -157,7 +157,7 @@ export function WorkItemPage() {
           {/* Main Content */}
           <div className="md:col-span-2 space-y-6">
             {/* Header Card */}
-            <Card className="p-6">
+            <Card data-sasha-card="Work Item" className="p-6">
               <WorkItemHeader workItem={workItem} />
               <Separator className="my-4" />
               <WorkItemProgress state={state} />
