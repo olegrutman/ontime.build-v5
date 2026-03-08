@@ -125,8 +125,8 @@ export default function PlatformDashboard() {
       {/* Growth Metrics */}
       {metrics.loading ? (
         <div className="space-y-4 mt-6">
-          <Skeleton className="h-72 w-full rounded-2xl" />
-          <div className="grid grid-cols-5 gap-3">
+          <Skeleton className="h-52 md:h-72 w-full rounded-2xl" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {Array.from({ length: 5 }).map((_, i) => (
               <Skeleton key={i} className="h-24 rounded-2xl" />
             ))}

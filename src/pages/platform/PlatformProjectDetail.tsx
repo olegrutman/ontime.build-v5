@@ -503,7 +503,7 @@ export default function PlatformProjectDetail() {
         <CardHeader>
           <CardTitle className="text-base">Team / Participants</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

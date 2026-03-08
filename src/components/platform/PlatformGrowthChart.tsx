@@ -13,7 +13,7 @@ export function PlatformGrowthChart({ data }: Props) {
         <CardTitle className="text-base">Growth Trends (Last 6 Months)</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-72">
+        <div className="h-52 md:h-72">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
               <defs>
