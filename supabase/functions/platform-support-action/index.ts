@@ -301,6 +301,7 @@ Deno.serve(async (req) => {
         }
 
         snapshotAfter = { members_count: members?.length ?? 0 };
+        logMeta = { p_target_org_id: organization_id, p_action_summary: `Rebuilt permissions for ${members?.length ?? 0} members` };
         result = { success: true, message: "Permissions rebuilt" };
         break;
       }
