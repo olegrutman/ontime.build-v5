@@ -21,6 +21,13 @@ interface ProjectData {
   created_by: string | null;
 }
 
+interface CreatorProfile {
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+  user_id: string;
+}
+
 interface TeamMember {
   id: string;
   role: string;
@@ -96,6 +103,7 @@ export default function PlatformProjectDetail() {
   const navigate = useNavigate();
   const [project, setProject] = useState<ProjectData | null>(null);
   const [team, setTeam] = useState<TeamMember[]>([]);
+  const [creator, setCreator] = useState<CreatorProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Financial data
@@ -142,10 +150,23 @@ export default function PlatformProjectDetail() {
       supabase.from('purchase_orders').select('po_total').eq('project_id', projectId),
     ]);
 
-    setProject(projRes.data as unknown as ProjectData);
+    const proj = projRes.data as unknown as ProjectData;
+    setProject(proj);
     setTeam((teamRes.data || []) as unknown as TeamMember[]);
     setContracts((contractsRes.data || []) as unknown as ContractRow[]);
     setInvoices((invoicesRes.data || []) as unknown as InvoiceRow[]);
+
+    // Resolve creator profile
+    if (proj?.created_by) {
+      const { data: creatorData } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, email, user_id')
+        .eq('user_id', proj.created_by)
+        .single();
+      setCreator(creatorData as unknown as CreatorProfile | null);
+    } else {
+      setCreator(null);
+    }
     setPos((posRes.data || []) as unknown as PORow[]);
 
     // Build status count maps
@@ -205,12 +226,13 @@ export default function PlatformProjectDetail() {
     );
   }
 
-  const cityState = project.address
-    ? [project.address.city, project.address.state].filter(Boolean).join(', ')
-    : null;
+  const fullAddress = project.address
+    ? [project.address.street, [project.address.city, project.address.state].filter(Boolean).join(', '), project.address.zip].filter(Boolean)
+    : [];
 
   const totalContractValue = contracts.reduce((s, c) => s + (c.contract_sum || 0), 0);
   const ownerOrg = team.find((t) => t.role === 'GC');
+  const creatorName = creator ? [creator.first_name, creator.last_name].filter(Boolean).join(' ') || creator.email : null;
 
   return (
     <PlatformLayout
@@ -223,7 +245,7 @@ export default function PlatformProjectDetail() {
     >
       {/* Summary */}
       <Card className="mb-6">
-        <CardContent className="pt-6 grid grid-cols-2 md:grid-cols-5 gap-4">
+        <CardContent className="pt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Status</p>
             <Badge variant="outline" className="capitalize mt-1">{project.status}</Badge>
@@ -242,8 +264,34 @@ export default function PlatformProjectDetail() {
             )}
           </div>
           <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Created By</p>
+            {creatorName && creator ? (
+              <div>
+                <button
+                  className="font-medium text-sm text-primary hover:underline"
+                  onClick={() => navigate(`/platform/users/${creator.user_id}`)}
+                >
+                  {creatorName}
+                </button>
+                {creator.email && creatorName !== creator.email && (
+                  <p className="text-xs text-muted-foreground truncate">{creator.email}</p>
+                )}
+              </div>
+            ) : (
+              <p className="font-medium text-sm">—</p>
+            )}
+          </div>
+          <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Location</p>
-            <p className="font-medium text-sm">{cityState || '—'}</p>
+            {fullAddress.length > 0 ? (
+              <div className="text-sm font-medium">
+                {fullAddress.map((line, i) => (
+                  <p key={i}>{line}</p>
+                ))}
+              </div>
+            ) : (
+              <p className="font-medium text-sm">—</p>
+            )}
           </div>
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Created</p>
@@ -477,7 +525,12 @@ export default function PlatformProjectDetail() {
                     className="cursor-pointer hover:bg-accent/50"
                     onClick={() => t.organization && navigate(`/platform/orgs/${t.organization.id}`)}
                   >
-                    <TableCell className="font-medium">{t.organization?.name || '—'}</TableCell>
+                    <TableCell>
+                      <span className="font-medium">{t.organization?.name || '—'}</span>
+                      {t.organization?.type && (
+                        <Badge variant="secondary" className="text-[10px] ml-1.5 capitalize">{t.organization.type}</Badge>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs">{t.role}</Badge>
                     </TableCell>
