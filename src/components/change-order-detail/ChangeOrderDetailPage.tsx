@@ -464,6 +464,16 @@ export function ChangeOrderDetailPage() {
                     />
                   )}
 
+                  {/* TC Internal Cost (self-performing, no FC) */}
+                  {isTC && !hasFCParticipant && (
+                    <TCInternalCostEditor
+                      currentCost={(changeOrder as any).tc_internal_cost ?? 0}
+                      isEditable={isTCEditable}
+                      onSave={(cost) => updateChangeOrder({ id: changeOrder.id, tc_internal_cost: cost } as any)}
+                      isSaving={isUpdatingChangeOrder}
+                    />
+                  )}
+
                   {/* Materials from linked PO - collapsible for GC */}
                   {changeOrder.requires_materials && linkedPO && linkedPO.items && linkedPO.items.length > 0 && (isTC || isFC) && (
                     <WorkOrderMaterialsPanel
