@@ -417,6 +417,8 @@ export function ContractedPricingCard({
           materialMarkup={materialMarkup}
           profit={profit}
           fcName={fcParticipant?.organization?.name}
+          isSelfPerforming={isSelfPerforming}
+          internalCost={tcInternalCost}
         />
       );
     }
