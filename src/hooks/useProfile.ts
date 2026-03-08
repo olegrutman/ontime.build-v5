@@ -214,7 +214,7 @@ export function useProfile() {
       
       if (error) throw error;
       
-      if (count === 0) {
+      if (!data || data.length === 0) {
         toast({ variant: 'destructive', title: 'Update failed', description: 'You do not have permission to update this organization.' });
         return false;
       }
