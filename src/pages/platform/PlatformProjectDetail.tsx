@@ -150,10 +150,23 @@ export default function PlatformProjectDetail() {
       supabase.from('purchase_orders').select('po_total').eq('project_id', projectId),
     ]);
 
-    setProject(projRes.data as unknown as ProjectData);
+    const proj = projRes.data as unknown as ProjectData;
+    setProject(proj);
     setTeam((teamRes.data || []) as unknown as TeamMember[]);
     setContracts((contractsRes.data || []) as unknown as ContractRow[]);
     setInvoices((invoicesRes.data || []) as unknown as InvoiceRow[]);
+
+    // Resolve creator profile
+    if (proj?.created_by) {
+      const { data: creatorData } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, email, user_id')
+        .eq('user_id', proj.created_by)
+        .single();
+      setCreator(creatorData as unknown as CreatorProfile | null);
+    } else {
+      setCreator(null);
+    }
     setPos((posRes.data || []) as unknown as PORow[]);
 
     // Build status count maps
