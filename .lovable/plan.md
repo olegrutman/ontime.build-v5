@@ -1,39 +1,64 @@
 
 
-# Allow Edit and Delete of Draft Invoices
+# Add "Send Nudge" Reminder Feature Across All Processes
 
-## Current State
+## What It Does
 
-- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
-- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
+When you submit an invoice, WO, PO, or return and the other party hasn't taken action, you can tap a **"Send Reminder"** button to nudge them. This inserts a new notification of type `NUDGE` to the recipient org, with a cooldown (once per 24 hours per entity) to prevent spam.
 
-## Plan
+## Where the Button Appears
 
-### 1. Add Delete Invoice capability
+| Process | Who sees the button | When it's visible | Recipient |
+|---------|-------------------|-------------------|-----------|
+| **Invoice** | Sender (from_org) | Status = SUBMITTED | Receiver (to_org) |
+| **Work Order** | Submitter org | Status = ready_for_approval | GC (project owner) |
+| **Purchase Order** | Buyer org | Status = SUBMITTED | Supplier org |
+| **Return** | Creator org | Status = SUBMITTED | Supplier org |
 
-**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
-- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
-- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
-- Button placed in the action buttons area, styled as destructive/outline
+## Database Changes (1 migration)
 
-**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
-- Add `onDelete` optional prop
-- Add trash icon to `hoverActions` array for DRAFT status
+1. Add `NUDGE` to `notification_type` enum
+2. Create a `nudge_log` table to enforce cooldown:
+   ```
+   nudge_log (
+     id uuid PK,
+     entity_type text,      -- 'invoice', 'work_order', 'purchase_order', 'return'
+     entity_id uuid,
+     sent_by uuid,          -- user who nudged
+     sent_to_org uuid,      -- recipient org
+     created_at timestamptz
+   )
+   ```
+3. Create an RPC function `send_nudge(entity_type, entity_id)` that:
+   - Validates the caller has permission (is part of the sending org)
+   - Checks cooldown (no nudge for same entity in last 24h)
+   - Inserts into `nudge_log`
+   - Inserts a `NUDGE` notification to the recipient org
+   - Returns success/error message
 
-**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
-- Delete line items then invoice from database
-- Show toast, refresh list
-- Pass `onDelete` to `InvoiceCard`
+## Email Notification
 
-### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
+Add `NUDGE` to the `TYPE_TO_PREFERENCE` map in `send-notification-email/index.ts` so nudges also trigger email delivery (mapped to `notify_email`).
 
-**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
-- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
-- Show the button when `status === 'DRAFT' && canSubmit`
+## UI Changes (4 files)
 
-### Files to Change
+Each detail component gets a small "Send Reminder" button with a bell icon, visible only to the sending party when the item is in a "waiting for action" status:
 
-- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
-- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
-- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
+1. **`InvoiceDetail.tsx`** — button next to "Export PDF" when status = SUBMITTED and user is sender
+2. **`PODetail.tsx`** — button when status = SUBMITTED and user is buyer org
+3. **`ReturnDetail.tsx`** — button when status = SUBMITTED and user is creator org
+4. **Work Order detail page** — button when status = ready_for_approval and user is submitter
+
+Each button calls `supabase.rpc('send_nudge', { _entity_type, _entity_id })` and shows a toast on success or cooldown error.
+
+## Shared Hook
+
+Create `src/hooks/useNudge.ts`:
+- Wraps the RPC call with loading state
+- Shows success toast ("Reminder sent") or cooldown toast ("Already sent a reminder recently")
+- Returns `{ sendNudge, loading }`
+
+## Cooldown UX
+
+After a successful nudge, the button text changes to "Reminder Sent" (disabled) for the rest of the session. The 24h cooldown is enforced server-side — if someone reloads and tries again within 24h, the RPC returns an error and the toast says "You already sent a reminder for this item today."
 
