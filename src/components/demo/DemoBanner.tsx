@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useDemo } from '@/contexts/DemoContext';
-import { X } from 'lucide-react';
+import { X, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 const ROLE_LABELS: Record<string, string> = {
   GC: 'General Contractor',
@@ -11,7 +12,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 export function DemoBanner() {
-  const { isDemoMode, demoRole, exitDemo } = useDemo();
+  const { isDemoMode, demoRole, exitDemo, resetStore } = useDemo();
   const navigate = useNavigate();
 
   if (!isDemoMode) return null;
@@ -21,6 +22,11 @@ export function DemoBanner() {
     navigate('/');
   };
 
+  const handleReset = () => {
+    resetStore();
+    toast.success('Demo data reset to initial state');
+  };
+
   return (
     <div className="sticky top-0 z-50 bg-primary text-primary-foreground px-4 py-2 flex items-center justify-between text-sm">
       <span>
@@ -28,10 +34,16 @@ export function DemoBanner() {
         <span className="font-semibold">{demoRole ? ROLE_LABELS[demoRole] : 'unknown'}</span>.
         No real data is affected.
       </span>
-      <Button variant="ghost" size="sm" onClick={handleExit} className="text-primary-foreground hover:bg-primary-foreground/20 h-7 gap-1">
-        <X className="w-3.5 h-3.5" />
-        Exit Demo
-      </Button>
+      <div className="flex items-center gap-1">
+        <Button variant="ghost" size="sm" onClick={handleReset} className="text-primary-foreground hover:bg-primary-foreground/20 h-7 gap-1">
+          <RotateCcw className="w-3.5 h-3.5" />
+          Reset
+        </Button>
+        <Button variant="ghost" size="sm" onClick={handleExit} className="text-primary-foreground hover:bg-primary-foreground/20 h-7 gap-1">
+          <X className="w-3.5 h-3.5" />
+          Exit Demo
+        </Button>
+      </div>
     </div>
   );
 }
