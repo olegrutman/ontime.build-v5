@@ -274,7 +274,7 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC, hasTC = true
   const canFinalize = isTC || (isFC && !hasTC);
   const pendingApproval = timeCards.some((c) => !!c.fc_submitted_at && !c.tc_approved && !c.tc_rejection_notes);
   const hasCards = timeCards.length > 0;
-  const finalizeDisabled = !hasCards || pendingApproval || tcRate <= 0 || fcRate <= 0;
+  const finalizeDisabled = !hasCards || pendingApproval || tcRate <= 0 || (!selfPerforming && fcRate <= 0);
 
   const finalizeMutation = useMutation({
     mutationFn: async () => {
