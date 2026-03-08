@@ -6,6 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Building2, Users, FolderKanban, ScrollText, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { usePlatformSearch } from '@/hooks/usePlatformSearch';
+import { usePlatformMetrics } from '@/hooks/usePlatformMetrics';
+import { PlatformGrowthChart } from '@/components/platform/PlatformGrowthChart';
+import { PlatformPeriodComparison } from '@/components/platform/PlatformPeriodComparison';
+import { PlatformBreakdowns } from '@/components/platform/PlatformBreakdowns';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function PlatformDashboard() {
   const navigate = useNavigate();
