@@ -400,7 +400,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
 
   const renderSummaryCards = () => (
     <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-      <Card className="p-4 relative overflow-hidden">
+      <Card data-sasha-card="Invoice Summary" className="p-4 relative overflow-hidden">
         <div className="flex flex-col gap-1">
           <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Draft</span>
           <span className="text-2xl font-bold">{stats.draft}</span>
