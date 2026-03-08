@@ -174,8 +174,8 @@ export function WorkItemPage() {
             )}
 
             {/* Details */}
-            <Card className="p-6">
-              <WorkItemDetails 
+            <Card data-sasha-card="Work Item Details" className="p-6">
+              <WorkItemDetails
                 workItem={workItem} 
                 canViewFinancials={permissions?.canViewRates ?? false}
               />
