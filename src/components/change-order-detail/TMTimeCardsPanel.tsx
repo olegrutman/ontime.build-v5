@@ -178,16 +178,35 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC, hasTC = true
       fc_hours_per_man: number;
       fc_description: string;
       submit: boolean;
+      selfPerforming?: boolean;
+      tc_own_hours?: number;
     }) => {
-      const { error } = await supabase.from('tm_time_cards').insert({
+      const insertData: Record<string, unknown> = {
         change_order_id: changeOrderId,
         entry_date: card.entry_date,
-        fc_men_count: card.fc_men_count,
-        fc_hours_per_man: card.fc_hours_per_man,
         fc_description: card.fc_description,
         fc_entered_by: user?.id,
-        fc_submitted_at: card.submit ? new Date().toISOString() : null,
-      } as never);
+      };
+
+      if (card.selfPerforming) {
+        // Self-performing TC: put hours in tc_own_hours, auto-approve & submit
+        insertData.tc_own_hours = card.tc_own_hours || 0;
+        insertData.fc_men_count = 0;
+        insertData.fc_hours_per_man = 0;
+        insertData.fc_submitted_at = new Date().toISOString();
+        insertData.tc_approved = true;
+        insertData.tc_approved_by = user?.id;
+        insertData.tc_approved_at = new Date().toISOString();
+        if (card.submit) {
+          insertData.tc_submitted_at = new Date().toISOString();
+        }
+      } else {
+        insertData.fc_men_count = card.fc_men_count;
+        insertData.fc_hours_per_man = card.fc_hours_per_man;
+        insertData.fc_submitted_at = card.submit ? new Date().toISOString() : null;
+      }
+
+      const { error } = await supabase.from('tm_time_cards').insert(insertData as never);
       if (error) throw error;
     },
     onSuccess: () => {
