@@ -467,23 +467,27 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC, hasTC = true
         {/* Rate Editors - hidden from GC */}
         {!isGC && (
           <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-            {/* FC Rate - editable by FC, read-only for TC */}
-            <RateEditor
-              label="FC Rate:"
-              rate={fcRate}
-              editing={editingFCRate}
-              value={fcRateValue}
-              onChange={setFcRateValue}
-              onSave={() => {
-                const r = parseFloat(fcRateValue);
-                if (!isNaN(r) && r > 0) updateFCRateMutation.mutate(r);
-              }}
-              onEdit={() => {
-                setFcRateValue(fcRate > 0 ? String(fcRate) : '');
-                setEditingFCRate(true);
-              }}
-              onCancel={() => setEditingFCRate(false)}
-              isPending={updateFCRateMutation.isPending}
+            {selfPerforming && (
+              <Badge variant="outline" className="mb-1">Self-Performing (No FC)</Badge>
+            )}
+            {/* FC Rate - editable by FC, read-only for TC — hidden when self-performing */}
+            {hasFCParticipant && (
+              <RateEditor
+                label="FC Rate:"
+                rate={fcRate}
+                editing={editingFCRate}
+                value={fcRateValue}
+                onChange={setFcRateValue}
+                onSave={() => {
+                  const r = parseFloat(fcRateValue);
+                  if (!isNaN(r) && r > 0) updateFCRateMutation.mutate(r);
+                }}
+                onEdit={() => {
+                  setFcRateValue(fcRate > 0 ? String(fcRate) : '');
+                  setEditingFCRate(true);
+                }}
+                onCancel={() => setEditingFCRate(false)}
+                isPending={updateFCRateMutation.isPending}
               editable={isFC}
             />
             {/* TC Rate - editable by TC, hidden from FC */}
