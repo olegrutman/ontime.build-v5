@@ -206,11 +206,15 @@ function TCPricingView({
       <div>
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Costs</p>
         <div className="space-y-2 pl-2">
-          <PricingRow label={fcName ? `Field Crew (${fcName})` : 'Field Crew'} value={fcCost} />
+          {isSelfPerforming ? (
+            <PricingRow label="Internal Cost" value={internalCost ?? 0} />
+          ) : (
+            <PricingRow label={fcName ? `Field Crew (${fcName})` : 'Field Crew'} value={fcCost} />
+          )}
           <PricingRow label="Materials (Supplier Cost)" value={materialCost} />
         </div>
         <div className="mt-2">
-          <PricingRow label="Total Costs" value={fcCost + materialCost} isBold />
+          <PricingRow label="Total Costs" value={(isSelfPerforming ? (internalCost ?? 0) : fcCost) + materialCost} isBold />
         </div>
       </div>
       
