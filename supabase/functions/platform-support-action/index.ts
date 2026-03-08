@@ -25,6 +25,7 @@ const ACTION_MIN_ROLE: Record<string, string> = {
   DELETE_ORGANIZATION: "PLATFORM_OWNER",
   DELETE_USER: "PLATFORM_OWNER",
   CHANGE_USER_ROLE: "PLATFORM_OWNER",
+  EDIT_USER_PROFILE: "PLATFORM_OWNER",
 };
 
 function hasPermission(callerRole: string, requiredRole: string): boolean {
@@ -611,6 +612,55 @@ Deno.serve(async (req) => {
         snapshotAfter = { role: new_role, is_admin: typeof new_is_admin === "boolean" ? new_is_admin : oldRole.is_admin };
         logMeta = { p_action_summary: `Changed role from ${oldRole.role} to ${new_role}` };
         result = { success: true, message: "User role updated" };
+        break;
+      }
+
+      case "EDIT_USER_PROFILE": {
+        const { user_id, fields } = params;
+        if (!user_id || !fields || typeof fields !== "object") {
+          return new Response(JSON.stringify({ error: "user_id and fields are required" }), {
+            status: 400, headers: corsHeaders,
+          });
+        }
+        targetId = user_id;
+
+        const allowedKeys = ["job_title", "phone"];
+        const updatePayload: Record<string, any> = {};
+        for (const key of allowedKeys) {
+          if (key in fields) updatePayload[key] = fields[key];
+        }
+        if (Object.keys(updatePayload).length === 0) {
+          return new Response(JSON.stringify({ error: "No valid fields to update" }), {
+            status: 400, headers: corsHeaders,
+          });
+        }
+
+        const { data: beforeProfile } = await adminClient
+          .from("profiles")
+          .select("job_title, phone")
+          .eq("user_id", user_id)
+          .single();
+        if (!beforeProfile) {
+          return new Response(JSON.stringify({ error: "User not found" }), {
+            status: 404, headers: corsHeaders,
+          });
+        }
+        snapshotBefore = beforeProfile;
+
+        const { error: updateErr } = await adminClient
+          .from("profiles")
+          .update(updatePayload)
+          .eq("user_id", user_id);
+        if (updateErr) {
+          return new Response(JSON.stringify({ error: updateErr.message }), {
+            status: 500, headers: corsHeaders,
+          });
+        }
+
+        snapshotAfter = { ...beforeProfile, ...updatePayload };
+        const changedFields = Object.keys(updatePayload).join(", ");
+        logMeta = { p_target_user_id: user_id, p_action_summary: `Edited profile fields: ${changedFields}` };
+        result = { success: true, message: "Profile updated" };
         break;
       }
 
