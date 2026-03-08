@@ -60,6 +60,7 @@ const PlatformOrgs = lazy(() => import("./pages/platform/PlatformOrgs"));
 const PlatformOrgDetail = lazy(() => import("./pages/platform/PlatformOrgDetail"));
 const PlatformUsers = lazy(() => import("./pages/platform/PlatformUsers"));
 const PlatformUserDetail = lazy(() => import("./pages/platform/PlatformUserDetail"));
+const PlatformProjects = lazy(() => import("./pages/platform/PlatformProjects"));
 const PlatformProjectDetail = lazy(() => import("./pages/platform/PlatformProjectDetail"));
 const PlatformLogs = lazy(() => import("./pages/platform/PlatformLogs"));
 
@@ -188,6 +189,7 @@ function AppRoutes() {
             <Route path="/platform/orgs/:orgId" element={<RequirePlatformRole><PlatformOrgDetail /></RequirePlatformRole>} />
             <Route path="/platform/users" element={<RequirePlatformRole><PlatformUsers /></RequirePlatformRole>} />
             <Route path="/platform/users/:userId" element={<RequirePlatformRole><PlatformUserDetail /></RequirePlatformRole>} />
+            <Route path="/platform/projects" element={<RequirePlatformRole><PlatformProjects /></RequirePlatformRole>} />
             <Route path="/platform/projects/:projectId" element={<RequirePlatformRole><PlatformProjectDetail /></RequirePlatformRole>} />
             <Route path="/platform/logs" element={<RequirePlatformRole><PlatformLogs /></RequirePlatformRole>} />
 
