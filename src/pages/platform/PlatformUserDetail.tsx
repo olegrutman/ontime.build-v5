@@ -23,7 +23,6 @@ import { format } from 'date-fns';
 import { KeyRound, Mail, LogIn, Trash2, Pencil, MapPin, UserPlus, Briefcase, Phone } from 'lucide-react';
 import { formatPhone } from '@/lib/formatPhone';
 import { getJobTitlesForOrgType } from '@/types/organization';
-import type { OrgType } from '@/types/organization';
 
 interface ProfileData {
   user_id: string;
