@@ -20,13 +20,17 @@ interface TimelineStep {
 export function POActivityTimeline({ po }: POActivityTimelineProps) {
   const [open, setOpen] = useState(false);
 
-  const steps: TimelineStep[] = [
+  const pricingSkipped = !po.priced_at && !!po.ordered_at;
+
+  const allSteps: TimelineStep[] = [
     { label: 'Created', timestamp: po.created_at, icon: <Plus className="h-3.5 w-3.5" /> },
     { label: 'Submitted to Supplier', timestamp: po.submitted_at, userId: po.submitted_by, icon: <Send className="h-3.5 w-3.5" /> },
     { label: 'Priced by Supplier', timestamp: po.priced_at, userId: po.priced_by, icon: <DollarSign className="h-3.5 w-3.5" /> },
     { label: 'Ordered', timestamp: po.ordered_at, icon: <CheckCircle className="h-3.5 w-3.5" /> },
     { label: 'Delivered', timestamp: po.delivered_at, icon: <Truck className="h-3.5 w-3.5" /> },
   ];
+
+  const steps = allSteps.filter(s => !(pricingSkipped && s.label === 'Priced by Supplier'));
 
   // Find the last completed step index
   const lastCompletedIndex = steps.reduce((acc, step, i) => (step.timestamp ? i : acc), -1);
