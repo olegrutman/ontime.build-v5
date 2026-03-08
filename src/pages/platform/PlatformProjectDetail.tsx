@@ -417,7 +417,7 @@ export default function PlatformProjectDetail() {
             <FileText className="h-4 w-4" /> Recent Invoices
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
