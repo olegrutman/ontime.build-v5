@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 interface Props {
@@ -8,18 +8,30 @@ interface Props {
 
 export function SashaHighlightOverlay({ onSelect, onCancel }: Props) {
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
 
-  const handleMouseOver = useCallback((e: MouseEvent) => {
-    const card = (e.target as HTMLElement).closest('[data-sasha-card]');
+  const findCardAt = useCallback((x: number, y: number): HTMLElement | null => {
+    const els = document.elementsFromPoint(x, y);
+    for (const el of els) {
+      // Skip elements inside our overlay
+      if (overlayRef.current?.contains(el)) continue;
+      const card = (el as HTMLElement).closest('[data-sasha-card]') as HTMLElement | null;
+      if (card) return card;
+    }
+    return null;
+  }, []);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    const card = findCardAt(e.clientX, e.clientY);
     if (card) {
       setRect(card.getBoundingClientRect());
     } else {
       setRect(null);
     }
-  }, []);
+  }, [findCardAt]);
 
-  const handleClick = useCallback((e: MouseEvent) => {
-    const card = (e.target as HTMLElement).closest('[data-sasha-card]') as HTMLElement | null;
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    const card = findCardAt(e.clientX, e.clientY);
     if (card) {
       e.preventDefault();
       e.stopPropagation();
@@ -29,23 +41,18 @@ export function SashaHighlightOverlay({ onSelect, onCancel }: Props) {
     } else {
       onCancel();
     }
-  }, [onSelect, onCancel]);
-
-  useEffect(() => {
-    document.addEventListener('mouseover', handleMouseOver, true);
-    document.addEventListener('click', handleClick, true);
-    return () => {
-      document.removeEventListener('mouseover', handleMouseOver, true);
-      document.removeEventListener('click', handleClick, true);
-    };
-  }, [handleMouseOver, handleClick]);
+  }, [findCardAt, onSelect, onCancel]);
 
   const padding = 6;
 
   return createPortal(
-    <div className="fixed inset-0 z-[55] pointer-events-none" aria-hidden>
-      {/* Semi-transparent overlay */}
-      <div className="absolute inset-0 bg-background/40 pointer-events-auto cursor-crosshair" />
+    <div ref={overlayRef} className="fixed inset-0 z-[55] pointer-events-none" aria-hidden>
+      {/* Interactive overlay that captures mouse events */}
+      <div
+        className="absolute inset-0 bg-background/40 pointer-events-auto cursor-crosshair"
+        onMouseMove={handleMouseMove}
+        onClick={handleClick}
+      />
 
       {/* Highlight around hovered card */}
       {rect && (
@@ -71,7 +78,7 @@ export function SashaHighlightOverlay({ onSelect, onCancel }: Props) {
             />
           </svg>
           <div
-            className="absolute border-2 border-primary rounded-lg animate-pulse pointer-events-auto cursor-pointer"
+            className="absolute border-2 border-primary rounded-lg animate-pulse pointer-events-none"
             style={{
               left: rect.left - padding,
               top: rect.top - padding,
