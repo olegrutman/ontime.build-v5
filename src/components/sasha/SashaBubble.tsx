@@ -343,7 +343,17 @@ export function SashaBubble() {
       {/* Floating Bubble */}
       <div className="fixed bottom-20 lg:bottom-4 right-4 z-50 flex items-center gap-2">
         {/* Tooltip label */}
-        {!open && showLabel && (
+        {/* Welcome tooltip on first dashboard visit */}
+        {!open && showWelcome && isOnDashboard && (
+          <div className="animate-in fade-in zoom-in-95 duration-300 flex items-center">
+            <div className="bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-xl shadow-lg whitespace-nowrap">
+              Need help? Click me! 👋
+            </div>
+            <div className="w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[8px] border-l-primary shrink-0" />
+          </div>
+        )}
+        {/* Default label (non-welcome) */}
+        {!open && showLabel && !(showWelcome && isOnDashboard) && (
           <div className="animate-fade-in bg-primary text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg whitespace-nowrap">
             Ask Sasha 💬
           </div>
