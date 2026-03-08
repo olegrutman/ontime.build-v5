@@ -103,6 +103,7 @@ export default function PlatformProjectDetail() {
   const navigate = useNavigate();
   const [project, setProject] = useState<ProjectData | null>(null);
   const [team, setTeam] = useState<TeamMember[]>([]);
+  const [creator, setCreator] = useState<CreatorProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Financial data
