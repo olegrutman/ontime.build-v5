@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send } from 'lucide-react';
+import { X, Send, MousePointer2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import sashaAvatar from '@/assets/sasha-avatar.png';
 import { Input } from '@/components/ui/input';
