@@ -12,6 +12,7 @@ import { Plus, Clock, Check, X, Users, Send, DollarSign, Lock } from 'lucide-rea
 import { format } from 'date-fns';
 import { TimeCardForm } from './TimeCardForm';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogAction,
