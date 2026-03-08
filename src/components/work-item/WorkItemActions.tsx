@@ -12,9 +12,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Check, X, Send, Play, AlertTriangle, FileDown, Loader2 } from 'lucide-react';
+import { Check, X, Send, Play, AlertTriangle, FileDown, Loader2, Bell } from 'lucide-react';
 import { WorkItemData, WorkItemState } from './WorkItemPage';
 import { AppRole } from '@/types/organization';
+import { useNudge } from '@/hooks/useNudge';
 
 interface WorkItemActionsProps {
   workItem: WorkItemData;
