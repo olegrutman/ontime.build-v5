@@ -107,7 +107,7 @@ export function ParticipantActivationPanel({
   }
 
   return (
-    <Card>
+    <Card data-sasha-card="Participants">
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
           <Users className="w-4 h-4" />
