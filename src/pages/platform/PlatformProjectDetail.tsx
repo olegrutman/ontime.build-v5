@@ -114,7 +114,7 @@ export default function PlatformProjectDetail() {
 
   const fetchData = async () => {
     if (!projectId) return;
-    const [projRes, teamRes, contractsRes, invoicesRes, posRes, woStatusRes, poStatusRes, invStatusRes] = await Promise.all([
+    const [projRes, teamRes, contractsRes, invoicesRes, posRes, woStatusRes, poStatusRes, invAllRes, poAllRes] = await Promise.all([
       supabase.from('projects').select('*').eq('id', projectId).single(),
       supabase
         .from('project_team')
