@@ -6,9 +6,15 @@ import { Input } from '@/components/ui/input';
 import { Building2, Users, FolderKanban, ScrollText, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { usePlatformSearch } from '@/hooks/usePlatformSearch';
+import { usePlatformMetrics } from '@/hooks/usePlatformMetrics';
+import { PlatformGrowthChart } from '@/components/platform/PlatformGrowthChart';
+import { PlatformPeriodComparison } from '@/components/platform/PlatformPeriodComparison';
+import { PlatformBreakdowns } from '@/components/platform/PlatformBreakdowns';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function PlatformDashboard() {
   const navigate = useNavigate();
+  const metrics = usePlatformMetrics();
   const [counts, setCounts] = useState({ orgs: 0, users: 0, projects: 0, logs: 0 });
   const [searchQuery, setSearchQuery] = useState('');
   const { results, searching, search } = usePlatformSearch();
@@ -115,6 +121,29 @@ export default function PlatformDashboard() {
           </Card>
         ))}
       </div>
+
+      {/* Growth Metrics */}
+      {metrics.loading ? (
+        <div className="space-y-4 mt-6">
+          <Skeleton className="h-72 w-full rounded-2xl" />
+          <div className="grid grid-cols-5 gap-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-2xl" />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-6 mt-6">
+          <PlatformPeriodComparison comparisons={metrics.periodComparisons} />
+          <PlatformGrowthChart data={metrics.monthlyTrends} />
+          <PlatformBreakdowns
+            orgsByType={metrics.orgsByType}
+            projectsByStatus={metrics.projectsByStatus}
+            invoicesByStatus={metrics.invoicesByStatus}
+            recentLogs={metrics.recentLogs}
+          />
+        </div>
+      )}
     </PlatformLayout>
   );
 }
