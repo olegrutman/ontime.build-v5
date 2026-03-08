@@ -149,6 +149,29 @@ export default function PlatformUserDetail() {
     setEditIsAdmin(m.is_admin);
   };
 
+  const handleEditJobTitle = async (reason: string) => {
+    const ok = await execute({ action_type: 'EDIT_USER_PROFILE', reason, user_id: userId, fields: { job_title: newJobTitle || null } });
+    if (ok) {
+      setEditJobTitleReasonOpen(false);
+      setEditJobTitleOpen(false);
+      setNewJobTitle('');
+      refreshData();
+    }
+  };
+
+  const handleEditPhone = async (reason: string) => {
+    const ok = await execute({ action_type: 'EDIT_USER_PROFILE', reason, user_id: userId, fields: { phone: newPhone || null } });
+    if (ok) {
+      setEditPhoneReasonOpen(false);
+      setEditPhoneOpen(false);
+      setNewPhone('');
+      refreshData();
+    }
+  };
+
+  const primaryOrgType = memberships[0]?.organization?.type as OrgType | undefined;
+  const jobTitles = getJobTitlesForOrgType(primaryOrgType);
+
   if (loading) {
     return (
       <PlatformLayout title="User Detail">
