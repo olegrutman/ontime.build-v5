@@ -1,39 +1,33 @@
 
 
-# Allow Edit and Delete of Draft Invoices
+# Fix Support Action Logging
 
-## Current State
+## Problem
+The `platform-support-action` edge function calls `log_support_action` RPC with wrong parameter names. The RPC expects parameters like `p_action_type`, `p_reason`, `p_target_user_id`, etc., but the edge function passes `_performed_by`, `_action_type`, `_target_type`, `_target_id`, `_snapshot_before`, `_snapshot_after`. Since all RPC params have defaults of NULL, the call succeeds silently but inserts nothing useful (or fails the NOT NULL constraint silently).
 
-- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
-- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
+## RPC Signature
+```
+p_target_org_id uuid, p_target_org_name text, p_target_project_id uuid, 
+p_target_project_name text, p_target_user_id uuid, p_target_user_email text,
+p_action_type text, p_action_summary text, p_reason text, 
+p_before_snapshot jsonb, p_after_snapshot jsonb
+```
 
-## Plan
+The RPC also calls `auth.uid()` internally, but the edge function uses the `adminClient` (service role) to call it, so `auth.uid()` returns NULL, causing the `is_platform_user` check to fail and raising an exception.
 
-### 1. Add Delete Invoice capability
+## Fix: `supabase/functions/platform-support-action/index.ts`
 
-**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
-- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
-- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
-- Button placed in the action buttons area, styled as destructive/outline
+1. Switch the `log_support_action` RPC call to use the **user's client** (`userClient`) instead of `adminClient`, so `auth.uid()` resolves correctly inside the function.
 
-**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
-- Add `onDelete` optional prop
-- Add trash icon to `hoverActions` array for DRAFT status
+2. Update the RPC parameters to match the actual function signature. For each action type, resolve and pass the correct target fields:
+   - `p_action_type` (was `_action_type`)
+   - `p_reason` (was `_reason`) 
+   - `p_before_snapshot` / `p_after_snapshot` (was `_snapshot_before` / `_snapshot_after`)
+   - `p_target_user_id`, `p_target_user_email`, `p_target_org_id`, `p_target_org_name`, `p_target_project_id`, `p_target_project_name` — populated based on the action context
+   - `p_action_summary` — a human-readable summary string
 
-**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
-- Delete line items then invoice from database
-- Show toast, refresh list
-- Pass `onDelete` to `InvoiceCard`
+3. Build a `logParams` object throughout each action case that accumulates the target details, then pass them all in the final RPC call.
 
-### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
-
-**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
-- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
-- Show the button when `status === 'DRAFT' && canSubmit`
-
-### Files to Change
-
-- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
-- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
-- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
+### Files
+- `supabase/functions/platform-support-action/index.ts` — Fix the logging RPC call at the bottom (~lines 593-602)
 
