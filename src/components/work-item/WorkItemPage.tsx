@@ -217,7 +217,7 @@ export function WorkItemPage() {
 
             {/* T&M Periods Panel - for TM_WORK items */}
             {showTMPeriodsPanel && (
-              <Card className="p-6">
+              <Card data-sasha-card="T&M Periods" className="p-6">
               <TMPeriodsPanel
                   workItemId={workItem.id}
                   currentRole={currentRole}
