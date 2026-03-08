@@ -268,7 +268,7 @@ export function SashaBubble() {
 
       {/* Chat Panel */}
       {open && (
-        <div className="fixed z-50 shadow-xl rounded-2xl border bg-background flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200 bottom-36 lg:bottom-20 right-2 left-2 sm:left-auto sm:right-4 sm:w-[min(400px,calc(100vw-2rem))] max-h-[60vh] sm:max-h-[min(500px,70vh)]">
+        <div className="fixed z-50 shadow-xl rounded-2xl border bg-background flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200 bottom-36 lg:bottom-20 right-2 left-auto w-[min(300px,calc(100vw-5rem))] sm:w-[min(400px,calc(100vw-2rem))] sm:right-4 max-h-[45vh] sm:max-h-[min(500px,70vh)]">
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b">
             <div className="flex items-center gap-2">
