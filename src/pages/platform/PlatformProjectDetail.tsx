@@ -359,7 +359,7 @@ export default function PlatformProjectDetail() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Contracts ({contracts.length})</CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-0 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -417,7 +417,7 @@ export default function PlatformProjectDetail() {
             <FileText className="h-4 w-4" /> Recent Invoices
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -462,7 +462,7 @@ export default function PlatformProjectDetail() {
             <ShoppingCart className="h-4 w-4" /> Recent Purchase Orders
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -503,7 +503,7 @@ export default function PlatformProjectDetail() {
         <CardHeader>
           <CardTitle className="text-base">Team / Participants</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

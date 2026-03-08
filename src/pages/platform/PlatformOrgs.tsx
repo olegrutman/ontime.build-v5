@@ -32,7 +32,6 @@ export default function PlatformOrgs() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('');
 
-  // Create dialog state
   const [showCreate, setShowCreate] = useState(false);
   const [creating, setCreating] = useState(false);
   const [orgName, setOrgName] = useState('');
@@ -56,9 +55,7 @@ export default function PlatformOrgs() {
 
   useEffect(() => { fetchOrgs(); }, []);
 
-  const filtered = filter
-    ? orgs.filter((o) => o.name.toLowerCase().includes(filter.toLowerCase()))
-    : orgs;
+  const filtered = filter ? orgs.filter((o) => o.name.toLowerCase().includes(filter.toLowerCase())) : orgs;
 
   async function handleCreate() {
     if (!orgName.trim() || !reason.trim()) return;
@@ -66,73 +63,40 @@ export default function PlatformOrgs() {
     try {
       const { data, error } = await supabase.functions.invoke('platform-support-action', {
         body: {
-          action_type: 'CREATE_ORGANIZATION',
-          reason,
-          org_name: orgName.trim(),
-          org_type: orgType,
+          action_type: 'CREATE_ORGANIZATION', reason,
+          org_name: orgName.trim(), org_type: orgType,
           org_phone: orgPhone.trim() || undefined,
-          org_address: orgStreet.trim() ? {
-            street: orgStreet.trim(),
-            city: orgCity.trim(),
-            state: orgState,
-            zip: orgZip.trim(),
-          } : undefined,
+          org_address: orgStreet.trim() ? { street: orgStreet.trim(), city: orgCity.trim(), state: orgState, zip: orgZip.trim() } : undefined,
           admin_email: adminEmail.trim() || undefined,
         },
       });
-
-      if (error || data?.error) {
-        toast({ title: 'Failed', description: data?.error || error?.message, variant: 'destructive' });
-        return;
-      }
-
+      if (error || data?.error) { toast({ title: 'Failed', description: data?.error || error?.message, variant: 'destructive' }); return; }
       toast({ title: 'Organization created', description: data?.message });
-      setShowCreate(false);
-      resetForm();
-      await fetchOrgs();
-      if (data?.org_id) {
-        navigate(`/platform/orgs/${data.org_id}`);
-      }
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
-    } finally {
-      setCreating(false);
-    }
+      setShowCreate(false); resetForm(); await fetchOrgs();
+      if (data?.org_id) navigate(`/platform/orgs/${data.org_id}`);
+    } catch (err: any) { toast({ title: 'Error', description: err.message, variant: 'destructive' }); }
+    finally { setCreating(false); }
   }
 
-  function resetForm() {
-    setOrgName('');
-    setOrgType('GC');
-    setOrgPhone('');
-    setOrgStreet('');
-    setOrgCity('');
-    setOrgState('');
-    setOrgZip('');
-    setAdminEmail('');
-    setReason('');
-  }
+  function resetForm() { setOrgName(''); setOrgType('GC'); setOrgPhone(''); setOrgStreet(''); setOrgCity(''); setOrgState(''); setOrgZip(''); setAdminEmail(''); setReason(''); }
 
   return (
     <PlatformLayout
       title="Organizations"
       breadcrumbs={[{ label: 'Platform', href: '/platform' }, { label: 'Organizations' }]}
     >
-      <div className="flex items-center gap-3 mb-4">
-        <div className="relative max-w-sm flex-1">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Filter by name..."
-            className="pl-10"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          />
+          <Input placeholder="Filter by name..." className="pl-10" value={filter} onChange={(e) => setFilter(e.target.value)} />
         </div>
         <Button onClick={() => setShowCreate(true)} size="sm">
           <Plus className="h-4 w-4 mr-1" /> Create Organization
         </Button>
       </div>
 
-      <Card>
+      {/* Desktop table */}
+      <Card className="hidden md:block">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -145,32 +109,16 @@ export default function PlatformOrgs() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No organizations found</TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={4} className="text-center py-8 text-muted-foreground">No organizations found</TableCell></TableRow>
               ) : (
                 filtered.map((org) => (
-                  <TableRow
-                    key={org.id}
-                    className="cursor-pointer hover:bg-accent/50"
-                    onClick={() => navigate(`/platform/orgs/${org.id}`)}
-                  >
+                  <TableRow key={org.id} className="cursor-pointer hover:bg-accent/50" onClick={() => navigate(`/platform/orgs/${org.id}`)}>
                     <TableCell className="font-medium">{org.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs">
-                        {ORG_TYPE_LABELS[org.type] || org.type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {org.user_org_roles?.[0]?.count ?? 0}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {format(new Date(org.created_at), 'MMM d, yyyy')}
-                    </TableCell>
+                    <TableCell><Badge variant="outline" className="text-xs">{ORG_TYPE_LABELS[org.type] || org.type}</Badge></TableCell>
+                    <TableCell className="text-right">{org.user_org_roles?.[0]?.count ?? 0}</TableCell>
+                    <TableCell className="text-muted-foreground text-sm">{format(new Date(org.created_at), 'MMM d, yyyy')}</TableCell>
                   </TableRow>
                 ))
               )}
@@ -179,12 +127,34 @@ export default function PlatformOrgs() {
         </CardContent>
       </Card>
 
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-2">
+        {loading ? (
+          <p className="text-center py-8 text-muted-foreground">Loading...</p>
+        ) : filtered.length === 0 ? (
+          <p className="text-center py-8 text-muted-foreground">No organizations found</p>
+        ) : (
+          filtered.map((org) => (
+            <Card key={org.id} className="cursor-pointer active:bg-accent/50" onClick={() => navigate(`/platform/orgs/${org.id}`)}>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-medium text-sm truncate">{org.name}</p>
+                  <Badge variant="outline" className="text-[10px] shrink-0">{ORG_TYPE_LABELS[org.type] || org.type}</Badge>
+                </div>
+                <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+                  <span>{org.user_org_roles?.[0]?.count ?? 0} members</span>
+                  <span className="ml-auto">{format(new Date(org.created_at), 'MMM d, yyyy')}</span>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
+      </div>
+
       {/* Create Organization Dialog */}
       <Dialog open={showCreate} onOpenChange={(o) => { if (!o) resetForm(); setShowCreate(o); }}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create Organization</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Create Organization</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Organization Name *</Label>
@@ -213,25 +183,15 @@ export default function PlatformOrgs() {
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-1">
-                <Label>City</Label>
-                <Input value={orgCity} onChange={(e) => setOrgCity(e.target.value)} placeholder="Denver" />
-              </div>
+              <div className="space-y-1"><Label>City</Label><Input value={orgCity} onChange={(e) => setOrgCity(e.target.value)} placeholder="Denver" /></div>
               <div className="space-y-1">
                 <Label>State</Label>
                 <Select value={orgState} onValueChange={setOrgState}>
                   <SelectTrigger><SelectValue placeholder="CO" /></SelectTrigger>
-                  <SelectContent>
-                    {US_STATES.map(s => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
-                  </SelectContent>
+                  <SelectContent>{US_STATES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-              <div className="space-y-1">
-                <Label>ZIP</Label>
-                <Input value={orgZip} onChange={(e) => setOrgZip(e.target.value)} placeholder="80202" />
-              </div>
+              <div className="space-y-1"><Label>ZIP</Label><Input value={orgZip} onChange={(e) => setOrgZip(e.target.value)} placeholder="80202" /></div>
             </div>
             <div className="space-y-2">
               <Label>Initial Admin Email</Label>

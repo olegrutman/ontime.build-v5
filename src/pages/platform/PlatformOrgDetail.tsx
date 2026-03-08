@@ -214,7 +214,7 @@ export default function PlatformOrgDetail() {
       ]}
     >
       {/* Action buttons */}
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="flex flex-nowrap gap-2 mb-6 overflow-x-auto pb-2">
         <Button variant="outline" size="sm" onClick={() => setAddMemberOpen(true)}>
           <UserPlus className="h-4 w-4 mr-1" /> Add Member (No Verification)
         </Button>
@@ -260,7 +260,7 @@ export default function PlatformOrgDetail() {
         <CardHeader>
           <CardTitle className="text-base">Members</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -297,7 +297,7 @@ export default function PlatformOrgDetail() {
         <CardHeader>
           <CardTitle className="text-base">Projects</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

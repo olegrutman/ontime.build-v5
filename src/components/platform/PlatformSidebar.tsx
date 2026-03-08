@@ -20,12 +20,14 @@ const NAV_ITEMS = [
   { to: '/platform/logs', icon: ScrollText, label: 'Support Logs' },
 ];
 
-export function PlatformSidebar() {
+export { NAV_ITEMS };
+
+export function PlatformSidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const { profile, platformRole, signOut } = useAuth();
   const location = useLocation();
 
   return (
-    <aside className="w-64 h-screen flex flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border shrink-0">
+    <div className="flex flex-col h-full bg-sidebar text-sidebar-foreground">
       {/* Header */}
       <div className="p-4 border-b border-sidebar-border">
         <div className="flex items-center gap-2">
@@ -50,6 +52,7 @@ export function PlatformSidebar() {
             <NavLink
               key={item.to}
               to={item.to}
+              onClick={onNavigate}
               className={cn(
                 'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors',
                 isActive
@@ -74,6 +77,14 @@ export function PlatformSidebar() {
           Sign Out
         </button>
       </div>
+    </div>
+  );
+}
+
+export function PlatformSidebar() {
+  return (
+    <aside className="hidden lg:flex w-64 h-screen flex-col border-r border-sidebar-border shrink-0">
+      <PlatformSidebarContent />
     </aside>
   );
 }
