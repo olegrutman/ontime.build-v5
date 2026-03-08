@@ -548,6 +548,7 @@ Deno.serve(async (req) => {
         await adminClient.from("user_org_roles").delete().eq("user_id", user_id);
         await adminClient.from("profiles").delete().eq("user_id", user_id);
 
+        logMeta = { p_target_user_id: user_id, p_target_user_email: userProfile?.email, p_action_summary: `Deleted user ${userProfile?.email || user_id}` };
         result = { success: true, message: "User deleted" };
         break;
       }
