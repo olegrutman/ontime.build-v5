@@ -1,43 +1,39 @@
 
 
-# Fix Platform Project Detail Page — Bugs + Supplier Estimates
+# Allow Edit and Delete of Draft Invoices
 
-## Bugs Found
+## Current State
 
-### Bug 1: Team members query fails (400 error)
-The query selects `accepted` but `project_team` has no such column. It has `status` (text: "Accepted"/"Pending"/etc.) and `accepted_at` (timestamp). The team table never loads — always shows "No team members."
+- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
+- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
 
-**Fix**: Change select from `accepted` to `status, accepted_at` and update the `TeamMember` interface. Use `status === 'Accepted'` for the badge logic.
+## Plan
 
-### Bug 2: Work Orders status breakdown fails (400 error)
-Query selects `work_items.status` but the column is `state`.
+### 1. Add Delete Invoice capability
 
-**Fix**: Change `.select('status')` to `.select('state')` and update `buildCounts` to use `r.state`.
+**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
+- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
+- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
+- Button placed in the action buttons area, styled as destructive/outline
 
-### Bug 3: Team query join may fail
-`project_team` FK column is `org_id`. The join `organization:organizations(id, name, type)` may not resolve correctly without specifying the FK hint.
+**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
+- Add `onDelete` optional prop
+- Add trash icon to `hoverActions` array for DRAFT status
 
-**Fix**: Use `organization:organizations!project_team_org_id_fkey(id, name, type)` or verify the FK name.
+**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
+- Delete line items then invoice from database
+- Show toast, refresh list
+- Pass `onDelete` to `InvoiceCard`
 
-### Bug 4: Full address not showing correctly
-The address field only has `street`. `city`, `state`, `zip` are top-level project columns, but the code reads them from `project.address`.
+### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
 
-**Fix**: Read `city`, `state`, `zip` from the project object directly (they're top-level columns). Add these to `ProjectData` interface.
+**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
+- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
+- Show the button when `status === 'DRAFT' && canSubmit`
 
-### Bug 5: No supplier estimates section
-The page doesn't show supplier estimates. Need to query `supplier_estimates` for the project and display them.
+### Files to Change
 
-## Changes — `src/pages/platform/PlatformProjectDetail.tsx`
-
-1. **Fix `ProjectData` interface** — add `city`, `state`, `zip` top-level fields
-2. **Fix `TeamMember` interface** — replace `accepted: boolean` with `status: string`
-3. **Fix team query** — select `status` instead of `accepted`, add FK hint for org_id
-4. **Fix work_items query** — select `state` instead of `status`
-5. **Fix address display** — use top-level `city`, `state`, `zip` fields
-6. **Fix team accepted badge** — use `t.status === 'Accepted'` instead of `t.accepted`
-7. **Add supplier estimates fetch** — query `supplier_estimates` joined with `supplier_org:organizations(name)` for the project
-8. **Add Supplier Estimates card** — show estimate name, supplier org, status, total amount, dates
-
-## Single file edit
-`src/pages/platform/PlatformProjectDetail.tsx`
+- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
+- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
+- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
 

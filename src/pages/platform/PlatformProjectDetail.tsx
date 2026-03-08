@@ -10,13 +10,16 @@ import { SupportActionDialog } from '@/components/platform/SupportActionDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupportAction } from '@/hooks/useSupportAction';
 import { format } from 'date-fns';
-import { CheckCircle, DollarSign, FileText, ClipboardList, ShoppingCart } from 'lucide-react';
+import { CheckCircle, DollarSign, FileText, ClipboardList, ShoppingCart, Package } from 'lucide-react';
 
 interface ProjectData {
   id: string;
   name: string;
   status: string;
   address: any;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
   created_at: string;
   created_by: string | null;
 }
@@ -31,8 +34,18 @@ interface CreatorProfile {
 interface TeamMember {
   id: string;
   role: string;
-  accepted: boolean;
+  status: string;
+  accepted_at: string | null;
   organization: { id: string; name: string; type: string } | null;
+}
+
+interface SupplierEstimateRow {
+  id: string;
+  name: string;
+  status: string;
+  total_amount: number;
+  created_at: string;
+  supplier_org: { name: string } | null;
 }
 
 interface ContractRow {
@@ -114,6 +127,7 @@ export default function PlatformProjectDetail() {
   const [poCounts, setPoCounts] = useState<StatusCounts>({});
   const [invCounts, setInvCounts] = useState<StatusCounts>({});
   const [financials, setFinancials] = useState({ invoiced: 0, paid: 0, retainage: 0, poTotal: 0 });
+  const [estimates, setEstimates] = useState<SupplierEstimateRow[]>([]);
 
   const { execute, loading: actionLoading } = useSupportAction();
   const [forceAcceptOpen, setForceAcceptOpen] = useState(false);
@@ -126,7 +140,7 @@ export default function PlatformProjectDetail() {
       supabase.from('projects').select('*').eq('id', projectId).single(),
       supabase
         .from('project_team')
-        .select('id, role, accepted, organization:organizations(id, name, type)')
+        .select('id, role, status, accepted_at, organization:organizations!project_team_org_id_fkey(id, name, type)')
         .eq('project_id', projectId),
       supabase
         .from('project_contracts')
@@ -144,7 +158,7 @@ export default function PlatformProjectDetail() {
         .eq('project_id', projectId)
         .order('created_at', { ascending: false })
         .limit(10),
-      supabase.from('work_items').select('status').eq('project_id', projectId),
+      supabase.from('work_items').select('state').eq('project_id', projectId),
       supabase.from('purchase_orders').select('status').eq('project_id', projectId),
       supabase.from('invoices').select('status, total_amount, retainage_amount, paid_at').eq('project_id', projectId),
       supabase.from('purchase_orders').select('po_total').eq('project_id', projectId),
@@ -170,12 +184,12 @@ export default function PlatformProjectDetail() {
     setPos((posRes.data || []) as unknown as PORow[]);
 
     // Build status count maps
-    const buildCounts = (data: any[]) => {
+    const buildCounts = (data: any[], key = 'status') => {
       const map: StatusCounts = {};
-      data.forEach((r) => { map[r.status] = (map[r.status] || 0) + 1; });
+      data.forEach((r) => { const v = r[key]; if (v) map[v] = (map[v] || 0) + 1; });
       return map;
     };
-    setWoCounts(buildCounts(woStatusRes.data || []));
+    setWoCounts(buildCounts(woStatusRes.data || [], 'state'));
     setPoCounts(buildCounts(poStatusRes.data || []));
     setInvCounts(buildCounts(invAllRes.data || []));
 
@@ -188,6 +202,13 @@ export default function PlatformProjectDetail() {
       retainage: invRows.reduce((s: number, r: any) => s + (r.retainage_amount || 0), 0),
       poTotal: poRows.reduce((s: number, r: any) => s + (r.po_total || 0), 0),
     });
+
+    // Fetch supplier estimates
+    const { data: estData } = await supabase
+      .from('supplier_estimates')
+      .select('id, name, status, total_amount, created_at, supplier_org:organizations!supplier_estimates_supplier_org_id_fkey(name)')
+      .eq('project_id', projectId);
+    setEstimates((estData || []) as unknown as SupplierEstimateRow[]);
 
     setLoading(false);
   };
@@ -226,9 +247,11 @@ export default function PlatformProjectDetail() {
     );
   }
 
-  const fullAddress = project.address
-    ? [project.address.street, [project.address.city, project.address.state].filter(Boolean).join(', '), project.address.zip].filter(Boolean)
-    : [];
+  const fullAddress = [
+    project.address?.street,
+    [project.city, project.state].filter(Boolean).join(', '),
+    project.zip,
+  ].filter(Boolean);
 
   const totalContractValue = contracts.reduce((s, c) => s + (c.contract_sum || 0), 0);
   const ownerOrg = team.find((t) => t.role === 'GC');
@@ -537,13 +560,13 @@ export default function PlatformProjectDetail() {
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={t.accepted ? 'text-xs border-green-500/30 text-green-600' : 'text-xs border-yellow-500/30 text-yellow-600'}
+                        className={t.status === 'Accepted' ? 'text-xs border-green-500/30 text-green-600' : 'text-xs border-yellow-500/30 text-yellow-600'}
                       >
-                        {t.accepted ? 'Accepted' : 'Pending'}
+                        {t.status || 'Pending'}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {!t.accepted && (
+                      {t.status !== 'Accepted' && (
                         <Button
                           variant="ghost"
                           size="sm"
@@ -558,6 +581,49 @@ export default function PlatformProjectDetail() {
                           <CheckCircle className="h-3.5 w-3.5 mr-1" /> Force Accept
                         </Button>
                       )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Supplier Estimates */}
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Package className="h-4 w-4" /> Supplier Estimates
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Estimate</TableHead>
+                <TableHead>Supplier Org</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead>Created</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {estimates.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">No supplier estimates</TableCell>
+                </TableRow>
+              ) : (
+                estimates.map((e) => (
+                  <TableRow key={e.id}>
+                    <TableCell className="font-medium">{e.name}</TableCell>
+                    <TableCell className="text-sm">{e.supplier_org?.name || '—'}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs capitalize">{e.status.toLowerCase()}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">{formatCurrency(e.total_amount)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {format(new Date(e.created_at), 'MMM d, yyyy')}
                     </TableCell>
                   </TableRow>
                 ))
