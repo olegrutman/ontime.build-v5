@@ -1,39 +1,29 @@
 
 
-# Allow Edit and Delete of Draft Invoices
+# Enhance Platform Project Detail — Full Address + Created By
 
 ## Current State
+The page already shows: team members table, contracts table, financial overview, activity breakdown, invoices, POs, and city/state in summary. Two things are missing:
 
-- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
-- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
+1. **Full address** — only city/state is displayed; street and zip are available in `project.address` but not shown
+2. **Created By** — `project.created_by` (a user ID) is fetched but never displayed; need to resolve it to a name
 
-## Plan
+## Changes — `src/pages/platform/PlatformProjectDetail.tsx`
 
-### 1. Add Delete Invoice capability
+### 1. Show full address in Summary Card
+Replace the Location field (currently just city/state) with the full address: street, city, state, zip — each on its own line or comma-separated. Falls back to "—" if no address.
 
-**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
-- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
-- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
-- Button placed in the action buttons area, styled as destructive/outline
+### 2. Resolve and show "Created By"
+- In `fetchData`, add a query to `profiles` table using `project.created_by` to get `first_name`, `last_name`, `email`
+- Add a "Created By" field to the Summary Card showing the user's name (linked to `/platform/users/:id`) with email as secondary text
+- If `created_by` is null, show "—"
 
-**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
-- Add `onDelete` optional prop
-- Add trash icon to `hoverActions` array for DRAFT status
+### 3. Add org type badge to Team table
+Currently the team table shows org name and role. Add the organization `type` (GC/TC/FC) as a small badge next to the org name for quick identification.
 
-**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
-- Delete line items then invoice from database
-- Show toast, refresh list
-- Pass `onDelete` to `InvoiceCard`
+### Summary of UI additions to Summary Card
+Current 5 columns: Status, Owner Org, Location, Created, Contracts
+New layout (6 columns): Status, Owner Org, Created By, Location (full address), Created Date, Contracts
 
-### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
-
-**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
-- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
-- Show the button when `status === 'DRAFT' && canSubmit`
-
-### Files to Change
-
-- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
-- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
-- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
+Single file edit: `src/pages/platform/PlatformProjectDetail.tsx`
 
