@@ -21,6 +21,13 @@ interface ProjectData {
   created_by: string | null;
 }
 
+interface CreatorProfile {
+  first_name: string | null;
+  last_name: string | null;
+  email: string;
+  user_id: string;
+}
+
 interface TeamMember {
   id: string;
   role: string;
