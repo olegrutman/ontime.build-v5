@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { TRADES } from '@/types/projectWizard';
-import { JOB_TITLES, type SignupWizardData } from './types';
+import { getJobTitlesForOrgType } from '@/types/organization';
+import type { SignupWizardData } from './types';
 
 interface Props {
   data: SignupWizardData;
