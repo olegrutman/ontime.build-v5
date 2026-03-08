@@ -40,19 +40,42 @@ export function SashaBubble() {
   const [pulse, setPulse] = useState(true);
   const [showLabel, setShowLabel] = useState(true);
   const [highlightMode, setHighlightMode] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !localStorage.getItem('sasha_welcome_seen');
+  });
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Stop pulse + hide label after first open
-  useEffect(() => {
-    if (open) { setPulse(false); setShowLabel(false); }
-  }, [open]);
+  const isOnDashboard = location.pathname === '/dashboard';
 
-  // Auto-dismiss label after 6 seconds
+  // Stop pulse + hide label after first open; dismiss welcome
+  useEffect(() => {
+    if (open) {
+      setPulse(false);
+      setShowLabel(false);
+      if (showWelcome) {
+        setShowWelcome(false);
+        localStorage.setItem('sasha_welcome_seen', 'true');
+      }
+    }
+  }, [open, showWelcome]);
+
+  // Auto-dismiss label after 6s (or welcome after 8s)
   useEffect(() => {
     const t = setTimeout(() => setShowLabel(false), 6000);
     return () => clearTimeout(t);
   }, []);
+
+  useEffect(() => {
+    if (showWelcome && isOnDashboard) {
+      const t = setTimeout(() => {
+        setShowWelcome(false);
+        localStorage.setItem('sasha_welcome_seen', 'true');
+      }, 8000);
+      return () => clearTimeout(t);
+    }
+  }, [showWelcome, isOnDashboard]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -320,7 +343,17 @@ export function SashaBubble() {
       {/* Floating Bubble */}
       <div className="fixed bottom-20 lg:bottom-4 right-4 z-50 flex items-center gap-2">
         {/* Tooltip label */}
-        {!open && showLabel && (
+        {/* Welcome tooltip on first dashboard visit */}
+        {!open && showWelcome && isOnDashboard && (
+          <div className="animate-in fade-in zoom-in-95 duration-300 flex items-center">
+            <div className="bg-primary text-primary-foreground text-sm font-semibold px-4 py-2 rounded-xl shadow-lg whitespace-nowrap">
+              Need help? Click me! 👋
+            </div>
+            <div className="w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[8px] border-l-primary shrink-0" />
+          </div>
+        )}
+        {/* Default label (non-welcome) */}
+        {!open && showLabel && !(showWelcome && isOnDashboard) && (
           <div className="animate-fade-in bg-primary text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg whitespace-nowrap">
             Ask Sasha 💬
           </div>
