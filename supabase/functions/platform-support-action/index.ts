@@ -106,6 +106,7 @@ Deno.serve(async (req) => {
     let targetId = "";
     let snapshotBefore: any = null;
     let snapshotAfter: any = null;
+    let logMeta: Record<string, any> = {};
 
     switch (action_type) {
       case "RESEND_INVITE": {
