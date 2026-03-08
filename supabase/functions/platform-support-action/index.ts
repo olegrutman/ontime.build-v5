@@ -263,6 +263,7 @@ Deno.serve(async (req) => {
           });
         }
         snapshotAfter = { user_email, role, organization_id };
+        logMeta = { p_target_user_id: profileData.user_id, p_target_user_email: user_email, p_target_org_id: organization_id, p_action_summary: `Added ${user_email} to org ${organization_id} as ${role}` };
         result = { success: true, message: "Member added without verification" };
         break;
       }
