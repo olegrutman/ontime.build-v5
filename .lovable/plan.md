@@ -1,39 +1,56 @@
 
 
-# Allow Edit and Delete of Draft Invoices
+# Org-Type-Specific Job Titles
 
-## Current State
+Currently, a single flat `JOB_TITLES` array is used everywhere (signup wizard, profile page, team management, landing auth). The user wants each organization type to have its own set of job titles.
 
-- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
-- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
+## New Job Titles by Org Type
 
-## Plan
+| GC | TC | FC | Supplier |
+|---|---|---|---|
+| Owner/Manager | Owner/Manager | Owner/Manager | Owner |
+| Project Manager | Project Manager | Project Manager | Sales Manager |
+| Field Supervisor | Field Supervisor | Field Supervisor | Sales Support |
+| Office Manager | Office Manager | Office Manager | Office Manager |
+| Superintendent | Superintendent | Superintendent | Accounting |
 
-### 1. Add Delete Invoice capability
+## Changes
 
-**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
-- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
-- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
-- Button placed in the action buttons area, styled as destructive/outline
+### 1. Central definition — `src/types/organization.ts`
 
-**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
-- Add `onDelete` optional prop
-- Add trash icon to `hoverActions` array for DRAFT status
+Add a `JOB_TITLES_BY_ORG_TYPE` mapping and a helper `getJobTitlesForOrgType(orgType)`. Keep a flat `ALL_JOB_TITLES` array (union of all) for contexts where org type is unknown.
 
-**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
-- Delete line items then invoice from database
-- Show toast, refresh list
-- Pass `onDelete` to `InvoiceCard`
+```ts
+export const JOB_TITLES_BY_ORG_TYPE: Record<OrgType, string[]> = {
+  GC: ['Owner/Manager', 'Project Manager', 'Field Supervisor', 'Office Manager', 'Superintendent'],
+  TC: ['Owner/Manager', 'Project Manager', 'Field Supervisor', 'Office Manager', 'Superintendent'],
+  FC: ['Owner/Manager', 'Project Manager', 'Field Supervisor', 'Office Manager', 'Superintendent'],
+  SUPPLIER: ['Owner', 'Sales Manager', 'Sales Support', 'Office Manager', 'Accounting'],
+};
 
-### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
+export const ALL_JOB_TITLES = [...new Set(Object.values(JOB_TITLES_BY_ORG_TYPE).flat())];
 
-**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
-- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
-- Show the button when `status === 'DRAFT' && canSubmit`
+export function getJobTitlesForOrgType(orgType: OrgType | null | undefined): string[] {
+  return orgType ? JOB_TITLES_BY_ORG_TYPE[orgType] : ALL_JOB_TITLES;
+}
+```
 
-### Files to Change
+### 2. Remove duplicate definitions
 
-- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
-- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
-- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
+- **`src/components/signup-wizard/types.ts`** — Remove `JOB_TITLES`, re-export from organization.ts
+- **`src/pages/Profile.tsx`** — Remove local `JOB_TITLES`, import `getJobTitlesForOrgType`, use current org type from `useAuth`
+- **`src/components/landing/AuthSection.tsx`** — Remove local `JOB_TITLES`, use `getJobTitlesForOrgType` based on selected org type in the signup form
+
+### 3. Update consumers to use org-type-aware titles
+
+- **`src/components/signup-wizard/RoleStep.tsx`** — Already has org type in wizard data; pass it to `getJobTitlesForOrgType`
+- **`src/components/signup-wizard/AccountStep.tsx`** — Same approach using wizard data's `orgType`
+- **`src/components/team/MemberDetailDialog.tsx`** — Get org type from `useAuth().userOrgRoles[0].organization.type` and filter titles
+- **`src/pages/Profile.tsx`** — Get org type from auth context
+- **`src/components/landing/AuthSection.tsx`** — Get org type from the signup form state
+- **`src/components/platform/AssignToOrgDialog.tsx`** — If job title selection exists, use selected org's type
+
+### 4. No database changes needed
+
+Job titles are cosmetic strings stored in the `job_title` column. Existing values remain valid. No migration required.
 
