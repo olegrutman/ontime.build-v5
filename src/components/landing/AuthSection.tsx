@@ -32,16 +32,6 @@ const ROLE_OPTIONS = [
   { value: 'SUPPLIER', label: 'Supplier' },
 ] as const;
 
-// Job title options for all org types
-const JOB_TITLES = [
-  'Owner',
-  'Project Manager',
-  'Superintendent',
-  'Estimator',
-  'Office Manager',
-  'Foreman',
-  'Other',
-];
 
 // Sign In schema
 const signInSchema = z.object({
