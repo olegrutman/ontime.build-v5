@@ -215,6 +215,24 @@ export const ROLE_PERMISSIONS: Record<AppRole, RolePermissions> = {
  * Compute effective permissions by merging role defaults with DB member_permissions.
  * Admins get ALL permissions regardless.
  */
+// ── Org-type-specific job titles ──────────────────────────────────────
+
+export const JOB_TITLES_BY_ORG_TYPE: Record<OrgType, string[]> = {
+  GC: ['Owner/Manager', 'Project Manager', 'Field Supervisor', 'Office Manager', 'Superintendent'],
+  TC: ['Owner/Manager', 'Project Manager', 'Field Supervisor', 'Office Manager', 'Superintendent'],
+  FC: ['Owner/Manager', 'Project Manager', 'Field Supervisor', 'Office Manager', 'Superintendent'],
+  SUPPLIER: ['Owner', 'Sales Manager', 'Sales Support', 'Office Manager', 'Accounting'],
+};
+
+export const ALL_JOB_TITLES = [...new Set(Object.values(JOB_TITLES_BY_ORG_TYPE).flat())];
+
+export function getJobTitlesForOrgType(orgType: OrgType | string | null | undefined): string[] {
+  if (orgType && orgType in JOB_TITLES_BY_ORG_TYPE) {
+    return JOB_TITLES_BY_ORG_TYPE[orgType as OrgType];
+  }
+  return ALL_JOB_TITLES;
+}
+
 export function getEffectivePermissions(
   role: AppRole | null,
   memberPerms: MemberPermissions | null,

@@ -154,7 +154,7 @@ export function AccountStep({ data, onChange, onNext, onBack, loading, showJobTi
                 <SelectValue placeholder="Select your job title" />
               </SelectTrigger>
               <SelectContent>
-                {JOB_TITLES.map(t => (
+                {getJobTitlesForOrgType(data.orgType).map(t => (
                   <SelectItem key={t} value={t}>{t}</SelectItem>
                 ))}
               </SelectContent>

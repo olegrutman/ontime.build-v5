@@ -288,7 +288,7 @@ export default function Profile() {
                     <SelectValue placeholder="Select title" />
                   </SelectTrigger>
                   <SelectContent>
-                    {JOB_TITLES.map(t => (
+                    {getJobTitlesForOrgType(organization?.type).map(t => (
                       <SelectItem key={t} value={t}>{t}</SelectItem>
                     ))}
                   </SelectContent>

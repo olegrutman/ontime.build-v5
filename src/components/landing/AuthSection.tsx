@@ -567,7 +567,7 @@ export function AuthSection() {
                           <SelectValue placeholder="Select your role" />
                         </SelectTrigger>
                         <SelectContent>
-                          {JOB_TITLES.map((title) => (
+                          {getJobTitlesForOrgType(signUpForm.role).map((title) => (
                             <SelectItem key={title} value={title}>
                               {title}
                             </SelectItem>
