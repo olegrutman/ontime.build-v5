@@ -68,9 +68,8 @@ export default function PlatformUsers() {
 
       {!loading && totalCount > 0 && (
         <p className="text-sm text-muted-foreground mb-3">
-          Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, totalCount)} of {totalCount} user{totalCount !== 1 ? 's' : ''}
+          Showing {page * PAGE_SIZE + 1}&ndash;{Math.min((page + 1) * PAGE_SIZE, totalCount)} of {totalCount} user{totalCount !== 1 ? 's' : ''}
         </p>
-      )}
       )}
       <Card>
         <CardContent className="p-0">
