@@ -70,15 +70,15 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
         </div>
 
         <div className="group flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">Owner Contract</span>
           <div className="flex items-center gap-1.5">
-            <span className={cn("text-sm font-semibold tabular-nums", !hasOwner && 'text-amber-600 dark:text-amber-400')}>
-              {hasOwner ? fmt(ownerContractValue) : 'Not set'}
-            </span>
             <button onClick={() => { setEditValue(ownerContractValue || 0); setEditing(true); }} className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-accent rounded">
               <Pencil className="h-3 w-3 text-muted-foreground" />
             </button>
+            <span className="text-sm text-muted-foreground">Owner Contract</span>
           </div>
+          <span className={cn("text-sm font-semibold tabular-nums", !hasOwner && 'text-amber-600 dark:text-amber-400')}>
+            {hasOwner ? fmt(ownerContractValue) : 'Not set'}
+          </span>
         </div>
 
         <div className="flex items-center justify-between">
