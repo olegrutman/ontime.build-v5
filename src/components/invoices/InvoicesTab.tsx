@@ -418,7 +418,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
           <Clock className="w-4 h-4 text-primary" />
         </div>
       </Card>
-      <Card className="p-4 relative overflow-hidden">
+      <Card data-sasha-card="Invoice Summary" className="p-4 relative overflow-hidden">
         <div className="flex flex-col gap-1">
           <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Approved</span>
           <span className="text-2xl font-bold text-accent-foreground">{stats.approved}</span>
