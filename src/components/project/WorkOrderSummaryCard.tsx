@@ -13,6 +13,7 @@ interface WorkOrderSummaryCardProps {
 interface WorkOrderTotals {
   tcToGcTotal: number;
   tcToFcTotal: number;
+  tcInternalCostTotal: number;
   fcEarnings: number;
   approvedCount: number;
   pendingCount: number;
