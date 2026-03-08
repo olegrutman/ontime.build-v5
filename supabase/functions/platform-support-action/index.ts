@@ -106,6 +106,7 @@ Deno.serve(async (req) => {
     let targetId = "";
     let snapshotBefore: any = null;
     let snapshotAfter: any = null;
+    let logMeta: Record<string, any> = {};
 
     switch (action_type) {
       case "RESEND_INVITE": {
@@ -141,6 +142,7 @@ Deno.serve(async (req) => {
           .eq("id", invite_id);
 
         snapshotAfter = { status: "pending", resent: true };
+        logMeta = { p_action_summary: `Resent invite ${invite_id}` };
         result = { success: true, message: "Invite resent" };
         break;
       }
@@ -170,6 +172,7 @@ Deno.serve(async (req) => {
             headers: corsHeaders,
           });
         }
+        logMeta = { p_target_user_id: user_id, p_target_user_email: profileData.email, p_action_summary: `Generated recovery link for ${profileData.email}` };
         result = { success: true, message: "Recovery link generated" };
         break;
       }
@@ -199,6 +202,7 @@ Deno.serve(async (req) => {
           .update({ email: new_email })
           .eq("user_id", user_id);
         snapshotAfter = { email: new_email };
+        logMeta = { p_target_user_id: user_id, p_target_user_email: new_email, p_action_summary: `Changed email from ${oldProfile?.email} to ${new_email}` };
         result = { success: true, message: "Email changed" };
         break;
       }
@@ -224,6 +228,7 @@ Deno.serve(async (req) => {
           });
         }
         snapshotAfter = { accepted: true };
+        logMeta = { p_action_summary: `Force-accepted project team membership ${team_id}` };
         result = { success: true, message: "Project team membership accepted" };
         break;
       }
@@ -258,6 +263,7 @@ Deno.serve(async (req) => {
           });
         }
         snapshotAfter = { user_email, role, organization_id };
+        logMeta = { p_target_user_id: profileData.user_id, p_target_user_email: user_email, p_target_org_id: organization_id, p_action_summary: `Added ${user_email} to org ${organization_id} as ${role}` };
         result = { success: true, message: "Member added without verification" };
         break;
       }
@@ -295,6 +301,7 @@ Deno.serve(async (req) => {
         }
 
         snapshotAfter = { members_count: members?.length ?? 0 };
+        logMeta = { p_target_org_id: organization_id, p_action_summary: `Rebuilt permissions for ${members?.length ?? 0} members` };
         result = { success: true, message: "Permissions rebuilt" };
         break;
       }
@@ -345,6 +352,7 @@ Deno.serve(async (req) => {
           });
         }
         snapshotAfter = { [statusField]: newStatus };
+        logMeta = { p_action_summary: `Unlocked ${record_type} ${record_id} → ${newStatus}` };
         result = { success: true, message: `${record_type} unlocked` };
         break;
       }
@@ -407,6 +415,7 @@ Deno.serve(async (req) => {
           }
         }
 
+        logMeta = { p_target_org_id: newOrg.id, p_target_org_name: org_name, p_action_summary: `Created org "${org_name}" (${org_type})` };
         result = { success: true, message: "Organization created", org_id: newOrg.id };
         break;
       }
@@ -461,6 +470,7 @@ Deno.serve(async (req) => {
           }
         }
 
+        logMeta = { p_target_user_id: newUserId, p_target_user_email: email, p_target_org_id: addOrgId || undefined, p_action_summary: `Created user ${email}` + (addOrgId ? ` and added to org as ${addRole}` : "") };
         result = { success: true, message: "User created" + (addOrgId ? " and added to org" : ""), user_id: newUserId };
         break;
       }
@@ -504,6 +514,7 @@ Deno.serve(async (req) => {
           });
         }
 
+        logMeta = { p_target_org_id: organization_id, p_target_org_name: orgData.name, p_action_summary: `Deleted org "${orgData.name}"` };
         result = { success: true, message: "Organization deleted" };
         break;
       }
@@ -537,6 +548,7 @@ Deno.serve(async (req) => {
         await adminClient.from("user_org_roles").delete().eq("user_id", user_id);
         await adminClient.from("profiles").delete().eq("user_id", user_id);
 
+        logMeta = { p_target_user_id: user_id, p_target_user_email: userProfile?.email, p_action_summary: `Deleted user ${userProfile?.email || user_id}` };
         result = { success: true, message: "User deleted" };
         break;
       }
@@ -579,6 +591,7 @@ Deno.serve(async (req) => {
         }
 
         snapshotAfter = { role: new_role, is_admin: typeof new_is_admin === "boolean" ? new_is_admin : oldRole.is_admin };
+        logMeta = { p_action_summary: `Changed role from ${oldRole.role} to ${new_role}` };
         result = { success: true, message: "User role updated" };
         break;
       }
@@ -590,15 +603,19 @@ Deno.serve(async (req) => {
         });
     }
 
-    // Log the action
-    await adminClient.rpc("log_support_action", {
-      _performed_by: callerId,
-      _action_type: action_type,
-      _target_type: action_type,
-      _target_id: targetId || "unknown",
-      _reason: reason,
-      _snapshot_before: snapshotBefore ? JSON.stringify(snapshotBefore) : null,
-      _snapshot_after: snapshotAfter ? JSON.stringify(snapshotAfter) : null,
+    // Log the action using user's client so auth.uid() resolves inside the RPC
+    await userClient.rpc("log_support_action", {
+      p_action_type: action_type,
+      p_reason: reason,
+      p_action_summary: logMeta.p_action_summary || `${action_type} on ${targetId}`,
+      p_target_user_id: logMeta.p_target_user_id || null,
+      p_target_user_email: logMeta.p_target_user_email || null,
+      p_target_org_id: logMeta.p_target_org_id || null,
+      p_target_org_name: logMeta.p_target_org_name || null,
+      p_target_project_id: logMeta.p_target_project_id || null,
+      p_target_project_name: logMeta.p_target_project_name || null,
+      p_before_snapshot: snapshotBefore ? JSON.stringify(snapshotBefore) : null,
+      p_after_snapshot: snapshotAfter ? JSON.stringify(snapshotAfter) : null,
     });
 
     return new Response(JSON.stringify(result), {
