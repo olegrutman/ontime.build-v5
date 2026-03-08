@@ -409,7 +409,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
           <FileEdit className="w-4 h-4 text-muted-foreground" />
         </div>
       </Card>
-      <Card className="p-4 relative overflow-hidden">
+      <Card data-sasha-card="Invoice Summary" className="p-4 relative overflow-hidden">
         <div className="flex flex-col gap-1">
           <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Pending</span>
           <span className="text-2xl font-bold text-primary">{stats.submitted}</span>
