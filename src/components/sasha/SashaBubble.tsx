@@ -37,7 +37,7 @@ export function SashaBubble() {
   const [messages, setMessages] = useState<SashaChatMessage[]>([INITIAL_GREETING]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [pulse, setPulse] = useState(true);
+  const [pulse, setPulse] = useState(() => !localStorage.getItem('sasha_pulse_dismissed'));
   const [showLabel, setShowLabel] = useState(true);
   const [highlightMode, setHighlightMode] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => {
