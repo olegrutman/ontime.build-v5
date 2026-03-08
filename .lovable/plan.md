@@ -1,39 +1,21 @@
 
 
-# Allow Edit and Delete of Draft Invoices
+# Add Notification Badge to Header Component
 
-## Current State
+## What's Already Working
+The `NotificationSheet` component already has a real-time unread count badge — it shows a red circle with the count, updates via Supabase realtime subscription on INSERT/DELETE, and caps at "99+". This works correctly in `ProjectTopBar`, `MobileProjectHeader`, `TopBar`, and `WorkOrderTopBar`.
 
-- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
-- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
+## The Gap
+`src/components/Header.tsx` (the main app header) uses a **plain Bell icon button** (line 73-77) with no badge and no connection to notifications. It doesn't use `NotificationSheet` at all.
 
-## Plan
+## Fix
+Replace the standalone Bell button in `Header.tsx` with the existing `<NotificationSheet />` component. Style the trigger to match the header's dark theme (white/translucent icon colors).
 
-### 1. Add Delete Invoice capability
+### Changes — `src/components/Header.tsx`
+1. Import `NotificationSheet` from `@/components/notifications`
+2. Remove the standalone `Bell` button (lines ~72-77)
+3. Replace it with `<NotificationSheet />` — this already includes the bell icon, unread badge, and the slide-out panel
+4. Optionally wrap or pass a className to match the header's `text-primary-foreground` styling
 
-**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
-- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
-- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
-- Button placed in the action buttons area, styled as destructive/outline
-
-**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
-- Add `onDelete` optional prop
-- Add trash icon to `hoverActions` array for DRAFT status
-
-**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
-- Delete line items then invoice from database
-- Show toast, refresh list
-- Pass `onDelete` to `InvoiceCard`
-
-### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
-
-**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
-- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
-- Show the button when `status === 'DRAFT' && canSubmit`
-
-### Files to Change
-
-- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
-- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
-- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
+This is a single-file, ~5-line change. No new components or database work needed — all the real-time plumbing already exists.
 
