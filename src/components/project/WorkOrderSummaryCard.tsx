@@ -151,7 +151,7 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
       // For TC and GC: fetch all work orders for this project
       const { data: workOrders, error } = await supabase
         .from('change_order_projects')
-        .select('id, status, final_price, labor_total, material_total, equipment_total, created_by_role, linked_po_id, material_markup_type, material_markup_percent, material_markup_amount')
+        .select('id, status, final_price, labor_total, material_total, equipment_total, created_by_role, linked_po_id, material_markup_type, material_markup_percent, material_markup_amount, tc_internal_cost')
         .eq('project_id', projectId);
 
       if (error) {
