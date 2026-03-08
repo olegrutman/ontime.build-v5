@@ -1,39 +1,32 @@
 
 
-# Allow Edit and Delete of Draft Invoices
+# Add Billing Progress Bar to All SOV Cards
 
-## Current State
+## Problem
+Each SOV card header only shows the contract sum and item count text. There is no visual billing progress bar at the SOV card level — the progress bar only appears per-item (when expanded) and in the TC section summaries.
 
-- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
-- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
+## Change
 
-## Plan
+### `src/components/sov/ContractSOVEditor.tsx`
 
-### 1. Add Delete Invoice capability
+Add an `SOVProgressBar` to each SOV card header, visible in both collapsed and expanded states. Insert it right after the `CardDescription` line (after line 322), using the existing `totals` object which already has `totalBilled` and `totalScheduled`.
 
-**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
-- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
-- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
-- Button placed in the action buttons area, styled as destructive/outline
+```tsx
+{/* After CardDescription, inside the header left side */}
+{totals.totalScheduled > 0 && (
+  <div className="mt-2 w-48">
+    <SOVProgressBar
+      scheduledValue={totals.totalScheduled}
+      billedToDate={totals.totalBilled}
+      showLabels={false}
+      size="sm"
+    />
+    <span className="text-xs text-muted-foreground">
+      {formatCurrency(totals.totalBilled)} / {formatCurrency(totals.totalScheduled)} billed
+    </span>
+  </div>
+)}
+```
 
-**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
-- Add `onDelete` optional prop
-- Add trash icon to `hoverActions` array for DRAFT status
-
-**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
-- Delete line items then invoice from database
-- Show toast, refresh list
-- Pass `onDelete` to `InvoiceCard`
-
-### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
-
-**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
-- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
-- Show the button when `status === 'DRAFT' && canSubmit`
-
-### Files to Change
-
-- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
-- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
-- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
+This reuses the existing `getSOVTotals(sov.id)` result already computed at line 288 and the existing `SOVProgressBar` component. One insertion point, no other files affected.
 
