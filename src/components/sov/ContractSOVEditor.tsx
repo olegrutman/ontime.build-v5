@@ -706,7 +706,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                             <div className="px-3 pb-3">
                               <SOVProgressBar
                                 scheduledValue={item.value_amount}
-                                billedToDtotal_billed_amounted_to_date || 0}
+                                billedToDate={item.total_billed_amount || 0}
                                 size="sm"
                               />
                             </div>
