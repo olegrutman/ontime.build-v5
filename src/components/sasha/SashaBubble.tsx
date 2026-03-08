@@ -37,7 +37,7 @@ export function SashaBubble() {
   const [messages, setMessages] = useState<SashaChatMessage[]>([INITIAL_GREETING]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [pulse, setPulse] = useState(true);
+  const [pulse, setPulse] = useState(() => !localStorage.getItem('sasha_pulse_dismissed'));
   const [showLabel, setShowLabel] = useState(true);
   const [highlightMode, setHighlightMode] = useState(false);
   const [showWelcome, setShowWelcome] = useState(() => {
@@ -359,7 +359,11 @@ export function SashaBubble() {
           </div>
         )}
         <button
-          onClick={() => setOpen((o) => !o)}
+          onClick={() => {
+            setPulse(false);
+            localStorage.setItem('sasha_pulse_dismissed', 'true');
+            setOpen((o) => !o);
+          }}
           className={`relative h-16 w-16 rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform overflow-hidden ${
             pulse ? 'animate-bounce' : ''
           }`}
