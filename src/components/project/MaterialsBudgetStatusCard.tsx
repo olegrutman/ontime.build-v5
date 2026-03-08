@@ -103,12 +103,12 @@ function Row({ label, value, sub, over }: { label: string; value: string; sub?: 
     <div className="flex items-center justify-between">
       <span className="text-sm text-muted-foreground">{label}</span>
       <div className="flex items-center gap-1.5">
-        <span className="text-sm font-semibold tabular-nums">{value}</span>
         {sub && (
-          <span className={cn("text-xs font-medium", over ? 'text-destructive' : 'text-green-600 dark:text-green-400')}>
+          <span className={cn("text-xs font-medium w-14 text-right", over ? 'text-destructive' : 'text-green-600 dark:text-green-400')}>
             {sub}
           </span>
         )}
+        <span className="text-sm font-semibold tabular-nums text-right min-w-[90px]">{value}</span>
       </div>
     </div>
   );
