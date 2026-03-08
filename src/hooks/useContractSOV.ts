@@ -44,6 +44,8 @@ export interface ContractSOVItem {
   percent_of_contract: number;
   value_amount: number;
   billed_to_date: number;
+  total_billed_amount: number;
+  total_completion_percent: number;
   source: 'template' | 'user';
   created_at: string;
 }
