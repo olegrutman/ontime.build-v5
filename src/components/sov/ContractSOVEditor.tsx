@@ -320,6 +320,19 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                         <CardDescription>
                           {formatCurrency(contract?.contract_sum || 0)} • {items.length} item{items.length !== 1 ? 's' : ''}
                         </CardDescription>
+                        {totals.totalValue > 0 && (
+                          <div className="mt-2 w-48">
+                            <SOVProgressBar
+                              scheduledValue={totals.totalValue}
+                              billedToDate={totals.totalBilled}
+                              showLabels={false}
+                              size="sm"
+                            />
+                            <span className="text-xs text-muted-foreground">
+                              {formatCurrency(totals.totalBilled)} / {formatCurrency(totals.totalValue)} billed
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
