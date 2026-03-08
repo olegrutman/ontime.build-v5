@@ -35,7 +35,7 @@ export function FinancialTrendCharts({ spendTrend, woTrend, loading }: Financial
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {/* Spend Over Time */}
-      <Card>
+      <Card data-sasha-card="Billing Trend">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <TrendingUp className="h-4 w-4 text-primary" />
