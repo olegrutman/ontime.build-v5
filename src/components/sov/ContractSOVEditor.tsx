@@ -787,18 +787,6 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
         <>
           {/* Non-TC: original layout */}
           {/* Main Contract Billing Summary */}
-          {contractSovs.length > 0 && mainContractBillingTotals.scheduled > 0 && (
-            <div className="rounded-lg border bg-muted/30 p-3 flex flex-wrap items-center gap-4 text-sm">
-              <span className="font-medium">Main Contract Billing:</span>
-              <span>{formatCurrency(mainContractBillingTotals.billed)} of {formatCurrency(mainContractBillingTotals.scheduled)}</span>
-              <SOVProgressBar
-                scheduledValue={mainContractBillingTotals.scheduled}
-                billedToDate={mainContractBillingTotals.billed}
-                size="sm"
-              />
-              <span className="text-muted-foreground">{mainBilledPercent.toFixed(1)}% complete</span>
-            </div>
-          )}
 
           {/* Main Contracts Section */}
           {contractSovs.length > 0 && (
