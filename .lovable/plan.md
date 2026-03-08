@@ -1,39 +1,46 @@
 
 
-# Allow Edit and Delete of Draft Invoices
+# Expand Demo Dataset to 10 Projects
 
 ## Current State
+- 3 projects, 6 work orders (2 each), 3 POs, 6 invoices, 3 contracts, 8 SOV items, 5 RFIs, 12 PO line items, 7 invoice line items, 6 WO details
+- ~354 lines in `demoData.ts`
 
-- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
-- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
+## Target State
+- **10 projects** across varied types (residential, commercial, mixed-use, industrial, institutional)
+- **~100 work orders** (8-12 per project, mix of draft/active/completed statuses)
+- **~40 purchase orders** (3-5 per project)
+- **~60 invoices** (5-8 per project, varied statuses)
+- **~15 contracts** (1-2 per project)
+- **~80 SOV items** (6-10 per project)
+- **~40 RFIs** (3-5 per project)
+- **~120 PO line items** (3-4 per PO)
+- **~120 invoice line items** (2-3 per invoice)
+- **~100 WO details** (one per WO)
+- **~20 team members** (expanded roster)
+- **~30 attention items** (2-4 per project)
 
-## Plan
+## New Projects (7 added to existing 3)
 
-### 1. Add Delete Invoice capability
+| ID | Name | Type | Build Type | City |
+|----|------|------|-----------|------|
+| demo-proj-4 | Riverside Medical Center | institutional | new_construction | Dallas, TX |
+| demo-proj-5 | Cedar Park Elementary Expansion | institutional | renovation | Cedar Park, TX |
+| demo-proj-6 | Westlake Hills Estate | residential | new_construction | Westlake Hills, TX |
+| demo-proj-7 | East Side Brewery & Taproom | commercial | renovation | Austin, TX |
+| demo-proj-8 | South Congress Retail Center | commercial | new_construction | Austin, TX |
+| demo-proj-9 | Mueller Mixed-Use Block 7 | mixed_use | new_construction | Austin, TX |
+| demo-proj-10 | Pflugerville Distribution Hub | industrial | new_construction | Pflugerville, TX |
 
-**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
-- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
-- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
-- Button placed in the action buttons area, styled as destructive/outline
+## Implementation
+Single file change: rewrite `src/data/demoData.ts` with all expanded arrays. All interfaces and helper functions stay the same — just more data rows. The file will grow from ~354 lines to ~1800-2000 lines.
 
-**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
-- Add `onDelete` optional prop
-- Add trash icon to `hoverActions` array for DRAFT status
+No other files need changes — all consumers already filter by `project_id` via `getDemoDataForProject()`.
 
-**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
-- Delete line items then invoice from database
-- Show toast, refresh list
-- Pass `onDelete` to `InvoiceCard`
-
-### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
-
-**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
-- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
-- Show the button when `status === 'DRAFT' && canSubmit`
-
-### Files to Change
-
-- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
-- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
-- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
+## Data Realism
+- Work orders use realistic trade types: framing, electrical, plumbing, HVAC, roofing, concrete, drywall, painting, flooring, fire protection, elevators, steel
+- Statuses distributed: ~30% draft, ~40% active, ~20% completed, ~10% cancelled
+- Financial figures scale with project type (medical center $2M+, brewery $400K, etc.)
+- RFIs reference real construction conflicts (code vs plans, material substitutions, coordination issues)
+- Invoice billing periods span Oct 2025 – Feb 2026
 
