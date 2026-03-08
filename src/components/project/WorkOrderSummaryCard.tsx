@@ -36,6 +36,7 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
   const [totals, setTotals] = useState<WorkOrderTotals>({
     tcToGcTotal: 0,
     tcToFcTotal: 0,
+    tcInternalCostTotal: 0,
     fcEarnings: 0,
     approvedCount: 0,
     pendingCount: 0,
