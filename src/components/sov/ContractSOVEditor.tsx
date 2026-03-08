@@ -320,7 +320,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                         <CardDescription className="tabular-nums">
                           {formatCurrency(contract?.contract_sum || 0)} • {items.length} item{items.length !== 1 ? 's' : ''}
                         </CardDescription>
-                        {totals.totalValue > 0 && (
+        {totals.totalValue > 0 && (
                           <div className="mt-2 w-48">
                             <SOVProgressBar
                               scheduledValue={totals.totalValue}
@@ -329,7 +329,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                               size="sm"
                             />
                             <span className="text-xs text-muted-foreground tabular-nums">
-                              {formatCurrency(totals.totalBilled)} / {formatCurrency(totals.totalValue)} billed
+                              {Math.round((totals.totalBilled / totals.totalValue) * 100)}% billed • {formatCurrency(totals.totalBilled)} / {formatCurrency(totals.totalValue)}
                             </span>
                           </div>
                         )}
