@@ -9,6 +9,15 @@ interface Props {
 export function SashaHighlightOverlay({ onSelect, onCancel }: Props) {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const maskId = `sasha-highlight-mask-${useId().replace(/:/g, '')}`;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onCancel]);
 
   const findCardAt = useCallback((x: number, y: number): HTMLElement | null => {
     const els = document.elementsFromPoint(x, y);
