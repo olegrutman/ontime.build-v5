@@ -615,6 +615,55 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "EDIT_USER_PROFILE": {
+        const { user_id, fields } = params;
+        if (!user_id || !fields || typeof fields !== "object") {
+          return new Response(JSON.stringify({ error: "user_id and fields are required" }), {
+            status: 400, headers: corsHeaders,
+          });
+        }
+        targetId = user_id;
+
+        const allowedKeys = ["job_title", "phone"];
+        const updatePayload: Record<string, any> = {};
+        for (const key of allowedKeys) {
+          if (key in fields) updatePayload[key] = fields[key];
+        }
+        if (Object.keys(updatePayload).length === 0) {
+          return new Response(JSON.stringify({ error: "No valid fields to update" }), {
+            status: 400, headers: corsHeaders,
+          });
+        }
+
+        const { data: beforeProfile } = await adminClient
+          .from("profiles")
+          .select("job_title, phone")
+          .eq("user_id", user_id)
+          .single();
+        if (!beforeProfile) {
+          return new Response(JSON.stringify({ error: "User not found" }), {
+            status: 404, headers: corsHeaders,
+          });
+        }
+        snapshotBefore = beforeProfile;
+
+        const { error: updateErr } = await adminClient
+          .from("profiles")
+          .update(updatePayload)
+          .eq("user_id", user_id);
+        if (updateErr) {
+          return new Response(JSON.stringify({ error: updateErr.message }), {
+            status: 500, headers: corsHeaders,
+          });
+        }
+
+        snapshotAfter = { ...beforeProfile, ...updatePayload };
+        const changedFields = Object.keys(updatePayload).join(", ");
+        logMeta = { p_target_user_id: user_id, p_action_summary: `Edited profile fields: ${changedFields}` };
+        result = { success: true, message: "Profile updated" };
+        break;
+      }
+
       default:
         return new Response(JSON.stringify({ error: "Not implemented" }), {
           status: 400,

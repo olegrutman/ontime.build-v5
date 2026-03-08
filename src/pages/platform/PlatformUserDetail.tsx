@@ -341,6 +341,49 @@ export default function PlatformUserDetail() {
       </Dialog>
 
       <SupportActionDialog open={changeRoleReasonOpen} onOpenChange={setChangeRoleReasonOpen} title="Change User Role" description={`Change role to ${ROLE_LABELS[editRole as AppRole] || editRole}${editIsAdmin ? ' (Admin)' : ''} in ${editingMembership?.organization?.name || 'organization'}.`} onConfirm={handleChangeRole} loading={actionLoading} />
+
+      {/* Edit Job Title Dialog */}
+      <Dialog open={editJobTitleOpen} onOpenChange={setEditJobTitleOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Job Title</DialogTitle></DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label>Current Job Title</Label>
+            <p className="text-sm text-muted-foreground">{profile.job_title || '(none)'}</p>
+            <Label htmlFor="new-job-title">New Job Title</Label>
+            <Select value={newJobTitle} onValueChange={setNewJobTitle}>
+              <SelectTrigger><SelectValue placeholder="Select job title" /></SelectTrigger>
+              <SelectContent>
+                {jobTitles.map((t) => (
+                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditJobTitleOpen(false)}>Cancel</Button>
+            <Button onClick={() => { setEditJobTitleOpen(false); setEditJobTitleReasonOpen(true); }}>Continue</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <SupportActionDialog open={editJobTitleReasonOpen} onOpenChange={setEditJobTitleReasonOpen} title="Edit Job Title" description={`Change job title to "${newJobTitle || '(clear)'}".`} onConfirm={handleEditJobTitle} loading={actionLoading} />
+
+      {/* Edit Phone Dialog */}
+      <Dialog open={editPhoneOpen} onOpenChange={setEditPhoneOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Phone Number</DialogTitle></DialogHeader>
+          <div className="space-y-2 py-2">
+            <Label>Current Phone</Label>
+            <p className="text-sm text-muted-foreground">{profile.phone || '(none)'}</p>
+            <Label htmlFor="new-phone">New Phone</Label>
+            <Input id="new-phone" type="tel" value={newPhone} onChange={(e) => setNewPhone(formatPhone(e.target.value))} placeholder="(555)123-4567" />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditPhoneOpen(false)}>Cancel</Button>
+            <Button onClick={() => { setEditPhoneOpen(false); setEditPhoneReasonOpen(true); }}>Continue</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <SupportActionDialog open={editPhoneReasonOpen} onOpenChange={setEditPhoneReasonOpen} title="Edit Phone Number" description={`Change phone to "${newPhone || '(clear)'}".`} onConfirm={handleEditPhone} loading={actionLoading} />
     </PlatformLayout>
   );
 }
