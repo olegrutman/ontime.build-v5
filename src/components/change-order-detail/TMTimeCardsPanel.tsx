@@ -488,8 +488,9 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC, hasTC = true
                 }}
                 onCancel={() => setEditingFCRate(false)}
                 isPending={updateFCRateMutation.isPending}
-              editable={isFC}
-            />
+                editable={isFC}
+              />
+            )}
             {/* TC Rate - editable by TC, hidden from FC */}
             {isTC && (
               <RateEditor
