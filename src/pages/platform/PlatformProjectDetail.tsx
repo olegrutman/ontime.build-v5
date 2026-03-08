@@ -226,12 +226,13 @@ export default function PlatformProjectDetail() {
     );
   }
 
-  const cityState = project.address
-    ? [project.address.city, project.address.state].filter(Boolean).join(', ')
-    : null;
+  const fullAddress = project.address
+    ? [project.address.street, [project.address.city, project.address.state].filter(Boolean).join(', '), project.address.zip].filter(Boolean)
+    : [];
 
   const totalContractValue = contracts.reduce((s, c) => s + (c.contract_sum || 0), 0);
   const ownerOrg = team.find((t) => t.role === 'GC');
+  const creatorName = creator ? [creator.first_name, creator.last_name].filter(Boolean).join(' ') || creator.email : null;
 
   return (
     <PlatformLayout
