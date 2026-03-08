@@ -28,6 +28,7 @@ export function WorkItemActions({ workItem, currentRole, onStateChange }: WorkIt
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectionNotes, setRejectionNotes] = useState('');
   const [exportLoading, setExportLoading] = useState(false);
+  const { sendNudge, loading: nudgeLoading, wasSent } = useNudge();
 
   const state = workItem.state as WorkItemState;
   const itemType = workItem.item_type;
