@@ -177,6 +177,13 @@ export function ProjectTopBar({
                 Estimates
               </TabsTrigger>
               <TabsTrigger
+                value="schedule"
+                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
+                onClick={() => onTabChange('schedule')}
+              >
+                Schedule
+              </TabsTrigger>
+              <TabsTrigger
                 value="invoices"
                 className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
                 onClick={() => onTabChange('invoices')}

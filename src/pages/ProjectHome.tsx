@@ -43,6 +43,7 @@ import { InvoicesTab } from '@/components/invoices';
 import { ReturnsTab } from '@/components/returns';
 import { ContractSOVEditor } from '@/components/sov';
 import { RFIsTab } from '@/components/rfi';
+import { ScheduleTab } from '@/components/schedule/ScheduleTab';
 import { useToast } from '@/hooks/use-toast';
 import { useProjectFinancials } from '@/hooks/useProjectFinancials';
 import { useProjectReadiness } from '@/hooks/useProjectReadiness';
@@ -375,6 +376,7 @@ export default function ProjectHome() {
                   : <PurchaseOrdersTab key={`po-${tabResetKey}-${realtimeKey}`} projectId={id!} projectName={project?.name} projectStatus={projectStatus}
                       projectAddress={project?.address ? `${project.address.street || ''}, ${project.address.city || ''}, ${project.address.state || ''} ${project.address.zip || ''}`.replace(/^,\s*|,\s*$/g, '').trim() : ''} />
               )}
+              {activeTab === 'schedule' && <ScheduleTab projectId={id!} />}
               {activeTab === 'returns' && <ReturnsTab projectId={id!} />}
             </div>
           </main>

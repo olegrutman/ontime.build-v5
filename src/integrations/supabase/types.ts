@@ -2386,6 +2386,72 @@ export type Database = {
           },
         ]
       }
+      project_schedule_items: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          created_by: string | null
+          dependency_ids: string[] | null
+          end_date: string | null
+          id: string
+          item_type: string
+          progress: number | null
+          project_id: string
+          sort_order: number | null
+          start_date: string
+          title: string
+          updated_at: string | null
+          work_order_id: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          dependency_ids?: string[] | null
+          end_date?: string | null
+          id?: string
+          item_type?: string
+          progress?: number | null
+          project_id: string
+          sort_order?: number | null
+          start_date: string
+          title: string
+          updated_at?: string | null
+          work_order_id?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          dependency_ids?: string[] | null
+          end_date?: string | null
+          id?: string
+          item_type?: string
+          progress?: number | null
+          project_id?: string
+          sort_order?: number | null
+          start_date?: string
+          title?: string
+          updated_at?: string | null
+          work_order_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_schedule_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_schedule_items_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_order_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_scope_details: {
         Row: {
           balcony_type: string | null

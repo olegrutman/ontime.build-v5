@@ -13,6 +13,7 @@ import {
   Bell,
   Users,
   Undo2,
+  CalendarDays,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
@@ -59,6 +60,7 @@ export function BottomNav() {
 
   const moreProjectItems: NavItem[] = [
     ...(!isSupplier ? [{ label: 'SOV', icon: ListChecks, tab: 'sov' }] : []),
+    { label: 'Schedule', icon: CalendarDays, tab: 'schedule' },
     { label: 'Invoices', icon: FileText, tab: 'invoices' },
     { label: 'POs', icon: ShoppingCart, tab: 'purchase-orders' },
     { label: 'Returns', icon: Undo2, tab: 'returns' },
