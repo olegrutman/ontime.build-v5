@@ -232,6 +232,63 @@ export default function Auth() {
               {errors.password && <p className="text-xs text-destructive mt-1">{errors.password}</p>}
             </div>
 
+            {!forgotMode && (
+              <button
+                type="button"
+                className="text-xs text-primary hover:underline -mt-2"
+                onClick={() => setForgotMode(true)}
+              >
+                Forgot password?
+              </button>
+            )}
+
+            {forgotMode && (
+              <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-3">
+                {resetSent ? (
+                  <div className="flex items-center gap-2 text-sm text-primary">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Password reset email sent to {signInForm.email || 'your email'}
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-sm text-muted-foreground">
+                      Enter your email above and click below to receive a password reset link.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      disabled={resetLoading}
+                      onClick={async () => {
+                        if (!signInForm.email) {
+                          setErrors({ email: 'Please enter your email first' });
+                          setForgotMode(false);
+                          return;
+                        }
+                        setResetLoading(true);
+                        await supabase.auth.resetPasswordForEmail(signInForm.email, {
+                          redirectTo: window.location.origin + '/reset-password',
+                        });
+                        setResetLoading(false);
+                        setResetSent(true);
+                      }}
+                    >
+                      {resetLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                      Send reset link
+                    </Button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground hover:underline"
+                  onClick={() => { setForgotMode(false); setResetSent(false); }}
+                >
+                  Back to sign in
+                </button>
+              </div>
+            )}
+
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Sign In
