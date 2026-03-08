@@ -437,6 +437,7 @@ export function ChangeOrderDetailPage() {
                       isTC={isTC}
                       isFC={isFC}
                       hasTC={hasTCParticipant}
+                      hasFCParticipant={hasFCParticipant}
                     />
                   )}
 
