@@ -232,7 +232,7 @@ export function WorkItemPage() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Actions */}
-            <Card className="p-6">
+            <Card data-sasha-card="Work Item Actions" className="p-6">
               <WorkItemActions
                 workItem={workItem}
                 currentRole={currentRole}
