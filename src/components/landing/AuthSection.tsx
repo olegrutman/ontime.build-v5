@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
-import { OrgType, ORG_TYPE_LABELS } from '@/types/organization';
+import { OrgType, ORG_TYPE_LABELS, getJobTitlesForOrgType } from '@/types/organization';
 import { TRADES, Trade } from '@/types/projectWizard';
 
 // Role labels using full text (no abbreviations)
