@@ -142,6 +142,7 @@ Deno.serve(async (req) => {
           .eq("id", invite_id);
 
         snapshotAfter = { status: "pending", resent: true };
+        logMeta = { p_action_summary: `Resent invite ${invite_id}` };
         result = { success: true, message: "Invite resent" };
         break;
       }
