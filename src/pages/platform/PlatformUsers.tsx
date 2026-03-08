@@ -57,6 +57,9 @@ export default function PlatformUsers() {
         />
       </div>
 
+      {!loading && users.length > 0 && (
+        <p className="text-sm text-muted-foreground mb-3">Showing {users.length} user{users.length !== 1 ? 's' : ''}</p>
+      )}
       <Card>
         <CardContent className="p-0">
           <Table>
