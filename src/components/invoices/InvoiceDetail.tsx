@@ -22,6 +22,7 @@ import {
 import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 import { CreateInvoiceFromSOV, RevisionData } from './CreateInvoiceFromSOV';
 import { Invoice, InvoiceLineItem, InvoiceStatus } from '@/types/invoice';
+import { useNudge } from '@/hooks/useNudge';
 
 interface InvoiceDetailProps {
   invoiceId: string;
