@@ -1,39 +1,50 @@
 
 
-# Allow Edit and Delete of Draft Invoices
+# Platform Dashboard Growth Metrics
 
-## Current State
+## What to Build
 
-- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
-- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
+Add growth analytics below the existing summary tiles on the Platform Dashboard. The platform owner will see real data showing how the business is growing over time.
 
-## Plan
+## Sections to Add
 
-### 1. Add Delete Invoice capability
+### 1. Growth Trend Chart (new component)
+A multi-line area chart (recharts, already installed) showing new signups over the last 6 months:
+- **New Users** per month (from `profiles.created_at`)
+- **New Organizations** per month (from `organizations.created_at`)
+- **New Projects** per month (from `projects.created_at`)
 
-**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
-- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
-- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
-- Button placed in the action buttons area, styled as destructive/outline
+### 2. This Period vs Last Period Cards
+A row of comparison cards showing this month vs last month with delta indicators (green up / red down arrows):
+- New Users this month vs last month
+- New Orgs this month vs last month
+- New Projects this month vs last month
+- Invoices created this month vs last month
+- Total invoice value this month vs last month
 
-**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
-- Add `onDelete` optional prop
-- Add trash icon to `hoverActions` array for DRAFT status
+### 3. Activity Breakdown Cards
+- **Organizations by Type**: Small bar/list showing count of GC, TC, FC, Supplier orgs
+- **Projects by Status**: Breakdown of active, setup, on_hold, completed, archived
+- **Invoices by Status**: Breakdown of DRAFT, SUBMITTED, APPROVED, PAID, REJECTED
+- **Recent Activity Feed**: Last 10 support action logs with timestamp, action type, and actor (from `support_actions_log`)
 
-**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
-- Delete line items then invoice from database
-- Show toast, refresh list
-- Pass `onDelete` to `InvoiceCard`
+## Data Fetching
 
-### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
+Create a new hook `src/hooks/usePlatformMetrics.ts` that:
+- Fetches `profiles`, `organizations`, `projects` with `created_at` for the last 6 months
+- Groups by month client-side for the chart
+- Computes this-month vs last-month deltas
+- Fetches org type breakdown, project status breakdown, invoice status breakdown
+- Fetches last 10 support logs with actor profile info
 
-**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
-- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
-- Show the button when `status === 'DRAFT' && canSubmit`
+## Files to Create/Edit
 
-### Files to Change
+- **Create**: `src/hooks/usePlatformMetrics.ts` — data fetching hook
+- **Create**: `src/components/platform/PlatformGrowthChart.tsx` — area chart component
+- **Create**: `src/components/platform/PlatformPeriodComparison.tsx` — comparison cards
+- **Create**: `src/components/platform/PlatformBreakdowns.tsx` — org type, project status, invoice status breakdowns + recent activity
+- **Edit**: `src/pages/platform/PlatformDashboard.tsx` — integrate all new sections below existing tiles
 
-- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
-- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
-- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
+## No Database Changes
+All data queried via existing tables with platform user SELECT access.
 
