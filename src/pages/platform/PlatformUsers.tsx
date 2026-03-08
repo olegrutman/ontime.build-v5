@@ -70,13 +70,7 @@ export default function PlatformUsers() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">Searching...</TableCell>
-                </TableRow>
-              ) : query.length < 2 ? (
-                <TableRow>
-                  <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
-                    Type at least 2 characters to search
-                  </TableCell>
+                  <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
                 </TableRow>
               ) : users.length === 0 ? (
                 <TableRow>
