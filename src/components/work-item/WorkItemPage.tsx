@@ -206,7 +206,7 @@ export function WorkItemPage() {
 
             {/* Materials Panel */}
             {showMaterialsPanel && (
-              <Card className="p-6">
+              <Card data-sasha-card="Work Item Materials" className="p-6">
                 <WorkItemMaterials
                   workItemId={workItem.id}
                   isEditable={isEditable && !isGC}
