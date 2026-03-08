@@ -40,6 +40,10 @@ export function SashaBubble() {
   const [pulse, setPulse] = useState(true);
   const [showLabel, setShowLabel] = useState(true);
   const [highlightMode, setHighlightMode] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !localStorage.getItem('sasha_welcome_seen');
+  });
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
