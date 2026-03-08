@@ -1,0 +1,1 @@
+ALTER TABLE public.change_order_projects ADD COLUMN tc_internal_cost numeric DEFAULT 0;
