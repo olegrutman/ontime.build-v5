@@ -234,27 +234,45 @@ Deno.serve(async (req) => {
       }
 
       case "ADD_MEMBER_NO_VERIFICATION": {
-        const { organization_id, user_email, role } = params;
+        const { organization_id, user_email, user_id: directUserId, role, is_admin: assignAdmin } = params;
         targetId = organization_id;
 
-        // Find user by email
-        const { data: profileData } = await adminClient
-          .from("profiles")
-          .select("user_id")
-          .eq("email", user_email)
-          .single();
-        if (!profileData) {
+        let resolvedUserId = directUserId;
+        let resolvedEmail = user_email;
+
+        if (!resolvedUserId && user_email) {
+          // Find user by email
+          const { data: profileData } = await adminClient
+            .from("profiles")
+            .select("user_id")
+            .eq("email", user_email)
+            .single();
+          if (!profileData) {
+            return new Response(
+              JSON.stringify({ error: "User not found with that email" }),
+              { status: 404, headers: corsHeaders }
+            );
+          }
+          resolvedUserId = profileData.user_id;
+        }
+
+        if (!resolvedUserId) {
           return new Response(
-            JSON.stringify({ error: "User not found with that email" }),
-            { status: 404, headers: corsHeaders }
+            JSON.stringify({ error: "Must provide user_email or user_id" }),
+            { status: 400, headers: corsHeaders }
           );
         }
 
+        if (!resolvedEmail) {
+          const { data: pData } = await adminClient.from("profiles").select("email").eq("user_id", resolvedUserId).single();
+          resolvedEmail = pData?.email || resolvedUserId;
+        }
+
         const { error } = await adminClient.from("user_org_roles").insert({
-          user_id: profileData.user_id,
+          user_id: resolvedUserId,
           organization_id,
           role,
-          is_admin: false,
+          is_admin: assignAdmin ?? false,
         });
         if (error) {
           return new Response(JSON.stringify({ error: error.message }), {
@@ -262,8 +280,8 @@ Deno.serve(async (req) => {
             headers: corsHeaders,
           });
         }
-        snapshotAfter = { user_email, role, organization_id };
-        logMeta = { p_target_user_id: profileData.user_id, p_target_user_email: user_email, p_target_org_id: organization_id, p_action_summary: `Added ${user_email} to org ${organization_id} as ${role}` };
+        snapshotAfter = { user_email: resolvedEmail, role, organization_id, is_admin: assignAdmin ?? false };
+        logMeta = { p_target_user_id: resolvedUserId, p_target_user_email: resolvedEmail, p_target_org_id: organization_id, p_action_summary: `Added ${resolvedEmail} to org ${organization_id} as ${role}` };
         result = { success: true, message: "Member added without verification" };
         break;
       }

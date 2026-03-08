@@ -11,19 +11,29 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { SupportActionDialog } from '@/components/platform/SupportActionDialog';
+import { UserProfileCard } from '@/components/platform/UserProfileCard';
+import { EditAddressDialog } from '@/components/platform/EditAddressDialog';
+import { AssignToOrgDialog } from '@/components/platform/AssignToOrgDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { ROLE_LABELS, ORG_TYPE_LABELS, ALLOWED_ROLES_BY_ORG_TYPE, type AppRole, type OrgType } from '@/types/organization';
 import { useSupportAction } from '@/hooks/useSupportAction';
 import { useImpersonation } from '@/hooks/useImpersonation';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { KeyRound, Mail, LogIn, Trash2, Pencil } from 'lucide-react';
+import { KeyRound, Mail, LogIn, Trash2, Pencil, MapPin, UserPlus } from 'lucide-react';
 
 interface ProfileData {
   user_id: string;
   email: string;
   full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   phone: string | null;
+  job_title: string | null;
+  timezone: string | null;
+  language: string | null;
+  preferred_contact_method: string | null;
+  address: { street?: string; city?: string; state?: string; zip?: string } | null;
   created_at: string;
 }
 
@@ -42,7 +52,6 @@ export default function PlatformUserDetail() {
   const [memberships, setMemberships] = useState<OrgMembership[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Support action state
   const { execute, loading: actionLoading } = useSupportAction();
   const { startImpersonation } = useImpersonation();
 
@@ -52,6 +61,8 @@ export default function PlatformUserDetail() {
   const [deleteUserOpen, setDeleteUserOpen] = useState(false);
   const [newEmail, setNewEmail] = useState('');
   const [changeEmailReasonOpen, setChangeEmailReasonOpen] = useState(false);
+  const [editAddressOpen, setEditAddressOpen] = useState(false);
+  const [assignOrgOpen, setAssignOrgOpen] = useState(false);
 
   // Role editing state
   const [editingMembership, setEditingMembership] = useState<OrgMembership | null>(null);
@@ -59,46 +70,36 @@ export default function PlatformUserDetail() {
   const [editIsAdmin, setEditIsAdmin] = useState(false);
   const [changeRoleReasonOpen, setChangeRoleReasonOpen] = useState(false);
 
+  const refreshData = async () => {
+    if (!userId) return;
+    const [profileRes, rolesRes] = await Promise.all([
+      supabase.from('profiles').select('*').eq('user_id', userId).single(),
+      supabase
+        .from('user_org_roles')
+        .select('id, role, is_admin, organization:organizations(id, name, type)')
+        .eq('user_id', userId),
+    ]);
+    if (profileRes.data) setProfile(profileRes.data as unknown as ProfileData);
+    setMemberships((rolesRes.data || []) as unknown as OrgMembership[]);
+  };
+
   useEffect(() => {
     if (!userId) return;
-    async function fetch() {
-      const [profileRes, rolesRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('user_id', userId).single(),
-        supabase
-          .from('user_org_roles')
-          .select('id, role, is_admin, organization:organizations(id, name, type)')
-          .eq('user_id', userId),
-      ]);
-      setProfile(profileRes.data as unknown as ProfileData);
-      setMemberships((rolesRes.data || []) as unknown as OrgMembership[]);
-      setLoading(false);
-    }
-    fetch();
+    refreshData().then(() => setLoading(false));
   }, [userId]);
 
   const handleResetPassword = async (reason: string) => {
-    const ok = await execute({
-      action_type: 'RESET_PASSWORD_LINK',
-      reason,
-      user_id: userId,
-    });
+    const ok = await execute({ action_type: 'RESET_PASSWORD_LINK', reason, user_id: userId });
     if (ok) setResetPasswordOpen(false);
   };
 
   const handleChangeEmail = async (reason: string) => {
-    const ok = await execute({
-      action_type: 'CHANGE_USER_EMAIL',
-      reason,
-      user_id: userId,
-      new_email: newEmail,
-    });
+    const ok = await execute({ action_type: 'CHANGE_USER_EMAIL', reason, user_id: userId, new_email: newEmail });
     if (ok) {
       setChangeEmailReasonOpen(false);
       setChangeEmailOpen(false);
       setNewEmail('');
-      // Refresh profile
-      const { data } = await supabase.from('profiles').select('*').eq('user_id', userId!).single();
-      if (data) setProfile(data as unknown as ProfileData);
+      refreshData();
     }
   };
 
@@ -108,11 +109,7 @@ export default function PlatformUserDetail() {
   };
 
   const handleDeleteUser = async (reason: string) => {
-    const ok = await execute({
-      action_type: 'DELETE_USER',
-      reason,
-      user_id: userId,
-    });
+    const ok = await execute({ action_type: 'DELETE_USER', reason, user_id: userId });
     if (ok) {
       setDeleteUserOpen(false);
       navigate('/platform/users');
@@ -131,12 +128,7 @@ export default function PlatformUserDetail() {
     if (ok) {
       setChangeRoleReasonOpen(false);
       setEditingMembership(null);
-      // Refresh memberships
-      const { data } = await supabase
-        .from('user_org_roles')
-        .select('id, role, is_admin, organization:organizations(id, name, type)')
-        .eq('user_id', userId!);
-      setMemberships((data || []) as unknown as OrgMembership[]);
+      refreshData();
     }
   };
 
@@ -165,6 +157,7 @@ export default function PlatformUserDetail() {
   const canImpersonate = platformRole === 'PLATFORM_OWNER' || platformRole === 'PLATFORM_ADMIN';
   const canChangeEmail = platformRole === 'PLATFORM_OWNER' || platformRole === 'PLATFORM_ADMIN';
   const canDelete = platformRole === 'PLATFORM_OWNER';
+  const isOwner = platformRole === 'PLATFORM_OWNER';
 
   return (
     <PlatformLayout
@@ -185,6 +178,11 @@ export default function PlatformUserDetail() {
             <Mail className="h-4 w-4 mr-1" /> Change Email
           </Button>
         )}
+        {isOwner && (
+          <Button variant="outline" size="sm" onClick={() => setEditAddressOpen(true)}>
+            <MapPin className="h-4 w-4 mr-1" /> Edit Address
+          </Button>
+        )}
         {canImpersonate && (
           <Button variant="outline" size="sm" onClick={() => setLoginAsOpen(true)}>
             <LogIn className="h-4 w-4 mr-1" /> Login As
@@ -197,30 +195,16 @@ export default function PlatformUserDetail() {
         )}
       </div>
 
-      <Card className="mb-6">
-        <CardContent className="pt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div>
-            <p className="text-xs text-muted-foreground">Email</p>
-            <p className="font-medium text-sm">{profile.email}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Full Name</p>
-            <p className="font-medium text-sm">{profile.full_name || '—'}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Phone</p>
-            <p className="font-medium text-sm">{profile.phone || '—'}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Joined</p>
-            <p className="font-medium text-sm">{format(new Date(profile.created_at), 'MMM d, yyyy')}</p>
-          </div>
-        </CardContent>
-      </Card>
+      <UserProfileCard profile={profile} />
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-base">Organization Memberships</CardTitle>
+          {isOwner && (
+            <Button variant="outline" size="sm" onClick={() => setAssignOrgOpen(true)}>
+              <UserPlus className="h-4 w-4 mr-1" /> Assign to Org
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {memberships.length === 0 ? (
@@ -242,7 +226,7 @@ export default function PlatformUserDetail() {
                     {m.is_admin && (
                       <Badge className="text-xs bg-primary/10 text-primary border-0">Admin</Badge>
                     )}
-                    {platformRole === 'PLATFORM_OWNER' && (
+                    {isOwner && (
                       <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEditRole(m)}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
@@ -255,96 +239,43 @@ export default function PlatformUserDetail() {
         </CardContent>
       </Card>
 
-      {/* Reset Password Dialog */}
-      <SupportActionDialog
-        open={resetPasswordOpen}
-        onOpenChange={setResetPasswordOpen}
-        title="Reset Password"
-        description={`Generate a password recovery link for ${profile.email}. The user will receive an email to reset their password.`}
-        onConfirm={handleResetPassword}
-        loading={actionLoading}
-      />
+      {/* Dialogs */}
+      <SupportActionDialog open={resetPasswordOpen} onOpenChange={setResetPasswordOpen} title="Reset Password" description={`Generate a password recovery link for ${profile.email}.`} onConfirm={handleResetPassword} loading={actionLoading} />
 
-      {/* Change Email - step 1: new email input */}
       <Dialog open={changeEmailOpen} onOpenChange={setChangeEmailOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Change User Email</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Change User Email</DialogTitle></DialogHeader>
           <div className="space-y-2 py-2">
             <Label>Current Email</Label>
             <p className="text-sm text-muted-foreground">{profile.email}</p>
             <Label htmlFor="new-email">New Email</Label>
-            <Input
-              id="new-email"
-              type="email"
-              value={newEmail}
-              onChange={(e) => setNewEmail(e.target.value)}
-              placeholder="new@example.com"
-            />
+            <Input id="new-email" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="new@example.com" />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setChangeEmailOpen(false)}>Cancel</Button>
-            <Button
-              onClick={() => {
-                setChangeEmailOpen(false);
-                setChangeEmailReasonOpen(true);
-              }}
-              disabled={!newEmail || !newEmail.includes('@')}
-            >
-              Continue
-            </Button>
+            <Button onClick={() => { setChangeEmailOpen(false); setChangeEmailReasonOpen(true); }} disabled={!newEmail || !newEmail.includes('@')}>Continue</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Change Email - step 2: reason */}
-      <SupportActionDialog
-        open={changeEmailReasonOpen}
-        onOpenChange={setChangeEmailReasonOpen}
-        title="Change User Email"
-        description={`Change email from ${profile.email} to ${newEmail}. This will update both auth and profile.`}
-        onConfirm={handleChangeEmail}
-        loading={actionLoading}
-      />
+      <SupportActionDialog open={changeEmailReasonOpen} onOpenChange={setChangeEmailReasonOpen} title="Change User Email" description={`Change email from ${profile.email} to ${newEmail}.`} onConfirm={handleChangeEmail} loading={actionLoading} />
+      <SupportActionDialog open={loginAsOpen} onOpenChange={setLoginAsOpen} title="Login As User" description={`You will be logged in as ${profile.email}. Session expires after 30 minutes.`} onConfirm={handleLoginAs} loading={actionLoading} />
+      <SupportActionDialog open={deleteUserOpen} onOpenChange={setDeleteUserOpen} title="Delete User" description={`Permanently delete ${profile.email} and all associated data. This cannot be undone.`} onConfirm={handleDeleteUser} loading={actionLoading} />
 
-      {/* Login As Dialog */}
-      <SupportActionDialog
-        open={loginAsOpen}
-        onOpenChange={setLoginAsOpen}
-        title="Login As User"
-        description={`You will be logged in as ${profile.email}. Your current session will be saved and can be restored. The impersonation session expires after 30 minutes.`}
-        onConfirm={handleLoginAs}
-        loading={actionLoading}
-      />
-
-      {/* Delete User Dialog */}
-      <SupportActionDialog
-        open={deleteUserOpen}
-        onOpenChange={setDeleteUserOpen}
-        title="Delete User"
-        description={`Permanently delete ${profile.email} and all associated data (profile, org memberships). This cannot be undone.`}
-        onConfirm={handleDeleteUser}
-        loading={actionLoading}
-      />
+      <EditAddressDialog open={editAddressOpen} onOpenChange={setEditAddressOpen} userId={profile.user_id} currentAddress={profile.address} onSaved={(addr) => setProfile((p) => p ? { ...p, address: addr } : p)} />
+      <AssignToOrgDialog open={assignOrgOpen} onOpenChange={setAssignOrgOpen} userId={profile.user_id} userEmail={profile.email} onAssigned={refreshData} />
 
       {/* Edit Role Dialog */}
       <Dialog open={!!editingMembership && !changeRoleReasonOpen} onOpenChange={(open) => { if (!open) setEditingMembership(null); }}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Change Role</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Change Role</DialogTitle></DialogHeader>
           {editingMembership && (
             <div className="space-y-4 py-2">
-              <p className="text-sm text-muted-foreground">
-                Organization: <span className="font-medium text-foreground">{editingMembership.organization?.name}</span>
-              </p>
+              <p className="text-sm text-muted-foreground">Organization: <span className="font-medium text-foreground">{editingMembership.organization?.name}</span></p>
               <div className="space-y-2">
                 <Label>Role</Label>
                 <Select value={editRole} onValueChange={(v) => setEditRole(v as AppRole)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {(ALLOWED_ROLES_BY_ORG_TYPE[editingMembership.organization?.type] || []).map((r) => (
                       <SelectItem key={r} value={r}>{ROLE_LABELS[r]}</SelectItem>
@@ -360,27 +291,12 @@ export default function PlatformUserDetail() {
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingMembership(null)}>Cancel</Button>
-            <Button
-              onClick={() => {
-                setChangeRoleReasonOpen(true);
-              }}
-              disabled={!editRole}
-            >
-              Continue
-            </Button>
+            <Button onClick={() => setChangeRoleReasonOpen(true)} disabled={!editRole}>Continue</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Change Role Reason */}
-      <SupportActionDialog
-        open={changeRoleReasonOpen}
-        onOpenChange={setChangeRoleReasonOpen}
-        title="Change User Role"
-        description={`Change role to ${ROLE_LABELS[editRole as AppRole] || editRole}${editIsAdmin ? ' (Admin)' : ''} in ${editingMembership?.organization?.name || 'organization'}.`}
-        onConfirm={handleChangeRole}
-        loading={actionLoading}
-      />
+      <SupportActionDialog open={changeRoleReasonOpen} onOpenChange={setChangeRoleReasonOpen} title="Change User Role" description={`Change role to ${ROLE_LABELS[editRole as AppRole] || editRole}${editIsAdmin ? ' (Admin)' : ''} in ${editingMembership?.organization?.name || 'organization'}.`} onConfirm={handleChangeRole} loading={actionLoading} />
     </PlatformLayout>
   );
 }
