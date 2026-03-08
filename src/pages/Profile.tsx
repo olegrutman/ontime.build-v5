@@ -39,15 +39,6 @@ const CONTACT_METHODS = [
   { value: 'text', label: 'Text Message' },
 ];
 
-const JOB_TITLES = [
-  'Owner',
-  'Project Manager',
-  'Superintendent',
-  'Estimator',
-  'Office Manager',
-  'Foreman',
-  'Other',
-];
 
 export default function Profile() {
   const { userOrgRoles } = useAuth();
