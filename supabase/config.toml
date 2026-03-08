@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.return-credit-memo]
 verify_jwt = false
+
+[functions.seed-platform-owner]
+verify_jwt = false
