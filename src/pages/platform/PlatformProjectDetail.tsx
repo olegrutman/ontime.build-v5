@@ -209,6 +209,7 @@ export default function PlatformProjectDetail() {
     ? [project.address.city, project.address.state].filter(Boolean).join(', ')
     : null;
 
+  const totalContractValue = contracts.reduce((s, c) => s + (c.contract_sum || 0), 0);
   const ownerOrg = team.find((t) => t.role === 'GC');
 
   return (
