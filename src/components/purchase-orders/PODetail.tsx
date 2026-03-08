@@ -471,6 +471,18 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
             </>
           )}
 
+          {/* SUBMITTED: Buyer can send reminder to supplier */}
+          {status === 'SUBMITTED' && !effectiveIsSupplier && canEdit && (
+            <Button
+              variant="outline"
+              onClick={() => sendNudge('purchase_order', poId)}
+              disabled={nudgeLoading || wasSent('purchase_order', poId)}
+            >
+              <Bell className="h-4 w-4 mr-2" />
+              {wasSent('purchase_order', poId) ? 'Reminder Sent' : 'Send Reminder'}
+            </Button>
+          )}
+
           {/* SUBMITTED or PRICED: Supplier can add/edit pricing */}
           {(status === 'SUBMITTED' || status === 'PRICED') && canEditPricing && !editingPrices && (
             <Button onClick={initializePriceEdits}>
