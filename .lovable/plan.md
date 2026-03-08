@@ -1,39 +1,50 @@
 
 
-# Allow Edit and Delete of Draft Invoices
+# Bug Report: SOV Page — Contracts Displayed Backwards
 
-## Current State
+## Bugs Found
 
-- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
-- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
+### Bug 1: `getContractDisplayName` shows arrow in wrong direction
+The contract data model stores `from_org` = **worker** (invoice sender) and `to_org` = **payer**. The display function renders `from → to`, which shows **"IMIS, LLC → Haley Custom Homes"** (worker → payer). This is backwards — convention is **payer → worker** (e.g. "GC → TC").
 
-## Plan
+**Evidence:** The database has `from_org_name: IMIS (TC)`, `to_org_name: Haley (GC)` for a GC-pays-TC contract. The SOV name reads "IMIS, LLC → Haley Custom Homes" — TC → GC instead of GC → TC.
 
-### 1. Add Delete Invoice capability
+**Fix:** In `getContractDisplayName` (line 114 of `useContractSOV.ts`), swap to `${to} → ${from}`.
 
-**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
-- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
-- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
-- Button placed in the action buttons area, styled as destructive/outline
+### Bug 2: TC partition logic is swapped
+When a TC views the SOV page, contracts are split into "GC → TC" and "TC → FC" sections. The filter logic is backwards:
 
-**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
-- Add `onDelete` optional prop
-- Add trash icon to `hoverActions` array for DRAFT status
+- `gcToTcSovs` uses `to_org_id === currentOrgId` — but `to_org` = payer, so this finds contracts where TC is the **payer**, not the receiver
+- `tcToFcSovs` uses `from_org_id === currentOrgId` — but `from_org` = worker, so this finds contracts where TC is the **worker**, not the payer
 
-**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
-- Delete line items then invoice from database
-- Show toast, refresh list
-- Pass `onDelete` to `InvoiceCard`
+Result: GC→TC contracts appear under "TC → FC" and vice versa.
 
-### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
+**Fix:** In `ContractSOVEditor.tsx` lines 256-263, swap the filters:
+- `gcToTcSovs`: `from_org_id === currentOrgId` (TC is the worker/invoice sender)
+- `tcToFcSovs`: `to_org_id === currentOrgId` (TC is the payer)
 
-**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
-- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
-- Show the button when `status === 'DRAFT' && canSubmit`
+## Changes
 
-### Files to Change
+### 1. `src/hooks/useContractSOV.ts` — line 114
+```typescript
+// Before: return `${from} → ${to}`;
+// After:
+return `${to} → ${from}`;
+```
 
-- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
-- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
-- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
+### 2. `src/components/sov/ContractSOVEditor.tsx` — lines 256-263
+Swap the org_id checks:
+```typescript
+const gcToTcSovs = isTC ? contractSovs.filter(sov => {
+  const contract = getContractForSOV(sov);
+  return contract?.from_org_id === currentOrgId; // TC is worker (GC pays TC)
+}) : [];
+const tcToFcSovs = isTC ? contractSovs.filter(sov => {
+  const contract = getContractForSOV(sov);
+  return contract?.to_org_id === currentOrgId; // TC is payer (TC pays FC)
+}) : [];
+```
+
+### 3. Database: Update stale stored SOV names
+Run a migration to flip stored `sov_name` values that contain " → " so they match the corrected display format. This is a data cleanup for existing SOVs.
 
