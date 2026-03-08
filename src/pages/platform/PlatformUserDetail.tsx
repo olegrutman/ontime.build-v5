@@ -187,6 +187,12 @@ export default function PlatformUserDetail() {
     }
   };
 
+  const handleEditPermissions = async (userOrgRoleId: string, permissions: Partial<MemberPermissions>, reason: string): Promise<boolean> => {
+    const ok = await execute({ action_type: 'EDIT_MEMBER_PERMISSIONS', reason, user_org_role_id: userOrgRoleId, permissions });
+    if (ok) refreshData();
+    return ok;
+  };
+
   const primaryOrgType = memberships[0]?.organization?.type as OrgType | undefined;
   const jobTitles = getJobTitlesForOrgType(primaryOrgType);
 
