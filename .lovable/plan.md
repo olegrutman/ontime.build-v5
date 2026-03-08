@@ -1,26 +1,39 @@
 
 
-# Fix: Platform Owner Can't See Contract Values
+# Allow Edit and Delete of Draft Invoices
 
-## Root Cause
-The `project_contracts` table RLS SELECT policy only allows access to users who belong to `from_org_id` or `to_org_id`, or who created the project. The platform owner user has no org membership and didn't create the project, so the query returns empty `[]` despite 4 contracts existing in the database.
+## Current State
 
-The `projects` table already has a policy using `is_platform_user(auth.uid())` but `project_contracts` is missing this.
+- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
+- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
 
-## Fix
+## Plan
 
-### 1. Add RLS policy for platform users on `project_contracts`
-Add a new SELECT policy:
-```sql
-CREATE POLICY "Platform users can view all contracts"
-ON public.project_contracts FOR SELECT
-USING (is_platform_user(auth.uid()));
-```
+### 1. Add Delete Invoice capability
 
-### 2. Verify other tables used on this page
-Check and add the same policy to any other tables that platform detail page queries and might also be blocked:
-- `supplier_estimates` (currently returns `[]` -- may also be RLS blocked)
-- `invoices`, `purchase_orders`, `work_items` -- these already return data so they're fine
+**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
+- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
+- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
+- Button placed in the action buttons area, styled as destructive/outline
 
-Single DB migration + verify `supplier_estimates` RLS. No code changes needed -- the UI already renders contracts when data is present.
+**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
+- Add `onDelete` optional prop
+- Add trash icon to `hoverActions` array for DRAFT status
+
+**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
+- Delete line items then invoice from database
+- Show toast, refresh list
+- Pass `onDelete` to `InvoiceCard`
+
+### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
+
+**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
+- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
+- Show the button when `status === 'DRAFT' && canSubmit`
+
+### Files to Change
+
+- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
+- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
+- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
 
