@@ -61,7 +61,7 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
   // Inline edit overlay
   if (editingId) {
     return (
-      <div className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 space-y-3">
+      <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 space-y-3">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Edit Contract</p>
         <div className="flex gap-2 items-end flex-wrap">
           <div className="relative flex-1 min-w-[120px]">
@@ -82,7 +82,7 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
   // FC contract creation overlay
   if (creating) {
     return (
-      <div className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 space-y-3">
+      <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 space-y-3">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Add Field Crew Contract</p>
         {fcParticipants.length > 1 && (
           <select className="w-full h-9 text-sm border rounded-lg px-3 bg-background" value={selectedFcOrg} onChange={e => setSelectedFcOrg(e.target.value)}>
@@ -116,7 +116,7 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
   if (isSupplier) {
     const supplierOutstanding = supplierInvoiced - supplierPaid;
     return (
-      <div className="bg-white dark:bg-card rounded-2xl shadow-sm p-6">
+      <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-6">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Order Value</p>
         <p className="text-3xl font-bold tabular-nums text-foreground">{fmt(supplierOrderValue)}</p>
         <div className="border-t mt-4 pt-4 grid grid-cols-3 gap-4">
@@ -142,7 +142,7 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
     const fcContract = downstreamContract;
     const fcValue = fcContract?.contract_sum || 0;
     return (
-      <div className="bg-white dark:bg-card rounded-2xl shadow-sm p-6">
+      <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-6">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
           Contract with {getContractCounterpartyName(fcContract, userOrgIds)}
         </p>
@@ -166,7 +166,7 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
   const currentTotal = gcContractValue + workOrderTotal;
 
   return (
-    <div className="bg-white dark:bg-card rounded-2xl shadow-sm p-6">
+    <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-6">
       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Current Contract Total</p>
       <p className="text-3xl font-bold tabular-nums text-foreground mb-4">{fmt(currentTotal)}</p>
 

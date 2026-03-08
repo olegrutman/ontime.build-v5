@@ -61,7 +61,7 @@ export function UrgentTasksCard({ projectId, onNavigate, isSupplier, supplierOrg
 
   if (items.length === 0) {
     return (
-      <div className="bg-white dark:bg-card rounded-2xl shadow-sm p-5">
+      <div data-sasha-card="Urgent Tasks" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Urgent Tasks</p>
         <p className="text-sm text-muted-foreground">No items need attention</p>
       </div>
@@ -69,7 +69,7 @@ export function UrgentTasksCard({ projectId, onNavigate, isSupplier, supplierOrg
   }
 
   return (
-    <div className="bg-white dark:bg-card rounded-2xl shadow-sm p-5">
+    <div data-sasha-card="Urgent Tasks" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5">
       <div className="flex items-center gap-2 mb-3">
         <AlertTriangle className="h-4 w-4 text-amber-500" />
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Urgent Tasks</p>

@@ -146,7 +146,7 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
   }, {});
 
   return (
-    <div className="bg-white dark:bg-card rounded-2xl shadow-sm p-5">
+    <div data-sasha-card="Team" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
           <Users className="h-4 w-4 text-muted-foreground" />

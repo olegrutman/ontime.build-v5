@@ -244,7 +244,7 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
   const profitPercent = totals.tcToGcTotal > 0 ? (profit / totals.tcToGcTotal) * 100 : 0;
 
   return (
-    <Card>
+    <Card data-sasha-card="Work Orders">
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
           <ClipboardList className="h-4 w-4" />
