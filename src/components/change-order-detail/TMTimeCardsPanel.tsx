@@ -553,20 +553,24 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC, hasTC = true
         )}
 
         {isTC && (
-          <div className="grid grid-cols-2 gap-3">
-            {/* FC to TC */}
-            <div className="bg-muted/50 rounded-lg p-3 space-y-1">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">From Field Crew</p>
-              <p className="text-xl font-bold">{fcToTCHours.toFixed(1)} <span className="text-sm font-normal">hrs</span></p>
-              <p className="text-sm text-muted-foreground">
-                {fcRate > 0
-                  ? `$${fcToTCCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                  : 'FC rate not set'}
-              </p>
-            </div>
+          <div className={cn('grid gap-3', selfPerforming ? 'grid-cols-1' : 'grid-cols-2')}>
+            {/* FC to TC — hidden when self-performing */}
+            {!selfPerforming && (
+              <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">From Field Crew</p>
+                <p className="text-xl font-bold">{fcToTCHours.toFixed(1)} <span className="text-sm font-normal">hrs</span></p>
+                <p className="text-sm text-muted-foreground">
+                  {fcRate > 0
+                    ? `$${fcToTCCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : 'FC rate not set'}
+                </p>
+              </div>
+            )}
             {/* TC to GC */}
             <div className="bg-muted/50 rounded-lg p-3 space-y-1">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Submitted to GC</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                {selfPerforming ? 'Your Hours → GC' : 'Submitted to GC'}
+              </p>
               <p className="text-xl font-bold">{tcToGCHours.toFixed(1)} <span className="text-sm font-normal">hrs</span></p>
               <p className="text-sm text-muted-foreground">
                 {tcRate > 0
