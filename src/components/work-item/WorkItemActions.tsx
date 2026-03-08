@@ -12,9 +12,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { Check, X, Send, Play, AlertTriangle, FileDown, Loader2 } from 'lucide-react';
+import { Check, X, Send, Play, AlertTriangle, FileDown, Loader2, Bell } from 'lucide-react';
 import { WorkItemData, WorkItemState } from './WorkItemPage';
 import { AppRole } from '@/types/organization';
+import { useNudge } from '@/hooks/useNudge';
 
 interface WorkItemActionsProps {
   workItem: WorkItemData;
@@ -27,6 +28,7 @@ export function WorkItemActions({ workItem, currentRole, onStateChange }: WorkIt
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectionNotes, setRejectionNotes] = useState('');
   const [exportLoading, setExportLoading] = useState(false);
+  const { sendNudge, loading: nudgeLoading, wasSent } = useNudge();
 
   const state = workItem.state as WorkItemState;
   const itemType = workItem.item_type;
@@ -150,6 +152,19 @@ export function WorkItemActions({ workItem, currentRole, onStateChange }: WorkIt
           >
             <Send className="w-4 h-4 mr-2" />
             Submit for Approval
+          </Button>
+        )}
+
+        {/* Send Reminder (TC only, PRICED state - waiting for GC approval) */}
+        {isTC && state === 'PRICED' && (
+          <Button
+            className="w-full"
+            variant="outline"
+            onClick={() => sendNudge('work_order', workItem.id)}
+            disabled={nudgeLoading || wasSent('work_order', workItem.id)}
+          >
+            <Bell className="w-4 h-4 mr-2" />
+            {wasSent('work_order', workItem.id) ? 'Reminder Sent' : 'Send Reminder'}
           </Button>
         )}
 

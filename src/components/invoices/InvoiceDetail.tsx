@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2, FileDown, Package, RotateCcw, Trash2, Edit } from 'lucide-react';
+import { ArrowLeft, Send, CheckCircle, XCircle, DollarSign, Loader2, FileDown, Package, RotateCcw, Trash2, Edit, Bell } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -22,6 +22,7 @@ import {
 import { InvoiceStatusBadge } from './InvoiceStatusBadge';
 import { CreateInvoiceFromSOV, RevisionData } from './CreateInvoiceFromSOV';
 import { Invoice, InvoiceLineItem, InvoiceStatus } from '@/types/invoice';
+import { useNudge } from '@/hooks/useNudge';
 
 interface InvoiceDetailProps {
   invoiceId: string;
@@ -52,6 +53,7 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
   const [reviseDialogOpen, setReviseDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const { sendNudge, loading: nudgeLoading, wasSent } = useNudge();
 
   // Get current user's organization ID
   const currentOrgId = userOrgRoles[0]?.organization?.id;
@@ -342,6 +344,17 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
                 Submit for Approval
               </Button>
             </>
+          )}
+
+          {status === 'SUBMITTED' && isInvoiceCreator && (
+            <Button
+              variant="outline"
+              onClick={() => sendNudge('invoice', invoiceId)}
+              disabled={nudgeLoading || wasSent('invoice', invoiceId)}
+            >
+              <Bell className="h-4 w-4 mr-2" />
+              {wasSent('invoice', invoiceId) ? 'Reminder Sent' : 'Send Reminder'}
+            </Button>
           )}
 
           {status === 'SUBMITTED' && canApprove && (

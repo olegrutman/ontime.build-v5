@@ -12,9 +12,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Trash2, Send, CalendarCheck, Package, Download, Loader2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Send, CalendarCheck, Package, Download, Loader2, Bell } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
+import { useNudge } from '@/hooks/useNudge';
 
 interface ReturnDetailProps {
   returnId: string;
@@ -29,6 +30,7 @@ export function ReturnDetail({ returnId, projectId, onBack }: ReturnDetailProps)
 
   const userOrgId = userOrgRoles[0]?.organization?.id || null;
   const isSupplier = userOrgRoles[0]?.organization?.type === 'SUPPLIER';
+  const { sendNudge, loading: nudgeLoading, wasSent } = useNudge();
 
   const { data: returnData, isLoading } = useQuery({
     queryKey: ['return-detail', returnId],
@@ -327,6 +329,19 @@ export function ReturnDetail({ returnId, projectId, onBack }: ReturnDetailProps)
               <Trash2 className="h-4 w-4 mr-1" /> Delete
             </Button>
           </>
+        )}
+
+        {/* Creator: Send Reminder (SUBMITTED) */}
+        {isCreatorOrg && returnData.status === 'SUBMITTED' && (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => sendNudge('return', returnId)}
+            disabled={nudgeLoading || wasSent('return', returnId)}
+          >
+            <Bell className="h-4 w-4 mr-1" />
+            {wasSent('return', returnId) ? 'Reminder Sent' : 'Send Reminder'}
+          </Button>
         )}
 
         {/* Supplier: Begin Review (SUBMITTED) */}

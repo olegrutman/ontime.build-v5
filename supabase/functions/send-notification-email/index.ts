@@ -20,6 +20,7 @@ const TYPE_TO_PREFERENCE: Record<string, string> = {
   INVOICE_SUBMITTED: "notify_inv_submitted",
   INVOICE_APPROVED: "notify_inv_approved",
   INVOICE_REJECTED: "notify_inv_rejected",
+  NUDGE: "notify_email",
 };
 
 interface NotificationPayload {

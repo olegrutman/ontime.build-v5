@@ -14,7 +14,9 @@ import {
   Clock,
   Lock,
   Receipt,
+  Bell,
 } from 'lucide-react';
+import { useNudge } from '@/hooks/useNudge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePOPricingVisibility } from '@/hooks/usePOPricingVisibility';
@@ -89,6 +91,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
 
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
+  const { sendNudge, loading: nudgeLoading, wasSent } = useNudge();
   
   const { canViewPricing, canEditPricing, isSupplier, isPricingOwner } = usePOPricingVisibility(
     po,
@@ -467,6 +470,18 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
                 Submit to Supplier
               </Button>
             </>
+          )}
+
+          {/* SUBMITTED: Buyer can send reminder to supplier */}
+          {status === 'SUBMITTED' && !effectiveIsSupplier && canEdit && (
+            <Button
+              variant="outline"
+              onClick={() => sendNudge('purchase_order', poId)}
+              disabled={nudgeLoading || wasSent('purchase_order', poId)}
+            >
+              <Bell className="h-4 w-4 mr-2" />
+              {wasSent('purchase_order', poId) ? 'Reminder Sent' : 'Send Reminder'}
+            </Button>
           )}
 
           {/* SUBMITTED or PRICED: Supplier can add/edit pricing */}
