@@ -1293,6 +1293,41 @@ export type Database = {
           },
         ]
       }
+      nudge_log: {
+        Row: {
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          sent_by: string
+          sent_to_org: string
+        }
+        Insert: {
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          sent_by: string
+          sent_to_org: string
+        }
+        Update: {
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          sent_by?: string
+          sent_to_org?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nudge_log_sent_to_org_fkey"
+            columns: ["sent_to_org"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           catalog_item_id: string | null
@@ -4788,6 +4823,10 @@ export type Database = {
               org_type: string
             }[]
           }
+      send_nudge: {
+        Args: { _entity_id: string; _entity_type: string }
+        Returns: Json
+      }
       send_work_order_assignment_notification: {
         Args: {
           _change_order_id: string
@@ -4876,6 +4915,7 @@ export type Database = {
         | "RFI_SUBMITTED"
         | "RFI_ANSWERED"
         | "JOIN_REQUEST"
+        | "NUDGE"
       order_status:
         | "DRAFT"
         | "SUBMITTED"
@@ -5062,6 +5102,7 @@ export const Constants = {
         "RFI_SUBMITTED",
         "RFI_ANSWERED",
         "JOIN_REQUEST",
+        "NUDGE",
       ],
       order_status: [
         "DRAFT",
