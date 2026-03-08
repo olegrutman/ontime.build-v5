@@ -37,7 +37,7 @@ export function ProjectReadinessCard({ readiness }: ProjectReadinessCardProps) {
 
 
   return (
-    <Card className={cn(
+    <Card data-sasha-card="Project Readiness" className={cn(
       "border-l-4",
       isReady ? "border-l-green-500" : "border-l-amber-500"
     )}>
