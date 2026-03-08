@@ -58,13 +58,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (rolesResult.data) {
-      setUserOrgRoles(rolesResult.data as UserOrgRole[]);
+      // Sort deterministically by created_at ASC so multi-org users get consistent first org
+      const sortedRoles = [...rolesResult.data].sort(
+        (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+      setUserOrgRoles(sortedRoles as UserOrgRole[]);
 
-      if (rolesResult.data.length > 0) {
+      if (sortedRoles.length > 0) {
         const { data: permsData } = await supabase
           .from('member_permissions')
           .select('*')
-          .eq('user_org_role_id', rolesResult.data[0].id)
+          .eq('user_org_role_id', sortedRoles[0].id)
           .maybeSingle();
         setMemberPermissions(permsData as MemberPermissions | null);
       }
