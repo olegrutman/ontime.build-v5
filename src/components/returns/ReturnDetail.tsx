@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Trash2, Send, CalendarCheck, Package, Download, Loader2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Send, CalendarCheck, Package, Download, Loader2, Bell } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 
