@@ -73,6 +73,14 @@ export default function PlatformUserDetail() {
   const [editIsAdmin, setEditIsAdmin] = useState(false);
   const [changeRoleReasonOpen, setChangeRoleReasonOpen] = useState(false);
 
+  // Edit profile fields state
+  const [editJobTitleOpen, setEditJobTitleOpen] = useState(false);
+  const [editPhoneOpen, setEditPhoneOpen] = useState(false);
+  const [newJobTitle, setNewJobTitle] = useState('');
+  const [newPhone, setNewPhone] = useState('');
+  const [editJobTitleReasonOpen, setEditJobTitleReasonOpen] = useState(false);
+  const [editPhoneReasonOpen, setEditPhoneReasonOpen] = useState(false);
+
   const refreshData = async () => {
     if (!userId) return;
     const [profileRes, rolesRes] = await Promise.all([
