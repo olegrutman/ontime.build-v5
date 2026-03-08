@@ -352,6 +352,7 @@ Deno.serve(async (req) => {
           });
         }
         snapshotAfter = { [statusField]: newStatus };
+        logMeta = { p_action_summary: `Unlocked ${record_type} ${record_id} → ${newStatus}` };
         result = { success: true, message: `${record_type} unlocked` };
         break;
       }
