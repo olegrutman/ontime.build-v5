@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
-import { OrgType, ORG_TYPE_LABELS } from '@/types/organization';
+import { OrgType, ORG_TYPE_LABELS, getJobTitlesForOrgType } from '@/types/organization';
 import { TRADES, Trade } from '@/types/projectWizard';
 
 // Role labels using full text (no abbreviations)
@@ -32,16 +32,6 @@ const ROLE_OPTIONS = [
   { value: 'SUPPLIER', label: 'Supplier' },
 ] as const;
 
-// Job title options for all org types
-const JOB_TITLES = [
-  'Owner',
-  'Project Manager',
-  'Superintendent',
-  'Estimator',
-  'Office Manager',
-  'Foreman',
-  'Other',
-];
 
 // Sign In schema
 const signInSchema = z.object({
@@ -577,7 +567,7 @@ export function AuthSection() {
                           <SelectValue placeholder="Select your role" />
                         </SelectTrigger>
                         <SelectContent>
-                          {JOB_TITLES.map((title) => (
+                          {getJobTitlesForOrgType(signUpForm.role).map((title) => (
                             <SelectItem key={title} value={title}>
                               {title}
                             </SelectItem>

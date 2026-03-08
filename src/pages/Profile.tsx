@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useProfile } from '@/hooks/useProfile';
 import { useAuth } from '@/hooks/useAuth';
-import { ORG_TYPE_LABELS } from '@/types/organization';
+import { ORG_TYPE_LABELS, getJobTitlesForOrgType } from '@/types/organization';
 import { TRADES, Trade } from '@/types/projectWizard';
 
 const TIMEZONES = [
@@ -39,15 +39,6 @@ const CONTACT_METHODS = [
   { value: 'text', label: 'Text Message' },
 ];
 
-const JOB_TITLES = [
-  'Owner',
-  'Project Manager',
-  'Superintendent',
-  'Estimator',
-  'Office Manager',
-  'Foreman',
-  'Other',
-];
 
 export default function Profile() {
   const { userOrgRoles } = useAuth();
@@ -297,7 +288,7 @@ export default function Profile() {
                     <SelectValue placeholder="Select title" />
                   </SelectTrigger>
                   <SelectContent>
-                    {JOB_TITLES.map(t => (
+                    {getJobTitlesForOrgType(organization?.type).map(t => (
                       <SelectItem key={t} value={t}>{t}</SelectItem>
                     ))}
                   </SelectContent>

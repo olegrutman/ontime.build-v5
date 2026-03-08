@@ -30,8 +30,8 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Shield, ArrowRightLeft, Loader2, UserMinus, Briefcase } from 'lucide-react';
-import { ROLE_LABELS, ROLE_PERMISSIONS, PERMISSION_TO_DB_COLUMN } from '@/types/organization';
-import { JOB_TITLES } from '@/components/signup-wizard/types';
+import { ROLE_LABELS, ROLE_PERMISSIONS, PERMISSION_TO_DB_COLUMN, getJobTitlesForOrgType } from '@/types/organization';
+import { useAuth } from '@/hooks/useAuth';
 import type { OrgMember } from '@/hooks/useOrgTeam';
 
 interface MemberDetailDialogProps {
@@ -82,6 +82,8 @@ export function MemberDetailDialog({
   isCurrentUserAdmin,
   isSelf,
 }: MemberDetailDialogProps) {
+  const { userOrgRoles } = useAuth();
+  const orgType = userOrgRoles[0]?.organization?.type ?? null;
   const [localPerms, setLocalPerms] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const [transferring, setTransferring] = useState(false);
@@ -196,7 +198,7 @@ export function MemberDetailDialog({
                       <SelectValue placeholder="Select job title" />
                     </SelectTrigger>
                     <SelectContent>
-                      {JOB_TITLES.map((title) => (
+                      {getJobTitlesForOrgType(orgType).map((title) => (
                         <SelectItem key={title} value={title}>
                           {title}
                         </SelectItem>

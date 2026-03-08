@@ -1,7 +1,6 @@
-export const JOB_TITLES = [
-  'Owner', 'Project Manager', 'Superintendent', 'Estimator',
-  'Office Manager', 'Foreman', 'Other',
-];
+// Job titles are now defined per org type in src/types/organization.ts
+// Use getJobTitlesForOrgType(orgType) or ALL_JOB_TITLES from there.
+export { ALL_JOB_TITLES as JOB_TITLES, getJobTitlesForOrgType } from '@/types/organization';
 
 export interface SignupWizardData {
   firstName: string;

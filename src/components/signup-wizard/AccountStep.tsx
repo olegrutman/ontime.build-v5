@@ -6,7 +6,8 @@ import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Mail, Lock, User, Phone, Loader2, ArrowLeft } from 'lucide-react';
 import { z } from 'zod';
-import { JOB_TITLES, type SignupWizardData } from './types';
+import { getJobTitlesForOrgType } from '@/types/organization';
+import type { SignupWizardData } from './types';
 import { formatPhone } from '@/lib/formatPhone';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
@@ -153,7 +154,7 @@ export function AccountStep({ data, onChange, onNext, onBack, loading, showJobTi
                 <SelectValue placeholder="Select your job title" />
               </SelectTrigger>
               <SelectContent>
-                {JOB_TITLES.map(t => (
+                {getJobTitlesForOrgType(data.orgType).map(t => (
                   <SelectItem key={t} value={t}>{t}</SelectItem>
                 ))}
               </SelectContent>
