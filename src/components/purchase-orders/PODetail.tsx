@@ -44,6 +44,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { POStatusBadge } from './POStatusBadge';
+import { POActivityTimeline } from './POActivityTimeline';
 import { CreateInvoiceFromPO } from './CreateInvoiceFromPO';
 import { CreateSupplierInvoiceFromPO } from './CreateSupplierInvoiceFromPO';
 import { PurchaseOrder, POLineItem, POStatus } from '@/types/purchaseOrder';
