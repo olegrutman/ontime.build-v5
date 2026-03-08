@@ -525,7 +525,12 @@ export default function PlatformProjectDetail() {
                     className="cursor-pointer hover:bg-accent/50"
                     onClick={() => t.organization && navigate(`/platform/orgs/${t.organization.id}`)}
                   >
-                    <TableCell className="font-medium">{t.organization?.name || '—'}</TableCell>
+                    <TableCell>
+                      <span className="font-medium">{t.organization?.name || '—'}</span>
+                      {t.organization?.type && (
+                        <Badge variant="secondary" className="text-[10px] ml-1.5 capitalize">{t.organization.type}</Badge>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-xs">{t.role}</Badge>
                     </TableCell>
