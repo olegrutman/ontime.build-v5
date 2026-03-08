@@ -591,6 +591,7 @@ Deno.serve(async (req) => {
         }
 
         snapshotAfter = { role: new_role, is_admin: typeof new_is_admin === "boolean" ? new_is_admin : oldRole.is_admin };
+        logMeta = { p_action_summary: `Changed role from ${oldRole.role} to ${new_role}` };
         result = { success: true, message: "User role updated" };
         break;
       }
