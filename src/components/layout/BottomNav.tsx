@@ -59,6 +59,7 @@ export function BottomNav() {
 
   const moreProjectItems: NavItem[] = [
     ...(!isSupplier ? [{ label: 'SOV', icon: ListChecks, tab: 'sov' }] : []),
+    { label: 'Schedule', icon: CalendarDays, tab: 'schedule' },
     { label: 'Invoices', icon: FileText, tab: 'invoices' },
     { label: 'POs', icon: ShoppingCart, tab: 'purchase-orders' },
     { label: 'Returns', icon: Undo2, tab: 'returns' },
