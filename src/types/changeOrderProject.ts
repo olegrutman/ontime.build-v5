@@ -69,6 +69,9 @@ export interface ChangeOrderProject {
   materials_pricing_locked?: boolean;
   materials_locked_at?: string | null;
   
+  // TC internal cost (self-performing, no FC)
+  tc_internal_cost?: number;
+  
   // Joined data
   project?: {
     id: string;

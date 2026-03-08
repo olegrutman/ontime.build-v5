@@ -34,6 +34,7 @@ import { MaterialResourceToggle } from './MaterialResourceToggle';
 import { WorkOrderMaterialsPanel } from './WorkOrderMaterialsPanel';
 import { ChangeOrderChecklist } from './ChangeOrderChecklist';
 import { TMTimeCardsPanel } from './TMTimeCardsPanel';
+import { TCInternalCostEditor } from './TCInternalCostEditor';
 
 /** Collapsible scope description: shows first 3 lines collapsed */
 function CollapsibleScope({ description }: { description: string | null }) {
@@ -460,6 +461,16 @@ export function ChangeOrderDetailPage() {
                       isEditable={isEditable}
                       canViewRates={true}
                       onAddLabor={addTCLabor}
+                    />
+                  )}
+
+                  {/* TC Internal Cost (self-performing, no FC) */}
+                  {isTC && !hasFCParticipant && (
+                    <TCInternalCostEditor
+                      currentCost={(changeOrder as any).tc_internal_cost ?? 0}
+                      isEditable={isTCEditable}
+                      onSave={(cost) => updateChangeOrder({ id: changeOrder.id, tc_internal_cost: cost } as any)}
+                      isSaving={isUpdatingChangeOrder}
                     />
                   )}
 

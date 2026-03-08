@@ -451,6 +451,7 @@ export type Database = {
           requires_materials: boolean | null
           status: string
           tc_hourly_rate: number | null
+          tc_internal_cost: number | null
           title: string
           updated_at: string
           work_type: string | null
@@ -484,6 +485,7 @@ export type Database = {
           requires_materials?: boolean | null
           status?: string
           tc_hourly_rate?: number | null
+          tc_internal_cost?: number | null
           title: string
           updated_at?: string
           work_type?: string | null
@@ -517,6 +519,7 @@ export type Database = {
           requires_materials?: boolean | null
           status?: string
           tc_hourly_rate?: number | null
+          tc_internal_cost?: number | null
           title?: string
           updated_at?: string
           work_type?: string | null

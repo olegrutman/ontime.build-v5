@@ -176,6 +176,8 @@ function TCPricingView({
   materialMarkup,
   profit,
   fcName,
+  isSelfPerforming,
+  internalCost,
 }: {
   laborTotal: number;
   materialTotal: number;
@@ -186,6 +188,8 @@ function TCPricingView({
   materialMarkup: number;
   profit: number;
   fcName?: string;
+  isSelfPerforming?: boolean;
+  internalCost?: number;
 }) {
   return (
     <div className="space-y-4">
@@ -206,11 +210,15 @@ function TCPricingView({
       <div>
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">Costs</p>
         <div className="space-y-2 pl-2">
-          <PricingRow label={fcName ? `Field Crew (${fcName})` : 'Field Crew'} value={fcCost} />
+          {isSelfPerforming ? (
+            <PricingRow label="Internal Cost" value={internalCost ?? 0} />
+          ) : (
+            <PricingRow label={fcName ? `Field Crew (${fcName})` : 'Field Crew'} value={fcCost} />
+          )}
           <PricingRow label="Materials (Supplier Cost)" value={materialCost} />
         </div>
         <div className="mt-2">
-          <PricingRow label="Total Costs" value={fcCost + materialCost} isBold />
+          <PricingRow label="Total Costs" value={(isSelfPerforming ? (internalCost ?? 0) : fcCost) + materialCost} isBold />
         </div>
       </div>
       
@@ -351,9 +359,15 @@ export function ContractedPricingCard({
   // Material markup (difference between what GC pays and supplier cost)
   const materialMarkup = materialTotal - materialCost;
   
+  // Self-performing TC detection
+  const isSelfPerforming = !fcParticipant;
+  const tcInternalCost = (changeOrder as any).tc_internal_cost ?? 0;
+  
   // TC profit
   const revenue = finalPrice;
-  const profit = revenue - fcCost - materialCost;
+  const profit = isSelfPerforming
+    ? revenue - tcInternalCost - materialCost
+    : revenue - fcCost - materialCost;
 
   // Check if we have any pricing data
   const hasPricingData = finalPrice > 0 || laborTotal > 0 || materialTotal > 0 || equipmentTotal > 0 || fcCost > 0;
@@ -407,6 +421,8 @@ export function ContractedPricingCard({
           materialMarkup={materialMarkup}
           profit={profit}
           fcName={fcParticipant?.organization?.name}
+          isSelfPerforming={isSelfPerforming}
+          internalCost={tcInternalCost}
         />
       );
     }
