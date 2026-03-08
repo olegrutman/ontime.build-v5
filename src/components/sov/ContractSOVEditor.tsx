@@ -779,18 +779,6 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
               <div className="border-t pt-4 mt-2">
                 <h3 className="text-base font-medium text-muted-foreground">TC → FC Contracts</h3>
               </div>
-              {tcToFcBilling.scheduled > 0 && (
-                <div className="rounded-lg border bg-muted/30 p-3 flex flex-wrap items-center gap-4 text-sm">
-                  <span className="font-medium">Billing:</span>
-                  <span>{formatCurrency(tcToFcBilling.billed)} of {formatCurrency(tcToFcBilling.scheduled)}</span>
-                  <SOVProgressBar
-                    scheduledValue={tcToFcBilling.scheduled}
-                    billedToDate={tcToFcBilling.billed}
-                    size="sm"
-                  />
-                  <span className="text-muted-foreground">{tcToFcBilling.percent.toFixed(1)}% complete</span>
-                </div>
-              )}
               {tcToFcSovs.map(sov => renderSOVCard(sov))}
             </>
           )}
