@@ -94,6 +94,7 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
           setTotals({
             tcToGcTotal: 0,
             tcToFcTotal: 0,
+            tcInternalCostTotal: 0,
             fcEarnings: 0,
             approvedCount: 0,
             pendingCount: 0,
