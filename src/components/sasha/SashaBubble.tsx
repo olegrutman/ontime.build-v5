@@ -211,9 +211,16 @@ export function SashaBubble() {
 
   const handleClose = () => {
     setOpen(false);
+    setHighlightMode(false);
     setMessages([INITIAL_GREETING]);
     setInput('');
   };
+
+  const handleHighlightSelect = useCallback((prompt: string) => {
+    setHighlightMode(false);
+    sendMessage(prompt);
+  }, [sendMessage]);
+
 
   // Show for demo mode (no auth needed) or authenticated users
   const hiddenPaths = ['/', '/auth'];
