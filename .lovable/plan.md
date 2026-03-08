@@ -1,46 +1,39 @@
 
 
-# Analysis: "Explain This Card" Highlight Mode — Critical Bug
+# Allow Edit and Delete of Draft Invoices
 
-## Problem Found
+## Current State
 
-The overlay has a **fundamental interaction bug**: the semi-transparent background div (`bg-background/40 pointer-events-auto`) captures all mouse events. When the user hovers or clicks, the event target is the overlay itself — not the cards underneath. So `closest('[data-sasha-card]')` never finds a match, and every click triggers `onCancel()`, immediately closing the overlay.
+- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
+- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
 
-This is exactly what the session replay shows: user activates highlight mode, clicks anywhere, overlay closes instantly with no card detected.
+## Plan
 
-## Fix
+### 1. Add Delete Invoice capability
 
-**File: `src/components/sasha/SashaHighlightOverlay.tsx`**
+**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
+- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
+- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
+- Button placed in the action buttons area, styled as destructive/outline
 
-Replace the event handlers to use `document.elementFromPoint()` — temporarily hide the overlay, probe what's underneath, then restore it:
+**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
+- Add `onDelete` optional prop
+- Add trash icon to `hoverActions` array for DRAFT status
 
-```tsx
-const handleMouseOver = useCallback((e: MouseEvent) => {
-  const overlay = e.currentTarget || e.target;
-  // Temporarily hide overlay to probe element underneath
-  const els = document.elementsFromPoint(e.clientX, e.clientY);
-  const card = els.find(el => el.closest('[data-sasha-card]'))?.closest('[data-sasha-card]');
-  if (card) {
-    setRect(card.getBoundingClientRect());
-  } else {
-    setRect(null);
-  }
-}, []);
-```
+**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
+- Delete line items then invoice from database
+- Show toast, refresh list
+- Pass `onDelete` to `InvoiceCard`
 
-Since the overlay intercepts events via capture phase, we need to switch to `mousemove` on the overlay div itself and use `elementsFromPoint` to look through it:
+### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
 
-1. Remove the global `document.addEventListener` approach
-2. Put `pointer-events-auto` only on the background overlay div
-3. In the `mousemove` handler on that div, use `elementsFromPoint(e.clientX, e.clientY)` skipping elements inside the overlay to find `[data-sasha-card]` beneath
-4. In the `click` handler, do the same probe and either select the card or cancel
+**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
+- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
+- Show the button when `status === 'DRAFT' && canSubmit`
 
-**Concrete changes to `SashaHighlightOverlay.tsx`:**
+### Files to Change
 
-- `handleMouseOver` → `handleMouseMove` on the overlay div, uses `document.elementsFromPoint` to find cards beneath the overlay
-- `handleClick` on the overlay div, same `elementsFromPoint` approach to detect cards
-- Remove global `document.addEventListener` in favor of React event handlers on the overlay div
-- The highlight border div stays `pointer-events-none` (visual only)
-
-This is a single-file fix to `src/components/sasha/SashaHighlightOverlay.tsx`. No other files need changes — the `data-sasha-card` attributes and `SashaBubble` integration are correct.
+- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
+- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
+- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
 
