@@ -250,7 +250,7 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
   const isFCView = viewerRole === 'Field Crew';
   const isSupplierView = viewerRole === 'Supplier';
   
-  const profit = totals.tcToGcTotal - totals.tcToFcTotal;
+  const profit = totals.tcToGcTotal - totals.tcToFcTotal - totals.tcInternalCostTotal;
   const profitPercent = totals.tcToGcTotal > 0 ? (profit / totals.tcToGcTotal) * 100 : 0;
 
   return (
