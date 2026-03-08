@@ -521,7 +521,7 @@ export function useDashboardData(): DashboardData {
         if (projectIds.length > 0) {
           const { data: workOrders } = await supabase
             .from('change_order_projects')
-            .select('id, project_id, final_price, status')
+            .select('id, project_id, final_price, status, tc_internal_cost')
             .in('project_id', projectIds)
             .in('status', ['approved', 'contracted']);
 

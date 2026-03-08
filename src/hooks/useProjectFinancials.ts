@@ -385,9 +385,10 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       // WO breakdowns (labor, material, equipment) from approved WOs
       const woLabor = approvedWOs.reduce((sum, wo: any) => sum + (wo.labor_total || 0), 0);
       const woMaterial = approvedWOs.reduce((sum, wo: any) => sum + (wo.material_total || 0), 0);
+      const woEquipment = approvedWOs.reduce((sum, wo: any) => sum + (wo.equipment_total || 0), 0);
       setWoLaborTotal(woLabor);
       setWoMaterialTotal(woMaterial);
-      setWoEquipmentTotal(Math.max(0, woTotal - woLabor - woMaterial));
+      setWoEquipmentTotal(woEquipment);
 
       // FC costs (TC view)
       if (detectedRole === 'Trade Contractor') {
@@ -396,6 +397,10 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           const { data: fcHours } = await supabase.from('change_order_fc_hours').select('labor_total').in('change_order_id', woIds);
           setWorkOrderFCCost((fcHours || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0));
         }
+
+        // Sum tc_internal_cost for self-performing WOs
+        const tcIntCost = approvedWOs.reduce((sum, wo: any) => sum + (wo.tc_internal_cost || 0), 0);
+        setTcInternalCostTotal(tcIntCost);
 
         // Total paid to FC from invoices
         const paidInvoices = allInvoices.filter(i => i.status === 'PAID');
