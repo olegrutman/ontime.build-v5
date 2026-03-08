@@ -139,6 +139,7 @@ export default function Profile() {
       timezone: personalForm.timezone,
       job_title: personalForm.job_title || null,
     });
+    await refreshUserData();
     setSaving(null);
   };
 
