@@ -1,40 +1,39 @@
 
 
-# View & Edit User Permissions from Platform User Detail
+# Allow Edit and Delete of Draft Invoices
 
-## What to Build
+## Current State
 
-Add a "Permissions" card on the Platform User Detail page that shows the effective permissions for each org membership, and lets Platform Owners toggle individual permission flags (with audit logging).
+- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
+- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
 
-## Changes
+## Plan
 
-### 1. Edge Function — `supabase/functions/platform-support-action/index.ts`
+### 1. Add Delete Invoice capability
 
-Add `EDIT_MEMBER_PERMISSIONS` action (min role: `PLATFORM_OWNER`):
-- Accepts `user_org_role_id` and `permissions` object (the 7 boolean DB columns)
-- Upserts the `member_permissions` row (insert if missing, update if exists)
-- Snapshots before/after for audit log
+**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
+- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
+- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
+- Button placed in the action buttons area, styled as destructive/outline
 
-### 2. UI — `src/pages/platform/PlatformUserDetail.tsx`
+**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
+- Add `onDelete` optional prop
+- Add trash icon to `hoverActions` array for DRAFT status
 
-**Fetch permissions**: After loading memberships, also fetch `member_permissions` for each membership's `user_org_role_id`.
+**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
+- Delete line items then invoice from database
+- Show toast, refresh list
+- Pass `onDelete` to `InvoiceCard`
 
-**New "Permissions" card** below the Organization Memberships card:
-- For each membership, show a collapsible section with the org name
-- Display each permission as a labeled Switch toggle:
-  - `can_view_financials` — View Financials
-  - `can_approve_invoices` — Approve Invoices
-  - `can_create_work_orders` — Create Work Orders
-  - `can_create_pos` — Create Purchase Orders
-  - `can_submit_time` — Submit Time
-  - `can_manage_team` — Manage Team
-  - `can_create_rfis` — Create RFIs
-- Show current effective value (merged from role defaults + DB overrides using `getEffectivePermissions`)
-- Admin members show all toggles as checked & disabled with a note "Admin — all permissions granted"
-- On toggle change, open SupportActionDialog for reason, then call `EDIT_MEMBER_PERMISSIONS`
-- Refresh permissions data on success
+### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
 
-### 3. No database migration needed
+**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
+- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
+- Show the button when `status === 'DRAFT' && canSubmit`
 
-`member_permissions` table and RLS policies already exist. Platform users have SELECT access. The edge function uses the service role key to bypass RLS for writes.
+### Files to Change
+
+- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
+- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
+- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
 

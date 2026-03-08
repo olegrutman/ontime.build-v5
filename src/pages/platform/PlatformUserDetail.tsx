@@ -14,8 +14,9 @@ import { SupportActionDialog } from '@/components/platform/SupportActionDialog';
 import { UserProfileCard } from '@/components/platform/UserProfileCard';
 import { EditAddressDialog } from '@/components/platform/EditAddressDialog';
 import { AssignToOrgDialog } from '@/components/platform/AssignToOrgDialog';
+import { UserPermissionsCard } from '@/components/platform/UserPermissionsCard';
 import { supabase } from '@/integrations/supabase/client';
-import { ROLE_LABELS, ORG_TYPE_LABELS, ALLOWED_ROLES_BY_ORG_TYPE, type AppRole, type OrgType } from '@/types/organization';
+import { ROLE_LABELS, ORG_TYPE_LABELS, ALLOWED_ROLES_BY_ORG_TYPE, type AppRole, type OrgType, type MemberPermissions } from '@/types/organization';
 import { useSupportAction } from '@/hooks/useSupportAction';
 import { useImpersonation } from '@/hooks/useImpersonation';
 import { useAuth } from '@/hooks/useAuth';
@@ -52,6 +53,7 @@ export default function PlatformUserDetail() {
   const { platformRole } = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [memberships, setMemberships] = useState<OrgMembership[]>([]);
+  const [permissionsMap, setPermissionsMap] = useState<Record<string, MemberPermissions | null>>({});
   const [loading, setLoading] = useState(true);
 
   const { execute, loading: actionLoading } = useSupportAction();
@@ -90,7 +92,24 @@ export default function PlatformUserDetail() {
         .eq('user_id', userId),
     ]);
     if (profileRes.data) setProfile(profileRes.data as unknown as ProfileData);
-    setMemberships((rolesRes.data || []) as unknown as OrgMembership[]);
+    const mems = (rolesRes.data || []) as unknown as OrgMembership[];
+    setMemberships(mems);
+
+    // Fetch permissions for each membership
+    if (mems.length > 0) {
+      const roleIds = mems.map((m) => m.id);
+      const { data: permsData } = await supabase
+        .from('member_permissions')
+        .select('*')
+        .in('user_org_role_id', roleIds);
+      const map: Record<string, MemberPermissions | null> = {};
+      for (const m of mems) {
+        map[m.id] = (permsData || []).find((p: any) => p.user_org_role_id === m.id) as MemberPermissions | null || null;
+      }
+      setPermissionsMap(map);
+    } else {
+      setPermissionsMap({});
+    }
   };
 
   useEffect(() => {
@@ -166,6 +185,12 @@ export default function PlatformUserDetail() {
       setNewPhone('');
       refreshData();
     }
+  };
+
+  const handleEditPermissions = async (userOrgRoleId: string, permissions: Partial<MemberPermissions>, reason: string): Promise<boolean> => {
+    const ok = await execute({ action_type: 'EDIT_MEMBER_PERMISSIONS', reason, user_org_role_id: userOrgRoleId, permissions });
+    if (ok) refreshData();
+    return ok;
   };
 
   const primaryOrgType = memberships[0]?.organization?.type as OrgType | undefined;
@@ -281,6 +306,14 @@ export default function PlatformUserDetail() {
           )}
         </CardContent>
       </Card>
+
+      <UserPermissionsCard
+        memberships={memberships}
+        permissionsMap={permissionsMap}
+        isOwner={isOwner}
+        onSave={handleEditPermissions}
+        actionLoading={actionLoading}
+      />
 
       {/* Dialogs */}
       <SupportActionDialog open={resetPasswordOpen} onOpenChange={setResetPasswordOpen} title="Reset Password" description={`Generate a password recovery link for ${profile.email}.`} onConfirm={handleResetPassword} loading={actionLoading} />
