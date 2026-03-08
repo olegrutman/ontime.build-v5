@@ -23,18 +23,19 @@ export default function PlatformUsers() {
 
   useEffect(() => {
     const timer = setTimeout(async () => {
-      if (query.length < 2) {
-        setUsers([]);
-        return;
-      }
       setLoading(true);
-      const q = `%${query}%`;
-      const { data } = await supabase
+      let request = supabase
         .from('profiles')
         .select('user_id, email, full_name, created_at')
-        .or(`email.ilike.${q},full_name.ilike.${q}`)
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(200);
+
+      if (query.trim().length > 0) {
+        const q = `%${query.trim()}%`;
+        request = request.or(`email.ilike.${q},full_name.ilike.${q}`);
+      }
+
+      const { data } = await request;
       setUsers((data || []) as UserRow[]);
       setLoading(false);
     }, 300);
