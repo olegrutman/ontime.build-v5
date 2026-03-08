@@ -590,6 +590,49 @@ export default function PlatformProjectDetail() {
         </CardContent>
       </Card>
 
+      {/* Supplier Estimates */}
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Package className="h-4 w-4" /> Supplier Estimates
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Estimate</TableHead>
+                <TableHead>Supplier Org</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead>Created</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {estimates.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">No supplier estimates</TableCell>
+                </TableRow>
+              ) : (
+                estimates.map((e) => (
+                  <TableRow key={e.id}>
+                    <TableCell className="font-medium">{e.name}</TableCell>
+                    <TableCell className="text-sm">{e.supplier_org?.name || '—'}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs capitalize">{e.status.toLowerCase()}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">{formatCurrency(e.total_amount)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {format(new Date(e.created_at), 'MMM d, yyyy')}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
       {/* Force Accept Dialog */}
       <SupportActionDialog
         open={forceAcceptOpen}
