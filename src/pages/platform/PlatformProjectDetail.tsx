@@ -359,7 +359,7 @@ export default function PlatformProjectDetail() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Contracts ({contracts.length})</CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="p-0 overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
