@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import { ChevronDown, ChevronUp, Calendar, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Separator } from '@/components/ui/separator';
@@ -20,15 +21,17 @@ interface TMPeriodCardProps {
   canViewRates: boolean;
   canSubmitTime?: boolean;
   onUpdate: () => void;
+  hasFCParticipant?: boolean;
 }
 
-export function TMPeriodCard({ period, currentRole, canViewRates, canSubmitTime = true, onUpdate }: TMPeriodCardProps) {
+export function TMPeriodCard({ period, currentRole, canViewRates, canSubmitTime = true, onUpdate, hasFCParticipant = true }: TMPeriodCardProps) {
   const [isOpen, setIsOpen] = useState(period.status === 'OPEN');
   
   const isGC = currentRole === 'GC_PM';
   const isTC = currentRole === 'TC_PM';
   const showFinancials = canViewRates && (period.status === 'APPROVED' || period.status === 'SUBMITTED');
   const canEditMarkup = isTC && period.status === 'OPEN';
+  const isSelfPerforming = isTC && !hasFCParticipant;
 
   const formatDateRange = () => {
     const start = format(new Date(period.period_start), 'MMM d');
@@ -44,7 +47,12 @@ export function TMPeriodCard({ period, currentRole, canViewRates, canSubmitTime 
             <div className="flex items-center gap-3">
               <Calendar className="w-4 h-4 text-muted-foreground" />
               <div>
-                <p className="font-medium">{formatDateRange()}</p>
+                <div className="flex items-center gap-2">
+                  <p className="font-medium">{formatDateRange()}</p>
+                  {isSelfPerforming && (
+                    <Badge variant="secondary" className="text-xs">Self-Performing</Badge>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground capitalize">
                   {period.period_type.toLowerCase()}
                 </p>
@@ -98,6 +106,7 @@ export function TMPeriodCard({ period, currentRole, canViewRates, canSubmitTime 
                   currentRole={currentRole} 
                   canViewRates={canViewRates}
                   canSubmitTime={canSubmitTime}
+                  hasFCParticipant={hasFCParticipant}
                 />
 
                 <Separator />
@@ -152,7 +161,12 @@ export function TMPeriodCard({ period, currentRole, canViewRates, canSubmitTime 
 
             {/* Actions */}
             <div className="flex justify-end pt-2">
-              <TMPeriodActions period={period} currentRole={currentRole} onAction={onUpdate} />
+              <TMPeriodActions 
+                period={period} 
+                currentRole={currentRole} 
+                onAction={onUpdate}
+                hasFCParticipant={hasFCParticipant}
+              />
             </div>
           </div>
         </CollapsibleContent>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,6 +17,7 @@ interface TMMaterialEntriesProps {
 }
 
 export function TMMaterialEntries({ period, currentRole, canViewCosts }: TMMaterialEntriesProps) {
+  const { user } = useAuth();
   const [entries, setEntries] = useState<TMMaterialEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -44,6 +46,8 @@ export function TMMaterialEntries({ period, currentRole, canViewCosts }: TMMater
   };
 
   const addEntry = async () => {
+    if (!user) return;
+
     const { data, error } = await supabase
       .from('tm_material_entries')
       .insert({
@@ -52,6 +56,7 @@ export function TMMaterialEntries({ period, currentRole, canViewCosts }: TMMater
         description: '',
         quantity: 1,
         uom: 'EA',
+        entered_by: user.id,
       })
       .select()
       .single();
