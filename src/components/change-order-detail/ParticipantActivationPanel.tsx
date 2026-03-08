@@ -66,7 +66,7 @@ export function ParticipantActivationPanel({
   if (!isTC) {
     // Read-only view for non-TC users
     return (
-      <Card>
+      <Card data-sasha-card="Participants">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Users className="w-4 h-4" />

@@ -82,7 +82,7 @@ export function TCPricingPanel({
   };
 
   return (
-    <Card>
+    <Card data-sasha-card="TC Pricing">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">

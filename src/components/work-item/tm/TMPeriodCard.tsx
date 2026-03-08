@@ -37,7 +37,7 @@ export function TMPeriodCard({ period, currentRole, canViewRates, canSubmitTime 
   };
 
   return (
-    <Card className="overflow-hidden">
+    <Card data-sasha-card="T&M Period" className="overflow-hidden">
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <CollapsibleTrigger asChild>
           <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 transition-colors">

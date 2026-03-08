@@ -110,6 +110,7 @@ export function InvoiceCard({
 
   return (
     <Card
+      data-sasha-card="Invoice"
       className="group cursor-pointer hover:shadow-md transition-shadow"
       onClick={onClick}
     >

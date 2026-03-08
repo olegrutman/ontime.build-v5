@@ -123,7 +123,7 @@ export function EquipmentPanel({
   const totalEquipment = equipment.reduce((sum, e) => sum + (e.total_cost || 0), 0);
 
   return (
-    <Card>
+    <Card data-sasha-card="Equipment">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">

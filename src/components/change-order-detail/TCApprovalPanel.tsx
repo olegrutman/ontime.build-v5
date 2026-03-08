@@ -62,7 +62,7 @@ export function TCApprovalPanel({
 
   return (
     <>
-      <Card className="border-primary/50">
+      <Card data-sasha-card="TC Approval" className="border-primary/50">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Clock className="w-4 h-4 text-primary" />

@@ -73,7 +73,7 @@ export function TCPricingSummary({
   const isComplete = hasLaborPricing && hasMaterialsPriced && allEquipmentPriced;
 
   return (
-    <Card>
+    <Card data-sasha-card="TC Pricing Summary">
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <DollarSign className="w-4 h-4" />

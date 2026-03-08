@@ -44,7 +44,7 @@ export function OnboardingChecklist({
   if (completedCount === steps.length) return null;
 
   return (
-    <Card className="border-primary/20 bg-primary/[0.02]">
+    <Card data-sasha-card="Onboarding" className="border-primary/20 bg-primary/[0.02]">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">

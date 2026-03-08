@@ -29,7 +29,7 @@ export function FinancialSnapshotTile({
   totalCosts 
 }: FinancialSnapshotTileProps) {
   return (
-    <Card className="h-full flex flex-col">
+    <Card data-sasha-card="Financial Snapshot" className="h-full flex flex-col">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <DollarSign className="h-5 w-5 text-green-600" />

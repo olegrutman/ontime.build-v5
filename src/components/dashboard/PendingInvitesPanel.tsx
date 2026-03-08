@@ -46,7 +46,7 @@ export function PendingInvitesPanel({ invites, onRefresh }: PendingInvitesPanelP
   };
 
   return (
-    <Card className="border-primary/30 dark:border-primary/50">
+    <Card data-sasha-card="Pending Invites" className="border-primary/30 dark:border-primary/50">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-lg">
           <Mail className="h-5 w-5 text-primary" />

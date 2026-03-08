@@ -62,7 +62,7 @@ export function DashboardAttentionBanner({ attentionItems, pendingInvites, onRef
   };
 
   return (
-    <div className="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-4">
+    <div data-sasha-card="Dashboard Attention" className="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/30 p-4">
       {/* Header */}
       <div className="flex items-center gap-2 mb-3">
         <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />

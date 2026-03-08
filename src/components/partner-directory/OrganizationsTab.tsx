@@ -25,7 +25,7 @@ export function OrganizationsTab({ groupedPartners }: OrganizationsTabProps) {
         const Icon = config.icon;
 
         return (
-          <Card key={type}>
+          <Card key={type} data-sasha-card="Partner Organization">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Icon className={`h-4 w-4 ${config.color}`} />

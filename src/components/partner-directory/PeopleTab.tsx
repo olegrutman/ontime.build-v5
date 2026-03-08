@@ -35,7 +35,7 @@ export function PeopleTab({ groupedPeople }: PeopleTabProps) {
         const config = ORG_TYPE_CONFIG[type];
 
         return (
-          <Card key={type}>
+          <Card key={type} data-sasha-card="Partner Contact">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <config.icon className="h-4 w-4 text-muted-foreground" />

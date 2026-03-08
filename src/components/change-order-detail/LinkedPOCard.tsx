@@ -34,6 +34,7 @@ export function LinkedPOCard({
 
   return (
     <Card 
+      data-sasha-card="Linked PO"
       className="cursor-pointer hover:bg-muted/50 transition-colors"
       onClick={handleClick}
     >
