@@ -142,6 +142,13 @@ function PageLoader() {
   );
 }
 
+function AuthenticatedSashaBubble() {
+  const { user } = useAuth();
+  const { isDemoMode } = useDemo();
+  if (!user && !isDemoMode) return null;
+  return <SashaBubble />;
+}
+
 function AppRoutes() {
   const { isDemoMode } = useDemo();
 
@@ -197,7 +204,7 @@ function AppRoutes() {
           </Routes>
         </Suspense>
       </ErrorBoundary>
-      <SashaBubble />
+      <AuthenticatedSashaBubble />
       {!isDemoMode && <BoltGuide />}
     </div>
   );

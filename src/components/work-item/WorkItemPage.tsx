@@ -157,7 +157,7 @@ export function WorkItemPage() {
           {/* Main Content */}
           <div className="md:col-span-2 space-y-6">
             {/* Header Card */}
-            <Card className="p-6">
+            <Card data-sasha-card="Work Item" className="p-6">
               <WorkItemHeader workItem={workItem} />
               <Separator className="my-4" />
               <WorkItemProgress state={state} />
@@ -174,8 +174,8 @@ export function WorkItemPage() {
             )}
 
             {/* Details */}
-            <Card className="p-6">
-              <WorkItemDetails 
+            <Card data-sasha-card="Work Item Details" className="p-6">
+              <WorkItemDetails
                 workItem={workItem} 
                 canViewFinancials={permissions?.canViewRates ?? false}
               />
@@ -183,7 +183,7 @@ export function WorkItemPage() {
 
             {/* Pricing Panel - TC can edit when OPEN, GC sees after submit */}
             {showPricingPanel && (
-              <Card className="p-6">
+              <Card data-sasha-card="Work Item Pricing" className="p-6">
                 <WorkItemPricing
                   workItemId={workItem.id}
                   isEditable={isEditable && isTC}
@@ -194,7 +194,7 @@ export function WorkItemPage() {
 
             {/* Labor Panel - TC/FS only, never GC */}
             {showLaborPanel && (
-              <Card className="p-6">
+              <Card data-sasha-card="Work Item Labor" className="p-6">
                 <WorkItemLabor
                   workItemId={workItem.id}
                   isEditable={isEditable}
@@ -206,7 +206,7 @@ export function WorkItemPage() {
 
             {/* Materials Panel */}
             {showMaterialsPanel && (
-              <Card className="p-6">
+              <Card data-sasha-card="Work Item Materials" className="p-6">
                 <WorkItemMaterials
                   workItemId={workItem.id}
                   isEditable={isEditable && !isGC}
@@ -217,7 +217,7 @@ export function WorkItemPage() {
 
             {/* T&M Periods Panel - for TM_WORK items */}
             {showTMPeriodsPanel && (
-              <Card className="p-6">
+              <Card data-sasha-card="T&M Periods" className="p-6">
               <TMPeriodsPanel
                   workItemId={workItem.id}
                   currentRole={currentRole}
@@ -232,7 +232,7 @@ export function WorkItemPage() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Actions */}
-            <Card className="p-6">
+            <Card data-sasha-card="Work Item Actions" className="p-6">
               <WorkItemActions
                 workItem={workItem}
                 currentRole={currentRole}
@@ -242,7 +242,7 @@ export function WorkItemPage() {
 
             {/* Participants */}
             {showParticipantsPanel && (
-              <Card className="p-6">
+              <Card data-sasha-card="Work Item Participants" className="p-6">
                 <WorkItemParticipants
                   workItemId={workItem.id}
                   isEditable={isEditable && (isTC || isGC)}

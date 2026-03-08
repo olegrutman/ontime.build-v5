@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect, useId } from 'react';
 import { createPortal } from 'react-dom';
 
 interface Props {
@@ -9,6 +9,15 @@ interface Props {
 export function SashaHighlightOverlay({ onSelect, onCancel }: Props) {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
+  const maskId = `sasha-highlight-mask-${useId().replace(/:/g, '')}`;
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onCancel]);
 
   const findCardAt = useCallback((x: number, y: number): HTMLElement | null => {
     const els = document.elementsFromPoint(x, y);
@@ -59,7 +68,7 @@ export function SashaHighlightOverlay({ onSelect, onCancel }: Props) {
         <>
           <svg className="absolute inset-0 w-full h-full pointer-events-none">
             <defs>
-              <mask id="sasha-highlight-mask">
+              <mask id={maskId}>
                 <rect x="0" y="0" width="100%" height="100%" fill="white" />
                 <rect
                   x={rect.left - padding}
@@ -74,7 +83,7 @@ export function SashaHighlightOverlay({ onSelect, onCancel }: Props) {
             <rect
               x="0" y="0" width="100%" height="100%"
               fill="hsl(var(--foreground) / 0.3)"
-              mask="url(#sasha-highlight-mask)"
+              mask={`url(#${maskId})`}
             />
           </svg>
           <div

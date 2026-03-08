@@ -400,7 +400,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
 
   const renderSummaryCards = () => (
     <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-      <Card className="p-4 relative overflow-hidden">
+      <Card data-sasha-card="Invoice Summary" className="p-4 relative overflow-hidden">
         <div className="flex flex-col gap-1">
           <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Draft</span>
           <span className="text-2xl font-bold">{stats.draft}</span>
@@ -409,7 +409,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
           <FileEdit className="w-4 h-4 text-muted-foreground" />
         </div>
       </Card>
-      <Card className="p-4 relative overflow-hidden">
+      <Card data-sasha-card="Invoice Summary" className="p-4 relative overflow-hidden">
         <div className="flex flex-col gap-1">
           <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Pending</span>
           <span className="text-2xl font-bold text-primary">{stats.submitted}</span>
@@ -418,7 +418,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
           <Clock className="w-4 h-4 text-primary" />
         </div>
       </Card>
-      <Card className="p-4 relative overflow-hidden">
+      <Card data-sasha-card="Invoice Summary" className="p-4 relative overflow-hidden">
         <div className="flex flex-col gap-1">
           <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Approved</span>
           <span className="text-2xl font-bold text-accent-foreground">{stats.approved}</span>
@@ -427,7 +427,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
           <CheckCircle2 className="w-4 h-4 text-accent-foreground" />
         </div>
       </Card>
-      <Card className="p-4 relative overflow-hidden">
+      <Card data-sasha-card="Invoice Summary" className="p-4 relative overflow-hidden">
         <div className="flex flex-col gap-1">
           <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Paid</span>
           <span className="text-2xl font-bold text-secondary-foreground">{stats.paid}</span>
@@ -436,7 +436,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
           <Wallet className="w-4 h-4 text-secondary-foreground" />
         </div>
       </Card>
-      <Card className="p-4 relative overflow-hidden col-span-2 sm:col-span-1">
+      <Card data-sasha-card="Invoice Summary" className="p-4 relative overflow-hidden col-span-2 sm:col-span-1">
         <div className="flex flex-col gap-1">
           <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Total Billed</span>
           <span className="text-2xl font-bold">
