@@ -514,6 +514,7 @@ Deno.serve(async (req) => {
           });
         }
 
+        logMeta = { p_target_org_id: organization_id, p_target_org_name: orgData.name, p_action_summary: `Deleted org "${orgData.name}"` };
         result = { success: true, message: "Organization deleted" };
         break;
       }
