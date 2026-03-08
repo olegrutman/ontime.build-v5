@@ -1,4 +1,5 @@
 import { ChangeOrderProject, WORK_TYPE_LABELS, LocationData } from '@/types/changeOrderProject';
+import { WorkOrderLocationData } from '@/types/workOrderWizard';
 import { ChangeOrderStatusBadge } from './ChangeOrderStatusBadge';
 import { MapPin, Hammer, Calendar, Building2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -7,22 +8,29 @@ interface ChangeOrderHeaderProps {
   changeOrder: ChangeOrderProject;
 }
 
-function formatLocation(location: LocationData): string {
+function formatLocation(location: LocationData & Partial<WorkOrderLocationData>): string {
   const parts: string[] = [];
   if (location.inside_outside) {
     parts.push(location.inside_outside === 'inside' ? 'Interior' : 'Exterior');
   }
+  // Interior fields
   if (location.level) parts.push(location.level);
   if (location.unit) parts.push(`Unit ${location.unit}`);
   if (location.room_area) parts.push(location.room_area);
-  // Add exterior feature for outside locations
-  if (location.exterior_feature) {
+  if (location.custom_room_area) parts.push(location.custom_room_area);
+  // Exterior fields (from wizard data)
+  if (location.exterior_level) parts.push(location.exterior_level);
+  if (location.exterior_feature_type) {
+    parts.push(location.exterior_feature_type);
+  } else if (location.exterior_feature) {
     const formatted = location.exterior_feature
       .split('_')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
     parts.push(formatted);
   }
+  if (location.exterior_direction) parts.push(location.exterior_direction);
+  if (location.custom_exterior) parts.push(location.custom_exterior);
   return parts.length > 0 ? parts.join(' • ') : 'No location specified';
 }
 
