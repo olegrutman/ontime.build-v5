@@ -202,6 +202,7 @@ Deno.serve(async (req) => {
           .update({ email: new_email })
           .eq("user_id", user_id);
         snapshotAfter = { email: new_email };
+        logMeta = { p_target_user_id: user_id, p_target_user_email: new_email, p_action_summary: `Changed email from ${oldProfile?.email} to ${new_email}` };
         result = { success: true, message: "Email changed" };
         break;
       }
