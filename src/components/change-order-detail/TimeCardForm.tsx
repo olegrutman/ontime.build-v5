@@ -73,34 +73,56 @@ export function TimeCardForm({ onSubmit, onCancel, isSubmitting, selfPerforming 
             className="h-9"
           />
         </div>
-        <div>
-          <label className="text-xs text-muted-foreground">Number of Men</label>
-          <Input
-            type="number"
-            min="1"
-            placeholder="5"
-            value={menCount}
-            onChange={(e) => setMenCount(e.target.value)}
-            className="h-9"
-          />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground">Hours per Man</label>
-          <Input
-            type="number"
-            min="0.5"
-            step="0.5"
-            placeholder="8"
-            value={hoursPerMan}
-            onChange={(e) => setHoursPerMan(e.target.value)}
-            className="h-9"
-          />
-        </div>
+        {selfPerforming ? (
+          <div>
+            <label className="text-xs text-muted-foreground">Your Hours</label>
+            <Input
+              type="number"
+              min="0.5"
+              step="0.5"
+              placeholder="8"
+              value={ownHours}
+              onChange={(e) => setOwnHours(e.target.value)}
+              className="h-9"
+            />
+          </div>
+        ) : (
+          <>
+            <div>
+              <label className="text-xs text-muted-foreground">Number of Men</label>
+              <Input
+                type="number"
+                min="1"
+                placeholder="5"
+                value={menCount}
+                onChange={(e) => setMenCount(e.target.value)}
+                className="h-9"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Hours per Man</label>
+              <Input
+                type="number"
+                min="0.5"
+                step="0.5"
+                placeholder="8"
+                value={hoursPerMan}
+                onChange={(e) => setHoursPerMan(e.target.value)}
+                className="h-9"
+              />
+            </div>
+          </>
+        )}
       </div>
 
-      {manHours > 0 && (
+      {!selfPerforming && manHours > 0 && (
         <div className="bg-muted rounded-md px-3 py-2 text-sm font-medium">
           Total: {men} men × {hours} hrs = <strong>{manHours} man-hours</strong>
+        </div>
+      )}
+      {selfPerforming && tcHours > 0 && (
+        <div className="bg-muted rounded-md px-3 py-2 text-sm font-medium">
+          Total: <strong>{tcHours} hours</strong>
         </div>
       )}
 
