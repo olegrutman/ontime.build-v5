@@ -1,23 +1,23 @@
 
 
-# Add "Send Nudge" Reminder Feature Across All Processes — COMPLETED
+# Add Welcome Tooltip for Sasha on First Dashboard Visit
 
-## What It Does
-Users can send a "Send Reminder" nudge to the other party when an invoice, WO, PO, or return is awaiting action. Server-enforced 24h cooldown prevents spam.
+## What Changes
 
-## Changes Made
+Modify `SashaBubble.tsx` to show a one-time "Need help? Click me!" tooltip when the user first lands on `/dashboard`. This replaces the generic "Ask Sasha" label on that first visit and is persisted via `localStorage` so it only appears once.
 
-### Database (1 migration)
-- Added `NUDGE` to `notification_type` enum
-- Created `nudge_log` table with RLS
-- Created `send_nudge(_entity_type, _entity_id)` RPC (SECURITY DEFINER) that validates state, enforces cooldown, and inserts notification
+## Implementation
 
-### Frontend
-- **`src/hooks/useNudge.ts`** — Shared hook wrapping the RPC call with loading/sent state
-- **`InvoiceDetail.tsx`** — "Send Reminder" button when status=SUBMITTED and user is invoice creator
-- **`PODetail.tsx`** — "Send Reminder" button when status=SUBMITTED and user is buyer (not supplier)
-- **`ReturnDetail.tsx`** — "Send Reminder" button when status=SUBMITTED and user is creator org
-- **`WorkItemActions.tsx`** — "Send Reminder" button when state=PRICED and user is TC
+### File: `src/components/sasha/SashaBubble.tsx`
 
-### Email
-- Added `NUDGE: "notify_email"` to `send-notification-email` edge function
+1. Add a `welcomeDismissed` state initialized from `localStorage` key `sasha_welcome_seen`
+2. On the `/dashboard` route, if `!welcomeDismissed`, show a styled tooltip arrow-pointing bubble saying "Need help? Click me!" instead of the default "Ask Sasha 💬" label
+3. When the user clicks the Sasha bubble (or after 8 seconds), mark `sasha_welcome_seen = true` in localStorage and hide the welcome tooltip
+4. The existing `showLabel` logic remains unchanged for non-dashboard pages
+
+### Tooltip Design
+- Positioned to the left of the bubble (same as current label)
+- Slightly larger with a subtle arrow/caret pointing right toward Sasha
+- Uses primary colors to stand out
+- Animates in with a fade + slight scale
+
