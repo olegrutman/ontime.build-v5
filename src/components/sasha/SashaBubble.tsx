@@ -318,21 +318,35 @@ export function SashaBubble() {
       )}
 
       {/* Floating Bubble */}
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className={`fixed bottom-20 lg:bottom-4 right-4 z-50 h-14 w-14 rounded-full shadow-lg flex items-center justify-center hover:scale-105 transition-transform overflow-hidden ${
-          pulse ? 'animate-pulse' : ''
-        }`}
-        aria-label="Open Sasha guide"
-      >
-        {open ? (
-          <div className="h-full w-full bg-primary flex items-center justify-center">
-            <X className="h-6 w-6 text-primary-foreground" />
+      <div className="fixed bottom-20 lg:bottom-4 right-4 z-50 flex items-center gap-2">
+        {/* Tooltip label */}
+        {!open && showLabel && (
+          <div className="animate-fade-in bg-primary text-primary-foreground text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg whitespace-nowrap">
+            Ask Sasha 💬
           </div>
-        ) : (
-          <img src={sashaAvatar} alt="Sasha" className="h-full w-full object-cover" />
         )}
-      </button>
+        <button
+          onClick={() => setOpen((o) => !o)}
+          className={`relative h-16 w-16 rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform overflow-hidden ${
+            pulse ? 'animate-bounce' : ''
+          }`}
+          style={!open ? { boxShadow: '0 0 20px hsl(var(--primary) / 0.45), 0 0 40px hsl(var(--primary) / 0.2)' } : undefined}
+          aria-label="Open Sasha guide"
+        >
+          {/* Pulsing ring */}
+          {!open && pulse && (
+            <span className="absolute inset-0 rounded-full animate-ping bg-primary/30" />
+          )}
+          <span className={`absolute inset-0 rounded-full ring-[3px] ring-primary/50 ${!open ? '' : 'ring-0'}`} />
+          {open ? (
+            <div className="h-full w-full bg-primary flex items-center justify-center">
+              <X className="h-6 w-6 text-primary-foreground" />
+            </div>
+          ) : (
+            <img src={sashaAvatar} alt="Sasha" className="h-full w-full object-cover" />
+          )}
+        </button>
+      </div>
     </>
   );
 }
