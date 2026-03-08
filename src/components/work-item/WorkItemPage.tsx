@@ -183,7 +183,7 @@ export function WorkItemPage() {
 
             {/* Pricing Panel - TC can edit when OPEN, GC sees after submit */}
             {showPricingPanel && (
-              <Card className="p-6">
+              <Card data-sasha-card="Work Item Pricing" className="p-6">
                 <WorkItemPricing
                   workItemId={workItem.id}
                   isEditable={isEditable && isTC}
