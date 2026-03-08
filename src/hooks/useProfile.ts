@@ -203,15 +203,21 @@ export function useProfile() {
     if (!organization?.id) return false;
     
     try {
-      const { error } = await supabase
+      const { error, data } = await supabase
         .from('organizations')
         .update({
           ...updates,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', organization.id);
+        .eq('id', organization.id)
+        .select('id');
       
       if (error) throw error;
+      
+      if (!data || data.length === 0) {
+        toast({ variant: 'destructive', title: 'Update failed', description: 'You do not have permission to update this organization.' });
+        return false;
+      }
       
       setOrganization(prev => prev ? { ...prev, ...updates } : null);
       toast({ title: 'Organization updated' });
