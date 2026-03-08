@@ -52,6 +52,7 @@ const RFIs = lazy(() => import("./pages/RFIs"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
 // Platform Admin pages
 const PlatformDashboard = lazy(() => import("./pages/platform/PlatformDashboard"));
