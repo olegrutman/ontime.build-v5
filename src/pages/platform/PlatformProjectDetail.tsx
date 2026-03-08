@@ -127,6 +127,7 @@ export default function PlatformProjectDetail() {
   const [poCounts, setPoCounts] = useState<StatusCounts>({});
   const [invCounts, setInvCounts] = useState<StatusCounts>({});
   const [financials, setFinancials] = useState({ invoiced: 0, paid: 0, retainage: 0, poTotal: 0 });
+  const [estimates, setEstimates] = useState<SupplierEstimateRow[]>([]);
 
   const { execute, loading: actionLoading } = useSupportAction();
   const [forceAcceptOpen, setForceAcceptOpen] = useState(false);
