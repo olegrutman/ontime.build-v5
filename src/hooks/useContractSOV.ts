@@ -925,7 +925,7 @@ export function useContractSOV(projectId: string | undefined) {
   // Delete an entire SOV (only if no items have been billed)
   const deleteSOV = useCallback(async (sovId: string) => {
     const items = sovItems[sovId] || [];
-    const hasBilledItems = items.some(item => (item.billed_to_date || 0) > 0);
+    const hasBilledItems = items.some(item => (item.total_billed_amount || 0) > 0);
     
     if (hasBilledItems) {
       toast({
