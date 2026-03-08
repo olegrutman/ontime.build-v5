@@ -577,7 +577,7 @@ export function ChangeOrderDetailPage() {
                         linkedPO={linkedPO}
                       />
 
-                      {isTC && (
+                      {isTC && (changeOrder as any).pricing_mode !== 'tm' && (
                         <TCPricingSummary
                           tcLabor={tcLabor}
                           materials={materials}

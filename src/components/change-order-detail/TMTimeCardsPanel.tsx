@@ -605,6 +605,7 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC, hasTC = true
             onSubmit={(data) => createMutation.mutate(data)}
             onCancel={() => setShowForm(false)}
             isSubmitting={createMutation.isPending}
+            selfPerforming={selfPerforming}
           />
         )}
 
