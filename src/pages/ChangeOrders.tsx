@@ -26,7 +26,7 @@ interface Project {
 const ChangeOrders = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, userOrgRoles, currentRole, permissions, permissions } = useAuth();
+  const { user, userOrgRoles, currentRole, permissions } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [showWizard, setShowWizard] = useState(false);
