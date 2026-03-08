@@ -203,14 +203,14 @@ export function useProfile() {
     if (!organization?.id) return false;
     
     try {
-      const { error, count } = await supabase
+      const { error, data } = await supabase
         .from('organizations')
         .update({
           ...updates,
           updated_at: new Date().toISOString(),
         })
         .eq('id', organization.id)
-        .select('id', { count: 'exact', head: true });
+        .select('id');
       
       if (error) throw error;
       
