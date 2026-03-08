@@ -209,37 +209,6 @@ export default function PlatformProjectDetail() {
     ? [project.address.city, project.address.state].filter(Boolean).join(', ')
     : null;
 
-  // Financial aggregations
-  const totalContractValue = contracts.reduce((s, c) => s + (c.contract_sum || 0), 0);
-  const totalInvoiced = invoices.length > 0
-    ? (invCounts ? Object.keys(invCounts) : []).length > 0
-      ? 0 // we need all invoices for sum, not just 10
-      : 0
-    : 0;
-
-  // For accurate financial totals, use the full invoice/PO datasets from status queries
-  // We already fetched all statuses, let's also get sums
-  const [financials, setFinancials] = useState({ invoiced: 0, paid: 0, retainage: 0, poTotal: 0 });
-
-  useEffect(() => {
-    if (!projectId) return;
-    async function fetchFinancials() {
-      const [invAll, poAll] = await Promise.all([
-        supabase.from('invoices').select('total_amount, retainage_amount, paid_at').eq('project_id', projectId!),
-        supabase.from('purchase_orders').select('po_total').eq('project_id', projectId!),
-      ]);
-      const invRows = invAll.data || [];
-      const poRows = poAll.data || [];
-      setFinancials({
-        invoiced: invRows.reduce((s, r: any) => s + (r.total_amount || 0), 0),
-        paid: invRows.filter((r: any) => r.paid_at).reduce((s, r: any) => s + (r.total_amount || 0), 0),
-        retainage: invRows.reduce((s, r: any) => s + (r.retainage_amount || 0), 0),
-        poTotal: poRows.reduce((s, r: any) => s + (r.po_total || 0), 0),
-      });
-    }
-    fetchFinancials();
-  }, [projectId]);
-
   const ownerOrg = team.find((t) => t.role === 'GC');
 
   return (
