@@ -1,12 +1,5 @@
 import { ProjectFinancials } from '@/hooks/useProjectFinancials';
-import { cn } from '@/lib/utils';
-
-function fmt(amount: number): string {
-  if (Math.abs(amount) >= 1_000_000) {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 1, notation: 'compact' }).format(amount);
-  }
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(amount);
-}
+import { cn, formatCurrency as fmt } from '@/lib/utils';
 
 interface BillingCashCardProps {
   financials: ProjectFinancials;

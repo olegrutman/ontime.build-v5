@@ -303,21 +303,21 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
             <Collapsible open={isExpanded} onOpenChange={() => toggleSov(sov.id)}>
               <CardHeader className="pb-3">
                 <CollapsibleTrigger asChild>
-                  <div className="flex items-center justify-between cursor-pointer">
-                    <div className="flex items-center gap-3">
+                  <div className="flex items-start sm:items-center justify-between cursor-pointer gap-2 flex-wrap">
+                    <div className="flex items-start sm:items-center gap-2 sm:gap-3 min-w-0 flex-1">
                       {isExpanded ? (
-                        <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                        <ChevronDown className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5 sm:mt-0" />
                       ) : (
-                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                        <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5 sm:mt-0" />
                       )}
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <CardTitle className="text-base">{sov.sov_name || 'Unnamed SOV'}</CardTitle>
-                          <Badge variant={isWorkOrderSOV ? "outline" : "secondary"} className="text-xs">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <CardTitle className="text-base line-clamp-2">{sov.sov_name || 'Unnamed SOV'}</CardTitle>
+                          <Badge variant={isWorkOrderSOV ? "outline" : "secondary"} className="text-xs shrink-0">
                             {sovSourceLabel}
                           </Badge>
                         </div>
-                        <CardDescription>
+                        <CardDescription className="tabular-nums">
                           {formatCurrency(contract?.contract_sum || 0)} • {items.length} item{items.length !== 1 ? 's' : ''}
                         </CardDescription>
                         {totals.totalValue > 0 && (
@@ -328,7 +328,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                               showLabels={false}
                               size="sm"
                             />
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs text-muted-foreground tabular-nums">
                               {formatCurrency(totals.totalBilled)} / {formatCurrency(totals.totalValue)} billed
                             </span>
                           </div>

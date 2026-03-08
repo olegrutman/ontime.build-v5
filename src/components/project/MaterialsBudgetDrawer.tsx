@@ -2,14 +2,7 @@ import { AlertTriangle } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
 import { SupplierMaterialsOverviewData } from '@/hooks/useSupplierMaterialsOverview';
-import { cn } from '@/lib/utils';
-
-function fmt(amount: number): string {
-  if (Math.abs(amount) >= 1_000_000) {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 1, notation: 'compact' }).format(amount);
-  }
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(amount);
-}
+import { cn, formatCurrency as fmt } from '@/lib/utils';
 
 function pctLabel(value: number, base: number): string {
   if (base <= 0) return '';

@@ -50,7 +50,7 @@ export function SOVProgressBar({
   return (
     <div className="w-full">
       {showLabels && (
-        <div className="flex justify-between text-xs text-muted-foreground mb-1">
+        <div className="flex justify-between text-xs text-muted-foreground mb-1 tabular-nums">
           <span>{formatCurrency(billedToDate)} billed</span>
           <span>{formatCurrency(scheduledValue)} scheduled</span>
         </div>
