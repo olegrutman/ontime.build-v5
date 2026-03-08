@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Plus, MapPin, CheckCircle2, Circle, Clock, FileText } from 'lucide-react';
+import { Plus, MapPin, CheckCircle2, Circle, Clock, FileText, ArrowRight } from 'lucide-react';
 import { useDemoProjectData } from '@/hooks/useDemoData';
 import { useDemo } from '@/contexts/DemoContext';
-import { DEMO_WORK_ORDER_DETAILS, type DemoWorkOrder, type DemoWorkOrderDetail } from '@/data/demoData';
+import { type DemoWorkOrder } from '@/data/demoData';
 import { WorkOrderWizard } from '@/components/work-order-wizard/WorkOrderWizard';
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -14,7 +14,7 @@ import { Progress } from '@/components/ui/progress';
 const STATUS_STYLES: Record<string, string> = {
   draft: 'bg-muted text-muted-foreground',
   active: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  complete: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
 };
 
 interface Props {
@@ -24,7 +24,7 @@ interface Props {
 
 export function DemoWorkOrdersTab({ projectId, projectName }: Props) {
   const data = useDemoProjectData();
-  const { demoRole } = useDemo();
+  const { demoRole, addWorkOrder, updateWorkOrderStatus } = useDemo();
   const [wizardOpen, setWizardOpen] = useState(false);
   const [selectedWO, setSelectedWO] = useState<DemoWorkOrder | null>(null);
 
@@ -34,11 +34,53 @@ export function DemoWorkOrdersTab({ projectId, projectName }: Props) {
   const canCreate = demoRole === 'GC' || demoRole === 'TC' || demoRole === 'FC';
 
   const detail = selectedWO
-    ? DEMO_WORK_ORDER_DETAILS.find(d => d.id === selectedWO.id) || null
+    ? workOrderDetails.find(d => d.id === selectedWO.id) || null
     : null;
 
   const checkedCount = detail?.checklist.filter(c => c.done).length || 0;
   const totalChecklist = detail?.checklist.length || 1;
+
+  const handleCreateWO = () => {
+    const num = workOrders.length + 1;
+    const newWO: DemoWorkOrder = {
+      id: `demo-wo-new-${Date.now()}`,
+      project_id: projectId,
+      title: `New Work Order #${num}`,
+      description: 'Created in interactive demo',
+      status: 'draft',
+      pricing_mode: 'fixed',
+      work_type: 'general',
+      created_at: new Date().toISOString(),
+      final_price: null,
+      labor_total: null,
+      material_total: null,
+    };
+    addWorkOrder(newWO, {
+      id: newWO.id,
+      location: 'TBD',
+      work_type_label: 'General',
+      checklist: [
+        { label: 'Scope defined', done: false },
+        { label: 'Location set', done: false },
+        { label: 'TC assigned', done: false },
+        { label: 'Pricing complete', done: false },
+        { label: 'GC approved', done: false },
+      ],
+    });
+    toast.success('Work Order created! 🎉 It appears as "draft" — a TC would now price it.');
+    setWizardOpen(false);
+  };
+
+  const handleStatusChange = (wo: DemoWorkOrder, newStatus: string) => {
+    if (newStatus === 'active' && wo.status === 'draft') {
+      updateWorkOrderStatus(wo.id, 'active', { final_price: 15000, labor_total: 9500, material_total: 5500 });
+      toast.success('Work Order priced & activated! 💰 Labor: $9,500 · Materials: $5,500');
+    } else if (newStatus === 'completed') {
+      updateWorkOrderStatus(wo.id, 'completed');
+      toast.success('Work Order marked complete! ✅');
+    }
+    setSelectedWO(null);
+  };
 
   return (
     <div className="space-y-4">
@@ -51,9 +93,8 @@ export function DemoWorkOrdersTab({ projectId, projectName }: Props) {
         )}
       </div>
 
-      {/* Status summary */}
       <div className="flex gap-2">
-        {['draft', 'active', 'complete'].map(status => {
+        {['draft', 'active', 'completed'].map(status => {
           const count = workOrders.filter(wo => wo.status === status).length;
           if (count === 0) return null;
           return (
@@ -64,7 +105,6 @@ export function DemoWorkOrdersTab({ projectId, projectName }: Props) {
         })}
       </div>
 
-      {/* Cards */}
       <div className="grid gap-3 sm:grid-cols-2">
         {workOrders.map(wo => (
           <Card
@@ -181,13 +221,26 @@ export function DemoWorkOrdersTab({ projectId, projectName }: Props) {
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* Action buttons based on status */}
+                <div className="flex gap-2 pt-2">
+                  {selectedWO.status === 'draft' && (demoRole === 'GC' || demoRole === 'TC') && (
+                    <Button className="flex-1" onClick={() => handleStatusChange(selectedWO, 'active')}>
+                      <ArrowRight className="h-4 w-4 mr-1" /> Price & Activate
+                    </Button>
+                  )}
+                  {selectedWO.status === 'active' && demoRole === 'GC' && (
+                    <Button className="flex-1" onClick={() => handleStatusChange(selectedWO, 'completed')}>
+                      <CheckCircle2 className="h-4 w-4 mr-1" /> Mark Complete
+                    </Button>
+                  )}
+                </div>
               </div>
             </>
           )}
         </SheetContent>
       </Sheet>
 
-      {/* Demo Wizard */}
       <WorkOrderWizard
         open={wizardOpen}
         onOpenChange={setWizardOpen}
@@ -195,7 +248,7 @@ export function DemoWorkOrdersTab({ projectId, projectName }: Props) {
         projectName={projectName}
         isSubmitting={false}
         onComplete={async () => {
-          toast.success('Work Order created! (Demo mode — nothing saved to database)');
+          handleCreateWO();
         }}
       />
     </div>

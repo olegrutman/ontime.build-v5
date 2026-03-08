@@ -1,5 +1,6 @@
 import { useDemo } from '@/contexts/DemoContext';
-import { getDemoDataForProject, getDemoProjectById, type DemoRole } from '@/data/demoData';
+import { getDemoProjectById } from '@/data/demoData';
+import { useDemoProjectData } from '@/hooks/useDemoData';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -17,11 +18,11 @@ interface Props {
 
 export function DemoProjectOverview({ onNavigate }: Props) {
   const { demoProjectId, demoRole } = useDemo();
-  if (!demoProjectId || !demoRole) return null;
+  const data = useDemoProjectData();
+  if (!demoProjectId || !demoRole || !data) return null;
 
   const project = getDemoProjectById(demoProjectId);
-  const data = getDemoDataForProject(demoProjectId, demoRole);
-  if (!project || !data) return null;
+  if (!project) return null;
 
   const { attentionItems, workOrders, purchaseOrders, invoices, contracts, sovItems } = data;
 
@@ -78,7 +79,6 @@ export function DemoProjectOverview({ onNavigate }: Props) {
 
       {/* Operational Grid */}
       <div className="grid gap-4 sm:grid-cols-2">
-        {/* Work Orders */}
         {demoRole !== 'SUPPLIER' && (
           <Card data-demo-target="wo-section">
             <CardContent className="p-4">
@@ -87,18 +87,22 @@ export function DemoProjectOverview({ onNavigate }: Props) {
                 Work Orders ({workOrders.length})
               </button>
               <div data-demo-target="wo-list" className="space-y-2">
-                {workOrders.map((wo, i) => (
+                {workOrders.slice(0, 5).map((wo, i) => (
                   <div key={wo.id} data-demo-target={`wo-card-${i}`} className="p-2 border rounded text-sm flex items-center justify-between">
                     <span>{wo.title}</span>
                     <Badge variant="outline" className="text-xs">{wo.status}</Badge>
                   </div>
                 ))}
+                {workOrders.length > 5 && (
+                  <button onClick={() => onNavigate('work-orders')} className="text-xs text-primary hover:underline">
+                    View all {workOrders.length} work orders →
+                  </button>
+                )}
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Purchase Orders */}
         <Card data-demo-target="po-section">
           <CardContent className="p-4">
             <button onClick={() => onNavigate('purchase-orders')} className="flex items-center gap-2 font-semibold mb-3 hover:text-primary transition-colors">
@@ -106,7 +110,7 @@ export function DemoProjectOverview({ onNavigate }: Props) {
               Purchase Orders ({purchaseOrders.length})
             </button>
             <div data-demo-target="po-list" className="space-y-2">
-              {purchaseOrders.map((po, i) => (
+              {purchaseOrders.slice(0, 5).map((po, i) => (
                 <div key={po.id} data-demo-target={`po-card-${i}`} className="p-2 border rounded text-sm flex items-center justify-between">
                   <div>
                     <span className="font-medium">{po.po_number}</span>
@@ -115,11 +119,15 @@ export function DemoProjectOverview({ onNavigate }: Props) {
                   <Badge variant="outline" className="text-xs">{po.status}</Badge>
                 </div>
               ))}
+              {purchaseOrders.length > 5 && (
+                <button onClick={() => onNavigate('purchase-orders')} className="text-xs text-primary hover:underline">
+                  View all {purchaseOrders.length} POs →
+                </button>
+              )}
             </div>
           </CardContent>
         </Card>
 
-        {/* Invoices */}
         {demoRole !== 'SUPPLIER' && (
           <Card data-demo-target="invoice-section">
             <CardContent className="p-4">
@@ -128,7 +136,7 @@ export function DemoProjectOverview({ onNavigate }: Props) {
                 Invoices ({invoices.length})
               </button>
               <div data-demo-target="invoice-list" className="space-y-2">
-                {invoices.map(inv => (
+                {invoices.slice(0, 5).map(inv => (
                   <div key={inv.id} className="p-2 border rounded text-sm flex items-center justify-between">
                     <div>
                       <span className="font-medium">{inv.invoice_number}</span>
@@ -137,12 +145,16 @@ export function DemoProjectOverview({ onNavigate }: Props) {
                     <Badge variant="outline" className="text-xs">{inv.status}</Badge>
                   </div>
                 ))}
+                {invoices.length > 5 && (
+                  <button onClick={() => onNavigate('invoices')} className="text-xs text-primary hover:underline">
+                    View all {invoices.length} invoices →
+                  </button>
+                )}
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Contracts (GC/TC only) */}
         {(demoRole === 'GC' || demoRole === 'TC') && (
           <Card>
             <CardContent className="p-4">

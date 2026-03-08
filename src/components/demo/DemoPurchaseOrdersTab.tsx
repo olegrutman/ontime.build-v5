@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Plus, Package, DollarSign } from 'lucide-react';
+import { Plus, Package, DollarSign, ArrowRight } from 'lucide-react';
 import { useDemoProjectData } from '@/hooks/useDemoData';
 import { useDemo } from '@/contexts/DemoContext';
-import { DEMO_PO_LINE_ITEMS, type DemoPurchaseOrder } from '@/data/demoData';
+import { type DemoPurchaseOrder } from '@/data/demoData';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -18,27 +18,46 @@ const STATUS_STYLES: Record<string, string> = {
   ordered: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
 };
 
+const STATUS_FLOW: Record<string, { next: string; label: string; roles: string[] }> = {
+  draft: { next: 'priced', label: 'Submit Pricing', roles: ['SUPPLIER'] },
+  priced: { next: 'approved', label: 'Approve PO', roles: ['GC', 'TC'] },
+  approved: { next: 'ordered', label: 'Mark Ordered', roles: ['GC', 'TC'] },
+};
+
 export function DemoPurchaseOrdersTab({ projectId }: { projectId: string }) {
   const data = useDemoProjectData();
-  const { demoRole } = useDemo();
+  const { demoRole, updatePOStatus } = useDemo();
   const [selectedPO, setSelectedPO] = useState<DemoPurchaseOrder | null>(null);
 
   if (!data) return null;
 
-  const { purchaseOrders } = data;
+  const { purchaseOrders, poLineItems } = data;
   const canCreate = demoRole === 'GC' || demoRole === 'TC';
   const isSupplier = demoRole === 'SUPPLIER';
 
   const lineItems = selectedPO
-    ? DEMO_PO_LINE_ITEMS.filter(li => li.po_id === selectedPO.id)
+    ? poLineItems.filter(li => li.po_id === selectedPO.id)
     : [];
+
+  const handleAdvanceStatus = (po: DemoPurchaseOrder) => {
+    const flow = STATUS_FLOW[po.status];
+    if (!flow) return;
+    updatePOStatus(po.id, flow.next);
+    const messages: Record<string, string> = {
+      priced: `Pricing submitted for ${po.po_number}! 💰 The GC/TC will now review.`,
+      approved: `${po.po_number} approved! ✅ Ready to be ordered from ${po.supplier_name}.`,
+      ordered: `${po.po_number} marked as ordered! 📦 Materials are on the way.`,
+    };
+    toast.success(messages[flow.next] || `Status updated to ${flow.next}`);
+    setSelectedPO(null);
+  };
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Purchase Orders</h2>
         {canCreate && (
-          <Button size="sm" onClick={() => toast.info('PO Wizard coming soon in demo mode!')}>
+          <Button size="sm" onClick={() => toast.info('PO creation wizard coming soon in demo mode!')}>
             <Plus className="h-4 w-4 mr-1" /> Create PO
           </Button>
         )}
@@ -74,7 +93,6 @@ export function DemoPurchaseOrdersTab({ projectId }: { projectId: string }) {
         ))}
       </div>
 
-      {/* Detail Sheet */}
       <Sheet open={!!selectedPO} onOpenChange={(open) => !open && setSelectedPO(null)}>
         <SheetContent className="sm:max-w-xl overflow-y-auto">
           {selectedPO && (
@@ -135,17 +153,16 @@ export function DemoPurchaseOrdersTab({ projectId }: { projectId: string }) {
                   </span>
                 </div>
 
-                {isSupplier && (
-                  <Button
-                    className="w-full"
-                    onClick={() => {
-                      toast.success('Pricing submitted! (Demo mode)');
-                      setSelectedPO(null);
-                    }}
-                  >
-                    Submit Pricing
-                  </Button>
-                )}
+                {/* Dynamic action button based on status + role */}
+                {(() => {
+                  const flow = STATUS_FLOW[selectedPO.status];
+                  if (!flow || !demoRole || !flow.roles.includes(demoRole)) return null;
+                  return (
+                    <Button className="w-full" onClick={() => handleAdvanceStatus(selectedPO)}>
+                      <ArrowRight className="h-4 w-4 mr-1" /> {flow.label}
+                    </Button>
+                  );
+                })()}
               </div>
             </>
           )}
