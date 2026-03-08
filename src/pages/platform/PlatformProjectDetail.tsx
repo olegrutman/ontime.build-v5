@@ -560,13 +560,13 @@ export default function PlatformProjectDetail() {
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={t.accepted ? 'text-xs border-green-500/30 text-green-600' : 'text-xs border-yellow-500/30 text-yellow-600'}
+                        className={t.status === 'Accepted' ? 'text-xs border-green-500/30 text-green-600' : 'text-xs border-yellow-500/30 text-yellow-600'}
                       >
-                        {t.accepted ? 'Accepted' : 'Pending'}
+                        {t.status || 'Pending'}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {!t.accepted && (
+                      {t.status !== 'Accepted' && (
                         <Button
                           variant="ghost"
                           size="sm"
