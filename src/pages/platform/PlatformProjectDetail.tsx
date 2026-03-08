@@ -247,9 +247,11 @@ export default function PlatformProjectDetail() {
     );
   }
 
-  const fullAddress = project.address
-    ? [project.address.street, [project.address.city, project.address.state].filter(Boolean).join(', '), project.address.zip].filter(Boolean)
-    : [];
+  const fullAddress = [
+    project.address?.street,
+    [project.city, project.state].filter(Boolean).join(', '),
+    project.zip,
+  ].filter(Boolean);
 
   const totalContractValue = contracts.reduce((s, c) => s + (c.contract_sum || 0), 0);
   const ownerOrg = team.find((t) => t.role === 'GC');
