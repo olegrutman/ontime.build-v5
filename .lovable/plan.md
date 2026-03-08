@@ -1,25 +1,39 @@
 
 
-# Create Platform Owner Account
+# Allow Edit and Delete of Draft Invoices
 
-## Problem
-The `platform-support-action` edge function requires an authenticated Platform Owner to call it, creating a chicken-and-egg problem. We need to create the first platform owner directly.
+## Current State
+
+- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
+- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
 
 ## Plan
 
-### 1. Create a new edge function `seed-platform-owner/index.ts`
-A one-time-use edge function (no JWT required) that:
-1. Creates auth user `olegrutman+owner@gmail.com` with password `Password1` (email auto-confirmed)
-2. Upserts a profile record with the user's info
-3. Inserts a `platform_users` row with `platform_role = 'PLATFORM_OWNER'` and `two_factor_verified = true`
+### 1. Add Delete Invoice capability
 
-### 2. Register in `supabase/config.toml`
-Add `[functions.seed-platform-owner]` with `verify_jwt = false`.
+**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
+- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
+- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
+- Button placed in the action buttons area, styled as destructive/outline
 
-### 3. Invoke the function once, then optionally delete it
-After deployment, call the function to create the account. The function can be removed afterward for security.
+**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
+- Add `onDelete` optional prop
+- Add trash icon to `hoverActions` array for DRAFT status
 
-### Files
-- `supabase/functions/seed-platform-owner/index.ts` (new)
-- `supabase/config.toml` (add entry)
+**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
+- Delete line items then invoice from database
+- Show toast, refresh list
+- Pass `onDelete` to `InvoiceCard`
+
+### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
+
+**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
+- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
+- Show the button when `status === 'DRAFT' && canSubmit`
+
+### Files to Change
+
+- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
+- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
+- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
 
