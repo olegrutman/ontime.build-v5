@@ -44,7 +44,7 @@ export function DashboardFinancialCard({
 
   if (role === 'TC') {
     return (
-      <Card>
+      <Card data-sasha-card="Financial Summary">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center justify-between text-base">
             <div className="flex items-center gap-2">
