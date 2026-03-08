@@ -239,7 +239,7 @@ export function getEffectivePermissions(
   isAdmin: boolean
 ): RolePermissions {
   if (isAdmin) return ALL_PERMISSIONS;
-  if (!role) return ROLE_PERMISSIONS.SUPPLIER; // fallback: no permissions
+  if (!role) return NO_PERMISSIONS;
 
   const roleDefaults = ROLE_PERMISSIONS[role];
 
