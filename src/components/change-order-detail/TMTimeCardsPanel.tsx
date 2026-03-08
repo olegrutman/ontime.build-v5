@@ -12,6 +12,7 @@ import { Plus, Clock, Check, X, Users, Send, DollarSign, Lock } from 'lucide-rea
 import { format } from 'date-fns';
 import { TimeCardForm } from './TimeCardForm';
 import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +31,7 @@ interface TMTimeCardsPanelProps {
   isTC: boolean;
   isFC: boolean;
   hasTC?: boolean;
+  hasFCParticipant?: boolean;
 }
 
 interface TimeCard {
@@ -56,7 +58,8 @@ interface TimeCard {
   updated_at: string;
 }
 
-export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC, hasTC = true }: TMTimeCardsPanelProps) {
+export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC, hasTC = true, hasFCParticipant = true }: TMTimeCardsPanelProps) {
+  const selfPerforming = isTC && !hasFCParticipant;
   const { user, userOrgRoles } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -176,16 +179,35 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC, hasTC = true
       fc_hours_per_man: number;
       fc_description: string;
       submit: boolean;
+      selfPerforming?: boolean;
+      tc_own_hours?: number;
     }) => {
-      const { error } = await supabase.from('tm_time_cards').insert({
+      const insertData: Record<string, unknown> = {
         change_order_id: changeOrderId,
         entry_date: card.entry_date,
-        fc_men_count: card.fc_men_count,
-        fc_hours_per_man: card.fc_hours_per_man,
         fc_description: card.fc_description,
         fc_entered_by: user?.id,
-        fc_submitted_at: card.submit ? new Date().toISOString() : null,
-      } as never);
+      };
+
+      if (card.selfPerforming) {
+        // Self-performing TC: put hours in tc_own_hours, auto-approve & submit
+        insertData.tc_own_hours = card.tc_own_hours || 0;
+        insertData.fc_men_count = 0;
+        insertData.fc_hours_per_man = 0;
+        insertData.fc_submitted_at = new Date().toISOString();
+        insertData.tc_approved = true;
+        insertData.tc_approved_by = user?.id;
+        insertData.tc_approved_at = new Date().toISOString();
+        if (card.submit) {
+          insertData.tc_submitted_at = new Date().toISOString();
+        }
+      } else {
+        insertData.fc_men_count = card.fc_men_count;
+        insertData.fc_hours_per_man = card.fc_hours_per_man;
+        insertData.fc_submitted_at = card.submit ? new Date().toISOString() : null;
+      }
+
+      const { error } = await supabase.from('tm_time_cards').insert(insertData as never);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -272,7 +294,7 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC, hasTC = true
   const canFinalize = isTC || (isFC && !hasTC);
   const pendingApproval = timeCards.some((c) => !!c.fc_submitted_at && !c.tc_approved && !c.tc_rejection_notes);
   const hasCards = timeCards.length > 0;
-  const finalizeDisabled = !hasCards || pendingApproval || tcRate <= 0 || fcRate <= 0;
+  const finalizeDisabled = !hasCards || pendingApproval || tcRate <= 0 || (!selfPerforming && fcRate <= 0);
 
   const finalizeMutation = useMutation({
     mutationFn: async () => {
@@ -465,25 +487,30 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC, hasTC = true
         {/* Rate Editors - hidden from GC */}
         {!isGC && (
           <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-            {/* FC Rate - editable by FC, read-only for TC */}
-            <RateEditor
-              label="FC Rate:"
-              rate={fcRate}
-              editing={editingFCRate}
-              value={fcRateValue}
-              onChange={setFcRateValue}
-              onSave={() => {
-                const r = parseFloat(fcRateValue);
-                if (!isNaN(r) && r > 0) updateFCRateMutation.mutate(r);
-              }}
-              onEdit={() => {
-                setFcRateValue(fcRate > 0 ? String(fcRate) : '');
-                setEditingFCRate(true);
-              }}
-              onCancel={() => setEditingFCRate(false)}
-              isPending={updateFCRateMutation.isPending}
-              editable={isFC}
-            />
+            {selfPerforming && (
+              <Badge variant="outline" className="mb-1">Self-Performing (No FC)</Badge>
+            )}
+            {/* FC Rate - editable by FC, read-only for TC — hidden when self-performing */}
+            {hasFCParticipant && (
+              <RateEditor
+                label="FC Rate:"
+                rate={fcRate}
+                editing={editingFCRate}
+                value={fcRateValue}
+                onChange={setFcRateValue}
+                onSave={() => {
+                  const r = parseFloat(fcRateValue);
+                  if (!isNaN(r) && r > 0) updateFCRateMutation.mutate(r);
+                }}
+                onEdit={() => {
+                  setFcRateValue(fcRate > 0 ? String(fcRate) : '');
+                  setEditingFCRate(true);
+                }}
+                onCancel={() => setEditingFCRate(false)}
+                isPending={updateFCRateMutation.isPending}
+                editable={isFC}
+              />
+            )}
             {/* TC Rate - editable by TC, hidden from FC */}
             {isTC && (
               <RateEditor
@@ -527,20 +554,24 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC, hasTC = true
         )}
 
         {isTC && (
-          <div className="grid grid-cols-2 gap-3">
-            {/* FC to TC */}
-            <div className="bg-muted/50 rounded-lg p-3 space-y-1">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">From Field Crew</p>
-              <p className="text-xl font-bold">{fcToTCHours.toFixed(1)} <span className="text-sm font-normal">hrs</span></p>
-              <p className="text-sm text-muted-foreground">
-                {fcRate > 0
-                  ? `$${fcToTCCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                  : 'FC rate not set'}
-              </p>
-            </div>
+          <div className={cn('grid gap-3', selfPerforming ? 'grid-cols-1' : 'grid-cols-2')}>
+            {/* FC to TC — hidden when self-performing */}
+            {!selfPerforming && (
+              <div className="bg-muted/50 rounded-lg p-3 space-y-1">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">From Field Crew</p>
+                <p className="text-xl font-bold">{fcToTCHours.toFixed(1)} <span className="text-sm font-normal">hrs</span></p>
+                <p className="text-sm text-muted-foreground">
+                  {fcRate > 0
+                    ? `$${fcToTCCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : 'FC rate not set'}
+                </p>
+              </div>
+            )}
             {/* TC to GC */}
             <div className="bg-muted/50 rounded-lg p-3 space-y-1">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Submitted to GC</p>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                {selfPerforming ? 'Your Hours → GC' : 'Submitted to GC'}
+              </p>
               <p className="text-xl font-bold">{tcToGCHours.toFixed(1)} <span className="text-sm font-normal">hrs</span></p>
               <p className="text-sm text-muted-foreground">
                 {tcRate > 0
@@ -579,6 +610,7 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC, hasTC = true
             onSubmit={(data) => createMutation.mutate(data)}
             onCancel={() => setShowForm(false)}
             isSubmitting={createMutation.isPending}
+            selfPerforming={selfPerforming}
           />
         )}
 
