@@ -34,8 +34,18 @@ interface CreatorProfile {
 interface TeamMember {
   id: string;
   role: string;
-  accepted: boolean;
+  status: string;
+  accepted_at: string | null;
   organization: { id: string; name: string; type: string } | null;
+}
+
+interface SupplierEstimateRow {
+  id: string;
+  name: string;
+  status: string;
+  total_amount: number;
+  created_at: string;
+  supplier_org: { name: string } | null;
 }
 
 interface ContractRow {
