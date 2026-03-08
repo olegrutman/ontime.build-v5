@@ -1,4 +1,5 @@
-import { Building2, Plus, Search, Bell, LogOut, Users, Settings, Package, FileText, ShoppingCart, Briefcase, Receipt, Home, Handshake } from 'lucide-react';
+import { Building2, Plus, Search, LogOut, Users, Settings, Package, FileText, ShoppingCart, Briefcase, Receipt, Home, Handshake } from 'lucide-react';
+import { NotificationSheet } from '@/components/notifications/NotificationSheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/hooks/useAuth';
