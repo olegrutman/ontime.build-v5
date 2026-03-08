@@ -12,9 +12,12 @@ interface TimeCardFormProps {
     fc_hours_per_man: number;
     fc_description: string;
     submit: boolean;
+    selfPerforming?: boolean;
+    tc_own_hours?: number;
   }) => void;
   onCancel: () => void;
   isSubmitting: boolean;
+  selfPerforming?: boolean;
 }
 
 export function TimeCardForm({ onSubmit, onCancel, isSubmitting }: TimeCardFormProps) {
