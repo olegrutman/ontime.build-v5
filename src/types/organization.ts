@@ -121,6 +121,22 @@ export const PERMISSION_TO_DB_COLUMN: Record<keyof RolePermissions, keyof Member
   canCreateRFIs: null, // DB column exists but types not yet regenerated
 };
 
+/** Zero permissions (used for null/unknown roles) */
+export const NO_PERMISSIONS: RolePermissions = {
+  canViewRates: false,
+  canViewMargins: false,
+  canApprove: false,
+  canViewInvoices: false,
+  canAddHoursEstimates: false,
+  canAddMaterialLists: false,
+  canManageOrg: false,
+  canInviteMembers: false,
+  canCreateWorkOrders: false,
+  canCreatePOs: false,
+  canSubmitTime: false,
+  canCreateRFIs: false,
+};
+
 /** All permissions enabled (used for admins) */
 export const ALL_PERMISSIONS: RolePermissions = {
   canViewRates: true,

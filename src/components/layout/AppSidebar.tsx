@@ -57,15 +57,14 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, profile, userOrgRoles, currentRole, signOut } = useAuth();
+  const { user, profile, userOrgRoles, currentRole, permissions, isAdmin, signOut } = useAuth();
   const collapsed = state === 'collapsed';
 
   const currentOrg = userOrgRoles.length > 0 ? userOrgRoles[0].organization : null;
   const orgId = currentOrg?.id;
   const isSupplier = currentOrg?.type === 'SUPPLIER';
   const isGC = currentRole === 'GC_PM';
-  const canManageOrg = currentRole ? ROLE_PERMISSIONS[currentRole]?.canManageOrg : false;
-  const isAdmin = userOrgRoles[0]?.is_admin ?? false;
+  const canManageOrg = permissions?.canManageOrg ?? false;
   const pendingJoinCount = usePendingJoinRequests(isAdmin ? orgId : undefined);
 
   const getInitials = (name?: string | null) => {

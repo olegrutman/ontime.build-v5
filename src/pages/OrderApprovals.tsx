@@ -35,17 +35,17 @@ export default function OrderApprovals() {
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
-    } else if (!authLoading && currentRole !== 'GC_PM') {
-      toast.error('Only GC Project Managers can approve orders');
+    } else if (!authLoading && !permissions?.canApprove) {
+      toast.error('You do not have permission to approve orders');
       navigate('/');
     }
-  }, [user, currentRole, authLoading, navigate]);
+  }, [user, permissions, authLoading, navigate]);
 
   useEffect(() => {
-    if (currentRole === 'GC_PM') {
+    if (permissions?.canApprove) {
       fetchOrders();
     }
-  }, [currentRole]);
+  }, [permissions]);
 
   const fetchOrders = async () => {
     setLoading(true);

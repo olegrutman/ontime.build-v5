@@ -26,7 +26,7 @@ interface Project {
 const ChangeOrders = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, userOrgRoles, currentRole, permissions } = useAuth();
+  const { user, userOrgRoles, currentRole, permissions, permissions } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [showWizard, setShowWizard] = useState(false);
@@ -41,7 +41,7 @@ const ChangeOrders = () => {
     isCreating,
   } = useChangeOrderProject(selectedProjectId || undefined);
 
-  const canCreate = currentRole === 'GC_PM' || currentRole === 'TC_PM';
+  constpermissions?.canCreateWorkOrders ?? falsee === 'TC_PM';
 
   // Valid status values for filtering
   const validStatuses: ChangeOrderStatus[] = [

@@ -68,7 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: permsData } = await supabase
           .from('member_permissions')
           .select('*')
-          .eq('user_org_role_id', rolesResult.data[0].id)
+          .eq('user_org_role_id', sortedRoles[0].id)
           .maybeSingle();
         setMemberPermissions(permsData as MemberPermissions | null);
       }
