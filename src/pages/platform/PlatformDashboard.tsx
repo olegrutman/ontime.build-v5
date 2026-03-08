@@ -121,6 +121,29 @@ export default function PlatformDashboard() {
           </Card>
         ))}
       </div>
+
+      {/* Growth Metrics */}
+      {metrics.loading ? (
+        <div className="space-y-4 mt-6">
+          <Skeleton className="h-72 w-full rounded-2xl" />
+          <div className="grid grid-cols-5 gap-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-24 rounded-2xl" />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-6 mt-6">
+          <PlatformPeriodComparison comparisons={metrics.periodComparisons} />
+          <PlatformGrowthChart data={metrics.monthlyTrends} />
+          <PlatformBreakdowns
+            orgsByType={metrics.orgsByType}
+            projectsByStatus={metrics.projectsByStatus}
+            invoicesByStatus={metrics.invoicesByStatus}
+            recentLogs={metrics.recentLogs}
+          />
+        </div>
+      )}
     </PlatformLayout>
   );
 }
