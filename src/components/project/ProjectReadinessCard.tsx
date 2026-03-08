@@ -23,7 +23,7 @@ export function ProjectReadinessCard({ readiness }: ProjectReadinessCardProps) {
 
   if (isActive) {
     return (
-      <Card className="border-l-4 border-l-green-500">
+      <Card className="border-l-4 border-l-green-500" data-sasha-card="Project Readiness">
         <CardContent className="p-4 flex items-center gap-3">
           <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
           <span className="font-medium text-sm">Project is active and ready for execution</span>
