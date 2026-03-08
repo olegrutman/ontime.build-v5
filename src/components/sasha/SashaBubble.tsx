@@ -38,6 +38,7 @@ export function SashaBubble() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [pulse, setPulse] = useState(true);
+  const [highlightMode, setHighlightMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
