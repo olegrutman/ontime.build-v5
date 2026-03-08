@@ -43,6 +43,7 @@ import { InvoicesTab } from '@/components/invoices';
 import { ReturnsTab } from '@/components/returns';
 import { ContractSOVEditor } from '@/components/sov';
 import { RFIsTab } from '@/components/rfi';
+import { ScheduleTab } from '@/components/schedule/ScheduleTab';
 import { useToast } from '@/hooks/use-toast';
 import { useProjectFinancials } from '@/hooks/useProjectFinancials';
 import { useProjectReadiness } from '@/hooks/useProjectReadiness';
