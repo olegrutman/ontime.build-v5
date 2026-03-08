@@ -173,40 +173,48 @@ export function WorkOrderSummaryCard({ projectId }: WorkOrderSummaryCardProps) {
         }))
       );
 
-      // Calculate totals
+      // Calculate totals — only approved/contracted count as revenue
       let tcToGcTotal = 0;
       let tcToFcTotal = 0;
+      let tcInternalCostTotal = 0;
       let approvedCount = 0;
       let pendingCount = 0;
 
       for (const wo of workOrders || []) {
-        const total = enrichedTotals.get(wo.id) || wo.final_price || 0;
-        tcToGcTotal += total;
-        
         if (wo.status === 'approved' || wo.status === 'contracted') {
           approvedCount++;
+          const total = enrichedTotals.get(wo.id) || wo.final_price || 0;
+          tcToGcTotal += total;
         } else if (wo.status !== 'draft') {
           pendingCount++;
         }
       }
 
-      // Fetch FC labor totals for profit calculation (TC only)
+      // Fetch FC labor totals and sum tc_internal_cost for profit calculation (TC only)
       if (isTCView) {
-        const workOrderIds = (workOrders || []).map(wo => wo.id);
+        const approvedIds = (workOrders || [])
+          .filter(wo => ['approved', 'contracted'].includes(wo.status))
+          .map(wo => wo.id);
         
-        if (workOrderIds.length > 0) {
+        if (approvedIds.length > 0) {
           const { data: fcHours } = await supabase
             .from('change_order_fc_hours')
             .select('change_order_id, labor_total')
-            .in('change_order_id', workOrderIds);
+            .in('change_order_id', approvedIds);
 
           tcToFcTotal = (fcHours || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0);
         }
+
+        // Sum tc_internal_cost from approved WOs (for self-performing)
+        tcInternalCostTotal = (workOrders || [])
+          .filter(wo => ['approved', 'contracted'].includes(wo.status))
+          .reduce((sum, wo) => sum + ((wo as any).tc_internal_cost || 0), 0);
       }
 
       setTotals({
         tcToGcTotal,
         tcToFcTotal,
+        tcInternalCostTotal,
         fcEarnings: 0,
         approvedCount,
         pendingCount,
