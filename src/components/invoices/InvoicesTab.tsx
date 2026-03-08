@@ -440,7 +440,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
         <div className="flex flex-col gap-1">
           <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Total Billed</span>
           <span className="text-2xl font-bold">
-            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(stats.totalBilled)}
+            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(stats.totalBilled)}
           </span>
         </div>
         <div className="absolute top-3 right-3 p-2 rounded-full bg-primary/10">
