@@ -63,7 +63,7 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
     const gcProfit = hasOwner ? ownerContractValue - currentTotal : 0;
 
     return (
-      <div className="bg-card rounded-2xl shadow-sm p-5 space-y-2.5">
+      <div className="bg-card rounded-2xl shadow-sm p-5 space-y-2.5" data-sasha-card="Profit Position">
         <div className="flex items-center gap-1.5 mb-1">
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
           <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Profit Position</span>

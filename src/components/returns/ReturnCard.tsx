@@ -18,6 +18,7 @@ export function ReturnCard({ returnData, onClick, canViewPricing }: ReturnCardPr
     <Card
       className="cursor-pointer hover:shadow-md transition-shadow"
       onClick={onClick}
+      data-sasha-card="Return"
     >
       <CardContent className="p-4 space-y-3">
         <div className="flex items-center justify-between">

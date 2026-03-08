@@ -67,6 +67,7 @@ export function WorkItemCard({ item, depth = 0, onClick, isSelected, onEdit, onD
         depth > 0 && 'ml-8'
       )}
       onClick={onClick}
+      data-sasha-card="Work Item"
     >
       {/* Type indicator bar */}
       <div 

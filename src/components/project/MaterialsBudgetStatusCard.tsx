@@ -67,6 +67,7 @@ export function MaterialsBudgetStatusCard({ projectId, supplierOrgId, financials
       <button
         onClick={() => setDrawerOpen(true)}
         className="w-full text-left bg-card rounded-2xl shadow-sm p-5 space-y-2.5 hover:bg-accent/30 transition-colors group"
+        data-sasha-card="Materials Budget"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">

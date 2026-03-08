@@ -14,6 +14,7 @@ export function RFICard({ rfi, onClick }: RFICardProps) {
     <Card
       className="cursor-pointer hover:shadow-md transition-shadow"
       onClick={onClick}
+      data-sasha-card="RFI"
     >
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">

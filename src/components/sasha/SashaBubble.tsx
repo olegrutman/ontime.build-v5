@@ -228,6 +228,14 @@ export function SashaBubble() {
 
   return (
     <>
+      {/* Highlight overlay */}
+      {open && highlightMode && (
+        <SashaHighlightOverlay
+          onSelect={handleHighlightSelect}
+          onCancel={() => setHighlightMode(false)}
+        />
+      )}
+
       {/* Chat Panel */}
       {open && (
         <div className="fixed z-50 shadow-xl rounded-2xl border bg-background flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200 bottom-36 lg:bottom-20 right-2 left-2 sm:left-auto sm:right-4 sm:w-[min(400px,calc(100vw-2rem))] max-h-[60vh] sm:max-h-[min(500px,70vh)]">
