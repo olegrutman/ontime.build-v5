@@ -194,7 +194,7 @@ export function WorkItemPage() {
 
             {/* Labor Panel - TC/FS only, never GC */}
             {showLaborPanel && (
-              <Card className="p-6">
+              <Card data-sasha-card="Work Item Labor" className="p-6">
                 <WorkItemLabor
                   workItemId={workItem.id}
                   isEditable={isEditable}
