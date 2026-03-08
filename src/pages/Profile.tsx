@@ -41,7 +41,7 @@ const CONTACT_METHODS = [
 
 
 export default function Profile() {
-  const { userOrgRoles } = useAuth();
+  const { userOrgRoles, refreshUserData } = useAuth();
   const {
     loading,
     profile,
@@ -139,6 +139,7 @@ export default function Profile() {
       timezone: personalForm.timezone,
       job_title: personalForm.job_title || null,
     });
+    await refreshUserData();
     setSaving(null);
   };
 

@@ -1,40 +1,23 @@
 
-# Profile Update → Sidebar Display Bug Report & Fix Plan
 
-## Bugs Found
+# Add "Send Nudge" Reminder Feature Across All Processes — COMPLETED
 
-### Bug 1: `Profile` type missing `job_title`
-**Where:** `src/types/organization.ts` line 24-34
-**Problem:** The `Profile` interface used by `useAuth` doesn't include `job_title`. The database column exists and the profile page writes to it, but `useAuth` never exposes it. The sidebar therefore cannot display the user's job title.
+## What It Does
+Users can send a "Send Reminder" nudge to the other party when an invoice, WO, PO, or return is awaiting action. Server-enforced 24h cooldown prevents spam.
 
-### Bug 2: Sidebar shows system role, not job title
-**Where:** `src/components/layout/AppSidebar.tsx` lines 229-232
-**Problem:** The sidebar footer always shows `ROLE_LABELS[currentRole]` (e.g., "General Contractor Manager") or "Owner". Per the existing memory note, job title should take priority over the system role label. The sidebar never checks `profile.job_title`.
+## Changes Made
 
-### Bug 3: Profile update doesn't refresh auth context
-**Where:** `src/pages/Profile.tsx` line 131-142
-**Problem:** After `handleSavePersonal` calls `updateProfile`, it only updates the local `useProfile` state. It never calls `refreshUserData()` from `useAuth`. This means the sidebar (which reads from `useAuth().profile`) shows stale data until the user refreshes the page.
+### Database (1 migration)
+- Added `NUDGE` to `notification_type` enum
+- Created `nudge_log` table with RLS
+- Created `send_nudge(_entity_type, _entity_id)` RPC (SECURITY DEFINER) that validates state, enforces cooldown, and inserts notification
 
-## Fix Plan
+### Frontend
+- **`src/hooks/useNudge.ts`** — Shared hook wrapping the RPC call with loading/sent state
+- **`InvoiceDetail.tsx`** — "Send Reminder" button when status=SUBMITTED and user is invoice creator
+- **`PODetail.tsx`** — "Send Reminder" button when status=SUBMITTED and user is buyer (not supplier)
+- **`ReturnDetail.tsx`** — "Send Reminder" button when status=SUBMITTED and user is creator org
+- **`WorkItemActions.tsx`** — "Send Reminder" button when state=PRICED and user is TC
 
-### 1. Add `job_title` to the `Profile` interface
-In `src/types/organization.ts`, add `job_title?: string | null` to the `Profile` interface.
-
-### 2. Update sidebar to prefer job title
-In `src/components/layout/AppSidebar.tsx` line 231, change:
-```
-{isAdmin ? 'Owner' : ROLE_LABELS[currentRole]}
-```
-to:
-```
-{isAdmin ? 'Owner' : (profile?.job_title || ROLE_LABELS[currentRole])}
-```
-This matches the existing pattern in `MemberDetailDialog` where job title takes priority.
-
-### 3. Call `refreshUserData` after profile save
-In `src/pages/Profile.tsx`, import `refreshUserData` from `useAuth` and call it after `updateProfile` succeeds, so the sidebar immediately reflects the new name/title.
-
-### Files Changed
-- `src/types/organization.ts` — add `job_title` to Profile interface
-- `src/components/layout/AppSidebar.tsx` — show job title in footer
-- `src/pages/Profile.tsx` — call `refreshUserData()` after save
+### Email
+- Added `NUDGE: "notify_email"` to `send-notification-email` edge function
