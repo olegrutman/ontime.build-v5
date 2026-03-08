@@ -415,6 +415,7 @@ Deno.serve(async (req) => {
           }
         }
 
+        logMeta = { p_target_org_id: newOrg.id, p_target_org_name: org_name, p_action_summary: `Created org "${org_name}" (${org_type})` };
         result = { success: true, message: "Organization created", org_id: newOrg.id };
         break;
       }
