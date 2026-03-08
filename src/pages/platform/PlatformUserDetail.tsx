@@ -53,6 +53,7 @@ export default function PlatformUserDetail() {
   const { platformRole } = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [memberships, setMemberships] = useState<OrgMembership[]>([]);
+  const [permissionsMap, setPermissionsMap] = useState<Record<string, MemberPermissions | null>>({});
   const [loading, setLoading] = useState(true);
 
   const { execute, loading: actionLoading } = useSupportAction();
