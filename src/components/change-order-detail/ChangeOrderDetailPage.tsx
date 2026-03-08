@@ -34,6 +34,7 @@ import { MaterialResourceToggle } from './MaterialResourceToggle';
 import { WorkOrderMaterialsPanel } from './WorkOrderMaterialsPanel';
 import { ChangeOrderChecklist } from './ChangeOrderChecklist';
 import { TMTimeCardsPanel } from './TMTimeCardsPanel';
+import { TCInternalCostEditor } from './TCInternalCostEditor';
 
 /** Collapsible scope description: shows first 3 lines collapsed */
 function CollapsibleScope({ description }: { description: string | null }) {
