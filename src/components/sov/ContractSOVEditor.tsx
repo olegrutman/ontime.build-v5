@@ -804,11 +804,6 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
           <div className="border-t pt-4 mt-2">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-base font-medium text-muted-foreground">Work Orders</h3>
-              {mainContractBillingTotals.scheduled > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  Main Contract Billed: {formatCurrency(mainContractBillingTotals.billed)} of {formatCurrency(mainContractBillingTotals.scheduled)} ({mainBilledPercent.toFixed(1)}%)
-                </span>
-              )}
             </div>
           </div>
           {workOrderSovs.map(sov => renderSOVCard(sov))}
