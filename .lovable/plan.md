@@ -1,39 +1,45 @@
 
 
-# Allow Edit and Delete of Draft Invoices
+# Platform User Detail: Assign to Org, Address, Full Info
 
-## Current State
+## 1. Show Full User Info
 
-- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
-- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
+Expand the profile card in `PlatformUserDetail.tsx` to display all available profile fields:
+- Email, Full Name, First Name, Last Name (already have email, full_name, phone)
+- Phone, Job Title, Timezone, Language, Preferred Contact Method
+- Created date (already shown)
 
-## Plan
+Update the `ProfileData` interface and the `select('*')` query already fetches everything — just render the additional fields in the info card grid.
 
-### 1. Add Delete Invoice capability
+## 2. Add Address to Profiles
 
-**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
-- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
-- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
-- Button placed in the action buttons area, styled as destructive/outline
+The `profiles` table currently has no address columns. Add a migration to add an `address` JSONB column (matching the `OrgAddress` pattern: street, city, state, zip).
 
-**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
-- Add `onDelete` optional prop
-- Add trash icon to `hoverActions` array for DRAFT status
+**Migration:**
+```sql
+ALTER TABLE public.profiles ADD COLUMN address jsonb DEFAULT NULL;
+```
 
-**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
-- Delete line items then invoice from database
-- Show toast, refresh list
-- Pass `onDelete` to `InvoiceCard`
+Display the address in the profile card, and allow Platform Owner to edit it inline via a dialog.
 
-### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
+## 3. Assign User to Organization
 
-**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
-- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
-- Show the button when `status === 'DRAFT' && canSubmit`
+Add an "Assign to Organization" button (visible to Platform Owners) in the Organization Memberships card. This opens a dialog where the platform owner can:
+- Search/select an organization (fetch from `organizations` table)
+- Pick a role (based on org type, using `ALLOWED_ROLES_BY_ORG_TYPE`)
+- Toggle admin status
+- Provide a reason (via `SupportActionDialog`)
 
-### Files to Change
+This will call the existing `ADD_MEMBER_NO_VERIFICATION` support action (which already exists in the edge function) but using the user's `user_id` directly instead of email lookup.
 
-- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
-- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
-- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
+### Files to Edit
+
+1. **`src/pages/platform/PlatformUserDetail.tsx`**
+   - Expand `ProfileData` interface with all profile fields
+   - Add full info display (job_title, first_name, last_name, timezone, language, preferred_contact_method, address)
+   - Add "Edit Address" dialog for Platform Owners to set/update address
+   - Add "Assign to Organization" button + dialog with org search, role select, admin toggle
+   - Wire assign action to `ADD_MEMBER_NO_VERIFICATION` support action
+
+2. **Database migration** — Add `address` JSONB column to `profiles` table
 
