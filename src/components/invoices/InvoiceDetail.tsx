@@ -346,6 +346,17 @@ export function InvoiceDetail({ invoiceId, projectId, onBack, onUpdate }: Invoic
             </>
           )}
 
+          {status === 'SUBMITTED' && isInvoiceCreator && (
+            <Button
+              variant="outline"
+              onClick={() => sendNudge('invoice', invoiceId)}
+              disabled={nudgeLoading || wasSent('invoice', invoiceId)}
+            >
+              <Bell className="h-4 w-4 mr-2" />
+              {wasSent('invoice', invoiceId) ? 'Reminder Sent' : 'Send Reminder'}
+            </Button>
+          )}
+
           {status === 'SUBMITTED' && canApprove && (
             <>
               <Button variant="outline" onClick={() => setRejectDialogOpen(true)} disabled={actionLoading}>
