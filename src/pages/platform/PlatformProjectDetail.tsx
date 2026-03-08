@@ -245,7 +245,7 @@ export default function PlatformProjectDetail() {
     >
       {/* Summary */}
       <Card className="mb-6">
-        <CardContent className="pt-6 grid grid-cols-2 md:grid-cols-5 gap-4">
+        <CardContent className="pt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Status</p>
             <Badge variant="outline" className="capitalize mt-1">{project.status}</Badge>
@@ -264,8 +264,34 @@ export default function PlatformProjectDetail() {
             )}
           </div>
           <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Created By</p>
+            {creatorName && creator ? (
+              <div>
+                <button
+                  className="font-medium text-sm text-primary hover:underline"
+                  onClick={() => navigate(`/platform/users/${creator.user_id}`)}
+                >
+                  {creatorName}
+                </button>
+                {creator.email && creatorName !== creator.email && (
+                  <p className="text-xs text-muted-foreground truncate">{creator.email}</p>
+                )}
+              </div>
+            ) : (
+              <p className="font-medium text-sm">—</p>
+            )}
+          </div>
+          <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Location</p>
-            <p className="font-medium text-sm">{cityState || '—'}</p>
+            {fullAddress.length > 0 ? (
+              <div className="text-sm font-medium">
+                {fullAddress.map((line, i) => (
+                  <p key={i}>{line}</p>
+                ))}
+              </div>
+            ) : (
+              <p className="font-medium text-sm">—</p>
+            )}
           </div>
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Created</p>
