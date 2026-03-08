@@ -1,24 +1,23 @@
 
-# Fix: "operator does not exist: uuid = text" on Invoice Approve
 
-## Root Cause
-When the GC approves (or rejects) an invoice, the `trg_cleanup_invoice_notification` trigger fires. Inside `cleanup_invoice_notification()`, line 28 does:
-```sql
-AND entity_id = NEW.id::text
-```
-The `entity_id` column is `uuid`, but `NEW.id::text` is `text`. Postgres has no `uuid = text` operator, so it throws the error. This blocks the entire UPDATE (approve/reject) from completing.
+# Add "Send Nudge" Reminder Feature Across All Processes — COMPLETED
 
-The same bug exists in all four cleanup triggers created in migration `20260308170027`:
-1. `cleanup_invite_notification` — line 9
-2. `cleanup_invoice_notification` — line 28
-3. `cleanup_change_order_notification` — line 47
-4. `cleanup_po_notification` — line 65
+## What It Does
+Users can send a "Send Reminder" nudge to the other party when an invoice, WO, PO, or return is awaiting action. Server-enforced 24h cooldown prevents spam.
 
-## Fix
-One new migration that recreates all four functions, removing the `::text` cast:
-```sql
-entity_id = NEW.id    -- was: NEW.id::text
-```
+## Changes Made
 
-## Files Changed
-- 1 new migration file (SQL only, no frontend changes needed)
+### Database (1 migration)
+- Added `NUDGE` to `notification_type` enum
+- Created `nudge_log` table with RLS
+- Created `send_nudge(_entity_type, _entity_id)` RPC (SECURITY DEFINER) that validates state, enforces cooldown, and inserts notification
+
+### Frontend
+- **`src/hooks/useNudge.ts`** — Shared hook wrapping the RPC call with loading/sent state
+- **`InvoiceDetail.tsx`** — "Send Reminder" button when status=SUBMITTED and user is invoice creator
+- **`PODetail.tsx`** — "Send Reminder" button when status=SUBMITTED and user is buyer (not supplier)
+- **`ReturnDetail.tsx`** — "Send Reminder" button when status=SUBMITTED and user is creator org
+- **`WorkItemActions.tsx`** — "Send Reminder" button when state=PRICED and user is TC
+
+### Email
+- Added `NUDGE: "notify_email"` to `send-notification-email` edge function
