@@ -15,6 +15,7 @@ import {
   Lock,
   Receipt,
 } from 'lucide-react';
+import { useNudge } from '@/hooks/useNudge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { usePOPricingVisibility } from '@/hooks/usePOPricingVisibility';
