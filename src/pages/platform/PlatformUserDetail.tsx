@@ -16,7 +16,7 @@ import { EditAddressDialog } from '@/components/platform/EditAddressDialog';
 import { AssignToOrgDialog } from '@/components/platform/AssignToOrgDialog';
 import { UserPermissionsCard } from '@/components/platform/UserPermissionsCard';
 import { supabase } from '@/integrations/supabase/client';
-import { ROLE_LABELS, ORG_TYPE_LABELS, ALLOWED_ROLES_BY_ORG_TYPE, type AppRole, type OrgType } from '@/types/organization';
+import { ROLE_LABELS, ORG_TYPE_LABELS, ALLOWED_ROLES_BY_ORG_TYPE, type AppRole, type OrgType, type MemberPermissions } from '@/types/organization';
 import { useSupportAction } from '@/hooks/useSupportAction';
 import { useImpersonation } from '@/hooks/useImpersonation';
 import { useAuth } from '@/hooks/useAuth';
