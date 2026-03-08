@@ -32,6 +32,9 @@ export default function Auth() {
   const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null);
   const [resendingVerification, setResendingVerification] = useState(false);
   const [verificationResent, setVerificationResent] = useState(false);
+  const [forgotMode, setForgotMode] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   const [signInForm, setSignInForm] = useState({
     email: '',

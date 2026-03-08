@@ -158,6 +158,7 @@ function AppRoutes() {
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/signup" element={<Signup />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             {/* Protected routes */}
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
