@@ -1,39 +1,31 @@
 
 
-# Allow Edit and Delete of Draft Invoices
+# Remove Redundant Billing Summary Bars from SOV Page
 
-## Current State
+## What's happening
+The SOV page has two levels of billing progress bars:
+1. **Section-level billing summary bars** — horizontal bars above each group of SOV cards ("Main Contract Billing: $X of $Y", "GC → TC Billing:", "TC → FC Billing:")
+2. **Per-card progress bars** — on each expandable SOV card header (added recently)
 
-- **Edit**: The InvoiceCard has an "Edit" button for DRAFT invoices, but it just navigates to InvoiceDetail — there's no actual edit capability (no inline editing of line items, notes, or billing period).
-- **Delete**: There is no delete functionality anywhere — no button, no handler, no confirmation dialog.
+Now that each card shows its own progress, the section-level summaries are redundant clutter.
 
-## Plan
+## Changes
 
-### 1. Add Delete Invoice capability
+### File: `src/components/sov/ContractSOVEditor.tsx`
 
-**InvoiceDetail.tsx** — Add a "Delete Invoice" button (with confirmation dialog) visible only when `status === 'DRAFT' && canSubmit`:
-- Add a delete confirmation `AlertDialog` (reuse existing pattern from reject dialog)
-- Handler: delete `invoice_line_items` where `invoice_id = id`, then delete `invoices` where `id = invoiceId`, call `onUpdate()` and `onBack()`
-- Button placed in the action buttons area, styled as destructive/outline
+1. **Remove the "Main Contract Billing" summary bar** (lines 814-825) — the `rounded-lg border bg-muted/30` div with `mainContractBillingTotals`.
 
-**InvoiceCard.tsx** — Add a delete hover action (trash icon) for DRAFT invoices when `canSubmit` is true:
-- Add `onDelete` optional prop
-- Add trash icon to `hoverActions` array for DRAFT status
+2. **Remove the "GC → TC" billing summary bar** (lines 772-783) — same pattern for `gcToTcBilling`.
 
-**InvoicesTab.tsx** — Add `handleDeleteInvoice` handler:
-- Delete line items then invoice from database
-- Show toast, refresh list
-- Pass `onDelete` to `InvoiceCard`
+3. **Remove the "TC → FC" billing summary bar** (lines 794-805) — same pattern for `tcToFcBilling`.
 
-### 2. Add Edit Invoice capability (reopen SOV wizard for DRAFT)
+4. **Remove the Work Orders section billing text** (lines 843-846) — the small "Main Contract Billed: $X of $Y" label.
 
-**InvoiceDetail.tsx** — Add an "Edit Invoice" button for DRAFT status that opens the existing `CreateInvoiceFromSOV` wizard pre-populated with revision data:
-- Reuse the same `reviseDialogOpen` / `CreateInvoiceFromSOV` pattern already used for rejected invoices
-- Show the button when `status === 'DRAFT' && canSubmit`
+5. **Update SOV card progress bar display** (lines 323-334) to show percentage more prominently:
+   - Change the text from `"$X / $Y billed"` to `"X% billed • $X / $Y"`
+   - Ensure the progress bar color coding is clear (green = billed portion)
 
-### Files to Change
+6. **Clean up unused variables** — `gcToTcBilling`, `tcToFcBilling`, `mainContractBillingTotals`, `mainBilledPercent`, and `calcBillingTotals` if no longer referenced elsewhere.
 
-- `src/components/invoices/InvoiceDetail.tsx` — Add delete button + confirmation dialog + edit button for DRAFT
-- `src/components/invoices/InvoiceCard.tsx` — Add `onDelete` prop + trash hover action
-- `src/components/invoices/InvoicesTab.tsx` — Add delete handler, pass to cards
+### No other files affected.
 
