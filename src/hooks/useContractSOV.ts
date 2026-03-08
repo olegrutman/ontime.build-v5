@@ -44,6 +44,8 @@ export interface ContractSOVItem {
   percent_of_contract: number;
   value_amount: number;
   billed_to_date: number;
+  total_billed_amount: number;
+  total_completion_percent: number;
   source: 'template' | 'user';
   created_at: string;
 }
@@ -913,7 +915,7 @@ export function useContractSOV(projectId: string | undefined) {
     const items = sovItems[sovId] || [];
     const totalPercent = items.reduce((sum, item) => sum + (item.percent_of_contract || 0), 0);
     const totalValue = items.reduce((sum, item) => sum + (item.value_amount || 0), 0);
-    const totalBilled = items.reduce((sum, item) => sum + (item.billed_to_date || 0), 0);
+    const totalBilled = items.reduce((sum, item) => sum + (item.total_billed_amount || 0), 0);
     const isValid = Math.abs(totalPercent - 100) <= 0.01;
     const remaining = 100 - totalPercent;
     
@@ -923,7 +925,7 @@ export function useContractSOV(projectId: string | undefined) {
   // Delete an entire SOV (only if no items have been billed)
   const deleteSOV = useCallback(async (sovId: string) => {
     const items = sovItems[sovId] || [];
-    const hasBilledItems = items.some(item => (item.billed_to_date || 0) > 0);
+    const hasBilledItems = items.some(item => (item.total_billed_amount || 0) > 0);
     
     if (hasBilledItems) {
       toast({

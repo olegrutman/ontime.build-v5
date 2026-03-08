@@ -267,7 +267,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
     const totals = sovList.reduce((acc, sov) => {
       const items = sovItems[sov.id] || [];
       const scheduled = items.reduce((sum, item) => sum + (item.value_amount || 0), 0);
-      const billed = items.reduce((sum, item) => sum + (item.billed_to_date || 0), 0);
+      const billed = items.reduce((sum, item) => sum + (item.total_billed_amount || 0), 0);
       return { scheduled: acc.scheduled + scheduled, billed: acc.billed + billed };
     }, { scheduled: 0, billed: 0 });
     const percent = totals.scheduled > 0 ? (totals.billed / totals.scheduled) * 100 : 0;
@@ -659,7 +659,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                                     </Button>
 
                                     {/* Delete button - only for unused items (no billing) */}
-                                    {(item.billed_to_date || 0) === 0 ? (
+                                 {(item.total_billed_amount || 0) === 0 ? (
                                       <AlertDialog>
                                         <AlertDialogTrigger asChild>
                                           <Button size="icon" variant="ghost" className="h-10 w-10">
@@ -706,7 +706,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                             <div className="px-3 pb-3">
                               <SOVProgressBar
                                 scheduledValue={item.value_amount}
-                                billedToDate={item.billed_to_date || 0}
+                                billedToDate={item.total_billed_amount || 0}
                                 size="sm"
                               />
                             </div>
