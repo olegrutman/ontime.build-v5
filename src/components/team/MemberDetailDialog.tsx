@@ -82,6 +82,8 @@ export function MemberDetailDialog({
   isCurrentUserAdmin,
   isSelf,
 }: MemberDetailDialogProps) {
+  const { userOrgRoles } = useAuth();
+  const orgType = userOrgRoles[0]?.organization?.type ?? null;
   const [localPerms, setLocalPerms] = useState<Record<string, boolean>>({});
   const [saving, setSaving] = useState(false);
   const [transferring, setTransferring] = useState(false);
