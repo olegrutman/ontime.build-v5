@@ -15,7 +15,7 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
   const { toast } = useToast();
   const {
     loading, viewerRole, upstreamContract, downstreamContract,
-    workOrderTotal, workOrderFCCost,
+    workOrderTotal, workOrderFCCost, tcInternalCostTotal,
     ownerContractValue, materialMarkupType, materialMarkupValue,
     materialDelivered, laborBudget,
     isTCMaterialResponsible, updateOwnerContract,
