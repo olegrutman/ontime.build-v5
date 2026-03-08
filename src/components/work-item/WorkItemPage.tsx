@@ -242,7 +242,7 @@ export function WorkItemPage() {
 
             {/* Participants */}
             {showParticipantsPanel && (
-              <Card className="p-6">
+              <Card data-sasha-card="Work Item Participants" className="p-6">
                 <WorkItemParticipants
                   workItemId={workItem.id}
                   isEditable={isEditable && (isTC || isGC)}

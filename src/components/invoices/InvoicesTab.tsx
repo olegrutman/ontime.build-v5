@@ -436,7 +436,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
           <Wallet className="w-4 h-4 text-secondary-foreground" />
         </div>
       </Card>
-      <Card className="p-4 relative overflow-hidden col-span-2 sm:col-span-1">
+      <Card data-sasha-card="Invoice Summary" className="p-4 relative overflow-hidden col-span-2 sm:col-span-1">
         <div className="flex flex-col gap-1">
           <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Total Billed</span>
           <span className="text-2xl font-bold">

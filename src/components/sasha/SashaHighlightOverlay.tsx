@@ -83,7 +83,7 @@ export function SashaHighlightOverlay({ onSelect, onCancel }: Props) {
             <rect
               x="0" y="0" width="100%" height="100%"
               fill="hsl(var(--foreground) / 0.3)"
-              mask="url(#sasha-highlight-mask)"
+              mask={`url(#${maskId})`}
             />
           </svg>
           <div

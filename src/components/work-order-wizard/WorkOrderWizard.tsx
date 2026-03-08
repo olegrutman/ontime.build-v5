@@ -82,11 +82,15 @@ export function WorkOrderWizard({
         );
       case 3: // Work Type - required
         return !!formData.work_type;
-      case 4: // Resources - optional but if answered, must be complete
+      case 4: // Scope Details - optional
         return true;
-      case 5: // Assignment - optional
+      case 5: // Pricing Mode - always valid (radio default)
         return true;
-      case 6: // Review
+      case 6: // Resources - optional
+        return true;
+      case 7: // Assignment - optional
+        return true;
+      case 8: // Review
         return true;
       default:
         return true;

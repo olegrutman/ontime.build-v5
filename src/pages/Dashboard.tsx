@@ -205,8 +205,8 @@ export default function Dashboard() {
 
   const handleMarkPartOfTeam = () => {
     if (orgId) {
-      localStorage.setItem(`ontime_sole_member_${orgId}`, 'true');
-      setSoleMember(true);
+      localStorage.setItem(`ontime_part_of_team_${orgId}`, 'true');
+      setSoleMember(true); // marks step as done without claiming sole member
     }
   };
 
