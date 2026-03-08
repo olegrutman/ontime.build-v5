@@ -65,7 +65,7 @@ export function EstimateSummaryCard({ items, totalWithTax }: EstimateSummaryCard
   const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
-    <Card>
+    <Card data-sasha-card="Estimate Summary">
       <CardContent className="p-4 space-y-4">
         {/* Financial Totals */}
         <div className="space-y-2">

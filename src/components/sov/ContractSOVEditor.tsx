@@ -280,7 +280,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
         const isEffectivelyLocked = sov.is_locked || hasBilling;
 
         return (
-          <Card key={sov.id}>
+          <Card key={sov.id} data-sasha-card="Contract SOV">
             <Collapsible open={isExpanded} onOpenChange={() => toggleSov(sov.id)}>
               <CardHeader className="pb-3">
                 <CollapsibleTrigger asChild>

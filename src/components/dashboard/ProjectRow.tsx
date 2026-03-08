@@ -92,6 +92,7 @@ export function ProjectRow({
 
   return (
     <Card
+      data-sasha-card="Project"
       className="group hover:shadow-md transition-shadow cursor-pointer"
       onClick={handleRowClick}
     >

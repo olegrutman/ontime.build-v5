@@ -385,7 +385,7 @@ export function TMTimeCardsPanel({ changeOrderId, isGC, isTC, isFC, hasTC = true
   );
 
   return (
-    <Card>
+    <Card data-sasha-card="Time Cards">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">

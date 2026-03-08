@@ -34,7 +34,7 @@ export function RemindersTile({ reminders, onComplete, onAdd }: RemindersTilePro
     .slice(0, 5);
   
   return (
-    <Card>
+    <Card data-sasha-card="Reminders">
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center justify-between text-base">
           <div className="flex items-center gap-2">

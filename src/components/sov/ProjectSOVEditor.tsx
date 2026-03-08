@@ -206,7 +206,7 @@ export function ProjectSOVEditor({ projectId }: ProjectSOVEditorProps) {
       <SOVProgressSummary items={sovItems} />
 
       {/* SOV Items Card */}
-      <Card>
+      <Card data-sasha-card="Schedule of Values">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div>

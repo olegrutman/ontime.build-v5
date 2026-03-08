@@ -56,6 +56,7 @@ export function DashboardQuickStats({ openWorkOrders, pendingInvoices, reminders
         return (
           <Card
             key={tile.label}
+            data-sasha-card="Quick Stat"
             className="cursor-pointer hover:shadow-md transition-shadow"
             onClick={tile.onClick}
           >

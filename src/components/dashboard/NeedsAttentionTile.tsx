@@ -84,7 +84,7 @@ export function NeedsAttentionTile({ items, pendingInvitesCount }: NeedsAttentio
   };
 
   return (
-    <Card className={cn("h-full flex flex-col", totalCount > 0 && "border-amber-500/50")}>
+    <Card data-sasha-card="Needs Attention" className={cn("h-full flex flex-col", totalCount > 0 && "border-amber-500/50")}>
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center justify-between text-base">
           <div className="flex items-center gap-2">
