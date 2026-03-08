@@ -664,6 +664,65 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "EDIT_MEMBER_PERMISSIONS": {
+        const { user_org_role_id, permissions: permPayload } = params;
+        if (!user_org_role_id || !permPayload || typeof permPayload !== "object") {
+          return new Response(JSON.stringify({ error: "user_org_role_id and permissions are required" }), {
+            status: 400, headers: corsHeaders,
+          });
+        }
+        targetId = user_org_role_id;
+
+        const permCols = [
+          "can_view_financials", "can_approve_invoices", "can_create_work_orders",
+          "can_create_pos", "can_submit_time", "can_manage_team", "can_create_rfis",
+        ];
+        const permUpdate: Record<string, boolean> = {};
+        for (const col of permCols) {
+          if (col in permPayload && typeof permPayload[col] === "boolean") {
+            permUpdate[col] = permPayload[col];
+          }
+        }
+        if (Object.keys(permUpdate).length === 0) {
+          return new Response(JSON.stringify({ error: "No valid permission fields" }), {
+            status: 400, headers: corsHeaders,
+          });
+        }
+
+        // Snapshot before
+        const { data: existingPerm } = await adminClient
+          .from("member_permissions")
+          .select("*")
+          .eq("user_org_role_id", user_org_role_id)
+          .maybeSingle();
+        snapshotBefore = existingPerm || { user_org_role_id, exists: false };
+
+        // Upsert
+        const { error: upsertErr } = await adminClient
+          .from("member_permissions")
+          .upsert(
+            { user_org_role_id, ...permUpdate },
+            { onConflict: "user_org_role_id" }
+          );
+        if (upsertErr) {
+          return new Response(JSON.stringify({ error: upsertErr.message }), {
+            status: 500, headers: corsHeaders,
+          });
+        }
+
+        const { data: afterPerm } = await adminClient
+          .from("member_permissions")
+          .select("*")
+          .eq("user_org_role_id", user_org_role_id)
+          .single();
+        snapshotAfter = afterPerm;
+
+        const changedPerms = Object.keys(permUpdate).join(", ");
+        logMeta = { p_action_summary: `Edited member permissions (${changedPerms}) for role ${user_org_role_id}` };
+        result = { success: true, message: "Permissions updated" };
+        break;
+      }
+
       default:
         return new Response(JSON.stringify({ error: "Not implemented" }), {
           status: 400,
