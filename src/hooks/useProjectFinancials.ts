@@ -31,6 +31,7 @@ export interface ProjectFinancials {
   workOrderTotal: number;
   approvedWOCount: number;
   workOrderFCCost: number;
+  tcInternalCostTotal: number;
   retainageAmount: number;
   outstanding: number;
   materialEstimate: number;
