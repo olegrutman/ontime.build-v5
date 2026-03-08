@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { X, Send } from 'lucide-react';
+import { X, Send, MousePointer2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import sashaAvatar from '@/assets/sasha-avatar.png';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useDemo } from '@/contexts/DemoContext';
 import { useSashaContext } from '@/hooks/useSashaContext';
 import { SashaMessage, type SashaChatMessage } from './SashaMessage';
+import { SashaHighlightOverlay } from './SashaHighlightOverlay';
 import { toast } from 'sonner';
 
 const SASHA_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sasha-guide`;
@@ -37,6 +38,7 @@ export function SashaBubble() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [pulse, setPulse] = useState(true);
+  const [highlightMode, setHighlightMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -209,9 +211,16 @@ export function SashaBubble() {
 
   const handleClose = () => {
     setOpen(false);
+    setHighlightMode(false);
     setMessages([INITIAL_GREETING]);
     setInput('');
   };
+
+  const handleHighlightSelect = useCallback((prompt: string) => {
+    setHighlightMode(false);
+    sendMessage(prompt);
+  }, [sendMessage]);
+
 
   // Show for demo mode (no auth needed) or authenticated users
   const hiddenPaths = ['/', '/auth'];
@@ -219,6 +228,14 @@ export function SashaBubble() {
 
   return (
     <>
+      {/* Highlight overlay */}
+      {open && highlightMode && (
+        <SashaHighlightOverlay
+          onSelect={handleHighlightSelect}
+          onCancel={() => setHighlightMode(false)}
+        />
+      )}
+
       {/* Chat Panel */}
       {open && (
         <div className="fixed z-50 shadow-xl rounded-2xl border bg-background flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 fade-in duration-200 bottom-36 lg:bottom-20 right-2 left-2 sm:left-auto sm:right-4 sm:w-[min(400px,calc(100vw-2rem))] max-h-[60vh] sm:max-h-[min(500px,70vh)]">
@@ -231,9 +248,20 @@ export function SashaBubble() {
                 <p className="text-[11px] text-muted-foreground">Your Ontime.Build guide</p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleClose}>
-              <X className="h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                variant={highlightMode ? 'default' : 'ghost'}
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setHighlightMode((h) => !h)}
+                title="Highlight a card for Sasha to explain"
+              >
+                <MousePointer2 className="h-4 w-4" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleClose}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           {/* Messages */}
