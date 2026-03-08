@@ -521,14 +521,13 @@ export function useDashboardData(): DashboardData {
         if (projectIds.length > 0) {
           const { data: workOrders } = await supabase
             .from('change_order_projects')
-            .select('id, project_id, final_price, status')
+            .select('id, project_id, final_price, status, tc_internal_cost')
             .in('project_id', projectIds)
             .in('status', ['approved', 'contracted']);
 
           const woList = workOrders || [];
           totalWorkOrders = woList.length;
           totalWorkOrderValue = woList
-            .filter(wo => wo.status === 'contracted')
             .reduce((sum, wo) => sum + (wo.final_price || 0), 0);
           totalRevenue += totalWorkOrderValue;
 
@@ -540,6 +539,10 @@ export function useDashboardData(): DashboardData {
               .in('change_order_id', woIds);
             const fcLaborCost = (fcHours || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0);
             totalCosts += fcLaborCost;
+
+            // Also sum tc_internal_cost for self-performing WOs
+            const tcInternalCost = woList.reduce((sum, wo) => sum + ((wo as any).tc_internal_cost || 0), 0);
+            totalCosts += tcInternalCost;
           }
         }
 

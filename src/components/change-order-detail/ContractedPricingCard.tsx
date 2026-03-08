@@ -364,7 +364,7 @@ export function ContractedPricingCard({
   const tcInternalCost = (changeOrder as any).tc_internal_cost ?? 0;
   
   // TC profit
-  const revenue = finalPrice;
+  const revenue = laborTotal + materialTotal + equipmentTotal;
   const profit = isSelfPerforming
     ? revenue - tcInternalCost - materialCost
     : revenue - fcCost - materialCost;

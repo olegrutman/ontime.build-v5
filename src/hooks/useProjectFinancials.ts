@@ -31,6 +31,7 @@ export interface ProjectFinancials {
   workOrderTotal: number;
   approvedWOCount: number;
   workOrderFCCost: number;
+  tcInternalCostTotal: number;
   retainageAmount: number;
   outstanding: number;
   materialEstimate: number;
@@ -103,6 +104,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [billedToDate, setBilledToDate] = useState(0);
   const [workOrderTotal, setWorkOrderTotal] = useState(0);
   const [workOrderFCCost, setWorkOrderFCCost] = useState(0);
+  const [tcInternalCostTotal, setTcInternalCostTotal] = useState(0);
   const [materialEstimate, setMaterialEstimate] = useState(0);
   const [materialOrdered, setMaterialOrdered] = useState(0);
   const [totalPaidToFC, setTotalPaidToFC] = useState(0);
@@ -204,7 +206,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           to_org:organizations!project_contracts_to_org_id_fkey(name)
         `).eq('project_id', projectId),
         supabase.from('invoices').select('id, invoice_number, status, subtotal, total_amount, created_at, paid_at, contract_id, po_id, retainage_amount').eq('project_id', projectId),
-        supabase.from('change_order_projects').select('id, title, status, created_at, final_price, material_total, labor_total, linked_po_id').eq('project_id', projectId),
+        supabase.from('change_order_projects').select('id, title, status, created_at, final_price, material_total, labor_total, equipment_total, linked_po_id, tc_internal_cost').eq('project_id', projectId),
         supabase.from('project_participants').select('organization_id, organizations:organization_id(name)').eq('project_id', projectId).eq('role', 'FC').eq('invite_status', 'ACCEPTED'),
       ]);
 
@@ -385,9 +387,10 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       // WO breakdowns (labor, material, equipment) from approved WOs
       const woLabor = approvedWOs.reduce((sum, wo: any) => sum + (wo.labor_total || 0), 0);
       const woMaterial = approvedWOs.reduce((sum, wo: any) => sum + (wo.material_total || 0), 0);
+      const woEquipment = approvedWOs.reduce((sum, wo: any) => sum + (wo.equipment_total || 0), 0);
       setWoLaborTotal(woLabor);
       setWoMaterialTotal(woMaterial);
-      setWoEquipmentTotal(Math.max(0, woTotal - woLabor - woMaterial));
+      setWoEquipmentTotal(woEquipment);
 
       // FC costs (TC view)
       if (detectedRole === 'Trade Contractor') {
@@ -396,6 +399,10 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           const { data: fcHours } = await supabase.from('change_order_fc_hours').select('labor_total').in('change_order_id', woIds);
           setWorkOrderFCCost((fcHours || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0));
         }
+
+        // Sum tc_internal_cost for self-performing WOs
+        const tcIntCost = approvedWOs.reduce((sum, wo: any) => sum + (wo.tc_internal_cost || 0), 0);
+        setTcInternalCostTotal(tcIntCost);
 
         // Total paid to FC from invoices
         const paidInvoices = allInvoices.filter(i => i.status === 'PAID');
@@ -523,7 +530,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
 
   return {
     loading, viewerRole, contracts, upstreamContract, downstreamContract, userOrgIds,
-    billedToDate, workOrderTotal, approvedWOCount, workOrderFCCost, retainageAmount, outstanding,
+    billedToDate, workOrderTotal, approvedWOCount, workOrderFCCost, tcInternalCostTotal, retainageAmount, outstanding,
     materialEstimate, materialOrdered, totalPaidToFC,
     materialEstimateTotal, approvedEstimateSum, isTCMaterialResponsible, isGCMaterialResponsible,
     isDesignatedSupplier,
