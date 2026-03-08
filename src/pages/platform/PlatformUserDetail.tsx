@@ -92,7 +92,24 @@ export default function PlatformUserDetail() {
         .eq('user_id', userId),
     ]);
     if (profileRes.data) setProfile(profileRes.data as unknown as ProfileData);
-    setMemberships((rolesRes.data || []) as unknown as OrgMembership[]);
+    const mems = (rolesRes.data || []) as unknown as OrgMembership[];
+    setMemberships(mems);
+
+    // Fetch permissions for each membership
+    if (mems.length > 0) {
+      const roleIds = mems.map((m) => m.id);
+      const { data: permsData } = await supabase
+        .from('member_permissions')
+        .select('*')
+        .in('user_org_role_id', roleIds);
+      const map: Record<string, MemberPermissions | null> = {};
+      for (const m of mems) {
+        map[m.id] = (permsData || []).find((p: any) => p.user_org_role_id === m.id) as MemberPermissions | null || null;
+      }
+      setPermissionsMap(map);
+    } else {
+      setPermissionsMap({});
+    }
   };
 
   useEffect(() => {
