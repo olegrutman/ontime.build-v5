@@ -359,7 +359,11 @@ export function SashaBubble() {
           </div>
         )}
         <button
-          onClick={() => setOpen((o) => !o)}
+          onClick={() => {
+            setPulse(false);
+            localStorage.setItem('sasha_pulse_dismissed', 'true');
+            setOpen((o) => !o);
+          }}
           className={`relative h-16 w-16 rounded-full shadow-lg flex items-center justify-center hover:scale-110 transition-transform overflow-hidden ${
             pulse ? 'animate-bounce' : ''
           }`}
