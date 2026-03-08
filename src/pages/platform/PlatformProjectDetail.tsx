@@ -462,7 +462,7 @@ export default function PlatformProjectDetail() {
             <ShoppingCart className="h-4 w-4" /> Recent Purchase Orders
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
