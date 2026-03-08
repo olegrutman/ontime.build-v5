@@ -43,10 +43,16 @@ export function SashaBubble() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Stop pulse after first open
+  // Stop pulse + hide label after first open
   useEffect(() => {
-    if (open) setPulse(false);
+    if (open) { setPulse(false); setShowLabel(false); }
   }, [open]);
+
+  // Auto-dismiss label after 6 seconds
+  useEffect(() => {
+    const t = setTimeout(() => setShowLabel(false), 6000);
+    return () => clearTimeout(t);
+  }, []);
 
   // Scroll to bottom on new messages
   useEffect(() => {
