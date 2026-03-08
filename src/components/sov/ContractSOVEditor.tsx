@@ -262,25 +262,6 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
     return contract?.to_org_id === currentOrgId; // TC is payer (TC pays FC)
   }) : [];
 
-  // Helper to calculate billing totals for a set of SOVs
-  const calcBillingTotals = (sovList: typeof sovs) => {
-    const totals = sovList.reduce((acc, sov) => {
-      const items = sovItems[sov.id] || [];
-      const scheduled = items.reduce((sum, item) => sum + (item.value_amount || 0), 0);
-      const billed = items.reduce((sum, item) => sum + (item.total_billed_amount || 0), 0);
-      return { scheduled: acc.scheduled + scheduled, billed: acc.billed + billed };
-    }, { scheduled: 0, billed: 0 });
-    const percent = totals.scheduled > 0 ? (totals.billed / totals.scheduled) * 100 : 0;
-    return { ...totals, percent };
-  };
-
-  // Calculate main contract billing totals
-  const mainContractBillingTotals = calcBillingTotals(contractSovs);
-  const mainBilledPercent = mainContractBillingTotals.percent;
-
-  // TC-specific billing totals
-  const gcToTcBilling = isTC ? calcBillingTotals(gcToTcSovs) : { scheduled: 0, billed: 0, percent: 0 };
-  const tcToFcBilling = isTC ? calcBillingTotals(tcToFcSovs) : { scheduled: 0, billed: 0, percent: 0 };
 
   const renderSOVCard = (sov: ContractSOV) => {
         const contract = getContractForSOV(sov);
@@ -320,7 +301,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                         <CardDescription className="tabular-nums">
                           {formatCurrency(contract?.contract_sum || 0)} • {items.length} item{items.length !== 1 ? 's' : ''}
                         </CardDescription>
-                        {totals.totalValue > 0 && (
+        {totals.totalValue > 0 && (
                           <div className="mt-2 w-48">
                             <SOVProgressBar
                               scheduledValue={totals.totalValue}
@@ -329,7 +310,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                               size="sm"
                             />
                             <span className="text-xs text-muted-foreground tabular-nums">
-                              {formatCurrency(totals.totalBilled)} / {formatCurrency(totals.totalValue)} billed
+                              {Math.round((totals.totalBilled / totals.totalValue) * 100)}% billed • {formatCurrency(totals.totalBilled)} / {formatCurrency(totals.totalValue)}
                             </span>
                           </div>
                         )}
@@ -769,18 +750,6 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
           {gcToTcSovs.length > 0 && (
             <>
               <h3 className="text-base font-medium text-muted-foreground">GC → TC Contracts</h3>
-              {gcToTcBilling.scheduled > 0 && (
-                <div className="rounded-lg border bg-muted/30 p-3 flex flex-wrap items-center gap-4 text-sm">
-                  <span className="font-medium">Billing:</span>
-                  <span>{formatCurrency(gcToTcBilling.billed)} of {formatCurrency(gcToTcBilling.scheduled)}</span>
-                  <SOVProgressBar
-                    scheduledValue={gcToTcBilling.scheduled}
-                    billedToDate={gcToTcBilling.billed}
-                    size="sm"
-                  />
-                  <span className="text-muted-foreground">{gcToTcBilling.percent.toFixed(1)}% complete</span>
-                </div>
-              )}
               {gcToTcSovs.map(sov => renderSOVCard(sov))}
             </>
           )}
@@ -791,18 +760,6 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
               <div className="border-t pt-4 mt-2">
                 <h3 className="text-base font-medium text-muted-foreground">TC → FC Contracts</h3>
               </div>
-              {tcToFcBilling.scheduled > 0 && (
-                <div className="rounded-lg border bg-muted/30 p-3 flex flex-wrap items-center gap-4 text-sm">
-                  <span className="font-medium">Billing:</span>
-                  <span>{formatCurrency(tcToFcBilling.billed)} of {formatCurrency(tcToFcBilling.scheduled)}</span>
-                  <SOVProgressBar
-                    scheduledValue={tcToFcBilling.scheduled}
-                    billedToDate={tcToFcBilling.billed}
-                    size="sm"
-                  />
-                  <span className="text-muted-foreground">{tcToFcBilling.percent.toFixed(1)}% complete</span>
-                </div>
-              )}
               {tcToFcSovs.map(sov => renderSOVCard(sov))}
             </>
           )}
@@ -811,18 +768,6 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
         <>
           {/* Non-TC: original layout */}
           {/* Main Contract Billing Summary */}
-          {contractSovs.length > 0 && mainContractBillingTotals.scheduled > 0 && (
-            <div className="rounded-lg border bg-muted/30 p-3 flex flex-wrap items-center gap-4 text-sm">
-              <span className="font-medium">Main Contract Billing:</span>
-              <span>{formatCurrency(mainContractBillingTotals.billed)} of {formatCurrency(mainContractBillingTotals.scheduled)}</span>
-              <SOVProgressBar
-                scheduledValue={mainContractBillingTotals.scheduled}
-                billedToDate={mainContractBillingTotals.billed}
-                size="sm"
-              />
-              <span className="text-muted-foreground">{mainBilledPercent.toFixed(1)}% complete</span>
-            </div>
-          )}
 
           {/* Main Contracts Section */}
           {contractSovs.length > 0 && (
@@ -840,11 +785,6 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
           <div className="border-t pt-4 mt-2">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-base font-medium text-muted-foreground">Work Orders</h3>
-              {mainContractBillingTotals.scheduled > 0 && (
-                <span className="text-xs text-muted-foreground">
-                  Main Contract Billed: {formatCurrency(mainContractBillingTotals.billed)} of {formatCurrency(mainContractBillingTotals.scheduled)} ({mainBilledPercent.toFixed(1)}%)
-                </span>
-              )}
             </div>
           </div>
           {workOrderSovs.map(sov => renderSOVCard(sov))}
