@@ -156,7 +156,17 @@ export default function PlatformProjectDetail() {
     };
     setWoCounts(buildCounts(woStatusRes.data || []));
     setPoCounts(buildCounts(poStatusRes.data || []));
-    setInvCounts(buildCounts(invStatusRes.data || []));
+    setInvCounts(buildCounts(invAllRes.data || []));
+
+    // Financial aggregations from full datasets
+    const invRows = invAllRes.data || [];
+    const poRows = poAllRes.data || [];
+    setFinancials({
+      invoiced: invRows.reduce((s: number, r: any) => s + (r.total_amount || 0), 0),
+      paid: invRows.filter((r: any) => r.paid_at).reduce((s: number, r: any) => s + (r.total_amount || 0), 0),
+      retainage: invRows.reduce((s: number, r: any) => s + (r.retainage_amount || 0), 0),
+      poTotal: poRows.reduce((s: number, r: any) => s + (r.po_total || 0), 0),
+    });
 
     setLoading(false);
   };
