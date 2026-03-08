@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { ArrowLeft, Trash2, Send, CalendarCheck, Package, Download, Loader2, Bell } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
+import { useNudge } from '@/hooks/useNudge';
 
 interface ReturnDetailProps {
   returnId: string;
