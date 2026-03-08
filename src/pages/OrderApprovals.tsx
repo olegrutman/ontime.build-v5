@@ -22,7 +22,7 @@ import {
 } from '@/types/materialOrder';
 
 export default function OrderApprovals() {
-  const { user, currentRole, loading: authLoading } = useAuth();
+  const { user, currentRole, permissions, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   
   const [orders, setOrders] = useState<MaterialOrder[]>([]);
