@@ -17,6 +17,7 @@ import { DelaysCard } from './DelaysCard';
 import { DeliveriesCard } from './DeliveriesCard';
 import { PhotosCard } from './PhotosCard';
 import { QuickNotesCard } from './QuickNotesCard';
+import { CriticalScheduleCard } from '@/components/project/CriticalScheduleCard';
 
 import type { WeatherData, SafetyIncident } from '@/types/dailyLog';
 
@@ -113,6 +114,9 @@ export function DailyLogPanel({ projectId }: DailyLogPanelProps) {
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
+
+      {/* Critical schedule */}
+      <CriticalScheduleCard projectId={projectId} onNavigate={(tab) => { window.location.search = `?tab=${tab}`; }} />
 
       {/* Cards */}
       <WeatherCard

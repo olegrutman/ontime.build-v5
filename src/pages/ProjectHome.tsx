@@ -31,6 +31,7 @@ import {
   ProfitCard,
   MaterialMarkupEditor,
   WorkOrderSummaryCard,
+  CriticalScheduleCard,
 } from '@/components/project';
 import { ContractHeroCard } from '@/components/project/ContractHeroCard';
 import { BillingCashCard } from '@/components/project/BillingCashCard';
@@ -314,6 +315,7 @@ export default function ProjectHome() {
                               financials={financials}
                             />
                           )}
+                          <CriticalScheduleCard projectId={id!} onNavigate={handleTabChange} />
                           <MaterialMarkupEditor financials={financials} projectId={id!} projectStatus={projectStatus} />
                           <CollapsibleOperations
                             projectId={id!}
