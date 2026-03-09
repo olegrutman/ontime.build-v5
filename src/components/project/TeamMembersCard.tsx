@@ -35,6 +35,7 @@ interface TeamMember {
   invited_org_name: string | null;
   org_id: string | null;
   status: string;
+  is_self_performing: boolean;
 }
 
 interface ContractData {
