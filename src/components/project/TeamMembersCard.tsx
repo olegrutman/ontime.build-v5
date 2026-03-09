@@ -225,6 +225,7 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
         .eq('project_team_id', member.id);
       if (error) throw error;
       toast({ title: `Invite resent to ${member.invited_org_name || 'member'}` });
+      onTeamChanged?.();
     } catch (err: any) {
       toast({ title: 'Error resending invite', description: err.message, variant: 'destructive' });
     } finally {

@@ -334,7 +334,7 @@ export default function ProjectHome() {
 
                       {/* Mobile: team + urgent below */}
                       <div className="lg:hidden space-y-4">
-                        <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} />
+                        <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} onTeamChanged={readiness.recalculate} />
                       </div>
                     </div>
                   )}
