@@ -45,6 +45,7 @@ export function DesignateSupplierDialog({
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteName, setInviteName] = useState('');
+  const [poEmail, setPoEmail] = useState('');
 
   const handleSearch = async () => {
     if (query.trim().length < 2) return;
