@@ -62,7 +62,7 @@ const statusVariant: Record<string, 'outline' | 'secondary' | 'destructive'> = {
   Declined: 'destructive',
 };
 
-export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembersCardProps) {
+export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChanged }: TeamMembersCardProps) {
   const { userOrgRoles } = useAuth();
   const { toast } = useToast();
   const [team, setTeam] = useState<TeamMember[]>([]);
