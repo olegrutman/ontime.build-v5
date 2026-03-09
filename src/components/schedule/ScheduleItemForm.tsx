@@ -18,7 +18,7 @@ interface ScheduleItemFormProps {
   projectId: string;
 }
 
-export function ScheduleItemForm({ open, onClose, onSave, item, workOrders = [], existingItems = [] }: ScheduleItemFormProps) {
+export function ScheduleItemForm({ open, onClose, onSave, item, workOrders = [], existingItems = [], projectId }: ScheduleItemFormProps) {
   const [title, setTitle] = useState(item?.title ?? '');
   const [itemType, setItemType] = useState<string>(item?.item_type ?? 'task');
   const [startDate, setStartDate] = useState(item?.start_date ?? new Date().toISOString().split('T')[0]);
