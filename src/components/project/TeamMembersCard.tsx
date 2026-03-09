@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Users, Plus, UserPlus, Package, Loader2, RotateCw, Trash2 } from 'lucide-react';
+import { Users, Plus, UserPlus, Package, Loader2, RotateCw, Trash2, Mail, Check, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
