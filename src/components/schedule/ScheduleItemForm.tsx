@@ -15,6 +15,7 @@ interface ScheduleItemFormProps {
   item?: ScheduleItem | null;
   workOrders?: { id: string; title: string; status: string }[];
   existingItems?: ScheduleItem[];
+  projectId: string;
 }
 
 export function ScheduleItemForm({ open, onClose, onSave, item, workOrders = [], existingItems = [] }: ScheduleItemFormProps) {
