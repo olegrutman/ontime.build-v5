@@ -12,11 +12,20 @@ export interface ScheduleItem {
   progress: number;
   dependency_ids: string[];
   work_order_id: string | null;
+  sov_item_id: string | null;
   color: string | null;
   sort_order: number;
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  // Computed fields
+  sov_item?: {
+    id: string;
+    description: string;
+    value_amount: number;
+    total_billed_amount: number;
+    billing_progress: number;
+  };
 }
 
 export type ScheduleItemInsert = Omit<ScheduleItem, 'id' | 'created_at' | 'updated_at'>;
