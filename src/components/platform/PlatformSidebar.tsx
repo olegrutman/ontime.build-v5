@@ -9,6 +9,7 @@ import {
   ScrollText,
   LogOut,
   Shield,
+  CreditCard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -17,6 +18,7 @@ const NAV_ITEMS = [
   { to: '/platform/orgs', icon: Building2, label: 'Organizations' },
   { to: '/platform/users', icon: Users, label: 'Users' },
   { to: '/platform/projects', icon: FolderKanban, label: 'Projects' },
+  { to: '/platform/plans', icon: CreditCard, label: 'Plans & Features' },
   { to: '/platform/logs', icon: ScrollText, label: 'Support Logs' },
 ];
 

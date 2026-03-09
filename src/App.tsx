@@ -63,6 +63,7 @@ const PlatformUserDetail = lazy(() => import("./pages/platform/PlatformUserDetai
 const PlatformProjects = lazy(() => import("./pages/platform/PlatformProjects"));
 const PlatformProjectDetail = lazy(() => import("./pages/platform/PlatformProjectDetail"));
 const PlatformLogs = lazy(() => import("./pages/platform/PlatformLogs"));
+const PlatformPlans = lazy(() => import("./pages/platform/PlatformPlans"));
 
 // Lazy-loaded components
 const WorkItemPage = lazy(() =>
@@ -199,6 +200,7 @@ function AppRoutes() {
             <Route path="/platform/projects" element={<RequirePlatformRole><PlatformProjects /></RequirePlatformRole>} />
             <Route path="/platform/projects/:projectId" element={<RequirePlatformRole><PlatformProjectDetail /></RequirePlatformRole>} />
             <Route path="/platform/logs" element={<RequirePlatformRole><PlatformLogs /></RequirePlatformRole>} />
+            <Route path="/platform/plans" element={<RequirePlatformRole><PlatformPlans /></RequirePlatformRole>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

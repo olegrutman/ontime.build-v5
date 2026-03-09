@@ -1629,6 +1629,44 @@ export type Database = {
           },
         ]
       }
+      org_feature_overrides: {
+        Row: {
+          enabled: boolean
+          feature_key: string
+          id: string
+          limit_value: number | null
+          organization_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          enabled: boolean
+          feature_key: string
+          id?: string
+          limit_value?: number | null
+          organization_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          enabled?: boolean
+          feature_key?: string
+          id?: string
+          limit_value?: number | null
+          organization_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_feature_overrides_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       org_invitations: {
         Row: {
           created_at: string
@@ -1767,6 +1805,7 @@ export type Database = {
           name: string
           org_code: string
           phone: string | null
+          subscription_plan_id: string | null
           trade: string | null
           trade_custom: string | null
           type: Database["public"]["Enums"]["org_type"]
@@ -1783,6 +1822,7 @@ export type Database = {
           name: string
           org_code: string
           phone?: string | null
+          subscription_plan_id?: string | null
           trade?: string | null
           trade_custom?: string | null
           type: Database["public"]["Enums"]["org_type"]
@@ -1799,12 +1839,21 @@ export type Database = {
           name?: string
           org_code?: string
           phone?: string | null
+          subscription_plan_id?: string | null
           trade?: string | null
           trade_custom?: string | null
           type?: Database["public"]["Enums"]["org_type"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "organizations_subscription_plan_id_fkey"
+            columns: ["subscription_plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pack_items: {
         Row: {
@@ -1856,6 +1905,41 @@ export type Database = {
             columns: ["pack_id"]
             isOneToOne: false
             referencedRelation: "estimate_packs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plan_features: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          feature_key: string
+          id: string
+          limit_value: number | null
+          plan_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          feature_key: string
+          id?: string
+          limit_value?: number | null
+          plan_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          feature_key?: string
+          id?: string
+          limit_value?: number | null
+          plan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_features_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
             referencedColumns: ["id"]
           },
         ]
@@ -3607,6 +3691,42 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_plans: {
+        Row: {
+          annual_price: number | null
+          created_at: string
+          description: string | null
+          display_name: string
+          id: string
+          is_active: boolean
+          monthly_price: number | null
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          annual_price?: number | null
+          created_at?: string
+          description?: string | null
+          display_name: string
+          id?: string
+          is_active?: boolean
+          monthly_price?: number | null
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          annual_price?: number | null
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          monthly_price?: number | null
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       supplier_estimate_items: {
         Row: {
           catalog_item_id: string | null
@@ -4985,6 +5105,15 @@ export type Database = {
           is_read: boolean
           title: string
           type: Database["public"]["Enums"]["notification_type"]
+        }[]
+      }
+      get_org_features: {
+        Args: { p_org_id: string }
+        Returns: {
+          enabled: boolean
+          feature_key: string
+          limit_value: number
+          source: string
         }[]
       }
       get_platform_role: {

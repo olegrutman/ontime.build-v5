@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { SupportActionDialog } from '@/components/platform/SupportActionDialog';
+import { OrgSubscriptionCard } from '@/components/platform/OrgSubscriptionCard';
 import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { ORG_TYPE_LABELS, ROLE_LABELS, ALLOWED_ROLES_BY_ORG_TYPE, type Organization, type AppRole, type OrgType } from '@/types/organization';
@@ -293,7 +294,7 @@ export default function PlatformOrgDetail() {
       </Card>
 
       {/* Projects */}
-      <Card>
+      <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-base">Projects</CardTitle>
         </CardHeader>
@@ -332,6 +333,12 @@ export default function PlatformOrgDetail() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Subscription & Feature Flags */}
+      <OrgSubscriptionCard
+        orgId={org.id}
+        currentPlanId={(org as any).subscription_plan_id ?? null}
+      />
 
       {/* Add Member - step 1: email + role */}
       <Dialog open={addMemberOpen} onOpenChange={setAddMemberOpen}>
