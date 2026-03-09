@@ -155,46 +155,45 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
       const items: ReadinessItem[] = [];
 
       if (detectedCreatorType === 'TC') {
-        // TC-Created Project Checklist
-        // 1. Contract sum with GC
-        const hasGCContractSum = gcContract ? (gcContract.contract_sum != null && gcContract.contract_sum > 0) : false;
-        items.push({ key: 'gc_contract_sum', label: 'Contract sum with GC entered', complete: hasGCContractSum });
+        // TC-Created Project Checklist — items only shown if the role exists in the project
+        const gcParticipants = getParticipantsByRole('GC');
+        const hasGCRole = gcParticipants.length > 0 || !!gcContract;
+        const hasFCRole = fcParticipants.length > 0 || !!fcContract;
 
-        // 2. Contract sum with FC
-        const hasFCContractSum = fcContract ? (fcContract.contract_sum != null && fcContract.contract_sum > 0) : false;
-        items.push({ key: 'fc_contract_sum', label: 'Contract sum with FC entered', complete: hasFCContractSum });
+        if (gcContract) {
+          const hasGCContractSum = gcContract.contract_sum != null && gcContract.contract_sum > 0;
+          items.push({ key: 'gc_contract_sum', label: 'Contract sum with GC entered', complete: hasGCContractSum });
+          items.push({ key: 'gc_sov', label: 'SOV for GC contract created', complete: hasSovForContract(gcContract.id) });
+        }
 
-        // 3. SOV for GC contract
-        const hasGCSov = gcContract ? hasSovForContract(gcContract.id) : false;
-        items.push({ key: 'gc_sov', label: 'SOV for GC contract created', complete: hasGCSov });
+        if (fcContract) {
+          const hasFCContractSum = fcContract.contract_sum != null && fcContract.contract_sum > 0;
+          items.push({ key: 'fc_contract_sum', label: 'Contract sum with FC entered', complete: hasFCContractSum });
+          items.push({ key: 'fc_sov', label: 'SOV for FC contract created', complete: hasSovForContract(fcContract.id) });
+        }
 
-        // 4. SOV for FC contract
-        const hasFCSov = fcContract ? hasSovForContract(fcContract.id) : false;
-        items.push({ key: 'fc_sov', label: 'SOV for FC contract created', complete: hasFCSov });
-
-        // 5. Material responsibility selected
         items.push({ key: 'material_resp', label: 'Material responsibility selected', complete: hasMaterialResp });
 
-        // 6. Supplier assigned (if TC responsible)
         if (materialResp === 'TC' || !hasMaterialResp) {
           items.push({ key: 'supplier', label: hasSupplier ? 'Supplier assigned' : 'Supplier not yet assigned', complete: hasSupplier });
         }
 
-        // 7. GC accepted
-        items.push({
-          key: 'gc_accepted',
-          label: gcAccepted ? 'GC accepted' : `Awaiting GC${gcPendingNames.length > 0 ? ': ' + gcPendingNames.join(', ') : ''}`,
-          complete: gcAccepted,
-        });
+        if (hasGCRole) {
+          items.push({
+            key: 'gc_accepted',
+            label: gcAccepted ? 'GC accepted' : `Awaiting GC${gcPendingNames.length > 0 ? ': ' + gcPendingNames.join(', ') : ''}`,
+            complete: gcAccepted,
+          });
+        }
 
-        // 8. FC accepted
-        items.push({
-          key: 'fc_accepted',
-          label: fcAccepted ? 'FC accepted' : `Awaiting FC${fcPendingNames.length > 0 ? ': ' + fcPendingNames.join(', ') : ''}`,
-          complete: fcAccepted,
-        });
+        if (hasFCRole) {
+          items.push({
+            key: 'fc_accepted',
+            label: fcAccepted ? 'FC accepted' : `Awaiting FC${fcPendingNames.length > 0 ? ': ' + fcPendingNames.join(', ') : ''}`,
+            complete: fcAccepted,
+          });
+        }
 
-        // 9. Supplier accepted (if assigned)
         if (hasSupplier) {
           items.push({
             key: 'supplier_accepted',
@@ -203,7 +202,6 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
           });
         }
 
-        // 10. Supplier estimate (if real supplier participant assigned)
         if (hasRealSupplier) {
           items.push({
             key: 'supplier_estimate',
@@ -212,34 +210,33 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
           });
         }
       } else {
-        // GC-Created Project Checklist (default)
-        // 1. Contract sum with TC
-        const hasTCContractSum = contracts.some(c => 
-          (c.from_role === 'Trade Contractor' || c.to_role === 'Trade Contractor') &&
-          c.contract_sum != null && c.contract_sum > 0
-        );
-        items.push({ key: 'tc_contract_sum', label: 'Contract sum with TC entered', complete: hasTCContractSum });
+        // GC-Created Project Checklist — items only shown if the role exists
+        const tcParticipants = getParticipantsByRole('TC');
+        const hasTCRole = tcParticipants.length > 0 || contracts.some(c => c.from_role === 'Trade Contractor' || c.to_role === 'Trade Contractor');
 
-        // 2. TC accepted
-        items.push({
-          key: 'tc_accepted',
-          label: tcAccepted ? 'TC accepted' : `Awaiting TC${tcPendingNames.length > 0 ? ': ' + tcPendingNames.join(', ') : ''}`,
-          complete: tcAccepted,
-        });
+        if (hasTCRole) {
+          const hasTCContractSum = contracts.some(c => 
+            (c.from_role === 'Trade Contractor' || c.to_role === 'Trade Contractor') &&
+            c.contract_sum != null && c.contract_sum > 0
+          );
+          items.push({ key: 'tc_contract_sum', label: 'Contract sum with TC entered', complete: hasTCContractSum });
 
-        // 3. SOV created
+          items.push({
+            key: 'tc_accepted',
+            label: tcAccepted ? 'TC accepted' : `Awaiting TC${tcPendingNames.length > 0 ? ': ' + tcPendingNames.join(', ') : ''}`,
+            complete: tcAccepted,
+          });
+        }
+
         const hasSov = sovs.length > 0;
         items.push({ key: 'sov', label: 'Schedule of Values created', complete: hasSov });
 
-        // 4. Material responsibility
         items.push({ key: 'material_resp', label: 'Material responsibility selected', complete: hasMaterialResp });
 
-        // 5. Supplier assigned (if materials required)
         if (hasMaterialResp) {
           items.push({ key: 'supplier', label: hasSupplier ? 'Supplier assigned' : 'Supplier not yet assigned', complete: hasSupplier });
         }
 
-        // 6. Supplier accepted (if assigned)
         if (hasSupplier) {
           items.push({
             key: 'supplier_accepted',
@@ -248,7 +245,6 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
           });
         }
 
-        // 7. Supplier estimate (if real supplier participant assigned)
         if (hasRealSupplier) {
           items.push({
             key: 'supplier_estimate',
@@ -257,7 +253,6 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
           });
         }
 
-        // 8. FC accepted (only if FC was invited)
         if (fcInvited) {
           items.push({
             key: 'fc_accepted',

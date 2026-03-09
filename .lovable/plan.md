@@ -1,44 +1,42 @@
+# Daily Log Feature — IMPLEMENTED
 
+## Design Philosophy
+Zero-typing, tap-first daily log that takes under 90 seconds to complete.
 
-# Bug Fix: Removed Team Members Still Appear in Project Readiness
+## Features Built
 
-## Problem
+### 1. Database Tables
+- `daily_logs` — one per project per date, auto-creates as draft
+- `daily_log_manpower` — per-trade headcount
+- `daily_log_delays` — cause chips + hours lost
+- `daily_log_photos` — storage refs with tags
+- `daily_log_deliveries` — PO delivery confirmations
 
-When a team member is removed from the project via the Team card, the **Project Readiness** checklist continues to show items related to that removed role (e.g., "Awaiting FC", "Contract sum with FC entered"). This happens because:
+### 2. UI Components (all tap-based)
+- **WeatherCard** — condition chips (☀️ 🌧️ ❄️ 💨 🌡️ 🥶) + stepper temps
+- **ManpowerCard** — per-trade steppers auto-populated from project team
+- **WorkPerformedCard** — progress sliders linked to schedule items
+- **SafetyCard** — toggle + incident type chips
+- **DelaysCard** — cause chips with hour steppers
+- **DeliveriesCard** — PO status chips (✅ ❌ ⚠️)
+- **PhotosCard** — camera upload with tags
+- **QuickNotesCard** — quick-add chips + text area
 
-1. **TC-created project checklist unconditionally adds GC and FC items** (lines 160-195 in `useProjectReadiness.ts`). Even after the participant and contract are deleted, the readiness still shows "Awaiting FC" and "Contract sum with FC" as incomplete items.
+### 3. Integration Points
+| Feature | Links To |
+|---------|----------|
+| Work Performed | `project_schedule_items.progress` (bidirectional) |
+| Manpower | Pre-populated from `project_team` trades |
+| Photos | Lovable Cloud storage bucket `daily-log-photos` |
 
-2. **GC-created project checklist** has a similar issue with TC-related items always appearing.
+### 4. Navigation
+- Added "Daily Log" tab to desktop `ProjectTopBar`
+- Added "Daily Log" to mobile bottom nav `BottomNav`
 
-The checklist should be **dynamic** — only showing acceptance and contract items for roles that are actually part of the project team.
-
-## Root Cause
-
-In `useProjectReadiness.ts`:
-- For TC projects: GC contract sum, FC contract sum, GC SOV, FC SOV, GC accepted, and FC accepted items are **always** added to the checklist regardless of whether those roles exist in the team
-- The GC checklist conditionally shows FC (`if (fcInvited)`) but always shows TC items
-
-## Fix
-
-### `src/hooks/useProjectReadiness.ts`
-
-Make checklist items conditional on the existence of the relevant contract or participant:
-
-**TC-created project:**
-- Only show "Contract sum with GC" if a GC contract exists
-- Only show "Contract sum with FC" if an FC contract exists  
-- Only show "SOV for GC contract" if a GC contract exists
-- Only show "SOV for FC contract" if an FC contract exists
-- Only show "GC accepted" if there are GC participants
-- Only show "FC accepted" if there are FC participants
-
-**GC-created project:**
-- Only show "Contract sum with TC" if a TC contract exists
-- Only show "TC accepted" if there are TC participants
-- (FC is already conditional)
-
-This makes the readiness reflect the **current** team composition. When a member is removed and re-added, items reappear naturally.
-
-### No other file changes needed
-The `onTeamChanged -> recalculate` wiring is already correct. The cascading delete logic in `TeamMembersCard` is already working. The only issue is the checklist generation logic being unconditional.
-
+## Files Created/Modified
+- `src/types/dailyLog.ts` — types + constants
+- `src/hooks/useDailyLog.ts` — auto-create, auto-save, submit logic
+- `src/components/daily-log/` — all card components + DailyLogPanel
+- `src/pages/ProjectHome.tsx` — renders DailyLogPanel on daily-log tab
+- `src/components/project/ProjectTopBar.tsx` — added tab
+- `src/components/layout/BottomNav.tsx` — added to more menu
