@@ -1,30 +1,42 @@
+# Daily Log Feature — IMPLEMENTED
 
+## Design Philosophy
+Zero-typing, tap-first daily log that takes under 90 seconds to complete.
 
-# Auto-Create Schedule Tasks from SOV Items — COMPLETED
+## Features Built
 
-## Feature
-When a SOV is created (via template or upload), automatically create a matching schedule task for each SOV line item. The task title = SOV item name, and they are pre-linked via `sov_item_id`.
+### 1. Database Tables
+- `daily_logs` — one per project per date, auto-creates as draft
+- `daily_log_manpower` — per-trade headcount
+- `daily_log_delays` — cause chips + hours lost
+- `daily_log_photos` — storage refs with tags
+- `daily_log_deliveries` — PO delivery confirmations
 
-## Changes Made
+### 2. UI Components (all tap-based)
+- **WeatherCard** — condition chips (☀️ 🌧️ ❄️ 💨 🌡️ 🥶) + stepper temps
+- **ManpowerCard** — per-trade steppers auto-populated from project team
+- **WorkPerformedCard** — progress sliders linked to schedule items
+- **SafetyCard** — toggle + incident type chips
+- **DelaysCard** — cause chips with hour steppers
+- **DeliveriesCard** — PO status chips (✅ ❌ ⚠️)
+- **PhotosCard** — camera upload with tags
+- **QuickNotesCard** — quick-add chips + text area
 
-### 1. Helper Function Added (`useContractSOV.ts`)
-Created `createScheduleItemsFromSOVItems(projectId, sovItems)` that bulk-inserts schedule tasks from newly created SOV items.
+### 3. Integration Points
+| Feature | Links To |
+|---------|----------|
+| Work Performed | `project_schedule_items.progress` (bidirectional) |
+| Manpower | Pre-populated from `project_team` trades |
+| Photos | Lovable Cloud storage bucket `daily-log-photos` |
 
-### 2. Template-Based SOV Creation Updated
-- `createAllSOVs` — now calls `.select('id, item_name, sort_order')` after insert and auto-creates schedule tasks
-- `createSOVForContract` — same pattern, auto-creates schedule tasks
+### 4. Navigation
+- Added "Daily Log" tab to desktop `ProjectTopBar`
+- Added "Daily Log" to mobile bottom nav `BottomNav`
 
-### 3. Upload SOV Creation Updated (`UploadSOVDialog.tsx`)
-- `handleApply` — now fetches inserted item IDs and creates matching schedule tasks
-
-### 4. Toast Messages Updated
-All SOV creation toasts now mention that schedule tasks were also auto-created.
-
-## Files Changed
-- `src/hooks/useContractSOV.ts` — Added helper + integrated into both template creation paths
-- `src/components/sov/UploadSOVDialog.tsx` — Integrated schedule task creation into upload flow
-
-## Behavior After
-- User clicks "Create SOVs from Template" → SOV items + schedule tasks auto-created
-- User uploads SOV PDF/CSV and applies → same auto-creation
-- Schedule tab instantly shows all tasks, each already linked to its SOV item
+## Files Created/Modified
+- `src/types/dailyLog.ts` — types + constants
+- `src/hooks/useDailyLog.ts` — auto-create, auto-save, submit logic
+- `src/components/daily-log/` — all card components + DailyLogPanel
+- `src/pages/ProjectHome.tsx` — renders DailyLogPanel on daily-log tab
+- `src/components/project/ProjectTopBar.tsx` — added tab
+- `src/components/layout/BottomNav.tsx` — added to more menu
