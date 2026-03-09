@@ -1,34 +1,42 @@
+# Daily Log Feature — IMPLEMENTED
 
+## Design Philosophy
+Zero-typing, tap-first daily log that takes under 90 seconds to complete.
 
-# Gantt Drag Bugs
+## Features Built
 
-## Bug 1 (Critical): Click fires after drag, opening edit form
+### 1. Database Tables
+- `daily_logs` — one per project per date, auto-creates as draft
+- `daily_log_manpower` — per-trade headcount
+- `daily_log_delays` — cause chips + hours lost
+- `daily_log_photos` — storage refs with tags
+- `daily_log_deliveries` — PO delivery confirmations
 
-After dragging a bar to move/resize it, the browser fires a `click` event on mouseup. The center move handle has `onClick={() => onSelect?.(item.id)}`, which calls `handleEdit`, opening the edit dialog every time you finish dragging. This makes drag-to-move unusable — every move opens the form.
+### 2. UI Components (all tap-based)
+- **WeatherCard** — condition chips (☀️ 🌧️ ❄️ 💨 🌡️ 🥶) + stepper temps
+- **ManpowerCard** — per-trade steppers auto-populated from project team
+- **WorkPerformedCard** — progress sliders linked to schedule items
+- **SafetyCard** — toggle + incident type chips
+- **DelaysCard** — cause chips with hour steppers
+- **DeliveriesCard** — PO status chips (✅ ❌ ⚠️)
+- **PhotosCard** — camera upload with tags
+- **QuickNotesCard** — quick-add chips + text area
 
-**Fix:** Track whether an actual drag occurred (delta !== 0). Suppress `onSelect` click if the interaction was a drag. Add a `didDrag` ref that gets set to `true` on mouseup when `dragDeltaDays !== 0`, and check it in the click handler.
+### 3. Integration Points
+| Feature | Links To |
+|---------|----------|
+| Work Performed | `project_schedule_items.progress` (bidirectional) |
+| Manpower | Pre-populated from `project_team` trades |
+| Photos | Lovable Cloud storage bucket `daily-log-photos` |
 
-## Bug 2 (Minor): Dragging items without end_date uses start_date as end
+### 4. Navigation
+- Added "Daily Log" tab to desktop `ProjectTopBar`
+- Added "Daily Log" to mobile bottom nav `BottomNav`
 
-When `item.end_date` is null, the drag handlers pass `item.start_date` as both start and end. This means:
-- Resize-right starts from a 0-duration bar, which is confusing
-- Move works but saves an `end_date` equal to `start_date` even if user didn't intend one
-
-**Fix:** For items without `end_date`, compute a synthetic end date (start + 1 day) for drag purposes, so resize behavior is sensible.
-
-## Bug 3 (Minor): No visual feedback during drag
-
-The bar opacity drops to 0.7 during drag, but there's no tooltip or date label showing what the new dates will be. Users drag blind.
-
-**Fix:** Add a small text label above the dragged bar showing the projected start/end dates during drag.
-
----
-
-## Files to modify
-
-| File | Change |
-|------|--------|
-| `GanttChart.tsx` | Add `didDrag` ref to suppress click after drag; fix null end_date handling; add date tooltip during drag |
-
-No other files need changes.
-
+## Files Created/Modified
+- `src/types/dailyLog.ts` — types + constants
+- `src/hooks/useDailyLog.ts` — auto-create, auto-save, submit logic
+- `src/components/daily-log/` — all card components + DailyLogPanel
+- `src/pages/ProjectHome.tsx` — renders DailyLogPanel on daily-log tab
+- `src/components/project/ProjectTopBar.tsx` — added tab
+- `src/components/layout/BottomNav.tsx` — added to more menu
