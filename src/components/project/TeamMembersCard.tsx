@@ -208,7 +208,7 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
     try {
       const { error } = await supabase
         .from('project_invites')
-        .update({ updated_at: new Date().toISOString() })
+        .update({ created_at: new Date().toISOString() })
         .eq('project_team_id', member.id);
       if (error) throw error;
       toast({ title: `Invite resent to ${member.invited_org_name || 'member'}` });
