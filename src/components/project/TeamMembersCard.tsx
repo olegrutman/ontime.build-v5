@@ -239,20 +239,30 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
 
           {designatedSupplier ? (
             <div className="flex items-center justify-between pt-1.5 border-t mt-1.5">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <span className="h-2 w-2 rounded-full shrink-0 bg-amber-500" />
                 <span className="text-[10px] font-medium text-muted-foreground uppercase w-7">SUP</span>
-                <span className="text-sm truncate">{designatedSupplier.invited_name || designatedSupplier.invited_email || 'Designated'}</span>
-                <Badge variant="outline" className="text-[9px] px-1 py-0">{designatedSupplier.status}</Badge>
+                <div className="min-w-0">
+                  <span className="text-sm truncate block">{designatedSupplier.invited_name || designatedSupplier.invited_email || 'System Catalog'}</span>
+                  {designatedSupplier.po_email && (
+                    <span className="text-[10px] text-muted-foreground truncate block">PO → {designatedSupplier.po_email}</span>
+                  )}
+                </div>
+                <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0">{designatedSupplier.status}</Badge>
               </div>
               {isGcOrTc && (
-                <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px]" onClick={() => setIsDesignateOpen(true)}>Change</Button>
+                <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] shrink-0" onClick={() => setIsDesignateOpen(true)}>Change</Button>
               )}
             </div>
           ) : isGcOrTc && !team.some(m => m.role === 'Supplier') ? (
-            <Button variant="ghost" size="sm" className="h-7 w-full mt-1.5 text-[11px] text-muted-foreground" onClick={() => setIsDesignateOpen(true)}>
-              <UserPlus className="h-3 w-3 mr-1" />Designate Supplier
-            </Button>
+            <div className="pt-1.5 border-t mt-1.5 space-y-1">
+              <Button variant="ghost" size="sm" className="h-7 w-full text-[11px] text-muted-foreground" onClick={() => setIsDesignateOpen(true)}>
+                <UserPlus className="h-3 w-3 mr-1" />Designate Supplier
+              </Button>
+              <Button variant="ghost" size="sm" className="h-7 w-full text-[11px] text-muted-foreground" onClick={handleUseSystemCatalog}>
+                <Package className="h-3 w-3 mr-1" />Use System Catalog
+              </Button>
+            </div>
           ) : null}
         </div>
       )}
