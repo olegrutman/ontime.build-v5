@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Plus, Milestone, Layers, CalendarDays, Trash2, ChevronDown, ChevronRight, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,12 +8,19 @@ import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useProjectSchedule, ScheduleItem } from '@/hooks/useProjectSchedule';
 import { GanttChart } from './GanttChart';
+import { GanttToolbar, ZoomLevel } from './GanttToolbar';
+import { TaskDetailDrawer } from './TaskDetailDrawer';
+import { CascadeConfirmDialog } from './CascadeConfirmDialog';
+import { CascadeBottomSheet } from './CascadeBottomSheet';
+import { MobileScheduleView } from './MobileScheduleView';
 import { ScheduleItemForm } from './ScheduleItemForm';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { format } from 'date-fns';
+import { format, addDays, differenceInDays } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { estimateDuration, addBusinessDays } from '@/utils/scheduleEstimates';
+import { findDownstreamTasks, cascadeFromTask, findCriticalPath, detectConflicts } from '@/utils/cascadeSchedule';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,9 +42,18 @@ interface ScheduleTabProps {
   projectId: string;
 }
 
+interface PendingCascade {
+  taskId: string;
+  newStart: string;
+  newEnd: string;
+  downstreamIds: string[];
+}
+
 export function ScheduleTab({ projectId }: ScheduleTabProps) {
   const { items, isLoading, addItem, updateItem, deleteItem } = useProjectSchedule(projectId);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
+
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ScheduleItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
@@ -45,6 +61,17 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
   const [ganttOpen, setGanttOpen] = useState(true);
   const [tableOpen, setTableOpen] = useState(true);
   const [estimating, setEstimating] = useState(false);
+
+  // New state
+  const [zoom, setZoom] = useState<ZoomLevel>('day');
+  const [criticalPathEnabled, setCriticalPathEnabled] = useState(false);
+  const [drawerItem, setDrawerItem] = useState<ScheduleItem | null>(null);
+  const [pendingCascade, setPendingCascade] = useState<PendingCascade | null>(null);
+  const [conflictIds, setConflictIds] = useState<Set<string>>(new Set());
+  const [undoSnapshot, setUndoSnapshot] = useState<{ items: ScheduleItem[]; updates: { id: string; start_date: string; end_date: string }[] } | null>(null);
+  const undoTimer = useRef<ReturnType<typeof setTimeout>>();
+
+  const criticalPathIds = criticalPathEnabled ? findCriticalPath(items) : new Set<string>();
 
   const { data: workOrders = [] } = useQuery({
     queryKey: ['schedule-work-orders', projectId],
@@ -70,9 +97,13 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
   };
 
   const handleEdit = (item: ScheduleItem) => {
-    setEditingItem(item);
-    setDefaultType(item.item_type);
-    setFormOpen(true);
+    if (isMobile) {
+      setEditingItem(item);
+      setDefaultType(item.item_type);
+      setFormOpen(true);
+    } else {
+      setDrawerItem(item);
+    }
   };
 
   const handleSave = async (data: Partial<ScheduleItem>) => {
@@ -105,12 +136,110 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
     setDeleteTarget(null);
   };
 
-  const handleGanttUpdate = async (id: string, updates: { start_date?: string; end_date?: string }) => {
+  const handleDrawerUpdate = async (id: string, updates: Partial<ScheduleItem>) => {
     try {
       await updateItem.mutateAsync({ id, ...updates } as any);
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
     }
+  };
+
+  // Unified handler for drag end / date change that checks for downstream tasks
+  const handleScheduleChange = useCallback((taskId: string, newStart: string, newEnd: string) => {
+    const downstream = findDownstreamTasks(items, taskId);
+    if (downstream.length > 0) {
+      setPendingCascade({ taskId, newStart, newEnd, downstreamIds: downstream });
+    } else {
+      applyUpdate(taskId, newStart, newEnd);
+    }
+  }, [items]);
+
+  const applyUpdate = async (taskId: string, newStart: string, newEnd: string) => {
+    // Save undo snapshot
+    const prevUpdates = [{ id: taskId, start_date: items.find(i => i.id === taskId)!.start_date, end_date: items.find(i => i.id === taskId)!.end_date || newEnd }];
+    setUndoSnapshot({ items, updates: prevUpdates });
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    undoTimer.current = setTimeout(() => setUndoSnapshot(null), 5000);
+
+    try {
+      await updateItem.mutateAsync({ id: taskId, start_date: newStart, end_date: newEnd } as any);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const handleCascade = async () => {
+    if (!pendingCascade) return;
+    const { taskId, newStart, newEnd } = pendingCascade;
+    const result = cascadeFromTask(items, taskId, newStart, newEnd);
+
+    // Save undo
+    const allUpdates = [
+      { id: taskId, start_date: items.find(i => i.id === taskId)!.start_date, end_date: items.find(i => i.id === taskId)!.end_date || newEnd },
+      ...Array.from(result.updates.entries()).map(([id, dates]) => ({
+        id,
+        start_date: items.find(i => i.id === id)!.start_date,
+        end_date: items.find(i => i.id === id)!.end_date || dates.end_date,
+      })),
+    ];
+    setUndoSnapshot({ items, updates: allUpdates });
+    if (undoTimer.current) clearTimeout(undoTimer.current);
+    undoTimer.current = setTimeout(() => setUndoSnapshot(null), 5000);
+
+    try {
+      await updateItem.mutateAsync({ id: taskId, start_date: newStart, end_date: newEnd } as any);
+      for (const [id, dates] of result.updates) {
+        await updateItem.mutateAsync({ id, ...dates } as any);
+      }
+      setConflictIds(new Set());
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+    setPendingCascade(null);
+  };
+
+  const handleKeepOthers = async () => {
+    if (!pendingCascade) return;
+    const { taskId, newStart, newEnd, downstreamIds } = pendingCascade;
+    await applyUpdate(taskId, newStart, newEnd);
+    setConflictIds(new Set(downstreamIds));
+    setPendingCascade(null);
+  };
+
+  const handleCancelCascade = () => {
+    setPendingCascade(null);
+  };
+
+  const handleUndo = async () => {
+    if (!undoSnapshot) return;
+    try {
+      for (const upd of undoSnapshot.updates) {
+        await updateItem.mutateAsync({ id: upd.id, start_date: upd.start_date, end_date: upd.end_date } as any);
+      }
+      setConflictIds(new Set());
+      toast({ title: 'Changes undone' });
+    } catch (err: any) {
+      toast({ title: 'Undo failed', description: err.message, variant: 'destructive' });
+    }
+    setUndoSnapshot(null);
+  };
+
+  // Mobile handlers
+  const handleAdjustDuration = (id: string, delta: number) => {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    const end = item.end_date || item.start_date;
+    const newEnd = format(addDays(new Date(end), delta), 'yyyy-MM-dd');
+    if (new Date(newEnd) <= new Date(item.start_date)) return;
+    handleScheduleChange(id, item.start_date, newEnd);
+  };
+
+  const handleMobileStartChange = (id: string, date: string) => {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    const duration = item.end_date ? differenceInDays(new Date(item.end_date), new Date(item.start_date)) : 0;
+    const newEnd = format(addDays(new Date(date), duration), 'yyyy-MM-dd');
+    handleScheduleChange(id, date, newEnd);
   };
 
   const handleAutoEstimate = async () => {
@@ -119,29 +248,21 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
       toast({ title: 'All items already have end dates' });
       return;
     }
-
     setEstimating(true);
     try {
-      let cursor = new Date(
-        Math.min(...unscheduled.map(i => new Date(i.start_date).getTime()))
-      );
-
+      let cursor = new Date(Math.min(...unscheduled.map(i => new Date(i.start_date).getTime())));
       for (const item of unscheduled) {
         const valueAmount = item.sov_item?.value_amount ?? 0;
         const days = estimateDuration(item.title, valueAmount);
         const itemStart = new Date(item.start_date) >= cursor ? new Date(item.start_date) : cursor;
         const endDate = addBusinessDays(itemStart, days);
-
         await updateItem.mutateAsync({
           id: item.id,
           start_date: format(itemStart, 'yyyy-MM-dd'),
           end_date: format(endDate, 'yyyy-MM-dd'),
         } as any);
-
-        // Chain: next task starts day after this one ends
         cursor = addBusinessDays(endDate, 0);
       }
-
       toast({ title: `Estimated dates for ${unscheduled.length} items` });
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
@@ -174,15 +295,9 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
           <Milestone className="h-4 w-4" /> Milestone
         </Button>
         {hasUnscheduled && (
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={handleAutoEstimate}
-            disabled={estimating}
-            className="gap-1.5"
-          >
+          <Button size="sm" variant="secondary" onClick={handleAutoEstimate} disabled={estimating} className="gap-1.5">
             <Wand2 className="h-4 w-4" />
-            {estimating ? 'Estimating…' : 'Auto-Estimate Dates'}
+            {estimating ? 'Estimating…' : 'Auto-Estimate'}
           </Button>
         )}
         <div className="flex-1" />
@@ -205,30 +320,53 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
           <CalendarDays className="h-10 w-10 opacity-40" />
           <p className="text-sm">No schedule items yet. Add a task, phase, or milestone to get started.</p>
         </div>
+      ) : isMobile ? (
+        /* Mobile Card View */
+        <MobileScheduleView
+          items={items}
+          conflicts={conflictIds}
+          onAdjustDuration={handleAdjustDuration}
+          onChangeStartDate={handleMobileStartChange}
+        />
       ) : (
         <>
-          {/* Collapsible Gantt Chart */}
+          {/* Desktop Gantt */}
           <Collapsible open={ganttOpen} onOpenChange={setGanttOpen}>
-            <CollapsibleTrigger asChild>
-              <button className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-full py-1">
-                {ganttOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                Gantt Chart
-              </button>
-            </CollapsibleTrigger>
+            <div className="flex items-center gap-2">
+              <CollapsibleTrigger asChild>
+                <button className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-1">
+                  {ganttOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  Gantt Chart
+                </button>
+              </CollapsibleTrigger>
+              {ganttOpen && (
+                <GanttToolbar
+                  zoom={zoom}
+                  onZoomChange={setZoom}
+                  criticalPath={criticalPathEnabled}
+                  onCriticalPathToggle={() => setCriticalPathEnabled(p => !p)}
+                  undoAvailable={!!undoSnapshot}
+                  onUndo={handleUndo}
+                />
+              )}
+            </div>
             <CollapsibleContent>
               <GanttChart
                 items={items}
-                selectedId={null}
+                selectedId={drawerItem?.id ?? null}
                 onSelect={(id) => {
                   const found = items.find(i => i.id === id);
                   if (found) handleEdit(found);
                 }}
-                onUpdate={handleGanttUpdate}
+                onDragEnd={(id, updates) => handleScheduleChange(id, updates.start_date, updates.end_date)}
+                zoom={zoom}
+                criticalPathIds={criticalPathIds}
+                conflictIds={conflictIds}
               />
             </CollapsibleContent>
           </Collapsible>
 
-          {/* Collapsible Table */}
+          {/* Table */}
           <Collapsible open={tableOpen} onOpenChange={setTableOpen}>
             <CollapsibleTrigger asChild>
               <button className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-full py-1">
@@ -257,40 +395,32 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
                       return (
                         <TableRow
                           key={item.id}
-                          className="cursor-pointer hover:bg-accent/40"
+                          className={`cursor-pointer hover:bg-accent/40 ${conflictIds.has(item.id) ? 'bg-destructive/5' : ''}`}
                           onClick={() => handleEdit(item)}
                         >
                           <TableCell>
                             <div className="flex flex-col">
                               <span className="font-medium text-sm">{item.title}</span>
-                              {wo && (
-                                <span className="text-[10px] text-muted-foreground">WO: {wo.title}</span>
-                              )}
-                              {item.sov_item && (
-                                <span className="text-[10px] text-muted-foreground">SOV: {item.sov_item.item_name}</span>
-                              )}
+                              {wo && <span className="text-[10px] text-muted-foreground">WO: {wo.title}</span>}
+                              {item.sov_item && <span className="text-[10px] text-muted-foreground">SOV: {item.sov_item.item_name}</span>}
                             </div>
                           </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className={badge.className}>{badge.label}</Badge>
-                          </TableCell>
+                          <TableCell><Badge variant="secondary" className={badge.className}>{badge.label}</Badge></TableCell>
                           <TableCell className="text-sm">{format(new Date(item.start_date), 'MMM d, yyyy')}</TableCell>
                           <TableCell className="text-sm">{item.end_date ? format(new Date(item.end_date), 'MMM d, yyyy') : '—'}</TableCell>
                           <TableCell className="text-right text-sm">{item.progress}%</TableCell>
                           <TableCell className="text-right text-sm">
                             {item.sov_item ? (
-                              <span className={`${item.sov_item.billing_progress > item.progress ? 'text-amber-600' : 
+                              <span className={`${item.sov_item.billing_progress > item.progress ? 'text-amber-600' :
                                 item.progress > item.sov_item.billing_progress ? 'text-green-600' : ''}`}>
                                 {item.sov_item.billing_progress}%
                               </span>
                             ) : '—'}
                           </TableCell>
                           <TableCell>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={e => { e.stopPropagation(); setDeleteTarget(item.id); }}>
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={e => { e.stopPropagation(); setDeleteTarget(item.id); }}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
                           </TableCell>
                         </TableRow>
                       );
@@ -303,6 +433,16 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
         </>
       )}
 
+      {/* Detail Drawer (desktop) */}
+      <TaskDetailDrawer
+        open={!!drawerItem}
+        onOpenChange={open => { if (!open) setDrawerItem(null); }}
+        item={drawerItem}
+        items={items}
+        onUpdate={handleDrawerUpdate}
+      />
+
+      {/* Schedule Item Form (mobile / add new) */}
       <ScheduleItemForm
         key={editingItem?.id ?? 'new'}
         open={formOpen}
@@ -314,6 +454,28 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
         projectId={projectId}
       />
 
+      {/* Cascade Confirmation */}
+      {!isMobile ? (
+        <CascadeConfirmDialog
+          open={!!pendingCascade}
+          onOpenChange={open => { if (!open) handleCancelCascade(); }}
+          downstreamCount={pendingCascade?.downstreamIds.length ?? 0}
+          onCascade={handleCascade}
+          onKeepOthers={handleKeepOthers}
+          onCancel={handleCancelCascade}
+        />
+      ) : (
+        <CascadeBottomSheet
+          open={!!pendingCascade}
+          onOpenChange={open => { if (!open) handleCancelCascade(); }}
+          downstreamCount={pendingCascade?.downstreamIds.length ?? 0}
+          onCascade={handleCascade}
+          onKeepOthers={handleKeepOthers}
+          onCancel={handleCancelCascade}
+        />
+      )}
+
+      {/* Delete Confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
