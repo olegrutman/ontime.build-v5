@@ -31,7 +31,7 @@ interface TeamMember {
   id: string;
   role: string;
   invited_org_name: string | null;
-  invited_org_id: string | null;
+  org_id: string | null;
   status: string;
 }
 
