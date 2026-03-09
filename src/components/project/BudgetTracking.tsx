@@ -15,11 +15,11 @@ interface BudgetTrackingProps {
 }
 
 export function BudgetTracking({ financials, projectId, onNavigate }: BudgetTrackingProps) {
-  const { loading, viewerRole, laborBudget, actualLaborCost, upstreamContract, downstreamContract, updateLaborBudget } = financials;
+  const { loading, viewerRole, laborBudget, actualLaborCost, upstreamContract, downstreamContract, updateLaborBudget, isTCSelfPerforming } = financials;
 
   if (loading) return null;
 
-  const showLabor = viewerRole === 'Field Crew';
+  const showLabor = viewerRole === 'Field Crew' || (viewerRole === 'Trade Contractor' && isTCSelfPerforming);
 
   if (!showLabor) return null;
 
