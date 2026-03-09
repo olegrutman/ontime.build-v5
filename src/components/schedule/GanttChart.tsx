@@ -277,7 +277,10 @@ export function GanttChart({ items, onSelect, onUpdate, selectedId }: GanttChart
                     x={barX - EDGE_HIT / 2} y={barY} width={EDGE_HIT} height={barH}
                     fill="transparent"
                     className="cursor-col-resize"
-                    onMouseDown={e => handleMouseDown(e, item.id, 'resize-left', item.start_date, item.end_date || item.start_date)}
+                    onMouseDown={e => {
+                      const effectiveEnd = item.end_date || format(addDays(new Date(item.start_date), 1), 'yyyy-MM-dd');
+                      handleMouseDown(e, item.id, 'resize-left', item.start_date, effectiveEnd);
+                    }}
                   />
                   {/* Center move */}
                   <rect
@@ -285,16 +288,43 @@ export function GanttChart({ items, onSelect, onUpdate, selectedId }: GanttChart
                     width={Math.max(barW - EDGE_HIT, 2)} height={barH}
                     fill="transparent"
                     className="cursor-grab"
-                    onMouseDown={e => handleMouseDown(e, item.id, 'move', item.start_date, item.end_date || item.start_date)}
-                    onClick={() => onSelect?.(item.id)}
+                    onMouseDown={e => {
+                      const effectiveEnd = item.end_date || format(addDays(new Date(item.start_date), 1), 'yyyy-MM-dd');
+                      handleMouseDown(e, item.id, 'move', item.start_date, effectiveEnd);
+                    }}
+                    onClick={() => {
+                      if (didDrag.current) {
+                        didDrag.current = false;
+                        return;
+                      }
+                      onSelect?.(item.id);
+                    }}
                   />
                   {/* Right edge resize */}
                   <rect
                     x={barX + barW - EDGE_HIT / 2} y={barY} width={EDGE_HIT} height={barH}
                     fill="transparent"
                     className="cursor-col-resize"
-                    onMouseDown={e => handleMouseDown(e, item.id, 'resize-right', item.start_date, item.end_date || item.start_date)}
+                    onMouseDown={e => {
+                      const effectiveEnd = item.end_date || format(addDays(new Date(item.start_date), 1), 'yyyy-MM-dd');
+                      handleMouseDown(e, item.id, 'resize-right', item.start_date, effectiveEnd);
+                    }}
                   />
+                  {/* Drag date tooltip */}
+                  {isDragging && (
+                    <text
+                      x={barX + barW / 2}
+                      y={barY - 6}
+                      textAnchor="middle"
+                      fontSize={9}
+                      fontWeight={600}
+                      className="fill-primary"
+                    >
+                      {format(addDays(new Date(drag!.origStartDate), drag!.mode === 'resize-right' ? 0 : dragDeltaDays), 'MMM d')}
+                      {' → '}
+                      {format(addDays(new Date(drag!.origEndDate), drag!.mode === 'resize-left' ? 0 : dragDeltaDays), 'MMM d')}
+                    </text>
+                  )}
                 </>
               )}
               {/* Fallback click when no onUpdate */}
