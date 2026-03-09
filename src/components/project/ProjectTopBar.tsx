@@ -184,6 +184,13 @@ export function ProjectTopBar({
                 Schedule
               </TabsTrigger>
               <TabsTrigger
+                value="daily-log"
+                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
+                onClick={() => onTabChange('daily-log')}
+              >
+                Daily Log
+              </TabsTrigger>
+              <TabsTrigger
                 value="invoices"
                 className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
                 onClick={() => onTabChange('invoices')}
