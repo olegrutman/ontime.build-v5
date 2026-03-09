@@ -248,7 +248,27 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
     }
   };
 
-  const handleSavePoEmail = async () => {
+  const handleToggleSelfPerforming = async (member: TeamMember) => {
+    setTogglingPerf(true);
+    try {
+      const newVal = !member.is_self_performing;
+      const { error } = await supabase.from('project_team').update({ is_self_performing: newVal } as any).eq('id', member.id);
+      if (error) throw error;
+      toast({ title: newVal ? 'Self-performing enabled' : 'Self-performing disabled' });
+      fetchTeam();
+      onTeamChanged?.();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setTogglingPerf(false);
+    }
+  };
+
+  // Find the current user's TC team row (for self-performing toggle)
+  const myTcRow = creatorOrgType === 'TC' ? team.find(m => m.role === 'Trade Contractor' && m.org_id === currentOrgId) : null;
+  const hasFC = team.some(m => m.role === 'Field Crew' && m.status === 'Accepted');
+
+
     const trimmed = poEmailDraft.trim();
     if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
       toast({ title: 'Please enter a valid email', variant: 'destructive' });
