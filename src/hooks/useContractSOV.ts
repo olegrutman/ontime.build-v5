@@ -565,6 +565,17 @@ export function useContractSOV(projectId: string | undefined) {
       const existingSovIds = existingPrimarySovs.map(s => s.id);
       
       if (existingSovIds.length > 0) {
+        // Clean up linked schedule tasks before deleting SOV items
+        const { data: sovItemIds } = await supabase
+          .from('project_sov_items')
+          .select('id')
+          .in('sov_id', existingSovIds);
+        if (sovItemIds?.length) {
+          await supabase
+            .from('project_schedule_items')
+            .delete()
+            .in('sov_item_id', sovItemIds.map(i => i.id));
+        }
         await supabase.from('project_sov_items').delete().in('sov_id', existingSovIds);
         await supabase.from('project_sov').delete().in('id', existingSovIds);
       }
