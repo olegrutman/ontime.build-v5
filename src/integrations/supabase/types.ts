@@ -2192,6 +2192,7 @@ export type Database = {
           id: string
           invited_email: string | null
           invited_name: string | null
+          po_email: string | null
           project_id: string
           status: string
           user_id: string | null
@@ -2202,6 +2203,7 @@ export type Database = {
           id?: string
           invited_email?: string | null
           invited_name?: string | null
+          po_email?: string | null
           project_id: string
           status?: string
           user_id?: string | null
@@ -2212,6 +2214,7 @@ export type Database = {
           id?: string
           invited_email?: string | null
           invited_name?: string | null
+          po_email?: string | null
           project_id?: string
           status?: string
           user_id?: string | null
