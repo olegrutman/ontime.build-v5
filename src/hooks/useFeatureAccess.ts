@@ -8,7 +8,8 @@ import type { FeatureKey, OrgFeature } from '@/types/subscription';
  * Uses the get_org_features() security-definer function.
  */
 export function useOrgFeaturesForCurrentOrg() {
-  const { orgId } = useAuth();
+  const { userOrgRoles } = useAuth();
+  const orgId = userOrgRoles.length > 0 ? userOrgRoles[0].organization_id : null;
 
   return useQuery({
     queryKey: ['org-features', orgId],
@@ -35,7 +36,8 @@ export function useFeatureAccess(featureKey: FeatureKey) {
   const feature = features?.find((f) => f.feature_key === featureKey);
 
   return {
-    enabled: feature?.enabled ?? true, // default open while loading (graceful degradation)
+    // default open while loading (graceful degradation — don't lock users out during load)
+    enabled: isLoading ? true : (feature?.enabled ?? true),
     limit: feature?.limit_value ?? null,
     loading: isLoading,
     source: feature?.source ?? 'none',
