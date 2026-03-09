@@ -1,42 +1,46 @@
-# Daily Log Feature — IMPLEMENTED
 
-## Design Philosophy
-Zero-typing, tap-first daily log that takes under 90 seconds to complete.
 
-## Features Built
+# Here's What I Understand (Plain English)
 
-### 1. Database Tables
-- `daily_logs` — one per project per date, auto-creates as draft
-- `daily_log_manpower` — per-trade headcount
-- `daily_log_delays` — cause chips + hours lost
-- `daily_log_photos` — storage refs with tags
-- `daily_log_deliveries` — PO delivery confirmations
+You want three things:
 
-### 2. UI Components (all tap-based)
-- **WeatherCard** — condition chips (☀️ 🌧️ ❄️ 💨 🌡️ 🥶) + stepper temps
-- **ManpowerCard** — per-trade steppers auto-populated from project team
-- **WorkPerformedCard** — progress sliders linked to schedule items
-- **SafetyCard** — toggle + incident type chips
-- **DelaysCard** — cause chips with hour steppers
-- **DeliveriesCard** — PO status chips (✅ ❌ ⚠️)
-- **PhotosCard** — camera upload with tags
-- **QuickNotesCard** — quick-add chips + text area
+1. **Clickable schedule tasks from SOV**: When a schedule task was auto-created from an SOV line item, clicking on it in the table should open a simplified edit form. The task name should match the SOV line item name exactly. The form should only show **start date** and **end date** — no type selector, no work order picker, no dependencies list. The SOV item link should be automatically set (defaulted) and not changeable.
 
-### 3. Integration Points
-| Feature | Links To |
-|---------|----------|
-| Work Performed | `project_schedule_items.progress` (bidirectional) |
-| Manpower | Pre-populated from `project_team` trades |
-| Photos | Lovable Cloud storage bucket `daily-log-photos` |
+2. **Progress bar on the Schedule tab**: Add an overall progress indicator at the top of the Schedule tab showing how far along the project schedule is (average progress across all items).
 
-### 4. Navigation
-- Added "Daily Log" tab to desktop `ProjectTopBar`
-- Added "Daily Log" to mobile bottom nav `BottomNav`
+3. **Collapsible schedule sections**: Allow the user to collapse/expand the Gantt chart and the table so they can hide parts they don't need at the moment.
 
-## Files Created/Modified
-- `src/types/dailyLog.ts` — types + constants
-- `src/hooks/useDailyLog.ts` — auto-create, auto-save, submit logic
-- `src/components/daily-log/` — all card components + DailyLogPanel
-- `src/pages/ProjectHome.tsx` — renders DailyLogPanel on daily-log tab
-- `src/components/project/ProjectTopBar.tsx` — added tab
-- `src/components/layout/BottomNav.tsx` — added to more menu
+---
+
+## Plan
+
+### 1. Simplified SOV-linked task form (`ScheduleItemForm.tsx`)
+
+When editing a task that has a `sov_item_id`:
+- Hide: Type selector, Work Order link, SOV Item selector, Dependencies list
+- Show: Title (read-only, matching SOV item name), Start Date, End Date, Progress slider
+- The SOV link stays locked — user can't change it
+
+Detection: `item?.sov_item_id` is truthy → render simplified layout.
+
+### 2. Clickable rows open edit form (`ScheduleTab.tsx`)
+
+Currently clicking a row only highlights it (`setSelectedId`). Change it so clicking a row also opens the edit form (calls `handleEdit`). The pencil button becomes redundant for row clicks but can stay for clarity.
+
+### 3. Overall progress bar (`ScheduleTab.tsx`)
+
+Add a progress bar in the toolbar area showing the average progress across all schedule items. Use the existing `Progress` component. Display as "Overall: X%" with the bar.
+
+### 4. Collapsible Gantt and Table sections (`ScheduleTab.tsx`)
+
+Wrap the Gantt chart and the Table each in a `Collapsible` component with a toggle header ("Gantt Chart" / "Schedule Items"). Both default to open. User can collapse either independently.
+
+### Files to modify
+
+| File | Change |
+|------|--------|
+| `src/components/schedule/ScheduleTab.tsx` | Click row → open edit form; add overall progress bar; wrap Gantt + Table in Collapsible |
+| `src/components/schedule/ScheduleItemForm.tsx` | Detect SOV-linked items and show simplified form (dates + progress only) |
+
+No database changes needed.
+
