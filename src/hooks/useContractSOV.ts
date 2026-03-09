@@ -3,6 +3,31 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
+// Helper: create schedule tasks for a list of newly-created SOV items
+async function createScheduleItemsFromSOVItems(
+  projectId: string,
+  sovItems: { id: string; item_name: string; sort_order: number }[]
+) {
+  if (!sovItems.length) return;
+  const today = new Date().toISOString().split('T')[0];
+  const scheduleItems = sovItems.map((item) => ({
+    project_id: projectId,
+    title: item.item_name,
+    item_type: 'task' as const,
+    sov_item_id: item.id,
+    start_date: today,
+    end_date: null,
+    progress: 0,
+    sort_order: item.sort_order,
+    dependency_ids: [],
+    work_order_id: null,
+    color: null,
+    created_by: null,
+  }));
+  const { error } = await supabase.from('project_schedule_items').insert(scheduleItems);
+  if (error) throw error;
+}
+
 // Contract types
 export interface ProjectContract {
   id: string;
