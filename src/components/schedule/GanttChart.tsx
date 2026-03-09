@@ -35,6 +35,7 @@ export function GanttChart({ items, onSelect, onUpdate, selectedId }: GanttChart
   const svgRef = useRef<SVGSVGElement>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   const [dragDeltaDays, setDragDeltaDays] = useState(0);
+  const didDrag = useRef(false);
 
   const { startDate, totalDays, weeks } = useMemo(() => {
     if (!items.length) {
