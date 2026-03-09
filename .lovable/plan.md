@@ -1,42 +1,48 @@
-# Daily Log Feature — IMPLEMENTED
 
-## Design Philosophy
-Zero-typing, tap-first daily log that takes under 90 seconds to complete.
 
-## Features Built
+# Schedule Tab Bug Report
 
-### 1. Database Tables
-- `daily_logs` — one per project per date, auto-creates as draft
-- `daily_log_manpower` — per-trade headcount
-- `daily_log_delays` — cause chips + hours lost
-- `daily_log_photos` — storage refs with tags
-- `daily_log_deliveries` — PO delivery confirmations
+After reviewing all schedule components, I found **3 bugs** — one critical and two minor.
 
-### 2. UI Components (all tap-based)
-- **WeatherCard** — condition chips (☀️ 🌧️ ❄️ 💨 🌡️ 🥶) + stepper temps
-- **ManpowerCard** — per-trade steppers auto-populated from project team
-- **WorkPerformedCard** — progress sliders linked to schedule items
-- **SafetyCard** — toggle + incident type chips
-- **DelaysCard** — cause chips with hour steppers
-- **DeliveriesCard** — PO status chips (✅ ❌ ⚠️)
-- **PhotosCard** — camera upload with tags
-- **QuickNotesCard** — quick-add chips + text area
+---
 
-### 3. Integration Points
-| Feature | Links To |
-|---------|----------|
-| Work Performed | `project_schedule_items.progress` (bidirectional) |
-| Manpower | Pre-populated from `project_team` trades |
-| Photos | Lovable Cloud storage bucket `daily-log-photos` |
+## Bug 1 (Critical): Form shows stale data when switching between items
 
-### 4. Navigation
-- Added "Daily Log" tab to desktop `ProjectTopBar`
-- Added "Daily Log" to mobile bottom nav `BottomNav`
+**The problem:** `ScheduleItemForm` initializes state with `useState(item?.title ?? '')` etc. React does NOT re-run `useState` initializers when props change. So if you click Item A, close the form, then click Item B — the form still shows Item A's data (title, dates, progress, etc.).
 
-## Files Created/Modified
-- `src/types/dailyLog.ts` — types + constants
-- `src/hooks/useDailyLog.ts` — auto-create, auto-save, submit logic
-- `src/components/daily-log/` — all card components + DailyLogPanel
-- `src/pages/ProjectHome.tsx` — renders DailyLogPanel on daily-log tab
-- `src/components/project/ProjectTopBar.tsx` — added tab
-- `src/components/layout/BottomNav.tsx` — added to more menu
+**The fix:** Add a `useEffect` (or better, use `key` prop) to reset all form state when `item` changes. The cleanest fix is adding `key={editingItem?.id ?? 'new'}` on the `<ScheduleItemForm>` in `ScheduleTab.tsx` — this forces React to remount the component with fresh state.
+
+**File:** `src/components/schedule/ScheduleTab.tsx` — add `key` prop to `<ScheduleItemForm>`
+
+---
+
+## Bug 2 (Minor): Missing `DialogDescription` causes console warning
+
+The console shows: `Warning: Missing Description or aria-describedby for DialogContent`. The `ScheduleItemForm` dialog has a `DialogTitle` but no `DialogDescription`, which is required by Radix for accessibility.
+
+**The fix:** Add a hidden `DialogDescription` inside the `DialogHeader`.
+
+**File:** `src/components/schedule/ScheduleItemForm.tsx`
+
+---
+
+## Bug 3 (Minor): Update mutation sends `sov_item` join data back to the database
+
+When `updateItem` is called, it spreads the full `ScheduleItem` (including the computed `sov_item` nested object) into the `.update()` call. Supabase will reject or ignore unknown columns, but it's sloppy and could cause errors. The `handleSave` in `ScheduleItemForm` doesn't include `sov_item`, but if any caller passes the full item object, it would break.
+
+**The fix:** Strip `sov_item` from the update payload in `useProjectSchedule.ts`.
+
+**File:** `src/hooks/useProjectSchedule.ts`
+
+---
+
+## Summary of fixes
+
+| File | Fix |
+|------|-----|
+| `ScheduleTab.tsx` | Add `key={editingItem?.id ?? 'new'}` to `<ScheduleItemForm>` |
+| `ScheduleItemForm.tsx` | Add `<DialogDescription>` for accessibility |
+| `useProjectSchedule.ts` | Strip `sov_item` from update mutation payload |
+
+All three are quick, low-risk fixes.
+
