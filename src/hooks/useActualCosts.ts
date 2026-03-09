@@ -138,7 +138,6 @@ export function useProjectActualCosts(projectId: string | undefined) {
         if (e2) throw e2;
         woEntries = data ?? [];
       }
-      if (e2) throw e2;
 
       const sum = [...(projectEntries ?? []), ...(woEntries ?? [])]
         .reduce((s, e) => s + ((e as any).total_amount || 0), 0);
