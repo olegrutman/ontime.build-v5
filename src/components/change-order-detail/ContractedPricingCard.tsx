@@ -253,6 +253,7 @@ function FCEarningsView({
   isLocked,
   hasLumpSum,
   tcName,
+  changeOrderId,
 }: {
   totalEarnings: number;
   totalHours: number;
@@ -260,7 +261,12 @@ function FCEarningsView({
   isLocked: boolean;
   hasLumpSum: boolean;
   tcName?: string;
+  changeOrderId: string;
 }) {
+  const [costPopupOpen, setCostPopupOpen] = useState(false);
+  const { totalActualCost } = useActualCosts(changeOrderId);
+  const profit = totalEarnings - totalActualCost;
+
   return (
     <div className="space-y-3">
       {!hasLumpSum && totalHours > 0 && (
@@ -279,6 +285,24 @@ function FCEarningsView({
         </>
       )}
       <PricingRow label="TOTAL EARNINGS" value={totalEarnings} isBold />
+
+      {/* Actual Cost - tappable */}
+      <button
+        onClick={() => setCostPopupOpen(true)}
+        className="w-full flex justify-between items-center text-sm hover:bg-muted/50 rounded px-1 py-0.5 -mx-1 transition-colors cursor-pointer"
+      >
+        <span className="text-muted-foreground underline underline-offset-2 decoration-dashed">Actual Cost</span>
+        <span>{formatCurrency(totalActualCost)}</span>
+      </button>
+
+      {totalActualCost > 0 && (
+        <div className="flex justify-between items-center font-semibold text-sm">
+          <span className="text-muted-foreground">Profit</span>
+          <span className={profit >= 0 ? 'text-green-600' : 'text-red-600'}>
+            {formatCurrency(profit)}
+          </span>
+        </div>
+      )}
       
       <div className="flex items-center gap-2 text-sm mt-3 pt-3 border-t">
         {isLocked ? (
@@ -300,6 +324,14 @@ function FCEarningsView({
           <span>Working for: {tcName}</span>
         </div>
       )}
+
+      <ActualCostPopup
+        open={costPopupOpen}
+        onOpenChange={setCostPopupOpen}
+        changeOrderId={changeOrderId}
+        earningsOrRevenue={totalEarnings}
+        label="Earnings"
+      />
     </div>
   );
 }
