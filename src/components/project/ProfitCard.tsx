@@ -306,14 +306,17 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
           </p>
         )}
 
-        <div className="flex items-center justify-between">
+        <button
+          onClick={() => setCostPopupOpen(true)}
+          className="flex items-center justify-between w-full rounded-md px-1 -mx-1 hover:bg-muted/50 transition-colors cursor-pointer"
+        >
           <span className="text-sm text-muted-foreground">
             {hasActualCost ? 'Actual Cost' : 'Internal Cost'}
           </span>
           <span className="text-sm font-semibold tabular-nums">
             {fmt(hasActualCost ? totalActualCost : tcInternalCostTotal)}
           </span>
-        </div>
+        </button>
 
         <div className="border-t pt-2.5 flex items-center justify-between">
           <span className="text-sm font-medium">Total Projected Profit</span>
@@ -329,6 +332,13 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
             </span>
           </div>
         )}
+        <ActualCostPopup
+          open={costPopupOpen}
+          onOpenChange={setCostPopupOpen}
+          projectId={projectId}
+          earningsOrRevenue={revenueTotal}
+          label="Revenue"
+        />
       </div>
     );
   }
