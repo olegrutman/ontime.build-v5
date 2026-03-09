@@ -24,12 +24,14 @@ import { cn } from '@/lib/utils';
 interface TeamMembersCardProps {
   projectId: string;
   onResponsibilityChange?: (value: string | null) => void;
+  onTeamChanged?: () => void;
 }
 
 interface TeamMember {
   id: string;
   role: string;
   invited_org_name: string | null;
+  org_id: string | null;
   status: string;
 }
 
@@ -60,7 +62,7 @@ const statusVariant: Record<string, 'outline' | 'secondary' | 'destructive'> = {
   Declined: 'destructive',
 };
 
-export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembersCardProps) {
+export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChanged }: TeamMembersCardProps) {
   const { userOrgRoles } = useAuth();
   const { toast } = useToast();
   const [team, setTeam] = useState<TeamMember[]>([]);
@@ -85,7 +87,7 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
   const isGcOrTc = creatorOrgType === 'GC' || creatorOrgType === 'TC';
 
   const fetchTeam = useCallback(async () => {
-    const { data } = await supabase.from('project_team').select('id, role, invited_org_name, status').eq('project_id', projectId);
+    const { data } = await supabase.from('project_team').select('id, role, invited_org_name, org_id, status').eq('project_id', projectId);
     setTeam(data || []);
     setLoading(false);
   }, [projectId]);
@@ -187,14 +189,25 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
     if (!memberToRemove) return;
     setRemoving(true);
     try {
-      // 1. Delete related invites
+      const orgId = memberToRemove.org_id;
+      // 1. Delete related contracts
+      if (orgId) {
+        await supabase.from('project_contracts').delete().eq('project_id', projectId).or(`from_org_id.eq.${orgId},to_org_id.eq.${orgId}`);
+      }
+      // 2. Delete related participants
+      if (orgId) {
+        await supabase.from('project_participants').delete().eq('project_id', projectId).eq('organization_id', orgId);
+      }
+      // 3. Delete related invites
       await supabase.from('project_invites').delete().eq('project_team_id', memberToRemove.id);
-      // 2. Delete the team member row (contracts/participants handled by cascade or separately)
+      // 4. Delete the team member row
       const { error } = await supabase.from('project_team').delete().eq('id', memberToRemove.id);
       if (error) throw error;
       toast({ title: `${memberToRemove.invited_org_name || 'Member'} removed from project` });
       setMemberToRemove(null);
       fetchTeam();
+      fetchContract();
+      onTeamChanged?.();
     } catch (err: any) {
       toast({ title: 'Error removing member', description: err.message, variant: 'destructive' });
     } finally {
@@ -212,6 +225,7 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
         .eq('project_team_id', member.id);
       if (error) throw error;
       toast({ title: `Invite resent to ${member.invited_org_name || 'member'}` });
+      onTeamChanged?.();
     } catch (err: any) {
       toast({ title: 'Error resending invite', description: err.message, variant: 'destructive' });
     } finally {

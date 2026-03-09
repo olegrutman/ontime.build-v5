@@ -328,13 +328,13 @@ export default function ProjectHome() {
                         {/* RIGHT SIDEBAR — desktop only */}
                         <div className="hidden lg:flex flex-col gap-4">
                           <UrgentTasksCard projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
-                          <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} />
+                          <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} onTeamChanged={readiness.recalculate} />
                         </div>
                       </div>
 
                       {/* Mobile: team + urgent below */}
                       <div className="lg:hidden space-y-4">
-                        <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} />
+                        <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} onTeamChanged={readiness.recalculate} />
                       </div>
                     </div>
                   )}
