@@ -239,6 +239,16 @@ export function DesignateSupplierDialog({
                 onChange={(e) => setInviteName(e.target.value)}
               />
             </div>
+            <div className="space-y-2">
+              <Label>PO Delivery Email</Label>
+              <Input
+                type="email"
+                placeholder="orders@example.com"
+                value={poEmail}
+                onChange={(e) => setPoEmail(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">Defaults to the email above if left blank</p>
+            </div>
             <DialogFooter>
               <Button onClick={handleInviteByEmail} disabled={saving || !inviteEmail.trim()}>
                 {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Mail className="h-4 w-4 mr-1" />}
