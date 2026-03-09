@@ -151,6 +151,7 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
     } = financials;
 
     const revenueTotal = currentTotal;
+    const hasActualCost = totalActualCost > 0;
     const estimateCost = isTCMaterialResponsible ? (materialEstimate || approvedEstimateSum || 0) : 0;
     // Self-performing TC: deduct actual cost instead of FC labor
     const laborDeduction = isTCSelfPerforming
@@ -160,8 +161,6 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
     const laborMarginPct = revenueTotal > 0 ? (laborMargin / revenueTotal) * 100 : 0;
     const netPosition = receivablesInvoiced - payablesInvoiced;
     const realizedPct = laborMargin > 0 ? (netPosition / laborMargin) * 100 : 0;
-
-    const hasActualCost = totalActualCost > 0;
 
     if (!isTCMaterialResponsible) {
       return (
