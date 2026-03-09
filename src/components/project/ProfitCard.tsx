@@ -17,20 +17,50 @@ interface ProfitCardProps {
 
 export function ProfitCard({ financials, projectId }: ProfitCardProps) {
   const { toast } = useToast();
+  const { userOrgRoles } = useAuth();
   const {
     loading, viewerRole, upstreamContract, downstreamContract,
     workOrderTotal, workOrderFCCost, tcInternalCostTotal,
     ownerContractValue, materialMarkupType, materialMarkupValue,
     materialDelivered, laborBudget,
     isTCMaterialResponsible, isTCSelfPerforming, updateOwnerContract,
-    materialEstimate, approvedEstimateSum,
+    materialEstimate, approvedEstimateSum, refetch,
   } = financials;
 
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [togglingPerf, setTogglingPerf] = useState(false);
 
   const { totalActualCost } = useActualCosts({ projectId });
+
+  const handleToggleSelfPerforming = async () => {
+    setTogglingPerf(true);
+    try {
+      const orgId = userOrgRoles[0]?.organization_id;
+      if (!orgId) return;
+      const { data: teamRow } = await supabase
+        .from('project_team')
+        .select('id, is_self_performing')
+        .eq('project_id', projectId)
+        .eq('org_id', orgId)
+        .eq('role', 'Trade Contractor')
+        .maybeSingle();
+      if (!teamRow) return;
+      const newVal = !teamRow.is_self_performing;
+      const { error } = await supabase
+        .from('project_team')
+        .update({ is_self_performing: newVal } as any)
+        .eq('id', teamRow.id);
+      if (error) throw error;
+      toast({ title: newVal ? 'Self-performing enabled' : 'Self-performing disabled' });
+      refetch();
+    } catch {
+      toast({ title: 'Error', description: 'Failed to update', variant: 'destructive' });
+    } finally {
+      setTogglingPerf(false);
+    }
+  };
 
   if (loading) return null;
 
