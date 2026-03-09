@@ -87,7 +87,7 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
   const isGcOrTc = creatorOrgType === 'GC' || creatorOrgType === 'TC';
 
   const fetchTeam = useCallback(async () => {
-    const { data } = await supabase.from('project_team').select('id, role, invited_org_name, status').eq('project_id', projectId);
+    const { data } = await supabase.from('project_team').select('id, role, invited_org_name, invited_org_id, status').eq('project_id', projectId);
     setTeam(data || []);
     setLoading(false);
   }, [projectId]);
