@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { TrendingUp, Pencil, Check, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import { cn, formatCurrency as fmt } from '@/lib/utils';
 import { useActualCosts } from '@/hooks/useActualCosts';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProfitCardProps {
   financials: ProjectFinancials;
@@ -14,20 +17,50 @@ interface ProfitCardProps {
 
 export function ProfitCard({ financials, projectId }: ProfitCardProps) {
   const { toast } = useToast();
+  const { userOrgRoles } = useAuth();
   const {
     loading, viewerRole, upstreamContract, downstreamContract,
     workOrderTotal, workOrderFCCost, tcInternalCostTotal,
     ownerContractValue, materialMarkupType, materialMarkupValue,
     materialDelivered, laborBudget,
     isTCMaterialResponsible, isTCSelfPerforming, updateOwnerContract,
-    materialEstimate, approvedEstimateSum,
+    materialEstimate, approvedEstimateSum, refetch,
   } = financials;
 
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [togglingPerf, setTogglingPerf] = useState(false);
 
   const { totalActualCost } = useActualCosts({ projectId });
+
+  const handleToggleSelfPerforming = async () => {
+    setTogglingPerf(true);
+    try {
+      const orgId = userOrgRoles[0]?.organization_id;
+      if (!orgId) return;
+      const { data: teamRow } = await supabase
+        .from('project_team')
+        .select('id, is_self_performing')
+        .eq('project_id', projectId)
+        .eq('org_id', orgId)
+        .eq('role', 'Trade Contractor')
+        .maybeSingle();
+      if (!teamRow) return;
+      const newVal = !teamRow.is_self_performing;
+      const { error } = await supabase
+        .from('project_team')
+        .update({ is_self_performing: newVal } as any)
+        .eq('id', teamRow.id);
+      if (error) throw error;
+      toast({ title: newVal ? 'Self-performing enabled' : 'Self-performing disabled' });
+      refetch();
+    } catch {
+      toast({ title: 'Error', description: 'Failed to update', variant: 'destructive' });
+    } finally {
+      setTogglingPerf(false);
+    }
+  };
 
   if (loading) return null;
 
@@ -165,9 +198,15 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
     if (!isTCMaterialResponsible) {
       return (
         <div className="bg-card rounded-2xl shadow-sm p-5 space-y-2.5">
-          <div className="flex items-center gap-1.5 mb-1">
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Profit Position</span>
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-1.5">
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Profit Position</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-muted-foreground">Self-Performing</span>
+              <Switch checked={isTCSelfPerforming} disabled={togglingPerf} onCheckedChange={handleToggleSelfPerforming} />
+            </div>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Revenue Total</span>
@@ -223,9 +262,15 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
 
     return (
       <div className="bg-card rounded-2xl shadow-sm p-5 space-y-2.5">
-        <div className="flex items-center gap-1.5 mb-1">
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Profit Position</span>
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-1.5">
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Profit Position</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-muted-foreground">Self-Performing</span>
+            <Switch checked={isTCSelfPerforming} disabled={togglingPerf} onCheckedChange={handleToggleSelfPerforming} />
+          </div>
         </div>
 
         {/* Labor */}
