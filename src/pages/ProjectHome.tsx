@@ -315,6 +315,7 @@ export default function ProjectHome() {
                               financials={financials}
                             />
                           )}
+                          <CriticalScheduleCard projectId={id!} onNavigate={handleTabChange} />
                           <MaterialMarkupEditor financials={financials} projectId={id!} projectStatus={projectStatus} />
                           <CollapsibleOperations
                             projectId={id!}

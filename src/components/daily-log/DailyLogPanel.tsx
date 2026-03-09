@@ -115,6 +115,9 @@ export function DailyLogPanel({ projectId }: DailyLogPanelProps) {
         </button>
       </div>
 
+      {/* Critical schedule */}
+      <CriticalScheduleCard projectId={projectId} onNavigate={(tab) => { window.location.search = `?tab=${tab}`; }} />
+
       {/* Cards */}
       <WeatherCard
         weather={(log?.weather_data as WeatherData) || {}}
