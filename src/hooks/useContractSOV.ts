@@ -4,7 +4,7 @@ import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
 // Helper: create schedule tasks for a list of newly-created SOV items
-async function createScheduleItemsFromSOVItems(
+export async function createScheduleItemsFromSOVItems(
   projectId: string,
   sovItems: { id: string; item_name: string; sort_order: number }[]
 ) {
@@ -565,6 +565,17 @@ export function useContractSOV(projectId: string | undefined) {
       const existingSovIds = existingPrimarySovs.map(s => s.id);
       
       if (existingSovIds.length > 0) {
+        // Clean up linked schedule tasks before deleting SOV items
+        const { data: sovItemIds } = await supabase
+          .from('project_sov_items')
+          .select('id')
+          .in('sov_id', existingSovIds);
+        if (sovItemIds?.length) {
+          await supabase
+            .from('project_schedule_items')
+            .delete()
+            .in('sov_item_id', sovItemIds.map(i => i.id));
+        }
         await supabase.from('project_sov_items').delete().in('sov_id', existingSovIds);
         await supabase.from('project_sov').delete().in('id', existingSovIds);
       }
@@ -610,8 +621,8 @@ export function useContractSOV(projectId: string | undefined) {
         
         if (itemsError) throw itemsError;
 
-        // Auto-create matching schedule tasks
-        if (insertedItems) {
+        // Auto-create matching schedule tasks only for the first contract to avoid duplicates
+        if (insertedItems && contract === contractsWithValue[0]) {
           await createScheduleItemsFromSOVItems(projectId, insertedItems);
         }
       }
