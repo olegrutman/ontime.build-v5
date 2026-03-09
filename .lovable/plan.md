@@ -1,42 +1,35 @@
-# Daily Log Feature — IMPLEMENTED
 
-## Design Philosophy
-Zero-typing, tap-first daily log that takes under 90 seconds to complete.
 
-## Features Built
+# TC Self-Performing Flag at Project Level
 
-### 1. Database Tables
-- `daily_logs` — one per project per date, auto-creates as draft
-- `daily_log_manpower` — per-trade headcount
-- `daily_log_delays` — cause chips + hours lost
-- `daily_log_photos` — storage refs with tags
-- `daily_log_deliveries` — PO delivery confirmations
+## Understanding
 
-### 2. UI Components (all tap-based)
-- **WeatherCard** — condition chips (☀️ 🌧️ ❄️ 💨 🌡️ 🥶) + stepper temps
-- **ManpowerCard** — per-trade steppers auto-populated from project team
-- **WorkPerformedCard** — progress sliders linked to schedule items
-- **SafetyCard** — toggle + incident type chips
-- **DelaysCard** — cause chips with hour steppers
-- **DeliveriesCard** — PO status chips (✅ ❌ ⚠️)
-- **PhotosCard** — camera upload with tags
-- **QuickNotesCard** — quick-add chips + text area
+Add an explicit toggle for TCs to declare "I'm self-performing (no FC)" at the project level. Currently this is inferred per work order by checking if an FC participant exists. An explicit flag gives the TC control and unlocks project-level features (budget tracking, actual cost logging) without requiring FC absence detection.
 
-### 3. Integration Points
-| Feature | Links To |
-|---------|----------|
-| Work Performed | `project_schedule_items.progress` (bidirectional) |
-| Manpower | Pre-populated from `project_team` trades |
-| Photos | Lovable Cloud storage bucket `daily-log-photos` |
+## Implementation
 
-### 4. Navigation
-- Added "Daily Log" tab to desktop `ProjectTopBar`
-- Added "Daily Log" to mobile bottom nav `BottomNav`
+### 1. Database: Add `is_self_performing` to `project_team`
 
-## Files Created/Modified
-- `src/types/dailyLog.ts` — types + constants
-- `src/hooks/useDailyLog.ts` — auto-create, auto-save, submit logic
-- `src/components/daily-log/` — all card components + DailyLogPanel
-- `src/pages/ProjectHome.tsx` — renders DailyLogPanel on daily-log tab
-- `src/components/project/ProjectTopBar.tsx` — added tab
-- `src/components/layout/BottomNav.tsx` — added to more menu
+Add a boolean column `is_self_performing` (default `false`) on the `project_team` table. This is the TC's own team row in the project. When `true`, the system treats the TC as self-performing across all work orders in that project.
+
+### 2. UI: Toggle in TeamMembersCard or Overview
+
+Add a toggle/switch on the TC's own row in `TeamMembersCard.tsx` (or a dedicated spot on the Overview page). Only visible to the TC themselves. Label: "Self-Performing (no Field Crew)". Toggling updates `project_team.is_self_performing`.
+
+### 3. Propagate the Flag
+
+- **`useProjectFinancials.ts`**: Fetch `is_self_performing` from `project_team` for the current TC. Expose it so `BudgetTracking` and `ProfitCard` can show the right UI (budget vs actual tracking for self-performing TC, same as FC sees today).
+- **`BudgetTracking.tsx`**: Show the Labor Budget card for self-performing TCs (currently only shows for FC). Enable actual cost logging.
+- **`ChangeOrderDetailPage.tsx`**: Use project-level flag as fallback/override for `hasFCParticipant` detection on work orders.
+
+### 4. Files
+
+| File | Change |
+|------|--------|
+| Migration SQL | Add `is_self_performing boolean default false` to `project_team` |
+| `TeamMembersCard.tsx` | Add toggle for TC's own row |
+| `useProjectFinancials.ts` | Fetch and expose the flag |
+| `BudgetTracking.tsx` | Show for self-performing TC |
+| `ProfitCard.tsx` | Adjust profit calc for self-performing TC |
+| `ChangeOrderDetailPage.tsx` | Use project flag as source of truth |
+
