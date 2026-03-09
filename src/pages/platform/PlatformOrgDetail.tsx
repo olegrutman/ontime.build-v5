@@ -294,7 +294,7 @@ export default function PlatformOrgDetail() {
       </Card>
 
       {/* Projects */}
-      <Card>
+      <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-base">Projects</CardTitle>
         </CardHeader>
@@ -333,6 +333,12 @@ export default function PlatformOrgDetail() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Subscription & Feature Flags */}
+      <OrgSubscriptionCard
+        orgId={org.id}
+        currentPlanId={(org as any).subscription_plan_id ?? null}
+      />
 
       {/* Add Member - step 1: email + role */}
       <Dialog open={addMemberOpen} onOpenChange={setAddMemberOpen}>
