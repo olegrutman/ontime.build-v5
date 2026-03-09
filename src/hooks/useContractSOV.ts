@@ -603,16 +603,22 @@ export function useContractSOV(projectId: string | undefined) {
           };
         });
         
-        const { error: itemsError } = await supabase
+        const { data: insertedItems, error: itemsError } = await supabase
           .from('project_sov_items')
-          .insert(itemsToInsert);
+          .insert(itemsToInsert)
+          .select('id, item_name, sort_order');
         
         if (itemsError) throw itemsError;
+
+        // Auto-create matching schedule tasks
+        if (insertedItems) {
+          await createScheduleItemsFromSOVItems(projectId, insertedItems);
+        }
       }
       
       toast({
         title: 'SOVs Created',
-        description: `Created ${contractsWithValue.length} SOV(s) with ${itemNames.length} items each.`
+        description: `Created ${contractsWithValue.length} SOV(s) with ${itemNames.length} items each, and added them as schedule tasks.`
       });
       
       await fetchData();
