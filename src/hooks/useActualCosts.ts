@@ -122,11 +122,22 @@ export function useProjectActualCosts(projectId: string | undefined) {
       if (e1) throw e1;
 
       // Get all WO-level entries for COs in this project
-      const { data: woEntries, error: e2 } = await supabase
-        .from('actual_cost_entries')
-        .select('total_amount, change_order_id!inner(project_id)')
-        .not('change_order_id', 'is', null)
-        .eq('change_order_id.project_id' as any, projectId!);
+      // Get WO-level entries: fetch COs for this project, then their cost entries
+      const { data: cos } = await supabase
+        .from('change_order_projects')
+        .select('id')
+        .eq('project_id', projectId!);
+      const coIds = (cos ?? []).map(c => c.id);
+      
+      let woEntries: { total_amount: number }[] = [];
+      if (coIds.length > 0) {
+        const { data, error: e2 } = await supabase
+          .from('actual_cost_entries')
+          .select('total_amount')
+          .in('change_order_id', coIds);
+        if (e2) throw e2;
+        woEntries = data ?? [];
+      }
       if (e2) throw e2;
 
       const sum = [...(projectEntries ?? []), ...(woEntries ?? [])]
