@@ -471,6 +471,8 @@ export function ChangeOrderDetailPage() {
                       isEditable={isTCEditable}
                       onSave={(cost) => updateChangeOrder({ id: changeOrder.id, tc_internal_cost: cost } as any)}
                       isSaving={isUpdatingChangeOrder}
+                      changeOrderId={changeOrder.id}
+                      revenue={(changeOrder.labor_total ?? 0) + (changeOrder.material_total ?? 0) + (changeOrder.equipment_total ?? 0)}
                     />
                   )}
 

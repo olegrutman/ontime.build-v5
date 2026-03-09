@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      actual_cost_entries: {
+        Row: {
+          change_order_id: string
+          cost_type: string
+          created_at: string
+          description: string
+          entered_by: string
+          entry_date: string
+          hourly_rate: number | null
+          hours_per_man: number | null
+          id: string
+          lump_amount: number | null
+          men_count: number | null
+          organization_id: string
+          total_amount: number
+        }
+        Insert: {
+          change_order_id: string
+          cost_type?: string
+          created_at?: string
+          description?: string
+          entered_by: string
+          entry_date?: string
+          hourly_rate?: number | null
+          hours_per_man?: number | null
+          id?: string
+          lump_amount?: number | null
+          men_count?: number | null
+          organization_id: string
+          total_amount?: number
+        }
+        Update: {
+          change_order_id?: string
+          cost_type?: string
+          created_at?: string
+          description?: string
+          entered_by?: string
+          entry_date?: string
+          hourly_rate?: number | null
+          hours_per_man?: number | null
+          id?: string
+          lump_amount?: number | null
+          men_count?: number | null
+          organization_id?: string
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "actual_cost_entries_change_order_id_fkey"
+            columns: ["change_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_order_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actual_cost_entries_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       catalog_items: {
         Row: {
           attributes: Json | null
