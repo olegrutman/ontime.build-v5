@@ -139,6 +139,31 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
     }
   };
 
+  const handleUseSystemCatalog = async () => {
+    if (!userOrgRoles[0]) return;
+    setSavingResp('system');
+    try {
+      const { error } = await supabase
+        .from('project_designated_suppliers')
+        .upsert({
+          project_id: projectId,
+          user_id: null,
+          invited_email: null,
+          invited_name: 'System Catalog',
+          po_email: null,
+          status: 'active',
+          designated_by: userOrgRoles[0].user_id,
+        }, { onConflict: 'project_id' });
+      if (error) throw error;
+      toast({ title: 'System catalog enabled for this project' });
+      fetchDesignatedSupplier();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setSavingResp(null);
+    }
+  };
+
   const teamByRole = team.reduce<Record<string, TeamMember[]>>((acc, m) => {
     if (!acc[m.role]) acc[m.role] = [];
     acc[m.role].push(m);
