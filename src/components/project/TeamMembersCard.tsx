@@ -189,7 +189,7 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
     if (!memberToRemove) return;
     setRemoving(true);
     try {
-      const orgId = memberToRemove.invited_org_id;
+      const orgId = memberToRemove.org_id;
       // 1. Delete related contracts
       if (orgId) {
         await supabase.from('project_contracts').delete().eq('project_id', projectId).or(`from_org_id.eq.${orgId},to_org_id.eq.${orgId}`);
