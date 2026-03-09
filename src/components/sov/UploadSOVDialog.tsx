@@ -151,10 +151,7 @@ export function UploadSOVDialog({ open, onOpenChange, contracts, projectId, onCr
         .select('id, item_name, sort_order');
       if (itemsError) throw itemsError;
 
-      // Auto-create matching schedule tasks
-      if (insertedItems && insertedItems.length > 0) {
-        await createScheduleItemsFromSOVItems(projectId, insertedItems);
-      }
+      // Schedule tasks are now auto-created by database trigger on project_sov_items INSERT
 
       toast({ title: 'SOV Created', description: `Created SOV with ${items.length} items and added them as schedule tasks.` });
       handleClose(false);
