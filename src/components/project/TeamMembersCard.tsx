@@ -51,7 +51,7 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
   const [loading, setLoading] = useState(true);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isDesignateOpen, setIsDesignateOpen] = useState(false);
-  const [designatedSupplier, setDesignatedSupplier] = useState<{ invited_name: string | null; invited_email: string | null; status: string } | null>(null);
+  const [designatedSupplier, setDesignatedSupplier] = useState<{ invited_name: string | null; invited_email: string | null; po_email: string | null; status: string } | null>(null);
 
   // Material responsibility state
   const [contract, setContract] = useState<ContractData | null>(null);
