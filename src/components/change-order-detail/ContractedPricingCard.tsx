@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { DollarSign, Lock, TrendingUp, Users } from 'lucide-react';
+import { ActualCostPopup } from './ActualCostPopup';
+import { useActualCosts } from '@/hooks/useActualCosts';
 import type { 
   ChangeOrderProject, 
   ChangeOrderFCHours, 
