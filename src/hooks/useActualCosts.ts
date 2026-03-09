@@ -6,7 +6,8 @@ import { toast } from '@/hooks/use-toast';
 
 export interface ActualCostEntry {
   id: string;
-  change_order_id: string;
+  change_order_id: string | null;
+  project_id: string | null;
   entry_date: string;
   cost_type: 'hours' | 'lump_sum';
   description: string;
@@ -21,7 +22,8 @@ export interface ActualCostEntry {
 }
 
 export type NewActualCostEntry = {
-  change_order_id: string;
+  change_order_id?: string | null;
+  project_id?: string | null;
   entry_date: string;
   cost_type: 'hours' | 'lump_sum';
   description: string;
@@ -32,21 +34,33 @@ export type NewActualCostEntry = {
   total_amount: number;
 };
 
-export function useActualCosts(changeOrderId: string | undefined) {
+interface UseActualCostsOptions {
+  changeOrderId?: string;
+  projectId?: string;
+}
+
+export function useActualCosts({ changeOrderId, projectId }: UseActualCostsOptions) {
   const { user, userOrgRoles } = useAuth();
   const orgId = userOrgRoles[0]?.organization?.id;
   const queryClient = useQueryClient();
-  const queryKey = ['actual-costs', changeOrderId];
+  const queryKey = ['actual-costs', changeOrderId ?? null, projectId ?? null];
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey,
-    enabled: !!changeOrderId && !!orgId,
+    enabled: !!(changeOrderId || projectId) && !!orgId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('actual_cost_entries')
         .select('*')
-        .eq('change_order_id', changeOrderId!)
         .order('entry_date', { ascending: false });
+
+      if (changeOrderId) {
+        query = query.eq('change_order_id', changeOrderId);
+      } else if (projectId) {
+        query = query.eq('project_id', projectId).is('change_order_id', null);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return (data ?? []) as ActualCostEntry[];
     },
@@ -88,4 +102,38 @@ export function useActualCosts(changeOrderId: string | undefined) {
   });
 
   return { entries, totalActualCost, isLoading, addEntry, deleteEntry };
+}
+
+/** Fetches ALL actual cost entries for a project (project-level + all work-order-level) */
+export function useProjectActualCosts(projectId: string | undefined) {
+  const { userOrgRoles } = useAuth();
+  const orgId = userOrgRoles[0]?.organization?.id;
+
+  const { data: totalActualCost = 0, isLoading } = useQuery({
+    queryKey: ['actual-costs-project-total', projectId],
+    enabled: !!projectId && !!orgId,
+    queryFn: async () => {
+      // Get project-level entries
+      const { data: projectEntries, error: e1 } = await supabase
+        .from('actual_cost_entries')
+        .select('total_amount')
+        .eq('project_id', projectId!)
+        .is('change_order_id', null);
+      if (e1) throw e1;
+
+      // Get all WO-level entries for COs in this project
+      const { data: woEntries, error: e2 } = await supabase
+        .from('actual_cost_entries')
+        .select('total_amount, change_order_id!inner(project_id)')
+        .not('change_order_id', 'is', null)
+        .eq('change_order_id.project_id' as any, projectId!);
+      if (e2) throw e2;
+
+      const sum = [...(projectEntries ?? []), ...(woEntries ?? [])]
+        .reduce((s, e) => s + ((e as any).total_amount || 0), 0);
+      return sum;
+    },
+  });
+
+  return { totalActualCost, isLoading };
 }
