@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { TrendingUp, Pencil, Check, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import { cn, formatCurrency as fmt } from '@/lib/utils';
 import { useActualCosts } from '@/hooks/useActualCosts';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProfitCardProps {
   financials: ProjectFinancials;
