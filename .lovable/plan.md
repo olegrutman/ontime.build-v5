@@ -1,42 +1,72 @@
-# Daily Log Feature — IMPLEMENTED
 
-## Design Philosophy
-Zero-typing, tap-first daily log that takes under 90 seconds to complete.
 
-## Features Built
+# Critical Schedule Card — Overview + Daily Log
 
-### 1. Database Tables
-- `daily_logs` — one per project per date, auto-creates as draft
-- `daily_log_manpower` — per-trade headcount
-- `daily_log_delays` — cause chips + hours lost
-- `daily_log_photos` — storage refs with tags
-- `daily_log_deliveries` — PO delivery confirmations
+## What it does
 
-### 2. UI Components (all tap-based)
-- **WeatherCard** — condition chips (☀️ 🌧️ ❄️ 💨 🌡️ 🥶) + stepper temps
-- **ManpowerCard** — per-trade steppers auto-populated from project team
-- **WorkPerformedCard** — progress sliders linked to schedule items
-- **SafetyCard** — toggle + incident type chips
-- **DelaysCard** — cause chips with hour steppers
-- **DeliveriesCard** — PO status chips (✅ ❌ ⚠️)
-- **PhotosCard** — camera upload with tags
-- **QuickNotesCard** — quick-add chips + text area
+A compact card showing schedule items that are **overdue** or **due soon** (next 7 days), highlighting items that need immediate attention. Displays task name, due date, progress, and a status indicator (overdue/due soon). Tapping navigates to the Schedule tab.
 
-### 3. Integration Points
-| Feature | Links To |
-|---------|----------|
-| Work Performed | `project_schedule_items.progress` (bidirectional) |
-| Manpower | Pre-populated from `project_team` trades |
-| Photos | Lovable Cloud storage bucket `daily-log-photos` |
+---
 
-### 4. Navigation
-- Added "Daily Log" tab to desktop `ProjectTopBar`
-- Added "Daily Log" to mobile bottom nav `BottomNav`
+## Design (matching existing card patterns)
 
-## Files Created/Modified
-- `src/types/dailyLog.ts` — types + constants
-- `src/hooks/useDailyLog.ts` — auto-create, auto-save, submit logic
-- `src/components/daily-log/` — all card components + DailyLogPanel
-- `src/pages/ProjectHome.tsx` — renders DailyLogPanel on daily-log tab
-- `src/components/project/ProjectTopBar.tsx` — added tab
-- `src/components/layout/BottomNav.tsx` — added to more menu
+```text
+┌────────────────────────────────────────┐
+│ 🔴 Critical Schedule                   │
+├────────────────────────────────────────┤
+│ ▶ 1st Floor Framing         Due: Mar 5│
+│   ████████░░░░░░░░░ 40%      OVERDUE   │
+├────────────────────────────────────────┤
+│ ▶ Rough-In Electrical      Due: Mar 12│
+│   ██████████████░░░ 70%      5 DAYS    │
+└────────────────────────────────────────┘
+```
+
+- **Overdue**: `end_date < today` AND `progress < 100` → red badge
+- **Due Soon**: `end_date` within 7 days AND `progress < 100` → amber badge
+- Progress bar + percentage
+- Tap row → navigate to Schedule tab
+- Empty state: "No critical items" with green checkmark
+
+---
+
+## Implementation
+
+### 1. Create `CriticalScheduleCard.tsx`
+
+New component at `src/components/project/CriticalScheduleCard.tsx`:
+
+- Props: `projectId`, `onNavigate`, `maxItems?` (default 5)
+- Uses `useProjectSchedule(projectId)` hook
+- Filters items: overdue OR due within 7 days, not 100% complete
+- Sorts by urgency (overdue first, then by end_date)
+- Shows progress bar, due date, status badge
+- Clickable rows → `onNavigate('schedule')`
+
+### 2. Add to Overview tab
+
+In `ProjectHome.tsx`, add the card in the left column (after WorkOrderSummaryCard/BudgetTracking grid):
+
+```tsx
+<CriticalScheduleCard projectId={id!} onNavigate={handleTabChange} />
+```
+
+### 3. Add to Daily Log
+
+In `DailyLogPanel.tsx`, add the card between the date nav and WeatherCard:
+
+```tsx
+<CriticalScheduleCard projectId={projectId} onNavigate={(tab) => window.location.href = `?tab=${tab}`} />
+```
+
+---
+
+## Files to modify
+
+| Action | File |
+|--------|------|
+| Create | `src/components/project/CriticalScheduleCard.tsx` |
+| Edit | `src/pages/ProjectHome.tsx` (add to overview) |
+| Edit | `src/components/daily-log/DailyLogPanel.tsx` (add to daily log) |
+| Edit | `src/components/project/index.ts` (export) |
+
