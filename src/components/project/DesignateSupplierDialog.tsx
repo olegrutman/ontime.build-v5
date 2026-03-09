@@ -45,6 +45,7 @@ export function DesignateSupplierDialog({
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteName, setInviteName] = useState('');
+  const [poEmail, setPoEmail] = useState('');
 
   const handleSearch = async () => {
     if (query.trim().length < 2) return;
@@ -77,6 +78,7 @@ export function DesignateSupplierDialog({
           user_id: userId,
           invited_email: null,
           invited_name: name,
+          po_email: poEmail.trim() || null,
           status: 'active',
           designated_by: user.id,
         }, { onConflict: 'project_id' });
@@ -103,6 +105,7 @@ export function DesignateSupplierDialog({
           user_id: null,
           invited_email: inviteEmail.trim(),
           invited_name: inviteName.trim() || null,
+          po_email: poEmail.trim() || inviteEmail.trim(),
           status: 'invited',
           designated_by: user.id,
         }, { onConflict: 'project_id' });
@@ -124,6 +127,7 @@ export function DesignateSupplierDialog({
     setSelectedUser(null);
     setInviteEmail('');
     setInviteName('');
+    setPoEmail('');
     setHasSearched(false);
     setTab('search');
   };
@@ -192,10 +196,20 @@ export function DesignateSupplierDialog({
             )}
 
             {selectedUser && (
-              <div className="border rounded-md p-3 bg-muted/30 space-y-2">
+              <div className="border rounded-md p-3 bg-muted/30 space-y-3">
                 <p className="text-sm">
                   Designate <strong>{selectedUser.full_name || selectedUser.email}</strong> as supplier contact?
                 </p>
+                <div className="space-y-2">
+                  <Label>PO Delivery Email</Label>
+                  <Input
+                    type="email"
+                    placeholder={selectedUser.email || 'orders@example.com'}
+                    value={poEmail}
+                    onChange={(e) => setPoEmail(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">Purchase orders will be sent to this address</p>
+                </div>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={() => handleDesignateUser(selectedUser.user_id, selectedUser.full_name)} disabled={saving}>
                     {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
@@ -224,6 +238,16 @@ export function DesignateSupplierDialog({
                 value={inviteName}
                 onChange={(e) => setInviteName(e.target.value)}
               />
+            </div>
+            <div className="space-y-2">
+              <Label>PO Delivery Email</Label>
+              <Input
+                type="email"
+                placeholder="orders@example.com"
+                value={poEmail}
+                onChange={(e) => setPoEmail(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">Defaults to the email above if left blank</p>
             </div>
             <DialogFooter>
               <Button onClick={handleInviteByEmail} disabled={saving || !inviteEmail.trim()}>

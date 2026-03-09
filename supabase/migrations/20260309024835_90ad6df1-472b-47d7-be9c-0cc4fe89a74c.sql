@@ -1,0 +1,1 @@
+ALTER TABLE public.project_designated_suppliers ADD COLUMN po_email text;

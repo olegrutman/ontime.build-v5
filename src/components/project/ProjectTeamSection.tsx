@@ -58,7 +58,7 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
   const [resending, setResending] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [designateDialogOpen, setDesignateDialogOpen] = useState(false);
-  const [designatedSupplier, setDesignatedSupplier] = useState<{ invited_name: string | null; invited_email: string | null; status: string } | null>(null);
+  const [designatedSupplier, setDesignatedSupplier] = useState<{ invited_name: string | null; invited_email: string | null; po_email: string | null; status: string } | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
   // Get current user's org type and permissions
@@ -70,7 +70,7 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
   const fetchTeam = async () => {
     const [teamResult, dsResult] = await Promise.all([
       supabase.from('project_team').select('*').eq('project_id', projectId),
-      supabase.from('project_designated_suppliers').select('invited_name, invited_email, status').eq('project_id', projectId).maybeSingle(),
+      supabase.from('project_designated_suppliers').select('invited_name, invited_email, po_email, status').eq('project_id', projectId).maybeSingle(),
     ]);
 
     if (teamResult.error) {
@@ -271,8 +271,11 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Designated Supplier Contact</p>
-                        <p className="text-sm font-medium">{designatedSupplier.invited_name || designatedSupplier.invited_email || 'Assigned'}</p>
+                        <p className="text-sm font-medium">{designatedSupplier.invited_name || designatedSupplier.invited_email || 'System Catalog'}</p>
                         <p className="text-xs text-muted-foreground">{designatedSupplier.status === 'invited' ? 'Invitation pending' : 'Active'}</p>
+                        {designatedSupplier.po_email && (
+                          <p className="text-xs text-muted-foreground">PO → {designatedSupplier.po_email}</p>
+                        )}
                       </div>
                       <Button size="sm" variant="ghost" onClick={() => setDesignateDialogOpen(true)}>Change</Button>
                     </div>

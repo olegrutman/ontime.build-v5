@@ -51,7 +51,7 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
   const [loading, setLoading] = useState(true);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isDesignateOpen, setIsDesignateOpen] = useState(false);
-  const [designatedSupplier, setDesignatedSupplier] = useState<{ invited_name: string | null; invited_email: string | null; status: string } | null>(null);
+  const [designatedSupplier, setDesignatedSupplier] = useState<{ invited_name: string | null; invited_email: string | null; po_email: string | null; status: string } | null>(null);
 
   // Material responsibility state
   const [contract, setContract] = useState<ContractData | null>(null);
@@ -70,7 +70,7 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
   }, [projectId]);
 
   const fetchDesignatedSupplier = useCallback(async () => {
-    const { data } = await supabase.from('project_designated_suppliers').select('invited_name, invited_email, status').eq('project_id', projectId).neq('status', 'removed').maybeSingle();
+    const { data } = await supabase.from('project_designated_suppliers').select('invited_name, invited_email, po_email, status').eq('project_id', projectId).neq('status', 'removed').maybeSingle();
     setDesignatedSupplier(data);
   }, [projectId]);
 
@@ -132,6 +132,31 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
       onResponsibilityChange?.(value);
       setShowSelector(false);
       toast({ title: `Material responsibility set to ${value === 'GC' ? 'General Contractor' : 'Trade Contractor'}` });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setSavingResp(null);
+    }
+  };
+
+  const handleUseSystemCatalog = async () => {
+    if (!userOrgRoles[0]) return;
+    setSavingResp('system');
+    try {
+      const { error } = await supabase
+        .from('project_designated_suppliers')
+        .upsert({
+          project_id: projectId,
+          user_id: null,
+          invited_email: null,
+          invited_name: 'System Catalog',
+          po_email: null,
+          status: 'active',
+          designated_by: userOrgRoles[0].user_id,
+        }, { onConflict: 'project_id' });
+      if (error) throw error;
+      toast({ title: 'System catalog enabled for this project' });
+      fetchDesignatedSupplier();
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
     } finally {
@@ -239,20 +264,30 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
 
           {designatedSupplier ? (
             <div className="flex items-center justify-between pt-1.5 border-t mt-1.5">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <span className="h-2 w-2 rounded-full shrink-0 bg-amber-500" />
                 <span className="text-[10px] font-medium text-muted-foreground uppercase w-7">SUP</span>
-                <span className="text-sm truncate">{designatedSupplier.invited_name || designatedSupplier.invited_email || 'Designated'}</span>
-                <Badge variant="outline" className="text-[9px] px-1 py-0">{designatedSupplier.status}</Badge>
+                <div className="min-w-0">
+                  <span className="text-sm truncate block">{designatedSupplier.invited_name || designatedSupplier.invited_email || 'System Catalog'}</span>
+                  {designatedSupplier.po_email && (
+                    <span className="text-[10px] text-muted-foreground truncate block">PO → {designatedSupplier.po_email}</span>
+                  )}
+                </div>
+                <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0">{designatedSupplier.status}</Badge>
               </div>
               {isGcOrTc && (
-                <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px]" onClick={() => setIsDesignateOpen(true)}>Change</Button>
+                <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] shrink-0" onClick={() => setIsDesignateOpen(true)}>Change</Button>
               )}
             </div>
           ) : isGcOrTc && !team.some(m => m.role === 'Supplier') ? (
-            <Button variant="ghost" size="sm" className="h-7 w-full mt-1.5 text-[11px] text-muted-foreground" onClick={() => setIsDesignateOpen(true)}>
-              <UserPlus className="h-3 w-3 mr-1" />Designate Supplier
-            </Button>
+            <div className="pt-1.5 border-t mt-1.5 space-y-1">
+              <Button variant="ghost" size="sm" className="h-7 w-full text-[11px] text-muted-foreground" onClick={() => setIsDesignateOpen(true)}>
+                <UserPlus className="h-3 w-3 mr-1" />Designate Supplier
+              </Button>
+              <Button variant="ghost" size="sm" className="h-7 w-full text-[11px] text-muted-foreground" onClick={handleUseSystemCatalog}>
+                <Package className="h-3 w-3 mr-1" />Use System Catalog
+              </Button>
+            </div>
           ) : null}
         </div>
       )}
