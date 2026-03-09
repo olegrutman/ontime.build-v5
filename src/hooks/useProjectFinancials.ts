@@ -86,6 +86,9 @@ export interface ProjectFinancials {
   // Designated supplier
   isDesignatedSupplier: boolean;
 
+  // TC self-performing flag
+  isTCSelfPerforming: boolean;
+
   // Actions
   refetch: () => void;
   updateContract: (id: string, sum: number, retainage: number) => Promise<boolean>;
@@ -122,6 +125,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [isGCMaterialResponsible, setIsGCMaterialResponsible] = useState(false);
   const [approvedEstimateSum, setApprovedEstimateSum] = useState(0);
   const [isDesignatedSupplier, setIsDesignatedSupplier] = useState(false);
+  const [isTCSelfPerforming, setIsTCSelfPerforming] = useState(false);
   const [totalPaid, setTotalPaid] = useState(0);
   const [materialDelivered, setMaterialDelivered] = useState(0);
   const [materialOrderedPending, setMaterialOrderedPending] = useState(0);
@@ -160,11 +164,18 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       } else if (orgIds.length > 0) {
         const { data: teamMembers } = await supabase
           .from('project_team')
-          .select('role, org_id')
+          .select('role, org_id, is_self_performing')
           .eq('project_id', projectId)
           .in('org_id', orgIds);
         if (teamMembers && teamMembers.length > 0) {
           detectedRole = teamMembers[0].role as ViewerRole;
+          // Check if TC is self-performing
+          const tcRow = teamMembers.find((m: any) => m.role === 'Trade Contractor');
+          if (tcRow && (tcRow as any).is_self_performing) {
+            setIsTCSelfPerforming(true);
+          } else {
+            setIsTCSelfPerforming(false);
+          }
         }
       }
       setViewerRole(detectedRole);
@@ -548,7 +559,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     billedToDate, workOrderTotal, approvedWOCount, workOrderFCCost, tcInternalCostTotal, fcWorkOrderEarnings, retainageAmount, outstanding,
     materialEstimate, materialOrdered, totalPaidToFC,
     materialEstimateTotal, approvedEstimateSum, isTCMaterialResponsible, isGCMaterialResponsible,
-    isDesignatedSupplier,
+    isDesignatedSupplier, isTCSelfPerforming,
     totalPaid, materialDelivered, materialOrderedPending, actualLaborCost, laborBudget,
     ownerContractValue, materialMarkupType, materialMarkupValue,
     woLaborTotal, woMaterialTotal, woEquipmentTotal,

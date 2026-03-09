@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { Users, Plus, UserPlus, Package, Loader2, RotateCw, Trash2, Mail, Check, X } from 'lucide-react';
+import { Users, Plus, UserPlus, Package, Loader2, RotateCw, Trash2, Mail, Check, X, Wrench } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,6 +35,7 @@ interface TeamMember {
   invited_org_name: string | null;
   org_id: string | null;
   status: string;
+  is_self_performing: boolean;
 }
 
 interface ContractData {
@@ -79,6 +81,7 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
   const [editingPoEmail, setEditingPoEmail] = useState(false);
   const [poEmailDraft, setPoEmailDraft] = useState('');
   const [savingPoEmail, setSavingPoEmail] = useState(false);
+  const [togglingPerf, setTogglingPerf] = useState(false);
 
   // Material responsibility state
   const [contract, setContract] = useState<ContractData | null>(null);
@@ -91,8 +94,8 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
   const isGcOrTc = creatorOrgType === 'GC' || creatorOrgType === 'TC';
 
   const fetchTeam = useCallback(async () => {
-    const { data } = await supabase.from('project_team').select('id, role, invited_org_name, org_id, status').eq('project_id', projectId);
-    setTeam(data || []);
+    const { data } = await supabase.from('project_team').select('id, role, invited_org_name, org_id, status, is_self_performing').eq('project_id', projectId);
+    setTeam((data || []).map((m: any) => ({ ...m, is_self_performing: m.is_self_performing ?? false })));
     setLoading(false);
   }, [projectId]);
 
@@ -244,6 +247,26 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
       setResending(null);
     }
   };
+
+  const handleToggleSelfPerforming = async (member: TeamMember) => {
+    setTogglingPerf(true);
+    try {
+      const newVal = !member.is_self_performing;
+      const { error } = await supabase.from('project_team').update({ is_self_performing: newVal } as any).eq('id', member.id);
+      if (error) throw error;
+      toast({ title: newVal ? 'Self-performing enabled' : 'Self-performing disabled' });
+      fetchTeam();
+      onTeamChanged?.();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setTogglingPerf(false);
+    }
+  };
+
+  // Find the current user's TC team row (for self-performing toggle)
+  const myTcRow = creatorOrgType === 'TC' ? team.find(m => m.role === 'Trade Contractor' && m.org_id === currentOrgId) : null;
+  const hasFC = team.some(m => m.role === 'Field Crew' && m.status === 'Accepted');
 
   const handleSavePoEmail = async () => {
     const trimmed = poEmailDraft.trim();
@@ -469,6 +492,21 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
               </Button>
             </div>
           ) : null}
+
+          {/* Self-performing toggle for TC */}
+          {myTcRow && !hasFC && (
+            <div className="pt-2 border-t mt-2 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Wrench className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-[11px] text-muted-foreground">Self-Performing (no FC)</span>
+              </div>
+              <Switch
+                checked={myTcRow.is_self_performing}
+                disabled={togglingPerf}
+                onCheckedChange={() => handleToggleSelfPerforming(myTcRow)}
+              />
+            </div>
+          )}
         </div>
       )}
 

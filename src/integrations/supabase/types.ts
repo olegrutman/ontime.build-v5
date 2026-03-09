@@ -3130,6 +3130,7 @@ export type Database = {
           invited_email: string | null
           invited_name: string | null
           invited_org_name: string | null
+          is_self_performing: boolean
           org_id: string | null
           project_id: string
           role: string
@@ -3149,6 +3150,7 @@ export type Database = {
           invited_email?: string | null
           invited_name?: string | null
           invited_org_name?: string | null
+          is_self_performing?: boolean
           org_id?: string | null
           project_id: string
           role: string
@@ -3168,6 +3170,7 @@ export type Database = {
           invited_email?: string | null
           invited_name?: string | null
           invited_org_name?: string | null
+          is_self_performing?: boolean
           org_id?: string | null
           project_id?: string
           role?: string
