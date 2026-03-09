@@ -31,6 +31,7 @@ import {
   ProfitCard,
   MaterialMarkupEditor,
   WorkOrderSummaryCard,
+  CriticalScheduleCard,
 } from '@/components/project';
 import { ContractHeroCard } from '@/components/project/ContractHeroCard';
 import { BillingCashCard } from '@/components/project/BillingCashCard';
