@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Milestone, Layers, CalendarDays, Trash2, Pencil, ChevronDown, ChevronRight } from 'lucide-react';
+import { Plus, Milestone, Layers, CalendarDays, Trash2, ChevronDown, ChevronRight, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,6 +13,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { estimateDuration, addBusinessDays } from '@/utils/scheduleEstimates';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +44,7 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
   const [defaultType, setDefaultType] = useState<'task' | 'phase' | 'milestone'>('task');
   const [ganttOpen, setGanttOpen] = useState(true);
   const [tableOpen, setTableOpen] = useState(true);
+  const [estimating, setEstimating] = useState(false);
 
   const { data: workOrders = [] } = useQuery({
     queryKey: ['schedule-work-orders', projectId],
@@ -103,6 +105,50 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
     setDeleteTarget(null);
   };
 
+  const handleGanttUpdate = async (id: string, updates: { start_date?: string; end_date?: string }) => {
+    try {
+      await updateItem.mutateAsync({ id, ...updates } as any);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+  };
+
+  const handleAutoEstimate = async () => {
+    const unscheduled = items.filter(i => !i.end_date && i.item_type !== 'milestone');
+    if (unscheduled.length === 0) {
+      toast({ title: 'All items already have end dates' });
+      return;
+    }
+
+    setEstimating(true);
+    try {
+      let cursor = new Date(
+        Math.min(...unscheduled.map(i => new Date(i.start_date).getTime()))
+      );
+
+      for (const item of unscheduled) {
+        const valueAmount = item.sov_item?.value_amount ?? 0;
+        const days = estimateDuration(item.title, valueAmount);
+        const itemStart = new Date(item.start_date) >= cursor ? new Date(item.start_date) : cursor;
+        const endDate = addBusinessDays(itemStart, days);
+
+        await updateItem.mutateAsync({
+          id: item.id,
+          start_date: format(itemStart, 'yyyy-MM-dd'),
+          end_date: format(endDate, 'yyyy-MM-dd'),
+        } as any);
+
+        // Chain: next task starts day after this one ends
+        cursor = addBusinessDays(endDate, 0);
+      }
+
+      toast({ title: `Estimated dates for ${unscheduled.length} items` });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+    setEstimating(false);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -111,6 +157,8 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
       </div>
     );
   }
+
+  const hasUnscheduled = items.some(i => !i.end_date && i.item_type !== 'milestone');
 
   return (
     <div className="space-y-4">
@@ -125,6 +173,18 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
         <Button size="sm" variant="outline" onClick={() => handleAdd('milestone')} className="gap-1.5">
           <Milestone className="h-4 w-4" /> Milestone
         </Button>
+        {hasUnscheduled && (
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={handleAutoEstimate}
+            disabled={estimating}
+            className="gap-1.5"
+          >
+            <Wand2 className="h-4 w-4" />
+            {estimating ? 'Estimating…' : 'Auto-Estimate Dates'}
+          </Button>
+        )}
         <div className="flex-1" />
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
           <CalendarDays className="h-3.5 w-3.5" />
@@ -156,10 +216,15 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent>
-              <GanttChart items={items} selectedId={null} onSelect={(id) => {
-                const found = items.find(i => i.id === id);
-                if (found) handleEdit(found);
-              }} />
+              <GanttChart
+                items={items}
+                selectedId={null}
+                onSelect={(id) => {
+                  const found = items.find(i => i.id === id);
+                  if (found) handleEdit(found);
+                }}
+                onUpdate={handleGanttUpdate}
+              />
             </CollapsibleContent>
           </Collapsible>
 

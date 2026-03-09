@@ -1,10 +1,11 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback, useRef } from 'react';
 import { ScheduleItem } from '@/hooks/useProjectSchedule';
 import { differenceInDays, addDays, format, startOfWeek, endOfWeek } from 'date-fns';
 
 interface GanttChartProps {
   items: ScheduleItem[];
   onSelect?: (id: string) => void;
+  onUpdate?: (id: string, updates: { start_date?: string; end_date?: string }) => void;
   selectedId?: string | null;
 }
 
@@ -12,6 +13,7 @@ const ROW_HEIGHT = 36;
 const HEADER_HEIGHT = 40;
 const DAY_WIDTH = 28;
 const LEFT_PAD = 8;
+const EDGE_HIT = 6;
 
 const TYPE_COLORS: Record<string, { bar: string; progress: string }> = {
   phase: { bar: 'hsl(var(--primary) / 0.25)', progress: 'hsl(var(--primary))' },
@@ -19,7 +21,21 @@ const TYPE_COLORS: Record<string, { bar: string; progress: string }> = {
   milestone: { bar: 'hsl(45 93% 47% / 0.6)', progress: 'hsl(45 93% 47%)' },
 };
 
-export function GanttChart({ items, onSelect, selectedId }: GanttChartProps) {
+type DragMode = 'move' | 'resize-left' | 'resize-right';
+
+interface DragState {
+  itemId: string;
+  mode: DragMode;
+  startX: number;
+  origStartDate: string;
+  origEndDate: string;
+}
+
+export function GanttChart({ items, onSelect, onUpdate, selectedId }: GanttChartProps) {
+  const svgRef = useRef<SVGSVGElement>(null);
+  const [drag, setDrag] = useState<DragState | null>(null);
+  const [dragDeltaDays, setDragDeltaDays] = useState(0);
+
   const { startDate, totalDays, weeks } = useMemo(() => {
     if (!items.length) {
       const today = new Date();
@@ -42,9 +58,78 @@ export function GanttChart({ items, onSelect, selectedId }: GanttChartProps) {
   const svgWidth = totalDays * DAY_WIDTH + LEFT_PAD * 2;
   const svgHeight = HEADER_HEIGHT + items.length * ROW_HEIGHT + 8;
 
+  const handleMouseDown = useCallback((e: React.MouseEvent, itemId: string, mode: DragMode, origStart: string, origEnd: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setDrag({ itemId, mode, startX: e.clientX, origStartDate: origStart, origEndDate: origEnd });
+    setDragDeltaDays(0);
+  }, []);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.startX;
+    const daysDelta = Math.round(dx / DAY_WIDTH);
+    setDragDeltaDays(daysDelta);
+  }, [drag]);
+
+  const handleMouseUp = useCallback(() => {
+    if (!drag || dragDeltaDays === 0 || !onUpdate) {
+      setDrag(null);
+      setDragDeltaDays(0);
+      return;
+    }
+
+    const origStart = new Date(drag.origStartDate);
+    const origEnd = new Date(drag.origEndDate);
+
+    let newStart: Date;
+    let newEnd: Date;
+
+    if (drag.mode === 'move') {
+      newStart = addDays(origStart, dragDeltaDays);
+      newEnd = addDays(origEnd, dragDeltaDays);
+    } else if (drag.mode === 'resize-left') {
+      newStart = addDays(origStart, dragDeltaDays);
+      newEnd = origEnd;
+      if (newStart >= newEnd) newStart = addDays(newEnd, -1);
+    } else {
+      newStart = origStart;
+      newEnd = addDays(origEnd, dragDeltaDays);
+      if (newEnd <= newStart) newEnd = addDays(newStart, 1);
+    }
+
+    onUpdate(drag.itemId, {
+      start_date: format(newStart, 'yyyy-MM-dd'),
+      end_date: format(newEnd, 'yyyy-MM-dd'),
+    });
+
+    setDrag(null);
+    setDragDeltaDays(0);
+  }, [drag, dragDeltaDays, onUpdate]);
+
+  const getDragOffset = (itemId: string): { startOffset: number; endOffset: number } => {
+    if (!drag || drag.itemId !== itemId) return { startOffset: 0, endOffset: 0 };
+    const px = dragDeltaDays * DAY_WIDTH;
+    if (drag.mode === 'move') return { startOffset: px, endOffset: px };
+    if (drag.mode === 'resize-left') return { startOffset: px, endOffset: 0 };
+    return { startOffset: 0, endOffset: px };
+  };
+
+  const cursorClass = drag
+    ? drag.mode === 'move' ? 'cursor-grabbing' : 'cursor-col-resize'
+    : '';
+
   return (
     <div className="overflow-x-auto overflow-y-auto border rounded-lg bg-card">
-      <svg width={svgWidth} height={svgHeight} className="select-none">
+      <svg
+        ref={svgRef}
+        width={svgWidth}
+        height={svgHeight}
+        className={`select-none ${cursorClass}`}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+      >
         {/* Week headers */}
         {weeks.map((w, i) => (
           <g key={i}>
@@ -136,6 +221,7 @@ export function GanttChart({ items, onSelect, selectedId }: GanttChartProps) {
           const dayOffset = differenceInDays(new Date(item.start_date), startDate);
           const colors = TYPE_COLORS[item.item_type] || TYPE_COLORS.task;
           const isSelected = selectedId === item.id;
+          const { startOffset, endOffset } = getDragOffset(item.id);
 
           if (item.item_type === 'milestone') {
             const cx = LEFT_PAD + dayOffset * DAY_WIDTH + DAY_WIDTH / 2;
@@ -156,20 +242,67 @@ export function GanttChart({ items, onSelect, selectedId }: GanttChartProps) {
           }
 
           const duration = item.end_date ? differenceInDays(new Date(item.end_date), new Date(item.start_date)) + 1 : 1;
-          const barX = LEFT_PAD + dayOffset * DAY_WIDTH;
-          const barW = Math.max(duration * DAY_WIDTH - 4, 8);
+          const barX = LEFT_PAD + dayOffset * DAY_WIDTH + startOffset;
+          const rawBarW = duration * DAY_WIDTH - 4 + (endOffset - startOffset);
+          const barW = Math.max(rawBarW, 8);
           const barH = item.item_type === 'phase' ? 20 : 16;
           const barY = y + (ROW_HEIGHT - barH) / 2;
           const progressW = barW * (item.progress / 100);
+          const isDragging = drag?.itemId === item.id;
 
           return (
-            <g key={item.id} onClick={() => onSelect?.(item.id)} className="cursor-pointer">
+            <g key={item.id} className="cursor-pointer">
               <rect x={0} y={y} width={svgWidth} height={ROW_HEIGHT} fill={isSelected ? 'hsl(var(--accent) / 0.3)' : 'transparent'} />
-              <rect x={barX} y={barY} width={barW} height={barH} rx={4} fill={colors.bar} stroke={isSelected ? 'hsl(var(--primary))' : 'none'} strokeWidth={1.5} />
+              
+              {/* Main bar */}
+              <rect
+                x={barX} y={barY} width={barW} height={barH} rx={4}
+                fill={colors.bar}
+                stroke={isSelected || isDragging ? 'hsl(var(--primary))' : 'none'}
+                strokeWidth={1.5}
+                opacity={isDragging ? 0.7 : 1}
+              />
               {item.progress > 0 && (
-                <rect x={barX} y={barY} width={progressW} height={barH} rx={4} fill={colors.progress} opacity={0.8} />
+                <rect x={barX} y={barY} width={Math.min(progressW, barW)} height={barH} rx={4} fill={colors.progress} opacity={0.8} />
               )}
               <text x={barX + barW + 6} y={barY + barH / 2 + 3} fontSize={10} className="fill-foreground">{item.title}</text>
+
+              {/* Drag handles — invisible hit targets */}
+              {onUpdate && (
+                <>
+                  {/* Left edge resize */}
+                  <rect
+                    x={barX - EDGE_HIT / 2} y={barY} width={EDGE_HIT} height={barH}
+                    fill="transparent"
+                    className="cursor-col-resize"
+                    onMouseDown={e => handleMouseDown(e, item.id, 'resize-left', item.start_date, item.end_date || item.start_date)}
+                  />
+                  {/* Center move */}
+                  <rect
+                    x={barX + EDGE_HIT / 2} y={barY}
+                    width={Math.max(barW - EDGE_HIT, 2)} height={barH}
+                    fill="transparent"
+                    className="cursor-grab"
+                    onMouseDown={e => handleMouseDown(e, item.id, 'move', item.start_date, item.end_date || item.start_date)}
+                    onClick={() => onSelect?.(item.id)}
+                  />
+                  {/* Right edge resize */}
+                  <rect
+                    x={barX + barW - EDGE_HIT / 2} y={barY} width={EDGE_HIT} height={barH}
+                    fill="transparent"
+                    className="cursor-col-resize"
+                    onMouseDown={e => handleMouseDown(e, item.id, 'resize-right', item.start_date, item.end_date || item.start_date)}
+                  />
+                </>
+              )}
+              {/* Fallback click when no onUpdate */}
+              {!onUpdate && (
+                <rect
+                  x={barX} y={barY} width={barW} height={barH}
+                  fill="transparent"
+                  onClick={() => onSelect?.(item.id)}
+                />
+              )}
             </g>
           );
         })}
