@@ -9,6 +9,7 @@ import { cn, formatCurrency as fmt } from '@/lib/utils';
 import { useActualCosts } from '@/hooks/useActualCosts';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { ActualCostPopup } from '@/components/change-order-detail/ActualCostPopup';
 
 interface ProfitCardProps {
   financials: ProjectFinancials;
