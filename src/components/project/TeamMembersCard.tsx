@@ -200,13 +200,21 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
       }
       // 3. Delete related invites
       await supabase.from('project_invites').delete().eq('project_team_id', memberToRemove.id);
-      // 4. Delete the team member row
+      // 4. Clean up supplier-specific records
+      if (memberToRemove.role === 'Supplier') {
+        await supabase.from('project_designated_suppliers').update({ status: 'removed' }).eq('project_id', projectId);
+        if (orgId) {
+          await supabase.from('supplier_estimates').delete().eq('project_id', projectId).eq('supplier_org_id', orgId);
+        }
+      }
+      // 5. Delete the team member row
       const { error } = await supabase.from('project_team').delete().eq('id', memberToRemove.id);
       if (error) throw error;
       toast({ title: `${memberToRemove.invited_org_name || 'Member'} removed from project` });
       setMemberToRemove(null);
       fetchTeam();
       fetchContract();
+      fetchDesignatedSupplier();
       onTeamChanged?.();
     } catch (err: any) {
       toast({ title: 'Error removing member', description: err.message, variant: 'destructive' });
