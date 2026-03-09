@@ -21,7 +21,7 @@ export interface ScheduleItem {
   // Computed fields
   sov_item?: {
     id: string;
-    description: string;
+    item_name: string;
     value_amount: number;
     total_billed_amount: number;
     billing_progress: number;
