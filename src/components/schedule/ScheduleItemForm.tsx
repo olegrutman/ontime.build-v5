@@ -25,7 +25,11 @@ export function ScheduleItemForm({ open, onClose, onSave, item, workOrders = [],
   const [endDate, setEndDate] = useState(item?.end_date ?? '');
   const [progress, setProgress] = useState(item?.progress ?? 0);
   const [workOrderId, setWorkOrderId] = useState(item?.work_order_id ?? '');
+  const [sovItemId, setSovItemId] = useState(item?.sov_item_id ?? '');
   const [depIds, setDepIds] = useState<string[]>(item?.dependency_ids ?? []);
+  
+  // Fetch available SOV items
+  const { data: sovItems = [] } = useProjectSOVItems(projectId);
 
   const handleWOChange = (woId: string) => {
     setWorkOrderId(woId === 'none' ? '' : woId);
