@@ -19,7 +19,7 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
     workOrderTotal, workOrderFCCost, tcInternalCostTotal,
     ownerContractValue, materialMarkupType, materialMarkupValue,
     materialDelivered, laborBudget,
-    isTCMaterialResponsible, updateOwnerContract,
+    isTCMaterialResponsible, isTCSelfPerforming, updateOwnerContract,
     materialEstimate, approvedEstimateSum,
   } = financials;
 
