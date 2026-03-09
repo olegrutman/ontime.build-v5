@@ -1,27 +1,42 @@
+# Daily Log Feature — IMPLEMENTED
 
+## Design Philosophy
+Zero-typing, tap-first daily log that takes under 90 seconds to complete.
 
-# Fix: Supplier Still Shows in Readiness After Removal
+## Features Built
 
-## Problem
+### 1. Database Tables
+- `daily_logs` — one per project per date, auto-creates as draft
+- `daily_log_manpower` — per-trade headcount
+- `daily_log_delays` — cause chips + hours lost
+- `daily_log_photos` — storage refs with tags
+- `daily_log_deliveries` — PO delivery confirmations
 
-When a supplier team member is removed, the cascading delete cleans up `project_contracts`, `project_participants`, `project_invites`, and `project_team` — but does **not** clean up `project_designated_suppliers`. The readiness hook queries `project_designated_suppliers` independently (line 121: `hasDesignatedSupplier = designatedSuppliers.some(ds => ds.status === 'active')`), so removed suppliers persist in the checklist as "Awaiting Supplier."
+### 2. UI Components (all tap-based)
+- **WeatherCard** — condition chips (☀️ 🌧️ ❄️ 💨 🌡️ 🥶) + stepper temps
+- **ManpowerCard** — per-trade steppers auto-populated from project team
+- **WorkPerformedCard** — progress sliders linked to schedule items
+- **SafetyCard** — toggle + incident type chips
+- **DelaysCard** — cause chips with hour steppers
+- **DeliveriesCard** — PO status chips (✅ ❌ ⚠️)
+- **PhotosCard** — camera upload with tags
+- **QuickNotesCard** — quick-add chips + text area
 
-Additionally, supplier estimate records in `supplier_estimates` are not cleaned up either, which could cause stale "Awaiting supplier estimate" items.
+### 3. Integration Points
+| Feature | Links To |
+|---------|----------|
+| Work Performed | `project_schedule_items.progress` (bidirectional) |
+| Manpower | Pre-populated from `project_team` trades |
+| Photos | Lovable Cloud storage bucket `daily-log-photos` |
 
-## Fix
+### 4. Navigation
+- Added "Daily Log" tab to desktop `ProjectTopBar`
+- Added "Daily Log" to mobile bottom nav `BottomNav`
 
-### `src/components/project/TeamMembersCard.tsx`
-
-In `handleRemoveMember`, add cleanup for `project_designated_suppliers` when the removed member's role is `SUPPLIER` (or `SUP`):
-
-- Before deleting the team row, also delete/update `project_designated_suppliers` where the project matches and the supplier org matches (or set status to `'removed'` to match the existing pattern used in `fetchDesignatedSupplier` which filters `neq('status', 'removed')`)
-- Also delete from `supplier_estimates` where `supplier_org_id` matches the removed org
-
-### One file to edit
-
-| File | Change |
-|------|--------|
-| `src/components/project/TeamMembersCard.tsx` | Add `project_designated_suppliers` and `supplier_estimates` cleanup to `handleRemoveMember` when removing a supplier role member |
-
-No database changes needed.
-
+## Files Created/Modified
+- `src/types/dailyLog.ts` — types + constants
+- `src/hooks/useDailyLog.ts` — auto-create, auto-save, submit logic
+- `src/components/daily-log/` — all card components + DailyLogPanel
+- `src/pages/ProjectHome.tsx` — renders DailyLogPanel on daily-log tab
+- `src/components/project/ProjectTopBar.tsx` — added tab
+- `src/components/layout/BottomNav.tsx` — added to more menu
