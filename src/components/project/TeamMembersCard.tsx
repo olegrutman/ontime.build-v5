@@ -244,6 +244,29 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
     }
   };
 
+  const handleSavePoEmail = async () => {
+    const trimmed = poEmailDraft.trim();
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      toast({ title: 'Please enter a valid email', variant: 'destructive' });
+      return;
+    }
+    setSavingPoEmail(true);
+    try {
+      const { error } = await supabase
+        .from('project_designated_suppliers')
+        .update({ po_email: trimmed })
+        .eq('project_id', projectId);
+      if (error) throw error;
+      toast({ title: 'PO email saved' });
+      setEditingPoEmail(false);
+      fetchDesignatedSupplier();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setSavingPoEmail(false);
+    }
+  };
+
   return (
     <div data-sasha-card="Team" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5">
       <div className="flex items-center justify-between mb-3">
