@@ -378,6 +378,7 @@ export default function ProjectHome() {
                       projectAddress={project?.address ? `${project.address.street || ''}, ${project.address.city || ''}, ${project.address.state || ''} ${project.address.zip || ''}`.replace(/^,\s*|,\s*$/g, '').trim() : ''} />
               )}
               {activeTab === 'schedule' && <ScheduleTab projectId={id!} />}
+              {activeTab === 'daily-log' && <DailyLogPanel projectId={id!} />}
               {activeTab === 'returns' && <ReturnsTab projectId={id!} />}
             </div>
           </main>

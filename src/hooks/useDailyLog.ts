@@ -104,10 +104,10 @@ export function useDailyLog(projectId: string, logDate?: string) {
   // --- Mutations ---
 
   const updateLog = useMutation({
-    mutationFn: async (updates: Partial<Pick<DailyLog, 'weather_data' | 'safety_incidents' | 'notes' | 'manpower_total' | 'delay_hours' | 'status' | 'submitted_at'>>) => {
+    mutationFn: async (updates: Record<string, unknown>) => {
       const { error } = await supabase
         .from('daily_logs')
-        .update({ ...updates, updated_at: new Date().toISOString() })
+        .update({ ...updates, updated_at: new Date().toISOString() } as any)
         .eq('id', logId!);
       if (error) throw error;
     },
