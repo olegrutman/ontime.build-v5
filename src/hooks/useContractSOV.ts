@@ -748,10 +748,7 @@ export function useContractSOV(projectId: string | undefined) {
       
       if (itemsError) throw itemsError;
 
-      // Auto-create matching schedule tasks
-      if (insertedItems) {
-        await createScheduleItemsFromSOVItems(projectId, insertedItems);
-      }
+      // Schedule tasks are now auto-created by database trigger on project_sov_items INSERT
       
       toast({
         title: 'SOV Created',
