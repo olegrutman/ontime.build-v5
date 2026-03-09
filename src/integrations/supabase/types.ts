@@ -685,6 +685,216 @@ export type Database = {
           },
         ]
       }
+      daily_log_delays: {
+        Row: {
+          cause: string
+          created_at: string
+          hours_lost: number
+          id: string
+          log_id: string
+          notes: string | null
+        }
+        Insert: {
+          cause: string
+          created_at?: string
+          hours_lost?: number
+          id?: string
+          log_id: string
+          notes?: string | null
+        }
+        Update: {
+          cause?: string
+          created_at?: string
+          hours_lost?: number
+          id?: string
+          log_id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_log_delays_log_id_fkey"
+            columns: ["log_id"]
+            isOneToOne: false
+            referencedRelation: "daily_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_log_deliveries: {
+        Row: {
+          created_at: string
+          id: string
+          log_id: string
+          notes: string | null
+          po_id: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          log_id: string
+          notes?: string | null
+          po_id?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          log_id?: string
+          notes?: string | null
+          po_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_log_deliveries_log_id_fkey"
+            columns: ["log_id"]
+            isOneToOne: false
+            referencedRelation: "daily_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_log_deliveries_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_log_manpower: {
+        Row: {
+          created_at: string
+          headcount: number
+          id: string
+          log_id: string
+          org_id: string | null
+          trade: string
+        }
+        Insert: {
+          created_at?: string
+          headcount?: number
+          id?: string
+          log_id: string
+          org_id?: string | null
+          trade?: string
+        }
+        Update: {
+          created_at?: string
+          headcount?: number
+          id?: string
+          log_id?: string
+          org_id?: string | null
+          trade?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_log_manpower_log_id_fkey"
+            columns: ["log_id"]
+            isOneToOne: false
+            referencedRelation: "daily_logs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_log_manpower_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_log_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          id: string
+          log_id: string
+          storage_path: string
+          tag: string | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          log_id: string
+          storage_path: string
+          tag?: string | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          id?: string
+          log_id?: string
+          storage_path?: string
+          tag?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_log_photos_log_id_fkey"
+            columns: ["log_id"]
+            isOneToOne: false
+            referencedRelation: "daily_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_logs: {
+        Row: {
+          created_at: string
+          created_by: string
+          delay_hours: number | null
+          id: string
+          log_date: string
+          manpower_total: number | null
+          notes: string | null
+          project_id: string
+          safety_incidents: Json | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+          weather_data: Json | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          delay_hours?: number | null
+          id?: string
+          log_date?: string
+          manpower_total?: number | null
+          notes?: string | null
+          project_id: string
+          safety_incidents?: Json | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          weather_data?: Json | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          delay_hours?: number | null
+          id?: string
+          log_date?: string
+          manpower_total?: number | null
+          notes?: string | null
+          project_id?: string
+          safety_incidents?: Json | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+          weather_data?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_logs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       estimate_catalog_mapping: {
         Row: {
           catalog_item_id: string
