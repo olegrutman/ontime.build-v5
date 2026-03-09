@@ -78,6 +78,7 @@ export function DesignateSupplierDialog({
           user_id: userId,
           invited_email: null,
           invited_name: name,
+          po_email: poEmail.trim() || null,
           status: 'active',
           designated_by: user.id,
         }, { onConflict: 'project_id' });
