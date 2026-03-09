@@ -621,8 +621,8 @@ export function useContractSOV(projectId: string | undefined) {
         
         if (itemsError) throw itemsError;
 
-        // Auto-create matching schedule tasks
-        if (insertedItems) {
+        // Auto-create matching schedule tasks only for the first contract to avoid duplicates
+        if (insertedItems && contract === contractsWithValue[0]) {
           await createScheduleItemsFromSOVItems(projectId, insertedItems);
         }
       }

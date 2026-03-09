@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { ProjectContract, getContractDisplayName } from '@/hooks/useContractSOV';
+import { ProjectContract, getContractDisplayName, createScheduleItemsFromSOVItems } from '@/hooks/useContractSOV';
 
 interface UploadSOVDialogProps {
   open: boolean;
