@@ -178,6 +178,14 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
                       <TableCell className="text-sm">{format(new Date(item.start_date), 'MMM d, yyyy')}</TableCell>
                       <TableCell className="text-sm">{item.end_date ? format(new Date(item.end_date), 'MMM d, yyyy') : '—'}</TableCell>
                       <TableCell className="text-right text-sm">{item.progress}%</TableCell>
+                      <TableCell className="text-right text-sm">
+                        {item.sov_item ? (
+                          <span className={`${item.sov_item.billing_progress > item.progress ? 'text-amber-600' : 
+                            item.progress > item.sov_item.billing_progress ? 'text-green-600' : ''}`}>
+                            {item.sov_item.billing_progress}%
+                          </span>
+                        ) : '—'}
+                      </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={e => { e.stopPropagation(); handleEdit(item); }}>

@@ -109,6 +109,27 @@ export function ScheduleItemForm({ open, onClose, onSave, item, workOrders = [],
               </Select>
             </div>
           )}
+          {sovItems.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Link to SOV Item (Optional)</Label>
+              <Select value={sovItemId || 'none'} onValueChange={v => setSovItemId(v === 'none' ? '' : v)}>
+                <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {sovItems.map(sov => (
+                    <SelectItem key={sov.id} value={sov.id}>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium">{sov.item_name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {sov.contract_name} • ${sov.value_amount.toLocaleString()}
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           {existingItems.length > 0 && (
             <div className="space-y-1.5">
               <Label>Dependencies</Label>
