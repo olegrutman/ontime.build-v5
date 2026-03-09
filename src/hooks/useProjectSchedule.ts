@@ -44,7 +44,7 @@ export function useProjectSchedule(projectId: string) {
           *,
           sov_item:project_sov_items!sov_item_id(
             id,
-            description,
+            item_name,
             value_amount,
             total_billed_amount
           )
