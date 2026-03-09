@@ -127,6 +127,7 @@ export function DesignateSupplierDialog({
     setSelectedUser(null);
     setInviteEmail('');
     setInviteName('');
+    setPoEmail('');
     setHasSearched(false);
     setTab('search');
   };
