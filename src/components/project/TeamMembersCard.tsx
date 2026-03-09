@@ -1,10 +1,20 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Users, Plus, UserPlus, Package, Loader2 } from 'lucide-react';
+import { Users, Plus, UserPlus, Package, Loader2, RotateCw, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { AddTeamMemberDialog } from '@/components/project/AddTeamMemberDialog';
@@ -44,6 +54,12 @@ const roleAbbrev: Record<string, string> = {
   'Supplier': 'SUP',
 };
 
+const statusVariant: Record<string, 'outline' | 'secondary' | 'destructive'> = {
+  Accepted: 'secondary',
+  Invited: 'outline',
+  Declined: 'destructive',
+};
+
 export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembersCardProps) {
   const { userOrgRoles } = useAuth();
   const { toast } = useToast();
@@ -52,6 +68,11 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
   const [isDesignateOpen, setIsDesignateOpen] = useState(false);
   const [designatedSupplier, setDesignatedSupplier] = useState<{ invited_name: string | null; invited_email: string | null; po_email: string | null; status: string } | null>(null);
+
+  // Remove confirmation state
+  const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null);
+  const [removing, setRemoving] = useState(false);
+  const [resending, setResending] = useState<string | null>(null);
 
   // Material responsibility state
   const [contract, setContract] = useState<ContractData | null>(null);
@@ -75,7 +96,6 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
   }, [projectId]);
 
   const fetchContract = useCallback(async () => {
-    // Fetch the primary contract (exclude work-order-level contracts)
     const { data } = await supabase
       .from('project_contracts')
       .select('id, material_responsibility, from_org_id, to_org_id')
@@ -109,11 +129,9 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
 
   const materialResp = contract?.material_responsibility;
 
-  // Permission: can current user edit material responsibility?
   const canEditResp = (() => {
     if (!contract || !currentOrgId || !isGcOrTc || isLocked) return false;
-    if (!materialResp) return true; // not set yet — creator can set
-    // If set, only the responsible party's org can switch
+    if (!materialResp) return true;
     const respOrgId = materialResp === 'TC' ? contract.from_org_id : contract.to_org_id;
     return currentOrgId === respOrgId;
   })();
@@ -164,11 +182,42 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
     }
   };
 
-  const teamByRole = team.reduce<Record<string, TeamMember[]>>((acc, m) => {
-    if (!acc[m.role]) acc[m.role] = [];
-    acc[m.role].push(m);
-    return acc;
-  }, {});
+  // Remove a team member with cascading deletes
+  const handleRemoveMember = async () => {
+    if (!memberToRemove) return;
+    setRemoving(true);
+    try {
+      // 1. Delete related invites
+      await supabase.from('project_invites').delete().eq('project_team_id', memberToRemove.id);
+      // 2. Delete the team member row (contracts/participants handled by cascade or separately)
+      const { error } = await supabase.from('project_team').delete().eq('id', memberToRemove.id);
+      if (error) throw error;
+      toast({ title: `${memberToRemove.invited_org_name || 'Member'} removed from project` });
+      setMemberToRemove(null);
+      fetchTeam();
+    } catch (err: any) {
+      toast({ title: 'Error removing member', description: err.message, variant: 'destructive' });
+    } finally {
+      setRemoving(false);
+    }
+  };
+
+  // Resend invite by touching updated_at on the invite record
+  const handleResendInvite = async (member: TeamMember) => {
+    setResending(member.id);
+    try {
+      const { error } = await supabase
+        .from('project_invites')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('project_team_id', member.id);
+      if (error) throw error;
+      toast({ title: `Invite resent to ${member.invited_org_name || 'member'}` });
+    } catch (err: any) {
+      toast({ title: 'Error resending invite', description: err.message, variant: 'destructive' });
+    } finally {
+      setResending(null);
+    }
+  };
 
   return (
     <div data-sasha-card="Team" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5">
@@ -188,16 +237,23 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
       ) : team.length === 0 ? (
         <p className="text-sm text-muted-foreground">No team members</p>
       ) : (
-        <div className="space-y-1.5">
-          {Object.entries(teamByRole).slice(0, 5).map(([role, members]) => {
-            const abbrev = roleAbbrev[role];
+        <div className="space-y-1">
+          {team.slice(0, 8).map((member) => {
+            const abbrev = roleAbbrev[member.role];
             const hasMaterialIcon = materialResp && abbrev === materialResp;
 
             return (
-              <div key={role} className="flex items-center gap-2 py-1 group">
-                <span className={cn("h-2 w-2 rounded-full shrink-0", roleDotColors[role])} />
+              <div key={member.id} className="flex items-center gap-2 py-1 group">
+                <span className={cn("h-2 w-2 rounded-full shrink-0", roleDotColors[member.role])} />
                 <span className="text-[10px] font-medium text-muted-foreground uppercase w-7">{abbrev}</span>
-                <span className="text-sm truncate flex-1">{members.map(m => m.invited_org_name || 'Unknown').join(', ')}</span>
+                <span className="text-sm truncate flex-1">{member.invited_org_name || 'Unknown'}</span>
+
+                {member.status !== 'Accepted' && (
+                  <Badge variant={statusVariant[member.status] || 'outline'} className="text-[9px] px-1 py-0 shrink-0">
+                    {member.status}
+                  </Badge>
+                )}
+
                 {hasMaterialIcon && (
                   <TooltipProvider>
                     <Tooltip>
@@ -208,16 +264,45 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
                     </Tooltip>
                   </TooltipProvider>
                 )}
-                {hasMaterialIcon && canEditResp && !showSelector && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-5 px-1.5 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => setShowSelector(true)}
-                  >
-                    Change
-                  </Button>
-                )}
+
+                {/* Hover actions */}
+                <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                  {member.status === 'Invited' && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            disabled={resending === member.id}
+                            onClick={() => handleResendInvite(member)}
+                          >
+                            {resending === member.id
+                              ? <Loader2 className="h-3 w-3 animate-spin" />
+                              : <RotateCw className="h-3 w-3" />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-xs">Resend invite</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => setMemberToRemove(member)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs">Remove</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </div>
             );
           })}
@@ -254,7 +339,21 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
             </div>
           )}
 
-          {/* Locked indicator — no edit controls */}
+          {/* Material resp change trigger on row with material icon */}
+          {contract && materialResp && !isLocked && canEditResp && !showSelector && (
+            <div className="pt-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 px-1.5 text-[10px] text-muted-foreground"
+                onClick={() => setShowSelector(true)}
+              >
+                Change material responsibility
+              </Button>
+            </div>
+          )}
+
+          {/* Locked indicator */}
           {contract && materialResp && isLocked && (
             <div className="pt-2 border-t mt-2 flex items-center gap-1.5">
               <Package className="h-3 w-3 text-muted-foreground" />
@@ -291,6 +390,24 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
           ) : null}
         </div>
       )}
+
+      {/* Remove confirmation dialog */}
+      <AlertDialog open={!!memberToRemove} onOpenChange={(open) => !open && setMemberToRemove(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove team member</AlertDialogTitle>
+            <AlertDialogDescription>
+              Remove <strong>{memberToRemove?.invited_org_name || 'this member'}</strong> from the project? This will also delete any related invites.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={removing}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRemoveMember} disabled={removing} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {removing ? 'Removing…' : 'Remove'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AddTeamMemberDialog open={isAddMemberOpen} onOpenChange={setIsAddMemberOpen} projectId={projectId} creatorOrgType={creatorOrgType} onMemberAdded={fetchTeam} />
       <DesignateSupplierDialog open={isDesignateOpen} onOpenChange={setIsDesignateOpen} projectId={projectId} onDesignated={fetchDesignatedSupplier} />
