@@ -2398,6 +2398,7 @@ export type Database = {
           progress: number | null
           project_id: string
           sort_order: number | null
+          sov_item_id: string | null
           start_date: string
           title: string
           updated_at: string | null
@@ -2414,6 +2415,7 @@ export type Database = {
           progress?: number | null
           project_id: string
           sort_order?: number | null
+          sov_item_id?: string | null
           start_date: string
           title: string
           updated_at?: string | null
@@ -2430,6 +2432,7 @@ export type Database = {
           progress?: number | null
           project_id?: string
           sort_order?: number | null
+          sov_item_id?: string | null
           start_date?: string
           title?: string
           updated_at?: string | null
@@ -2441,6 +2444,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_schedule_items_sov_item_id_fkey"
+            columns: ["sov_item_id"]
+            isOneToOne: false
+            referencedRelation: "project_sov_items"
             referencedColumns: ["id"]
           },
           {
