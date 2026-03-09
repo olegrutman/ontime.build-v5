@@ -145,10 +145,34 @@ export function UploadSOVDialog({ open, onOpenChange, contracts, projectId, onCr
         source: 'user' as const,
       }));
 
-      const { error: itemsError } = await supabase.from('project_sov_items').insert(itemsToInsert);
+      const { data: insertedItems, error: itemsError } = await supabase
+        .from('project_sov_items')
+        .insert(itemsToInsert)
+        .select('id, item_name, sort_order');
       if (itemsError) throw itemsError;
 
-      toast({ title: 'SOV Created', description: `Created SOV with ${items.length} items from your upload.` });
+      // Auto-create matching schedule tasks
+      if (insertedItems && insertedItems.length > 0) {
+        const today = new Date().toISOString().split('T')[0];
+        const scheduleItems = insertedItems.map((item) => ({
+          project_id: projectId,
+          title: item.item_name,
+          item_type: 'task' as const,
+          sov_item_id: item.id,
+          start_date: today,
+          end_date: null,
+          progress: 0,
+          sort_order: item.sort_order,
+          dependency_ids: [],
+          work_order_id: null,
+          color: null,
+          created_by: null,
+        }));
+        const { error: scheduleError } = await supabase.from('project_schedule_items').insert(scheduleItems);
+        if (scheduleError) throw scheduleError;
+      }
+
+      toast({ title: 'SOV Created', description: `Created SOV with ${items.length} items and added them as schedule tasks.` });
       handleClose(false);
       onCreated();
     } catch (err: any) {

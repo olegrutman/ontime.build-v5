@@ -3,6 +3,31 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
+// Helper: create schedule tasks for a list of newly-created SOV items
+async function createScheduleItemsFromSOVItems(
+  projectId: string,
+  sovItems: { id: string; item_name: string; sort_order: number }[]
+) {
+  if (!sovItems.length) return;
+  const today = new Date().toISOString().split('T')[0];
+  const scheduleItems = sovItems.map((item) => ({
+    project_id: projectId,
+    title: item.item_name,
+    item_type: 'task' as const,
+    sov_item_id: item.id,
+    start_date: today,
+    end_date: null,
+    progress: 0,
+    sort_order: item.sort_order,
+    dependency_ids: [],
+    work_order_id: null,
+    color: null,
+    created_by: null,
+  }));
+  const { error } = await supabase.from('project_schedule_items').insert(scheduleItems);
+  if (error) throw error;
+}
+
 // Contract types
 export interface ProjectContract {
   id: string;
@@ -578,16 +603,22 @@ export function useContractSOV(projectId: string | undefined) {
           };
         });
         
-        const { error: itemsError } = await supabase
+        const { data: insertedItems, error: itemsError } = await supabase
           .from('project_sov_items')
-          .insert(itemsToInsert);
+          .insert(itemsToInsert)
+          .select('id, item_name, sort_order');
         
         if (itemsError) throw itemsError;
+
+        // Auto-create matching schedule tasks
+        if (insertedItems) {
+          await createScheduleItemsFromSOVItems(projectId, insertedItems);
+        }
       }
       
       toast({
         title: 'SOVs Created',
-        description: `Created ${contractsWithValue.length} SOV(s) with ${itemNames.length} items each.`
+        description: `Created ${contractsWithValue.length} SOV(s) with ${itemNames.length} items each, and added them as schedule tasks.`
       });
       
       await fetchData();
@@ -702,15 +733,21 @@ export function useContractSOV(projectId: string | undefined) {
         };
       });
       
-      const { error: itemsError } = await supabase
+      const { data: insertedItems, error: itemsError } = await supabase
         .from('project_sov_items')
-        .insert(itemsToInsert);
+        .insert(itemsToInsert)
+        .select('id, item_name, sort_order');
       
       if (itemsError) throw itemsError;
+
+      // Auto-create matching schedule tasks
+      if (insertedItems) {
+        await createScheduleItemsFromSOVItems(projectId, insertedItems);
+      }
       
       toast({
         title: 'SOV Created',
-        description: `Created SOV with ${itemNames.length} items for ${sovName}.`
+        description: `Created SOV with ${itemNames.length} items for ${sovName}, and added them as schedule tasks.`
       });
       
       await fetchData();
