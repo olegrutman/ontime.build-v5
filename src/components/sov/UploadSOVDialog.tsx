@@ -153,23 +153,7 @@ export function UploadSOVDialog({ open, onOpenChange, contracts, projectId, onCr
 
       // Auto-create matching schedule tasks
       if (insertedItems && insertedItems.length > 0) {
-        const today = new Date().toISOString().split('T')[0];
-        const scheduleItems = insertedItems.map((item) => ({
-          project_id: projectId,
-          title: item.item_name,
-          item_type: 'task' as const,
-          sov_item_id: item.id,
-          start_date: today,
-          end_date: null,
-          progress: 0,
-          sort_order: item.sort_order,
-          dependency_ids: [],
-          work_order_id: null,
-          color: null,
-          created_by: null,
-        }));
-        const { error: scheduleError } = await supabase.from('project_schedule_items').insert(scheduleItems);
-        if (scheduleError) throw scheduleError;
+        await createScheduleItemsFromSOVItems(projectId, insertedItems);
       }
 
       toast({ title: 'SOV Created', description: `Created SOV with ${items.length} items and added them as schedule tasks.` });

@@ -4,7 +4,7 @@ import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 
 // Helper: create schedule tasks for a list of newly-created SOV items
-async function createScheduleItemsFromSOVItems(
+export async function createScheduleItemsFromSOVItems(
   projectId: string,
   sovItems: { id: string; item_name: string; sort_order: number }[]
 ) {
