@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { ScheduleItem } from '@/hooks/useProjectSchedule';
+import { useProjectSOVItems } from '@/hooks/useProjectSOVItems';
 
 interface ScheduleItemFormProps {
   open: boolean;
