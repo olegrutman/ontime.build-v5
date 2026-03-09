@@ -1,33 +1,30 @@
 
 
-# Math Formula Audit — 7 Bug Fixes — COMPLETED
+# Auto-Create Schedule Tasks from SOV Items — COMPLETED
 
-## Bugs Fixed
+## Feature
+When a SOV is created (via template or upload), automatically create a matching schedule task for each SOV line item. The task title = SOV item name, and they are pre-linked via `sov_item_id`.
 
-### Bug 1: WorkOrderSummaryCard — TC profit now only sums approved/contracted WOs
-Revenue filter added so drafts and rejected WOs are excluded from `tcToGcTotal`.
+## Changes Made
 
-### Bug 2: WorkOrderSummaryCard — TC profit includes tc_internal_cost
-`profit = revenue - fcCost - tcInternalCostTotal` for accurate self-performing margin.
+### 1. Helper Function Added (`useContractSOV.ts`)
+Created `createScheduleItemsFromSOVItems(projectId, sovItems)` that bulk-inserts schedule tasks from newly created SOV items.
 
-### Bug 3: useDashboardData — TC dashboard profit includes internal cost
-`tc_internal_cost` summed from WO query and added to `totalCosts`.
+### 2. Template-Based SOV Creation Updated
+- `createAllSOVs` — now calls `.select('id, item_name, sort_order')` after insert and auto-creates schedule tasks
+- `createSOVForContract` — same pattern, auto-creates schedule tasks
 
-### Bug 4: useProjectFinancials — Equipment total fetched directly
-`equipment_total` selected from DB and summed directly instead of derived from mismatched sources.
+### 3. Upload SOV Creation Updated (`UploadSOVDialog.tsx`)
+- `handleApply` — now fetches inserted item IDs and creates matching schedule tasks
 
-### Bug 5: ContractedPricingCard — Revenue uses recalculated totals
-`revenue = laborTotal + materialTotal + equipmentTotal` instead of stale `final_price`.
-
-### Bug 6: ProfitCard — TC labor margin includes tcInternalCostTotal
-`laborMargin = revenueTotal - fcContractValue - workOrderFCCost - tcInternalCostTotal - estimateCost`.
-
-### Bug 7: useDashboardData — WO revenue includes both approved and contracted
-Removed `.filter(wo => wo.status === 'contracted')` so both statuses count.
+### 4. Toast Messages Updated
+All SOV creation toasts now mention that schedule tasks were also auto-created.
 
 ## Files Changed
-- `src/components/project/WorkOrderSummaryCard.tsx` — Bugs 1, 2
-- `src/hooks/useDashboardData.ts` — Bugs 3, 7
-- `src/hooks/useProjectFinancials.ts` — Bugs 4, 6
-- `src/components/change-order-detail/ContractedPricingCard.tsx` — Bug 5
-- `src/components/project/ProfitCard.tsx` — Bug 6
+- `src/hooks/useContractSOV.ts` — Added helper + integrated into both template creation paths
+- `src/components/sov/UploadSOVDialog.tsx` — Integrated schedule task creation into upload flow
+
+## Behavior After
+- User clicks "Create SOVs from Template" → SOV items + schedule tasks auto-created
+- User uploads SOV PDF/CSV and applies → same auto-creation
+- Schedule tab instantly shows all tasks, each already linked to its SOV item
