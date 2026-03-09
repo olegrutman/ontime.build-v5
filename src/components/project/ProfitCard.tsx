@@ -6,7 +6,6 @@ import { useToast } from '@/hooks/use-toast';
 import { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import { cn, formatCurrency as fmt } from '@/lib/utils';
 import { useActualCosts } from '@/hooks/useActualCosts';
-import { ActualCostPopup } from '@/components/change-order-detail/ActualCostPopup';
 
 interface ProfitCardProps {
   financials: ProjectFinancials;
@@ -27,7 +26,6 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
   const [editing, setEditing] = useState(false);
   const [editValue, setEditValue] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [costPopupOpen, setCostPopupOpen] = useState(false);
 
   const { totalActualCost } = useActualCosts({ projectId });
 
@@ -117,45 +115,32 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
     if (!hasLaborBudget && !hasActualCost) return null;
 
     return (
-      <>
-        <div className="bg-card rounded-2xl shadow-sm p-5 space-y-2.5">
-          <div className="flex items-center gap-1.5 mb-1">
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Profit Position</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Contract Total</span>
-            <span className="text-sm font-semibold tabular-nums">{fmt(fcContractTotal)}</span>
-          </div>
-
-          <button
-            onClick={() => setCostPopupOpen(true)}
-            className="flex items-center justify-between w-full hover:bg-accent/50 rounded-md px-1 -mx-1 py-0.5 transition-colors"
-          >
-            <span className="text-sm text-muted-foreground underline decoration-dashed underline-offset-2">
-              {hasActualCost ? 'Actual Cost' : 'Labor Budget'}
-            </span>
-            <span className="text-sm font-semibold tabular-nums">
-              {fmt(hasActualCost ? totalActualCost : (laborBudget || 0))}
-            </span>
-          </button>
-
-          <div className="border-t pt-2.5 flex items-center justify-between">
-            <span className="text-sm font-medium">FC Profit</span>
-            <span className={cn("text-lg font-bold tabular-nums", fcProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
-              {fmt(fcProfit)}
-            </span>
-          </div>
+      <div className="bg-card rounded-2xl shadow-sm p-5 space-y-2.5">
+        <div className="flex items-center gap-1.5 mb-1">
+          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Profit Position</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">Contract Total</span>
+          <span className="text-sm font-semibold tabular-nums">{fmt(fcContractTotal)}</span>
         </div>
 
-        <ActualCostPopup
-          open={costPopupOpen}
-          onOpenChange={setCostPopupOpen}
-          projectId={projectId}
-          earningsOrRevenue={fcContractTotal}
-          label="Earnings"
-        />
-      </>
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">
+            {hasActualCost ? 'Actual Cost' : 'Labor Budget'}
+          </span>
+          <span className="text-sm font-semibold tabular-nums">
+            {fmt(hasActualCost ? totalActualCost : (laborBudget || 0))}
+          </span>
+        </div>
+
+        <div className="border-t pt-2.5 flex items-center justify-between">
+          <span className="text-sm font-medium">FC Profit</span>
+          <span className={cn("text-lg font-bold tabular-nums", fcProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
+            {fmt(fcProfit)}
+          </span>
+        </div>
+      </div>
     );
   }
 
@@ -176,60 +161,47 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
 
     if (!isTCMaterialResponsible) {
       return (
-        <>
-          <div className="bg-card rounded-2xl shadow-sm p-5 space-y-2.5">
-            <div className="flex items-center gap-1.5 mb-1">
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Profit Position</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Revenue Total</span>
-              <span className="text-sm font-semibold tabular-nums">{fmt(revenueTotal)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">FC Labor Cost</span>
-              <span className="text-sm font-semibold tabular-nums text-orange-600 dark:text-orange-400">-{fmt(fcContractValue + workOrderFCCost)}</span>
-            </div>
-
-            <button
-              onClick={() => setCostPopupOpen(true)}
-              className="flex items-center justify-between w-full hover:bg-accent/50 rounded-md px-1 -mx-1 py-0.5 transition-colors"
-            >
-              <span className="text-sm text-muted-foreground underline decoration-dashed underline-offset-2">
-                {hasActualCost ? 'Actual Cost' : 'Internal Cost'}
-              </span>
-              <span className="text-sm font-semibold tabular-nums">
-                {fmt(hasActualCost ? totalActualCost : tcInternalCostTotal)}
-              </span>
-            </button>
-
-            <div className="border-t pt-2.5 flex items-center justify-between">
-              <span className="text-sm font-medium">Labor Margin</span>
-              <div className="text-right">
-                <span className={cn("text-lg font-bold tabular-nums", laborMargin >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
-                  {fmt(laborMargin)}
-                </span>
-                <span className="text-xs text-muted-foreground ml-2">({laborMarginPct.toFixed(1)}%)</span>
-              </div>
-            </div>
-            {laborMargin > 0 && (
-              <div className="flex items-center justify-between mt-1">
-                <span className="text-sm text-muted-foreground">Realized</span>
-                <span className={cn("text-sm font-semibold tabular-nums", netPosition >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
-                  {fmt(netPosition)} <span className="text-xs text-muted-foreground">({realizedPct.toFixed(1)}%)</span>
-                </span>
-              </div>
-            )}
+        <div className="bg-card rounded-2xl shadow-sm p-5 space-y-2.5">
+          <div className="flex items-center gap-1.5 mb-1">
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Profit Position</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Revenue Total</span>
+            <span className="text-sm font-semibold tabular-nums">{fmt(revenueTotal)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">FC Labor Cost</span>
+            <span className="text-sm font-semibold tabular-nums text-orange-600 dark:text-orange-400">-{fmt(fcContractValue + workOrderFCCost)}</span>
           </div>
 
-          <ActualCostPopup
-            open={costPopupOpen}
-            onOpenChange={setCostPopupOpen}
-            projectId={projectId}
-            earningsOrRevenue={revenueTotal}
-            label="Revenue"
-          />
-        </>
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">
+              {hasActualCost ? 'Actual Cost' : 'Internal Cost'}
+            </span>
+            <span className="text-sm font-semibold tabular-nums">
+              {fmt(hasActualCost ? totalActualCost : tcInternalCostTotal)}
+            </span>
+          </div>
+
+          <div className="border-t pt-2.5 flex items-center justify-between">
+            <span className="text-sm font-medium">Labor Margin</span>
+            <div className="text-right">
+              <span className={cn("text-lg font-bold tabular-nums", laborMargin >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
+                {fmt(laborMargin)}
+              </span>
+              <span className="text-xs text-muted-foreground ml-2">({laborMarginPct.toFixed(1)}%)</span>
+            </div>
+          </div>
+          {laborMargin > 0 && (
+            <div className="flex items-center justify-between mt-1">
+              <span className="text-sm text-muted-foreground">Realized</span>
+              <span className={cn("text-sm font-semibold tabular-nums", netPosition >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
+                {fmt(netPosition)} <span className="text-xs text-muted-foreground">({realizedPct.toFixed(1)}%)</span>
+              </span>
+            </div>
+          )}
+        </div>
       );
     }
 
@@ -245,70 +217,57 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
     const totalProfit = laborMargin + materialMargin;
 
     return (
-      <>
-        <div className="bg-card rounded-2xl shadow-sm p-5 space-y-2.5">
-          <div className="flex items-center gap-1.5 mb-1">
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Profit Position</span>
-          </div>
-
-          {/* Labor */}
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Labor Margin</span>
-            <span className={cn("text-sm font-semibold tabular-nums", laborMargin >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
-              {fmt(laborMargin)}
-            </span>
-          </div>
-
-          {/* Materials */}
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Material Margin</span>
-            <span className={cn("text-sm font-semibold tabular-nums", materialMargin >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
-              {fmt(materialMargin)}
-            </span>
-          </div>
-          {materialMarkupType && (
-            <p className="text-[10px] text-muted-foreground">
-              Markup: {materialMarkupType === 'percent' ? `${materialMarkupValue}%` : fmt(materialMarkupValue || 0)} on {fmt(materialCost)} delivered
-            </p>
-          )}
-
-          <button
-            onClick={() => setCostPopupOpen(true)}
-            className="flex items-center justify-between w-full hover:bg-accent/50 rounded-md px-1 -mx-1 py-0.5 transition-colors"
-          >
-            <span className="text-sm text-muted-foreground underline decoration-dashed underline-offset-2">
-              {hasActualCost ? 'Actual Cost' : 'Internal Cost'}
-            </span>
-            <span className="text-sm font-semibold tabular-nums">
-              {fmt(hasActualCost ? totalActualCost : tcInternalCostTotal)}
-            </span>
-          </button>
-
-          <div className="border-t pt-2.5 flex items-center justify-between">
-            <span className="text-sm font-medium">Total Projected Profit</span>
-            <span className={cn("text-lg font-bold tabular-nums", totalProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
-              {fmt(totalProfit)}
-            </span>
-          </div>
-          {laborMargin > 0 && (
-            <div className="flex items-center justify-between mt-1">
-              <span className="text-sm text-muted-foreground">Realized</span>
-              <span className={cn("text-sm font-semibold tabular-nums", netPosition >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
-                {fmt(netPosition)} <span className="text-xs text-muted-foreground">({realizedPct.toFixed(1)}%)</span>
-              </span>
-            </div>
-          )}
+      <div className="bg-card rounded-2xl shadow-sm p-5 space-y-2.5">
+        <div className="flex items-center gap-1.5 mb-1">
+          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Profit Position</span>
         </div>
 
-        <ActualCostPopup
-          open={costPopupOpen}
-          onOpenChange={setCostPopupOpen}
-          projectId={projectId}
-          earningsOrRevenue={revenueTotal}
-          label="Revenue"
-        />
-      </>
+        {/* Labor */}
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">Labor Margin</span>
+          <span className={cn("text-sm font-semibold tabular-nums", laborMargin >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
+            {fmt(laborMargin)}
+          </span>
+        </div>
+
+        {/* Materials */}
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">Material Margin</span>
+          <span className={cn("text-sm font-semibold tabular-nums", materialMargin >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
+            {fmt(materialMargin)}
+          </span>
+        </div>
+        {materialMarkupType && (
+          <p className="text-[10px] text-muted-foreground">
+            Markup: {materialMarkupType === 'percent' ? `${materialMarkupValue}%` : fmt(materialMarkupValue || 0)} on {fmt(materialCost)} delivered
+          </p>
+        )}
+
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-muted-foreground">
+            {hasActualCost ? 'Actual Cost' : 'Internal Cost'}
+          </span>
+          <span className="text-sm font-semibold tabular-nums">
+            {fmt(hasActualCost ? totalActualCost : tcInternalCostTotal)}
+          </span>
+        </div>
+
+        <div className="border-t pt-2.5 flex items-center justify-between">
+          <span className="text-sm font-medium">Total Projected Profit</span>
+          <span className={cn("text-lg font-bold tabular-nums", totalProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
+            {fmt(totalProfit)}
+          </span>
+        </div>
+        {laborMargin > 0 && (
+          <div className="flex items-center justify-between mt-1">
+            <span className="text-sm text-muted-foreground">Realized</span>
+            <span className={cn("text-sm font-semibold tabular-nums", netPosition >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
+              {fmt(netPosition)} <span className="text-xs text-muted-foreground">({realizedPct.toFixed(1)}%)</span>
+            </span>
+          </div>
+        )}
+      </div>
     );
   }
 
