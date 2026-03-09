@@ -147,6 +147,7 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
                   <TableHead className="w-28">Start</TableHead>
                   <TableHead className="w-28">End</TableHead>
                   <TableHead className="w-20 text-right">Progress</TableHead>
+                  <TableHead className="w-20 text-right">Billed</TableHead>
                   <TableHead className="w-16" />
                 </TableRow>
               </TableHeader>
@@ -166,6 +167,9 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
                           {wo && (
                             <span className="text-[10px] text-muted-foreground">WO: {wo.title}</span>
                           )}
+                          {item.sov_item && (
+                            <span className="text-[10px] text-muted-foreground">SOV: {item.sov_item.item_name}</span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -174,6 +178,14 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
                       <TableCell className="text-sm">{format(new Date(item.start_date), 'MMM d, yyyy')}</TableCell>
                       <TableCell className="text-sm">{item.end_date ? format(new Date(item.end_date), 'MMM d, yyyy') : '—'}</TableCell>
                       <TableCell className="text-right text-sm">{item.progress}%</TableCell>
+                      <TableCell className="text-right text-sm">
+                        {item.sov_item ? (
+                          <span className={`${item.sov_item.billing_progress > item.progress ? 'text-amber-600' : 
+                            item.progress > item.sov_item.billing_progress ? 'text-green-600' : ''}`}>
+                            {item.sov_item.billing_progress}%
+                          </span>
+                        ) : '—'}
+                      </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={e => { e.stopPropagation(); handleEdit(item); }}>
@@ -201,6 +213,7 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
         item={editingItem}
         workOrders={workOrders}
         existingItems={items}
+        projectId={projectId}
       />
 
       {/* Delete Confirmation */}

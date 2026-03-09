@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { ScheduleItem } from '@/hooks/useProjectSchedule';
+import { useProjectSOVItems } from '@/hooks/useProjectSOVItems';
 
 interface ScheduleItemFormProps {
   open: boolean;
@@ -14,16 +15,21 @@ interface ScheduleItemFormProps {
   item?: ScheduleItem | null;
   workOrders?: { id: string; title: string; status: string }[];
   existingItems?: ScheduleItem[];
+  projectId: string;
 }
 
-export function ScheduleItemForm({ open, onClose, onSave, item, workOrders = [], existingItems = [] }: ScheduleItemFormProps) {
+export function ScheduleItemForm({ open, onClose, onSave, item, workOrders = [], existingItems = [], projectId }: ScheduleItemFormProps) {
   const [title, setTitle] = useState(item?.title ?? '');
   const [itemType, setItemType] = useState<string>(item?.item_type ?? 'task');
   const [startDate, setStartDate] = useState(item?.start_date ?? new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(item?.end_date ?? '');
   const [progress, setProgress] = useState(item?.progress ?? 0);
   const [workOrderId, setWorkOrderId] = useState(item?.work_order_id ?? '');
+  const [sovItemId, setSovItemId] = useState(item?.sov_item_id ?? '');
   const [depIds, setDepIds] = useState<string[]>(item?.dependency_ids ?? []);
+  
+  // Fetch available SOV items
+  const { data: sovItems = [] } = useProjectSOVItems(projectId);
 
   const handleWOChange = (woId: string) => {
     setWorkOrderId(woId === 'none' ? '' : woId);
@@ -43,6 +49,7 @@ export function ScheduleItemForm({ open, onClose, onSave, item, workOrders = [],
       end_date: itemType === 'milestone' ? null : (endDate || null),
       progress,
       work_order_id: workOrderId || null,
+      sov_item_id: sovItemId || null,
       dependency_ids: depIds,
     });
     onClose();
@@ -97,6 +104,27 @@ export function ScheduleItemForm({ open, onClose, onSave, item, workOrders = [],
                   <SelectItem value="none">None</SelectItem>
                   {workOrders.map(wo => (
                     <SelectItem key={wo.id} value={wo.id}>{wo.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {sovItems.length > 0 && (
+            <div className="space-y-1.5">
+              <Label>Link to SOV Item (Optional)</Label>
+              <Select value={sovItemId || 'none'} onValueChange={v => setSovItemId(v === 'none' ? '' : v)}>
+                <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {sovItems.map(sov => (
+                    <SelectItem key={sov.id} value={sov.id}>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-medium">{sov.item_name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {sov.contract_name} • ${sov.value_amount.toLocaleString()}
+                        </span>
+                      </div>
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
