@@ -1,28 +1,42 @@
+# Daily Log Feature — IMPLEMENTED
 
+## Design Philosophy
+Zero-typing, tap-first daily log that takes under 90 seconds to complete.
 
-# Move Actual Cost Tracker to Labor Budget Card
+## Features Built
 
-## What Changes
+### 1. Database Tables
+- `daily_logs` — one per project per date, auto-creates as draft
+- `daily_log_manpower` — per-trade headcount
+- `daily_log_delays` — cause chips + hours lost
+- `daily_log_photos` — storage refs with tags
+- `daily_log_deliveries` — PO delivery confirmations
 
-The `BudgetTracking.tsx` (Labor Budget card) becomes the home for the Actual Cost Tracker. The card currently shows: Budget → Actual (placeholder) → Remaining → % Used. We make the "Actual" row tappable to open `ActualCostPopup`, and the "Actual" value reflects real logged entries instead of a static number.
+### 2. UI Components (all tap-based)
+- **WeatherCard** — condition chips (☀️ 🌧️ ❄️ 💨 🌡️ 🥶) + stepper temps
+- **ManpowerCard** — per-trade steppers auto-populated from project team
+- **WorkPerformedCard** — progress sliders linked to schedule items
+- **SafetyCard** — toggle + incident type chips
+- **DelaysCard** — cause chips with hour steppers
+- **DeliveriesCard** — PO status chips (✅ ❌ ⚠️)
+- **PhotosCard** — camera upload with tags
+- **QuickNotesCard** — quick-add chips + text area
 
-### 1. `BudgetTracking.tsx`
-- Import `ActualCostPopup` and `useActualCosts`
-- Accept `projectId` prop (already has it via parent)
-- Make the "Actual" row tappable → opens `ActualCostPopup` scoped to the project
-- Replace `actualLaborCost` with `totalActualCost` from the hook when entries exist (fall back to `actualLaborCost` if no entries)
-- Show Budget vs Actual Cost variance properly
+### 3. Integration Points
+| Feature | Links To |
+|---------|----------|
+| Work Performed | `project_schedule_items.progress` (bidirectional) |
+| Manpower | Pre-populated from `project_team` trades |
+| Photos | Lovable Cloud storage bucket `daily-log-photos` |
 
-### 2. `ProfitCard.tsx`
-- Remove the actual cost popup integration from ProfitCard (FC and TC sections)
-- Remove `useActualCosts` import and `costPopupOpen` state
-- Keep profit math but use the `totalActualCost` from the hook for profit calculation (or accept it as a prop from parent)
-- The "Actual Cost" / "Internal Cost" tappable rows move out of ProfitCard
+### 4. Navigation
+- Added "Daily Log" tab to desktop `ProjectTopBar`
+- Added "Daily Log" to mobile bottom nav `BottomNav`
 
-### 3. Files
-
-| File | Change |
-|------|--------|
-| `src/components/project/BudgetTracking.tsx` | Add tappable actual cost row, integrate `ActualCostPopup` |
-| `src/components/project/ProfitCard.tsx` | Remove actual cost popup, simplify to pure profit display |
-
+## Files Created/Modified
+- `src/types/dailyLog.ts` — types + constants
+- `src/hooks/useDailyLog.ts` — auto-create, auto-save, submit logic
+- `src/components/daily-log/` — all card components + DailyLogPanel
+- `src/pages/ProjectHome.tsx` — renders DailyLogPanel on daily-log tab
+- `src/components/project/ProjectTopBar.tsx` — added tab
+- `src/components/layout/BottomNav.tsx` — added to more menu
