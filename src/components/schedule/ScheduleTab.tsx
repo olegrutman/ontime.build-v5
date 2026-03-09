@@ -239,6 +239,7 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
       )}
 
       <ScheduleItemForm
+        key={editingItem?.id ?? 'new'}
         open={formOpen}
         onClose={() => setFormOpen(false)}
         onSave={handleSave}

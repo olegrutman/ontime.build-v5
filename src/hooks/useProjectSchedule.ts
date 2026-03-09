@@ -91,7 +91,7 @@ export function useProjectSchedule(projectId: string) {
   });
 
   const updateItem = useMutation({
-    mutationFn: async ({ id, ...updates }: Partial<ScheduleItem> & { id: string }) => {
+    mutationFn: async ({ id, sov_item, ...updates }: Partial<ScheduleItem> & { id: string }) => {
       const { data, error } = await supabase
         .from('project_schedule_items')
         .update({ ...updates, updated_at: new Date().toISOString() })
