@@ -483,6 +483,7 @@ export function ContractedPricingCard({
           isLocked={fcAllLocked}
           hasLumpSum={fcHasLumpSum}
           tcName={tcParticipant?.organization?.name}
+          changeOrderId={changeOrder.id}
         />
       );
     }
