@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -63,6 +63,9 @@ export function ScheduleItemForm({ open, onClose, onSave, item, workOrders = [],
           <DialogTitle>
             {isSovLinked ? 'Edit SOV Schedule Item' : (item ? 'Edit Schedule Item' : 'New Schedule Item')}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            {item ? 'Edit schedule item details' : 'Create a new schedule item'}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           {/* Title - read-only for SOV-linked items */}
