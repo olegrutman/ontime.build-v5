@@ -1,10 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
-import { Users, Plus, UserPlus, Package, Loader2, RotateCw, Trash2 } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { Users, Plus, UserPlus, Package, Loader2, RotateCw, Trash2, Mail, Check, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Input } from '@/components/ui/input';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,6 +76,9 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
   const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null);
   const [removing, setRemoving] = useState(false);
   const [resending, setResending] = useState<string | null>(null);
+  const [editingPoEmail, setEditingPoEmail] = useState(false);
+  const [poEmailDraft, setPoEmailDraft] = useState('');
+  const [savingPoEmail, setSavingPoEmail] = useState(false);
 
   // Material responsibility state
   const [contract, setContract] = useState<ContractData | null>(null);
@@ -241,6 +245,29 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
     }
   };
 
+  const handleSavePoEmail = async () => {
+    const trimmed = poEmailDraft.trim();
+    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      toast({ title: 'Please enter a valid email', variant: 'destructive' });
+      return;
+    }
+    setSavingPoEmail(true);
+    try {
+      const { error } = await supabase
+        .from('project_designated_suppliers')
+        .update({ po_email: trimmed })
+        .eq('project_id', projectId);
+      if (error) throw error;
+      toast({ title: 'PO email saved' });
+      setEditingPoEmail(false);
+      fetchDesignatedSupplier();
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    } finally {
+      setSavingPoEmail(false);
+    }
+  };
+
   return (
     <div data-sasha-card="Team" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5">
       <div className="flex items-center justify-between mb-3">
@@ -384,21 +411,53 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
           )}
 
           {designatedSupplier ? (
-            <div className="flex items-center justify-between pt-1.5 border-t mt-1.5">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="h-2 w-2 rounded-full shrink-0 bg-amber-500" />
-                <span className="text-[10px] font-medium text-muted-foreground uppercase w-7">SUP</span>
-                <div className="min-w-0">
-                  <span className="text-sm truncate block">{designatedSupplier.invited_name || designatedSupplier.invited_email || 'System Catalog'}</span>
-                  {designatedSupplier.po_email && (
-                    <span className="text-[10px] text-muted-foreground truncate block">PO → {designatedSupplier.po_email}</span>
+            <div className="pt-1.5 border-t mt-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="h-2 w-2 rounded-full shrink-0 bg-amber-500" />
+                  <span className="text-[10px] font-medium text-muted-foreground uppercase w-7">SUP</span>
+                  <span className="text-sm truncate">{designatedSupplier.invited_name || designatedSupplier.invited_email || 'System Catalog'}</span>
+                  <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0">{designatedSupplier.status}</Badge>
+                </div>
+                {isGcOrTc && (
+                  <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] shrink-0" onClick={() => setIsDesignateOpen(true)}>Change</Button>
+                )}
+              </div>
+
+              {/* PO Email row */}
+              {editingPoEmail ? (
+                <div className="flex items-center gap-1.5 mt-1.5 pl-[2.75rem]">
+                  <Input
+                    type="email"
+                    placeholder="supplier@email.com"
+                    value={poEmailDraft}
+                    onChange={(e) => setPoEmailDraft(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSavePoEmail()}
+                    className="h-7 text-xs flex-1"
+                    autoFocus
+                  />
+                  <Button variant="ghost" size="icon" className="h-6 w-6 text-primary" disabled={savingPoEmail} onClick={handleSavePoEmail}>
+                    {savingPoEmail ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingPoEmail(false)}>
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ) : designatedSupplier.po_email ? (
+                <div className="flex items-center gap-1 mt-0.5 pl-[2.75rem]">
+                  <Mail className="h-3 w-3 text-muted-foreground shrink-0" />
+                  <span className="text-[10px] text-muted-foreground truncate">PO → {designatedSupplier.po_email}</span>
+                  {isGcOrTc && (
+                    <Button variant="ghost" size="sm" className="h-4 px-1 text-[9px] text-muted-foreground" onClick={() => { setPoEmailDraft(designatedSupplier.po_email || ''); setEditingPoEmail(true); }}>
+                      Edit
+                    </Button>
                   )}
                 </div>
-                <Badge variant="outline" className="text-[9px] px-1 py-0 shrink-0">{designatedSupplier.status}</Badge>
-              </div>
-              {isGcOrTc && (
-                <Button variant="ghost" size="sm" className="h-5 px-1.5 text-[10px] shrink-0" onClick={() => setIsDesignateOpen(true)}>Change</Button>
-              )}
+              ) : isGcOrTc ? (
+                <Button variant="ghost" size="sm" className="h-5 mt-1 ml-[2.75rem] px-1.5 text-[10px] text-muted-foreground" onClick={() => { setPoEmailDraft(''); setEditingPoEmail(true); }}>
+                  <Mail className="h-3 w-3 mr-1" />Add PO Email
+                </Button>
+              ) : null}
             </div>
           ) : isGcOrTc && !team.some(m => m.role === 'Supplier') ? (
             <div className="pt-1.5 border-t mt-1.5 space-y-1">
