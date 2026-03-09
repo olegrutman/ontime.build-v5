@@ -40,11 +40,31 @@ export function useProjectSchedule(projectId: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('project_schedule_items')
-        .select('*')
+        .select(`
+          *,
+          sov_item:project_sov_items!sov_item_id(
+            id,
+            description,
+            value_amount,
+            total_billed_amount
+          )
+        `)
         .eq('project_id', projectId)
         .order('sort_order', { ascending: true });
       if (error) throw error;
-      return (data || []) as ScheduleItem[];
+      
+      // Transform data to include billing progress calculation
+      const items = (data || []).map(item => ({
+        ...item,
+        sov_item: item.sov_item ? {
+          ...item.sov_item,
+          billing_progress: item.sov_item.value_amount > 0 
+            ? Math.round((item.sov_item.total_billed_amount / item.sov_item.value_amount) * 100)
+            : 0
+        } : null
+      })) as ScheduleItem[];
+      
+      return items;
     },
     enabled: !!projectId,
   });
