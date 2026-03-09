@@ -27,7 +27,7 @@ export function TCInternalCostEditor({ currentCost, isEditable, onSave, isSaving
   const [value, setValue] = useState(currentCost > 0 ? currentCost.toString() : '');
   const [isDirty, setIsDirty] = useState(false);
   const [costPopupOpen, setCostPopupOpen] = useState(false);
-  const { totalActualCost } = useActualCosts(changeOrderId);
+  const { totalActualCost } = useActualCosts({ changeOrderId });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setValue(e.target.value);

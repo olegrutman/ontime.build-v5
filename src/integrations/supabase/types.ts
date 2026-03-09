@@ -16,7 +16,7 @@ export type Database = {
     Tables: {
       actual_cost_entries: {
         Row: {
-          change_order_id: string
+          change_order_id: string | null
           cost_type: string
           created_at: string
           description: string
@@ -28,10 +28,11 @@ export type Database = {
           lump_amount: number | null
           men_count: number | null
           organization_id: string
+          project_id: string | null
           total_amount: number
         }
         Insert: {
-          change_order_id: string
+          change_order_id?: string | null
           cost_type?: string
           created_at?: string
           description?: string
@@ -43,10 +44,11 @@ export type Database = {
           lump_amount?: number | null
           men_count?: number | null
           organization_id: string
+          project_id?: string | null
           total_amount?: number
         }
         Update: {
-          change_order_id?: string
+          change_order_id?: string | null
           cost_type?: string
           created_at?: string
           description?: string
@@ -58,6 +60,7 @@ export type Database = {
           lump_amount?: number | null
           men_count?: number | null
           organization_id?: string
+          project_id?: string | null
           total_amount?: number
         }
         Relationships: [
@@ -73,6 +76,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "actual_cost_entries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]

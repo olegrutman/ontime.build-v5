@@ -264,7 +264,7 @@ function FCEarningsView({
   changeOrderId: string;
 }) {
   const [costPopupOpen, setCostPopupOpen] = useState(false);
-  const { totalActualCost } = useActualCosts(changeOrderId);
+  const { totalActualCost } = useActualCosts({ changeOrderId });
   const profit = totalEarnings - totalActualCost;
 
   return (

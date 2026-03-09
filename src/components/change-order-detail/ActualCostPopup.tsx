@@ -21,19 +21,24 @@ function formatCurrency(amount: number): string {
 interface ActualCostPopupProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  changeOrderId: string;
+  changeOrderId?: string;
+  projectId?: string;
   earningsOrRevenue: number;
-  label: string; // "Earnings" for FC, "Revenue" for TC
+  label: string;
 }
 
 export function ActualCostPopup({
   open,
   onOpenChange,
   changeOrderId,
+  projectId,
   earningsOrRevenue,
   label,
 }: ActualCostPopupProps) {
-  const { entries, totalActualCost, addEntry, deleteEntry } = useActualCosts(changeOrderId);
+  const { entries, totalActualCost, addEntry, deleteEntry } = useActualCosts({
+    changeOrderId,
+    projectId,
+  });
   const profit = earningsOrRevenue - totalActualCost;
 
   const [costType, setCostType] = useState<'hours' | 'lump_sum'>('hours');
@@ -60,7 +65,8 @@ export function ActualCostPopup({
   const handleAdd = () => {
     if (computedTotal <= 0) return;
     const entry: NewActualCostEntry = {
-      change_order_id: changeOrderId,
+      change_order_id: changeOrderId || null,
+      project_id: projectId || null,
       entry_date: entryDate,
       cost_type: costType,
       description: description || (costType === 'hours' ? 'Labor' : 'Expense'),
