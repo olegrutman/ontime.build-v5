@@ -86,6 +86,36 @@ export function useProjectRealtime(projectId: string | undefined) {
           queryClient.invalidateQueries({ queryKey: ['returns'] });
           bump();
         }
+       )
+      // Schedule items
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'project_schedule_items',
+          filter: `project_id=eq.${projectId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['project-schedule'] });
+          queryClient.invalidateQueries({ queryKey: ['project-sov-items'] });
+          bump();
+        }
+      )
+      // SOV items (for billing progress sync)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'project_sov_items',
+          filter: `project_id=eq.${projectId}`,
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['project-schedule'] });
+          queryClient.invalidateQueries({ queryKey: ['project-sov-items'] });
+          bump();
+        }
       )
       .subscribe();
 
