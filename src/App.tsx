@@ -200,6 +200,7 @@ function AppRoutes() {
             <Route path="/platform/projects" element={<RequirePlatformRole><PlatformProjects /></RequirePlatformRole>} />
             <Route path="/platform/projects/:projectId" element={<RequirePlatformRole><PlatformProjectDetail /></RequirePlatformRole>} />
             <Route path="/platform/logs" element={<RequirePlatformRole><PlatformLogs /></RequirePlatformRole>} />
+            <Route path="/platform/plans" element={<RequirePlatformRole><PlatformPlans /></RequirePlatformRole>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
