@@ -167,6 +167,9 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
                           {wo && (
                             <span className="text-[10px] text-muted-foreground">WO: {wo.title}</span>
                           )}
+                          {item.sov_item && (
+                            <span className="text-[10px] text-muted-foreground">SOV: {item.sov_item.item_name}</span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
