@@ -32,6 +32,7 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
   const [editValue, setEditValue] = useState(0);
   const [saving, setSaving] = useState(false);
   const [togglingPerf, setTogglingPerf] = useState(false);
+  const [costPopupOpen, setCostPopupOpen] = useState(false);
 
   const { totalActualCost } = useActualCosts({ projectId });
 
