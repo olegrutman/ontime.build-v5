@@ -164,11 +164,18 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       } else if (orgIds.length > 0) {
         const { data: teamMembers } = await supabase
           .from('project_team')
-          .select('role, org_id')
+          .select('role, org_id, is_self_performing')
           .eq('project_id', projectId)
           .in('org_id', orgIds);
         if (teamMembers && teamMembers.length > 0) {
           detectedRole = teamMembers[0].role as ViewerRole;
+          // Check if TC is self-performing
+          const tcRow = teamMembers.find((m: any) => m.role === 'Trade Contractor');
+          if (tcRow && (tcRow as any).is_self_performing) {
+            setIsTCSelfPerforming(true);
+          } else {
+            setIsTCSelfPerforming(false);
+          }
         }
       }
       setViewerRole(detectedRole);
