@@ -1,0 +1,1 @@
+ALTER TABLE public.project_team ADD COLUMN is_self_performing boolean NOT NULL DEFAULT false;
