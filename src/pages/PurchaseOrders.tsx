@@ -404,8 +404,19 @@ export default function PurchaseOrders() {
                           <Button variant="outline" size="sm" onClick={() => handleDeletePO(selectedPO.id)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" onClick={() => {
-                            setSupplierEmail(selectedPO.supplier?.contact_info || '');
+                          <Button size="sm" onClick={async () => {
+                            // Try designated supplier po_email first
+                            let email = selectedPO.supplier?.contact_info || '';
+                            if (selectedPO.project_id) {
+                              const { data: ds } = await supabase
+                                .from('project_designated_suppliers')
+                                .select('po_email')
+                                .eq('project_id', selectedPO.project_id)
+                                .neq('status', 'removed')
+                                .maybeSingle();
+                              if (ds?.po_email) email = ds.po_email;
+                            }
+                            setSupplierEmail(email);
                             setSendDialogOpen(true);
                           }}>
                             <Send className="h-4 w-4 mr-2" />
