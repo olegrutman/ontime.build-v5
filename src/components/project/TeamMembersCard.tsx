@@ -75,6 +75,9 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
   const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null);
   const [removing, setRemoving] = useState(false);
   const [resending, setResending] = useState<string | null>(null);
+  const [editingPoEmail, setEditingPoEmail] = useState(false);
+  const [poEmailDraft, setPoEmailDraft] = useState('');
+  const [savingPoEmail, setSavingPoEmail] = useState(false);
 
   // Material responsibility state
   const [contract, setContract] = useState<ContractData | null>(null);
