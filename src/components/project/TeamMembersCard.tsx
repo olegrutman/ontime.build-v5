@@ -70,7 +70,7 @@ export function TeamMembersCard({ projectId, onResponsibilityChange }: TeamMembe
   }, [projectId]);
 
   const fetchDesignatedSupplier = useCallback(async () => {
-    const { data } = await supabase.from('project_designated_suppliers').select('invited_name, invited_email, status').eq('project_id', projectId).neq('status', 'removed').maybeSingle();
+    const { data } = await supabase.from('project_designated_suppliers').select('invited_name, invited_email, po_email, status').eq('project_id', projectId).neq('status', 'removed').maybeSingle();
     setDesignatedSupplier(data);
   }, [projectId]);
 
