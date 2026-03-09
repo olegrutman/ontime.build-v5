@@ -268,7 +268,7 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
   const myTcRow = creatorOrgType === 'TC' ? team.find(m => m.role === 'Trade Contractor' && m.org_id === currentOrgId) : null;
   const hasFC = team.some(m => m.role === 'Field Crew' && m.status === 'Accepted');
 
-
+  const handleSavePoEmail = async () => {
     const trimmed = poEmailDraft.trim();
     if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
       toast({ title: 'Please enter a valid email', variant: 'destructive' });
