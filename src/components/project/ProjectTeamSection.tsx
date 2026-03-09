@@ -70,7 +70,7 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
   const fetchTeam = async () => {
     const [teamResult, dsResult] = await Promise.all([
       supabase.from('project_team').select('*').eq('project_id', projectId),
-      supabase.from('project_designated_suppliers').select('invited_name, invited_email, status').eq('project_id', projectId).maybeSingle(),
+      supabase.from('project_designated_suppliers').select('invited_name, invited_email, po_email, status').eq('project_id', projectId).maybeSingle(),
     ]);
 
     if (teamResult.error) {
