@@ -147,6 +147,7 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
                   <TableHead className="w-28">Start</TableHead>
                   <TableHead className="w-28">End</TableHead>
                   <TableHead className="w-20 text-right">Progress</TableHead>
+                  <TableHead className="w-20 text-right">Billed</TableHead>
                   <TableHead className="w-16" />
                 </TableRow>
               </TableHeader>
