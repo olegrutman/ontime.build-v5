@@ -198,6 +198,20 @@ export default function CreateProject() {
         }
       }
 
+      // 6. Auto-default to System Catalog supplier if no supplier was added
+      const hasSupplierParty = data.parties.some(p => p.role === 'SUPPLIER');
+      if (!hasSupplierParty) {
+        await supabase.from('project_designated_suppliers').insert({
+          project_id: project.id,
+          user_id: null,
+          invited_email: null,
+          invited_name: 'System Catalog',
+          po_email: null,
+          status: 'active',
+          designated_by: user.id,
+        });
+      }
+
       toast.success('Project created successfully!');
       navigate(`/project/${project.id}`);
     } catch (error: any) {
