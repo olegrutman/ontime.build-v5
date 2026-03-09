@@ -99,6 +99,7 @@ export function GanttChart({ items, onSelect, onUpdate, selectedId }: GanttChart
       if (newEnd <= newStart) newEnd = addDays(newStart, 1);
     }
 
+    didDrag.current = true;
     onUpdate(drag.itemId, {
       start_date: format(newStart, 'yyyy-MM-dd'),
       end_date: format(newEnd, 'yyyy-MM-dd'),
