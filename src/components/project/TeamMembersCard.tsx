@@ -492,6 +492,21 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
               </Button>
             </div>
           ) : null}
+
+          {/* Self-performing toggle for TC */}
+          {myTcRow && !hasFC && (
+            <div className="pt-2 border-t mt-2 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Wrench className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-[11px] text-muted-foreground">Self-Performing (no FC)</span>
+              </div>
+              <Switch
+                checked={myTcRow.is_self_performing}
+                disabled={togglingPerf}
+                onCheckedChange={() => handleToggleSelfPerforming(myTcRow)}
+              />
+            </div>
+          )}
         </div>
       )}
 

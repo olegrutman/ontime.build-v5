@@ -125,6 +125,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [isGCMaterialResponsible, setIsGCMaterialResponsible] = useState(false);
   const [approvedEstimateSum, setApprovedEstimateSum] = useState(0);
   const [isDesignatedSupplier, setIsDesignatedSupplier] = useState(false);
+  const [isTCSelfPerforming, setIsTCSelfPerforming] = useState(false);
   const [totalPaid, setTotalPaid] = useState(0);
   const [materialDelivered, setMaterialDelivered] = useState(0);
   const [materialOrderedPending, setMaterialOrderedPending] = useState(0);
