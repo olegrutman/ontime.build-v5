@@ -58,7 +58,7 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
   const [resending, setResending] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [designateDialogOpen, setDesignateDialogOpen] = useState(false);
-  const [designatedSupplier, setDesignatedSupplier] = useState<{ invited_name: string | null; invited_email: string | null; status: string } | null>(null);
+  const [designatedSupplier, setDesignatedSupplier] = useState<{ invited_name: string | null; invited_email: string | null; po_email: string | null; status: string } | null>(null);
   const [isOpen, setIsOpen] = useState(false);
 
   // Get current user's org type and permissions
