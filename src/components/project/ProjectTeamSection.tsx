@@ -271,8 +271,11 @@ export function ProjectTeamSection({ projectId }: ProjectTeamSectionProps) {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Designated Supplier Contact</p>
-                        <p className="text-sm font-medium">{designatedSupplier.invited_name || designatedSupplier.invited_email || 'Assigned'}</p>
+                        <p className="text-sm font-medium">{designatedSupplier.invited_name || designatedSupplier.invited_email || 'System Catalog'}</p>
                         <p className="text-xs text-muted-foreground">{designatedSupplier.status === 'invited' ? 'Invitation pending' : 'Active'}</p>
+                        {designatedSupplier.po_email && (
+                          <p className="text-xs text-muted-foreground">PO → {designatedSupplier.po_email}</p>
+                        )}
                       </div>
                       <Button size="sm" variant="ghost" onClick={() => setDesignateDialogOpen(true)}>Change</Button>
                     </div>
