@@ -49,6 +49,7 @@ export function ScheduleItemForm({ open, onClose, onSave, item, workOrders = [],
       end_date: itemType === 'milestone' ? null : (endDate || null),
       progress,
       work_order_id: workOrderId || null,
+      sov_item_id: sovItemId || null,
       dependency_ids: depIds,
     });
     onClose();
