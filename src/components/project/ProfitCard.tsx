@@ -173,14 +173,16 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
             <span className="text-sm text-muted-foreground">Revenue Total</span>
             <span className="text-sm font-semibold tabular-nums">{fmt(revenueTotal)}</span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">FC Labor Cost</span>
-            <span className="text-sm font-semibold tabular-nums text-orange-600 dark:text-orange-400">-{fmt(fcContractValue + workOrderFCCost)}</span>
-          </div>
+          {!isTCSelfPerforming && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">FC Labor Cost</span>
+              <span className="text-sm font-semibold tabular-nums text-orange-600 dark:text-orange-400">-{fmt(fcContractValue + workOrderFCCost)}</span>
+            </div>
+          )}
 
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">
-              {hasActualCost ? 'Actual Cost' : 'Internal Cost'}
+              {isTCSelfPerforming ? (hasActualCost ? 'Actual Cost' : 'Internal Cost') : (hasActualCost ? 'Actual Cost' : 'Internal Cost')}
             </span>
             <span className="text-sm font-semibold tabular-nums">
               {fmt(hasActualCost ? totalActualCost : tcInternalCostTotal)}
