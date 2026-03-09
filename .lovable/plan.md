@@ -1,42 +1,67 @@
-# Daily Log Feature — IMPLEMENTED
 
-## Design Philosophy
-Zero-typing, tap-first daily log that takes under 90 seconds to complete.
 
-## Features Built
+# Auto-Estimate Durations + Drag-to-Resize on Gantt
 
-### 1. Database Tables
-- `daily_logs` — one per project per date, auto-creates as draft
-- `daily_log_manpower` — per-trade headcount
-- `daily_log_delays` — cause chips + hours lost
-- `daily_log_photos` — storage refs with tags
-- `daily_log_deliveries` — PO delivery confirmations
+## What this does
 
-### 2. UI Components (all tap-based)
-- **WeatherCard** — condition chips (☀️ 🌧️ ❄️ 💨 🌡️ 🥶) + stepper temps
-- **ManpowerCard** — per-trade steppers auto-populated from project team
-- **WorkPerformedCard** — progress sliders linked to schedule items
-- **SafetyCard** — toggle + incident type chips
-- **DelaysCard** — cause chips with hour steppers
-- **DeliveriesCard** — PO status chips (✅ ❌ ⚠️)
-- **PhotosCard** — camera upload with tags
-- **QuickNotesCard** — quick-add chips + text area
+1. **Auto-populate estimated durations** for every SOV schedule task based on industry-standard residential wood-frame construction timelines. Tasks that currently have no end date (most of them) get a sensible default.
 
-### 3. Integration Points
-| Feature | Links To |
-|---------|----------|
-| Work Performed | `project_schedule_items.progress` (bidirectional) |
-| Manpower | Pre-populated from `project_team` trades |
-| Photos | Lovable Cloud storage bucket `daily-log-photos` |
+2. **Drag-to-resize bars on the Gantt chart** so the user can grab the left or right edge of any bar and drag to adjust start/end dates visually. Changes save immediately to the database.
 
-### 4. Navigation
-- Added "Daily Log" tab to desktop `ProjectTopBar`
-- Added "Daily Log" to mobile bottom nav `BottomNav`
+## Industry Duration Estimates
 
-## Files Created/Modified
-- `src/types/dailyLog.ts` — types + constants
-- `src/hooks/useDailyLog.ts` — auto-create, auto-save, submit logic
-- `src/components/daily-log/` — all card components + DailyLogPanel
-- `src/pages/ProjectHome.tsx` — renders DailyLogPanel on daily-log tab
-- `src/components/project/ProjectTopBar.tsx` — added tab
-- `src/components/layout/BottomNav.tsx` — added to more menu
+Based on the SOV items in this project (multi-story wood-frame residential), here are the standard estimates:
+
+| Task Pattern | Duration (business days) |
+|---|---|
+| Walls Frame (per floor) | 3-5 days |
+| Wall Sheathing (per floor) | 2-3 days |
+| Trusses (per floor) | 2-3 days |
+| Truss Sheathing (per floor) | 2-3 days |
+| Backout/Blocking (per floor) | 2 days |
+| Hardware Installation (per floor) | 1-2 days |
+| Shim and Shave (per floor) | 2 days |
+| Inspection (per floor) | 1 day |
+| Final Punch (per floor) | 1-2 days |
+| Tyvek Install | 2-3 days |
+| Windows Install | 3-5 days |
+| Siding (per side) | 3-5 days |
+| Roof Trusses | 3 days |
+| Roof Truss Sheathing | 2-3 days |
+| Pool Room | 5 days |
+
+## Implementation
+
+### 1. Duration estimation utility (`src/utils/scheduleEstimates.ts` — new file)
+
+A function `estimateDuration(taskName: string, valueAmount: number): number` that pattern-matches the task name to return business days. Uses value amount as a secondary signal (higher value → longer duration within range). Returns a sensible default (3 days) for unrecognized names.
+
+### 2. "Auto-Estimate" button on ScheduleTab
+
+Add a button in the toolbar: "Auto-Estimate Dates". When clicked:
+- Finds all schedule items with no end date (or where start === today, meaning un-scheduled)
+- Sequences them logically: per-floor tasks in construction order, then cross-cutting tasks
+- Sets `start_date` and `end_date` using the estimates, chaining tasks so they don't all start on the same day
+- Batch-updates via `updateItem`
+
+### 3. Drag-to-resize on Gantt bars (`GanttChart.tsx`)
+
+Add mouse interaction to task/phase bars:
+- **Right edge drag**: changes `end_date` — cursor shows `col-resize`, a ghost bar follows the mouse, on mouseup the new end date is calculated from pixel position and `onUpdate` is called
+- **Left edge drag**: changes `start_date` similarly
+- **Whole bar drag**: shifts both dates (move, not resize)
+
+New prop: `onUpdate: (id: string, updates: { start_date?: string; end_date?: string }) => void`
+
+The drag is implemented with `onMouseDown` on thin invisible hit-target rects at bar edges (6px wide), tracking mouse movement via `onMouseMove`/`onMouseUp` on the SVG element.
+
+### Files
+
+| File | Change |
+|---|---|
+| `src/utils/scheduleEstimates.ts` | New — duration lookup by task name |
+| `src/components/schedule/ScheduleTab.tsx` | Add "Auto-Estimate" button, wire `onUpdate` to Gantt |
+| `src/components/schedule/GanttChart.tsx` | Add drag-to-resize/move on bars |
+
+No database changes needed.
+
