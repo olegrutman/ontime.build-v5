@@ -28,8 +28,9 @@ export function ScheduleItemForm({ open, onClose, onSave, item, workOrders = [],
   const [sovItemId, setSovItemId] = useState(item?.sov_item_id ?? '');
   const [depIds, setDepIds] = useState<string[]>(item?.dependency_ids ?? []);
   
-  // Fetch available SOV items
   const { data: sovItems = [] } = useProjectSOVItems(projectId);
+
+  const isSovLinked = !!item?.sov_item_id;
 
   const handleWOChange = (woId: string) => {
     setWorkOrderId(woId === 'none' ? '' : woId);
@@ -49,7 +50,7 @@ export function ScheduleItemForm({ open, onClose, onSave, item, workOrders = [],
       end_date: itemType === 'milestone' ? null : (endDate || null),
       progress,
       work_order_id: workOrderId || null,
-      sov_item_id: sovItemId || null,
+      sov_item_id: sovItemId || item?.sov_item_id || null,
       dependency_ids: depIds,
     });
     onClose();
@@ -59,43 +60,70 @@ export function ScheduleItemForm({ open, onClose, onSave, item, workOrders = [],
     <Dialog open={open} onOpenChange={() => onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{item ? 'Edit Schedule Item' : 'New Schedule Item'}</DialogTitle>
+          <DialogTitle>
+            {isSovLinked ? 'Edit SOV Schedule Item' : (item ? 'Edit Schedule Item' : 'New Schedule Item')}
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-4 py-2">
+          {/* Title - read-only for SOV-linked items */}
           <div className="space-y-1.5">
             <Label>Title</Label>
-            <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Task name" />
+            {isSovLinked ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium py-2 px-3 bg-muted rounded-md w-full">{title}</span>
+              </div>
+            ) : (
+              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="Task name" />
+            )}
           </div>
-          <div className="space-y-1.5">
-            <Label>Type</Label>
-            <Select value={itemType} onValueChange={setItemType}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="task">Task</SelectItem>
-                <SelectItem value="phase">Phase</SelectItem>
-                <SelectItem value="milestone">Milestone</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+
+          {/* Type - hidden for SOV-linked */}
+          {!isSovLinked && (
+            <div className="space-y-1.5">
+              <Label>Type</Label>
+              <Select value={itemType} onValueChange={setItemType}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="task">Task</SelectItem>
+                  <SelectItem value="phase">Phase</SelectItem>
+                  <SelectItem value="milestone">Milestone</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Dates - always shown */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Start Date</Label>
               <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
             </div>
-            {itemType !== 'milestone' && (
+            {(isSovLinked || itemType !== 'milestone') && (
               <div className="space-y-1.5">
                 <Label>End Date</Label>
                 <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
               </div>
             )}
           </div>
-          {itemType !== 'milestone' && (
+
+          {/* Progress - always shown for SOV-linked, or when not milestone */}
+          {(isSovLinked || itemType !== 'milestone') && (
             <div className="space-y-1.5">
               <Label>Progress: {progress}%</Label>
               <Slider value={[progress]} onValueChange={v => setProgress(v[0])} max={100} step={5} />
             </div>
           )}
-          {workOrders.length > 0 && (
+
+          {/* SOV badge for linked items */}
+          {isSovLinked && item?.sov_item && (
+            <div className="text-xs text-muted-foreground bg-muted/50 rounded-md p-2">
+              Linked to SOV: <span className="font-medium">{item.sov_item.item_name}</span>
+              {' • $'}{item.sov_item.value_amount.toLocaleString()}
+            </div>
+          )}
+
+          {/* Work Order - hidden for SOV-linked */}
+          {!isSovLinked && workOrders.length > 0 && (
             <div className="space-y-1.5">
               <Label>Link to Work Order</Label>
               <Select value={workOrderId || 'none'} onValueChange={handleWOChange}>
@@ -109,7 +137,9 @@ export function ScheduleItemForm({ open, onClose, onSave, item, workOrders = [],
               </Select>
             </div>
           )}
-          {sovItems.length > 0 && (
+
+          {/* SOV selector - hidden for SOV-linked */}
+          {!isSovLinked && sovItems.length > 0 && (
             <div className="space-y-1.5">
               <Label>Link to SOV Item (Optional)</Label>
               <Select value={sovItemId || 'none'} onValueChange={v => setSovItemId(v === 'none' ? '' : v)}>
@@ -130,7 +160,9 @@ export function ScheduleItemForm({ open, onClose, onSave, item, workOrders = [],
               </Select>
             </div>
           )}
-          {existingItems.length > 0 && (
+
+          {/* Dependencies - hidden for SOV-linked */}
+          {!isSovLinked && existingItems.length > 0 && (
             <div className="space-y-1.5">
               <Label>Dependencies</Label>
               <div className="max-h-32 overflow-y-auto border rounded-md p-2 space-y-1">

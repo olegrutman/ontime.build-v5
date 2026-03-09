@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Plus, Milestone, Layers, CalendarDays, Trash2, Pencil } from 'lucide-react';
+import { Plus, Milestone, Layers, CalendarDays, Trash2, Pencil, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Progress } from '@/components/ui/progress';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useProjectSchedule, ScheduleItem } from '@/hooks/useProjectSchedule';
 import { GanttChart } from './GanttChart';
 import { ScheduleItemForm } from './ScheduleItemForm';
@@ -35,13 +37,13 @@ interface ScheduleTabProps {
 export function ScheduleTab({ projectId }: ScheduleTabProps) {
   const { items, isLoading, addItem, updateItem, deleteItem } = useProjectSchedule(projectId);
   const { toast } = useToast();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ScheduleItem | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [defaultType, setDefaultType] = useState<'task' | 'phase' | 'milestone'>('task');
+  const [ganttOpen, setGanttOpen] = useState(true);
+  const [tableOpen, setTableOpen] = useState(true);
 
-  // Fetch work orders for linking
   const { data: workOrders = [] } = useQuery({
     queryKey: ['schedule-work-orders', projectId],
     queryFn: async () => {
@@ -54,6 +56,10 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
     },
     enabled: !!projectId,
   });
+
+  const overallProgress = items.length > 0
+    ? Math.round(items.reduce((sum, i) => sum + i.progress, 0) / items.length)
+    : 0;
 
   const handleAdd = (type: 'task' | 'phase' | 'milestone') => {
     setDefaultType(type);
@@ -91,7 +97,6 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
     try {
       await deleteItem.mutateAsync(deleteTarget);
       toast({ title: 'Item deleted' });
-      if (selectedId === deleteTarget) setSelectedId(null);
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
     }
@@ -127,6 +132,14 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
         </div>
       </div>
 
+      {/* Overall Progress */}
+      {items.length > 0 && (
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Overall: {overallProgress}%</span>
+          <Progress value={overallProgress} className="h-2 flex-1" />
+        </div>
+      )}
+
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-2">
           <CalendarDays className="h-10 w-10 opacity-40" />
@@ -134,78 +147,97 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
         </div>
       ) : (
         <>
-          {/* Gantt Chart */}
-          <GanttChart items={items} selectedId={selectedId} onSelect={setSelectedId} />
+          {/* Collapsible Gantt Chart */}
+          <Collapsible open={ganttOpen} onOpenChange={setGanttOpen}>
+            <CollapsibleTrigger asChild>
+              <button className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-full py-1">
+                {ganttOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                Gantt Chart
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <GanttChart items={items} selectedId={null} onSelect={(id) => {
+                const found = items.find(i => i.id === id);
+                if (found) handleEdit(found);
+              }} />
+            </CollapsibleContent>
+          </Collapsible>
 
-          {/* Table */}
-          <div className="border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead className="w-24">Type</TableHead>
-                  <TableHead className="w-28">Start</TableHead>
-                  <TableHead className="w-28">End</TableHead>
-                  <TableHead className="w-20 text-right">Progress</TableHead>
-                  <TableHead className="w-20 text-right">Billed</TableHead>
-                  <TableHead className="w-16" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map(item => {
-                  const badge = TYPE_BADGE[item.item_type] || TYPE_BADGE.task;
-                  const wo = workOrders.find(w => w.id === item.work_order_id);
-                  return (
-                    <TableRow
-                      key={item.id}
-                      className={selectedId === item.id ? 'bg-accent/40' : 'cursor-pointer'}
-                      onClick={() => setSelectedId(item.id)}
-                    >
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium text-sm">{item.title}</span>
-                          {wo && (
-                            <span className="text-[10px] text-muted-foreground">WO: {wo.title}</span>
-                          )}
-                          {item.sov_item && (
-                            <span className="text-[10px] text-muted-foreground">SOV: {item.sov_item.item_name}</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className={badge.className}>{badge.label}</Badge>
-                      </TableCell>
-                      <TableCell className="text-sm">{format(new Date(item.start_date), 'MMM d, yyyy')}</TableCell>
-                      <TableCell className="text-sm">{item.end_date ? format(new Date(item.end_date), 'MMM d, yyyy') : '—'}</TableCell>
-                      <TableCell className="text-right text-sm">{item.progress}%</TableCell>
-                      <TableCell className="text-right text-sm">
-                        {item.sov_item ? (
-                          <span className={`${item.sov_item.billing_progress > item.progress ? 'text-amber-600' : 
-                            item.progress > item.sov_item.billing_progress ? 'text-green-600' : ''}`}>
-                            {item.sov_item.billing_progress}%
-                          </span>
-                        ) : '—'}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={e => { e.stopPropagation(); handleEdit(item); }}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={e => { e.stopPropagation(); setDeleteTarget(item.id); }}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
+          {/* Collapsible Table */}
+          <Collapsible open={tableOpen} onOpenChange={setTableOpen}>
+            <CollapsibleTrigger asChild>
+              <button className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-full py-1">
+                {tableOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                Schedule Items
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead className="w-24">Type</TableHead>
+                      <TableHead className="w-28">Start</TableHead>
+                      <TableHead className="w-28">End</TableHead>
+                      <TableHead className="w-20 text-right">Progress</TableHead>
+                      <TableHead className="w-20 text-right">Billed</TableHead>
+                      <TableHead className="w-16" />
                     </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-          </div>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map(item => {
+                      const badge = TYPE_BADGE[item.item_type] || TYPE_BADGE.task;
+                      const wo = workOrders.find(w => w.id === item.work_order_id);
+                      return (
+                        <TableRow
+                          key={item.id}
+                          className="cursor-pointer hover:bg-accent/40"
+                          onClick={() => handleEdit(item)}
+                        >
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium text-sm">{item.title}</span>
+                              {wo && (
+                                <span className="text-[10px] text-muted-foreground">WO: {wo.title}</span>
+                              )}
+                              {item.sov_item && (
+                                <span className="text-[10px] text-muted-foreground">SOV: {item.sov_item.item_name}</span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className={badge.className}>{badge.label}</Badge>
+                          </TableCell>
+                          <TableCell className="text-sm">{format(new Date(item.start_date), 'MMM d, yyyy')}</TableCell>
+                          <TableCell className="text-sm">{item.end_date ? format(new Date(item.end_date), 'MMM d, yyyy') : '—'}</TableCell>
+                          <TableCell className="text-right text-sm">{item.progress}%</TableCell>
+                          <TableCell className="text-right text-sm">
+                            {item.sov_item ? (
+                              <span className={`${item.sov_item.billing_progress > item.progress ? 'text-amber-600' : 
+                                item.progress > item.sov_item.billing_progress ? 'text-green-600' : ''}`}>
+                                {item.sov_item.billing_progress}%
+                              </span>
+                            ) : '—'}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={e => { e.stopPropagation(); setDeleteTarget(item.id); }}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </>
       )}
 
-      {/* Form Dialog */}
       <ScheduleItemForm
         open={formOpen}
         onClose={() => setFormOpen(false)}
@@ -216,7 +248,6 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
         projectId={projectId}
       />
 
-      {/* Delete Confirmation */}
       <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
