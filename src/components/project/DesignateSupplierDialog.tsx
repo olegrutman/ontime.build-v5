@@ -196,10 +196,20 @@ export function DesignateSupplierDialog({
             )}
 
             {selectedUser && (
-              <div className="border rounded-md p-3 bg-muted/30 space-y-2">
+              <div className="border rounded-md p-3 bg-muted/30 space-y-3">
                 <p className="text-sm">
                   Designate <strong>{selectedUser.full_name || selectedUser.email}</strong> as supplier contact?
                 </p>
+                <div className="space-y-2">
+                  <Label>PO Delivery Email</Label>
+                  <Input
+                    type="email"
+                    placeholder={selectedUser.email || 'orders@example.com'}
+                    value={poEmail}
+                    onChange={(e) => setPoEmail(e.target.value)}
+                  />
+                  <p className="text-xs text-muted-foreground">Purchase orders will be sent to this address</p>
+                </div>
                 <div className="flex gap-2">
                   <Button size="sm" onClick={() => handleDesignateUser(selectedUser.user_id, selectedUser.full_name)} disabled={saving}>
                     {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
