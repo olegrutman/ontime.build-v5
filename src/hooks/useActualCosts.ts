@@ -33,7 +33,8 @@ export type NewActualCostEntry = {
 };
 
 export function useActualCosts(changeOrderId: string | undefined) {
-  const { user, orgId } = useAuth();
+  const { user, userOrgRoles } = useAuth();
+  const orgId = userOrgRoles[0]?.organization?.id;
   const queryClient = useQueryClient();
   const queryKey = ['actual-costs', changeOrderId];
 
