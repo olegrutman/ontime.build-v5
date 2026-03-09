@@ -3075,6 +3075,39 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          auth_key: string
+          created_at: string | null
+          endpoint: string
+          id: string
+          is_active: boolean | null
+          p256dh_key: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          auth_key: string
+          created_at?: string | null
+          endpoint: string
+          id?: string
+          is_active?: boolean | null
+          p256dh_key: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          auth_key?: string
+          created_at?: string | null
+          endpoint?: string
+          id?: string
+          is_active?: boolean | null
+          p256dh_key?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       reminders: {
         Row: {
           completed: boolean | null
@@ -4034,6 +4067,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_notification_preferences: {
+        Row: {
+          created_at: string | null
+          id: string
+          overdue_invoices: boolean | null
+          pending_approvals: boolean | null
+          push_enabled: boolean | null
+          push_frequency: string | null
+          push_quiet_hours_end: string | null
+          push_quiet_hours_start: string | null
+          updated_at: string | null
+          user_id: string
+          work_order_updates: boolean | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          overdue_invoices?: boolean | null
+          pending_approvals?: boolean | null
+          push_enabled?: boolean | null
+          push_frequency?: string | null
+          push_quiet_hours_end?: string | null
+          push_quiet_hours_start?: string | null
+          updated_at?: string | null
+          user_id: string
+          work_order_updates?: boolean | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          overdue_invoices?: boolean | null
+          pending_approvals?: boolean | null
+          push_enabled?: boolean | null
+          push_frequency?: string | null
+          push_quiet_hours_end?: string | null
+          push_quiet_hours_start?: string | null
+          updated_at?: string | null
+          user_id?: string
+          work_order_updates?: boolean | null
+        }
+        Relationships: []
       }
       user_org_roles: {
         Row: {
