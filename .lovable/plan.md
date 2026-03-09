@@ -1,50 +1,42 @@
+# Daily Log Feature — IMPLEMENTED
 
+## Design Philosophy
+Zero-typing, tap-first daily log that takes under 90 seconds to complete.
 
-# Auto-Default to System Supplier When No Supplier Added During Project Setup
+## Features Built
 
-## Problem
-When a project is created without adding a supplier in the wizard's Parties step, no supplier record exists. The readiness checklist then shows "Supplier not yet assigned" and the project cannot activate until the user manually designates one from the Team card. Users should not have to take this extra step — the system should default to the System Catalog supplier automatically.
+### 1. Database Tables
+- `daily_logs` — one per project per date, auto-creates as draft
+- `daily_log_manpower` — per-trade headcount
+- `daily_log_delays` — cause chips + hours lost
+- `daily_log_photos` — storage refs with tags
+- `daily_log_deliveries` — PO delivery confirmations
 
-## Plan
+### 2. UI Components (all tap-based)
+- **WeatherCard** — condition chips (☀️ 🌧️ ❄️ 💨 🌡️ 🥶) + stepper temps
+- **ManpowerCard** — per-trade steppers auto-populated from project team
+- **WorkPerformedCard** — progress sliders linked to schedule items
+- **SafetyCard** — toggle + incident type chips
+- **DelaysCard** — cause chips with hour steppers
+- **DeliveriesCard** — PO status chips (✅ ❌ ⚠️)
+- **PhotosCard** — camera upload with tags
+- **QuickNotesCard** — quick-add chips + text area
 
-### 1. Auto-create System Supplier on project creation (`src/pages/CreateProject.tsx`)
+### 3. Integration Points
+| Feature | Links To |
+|---------|----------|
+| Work Performed | `project_schedule_items.progress` (bidirectional) |
+| Manpower | Pre-populated from `project_team` trades |
+| Photos | Lovable Cloud storage bucket `daily-log-photos` |
 
-After inviting all parties (step 5, ~line 199), check if any party has `role === 'SUPPLIER'`. If none, insert a `project_designated_suppliers` record with `invited_name: 'System Catalog'` and `status: 'active'` — identical to what `handleUseSystemCatalog` does in the TeamMembersCard.
+### 4. Navigation
+- Added "Daily Log" tab to desktop `ProjectTopBar`
+- Added "Daily Log" to mobile bottom nav `BottomNav`
 
-```
-// After party invite loop (~line 199):
-const hasSupplierParty = data.parties.some(p => p.role === 'SUPPLIER');
-if (!hasSupplierParty) {
-  await supabase.from('project_designated_suppliers').insert({
-    project_id: project.id,
-    user_id: null,
-    invited_email: null,
-    invited_name: 'System Catalog',
-    po_email: null,
-    status: 'active',
-    designated_by: user.id,
-  });
-}
-```
-
-### 2. Team card already handles display and change
-
-The `TeamMembersCard` already:
-- Shows the designated supplier row with "System Catalog" label
-- Provides a "Change" button that opens `DesignateSupplierDialog`
-- Supports replacing the system catalog with a real supplier
-
-No changes needed to the Team card UI.
-
-### 3. Readiness hook already handles it
-
-The readiness hook checks `project_designated_suppliers` for `status === 'active'` and treats it as supplier assigned + accepted. No changes needed.
-
-## Files to modify
-
-| File | Change |
-|------|--------|
-| `src/pages/CreateProject.tsx` | Add auto-insert of system supplier when no supplier party is included |
-
-One file, ~8 lines added. No database changes needed.
-
+## Files Created/Modified
+- `src/types/dailyLog.ts` — types + constants
+- `src/hooks/useDailyLog.ts` — auto-create, auto-save, submit logic
+- `src/components/daily-log/` — all card components + DailyLogPanel
+- `src/pages/ProjectHome.tsx` — renders DailyLogPanel on daily-log tab
+- `src/components/project/ProjectTopBar.tsx` — added tab
+- `src/components/layout/BottomNav.tsx` — added to more menu
