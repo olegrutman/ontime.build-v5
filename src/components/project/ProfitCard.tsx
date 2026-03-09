@@ -160,14 +160,20 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
           <span className="text-sm font-semibold tabular-nums">{fmt(fcContractTotal)}</span>
         </div>
 
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">
-            {hasActualCost ? 'Actual Cost' : 'Labor Budget'}
-          </span>
-          <span className="text-sm font-semibold tabular-nums">
-            {fmt(hasActualCost ? totalActualCost : (laborBudget || 0))}
-          </span>
-        </div>
+        {hasActualCost ? (
+          <button
+            onClick={() => setCostPopupOpen(true)}
+            className="flex items-center justify-between w-full rounded-md px-1 -mx-1 hover:bg-muted/50 transition-colors cursor-pointer"
+          >
+            <span className="text-sm text-muted-foreground">Actual Cost</span>
+            <span className="text-sm font-semibold tabular-nums">{fmt(totalActualCost)}</span>
+          </button>
+        ) : (
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Labor Budget</span>
+            <span className="text-sm font-semibold tabular-nums">{fmt(laborBudget || 0)}</span>
+          </div>
+        )}
 
         <div className="border-t pt-2.5 flex items-center justify-between">
           <span className="text-sm font-medium">FC Profit</span>
@@ -175,6 +181,13 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
             {fmt(fcProfit)}
           </span>
         </div>
+        <ActualCostPopup
+          open={costPopupOpen}
+          onOpenChange={setCostPopupOpen}
+          projectId={projectId}
+          earningsOrRevenue={fcContractTotal}
+          label="Contract Total"
+        />
       </div>
     );
   }
