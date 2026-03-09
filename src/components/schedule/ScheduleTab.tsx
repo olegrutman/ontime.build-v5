@@ -201,6 +201,7 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
         item={editingItem}
         workOrders={workOrders}
         existingItems={items}
+        projectId={projectId}
       />
 
       {/* Delete Confirmation */}
