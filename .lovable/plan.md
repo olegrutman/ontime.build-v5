@@ -1,42 +1,27 @@
-# Daily Log Feature — IMPLEMENTED
 
-## Design Philosophy
-Zero-typing, tap-first daily log that takes under 90 seconds to complete.
 
-## Features Built
+# Add Self-Performing Toggle to Profit Position Card
 
-### 1. Database Tables
-- `daily_logs` — one per project per date, auto-creates as draft
-- `daily_log_manpower` — per-trade headcount
-- `daily_log_delays` — cause chips + hours lost
-- `daily_log_photos` — storage refs with tags
-- `daily_log_deliveries` — PO delivery confirmations
+## What Changes
 
-### 2. UI Components (all tap-based)
-- **WeatherCard** — condition chips (☀️ 🌧️ ❄️ 💨 🌡️ 🥶) + stepper temps
-- **ManpowerCard** — per-trade steppers auto-populated from project team
-- **WorkPerformedCard** — progress sliders linked to schedule items
-- **SafetyCard** — toggle + incident type chips
-- **DelaysCard** — cause chips with hour steppers
-- **DeliveriesCard** — PO status chips (✅ ❌ ⚠️)
-- **PhotosCard** — camera upload with tags
-- **QuickNotesCard** — quick-add chips + text area
+### 1. `ProfitCard.tsx` -- TC Section
+- Add a Switch toggle in the card header next to "Profit Position" label, visible only for TC viewers
+- Label: "Self-Performing"
+- Toggling updates `project_team.is_self_performing` in the database (same logic as TeamMembersCard)
+- When toggled on, `BudgetTracking` card automatically appears (already handled by existing `isTCSelfPerforming` check in `BudgetTracking.tsx`)
 
-### 3. Integration Points
-| Feature | Links To |
-|---------|----------|
-| Work Performed | `project_schedule_items.progress` (bidirectional) |
-| Manpower | Pre-populated from `project_team` trades |
-| Photos | Lovable Cloud storage bucket `daily-log-photos` |
+### 2. Wire the toggle to database
+- Import `supabase` client and `useAuth` to get current org
+- On toggle change, update `project_team.is_self_performing` for the TC's row
+- Call `financials` refetch or use the existing `onTeamChanged` pattern to propagate the state change
 
-### 4. Navigation
-- Added "Daily Log" tab to desktop `ProjectTopBar`
-- Added "Daily Log" to mobile bottom nav `BottomNav`
+### 3. No changes needed to `BudgetTracking.tsx`
+- It already checks `isTCSelfPerforming` and shows the Labor Budget card when true
+- The profit calculation in ProfitCard already handles self-performing mode
 
-## Files Created/Modified
-- `src/types/dailyLog.ts` — types + constants
-- `src/hooks/useDailyLog.ts` — auto-create, auto-save, submit logic
-- `src/components/daily-log/` — all card components + DailyLogPanel
-- `src/pages/ProjectHome.tsx` — renders DailyLogPanel on daily-log tab
-- `src/components/project/ProjectTopBar.tsx` — added tab
-- `src/components/layout/BottomNav.tsx` — added to more menu
+### Files
+
+| File | Change |
+|------|--------|
+| `src/components/project/ProfitCard.tsx` | Add Switch toggle in TC section header, wire to DB update |
+
