@@ -86,6 +86,9 @@ export interface ProjectFinancials {
   // Designated supplier
   isDesignatedSupplier: boolean;
 
+  // TC self-performing flag
+  isTCSelfPerforming: boolean;
+
   // Actions
   refetch: () => void;
   updateContract: (id: string, sum: number, retainage: number) => Promise<boolean>;
