@@ -14,8 +14,10 @@ export default {
   	},
   	extend: {
 		fontFamily: {
+			heading: ['Barlow Condensed', 'sans-serif'],
+			body: ['DM Sans', 'sans-serif'],
 			sans: [
-				'Poppins',
+				'DM Sans',
   				'ui-sans-serif',
   				'system-ui',
   				'-apple-system',

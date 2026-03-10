@@ -4,7 +4,7 @@
 
 /* Ontime.Build Design System - Modern SaaS */
 
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Barlow:wght@400;500;600&display=swap');
 
 @import url("https://fonts.googleapis.com/css2?family=Lora:wght@400;500;600;700&display=swap");
 
@@ -177,12 +177,12 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: 'Poppins', system-ui, sans-serif;
+    font-family: 'DM Sans', system-ui, sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-semibold tracking-tight;
-    font-family: 'Poppins', system-ui, sans-serif;
+    font-family: 'DM Sans', system-ui, sans-serif;
   }
 
   code, pre {
@@ -279,25 +279,61 @@
     box-shadow: 0 8px 24px -4px hsl(207 90% 54% / 0.25);
   }
 
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+  .shadow-orange {
+    box-shadow: 0 2px 8px rgba(232,90,0,.3);
   }
 
-  @keyframes slideUp {
-    from { 
-      opacity: 0; 
-      transform: translateY(8px); 
-    }
-    to { 
-      opacity: 1; 
-      transform: translateY(0); 
-    }
+  .dot-grid {
+    background-image: radial-gradient(circle, rgba(0,0,0,.07) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+
+  .dot-grid-light {
+    background-image: radial-gradient(circle, rgba(255,255,255,.06) 1px, transparent 1px);
+    background-size: 32px 32px;
   }
 
   @keyframes marquee {
     from { transform: translateX(0); }
     to { transform: translateX(-50%); }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-fade-up {
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .animate-fade-up-delay-1 {
+    animation: fadeUp 0.6s 0.08s ease both;
+  }
+
+  .animate-fade-up-delay-2 {
+    animation: fadeUp 0.6s 0.16s ease both;
+  }
+
+  .animate-fade-up-delay-3 {
+    animation: fadeUp 0.6s 0.24s ease both;
+  }
+
+  .animate-fade-up-delay-4 {
+    animation: fadeUp 0.6s 0.32s ease both;
+  }
+
+  .animate-fade-up-delay-5 {
+    animation: fadeUp 0.8s 0.38s ease both;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.5); }
+  }
+
+  .animate-pulse-dot {
+    animation: pulse-dot 2s infinite;
   }
 }
 

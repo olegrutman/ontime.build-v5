@@ -1,22 +1,28 @@
 import {
   LandingHeader,
   HeroSection,
-  LogoMarquee,
+  StatsStrip,
   FeaturesSection,
   HowItWorksSection,
+  IntegrationsStrip,
+  TestimonialsSection,
+  PricingSection,
   CTASection,
   Footer,
 } from '@/components/landing';
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-white">
       <LandingHeader />
       <main>
         <HeroSection />
-        <LogoMarquee />
+        <StatsStrip />
         <FeaturesSection />
         <HowItWorksSection />
+        <IntegrationsStrip />
+        <TestimonialsSection />
+        <PricingSection />
         <CTASection />
       </main>
       <Footer />

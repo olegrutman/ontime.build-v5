@@ -1,54 +1,43 @@
-import { Button } from '@/components/ui/button';
-import { ArrowRight, Building2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-
 export function CTASection() {
-  const navigate = useNavigate();
-
   return (
-    <section className="py-24 relative overflow-hidden">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-primary/10" />
-      
-      {/* Decorative elements */}
-      <div className="absolute top-1/2 left-0 w-72 h-72 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 -translate-x-1/2" />
-      <div className="absolute top-1/2 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+    <section className="bg-[#E85A00] py-[100px] px-[5%] text-center relative overflow-hidden">
+      {/* Dot grid */}
+      <div className="absolute inset-0 pointer-events-none" style={{
+        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,.06) 1px, transparent 1px)',
+        backgroundSize: '32px 32px',
+      }} />
+      {/* Accent glow */}
+      <div className="absolute -top-[100px] -right-[100px] w-[400px] h-[400px] pointer-events-none"
+        style={{ background: 'radial-gradient(ellipse, rgba(255,255,255,.12), transparent 65%)' }}
+      />
 
-      <div className="container mx-auto px-4 relative">
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-8">
-            <Building2 className="w-8 h-8 text-primary-foreground" />
-          </div>
-          
-          <h2 className="text-3xl md:text-5xl font-bold mb-6">
-            Ready to streamline your billing?
-          </h2>
-          <p className="text-xl text-muted-foreground mb-10">
-            Join hundreds of contractors who have simplified their change order and T&M workflow. Start your free trial today.
-          </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button 
-              size="lg" 
-              onClick={() => navigate('/signup')}
-              className="h-14 px-10 text-lg shadow-purple hover:shadow-lg transition-all"
-            >
-              Start free trial
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-            <Button 
-              size="lg" 
-              variant="outline"
-              className="h-14 px-10 text-lg"
-            >
-              Talk to sales
-            </Button>
-          </div>
-
-          <p className="mt-8 text-sm text-muted-foreground">
-            No credit card required • 14-day free trial • Cancel anytime
-          </p>
-        </div>
+      <h2 className="font-heading text-[clamp(2.8rem,6vw,5.5rem)] font-black leading-[0.93] tracking-[-2px] uppercase text-white max-w-[800px] mx-auto mb-[22px] relative">
+        Stop Losing Money<br />to <span className="text-transparent" style={{ WebkitTextStroke: '2px rgba(255,255,255,.5)' }}>Miscommunication.</span>
+      </h2>
+      <p className="text-white/75 text-[1.05rem] max-w-[460px] mx-auto mb-9 relative">
+        Join thousands of construction teams delivering projects on time, on budget — with less chaos and more confidence.
+      </p>
+      <div className="flex justify-center gap-3.5 flex-wrap relative">
+        <a
+          href="/signup"
+          className="px-9 py-4 text-base font-bold bg-white text-[#E85A00] rounded-[5px] no-underline shadow-[0_4px_20px_rgba(0,0,0,.15)] hover:-translate-y-0.5 hover:shadow-[0_8px_28px_rgba(0,0,0,.2)] transition-all"
+        >
+          Start Free 14-Day Trial
+        </a>
+        <a
+          href="#"
+          className="px-9 py-4 text-base font-semibold bg-transparent text-white border-[1.5px] border-white/40 rounded-[5px] no-underline hover:border-white hover:bg-white/[0.08] transition-all"
+        >
+          Schedule a Demo
+        </a>
+      </div>
+      <div className="mt-[22px] flex justify-center gap-6 flex-wrap relative">
+        {['No credit card required', 'Full feature access', 'Setup in under 30 min', 'Live onboarding included'].map((t) => (
+          <span key={t} className="text-[0.8rem] text-white/65 flex items-center gap-[5px]">
+            <span className="font-bold text-white/90">✓</span>
+            {t}
+          </span>
+        ))}
       </div>
     </section>
   );
