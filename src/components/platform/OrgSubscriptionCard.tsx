@@ -33,6 +33,13 @@ export function OrgSubscriptionCard({ orgId, currentPlanId }: OrgSubscriptionCar
 
   const [selectedPlanId, setSelectedPlanId] = useState<string>(currentPlanId ?? '');
 
+  // Sync state when prop arrives asynchronously
+  React.useEffect(() => {
+    if (currentPlanId && selectedPlanId === '') {
+      setSelectedPlanId(currentPlanId);
+    }
+  }, [currentPlanId]);
+
   const plans = plansData?.plans ?? [];
   const currentPlan = plans.find((p) => p.id === (currentPlanId ?? selectedPlanId));
 
