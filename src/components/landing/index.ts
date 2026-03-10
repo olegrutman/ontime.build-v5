@@ -1,8 +1,10 @@
 export { LandingHeader } from './LandingHeader';
 export { HeroSection } from './HeroSection';
-export { LogoMarquee } from './LogoMarquee';
+export { StatsStrip } from './StatsStrip';
 export { FeaturesSection } from './FeaturesSection';
 export { HowItWorksSection } from './HowItWorksSection';
+export { IntegrationsStrip } from './IntegrationsStrip';
+export { TestimonialsSection } from './TestimonialsSection';
+export { PricingSection } from './PricingSection';
 export { CTASection } from './CTASection';
-
 export { Footer } from './Footer';
