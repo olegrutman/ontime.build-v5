@@ -18,6 +18,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
+import { useFeatureEnabled } from '@/components/auth/FeatureGate';
 
 interface NavItem {
   label: string;
