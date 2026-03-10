@@ -1,19 +1,20 @@
 import { useState } from 'react';
-import { ChevronDown, Download, Loader2 } from 'lucide-react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { NotificationSheet } from '@/components/notifications';
+import { ChevronDown, Download, Loader2 } from 'lucide-react';
+import { NotificationSheet } from '@/components/notifications/NotificationSheet';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useFeatureEnabled, TAB_FEATURE_MAP } from '@/components/auth/FeatureGate';
 
 interface ProjectTopBarProps {
   projectName: string;
@@ -59,6 +60,16 @@ export function ProjectTopBar({
 }: ProjectTopBarProps) {
   const { toast } = useToast();
   const [downloading, setDownloading] = useState(false);
+
+  // Feature access checks for all gated tabs
+  const sovEnabled = useFeatureEnabled('sov_contracts');
+  const changeOrdersEnabled = useFeatureEnabled('change_orders');
+  const scheduleEnabled = useFeatureEnabled('schedule_gantt');
+  const dailyLogEnabled = useFeatureEnabled('daily_logs');
+  const invoicingEnabled = useFeatureEnabled('invoicing');
+  const posEnabled = useFeatureEnabled('purchase_orders');
+  const returnsEnabled = useFeatureEnabled('returns_tracking');
+  const estimatesEnabled = useFeatureEnabled('supplier_estimates');
 
   const handleDownloadSummary = async () => {
     setDownloading(true);
@@ -143,7 +154,7 @@ export function ProjectTopBar({
               >
                 Overview
               </TabsTrigger>
-              {!isSupplier && (
+              {!isSupplier && sovEnabled && (
                 <TabsTrigger
                   value="sov"
                   className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
@@ -152,7 +163,7 @@ export function ProjectTopBar({
                   SOV
                 </TabsTrigger>
               )}
-              {!isSupplier && (
+              {!isSupplier && changeOrdersEnabled && (
               <TabsTrigger
                 value="work-orders"
                 className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
@@ -169,6 +180,7 @@ export function ProjectTopBar({
               >
                 RFIs
               </TabsTrigger>
+              {estimatesEnabled && (
               <TabsTrigger
                 value="estimates"
                 className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
@@ -176,6 +188,8 @@ export function ProjectTopBar({
               >
                 Estimates
               </TabsTrigger>
+              )}
+              {scheduleEnabled && (
               <TabsTrigger
                 value="schedule"
                 className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
@@ -183,6 +197,8 @@ export function ProjectTopBar({
               >
                 Schedule
               </TabsTrigger>
+              )}
+              {dailyLogEnabled && (
               <TabsTrigger
                 value="daily-log"
                 className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
@@ -190,6 +206,8 @@ export function ProjectTopBar({
               >
                 Daily Log
               </TabsTrigger>
+              )}
+              {invoicingEnabled && (
               <TabsTrigger
                 value="invoices"
                 className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
@@ -197,6 +215,8 @@ export function ProjectTopBar({
               >
                 Invoices
               </TabsTrigger>
+              )}
+              {posEnabled && (
               <TabsTrigger
                 value="purchase-orders"
                 className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
@@ -205,6 +225,8 @@ export function ProjectTopBar({
                 <span className="lg:hidden">POs</span>
                 <span className="hidden lg:inline">Purchase Orders</span>
               </TabsTrigger>
+              )}
+              {returnsEnabled && (
               <TabsTrigger
                 value="returns"
                 className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
@@ -212,6 +234,7 @@ export function ProjectTopBar({
               >
                 Returns
               </TabsTrigger>
+              )}
             </TabsList>
           </div>
         </Tabs>

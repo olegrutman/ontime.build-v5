@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
@@ -32,6 +32,13 @@ export function OrgSubscriptionCard({ orgId, currentPlanId }: OrgSubscriptionCar
   const updatePlan = useUpdateOrgPlan();
 
   const [selectedPlanId, setSelectedPlanId] = useState<string>(currentPlanId ?? '');
+
+  // Sync state when prop arrives asynchronously
+  React.useEffect(() => {
+    if (currentPlanId && selectedPlanId === '') {
+      setSelectedPlanId(currentPlanId);
+    }
+  }, [currentPlanId]);
 
   const plans = plansData?.plans ?? [];
   const currentPlan = plans.find((p) => p.id === (currentPlanId ?? selectedPlanId));

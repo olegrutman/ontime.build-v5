@@ -47,6 +47,7 @@ import { RFIsTab } from '@/components/rfi';
 import { ScheduleTab } from '@/components/schedule/ScheduleTab';
 import { DailyLogPanel } from '@/components/daily-log/DailyLogPanel';
 import { useToast } from '@/hooks/use-toast';
+import { FeatureGate, TAB_FEATURE_MAP } from '@/components/auth/FeatureGate';
 import { useProjectFinancials } from '@/hooks/useProjectFinancials';
 import { useProjectReadiness } from '@/hooks/useProjectReadiness';
 
@@ -343,45 +344,72 @@ export default function ProjectHome() {
 
               {/* Other tabs — unchanged */}
               {activeTab === 'sov' && !isSupplier && (
-                isInDemoMode ? <DemoSOVTab /> : <ContractSOVEditor projectId={id!} />
+                <FeatureGate feature="sov_contracts">
+                  {isInDemoMode ? <DemoSOVTab /> : <ContractSOVEditor projectId={id!} />}
+                </FeatureGate>
               )}
               {activeTab === 'work-orders' && !isSupplier && (
-                isInDemoMode
-                  ? <DemoWorkOrdersTab projectId={id!} projectName={project.name} />
-                  : <WorkOrdersTab projectId={id!} projectName={project.name} projectStatus={projectStatus} />
+                <FeatureGate feature="change_orders">
+                  {isInDemoMode
+                    ? <DemoWorkOrdersTab projectId={id!} projectName={project.name} />
+                    : <WorkOrdersTab projectId={id!} projectName={project.name} projectStatus={projectStatus} />
+                  }
+                </FeatureGate>
               )}
               {activeTab === 'rfis' && (
                 isInDemoMode ? <DemoRFIsTab /> : <RFIsTab projectId={id!} />
               )}
               {activeTab === 'estimates' && isSupplier && supplierOrgId && (
-                <SupplierEstimatesSection projectId={id!} projectName={project?.name} supplierOrgId={supplierOrgId} />
+                <FeatureGate feature="supplier_estimates">
+                  <SupplierEstimatesSection projectId={id!} projectName={project?.name} supplierOrgId={supplierOrgId} />
+                </FeatureGate>
               )}
               {activeTab === 'estimates' && !isSupplier && (
-                materialResponsibility && (
-                  (currentOrg?.type === 'GC' && materialResponsibility === 'TC') ||
-                  (currentOrg?.type !== 'GC' && materialResponsibility === 'GC')
-                ) ? (
-                  <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
-                    Materials are managed by the {materialResponsibility === 'GC' ? 'General Contractor' : 'Trade Contractor'} on this project.
-                  </div>
-                ) : (
-                  <ProjectEstimatesReview projectId={id!} />
-                )
+                <FeatureGate feature="supplier_estimates">
+                  {materialResponsibility && (
+                    (currentOrg?.type === 'GC' && materialResponsibility === 'TC') ||
+                    (currentOrg?.type !== 'GC' && materialResponsibility === 'GC')
+                  ) ? (
+                    <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
+                      Materials are managed by the {materialResponsibility === 'GC' ? 'General Contractor' : 'Trade Contractor'} on this project.
+                    </div>
+                  ) : (
+                    <ProjectEstimatesReview projectId={id!} />
+                  )}
+                </FeatureGate>
               )}
               {activeTab === 'invoices' && (
-                isInDemoMode
-                  ? <DemoInvoicesTab projectId={id!} />
-                  : <InvoicesTab key={`invoices-${tabResetKey}-${realtimeKey}`} projectId={id!} retainagePercent={project.retainage_percent || 0} projectStatus={projectStatus} />
+                <FeatureGate feature="invoicing">
+                  {isInDemoMode
+                    ? <DemoInvoicesTab projectId={id!} />
+                    : <InvoicesTab key={`invoices-${tabResetKey}-${realtimeKey}`} projectId={id!} retainagePercent={project.retainage_percent || 0} projectStatus={projectStatus} />
+                  }
+                </FeatureGate>
               )}
               {activeTab === 'purchase-orders' && (
-                isInDemoMode
-                  ? <DemoPurchaseOrdersTab projectId={id!} />
-                  : <PurchaseOrdersTab key={`po-${tabResetKey}-${realtimeKey}`} projectId={id!} projectName={project?.name} projectStatus={projectStatus}
-                      projectAddress={project?.address ? `${project.address.street || ''}, ${project.address.city || ''}, ${project.address.state || ''} ${project.address.zip || ''}`.replace(/^,\s*|,\s*$/g, '').trim() : ''} />
+                <FeatureGate feature="purchase_orders">
+                  {isInDemoMode
+                    ? <DemoPurchaseOrdersTab projectId={id!} />
+                    : <PurchaseOrdersTab key={`po-${tabResetKey}-${realtimeKey}`} projectId={id!} projectName={project?.name} projectStatus={projectStatus}
+                        projectAddress={project?.address ? `${project.address.street || ''}, ${project.address.city || ''}, ${project.address.state || ''} ${project.address.zip || ''}`.replace(/^,\s*|,\s*$/g, '').trim() : ''} />
+                  }
+                </FeatureGate>
               )}
-              {activeTab === 'schedule' && <ScheduleTab projectId={id!} />}
-              {activeTab === 'daily-log' && <DailyLogPanel projectId={id!} />}
-              {activeTab === 'returns' && <ReturnsTab projectId={id!} />}
+              {activeTab === 'schedule' && (
+                <FeatureGate feature="schedule_gantt">
+                  <ScheduleTab projectId={id!} />
+                </FeatureGate>
+              )}
+              {activeTab === 'daily-log' && (
+                <FeatureGate feature="daily_logs">
+                  <DailyLogPanel projectId={id!} />
+                </FeatureGate>
+              )}
+              {activeTab === 'returns' && (
+                <FeatureGate feature="returns_tracking">
+                  <ReturnsTab projectId={id!} />
+                </FeatureGate>
+              )}
             </div>
           </main>
         </SidebarInset>
