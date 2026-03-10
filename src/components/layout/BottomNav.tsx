@@ -41,6 +41,15 @@ export function BottomNav() {
   const projectId = isProjectPage ? location.pathname.split('/')[2] : null;
   const activeTab = searchParams.get('tab') || 'overview';
 
+  // Feature access checks
+  const sovEnabled = useFeatureEnabled('sov_contracts');
+  const changeOrdersEnabled = useFeatureEnabled('change_orders');
+  const scheduleEnabled = useFeatureEnabled('schedule_gantt');
+  const dailyLogEnabled = useFeatureEnabled('daily_logs');
+  const invoicingEnabled = useFeatureEnabled('invoicing');
+  const posEnabled = useFeatureEnabled('purchase_orders');
+  const returnsEnabled = useFeatureEnabled('returns_tracking');
+
   // 10. Updated dashboard items with global pages
   const dashboardPrimaryItems: NavItem[] = [
     { label: 'Dashboard', icon: Home, path: '/dashboard' },
@@ -56,16 +65,16 @@ export function BottomNav() {
   const primaryProjectItems: NavItem[] = [
     { label: 'Dashboard', icon: Home, path: '/dashboard' },
     { label: 'Overview', icon: LayoutDashboard, tab: 'overview' },
-    ...(!isSupplier ? [{ label: 'WOs', icon: ClipboardList, tab: 'work-orders' }] : []),
+    ...(!isSupplier && changeOrdersEnabled ? [{ label: 'WOs', icon: ClipboardList, tab: 'work-orders' }] : []),
   ];
 
   const moreProjectItems: NavItem[] = [
-    ...(!isSupplier ? [{ label: 'SOV', icon: ListChecks, tab: 'sov' }] : []),
-    { label: 'Schedule', icon: CalendarDays, tab: 'schedule' },
-    { label: 'Daily Log', icon: ClipboardList, tab: 'daily-log' },
-    { label: 'Invoices', icon: FileText, tab: 'invoices' },
-    { label: 'POs', icon: ShoppingCart, tab: 'purchase-orders' },
-    { label: 'Returns', icon: Undo2, tab: 'returns' },
+    ...(!isSupplier && sovEnabled ? [{ label: 'SOV', icon: ListChecks, tab: 'sov' }] : []),
+    ...(scheduleEnabled ? [{ label: 'Schedule', icon: CalendarDays, tab: 'schedule' }] : []),
+    ...(dailyLogEnabled ? [{ label: 'Daily Log', icon: ClipboardList, tab: 'daily-log' }] : []),
+    ...(invoicingEnabled ? [{ label: 'Invoices', icon: FileText, tab: 'invoices' }] : []),
+    ...(posEnabled ? [{ label: 'POs', icon: ShoppingCart, tab: 'purchase-orders' }] : []),
+    ...(returnsEnabled ? [{ label: 'Returns', icon: Undo2, tab: 'returns' }] : []),
     { label: 'RFIs', icon: MessageSquareMore, tab: 'rfis' },
   ];
 
