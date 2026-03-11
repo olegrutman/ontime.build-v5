@@ -162,6 +162,7 @@ export const INITIAL_WIZARD_DATA: WorkOrderWizardData = {
   location_data: {},
   work_type: null,
   structural_element: undefined,
+  architectural_element_sub_type: undefined,
   scope_size: undefined,
   urgency: undefined,
   access_conditions: undefined,
