@@ -1,4 +1,5 @@
-import { Ruler, AlertTriangle, Layers, Eye, Crosshair } from 'lucide-react';
+import { useMemo } from 'react';
+import { Ruler, AlertTriangle, Layers, Eye, Crosshair, LayoutList } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -9,8 +10,11 @@ import {
 } from '@/components/ui/select';
 import {
   WorkOrderWizardData,
-  STRUCTURAL_ELEMENT_OPTIONS,
-  SCOPE_SIZE_OPTIONS,
+  INTERIOR_ARCHITECTURAL_ELEMENTS,
+  EXTERIOR_ARCHITECTURAL_ELEMENTS,
+  INTERIOR_SCOPE_SIZE_OPTIONS,
+  EXTERIOR_SCOPE_SIZE_OPTIONS,
+  ELEMENT_SUB_TYPE_MAP,
   URGENCY_OPTIONS,
   ACCESS_CONDITIONS_OPTIONS,
   EXISTING_CONDITIONS_OPTIONS,
@@ -59,23 +63,62 @@ function ScopeSelect({
 }
 
 export function ScopeDetailsStep({ data, onChange }: ScopeDetailsStepProps) {
+  const isOutside = data.location_data?.inside_outside === 'outside';
+
+  const elementOptions = useMemo(
+    () => (isOutside ? EXTERIOR_ARCHITECTURAL_ELEMENTS : INTERIOR_ARCHITECTURAL_ELEMENTS),
+    [isOutside],
+  );
+
+  const scopeSizeOptions = useMemo(
+    () => (isOutside ? EXTERIOR_SCOPE_SIZE_OPTIONS : INTERIOR_SCOPE_SIZE_OPTIONS),
+    [isOutside],
+  );
+
+  const subTypeOptions = useMemo(
+    () => (data.structural_element ? ELEMENT_SUB_TYPE_MAP[data.structural_element] : null),
+    [data.structural_element],
+  );
+
+  const handleElementChange = (val: string) => {
+    const updates: Partial<WorkOrderWizardData> = { structural_element: val };
+    // Clear sub-type when element changes
+    if (!ELEMENT_SUB_TYPE_MAP[val]) {
+      updates.architectural_element_sub_type = undefined;
+    }
+    onChange(updates);
+  };
+
   return (
     <div className="space-y-6">
       <ScopeSelect
         icon={Layers}
-        label="Structural Element"
+        label="Architectural Element"
         placeholder="What is being worked on?"
         value={data.structural_element}
-        options={STRUCTURAL_ELEMENT_OPTIONS}
-        onValueChange={(val) => onChange({ structural_element: val })}
+        options={elementOptions}
+        onValueChange={handleElementChange}
       />
+
+      {subTypeOptions && (
+        <div className="animate-in fade-in slide-in-from-top-2">
+          <ScopeSelect
+            icon={LayoutList}
+            label={`${data.structural_element} Type`}
+            placeholder={`What type of ${data.structural_element?.toLowerCase()}?`}
+            value={data.architectural_element_sub_type}
+            options={subTypeOptions}
+            onValueChange={(val) => onChange({ architectural_element_sub_type: val })}
+          />
+        </div>
+      )}
 
       <ScopeSelect
         icon={Ruler}
         label="Scope Size"
         placeholder="How much work is involved?"
         value={data.scope_size}
-        options={SCOPE_SIZE_OPTIONS}
+        options={scopeSizeOptions}
         onValueChange={(val) => onChange({ scope_size: val })}
       />
 
