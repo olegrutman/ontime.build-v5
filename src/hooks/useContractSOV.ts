@@ -320,6 +320,26 @@ function generateStaticListItems(
   return items;
 }
 
+// Helper: fetch existing SOV items from any SOV on this project (for inheritance)
+export async function getExistingSOVItems(projectId: string): Promise<{item_name: string, percent_of_contract: number, sort_order: number}[] | null> {
+  const { data: existingSov } = await supabase
+    .from('project_sov')
+    .select('id')
+    .eq('project_id', projectId)
+    .limit(1)
+    .maybeSingle();
+  
+  if (!existingSov) return null;
+  
+  const { data: items } = await supabase
+    .from('project_sov_items')
+    .select('item_name, percent_of_contract, sort_order')
+    .eq('sov_id', existingSov.id)
+    .order('sort_order');
+  
+  return items?.length ? items : null;
+}
+
 export function useContractSOV(projectId: string | undefined) {
   const { userOrgRoles, user } = useAuth();
   const currentOrgId = userOrgRoles[0]?.organization?.id;
