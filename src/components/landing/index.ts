@@ -3,6 +3,7 @@ export { HeroSection } from './HeroSection';
 export { StatsStrip } from './StatsStrip';
 export { FeaturesSection } from './FeaturesSection';
 export { HowItWorksSection } from './HowItWorksSection';
+export { RolesSection } from './RolesSection';
 export { IntegrationsStrip } from './IntegrationsStrip';
 export { TestimonialsSection } from './TestimonialsSection';
 export { PricingSection } from './PricingSection';

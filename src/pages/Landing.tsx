@@ -4,6 +4,7 @@ import {
   StatsStrip,
   FeaturesSection,
   HowItWorksSection,
+  RolesSection,
   IntegrationsStrip,
   TestimonialsSection,
   PricingSection,
@@ -20,6 +21,7 @@ export default function Landing() {
         <StatsStrip />
         <FeaturesSection />
         <HowItWorksSection />
+        <RolesSection />
         <IntegrationsStrip />
         <TestimonialsSection />
         <PricingSection />
