@@ -4,6 +4,7 @@ export { NeedsAttentionTile, type AttentionItem, type PendingInvite } from './Ne
 export { RemindersTile, type Reminder } from './RemindersTile';
 export { AddReminderDialog } from './AddReminderDialog';
 export { ProjectRow } from './ProjectRow';
+export { ProjectQuickOverview } from './ProjectQuickOverview';
 export { NeedsAttentionPanel } from './NeedsAttentionPanel';
 export { PendingInvitesPanel } from './PendingInvitesPanel';
 export { ArchiveProjectDialog } from './ArchiveProjectDialog';

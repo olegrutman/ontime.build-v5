@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Building2, ChevronRight, MoreVertical, Archive, RotateCcw, PauseCircle, CheckCircle2, PlayCircle } from 'lucide-react';
+import { Building2, ChevronRight, ChevronDown, MoreVertical, Archive, RotateCcw, PauseCircle, CheckCircle2, PlayCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -10,8 +10,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useProjectQuickStats } from '@/hooks/useProjectQuickStats';
+import { ProjectQuickOverview } from './ProjectQuickOverview';
 
 interface ProjectRowProps {
   project: {
@@ -25,19 +28,12 @@ interface ProjectRowProps {
   contractValue: number | null;
   pendingActions: number;
   orgType?: string | null;
+  isExpanded: boolean;
+  onToggleExpand: (projectId: string) => void;
   onArchive: (projectId: string) => void;
   onUnarchive: (projectId: string) => void;
   onStatusChange: (projectId: string, status: 'active' | 'on_hold' | 'completed') => void;
 }
-
-const STATUS_BORDER_COLORS: Record<string, string> = {
-  'setup': 'border-l-violet-500',
-  'active': 'border-l-green-500',
-  'on_hold': 'border-l-amber-500',
-  'completed': 'border-l-blue-500',
-  'archived': 'border-l-muted-foreground',
-  'draft': 'border-l-muted-foreground',
-};
 
 const STATUS_COLORS: Record<string, string> = {
   'setup': 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
@@ -72,6 +68,8 @@ export function ProjectRow({
   contractValue,
   pendingActions,
   orgType,
+  isExpanded,
+  onToggleExpand,
   onArchive,
   onUnarchive,
   onStatusChange,
@@ -82,18 +80,49 @@ export function ProjectRow({
   const isCompleted = project.status === 'completed';
   const isActive = project.status === 'active';
 
+  // Only fetch stats when expanded
+  const stats = useProjectQuickStats(isExpanded ? project.id : null);
+
   const handleRowClick = () => {
-    navigate(`/project/${project.id}`);
+    onToggleExpand(project.id);
   };
 
   const handleMenuClick = (e: React.MouseEvent) => {
     e.stopPropagation();
   };
 
+  // Schedule status badge
+  const getScheduleBadge = () => {
+    if (!isExpanded || stats.loading) return null;
+    if (stats.scheduleDelta >= 0) {
+      return (
+        <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 text-[10px] gap-1">
+          <CheckCircle2 className="h-3 w-3" />
+          ON SCHEDULE
+        </Badge>
+      );
+    }
+    if (stats.scheduleDelta >= -5) {
+      return (
+        <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 text-[10px]">
+          AT RISK
+        </Badge>
+      );
+    }
+    return (
+      <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 text-[10px]">
+        BEHIND
+      </Badge>
+    );
+  };
+
   return (
     <Card
       data-sasha-card="Project"
-      className="group hover:shadow-md transition-shadow cursor-pointer"
+      className={cn(
+        'group transition-shadow cursor-pointer',
+        isExpanded ? 'shadow-md ring-1 ring-primary/10' : 'hover:shadow-md'
+      )}
       onClick={handleRowClick}
     >
       <CardContent className="p-2.5 sm:p-4">
@@ -107,7 +136,10 @@ export function ProjectRow({
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
-                <h3 className="text-base font-semibold truncate">{project.name}</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-semibold truncate">{project.name}</h3>
+                  {getScheduleBadge()}
+                </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span className="capitalize truncate">{project.project_type}</span>
                   {userRole && (
@@ -119,7 +151,11 @@ export function ProjectRow({
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                <ChevronRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
+                {isExpanded ? (
+                  <ChevronDown className="h-5 w-5 text-muted-foreground transition-transform" />
+                ) : (
+                  <ChevronRight className="h-5 w-5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block" />
+                )}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild onClick={handleMenuClick}>
                     <Button variant="ghost" size="icon" className="h-10 w-10">
@@ -203,6 +239,15 @@ export function ProjectRow({
             </div>
           </div>
         </div>
+
+        {/* Expanded Quick Overview */}
+        <Collapsible open={isExpanded}>
+          <CollapsibleContent>
+            <div className="border-t mt-3 pt-1">
+              <ProjectQuickOverview projectId={project.id} stats={stats} />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </CardContent>
     </Card>
   );
