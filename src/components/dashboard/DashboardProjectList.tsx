@@ -63,6 +63,7 @@ export function DashboardProjectList({
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const [statusOpen, setStatusOpen] = useState(false);
+  const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
 
   const filteredProjects = useMemo(() => {
     if (statusFilter === 'setup') {
@@ -73,7 +74,6 @@ export function DashboardProjectList({
 
   const canCreateProject = orgType === 'GC' || orgType === 'TC';
 
-  // Check if any non-current status has items (hint dot)
   const hasOtherItems = useMemo(() => {
     return Object.entries(statusCounts).some(
       ([key, count]) => key !== statusFilter && count > 0
@@ -83,6 +83,11 @@ export function DashboardProjectList({
   const handleMobileFilterChange = (filter: ProjectStatusFilter) => {
     onStatusFilterChange(filter);
     setStatusOpen(false);
+    setExpandedProjectId(null);
+  };
+
+  const handleToggleExpand = (projectId: string) => {
+    setExpandedProjectId((prev) => (prev === projectId ? null : projectId));
   };
 
   const emptyStateConfig = {
@@ -116,7 +121,7 @@ export function DashboardProjectList({
 
   return (
     <div className="space-y-0">
-      {/* Status Tabs - Collapsible on mobile */}
+      {/* Status Tabs */}
       {isMobile ? (
         <Collapsible open={statusOpen} onOpenChange={setStatusOpen}>
           <CollapsibleTrigger className="flex items-center justify-between w-full py-2.5 px-1">
@@ -146,7 +151,10 @@ export function DashboardProjectList({
       ) : (
         <StatusMenu
           currentFilter={statusFilter}
-          onFilterChange={onStatusFilterChange}
+          onFilterChange={(f) => {
+            onStatusFilterChange(f);
+            setExpandedProjectId(null);
+          }}
           counts={statusCounts}
         />
       )}
@@ -203,6 +211,8 @@ export function DashboardProjectList({
                 contractValue={project.contractValue}
                 pendingActions={project.pendingActions}
                 orgType={orgType}
+                isExpanded={expandedProjectId === project.id}
+                onToggleExpand={handleToggleExpand}
                 onArchive={onArchive}
                 onUnarchive={onUnarchive}
                 onStatusChange={onStatusChange}
