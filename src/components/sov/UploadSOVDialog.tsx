@@ -72,6 +72,17 @@ export function UploadSOVDialog({ open, onOpenChange, contracts, projectId, onCr
     setStage('processing');
 
     try {
+      // Check if an SOV already exists on this project — if so, inherit items
+      const existingItems = await getExistingSOVItems(projectId);
+      
+      if (existingItems) {
+        // Skip AI parsing — use inherited items
+        setItems(existingItems.map(i => ({ name: i.item_name, percent: i.percent_of_contract })));
+        setWarnings(['Items and percentages were inherited from an existing SOV on this project to maintain consistency.']);
+        setStage('review');
+        return;
+      }
+
       const arrayBuffer = await file.arrayBuffer();
       const base64 = btoa(new Uint8Array(arrayBuffer).reduce((data, byte) => data + String.fromCharCode(byte), ''));
       const fileType = file.name.toLowerCase().endsWith('.csv') ? 'csv' : 'pdf';
@@ -95,7 +106,7 @@ export function UploadSOVDialog({ open, onOpenChange, contracts, projectId, onCr
       toast({ title: 'Parse Failed', description: err.message || 'Could not parse the document.', variant: 'destructive' });
       setStage('upload');
     }
-  }, [file, selectedContractId, selectedContract]);
+  }, [file, selectedContractId, selectedContract, projectId]);
 
   const updateItemName = (index: number, name: string) => {
     setItems(prev => prev.map((item, i) => (i === index ? { ...item, name } : item)));
