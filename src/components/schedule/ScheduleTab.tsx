@@ -144,20 +144,24 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
     }
   };
 
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+
   // Unified handler for drag end / date change that checks for downstream tasks
   const handleScheduleChange = useCallback((taskId: string, newStart: string, newEnd: string) => {
-    const downstream = findDownstreamTasks(items, taskId);
+    const downstream = findDownstreamTasks(itemsRef.current, taskId);
     if (downstream.length > 0) {
       setPendingCascade({ taskId, newStart, newEnd, downstreamIds: downstream });
     } else {
       applyUpdate(taskId, newStart, newEnd);
     }
-  }, [items]);
+  }, []);
 
-  const applyUpdate = async (taskId: string, newStart: string, newEnd: string) => {
+  const applyUpdate = useCallback(async (taskId: string, newStart: string, newEnd: string) => {
+    const currentItems = itemsRef.current;
     // Save undo snapshot
-    const prevUpdates = [{ id: taskId, start_date: items.find(i => i.id === taskId)!.start_date, end_date: items.find(i => i.id === taskId)!.end_date || newEnd }];
-    setUndoSnapshot({ items, updates: prevUpdates });
+    const prevUpdates = [{ id: taskId, start_date: currentItems.find(i => i.id === taskId)!.start_date, end_date: currentItems.find(i => i.id === taskId)!.end_date || newEnd }];
+    setUndoSnapshot({ items: currentItems, updates: prevUpdates });
     if (undoTimer.current) clearTimeout(undoTimer.current);
     undoTimer.current = setTimeout(() => setUndoSnapshot(null), 5000);
 
@@ -166,7 +170,7 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
     } catch (err: any) {
       toast({ title: 'Error', description: err.message, variant: 'destructive' });
     }
-  };
+  }, [updateItem, toast]);
 
   const handleCascade = async () => {
     if (!pendingCascade) return;
@@ -440,6 +444,7 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
         item={drawerItem}
         items={items}
         onUpdate={handleDrawerUpdate}
+        onDateChange={handleScheduleChange}
       />
 
       {/* Schedule Item Form (mobile / add new) */}
