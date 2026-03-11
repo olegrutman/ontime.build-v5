@@ -3066,6 +3066,7 @@ export type Database = {
           sov_id: string | null
           total_billed_amount: number | null
           total_completion_percent: number | null
+          updated_at: string | null
           value_amount: number | null
         }
         Insert: {
@@ -3083,6 +3084,7 @@ export type Database = {
           sov_id?: string | null
           total_billed_amount?: number | null
           total_completion_percent?: number | null
+          updated_at?: string | null
           value_amount?: number | null
         }
         Update: {
@@ -3100,6 +3102,7 @@ export type Database = {
           sov_id?: string | null
           total_billed_amount?: number | null
           total_completion_percent?: number | null
+          updated_at?: string | null
           value_amount?: number | null
         }
         Relationships: [
