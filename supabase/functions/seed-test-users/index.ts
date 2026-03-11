@@ -13,10 +13,40 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
+
+    // --- Auth: require valid JWT from a PLATFORM_OWNER ---
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: corsHeaders,
+      })
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    })
+    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token)
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: corsHeaders,
+      })
+    }
+
+    const callerId = claimsData.claims.sub as string
+
     const adminClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false }
     })
+
+    // Verify caller is PLATFORM_OWNER
+    const { data: roleData } = await adminClient.rpc('get_platform_role', { _user_id: callerId })
+    if (roleData !== 'PLATFORM_OWNER') {
+      return new Response(JSON.stringify({ error: 'Forbidden — PLATFORM_OWNER required' }), {
+        status: 403, headers: corsHeaders,
+      })
+    }
 
     const users = [
       {
