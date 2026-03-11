@@ -320,6 +320,26 @@ function generateStaticListItems(
   return items;
 }
 
+// Helper: fetch existing SOV items from any SOV on this project (for inheritance)
+export async function getExistingSOVItems(projectId: string): Promise<{item_name: string, percent_of_contract: number, sort_order: number}[] | null> {
+  const { data: existingSov } = await supabase
+    .from('project_sov')
+    .select('id')
+    .eq('project_id', projectId)
+    .limit(1)
+    .maybeSingle();
+  
+  if (!existingSov) return null;
+  
+  const { data: items } = await supabase
+    .from('project_sov_items')
+    .select('item_name, percent_of_contract, sort_order')
+    .eq('sov_id', existingSov.id)
+    .order('sort_order');
+  
+  return items?.length ? items : null;
+}
+
 export function useContractSOV(projectId: string | undefined) {
   const { userOrgRoles, user } = useAuth();
   const currentOrgId = userOrgRoles[0]?.organization?.id;
@@ -518,43 +538,51 @@ export function useContractSOV(projectId: string | undefined) {
     setSaving(true);
     
     try {
-      // Get project details
-      const { data: project } = await supabase
-        .from('projects')
-        .select('project_type')
-        .eq('id', projectId)
-        .single();
+      // Check for existing SOV items on this project (inheritance rule)
+      const existingItems = await getExistingSOVItems(projectId);
       
-      if (!project) throw new Error('Project not found');
+      let itemNames: string[];
+      let normalizedPercents: number[];
+      let templateKey = 'inherited';
       
-      // Get scope details
-      const { data: scope } = await supabase
-        .from('project_scope_details')
-        .select('*')
-        .eq('project_id', projectId)
-        .maybeSingle();
-      
-      const scopeDetails = scope as ProjectScopeDetails | null;
-      const stories = scopeDetails?.stories || scopeDetails?.floors || 2;
-      const homeType = scopeDetails?.home_type || null;
-      const templateKey = getTemplateKeyForProject(project.project_type, homeType);
-      
-      // Generate master item list
-      const itemNames = await generateItemsFromTemplate(templateKey, stories, scopeDetails);
-      
-      // Calculate industry-standard percentages for each item
-      const rawPercents = itemNames.map(name => getDefaultPercentForItem(name));
-      const totalRaw = rawPercents.reduce((a, b) => a + b, 0);
-      
-      // Normalize to 100% while maintaining proportions
-      const normalizedPercents: number[] = [];
-      for (let i = 0; i < rawPercents.length; i++) {
-        if (i === rawPercents.length - 1) {
-          // Last item gets remainder to ensure exactly 100%
-          const sumSoFar = normalizedPercents.reduce((a, b) => a + b, 0);
-          normalizedPercents.push(parseFloat((100 - sumSoFar).toFixed(2)));
-        } else {
-          normalizedPercents.push(parseFloat(((rawPercents[i] / totalRaw) * 100).toFixed(2)));
+      if (existingItems) {
+        // Inherit from existing SOV
+        itemNames = existingItems.map(i => i.item_name);
+        normalizedPercents = existingItems.map(i => i.percent_of_contract);
+      } else {
+        // No existing SOV — generate from template
+        const { data: project } = await supabase
+          .from('projects')
+          .select('project_type')
+          .eq('id', projectId)
+          .single();
+        
+        if (!project) throw new Error('Project not found');
+        
+        const { data: scope } = await supabase
+          .from('project_scope_details')
+          .select('*')
+          .eq('project_id', projectId)
+          .maybeSingle();
+        
+        const scopeDetails = scope as ProjectScopeDetails | null;
+        const stories = scopeDetails?.stories || scopeDetails?.floors || 2;
+        const homeType = scopeDetails?.home_type || null;
+        templateKey = getTemplateKeyForProject(project.project_type, homeType);
+        
+        itemNames = await generateItemsFromTemplate(templateKey, stories, scopeDetails);
+        
+        const rawPercents = itemNames.map(name => getDefaultPercentForItem(name));
+        const totalRaw = rawPercents.reduce((a, b) => a + b, 0);
+        
+        normalizedPercents = [];
+        for (let i = 0; i < rawPercents.length; i++) {
+          if (i === rawPercents.length - 1) {
+            const sumSoFar = normalizedPercents.reduce((a, b) => a + b, 0);
+            normalizedPercents.push(parseFloat((100 - sumSoFar).toFixed(2)));
+          } else {
+            normalizedPercents.push(parseFloat(((rawPercents[i] / totalRaw) * 100).toFixed(2)));
+          }
         }
       }
       
@@ -670,42 +698,51 @@ export function useContractSOV(projectId: string | undefined) {
     setSaving(true);
     
     try {
-      // Get project details
-      const { data: project } = await supabase
-        .from('projects')
-        .select('project_type')
-        .eq('id', projectId)
-        .single();
+      // Check for existing SOV items on this project (inheritance rule)
+      const existingItems = await getExistingSOVItems(projectId);
       
-      if (!project) throw new Error('Project not found');
+      let itemNames: string[];
+      let normalizedPercents: number[];
+      let templateKey = 'inherited';
       
-      // Get scope details
-      const { data: scope } = await supabase
-        .from('project_scope_details')
-        .select('*')
-        .eq('project_id', projectId)
-        .maybeSingle();
-      
-      const scopeDetails = scope as ProjectScopeDetails | null;
-      const stories = scopeDetails?.stories || scopeDetails?.floors || 2;
-      const homeType = scopeDetails?.home_type || null;
-      const templateKey = getTemplateKeyForProject(project.project_type, homeType);
-      
-      // Generate item list
-      const itemNames = await generateItemsFromTemplate(templateKey, stories, scopeDetails);
-      
-      // Calculate industry-standard percentages for each item
-      const rawPercents = itemNames.map(name => getDefaultPercentForItem(name));
-      const totalRaw = rawPercents.reduce((a, b) => a + b, 0);
-      
-      // Normalize to 100% while maintaining proportions
-      const normalizedPercents: number[] = [];
-      for (let i = 0; i < rawPercents.length; i++) {
-        if (i === rawPercents.length - 1) {
-          const sumSoFar = normalizedPercents.reduce((a, b) => a + b, 0);
-          normalizedPercents.push(parseFloat((100 - sumSoFar).toFixed(2)));
-        } else {
-          normalizedPercents.push(parseFloat(((rawPercents[i] / totalRaw) * 100).toFixed(2)));
+      if (existingItems) {
+        // Inherit from existing SOV
+        itemNames = existingItems.map(i => i.item_name);
+        normalizedPercents = existingItems.map(i => i.percent_of_contract);
+      } else {
+        // No existing SOV — generate from template
+        const { data: project } = await supabase
+          .from('projects')
+          .select('project_type')
+          .eq('id', projectId)
+          .single();
+        
+        if (!project) throw new Error('Project not found');
+        
+        const { data: scope } = await supabase
+          .from('project_scope_details')
+          .select('*')
+          .eq('project_id', projectId)
+          .maybeSingle();
+        
+        const scopeDetails = scope as ProjectScopeDetails | null;
+        const stories = scopeDetails?.stories || scopeDetails?.floors || 2;
+        const homeType = scopeDetails?.home_type || null;
+        templateKey = getTemplateKeyForProject(project.project_type, homeType);
+        
+        itemNames = await generateItemsFromTemplate(templateKey, stories, scopeDetails);
+        
+        const rawPercents = itemNames.map(name => getDefaultPercentForItem(name));
+        const totalRaw = rawPercents.reduce((a, b) => a + b, 0);
+        
+        normalizedPercents = [];
+        for (let i = 0; i < rawPercents.length; i++) {
+          if (i === rawPercents.length - 1) {
+            const sumSoFar = normalizedPercents.reduce((a, b) => a + b, 0);
+            normalizedPercents.push(parseFloat((100 - sumSoFar).toFixed(2)));
+          } else {
+            normalizedPercents.push(parseFloat(((rawPercents[i] / totalRaw) * 100).toFixed(2)));
+          }
         }
       }
       
