@@ -135,6 +135,7 @@ export interface WorkOrderWizardData {
   
   // Step 4: Scope Details
   structural_element?: string;
+  architectural_element_sub_type?: string;
   scope_size?: string;
   urgency?: string;
   access_conditions?: string;
