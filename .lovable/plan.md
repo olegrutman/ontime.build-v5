@@ -1,55 +1,51 @@
+# Interactive Project Scheduling Module — IMPLEMENTED
 
+## Design Philosophy
+Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-# Filter Schedule Auto-Generation to TC→GC SOV Only
+## Features Built
 
-## Problem
-The database trigger `auto_create_schedule_from_sov` creates a schedule task for **every** `project_sov_items` insert, regardless of which contract the SOV belongs to. This results in duplicate/irrelevant schedule tasks from Field Crew→TC or Supplier contracts. The user wants only **Trade Contractor → General Contractor** SOV items to generate schedule tasks.
+### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
+- Dependency graph walking with BFS
+- Cascade date computation with buffer days support
+- Critical path calculation (longest dependency chain)
+- Conflict detection (tasks starting before predecessors end)
+- `findDownstreamTasks()` for cascade confirmation
 
-## Solution
-Update the `auto_create_schedule_from_sov` trigger function to join through `project_sov → project_contracts` and only create a schedule item when the contract's `from_role = 'Trade Contractor'` and `to_role = 'General Contractor'`.
+### 2. Desktop Gantt Chart (≥768px)
+- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
+- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
+- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
+- **Dependency arrows**: Bezier curves with arrow markers
+- **Critical path toggle**: Highlights longest dependency chain in amber/gold
+- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
+- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
+- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
+- **Undo**: 5-second undo button after any drag action
 
-## Database Migration
+### 3. Mobile Card View (<768px)
+- **Sticky top bar**: Project start/end dates + days remaining
+- **Phase grouping**: Collapsible sections with total duration
+- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
+- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
+- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
 
-```sql
-CREATE OR REPLACE FUNCTION public.auto_create_schedule_from_sov()
-RETURNS TRIGGER AS $$
-DECLARE
-  v_from_role TEXT;
-  v_to_role TEXT;
-BEGIN
-  -- Look up the contract direction via project_sov
-  SELECT pc.from_role, pc.to_role
-  INTO v_from_role, v_to_role
-  FROM public.project_sov ps
-  JOIN public.project_contracts pc ON pc.id = ps.contract_id
-  WHERE ps.id = NEW.sov_id;
+### 4. Shared Logic
+- One unified `items` array drives both views
+- `handleScheduleChange()` checks downstream tasks before applying
+- Optimistic undo with snapshot restoration
+- Auto-estimate dates still available for unscheduled items
 
-  -- Only create schedule items for TC → GC contracts
-  IF v_from_role = 'Trade Contractor' AND v_to_role = 'General Contractor' THEN
-    IF NOT EXISTS (
-      SELECT 1 FROM public.project_schedule_items 
-      WHERE sov_item_id = NEW.id
-    ) THEN
-      INSERT INTO public.project_schedule_items (
-        project_id, title, item_type, sov_item_id,
-        start_date, progress, sort_order, dependency_ids
-      ) VALUES (
-        NEW.project_id, NEW.item_name, 'task', NEW.id,
-        CURRENT_DATE, 0, NEW.sort_order, '{}'::uuid[]
-      );
-    END IF;
-  END IF;
-
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
-```
-
-## Files
-
-| File | Change |
+## Files Created/Modified
+| File | Action |
 |------|--------|
-| Database migration | Update `auto_create_schedule_from_sov` to filter by TC→GC contract direction |
-
-No frontend code changes needed — the trigger is the only mechanism that generates schedule items from SOV.
-
+| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
+| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
+| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
+| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
+| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
+| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
+| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
+| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
+| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
+| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
