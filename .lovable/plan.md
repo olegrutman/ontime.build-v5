@@ -1,51 +1,52 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-## Features Built
+# SOV Consistency Rule: All SOVs Share Same Line Items & Percentages
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
+## Problem
+Currently, each SOV can be created independently with different line items and percentages. The business rule is: **all SOVs on a project must share the same line items and the same percentages**, only differing by the contract (and therefore dollar amounts). Whether TC creates one first (TC→GC, then TC→FC) or GC creates one, all subsequent SOVs must mirror the first.
 
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
+## Solution
+When creating a new SOV (template-based, upload, or single-contract), check if any SOV already exists on the project. If so, **copy line items and percentages from the existing SOV** instead of generating from template or AI parsing.
 
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
+### Changes
 
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
-
-## Files Created/Modified
-| File | Action |
+| File | Change |
 |------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+| `src/hooks/useContractSOV.ts` | In `createAllSOVs` and `createSOVForContract`: before generating from template, check for an existing SOV on the project. If found, use its items/percentages instead of template generation. |
+| `src/components/sov/UploadSOVDialog.tsx` | In `handleApply`: after user reviews uploaded items, if an existing SOV already exists on the project, warn/block and instead copy from the existing SOV. OR: if this is the **first** SOV, allow upload; if not, skip AI parsing and auto-populate from the existing SOV's items. |
+
+### Logic Detail
+
+**Helper function** (in `useContractSOV.ts`):
+```typescript
+async function getExistingSOVItems(projectId: string): Promise<{item_name: string, percent_of_contract: number, sort_order: number}[] | null> {
+  // Find any existing SOV for this project (not work order)
+  const { data: existingSov } = await supabase
+    .from('project_sov')
+    .select('id')
+    .eq('project_id', projectId)
+    .limit(1)
+    .single();
+  
+  if (!existingSov) return null;
+  
+  const { data: items } = await supabase
+    .from('project_sov_items')
+    .select('item_name, percent_of_contract, sort_order')
+    .eq('sov_id', existingSov.id)
+    .order('sort_order');
+  
+  return items?.length ? items : null;
+}
+```
+
+**In `createSOVForContract` and the loop in `createAllSOVs`**: before template generation, call this helper. If items exist, use them (applying each contract's `contract_sum` for dollar amounts). Only fall back to template generation if no SOV exists yet.
+
+**In `UploadSOVDialog`**: check for existing SOV items on the project. If found, skip the upload/AI flow entirely — auto-create the new SOV by copying items from the existing SOV, just with the new contract's dollar amounts. Show a toast explaining items were inherited.
+
+### Edge Cases
+- **First SOV on project**: normal flow (template or upload)
+- **Subsequent SOVs**: always inherit from the first SOV's line items and percentages
+- **`createAllSOVs` (bulk)**: generate items once, apply to all contracts (already works this way)
+- **Editing percentages on one SOV**: does NOT retroactively sync to other SOVs (they were set at creation time — user can regenerate all if needed)
+
