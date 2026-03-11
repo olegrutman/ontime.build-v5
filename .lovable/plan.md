@@ -1,41 +1,51 @@
+# Interactive Project Scheduling Module — IMPLEMENTED
 
+## Design Philosophy
+Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-# Fix: Download Edge Functions Skip JWT Validation
+## Features Built
 
-## Problem
-Four edge functions check only that an `Authorization` header is *present* (e.g. `startsWith('Bearer ')`) but never validate the JWT token. They then query data using the **service role key**, bypassing all RLS. Any caller who supplies `Bearer anything` can download any record by UUID.
+### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
+- Dependency graph walking with BFS
+- Cascade date computation with buffer days support
+- Critical path calculation (longest dependency chain)
+- Conflict detection (tasks starting before predecessors end)
+- `findDownstreamTasks()` for cascade confirmation
 
-**Affected functions:** `invoice-download`, `work-order-download`, `project-summary-download`, `return-credit-memo`
+### 2. Desktop Gantt Chart (≥768px)
+- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
+- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
+- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
+- **Dependency arrows**: Bezier curves with arrow markers
+- **Critical path toggle**: Highlights longest dependency chain in amber/gold
+- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
+- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
+- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
+- **Undo**: 5-second undo button after any drag action
 
-**Reference:** `po-download` already implements proper auth — it creates a user-scoped client with `getClaims()` validation and queries via RLS.
+### 3. Mobile Card View (<768px)
+- **Sticky top bar**: Project start/end dates + days remaining
+- **Phase grouping**: Collapsible sections with total duration
+- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
+- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
+- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
 
-## Fix (same pattern for all 4 functions)
+### 4. Shared Logic
+- One unified `items` array drives both views
+- `handleScheduleChange()` checks downstream tasks before applying
+- Optimistic undo with snapshot restoration
+- Auto-estimate dates still available for unscheduled items
 
-Replace the header-presence check with actual JWT validation using `getClaims()`, then use a **user-scoped client** (anon key + user token) for data queries so RLS is enforced. The service role client is removed from the main query path.
-
-```typescript
-// 1. Validate JWT
-const token = authHeader.replace('Bearer ', '');
-const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-  global: { headers: { Authorization: `Bearer ${token}` } },
-});
-const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-if (claimsError || !claimsData?.claims) {
-  return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: corsHeaders });
-}
-
-// 2. Query using userClient (RLS-enforced) instead of service role
-const { data, error } = await userClient.from('table').select('*')...
-```
-
-### Per-function changes
-
-| Function | Current auth | Data client | Fix |
-|----------|-------------|-------------|-----|
-| `invoice-download` | `startsWith('Bearer ')` only | service role | Add `getClaims()`, switch to user client |
-| `work-order-download` | `startsWith('Bearer ')` only | service role | Add `getClaims()`, switch to user client |
-| `project-summary-download` | `startsWith('Bearer ')` only | service role | Add `getClaims()`, switch to user client |
-| `return-credit-memo` | `if (!authHeader)` only | service role | Add `getClaims()`, switch to user client |
-
-All 4 functions already have `verify_jwt = false` in `config.toml` — that stays unchanged. The `supabaseAnonKey` env var needs to be added to `project-summary-download` and `return-credit-memo` (they currently only import the service key).
-
+## Files Created/Modified
+| File | Action |
+|------|--------|
+| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
+| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
+| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
+| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
+| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
+| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
+| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
+| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
+| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
+| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
