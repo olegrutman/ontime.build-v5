@@ -47,17 +47,64 @@ export const EXTERIOR_DIRECTION_OPTIONS = [
   'General',
 ];
 
-// Scope detail options
-export const STRUCTURAL_ELEMENT_OPTIONS = [
-  'Wall', 'Header', 'Beam', 'Joist', 'Rafter', 'Truss',
-  'Post/Column', 'Sill Plate', 'Top Plate', 'Stud', 'Blocking',
-  'Sheathing', 'Subfloor', 'Stairway', 'Other',
+// Interior architectural elements (framing-focused)
+export const INTERIOR_ARCHITECTURAL_ELEMENTS = [
+  'Wall (Interior Partition)', 'Wall (Exterior/Load-Bearing)', 'Header', 'Beam',
+  'Joist (Floor)', 'Joist (Ceiling)', 'Rafter', 'Truss', 'Post/Column',
+  'Sill Plate', 'Top Plate', 'King Stud', 'Jack Stud', 'Cripple Stud',
+  'Blocking/Nailer', 'Sheathing (Wall)', 'Subfloor/Decking',
+  'Stairway/Stringer', 'Landing/Platform', 'Furring Strip', 'Other',
 ];
 
-export const SCOPE_SIZE_OPTIONS = [
+// Exterior architectural elements (envelope-focused)
+export const EXTERIOR_ARCHITECTURAL_ELEMENTS = [
+  'Siding', 'Fascia', 'Soffit', 'Rake Board', 'Frieze Board',
+  'Corner Board/Trim', 'Band Board/Rim Joist', 'Window Trim/Casing',
+  'Door Trim/Casing', 'Eave', 'Overhang', 'Gable End',
+  'Roof Sheathing', 'Roof Edge/Drip Edge', 'Balcony Rail/Guard',
+  'Deck Framing', 'Porch Post/Column', 'Ledger Board', 'Flashing/WRB', 'Other',
+];
+
+// Sub-type maps for siding, fascia, soffit
+export const SIDING_SUB_TYPES = [
+  'Lap/Clapboard', 'Board & Batten', 'T1-11/Panel', 'Tongue & Groove',
+  'Shake/Shingle', 'Plywood Sheathing', 'ZIP/Structural Panel', 'Other',
+];
+
+export const FASCIA_SUB_TYPES = [
+  'Flat Fascia Board', 'Sub-Fascia (Rough)', 'Built-Up Fascia',
+  'Rake Fascia', 'Fascia Return', 'Other',
+];
+
+export const SOFFIT_SUB_TYPES = [
+  'Open Soffit (Exposed Rafter Tails)', 'Closed/Boxed Soffit',
+  'Vented Soffit Panel', 'T&G Wood Soffit', 'Fly Rafter Soffit', 'Other',
+];
+
+export const ELEMENT_SUB_TYPE_MAP: Record<string, string[]> = {
+  'Siding': SIDING_SUB_TYPES,
+  'Fascia': FASCIA_SUB_TYPES,
+  'Soffit': SOFFIT_SUB_TYPES,
+};
+
+// Keep legacy export for any other consumers
+export const STRUCTURAL_ELEMENT_OPTIONS = [
+  ...INTERIOR_ARCHITECTURAL_ELEMENTS.filter(e => e !== 'Other'),
+  ...EXTERIOR_ARCHITECTURAL_ELEMENTS,
+];
+
+// Scope size options by context
+export const INTERIOR_SCOPE_SIZE_OPTIONS = [
   'Single Item', 'Partial Wall/Section', 'Full Wall',
   'Multiple Walls', 'Entire Room', 'Entire Floor', 'Other',
 ];
+
+export const EXTERIOR_SCOPE_SIZE_OPTIONS = [
+  'Single Item', 'Linear Run', 'Partial Elevation', 'Full Elevation',
+  'Multiple Elevations', 'Full Perimeter', 'Other',
+];
+
+export const SCOPE_SIZE_OPTIONS = INTERIOR_SCOPE_SIZE_OPTIONS;
 
 export const URGENCY_OPTIONS = [
   'Standard', 'Priority', 'Urgent', 'Emergency',
