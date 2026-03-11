@@ -444,6 +444,7 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
         item={drawerItem}
         items={items}
         onUpdate={handleDrawerUpdate}
+        onDateChange={handleScheduleChange}
       />
 
       {/* Schedule Item Form (mobile / add new) */}
