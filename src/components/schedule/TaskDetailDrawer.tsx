@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -5,7 +6,7 @@ import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { ScheduleItem } from '@/hooks/useProjectSchedule';
-import { differenceInDays } from 'date-fns';
+import { differenceInDays, addDays, format } from 'date-fns';
 
 interface TaskDetailDrawerProps {
   open: boolean;
@@ -13,9 +14,16 @@ interface TaskDetailDrawerProps {
   item: ScheduleItem | null;
   items: ScheduleItem[];
   onUpdate: (id: string, updates: Partial<ScheduleItem>) => void;
+  onDateChange?: (id: string, newStart: string, newEnd: string) => void;
 }
 
-export function TaskDetailDrawer({ open, onOpenChange, item, items, onUpdate }: TaskDetailDrawerProps) {
+export function TaskDetailDrawer({ open, onOpenChange, item, items, onUpdate, onDateChange }: TaskDetailDrawerProps) {
+  const [localProgress, setLocalProgress] = useState(0);
+
+  useEffect(() => {
+    if (item) setLocalProgress(item.progress);
+  }, [item?.id, item?.progress]);
+
   if (!item) return null;
 
   const duration = item.end_date
@@ -24,6 +32,28 @@ export function TaskDetailDrawer({ open, onOpenChange, item, items, onUpdate }: 
 
   const deps = items.filter(i => item.dependency_ids.includes(i.id));
   const isAutoMode = !!item.sov_item_id;
+
+  const handleStartDateChange = (newStart: string) => {
+    if (!newStart) return;
+    const dur = item.end_date
+      ? differenceInDays(new Date(item.end_date), new Date(item.start_date))
+      : 0;
+    const newEnd = format(addDays(new Date(newStart), dur), 'yyyy-MM-dd');
+    if (onDateChange) {
+      onDateChange(item.id, newStart, newEnd);
+    } else {
+      onUpdate(item.id, { start_date: newStart, end_date: newEnd });
+    }
+  };
+
+  const handleEndDateChange = (newEnd: string) => {
+    if (!newEnd) return;
+    if (onDateChange) {
+      onDateChange(item.id, item.start_date, newEnd);
+    } else {
+      onUpdate(item.id, { end_date: newEnd });
+    }
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -49,7 +79,7 @@ export function TaskDetailDrawer({ open, onOpenChange, item, items, onUpdate }: 
               <Input
                 type="date"
                 value={item.start_date}
-                onChange={e => onUpdate(item.id, { start_date: e.target.value })}
+                onChange={e => handleStartDateChange(e.target.value)}
                 className="h-9"
               />
             </div>
@@ -58,7 +88,7 @@ export function TaskDetailDrawer({ open, onOpenChange, item, items, onUpdate }: 
               <Input
                 type="date"
                 value={item.end_date || ''}
-                onChange={e => onUpdate(item.id, { end_date: e.target.value })}
+                onChange={e => handleEndDateChange(e.target.value)}
                 className="h-9"
               />
             </div>
@@ -83,11 +113,12 @@ export function TaskDetailDrawer({ open, onOpenChange, item, items, onUpdate }: 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label className="text-sm">Progress</Label>
-              <span className="text-sm font-medium">{item.progress}%</span>
+              <span className="text-sm font-medium">{localProgress}%</span>
             </div>
             <Slider
-              value={[item.progress]}
-              onValueChange={v => onUpdate(item.id, { progress: v[0] })}
+              value={[localProgress]}
+              onValueChange={v => setLocalProgress(v[0])}
+              onValueCommit={v => onUpdate(item.id, { progress: v[0] })}
               max={100}
               step={5}
             />
