@@ -47,9 +47,17 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Use service role client - auth header proves user is logged in,
-    // service role bypasses RLS for reliable data fetching in edge functions
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const token = authHeader.replace('Bearer ', '');
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+    });
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
 
     // Fetch invoice with related data
     const { data: invoice, error: invoiceError } = await supabase
