@@ -75,7 +75,7 @@ export function ProjectRow({
   const isActive = project.status === 'active';
 
   // Only fetch stats when expanded
-  const stats = useProjectQuickStats(isExpanded ? project.id : null, { orgType: orgType ?? undefined });
+  const stats = useProjectQuickStats(isExpanded ? project.id : null, { orgType: orgType ?? undefined, orgId: orgId ?? undefined });
 
   const handleRowClick = () => {
     onToggleExpand(project.id);

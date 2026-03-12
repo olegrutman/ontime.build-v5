@@ -213,6 +213,7 @@ export function DashboardProjectList({
                 contractValue={project.contractValue}
                 pendingActions={project.pendingActions}
                 orgType={orgType}
+                orgId={orgId}
                 isExpanded={expandedProjectId === project.id}
                 onToggleExpand={handleToggleExpand}
                 onArchive={onArchive}
