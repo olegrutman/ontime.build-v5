@@ -395,6 +395,7 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
           conflicts={conflictIds}
           onAdjustDuration={handleAdjustDuration}
           onChangeStartDate={handleMobileStartChange}
+          readOnly={!canEditSchedule}
         />
       ) : (
         <>
