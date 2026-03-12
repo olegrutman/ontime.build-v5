@@ -118,22 +118,33 @@ export function useProjectQuickStats(
       const allPos = poRes.data ?? [];
       const allContracts = contractRes.data ?? [];
 
-      // Bug 3 & 8 fix: Filter contracts and invoices by orgId when available
+      // Directional contract/invoice filtering by orgId
       let contracts = allContracts;
       let invoices = allInvoices;
+      let receivedInvoices: typeof allInvoices = [];
       let workOrders = allWorkOrders;
       let pos = allPos;
 
       if (orgId) {
-        // Only contracts where this org is a party
-        contracts = allContracts.filter(
-          (c) => c.from_org_id === orgId || c.to_org_id === orgId
-        );
-        const relevantContractIds = new Set(contracts.map((c) => c.id));
+        // Receivable contracts: where this org is the contractor (from_org_id)
+        const sentContracts = allContracts.filter((c) => c.from_org_id === orgId);
+        // Payable contracts: where this org is the client (to_org_id)
+        const receivedContracts = allContracts.filter((c) => c.to_org_id === orgId);
 
-        // Only invoices linked to relevant contracts, or unlinked invoices
+        // Budget = only sent contracts (what the org is contracted for)
+        contracts = sentContracts;
+
+        const sentContractIds = new Set(sentContracts.map((c) => c.id));
+        const receivedContractIds = new Set(receivedContracts.map((c) => c.id));
+
+        // Invoices for budget/billing = only on sent contracts
         invoices = allInvoices.filter(
-          (i) => !i.contract_id || relevantContractIds.has(i.contract_id)
+          (i) => i.contract_id && sentContractIds.has(i.contract_id)
+        );
+
+        // Invoices received (from subs) for action items
+        receivedInvoices = allInvoices.filter(
+          (i) => i.contract_id && receivedContractIds.has(i.contract_id)
         );
 
         // Filter work orders by org
@@ -145,13 +156,13 @@ export function useProjectQuickStats(
         );
       }
 
-      // ── Budget metrics ──
+      // ── Budget metrics (receivables only) ──
       const budgetTotal = contracts.reduce((s, c) => s + (c.contract_sum ?? 0), 0);
       const approvedPaid = invoices.filter((i) => i.status === 'APPROVED' || i.status === 'PAID');
       const budgetUsed = approvedPaid.reduce((s, i) => s + (i.total_amount ?? 0), 0);
       const budgetPercent = budgetTotal > 0 ? Math.round((budgetUsed / budgetTotal) * 100) : 0;
 
-      // Bug 4 fix: Exclude REJECTED invoices from totalBilled
+      // Exclude REJECTED invoices from totalBilled
       const totalBilled = invoices
         .filter((i) => i.status !== 'REJECTED')
         .reduce((s, i) => s + (i.total_amount ?? 0), 0);
