@@ -324,7 +324,7 @@ export function GanttChart({ items, onSelect, onDragEnd, selectedId, zoom, criti
               </text>
 
               {/* Drag handles */}
-              {onDragEnd && (
+              {onDragEnd && !readOnly && (
                 <>
                   <rect
                     x={barX - EDGE_HIT / 2} y={barY} width={EDGE_HIT} height={barH}

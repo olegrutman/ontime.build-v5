@@ -124,6 +124,7 @@ export function TaskDetailDrawer({ open, onOpenChange, item, items, onUpdate, on
               onValueCommit={v => onUpdate(item.id, { progress: v[0] })}
               max={100}
               step={5}
+              disabled={readOnly}
             />
           </div>
 

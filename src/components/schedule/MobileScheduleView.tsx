@@ -85,8 +85,8 @@ export function MobileScheduleView({ items, conflicts, onAdjustDuration, onChang
                 projectStart={projectStart}
                 projectEnd={projectEnd}
                 isConflict={conflicts.has(item.id)}
-                onAdjustDuration={onAdjustDuration}
-                onChangeStartDate={onChangeStartDate}
+                onAdjustDuration={readOnly ? undefined : onAdjustDuration}
+                onChangeStartDate={readOnly ? undefined : onChangeStartDate}
               />
             ))}
           </PhaseCardGroup>
