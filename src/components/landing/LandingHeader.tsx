@@ -23,7 +23,7 @@ export function LandingHeader() {
       <div className="w-full px-[5%] flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 no-underline">
-          <LogoSVG />
+          <OntimeLogo />
           <div>
             <span className="font-heading text-[1.35rem] font-extrabold tracking-[-0.3px] text-white leading-none">
               Ontime<span style={{ color: 'hsl(var(--amber))' }}>.build</span>

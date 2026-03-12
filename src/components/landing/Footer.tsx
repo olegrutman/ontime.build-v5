@@ -14,7 +14,7 @@ export function Footer() {
         {/* Brand */}
         <div>
           <div className="flex items-center gap-2.5 mb-3">
-            <LogoSVG />
+            <OntimeLogo />
             <span className="font-heading text-[1.35rem] font-extrabold text-white">
               Ontime<span style={{ color: 'hsl(var(--amber))' }}>.build</span>
             </span>
