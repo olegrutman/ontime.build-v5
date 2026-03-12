@@ -114,9 +114,18 @@ interface DashboardKPIRowProps {
 export function DashboardKPIRow({ financials, billing, attentionCount }: DashboardKPIRowProps) {
   const contractValue = financials.totalRevenue || 0;
   const invoicesPaid = financials.totalBilled || 0;
-  const pendingApprovals = billing.outstandingToPay || billing.outstandingToCollect || 0;
   const billedPercent = contractValue > 0 ? Math.round((invoicesPaid / contractValue) * 100) : 0;
-  const pendingPercent = contractValue > 0 ? Math.round((pendingApprovals / contractValue) * 100) : 0;
+
+  // For TC: show both directions. For GC: outstanding to pay. For FC: outstanding to collect.
+  const outstandingToPay = billing.outstandingToPay || 0;
+  const outstandingToCollect = billing.outstandingToCollect || 0;
+
+  // "Pending" = invoices awaiting review (to pay)
+  const pendingValue = outstandingToPay;
+  const pendingPercent = contractValue > 0 ? Math.round((pendingValue / contractValue) * 100) : 0;
+
+  // "Outstanding" = what we're owed (to collect)
+  const collectPercent = contractValue > 0 ? Math.min(Math.round((outstandingToCollect / contractValue) * 100), 100) : 0;
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
@@ -133,30 +142,30 @@ export function DashboardKPIRow({ financials, billing, attentionCount }: Dashboa
       <KPICard
         label="Invoices Paid"
         value={invoicesPaid}
-        tag={`↑ ${billedPercent}%`}
-        tagColor="green"
+        tag={billedPercent > 0 ? `↑ ${billedPercent}%` : '0%'}
+        tagColor={billedPercent > 0 ? 'green' : 'neutral'}
         subText={`${billedPercent}% of contract`}
         barPercent={billedPercent}
         barColor="green"
         delay={40}
       />
       <KPICard
-        label="Pending Approvals"
-        value={pendingApprovals}
+        label="Pending Review"
+        value={pendingValue}
         tag={`${attentionCount} items`}
         tagColor="yellow"
-        subText="Invoices + work orders"
+        subText="Invoices awaiting approval"
         barPercent={Math.min(pendingPercent, 100)}
         barColor="yellow"
         delay={80}
       />
       <KPICard
         label="Outstanding"
-        value={billing.outstandingToCollect}
+        value={outstandingToCollect}
         tag="To collect"
         tagColor="neutral"
         subText="Submitted & approved"
-        barPercent={contractValue > 0 ? Math.min(Math.round((billing.outstandingToCollect / contractValue) * 100), 100) : 0}
+        barPercent={collectPercent}
         barColor="navy"
         delay={120}
       />

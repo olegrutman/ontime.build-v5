@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '@/lib/utils';
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
     outstandingToPay: number;
   };
   activeProjectName: string | null;
+  activeProjectId?: string | null;
 }
 
 interface BudgetRow {
@@ -19,7 +21,8 @@ interface BudgetRow {
   percent: number;
 }
 
-export function DashboardBudgetCard({ financials, billing, activeProjectName }: Props) {
+export function DashboardBudgetCard({ financials, billing, activeProjectName, activeProjectId }: Props) {
+  const navigate = useNavigate();
   const total = financials.totalRevenue || 0;
   const paid = financials.totalBilled || 0;
   const pending = billing.outstandingToPay || 0;
@@ -48,7 +51,10 @@ export function DashboardBudgetCard({ financials, billing, activeProjectName }: 
     <div className="bg-card border border-border rounded-lg">
       <div className="flex items-center justify-between px-[18px] py-3">
         <h3 className="font-heading text-[1rem] font-bold text-foreground">Budget Overview</h3>
-        <button className="text-[0.75rem] font-medium text-primary hover:text-primary/80 transition-colors">
+        <button
+          onClick={() => activeProjectId && navigate(`/project/${activeProjectId}`)}
+          className="text-[0.75rem] font-medium text-primary hover:text-primary/80 transition-colors"
+        >
           Details →
         </button>
       </div>
