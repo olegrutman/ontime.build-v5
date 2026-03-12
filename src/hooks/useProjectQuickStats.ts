@@ -320,6 +320,8 @@ export function useProjectQuickStats(
 
       setStats({
         actionItems,
+        criticalScheduleItems,
+        totalCriticalCount,
         budgetPercent,
         budgetUsed,
         budgetTotal,
