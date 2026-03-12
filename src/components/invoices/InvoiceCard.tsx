@@ -45,7 +45,7 @@ function InvoiceAgeBadge({ invoice }: { invoice: Invoice }) {
     : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
   return <Badge className={cn('font-mono text-xs', colors)}>{days}d</Badge>;
 }
-
+export function InvoiceCard({ 
   invoice, 
   onClick, 
   onEdit, 
