@@ -11,10 +11,19 @@ export interface ActionItem {
   tab?: string; // project tab to navigate to
 }
 
+export interface CriticalScheduleItem {
+  id: string;
+  title: string;
+  progress: number;
+  endDate: string;
+  isOverdue: boolean;
+  daysUntil: number;
+}
+
 export interface ProjectQuickStats {
-  // Action items (role-aware)
   actionItems: ActionItem[];
-  // Summary metrics
+  criticalScheduleItems: CriticalScheduleItem[];
+  totalCriticalCount: number;
   budgetPercent: number;
   budgetUsed: number;
   budgetTotal: number;
@@ -32,6 +41,8 @@ interface UseProjectQuickStatsOptions {
 
 const EMPTY: ProjectQuickStats = {
   actionItems: [],
+  criticalScheduleItems: [],
+  totalCriticalCount: 0,
   budgetPercent: 0,
   budgetUsed: 0,
   budgetTotal: 0,
@@ -140,37 +151,28 @@ export function useProjectQuickStats(
       // ── Build action items based on org type ──
       const actionItems: ActionItem[] = [];
 
-      // Schedule: overdue tasks (universal)
-      const overdueTasks = scheduleItems.filter(
-        (s) => s.end_date && s.end_date < today && (s.progress ?? 0) < 100
-      );
-      if (overdueTasks.length > 0) {
-        actionItems.push({
-          key: 'overdue-tasks',
-          label: `${overdueTasks.length} task${overdueTasks.length > 1 ? 's' : ''} overdue`,
-          count: overdueTasks.length,
-          severity: 'red',
-          tab: 'schedule',
-        });
-      }
+      // ── Build critical schedule items ──
+      const MAX_CRITICAL = 3;
+      const allCritical = scheduleItems
+        .filter((s) => s.end_date && (s.progress ?? 0) < 100)
+        .map((s) => {
+          const endMs = new Date(s.end_date!).getTime();
+          const todayMs = new Date(today).getTime();
+          const daysUntil = Math.round((endMs - todayMs) / 86400000);
+          return {
+            id: s.id,
+            title: s.title,
+            progress: s.progress ?? 0,
+            endDate: s.end_date!,
+            isOverdue: daysUntil < 0,
+            daysUntil,
+          };
+        })
+        .filter((s) => s.daysUntil < 7) // overdue or due within 7 days
+        .sort((a, b) => a.daysUntil - b.daysUntil);
 
-      // Schedule: due soon tasks (universal)
-      const dueSoonTasks = scheduleItems.filter(
-        (s) =>
-          s.end_date &&
-          s.end_date >= today &&
-          s.end_date <= sevenDaysOut &&
-          (s.progress ?? 0) < 100
-      );
-      if (dueSoonTasks.length > 0) {
-        actionItems.push({
-          key: 'due-soon-tasks',
-          label: `${dueSoonTasks.length} task${dueSoonTasks.length > 1 ? 's' : ''} due this week`,
-          count: dueSoonTasks.length,
-          severity: 'amber',
-          tab: 'schedule',
-        });
-      }
+      const criticalScheduleItems = allCritical.slice(0, MAX_CRITICAL);
+      const totalCriticalCount = allCritical.length;
 
       // Urgent RFIs (universal)
       const urgentRFIs = rfis.filter((r) => r.due_date && r.due_date <= today);
@@ -318,6 +320,8 @@ export function useProjectQuickStats(
 
       setStats({
         actionItems,
+        criticalScheduleItems,
+        totalCriticalCount,
         budgetPercent,
         budgetUsed,
         budgetTotal,

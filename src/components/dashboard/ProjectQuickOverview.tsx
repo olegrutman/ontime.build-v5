@@ -8,11 +8,15 @@ import {
   DollarSign,
   CalendarCheck,
   TrendingUp,
+  Clock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import type { ProjectQuickStats, ActionItem } from '@/hooks/useProjectQuickStats';
+import { format, parseISO } from 'date-fns';
+import type { ProjectQuickStats, ActionItem, CriticalScheduleItem } from '@/hooks/useProjectQuickStats';
 
 interface ProjectQuickOverviewProps {
   projectId: string;
@@ -81,6 +85,112 @@ function ActionChip({
   );
 }
 
+function CriticalScheduleSection({
+  items,
+  totalCount,
+  onNavigate,
+}: {
+  items: CriticalScheduleItem[];
+  totalCount: number;
+  onNavigate: (tab: string) => void;
+}) {
+  if (items.length === 0) return null;
+
+  return (
+    <div className="rounded-xl border bg-card overflow-hidden">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onNavigate('schedule');
+        }}
+        className="flex items-center justify-between w-full px-3 py-2 hover:bg-accent/30 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">
+            Critical Schedule
+          </span>
+          <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4">
+            {totalCount}
+          </Badge>
+        </div>
+        {totalCount > items.length && (
+          <span className="text-[11px] text-muted-foreground">
+            +{totalCount - items.length} more
+          </span>
+        )}
+      </button>
+
+      <div className="px-3 pb-2.5 space-y-1.5">
+        {items.map((item) => (
+          <button
+            key={item.id}
+            onClick={(e) => {
+              e.stopPropagation();
+              onNavigate('schedule');
+            }}
+            className="w-full text-left rounded-lg bg-muted/50 p-2.5 hover:bg-accent/40 transition-colors"
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-medium truncate pr-2">{item.title}</span>
+              {item.isOverdue ? (
+                <Badge className="bg-destructive/10 text-destructive border-0 text-[10px] shrink-0 h-4 px-1.5">
+                  OVERDUE
+                </Badge>
+              ) : (
+                <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-0 text-[10px] shrink-0 h-4 px-1.5">
+                  {item.daysUntil === 0 ? 'TODAY' : `${item.daysUntil}d`}
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <Progress value={item.progress} className="h-1.5 flex-1" />
+              <span className="text-[10px] text-muted-foreground w-7 text-right tabular-nums">
+                {item.progress}%
+              </span>
+            </div>
+            <span className="text-[10px] text-muted-foreground mt-0.5 block">
+              Due {format(parseISO(item.endDate), 'MMM d')}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function KpiTile({
+  icon: Icon,
+  label,
+  value,
+  subValue,
+  progress,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  subValue?: string;
+  progress?: number;
+}) {
+  return (
+    <div className="rounded-xl border bg-card p-3 flex-1 min-w-0">
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+        <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium truncate">
+          {label}
+        </span>
+      </div>
+      <div className="text-sm font-semibold text-foreground tabular-nums">{value}</div>
+      {subValue && (
+        <div className="text-[11px] text-muted-foreground mt-0.5">{subValue}</div>
+      )}
+      {progress != null && (
+        <Progress value={progress} className="h-1 mt-1.5" />
+      )}
+    </div>
+  );
+}
+
 export function ProjectQuickOverview({ projectId, stats }: ProjectQuickOverviewProps) {
   const navigate = useNavigate();
 
@@ -89,12 +199,18 @@ export function ProjectQuickOverview({ projectId, stats }: ProjectQuickOverviewP
       <div className="space-y-3 pt-3 pb-1">
         <Skeleton className="h-10 w-full rounded-lg" />
         <Skeleton className="h-10 w-3/4 rounded-lg" />
-        <Skeleton className="h-8 w-full rounded" />
+        <div className="grid grid-cols-3 gap-2">
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-20 rounded-xl" />
+          <Skeleton className="h-20 rounded-xl" />
+        </div>
       </div>
     );
   }
 
   const hasActions = stats.actionItems.length > 0;
+  const hasCritical = stats.criticalScheduleItems.length > 0;
+  const hasFinancials = stats.budgetTotal > 0 || stats.outstandingBilling > 0 || stats.schedulePercent > 0;
 
   const navigateToTab = (tab?: string) => {
     const base = `/project/${projectId}`;
@@ -103,7 +219,7 @@ export function ProjectQuickOverview({ projectId, stats }: ProjectQuickOverviewP
 
   return (
     <div className="space-y-3 pt-3 pb-1">
-      {/* Action Items */}
+      {/* Section 1: Action Alerts */}
       {hasActions ? (
         <div className="space-y-1.5">
           {stats.actionItems.map((item) => (
@@ -114,42 +230,58 @@ export function ProjectQuickOverview({ projectId, stats }: ProjectQuickOverviewP
             />
           ))}
         </div>
-      ) : (
+      ) : !hasCritical ? (
         <div className="flex items-center gap-2 rounded-lg border border-emerald-200 dark:border-emerald-800/40 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2.5 text-sm font-medium text-emerald-700 dark:text-emerald-300">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           All clear — no items need attention
         </div>
+      ) : null}
+
+      {/* Section 2: Critical Schedule Items */}
+      <CriticalScheduleSection
+        items={stats.criticalScheduleItems}
+        totalCount={stats.totalCriticalCount}
+        onNavigate={(tab) => navigateToTab(tab)}
+      />
+
+      {/* Section 3: Financial KPI Tiles */}
+      {hasFinancials && (
+        <div className="grid grid-cols-3 gap-2">
+          {stats.budgetTotal > 0 && (
+            <KpiTile
+              icon={DollarSign}
+              label="Billed"
+              value={formatCurrency(stats.budgetUsed)}
+              subValue={`of ${formatCurrency(stats.budgetTotal)}`}
+              progress={stats.budgetPercent}
+            />
+          )}
+          {stats.outstandingBilling > 0 && (
+            <KpiTile
+              icon={TrendingUp}
+              label="Outstanding"
+              value={formatCurrency(stats.outstandingBilling)}
+            />
+          )}
+          {stats.schedulePercent > 0 && (
+            <KpiTile
+              icon={CalendarCheck}
+              label="Schedule"
+              value={`${stats.schedulePercent}%`}
+              subValue={
+                stats.scheduleDelta > 0
+                  ? `${stats.scheduleDelta}% ahead`
+                  : stats.scheduleDelta < 0
+                  ? `${Math.abs(stats.scheduleDelta)}% behind`
+                  : 'On track'
+              }
+              progress={stats.schedulePercent}
+            />
+          )}
+        </div>
       )}
 
-      {/* Compact Metrics Row */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground px-1">
-        {stats.budgetTotal > 0 && (
-          <div className="flex items-center gap-1">
-            <DollarSign className="h-3 w-3" />
-            <span>
-              Billed: <span className="font-semibold text-foreground">{formatCurrency(stats.budgetUsed)}</span>
-            </span>
-          </div>
-        )}
-        {stats.outstandingBilling > 0 && (
-          <div className="flex items-center gap-1">
-            <TrendingUp className="h-3 w-3" />
-            <span>
-              Outstanding: <span className="font-semibold text-foreground">{formatCurrency(stats.outstandingBilling)}</span>
-            </span>
-          </div>
-        )}
-        {stats.schedulePercent > 0 && (
-          <div className="flex items-center gap-1">
-            <CalendarCheck className="h-3 w-3" />
-            <span>
-              Schedule: <span className="font-semibold text-foreground">{stats.schedulePercent}%</span>
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* CTA */}
+      {/* Section 4: CTA */}
       <div className="flex justify-end pt-0.5">
         <Button
           variant="outline"
