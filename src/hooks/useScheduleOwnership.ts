@@ -17,7 +17,7 @@ export function useScheduleOwnership(projectId: string) {
     queryFn: async () => {
       const { data: team, error } = await supabase
         .from('project_team')
-        .select('role, organization_id')
+        .select('role, org_id')
         .eq('project_id', projectId);
       if (error) throw error;
       return team || [];
