@@ -28,6 +28,7 @@ interface ProjectRowProps {
   contractValue: number | null;
   pendingActions: number;
   orgType?: string | null;
+  orgId?: string;
   isExpanded: boolean;
   onToggleExpand: (projectId: string) => void;
   onArchive: (projectId: string) => void;

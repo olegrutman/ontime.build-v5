@@ -44,6 +44,7 @@ interface DashboardProjectListProps {
   statusCounts: { setup: number; active: number; on_hold: number; completed: number; archived: number };
   loading: boolean;
   orgType: string | null;
+  orgId?: string;
   onArchive: (projectId: string) => void;
   onUnarchive: (projectId: string) => void;
   onStatusChange: (projectId: string, status: 'active' | 'on_hold' | 'completed') => void;
