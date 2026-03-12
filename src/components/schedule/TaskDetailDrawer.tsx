@@ -82,6 +82,7 @@ export function TaskDetailDrawer({ open, onOpenChange, item, items, onUpdate, on
                 value={item.start_date}
                 onChange={e => handleStartDateChange(e.target.value)}
                 className="h-9"
+                disabled={readOnly}
               />
             </div>
             <div className="space-y-1.5">
@@ -91,6 +92,7 @@ export function TaskDetailDrawer({ open, onOpenChange, item, items, onUpdate, on
                 value={item.end_date || ''}
                 onChange={e => handleEndDateChange(e.target.value)}
                 className="h-9"
+                disabled={readOnly}
               />
             </div>
           </div>
