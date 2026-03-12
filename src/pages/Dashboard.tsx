@@ -12,16 +12,16 @@ import {
   ArchiveProjectDialog,
   CompleteProjectDialog,
   AddReminderDialog,
-  RemindersTile,
-  type ProjectStatusFilter,
 } from '@/components/dashboard';
-import { DashboardWelcome } from '@/components/dashboard/DashboardWelcome';
-import { DashboardFinancialSnapshot } from '@/components/dashboard/DashboardFinancialSnapshot';
-import { DashboardAttentionBanner } from '@/components/dashboard/DashboardAttentionBanner';
-import { DashboardProjectList } from '@/components/dashboard/DashboardProjectList';
 import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { useProfile } from '@/hooks/useProfile';
+import { DashboardKPIRow } from '@/components/dashboard/DashboardKPIRow';
+import { DashboardProjectsTable } from '@/components/dashboard/DashboardProjectsTable';
+import { DashboardRecentDocs } from '@/components/dashboard/DashboardRecentDocs';
+import { DashboardBudgetCard } from '@/components/dashboard/DashboardBudgetCard';
+import { DashboardNeedsAttentionCard } from '@/components/dashboard/DashboardNeedsAttentionCard';
+import { DashboardLiveFeed } from '@/components/dashboard/DashboardLiveFeed';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -39,16 +39,6 @@ export default function Dashboard() {
     refetch,
   } = useDashboardData();
 
-  const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>('active');
-  const hasAutoSwitched = useRef(false);
-
-  useEffect(() => {
-    if (!hasAutoSwitched.current && !dataLoading && statusCounts.setup > 0) {
-      setStatusFilter('setup');
-      hasAutoSwitched.current = true;
-    }
-  }, [dataLoading, statusCounts.setup]);
-
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [projectToArchive, setProjectToArchive] = useState<{ id: string; name: string } | null>(null);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
@@ -63,44 +53,9 @@ export default function Dashboard() {
     orgId ? localStorage.getItem(`ontime_sole_member_${orgId}`) === 'true' : false
   );
 
-  const handleArchive = (projectId: string) => {
-    const project = projects.find((p) => p.id === projectId);
-    if (project) {
-      setProjectToArchive({ id: project.id, name: project.name });
-      setArchiveDialogOpen(true);
-    }
-  };
-
-  const handleUnarchive = useCallback(async (projectId: string) => {
-    const { error } = await supabase
-      .from('projects')
-      .update({ status: 'active' })
-      .eq('id', projectId);
-
-    if (error) {
-      toast({ title: 'Error', description: 'Failed to unarchive project', variant: 'destructive' });
-    } else {
-      toast({ title: 'Project Unarchived', description: 'The project has been restored to Active.' });
-    }
-    refetch();
-  }, [toast, refetch]);
-
-  const handleStatusChange = (projectId: string, status: 'active' | 'on_hold' | 'completed') => {
-    if (status === 'completed') {
-      const project = projects.find((p) => p.id === projectId);
-      if (project) {
-        setProjectToComplete({ id: project.id, name: project.name });
-        setCompleteDialogOpen(true);
-      }
-      return;
-    }
-    updateProjectStatus(projectId, status);
-  };
-
   const updateProjectStatus = useCallback(async (projectId: string, status: 'active' | 'on_hold' | 'completed') => {
     const statusLabels = { active: 'Active', on_hold: 'On Hold', completed: 'Completed' };
     const { error } = await supabase.from('projects').update({ status }).eq('id', projectId);
-
     if (error) {
       toast({ title: 'Error', description: 'Failed to update project status', variant: 'destructive' });
     } else {
@@ -122,7 +77,6 @@ export default function Dashboard() {
       .from('projects')
       .update({ status: 'archived' })
       .eq('id', projectToArchive.id);
-
     if (error) {
       toast({ title: 'Error', description: 'Failed to archive project', variant: 'destructive' });
     } else {
@@ -150,15 +104,6 @@ export default function Dashboard() {
     }
   };
 
-  const handleCompleteReminder = async (id: string) => {
-    const { error } = await supabase.from('reminders').update({ completed: true }).eq('id', id);
-    if (error) {
-      toast({ title: 'Error', description: 'Failed to complete reminder', variant: 'destructive' });
-    } else {
-      refetch();
-    }
-  };
-
   const loading = authLoading || dataLoading;
 
   if (authLoading) {
@@ -167,9 +112,7 @@ export default function Dashboard() {
         <div className="p-4 sm:p-6 space-y-6">
           <Skeleton className="h-24 w-full" />
           <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-20" />
-            ))}
+            {[1, 2, 3].map((i) => <Skeleton key={i} className="h-20" />)}
           </div>
         </div>
       </AppLayout>
@@ -183,9 +126,7 @@ export default function Dashboard() {
           <Card className="max-w-md mx-auto">
             <CardContent className="p-6 text-center">
               <h2 className="text-lg font-semibold mb-2">Welcome to Ontime.Build</h2>
-              <p className="text-muted-foreground mb-4">
-                Please sign in to access your projects and work items.
-              </p>
+              <p className="text-muted-foreground mb-4">Please sign in to access your projects.</p>
               <Button onClick={() => navigate('/auth')}>Sign In</Button>
             </CardContent>
           </Card>
@@ -201,9 +142,7 @@ export default function Dashboard() {
           <Card className="max-w-md mx-auto">
             <CardContent className="p-6 text-center">
               <h2 className="text-lg font-semibold mb-2">Account Setup Incomplete</h2>
-              <p className="text-muted-foreground mb-4">
-                Your account is not linked to an organization. Please sign out and create a new account.
-              </p>
+              <p className="text-muted-foreground mb-4">Your account is not linked to an organization.</p>
               <Button variant="outline" onClick={() => signOut()}>Sign Out</Button>
             </CardContent>
           </Card>
@@ -213,33 +152,14 @@ export default function Dashboard() {
   }
 
   const canCreateProject = orgType === 'GC' || orgType === 'TC';
-
-  // Onboarding state
+  const isOrgAdmin = userOrgRoles[0]?.is_admin ?? false;
   const showOnboarding = userSettings && !userSettings.onboarding_dismissed;
   const profileComplete = !!(profile?.first_name && profile?.phone);
   const orgComplete = !!(organization?.address?.street);
-  const isOrgAdmin = userOrgRoles[0]?.is_admin ?? false;
   const teamInvited = !isOrgAdmin || (userOrgRoles.length > 1) || soleMember;
   const projectCreated = projects.length > 0;
 
-  const handleDismissOnboarding = async () => {
-    await updateUserSettings({ onboarding_dismissed: true });
-  };
-
-  const handleMarkSoleMember = () => {
-    if (orgId) {
-      localStorage.setItem(`ontime_sole_member_${orgId}`, 'true');
-      setSoleMember(true);
-    }
-  };
-
-  const handleMarkPartOfTeam = () => {
-    if (orgId) {
-      localStorage.setItem(`ontime_part_of_team_${orgId}`, 'true');
-      setSoleMember(true);
-    }
-  };
-
+  const activeProject = projects.find(p => p.status === 'active');
   const totalAttention = attentionItems.length + pendingInvites.length;
 
   return (
@@ -249,7 +169,7 @@ export default function Dashboard() {
       onNewClick={() => navigate('/create-project')}
       newButtonLabel="New Project"
     >
-      <div className="space-y-4 sm:space-y-5">
+      <div className="space-y-2.5">
         {showOnboarding && (
           <OnboardingChecklist
             profileComplete={profileComplete}
@@ -257,51 +177,47 @@ export default function Dashboard() {
             teamInvited={teamInvited}
             projectCreated={projectCreated}
             orgType={orgType}
-            onDismiss={handleDismissOnboarding}
-            onMarkSoleMember={handleMarkSoleMember}
-            onMarkPartOfTeam={handleMarkPartOfTeam}
+            onDismiss={async () => updateUserSettings({ onboarding_dismissed: true })}
+            onMarkSoleMember={() => {
+              if (orgId) { localStorage.setItem(`ontime_sole_member_${orgId}`, 'true'); setSoleMember(true); }
+            }}
+            onMarkPartOfTeam={() => {
+              if (orgId) { localStorage.setItem(`ontime_part_of_team_${orgId}`, 'true'); setSoleMember(true); }
+            }}
           />
         )}
 
         <OrgInviteBanner />
 
-        {/* Smart Welcome */}
-        <DashboardWelcome
-          firstName={profile?.first_name || null}
+        {/* KPI Row */}
+        <DashboardKPIRow
+          financials={financials}
+          billing={billing}
           attentionCount={totalAttention}
-          activeProjects={statusCounts.active}
         />
 
-        {/* Financial Snapshot */}
-        <DashboardFinancialSnapshot billing={billing} financials={financials} />
+        {/* Two-column grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-2.5">
+          {/* Left column */}
+          <div className="space-y-2.5">
+            <DashboardProjectsTable projects={projects} loading={loading} />
+            <DashboardRecentDocs />
+          </div>
 
-        {/* Action Items */}
-        <DashboardAttentionBanner
-          attentionItems={attentionItems}
-          pendingInvites={pendingInvites}
-          reminders={reminders}
-          onRefresh={refetch}
-        />
-
-        {/* Reminders */}
-        <RemindersTile
-          reminders={reminders}
-          onComplete={handleCompleteReminder}
-          onAdd={() => setAddReminderOpen(true)}
-        />
-
-        <DashboardProjectList
-          projects={projects}
-          statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
-          statusCounts={statusCounts}
-          loading={loading}
-          orgType={orgType}
-          orgId={orgId}
-          onArchive={handleArchive}
-          onUnarchive={handleUnarchive}
-          onStatusChange={handleStatusChange}
-        />
+          {/* Right column */}
+          <div className="space-y-2.5">
+            <DashboardBudgetCard
+              financials={financials}
+              billing={billing}
+              activeProjectName={activeProject?.name || null}
+            />
+            <DashboardNeedsAttentionCard
+              attentionItems={attentionItems}
+              pendingInvites={pendingInvites}
+            />
+            <DashboardLiveFeed reminders={reminders} />
+          </div>
+        </div>
       </div>
 
       <ArchiveProjectDialog
@@ -310,14 +226,12 @@ export default function Dashboard() {
         projectName={projectToArchive?.name || ''}
         onConfirm={confirmArchive}
       />
-
       <CompleteProjectDialog
         open={completeDialogOpen}
         onOpenChange={setCompleteDialogOpen}
         projectName={projectToComplete?.name || ''}
         onConfirm={confirmComplete}
       />
-
       <AddReminderDialog
         open={addReminderOpen}
         onOpenChange={setAddReminderOpen}
