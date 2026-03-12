@@ -61,6 +61,7 @@ export function ProjectRow({
   contractValue,
   pendingActions,
   orgType,
+  orgId,
   isExpanded,
   onToggleExpand,
   onArchive,
