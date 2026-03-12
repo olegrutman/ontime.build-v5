@@ -278,6 +278,49 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
     setEstimating(false);
   };
 
+  const handleRegenerate = async () => {
+    setRegenerating(true);
+    try {
+      // Delete all existing schedule items
+      for (const item of items) {
+        await deleteItem.mutateAsync(item.id);
+      }
+
+      // Fetch TC→GC SOV items to regenerate from
+      const { data: sovs } = await supabase
+        .from('project_sov')
+        .select('id, contract_id')
+        .eq('project_id', projectId);
+
+      if (sovs && sovs.length > 0) {
+        // Get items from the first SOV as template
+        const { data: sovItems } = await supabase
+          .from('project_sov_items')
+          .select('item_name, percent_of_contract, sort_order')
+          .eq('sov_id', sovs[0].id)
+          .order('sort_order');
+
+        if (sovItems && sovItems.length > 0) {
+          const today = format(new Date(), 'yyyy-MM-dd');
+          for (let i = 0; i < sovItems.length; i++) {
+            await addItem.mutateAsync({
+              title: sovItems[i].item_name,
+              start_date: today,
+              item_type: 'task',
+              sort_order: sovItems[i].sort_order,
+            } as any);
+          }
+        }
+      }
+
+      toast({ title: 'Schedule regenerated from SOV' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+    setRegenerating(false);
+    setRegenerateOpen(false);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
