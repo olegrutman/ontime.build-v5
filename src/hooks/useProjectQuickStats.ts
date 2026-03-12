@@ -41,6 +41,8 @@ interface UseProjectQuickStatsOptions {
 
 const EMPTY: ProjectQuickStats = {
   actionItems: [],
+  criticalScheduleItems: [],
+  totalCriticalCount: 0,
   budgetPercent: 0,
   budgetUsed: 0,
   budgetTotal: 0,
