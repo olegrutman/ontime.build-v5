@@ -32,7 +32,20 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function InvoiceCard({ 
+function InvoiceAgeBadge({ invoice }: { invoice: Invoice }) {
+  if (invoice.status === 'DRAFT' || invoice.status === 'PAID') return null;
+  const ref = invoice.status === 'APPROVED'
+    ? (invoice.approved_at || invoice.submitted_at || invoice.created_at)
+    : (invoice.submitted_at || invoice.created_at);
+  const days = differenceInDays(new Date(), new Date(ref));
+  const colors = days <= 14
+    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
+    : days <= 30
+    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+  return <Badge className={cn('font-mono text-xs', colors)}>{days}d</Badge>;
+}
+
   invoice, 
   onClick, 
   onEdit, 
