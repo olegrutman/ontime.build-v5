@@ -1,10 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Receipt, Filter, AlertCircle, Send, Inbox, AlertTriangle, ArrowRight, FileEdit, Clock, CheckCircle2, Wallet, DollarSign, Package } from 'lucide-react';
+import { Plus, Receipt, Filter, AlertCircle, Send, Inbox, AlertTriangle, ArrowRight, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -14,8 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ViewSwitcher, ViewMode } from '@/components/ui/view-switcher';
 import { CreateInvoiceFromSOV } from './CreateInvoiceFromSOV';
 import { InvoiceCard } from './InvoiceCard';
+import { InvoiceTableView } from './InvoiceTableView';
+import { InvoiceActionBar } from './InvoiceActionBar';
 import { InvoiceDetail } from './InvoiceDetail';
 import { Invoice, InvoiceStatus, INVOICE_STATUS_LABELS } from '@/types/invoice';
 import { useAuth } from '@/hooks/useAuth';
@@ -43,10 +45,11 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'ALL'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'ALL' | 'NEEDS_ACTION'>('ALL');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [invoiceDirection, setInvoiceDirection] = useState<'sent' | 'received'>('sent');
+  const [viewMode, setViewMode] = useState<ViewMode>('table');
   // GC sub-tab: 'from_tc' or 'from_supplier'
   const [gcSubTab, setGcSubTab] = useState<'from_tc' | 'from_supplier'>('from_tc');
 
@@ -120,20 +123,27 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
     return gcContract?.to_org_name || 'GC';
   }, [contracts]);
 
-  // Current view invoices based on direction and role
+  // Determine if current view is "approver" side
+  const isApproverView = useMemo(() => {
+    if (currentOrgType === 'GC') return true;
+    if (currentOrgType === 'TC' && invoiceDirection === 'received') return true;
+    return false;
+  }, [currentOrgType, invoiceDirection]);
+
+  // Current view invoices based on direction and role, with NEEDS_ACTION filter
   const currentInvoices = useMemo(() => {
-    if (currentOrgType === 'SUPPLIER') {
-      return sentInvoices;
+    let base: Invoice[];
+    if (currentOrgType === 'SUPPLIER') base = sentInvoices;
+    else if (currentOrgType === 'GC') base = gcSubTab === 'from_tc' ? receivedFromContracts : receivedFromSuppliers;
+    else if (currentOrgType === 'TC') base = invoiceDirection === 'sent' ? sentInvoices : allReceivedInvoices;
+    else base = sentInvoices;
+
+    if (statusFilter === 'NEEDS_ACTION') {
+      const actionStatuses = isApproverView ? ['SUBMITTED'] : ['DRAFT'];
+      return base.filter(i => actionStatuses.includes(i.status));
     }
-    if (currentOrgType === 'GC') {
-      return gcSubTab === 'from_tc' ? receivedFromContracts : receivedFromSuppliers;
-    }
-    if (currentOrgType === 'TC') {
-      return invoiceDirection === 'sent' ? sentInvoices : allReceivedInvoices;
-    }
-    // FC
-    return sentInvoices;
-  }, [currentOrgType, gcSubTab, invoiceDirection, sentInvoices, receivedFromContracts, receivedFromSuppliers, allReceivedInvoices]);
+    return base;
+  }, [currentOrgType, gcSubTab, invoiceDirection, sentInvoices, receivedFromContracts, receivedFromSuppliers, allReceivedInvoices, statusFilter, isApproverView]);
 
   useEffect(() => {
     const fetchContracts = async () => {
@@ -173,7 +183,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
       .eq('project_id', projectId)
       .order('created_at', { ascending: false });
 
-    if (statusFilter !== 'ALL') {
+    if (statusFilter !== 'ALL' && statusFilter !== 'NEEDS_ACTION') {
       query = query.eq('status', statusFilter);
     }
 
@@ -261,6 +271,14 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
     }
   };
 
+  // Unfiltered invoices for action bar (always shows full picture)
+  const unfilteredInvoices = useMemo(() => {
+    if (currentOrgType === 'SUPPLIER') return sentInvoices;
+    if (currentOrgType === 'GC') return gcSubTab === 'from_tc' ? receivedFromContracts : receivedFromSuppliers;
+    if (currentOrgType === 'TC') return invoiceDirection === 'sent' ? sentInvoices : allReceivedInvoices;
+    return sentInvoices;
+  }, [currentOrgType, gcSubTab, invoiceDirection, sentInvoices, receivedFromContracts, receivedFromSuppliers, allReceivedInvoices]);
+
   if (selectedInvoiceId) {
     return (
       <InvoiceDetail
@@ -271,18 +289,6 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
       />
     );
   }
-
-  // Calculate stats for current view
-  const stats = {
-    total: currentInvoices.length,
-    draft: currentInvoices.filter((i) => i.status === 'DRAFT').length,
-    submitted: currentInvoices.filter((i) => i.status === 'SUBMITTED').length,
-    approved: currentInvoices.filter((i) => i.status === 'APPROVED').length,
-    paid: currentInvoices.filter((i) => i.status === 'PAID').length,
-    totalBilled: currentInvoices
-      .filter((i) => i.status === 'APPROVED' || i.status === 'PAID')
-      .reduce((sum, i) => sum + i.total_amount, 0),
-  };
 
   const getRoleContext = () => {
     if (currentOrgType === 'GC') {
@@ -376,6 +382,20 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
       );
     }
 
+    if (viewMode === 'table') {
+      return (
+        <InvoiceTableView
+          invoices={currentInvoices}
+          onView={(inv) => setSelectedInvoiceId(inv.id)}
+          onEdit={handleEditInvoice}
+          onSubmit={handleQuickSubmit}
+          onApprove={handleQuickApprove}
+          onDelete={handleDeleteInvoice}
+          getPermissions={getInvoicePermissions}
+        />
+      );
+    }
+
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {currentInvoices.map((invoice) => {
@@ -397,58 +417,6 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
       </div>
     );
   };
-
-  const renderSummaryCards = () => (
-    <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-      <Card data-sasha-card="Invoice Summary" className="p-4 relative overflow-hidden">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Draft</span>
-          <span className="text-2xl font-bold">{stats.draft}</span>
-        </div>
-        <div className="absolute top-3 right-3 p-2 rounded-full bg-muted">
-          <FileEdit className="w-4 h-4 text-muted-foreground" />
-        </div>
-      </Card>
-      <Card data-sasha-card="Invoice Summary" className="p-4 relative overflow-hidden">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Pending</span>
-          <span className="text-2xl font-bold text-primary">{stats.submitted}</span>
-        </div>
-        <div className="absolute top-3 right-3 p-2 rounded-full bg-primary/10">
-          <Clock className="w-4 h-4 text-primary" />
-        </div>
-      </Card>
-      <Card data-sasha-card="Invoice Summary" className="p-4 relative overflow-hidden">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Approved</span>
-          <span className="text-2xl font-bold text-accent-foreground">{stats.approved}</span>
-        </div>
-        <div className="absolute top-3 right-3 p-2 rounded-full bg-accent">
-          <CheckCircle2 className="w-4 h-4 text-accent-foreground" />
-        </div>
-      </Card>
-      <Card data-sasha-card="Invoice Summary" className="p-4 relative overflow-hidden">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Paid</span>
-          <span className="text-2xl font-bold text-secondary-foreground">{stats.paid}</span>
-        </div>
-        <div className="absolute top-3 right-3 p-2 rounded-full bg-secondary">
-          <Wallet className="w-4 h-4 text-secondary-foreground" />
-        </div>
-      </Card>
-      <Card data-sasha-card="Invoice Summary" className="p-4 relative overflow-hidden col-span-2 sm:col-span-1">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Total Billed</span>
-          <span className="text-2xl font-bold">
-            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(stats.totalBilled)}
-          </span>
-        </div>
-        <div className="absolute top-3 right-3 p-2 rounded-full bg-primary/10">
-          <DollarSign className="w-4 h-4 text-primary" />
-        </div>
-      </Card>
-    </div>
-  );
 
   const renderSOVAlert = () => {
     if (!isBlocked) return null;
@@ -480,22 +448,25 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
       <div>
         <h3 className="text-xl font-semibold">{title || 'Invoices'}</h3>
         <p className="text-sm text-muted-foreground">
-          {stats.total} invoice{stats.total !== 1 ? 's' : ''} •{' '}
-          {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0, minimumFractionDigits: 0 }).format(
-            stats.totalBilled
-          )}{' '}
-          billed
+          {currentInvoices.length} invoice{currentInvoices.length !== 1 ? 's' : ''}
         </p>
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as InvoiceStatus | 'ALL')}>
-          <SelectTrigger className="w-[160px]">
+        <ViewSwitcher
+          value={viewMode}
+          onChange={setViewMode}
+          availableModes={['table', 'list']}
+        />
+
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as InvoiceStatus | 'ALL' | 'NEEDS_ACTION')}>
+          <SelectTrigger className="w-[180px]">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Statuses</SelectItem>
+            <SelectItem value="NEEDS_ACTION">⚡ Needs My Action</SelectItem>
             {(Object.keys(INVOICE_STATUS_LABELS) as InvoiceStatus[]).map((status) => (
               <SelectItem key={status} value={status}>
                 {INVOICE_STATUS_LABELS[status]}
@@ -531,11 +502,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
     <div className="space-y-6">
       {renderSOVAlert()}
       {renderHeader(showCreate, title)}
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>{roleContext.message}</AlertDescription>
-      </Alert>
-      {renderSummaryCards()}
+      <InvoiceActionBar invoices={unfilteredInvoices} isApprover={isApproverView} />
       {renderInvoiceList()}
     </div>
   );
@@ -656,14 +623,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
       {renderSOVAlert()}
       {renderHeader(true)}
 
-      {roleContext.message && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{roleContext.message}</AlertDescription>
-        </Alert>
-      )}
-
-      {renderSummaryCards()}
+      <InvoiceActionBar invoices={unfilteredInvoices} isApprover={isApproverView} />
       {renderInvoiceList()}
 
       <CreateInvoiceFromSOV

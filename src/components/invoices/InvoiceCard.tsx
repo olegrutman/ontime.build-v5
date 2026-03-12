@@ -1,5 +1,7 @@
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { FileText, Calendar, DollarSign, Eye, Edit, Download, Send, CheckCircle, XCircle, Loader2, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { InvoiceStatusBadge } from './InvoiceStatusBadge';
@@ -30,6 +32,19 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+function InvoiceAgeBadge({ invoice }: { invoice: Invoice }) {
+  if (invoice.status === 'DRAFT' || invoice.status === 'PAID') return null;
+  const ref = invoice.status === 'APPROVED'
+    ? (invoice.approved_at || invoice.submitted_at || invoice.created_at)
+    : (invoice.submitted_at || invoice.created_at);
+  const days = differenceInDays(new Date(), new Date(ref));
+  const colors = days <= 14
+    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300'
+    : days <= 30
+    ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
+    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
+  return <Badge className={cn('font-mono text-xs', colors)}>{days}d</Badge>;
+}
 export function InvoiceCard({ 
   invoice, 
   onClick, 
@@ -128,6 +143,7 @@ export function InvoiceCard({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <InvoiceAgeBadge invoice={invoice} />
             <HoverActions actions={hoverActions} />
             <StatusColumn
               value={invoice.status}
