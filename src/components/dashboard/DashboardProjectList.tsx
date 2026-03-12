@@ -44,6 +44,7 @@ interface DashboardProjectListProps {
   statusCounts: { setup: number; active: number; on_hold: number; completed: number; archived: number };
   loading: boolean;
   orgType: string | null;
+  orgId?: string;
   onArchive: (projectId: string) => void;
   onUnarchive: (projectId: string) => void;
   onStatusChange: (projectId: string, status: 'active' | 'on_hold' | 'completed') => void;
@@ -56,6 +57,7 @@ export function DashboardProjectList({
   statusCounts,
   loading,
   orgType,
+  orgId,
   onArchive,
   onUnarchive,
   onStatusChange,
@@ -211,6 +213,7 @@ export function DashboardProjectList({
                 contractValue={project.contractValue}
                 pendingActions={project.pendingActions}
                 orgType={orgType}
+                orgId={orgId}
                 isExpanded={expandedProjectId === project.id}
                 onToggleExpand={handleToggleExpand}
                 onArchive={onArchive}

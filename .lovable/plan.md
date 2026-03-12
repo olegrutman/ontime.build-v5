@@ -1,33 +1,51 @@
+# Interactive Project Scheduling Module — IMPLEMENTED
 
+## Design Philosophy
+Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-# Fix: Pass `orgId` Through to Stats Hook + Console Warning
+## Features Built
 
-## Problems Found
+### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
+- Dependency graph walking with BFS
+- Cascade date computation with buffer days support
+- Critical path calculation (longest dependency chain)
+- Conflict detection (tasks starting before predecessors end)
+- `findDownstreamTasks()` for cascade confirmation
 
-1. **`orgId` never reaches the stats hook (HIGH)** -- `Dashboard.tsx` has `orgId` on line 54, but it is never passed to `DashboardProjectList`, which never passes it to `ProjectRow`, which calls `useProjectQuickStats` without it. All the org-based filtering logic added in the previous fix (contracts, invoices, WOs, POs) is dead code -- it never runs because `orgId` is always `undefined`.
+### 2. Desktop Gantt Chart (≥768px)
+- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
+- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
+- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
+- **Dependency arrows**: Bezier curves with arrow markers
+- **Critical path toggle**: Highlights longest dependency chain in amber/gold
+- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
+- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
+- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
+- **Undo**: 5-second undo button after any drag action
 
-2. **Console ref warning on KpiTile (LOW)** -- React warns "Function components cannot be given refs" for `KpiTile`. This is likely caused by the spread `{...tile}` in the rendering loop unintentionally passing a ref. Not a functional bug but noisy in console.
+### 3. Mobile Card View (<768px)
+- **Sticky top bar**: Project start/end dates + days remaining
+- **Phase grouping**: Collapsible sections with total duration
+- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
+- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
+- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
 
-## Changes
+### 4. Shared Logic
+- One unified `items` array drives both views
+- `handleScheduleChange()` checks downstream tasks before applying
+- Optimistic undo with snapshot restoration
+- Auto-estimate dates still available for unscheduled items
 
-### 1. Pass `orgId` through the chain
-
-| File | Change |
+## Files Created/Modified
+| File | Action |
 |------|--------|
-| `src/pages/Dashboard.tsx` | Add `orgId={orgId}` prop to `<DashboardProjectList>` |
-| `src/components/dashboard/DashboardProjectList.tsx` | Accept `orgId` prop, pass it to `<ProjectRow>` |
-| `src/components/dashboard/ProjectRow.tsx` | Accept `orgId` prop, pass it to `useProjectQuickStats` options |
-
-Line 76 in `ProjectRow.tsx` changes from:
-```typescript
-const stats = useProjectQuickStats(isExpanded ? project.id : null, { orgType: orgType ?? undefined });
-```
-to:
-```typescript
-const stats = useProjectQuickStats(isExpanded ? project.id : null, { orgType: orgType ?? undefined, orgId: orgId ?? undefined });
-```
-
-### 2. Fix KpiTile ref warning
-
-The `KpiTile` component at line 158 of `ProjectQuickOverview.tsx` should not receive a ref. The issue is that the iteration uses spread which may pass unintended props. Will ensure only named props are passed (already seems correct in the code shown -- may need to verify the exact rendering line).
-
+| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
+| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
+| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
+| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
+| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
+| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
+| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
+| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
+| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
+| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |

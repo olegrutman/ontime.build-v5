@@ -259,6 +259,7 @@ export default function Dashboard() {
           statusCounts={statusCounts}
           loading={loading}
           orgType={orgType}
+          orgId={orgId}
           onArchive={handleArchive}
           onUnarchive={handleUnarchive}
           onStatusChange={handleStatusChange}
