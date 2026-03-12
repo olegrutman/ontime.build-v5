@@ -1,10 +1,18 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, DollarSign, CalendarCheck, MessageSquareWarning } from 'lucide-react';
+import {
+  ArrowRight,
+  AlertTriangle,
+  CircleAlert,
+  Info,
+  CheckCircle2,
+  DollarSign,
+  CalendarCheck,
+  TrendingUp,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import type { ProjectQuickStats, PhaseItem } from '@/hooks/useProjectQuickStats';
+import type { ProjectQuickStats, ActionItem } from '@/hooks/useProjectQuickStats';
 
 interface ProjectQuickOverviewProps {
   projectId: string;
@@ -17,57 +25,59 @@ function formatCurrency(amount: number): string {
   return `$${amount.toLocaleString()}`;
 }
 
-function KPITile({
-  label,
-  value,
-  subtitle,
-  icon: Icon,
-  colorClass,
-}: {
-  label: string;
-  value: string;
-  subtitle: string;
-  icon: React.ElementType;
-  colorClass: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1 rounded-xl border bg-card p-3 sm:p-4">
-      <div className="flex items-center gap-2">
-        <Icon className={cn('h-4 w-4', colorClass)} />
-        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-          {label}
-        </span>
-      </div>
-      <span className={cn('text-2xl sm:text-3xl font-bold', colorClass)}>{value}</span>
-      <span className="text-xs text-muted-foreground">{subtitle}</span>
-    </div>
-  );
-}
+const SEVERITY_STYLES = {
+  red: {
+    bg: 'bg-red-50 dark:bg-red-950/30',
+    border: 'border-red-200 dark:border-red-800/40',
+    text: 'text-red-700 dark:text-red-300',
+    icon: AlertTriangle,
+  },
+  amber: {
+    bg: 'bg-amber-50 dark:bg-amber-950/30',
+    border: 'border-amber-200 dark:border-amber-800/40',
+    text: 'text-amber-700 dark:text-amber-300',
+    icon: CircleAlert,
+  },
+  blue: {
+    bg: 'bg-blue-50 dark:bg-blue-950/30',
+    border: 'border-blue-200 dark:border-blue-800/40',
+    text: 'text-blue-700 dark:text-blue-300',
+    icon: Info,
+  },
+};
 
-function PhaseBar({ phase }: { phase: PhaseItem }) {
-  const isDone = phase.progress >= 100;
+function ActionChip({
+  item,
+  onClick,
+}: {
+  item: ActionItem;
+  onClick: () => void;
+}) {
+  const style = SEVERITY_STYLES[item.severity];
+  const Icon = style.icon;
+
   return (
-    <div className="flex items-center gap-3">
-      <span className="text-sm text-muted-foreground w-28 sm:w-36 truncate">{phase.title}</span>
-      <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all duration-500"
-          style={{
-            width: `${Math.min(phase.progress, 100)}%`,
-            backgroundColor: phase.color,
-          }}
-        />
-      </div>
-      {isDone ? (
-        <Badge variant="secondary" className="text-xs px-1.5 py-0 shrink-0">
-          Done
-        </Badge>
-      ) : (
-        <span className="text-xs font-medium text-muted-foreground w-10 text-right shrink-0">
-          {phase.progress}%
-        </span>
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      className={cn(
+        'flex items-center gap-2 w-full rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors hover:opacity-80',
+        style.bg,
+        style.border,
+        style.text
       )}
-    </div>
+    >
+      <Icon className="h-4 w-4 shrink-0" />
+      <span className="flex-1 truncate">
+        {item.label}
+        {item.amount != null && item.amount > 0 && (
+          <span className="ml-1 font-semibold">({formatCurrency(item.amount)})</span>
+        )}
+      </span>
+      <ArrowRight className="h-3.5 w-3.5 shrink-0 opacity-60" />
+    </button>
   );
 }
 
@@ -76,69 +86,71 @@ export function ProjectQuickOverview({ projectId, stats }: ProjectQuickOverviewP
 
   if (stats.loading) {
     return (
-      <div className="space-y-4 pt-3 pb-1">
-        <div className="grid grid-cols-3 gap-3">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-24 rounded-xl" />
-          ))}
-        </div>
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-5 w-full rounded" />
-          ))}
-        </div>
+      <div className="space-y-3 pt-3 pb-1">
+        <Skeleton className="h-10 w-full rounded-lg" />
+        <Skeleton className="h-10 w-3/4 rounded-lg" />
+        <Skeleton className="h-8 w-full rounded" />
       </div>
     );
   }
 
-  const deltaLabel =
-    stats.scheduleDelta >= 0
-      ? `${stats.scheduleDelta} days ahead`
-      : `${Math.abs(stats.scheduleDelta)} days behind`;
+  const hasActions = stats.actionItems.length > 0;
+
+  const navigateToTab = (tab?: string) => {
+    const base = `/project/${projectId}`;
+    navigate(tab ? `${base}?tab=${tab}` : base);
+  };
 
   return (
-    <div className="space-y-4 pt-3 pb-1">
-      {/* KPI Tiles */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <KPITile
-          label="Budget Used"
-          value={`${stats.budgetPercent}%`}
-          subtitle={`${formatCurrency(stats.budgetUsed)} of ${formatCurrency(stats.budgetTotal)}`}
-          icon={DollarSign}
-          colorClass="text-amber-600 dark:text-amber-400"
-        />
-        <KPITile
-          label="Schedule"
-          value={`${stats.schedulePercent}%`}
-          subtitle={deltaLabel}
-          icon={CalendarCheck}
-          colorClass="text-emerald-600 dark:text-emerald-400"
-        />
-        <KPITile
-          label="Open RFIs"
-          value={String(stats.openRFIs)}
-          subtitle={stats.urgentRFIs > 0 ? `${stats.urgentRFIs} need response today` : 'None urgent'}
-          icon={MessageSquareWarning}
-          colorClass="text-indigo-600 dark:text-indigo-400"
-        />
-      </div>
-
-      {/* Phase Progress */}
-      {stats.phases.length > 0 && (
-        <div className="space-y-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Phase Progress
-          </span>
-          <div className="space-y-2">
-            {stats.phases.map((phase) => (
-              <PhaseBar key={phase.id} phase={phase} />
-            ))}
-          </div>
+    <div className="space-y-3 pt-3 pb-1">
+      {/* Action Items */}
+      {hasActions ? (
+        <div className="space-y-1.5">
+          {stats.actionItems.map((item) => (
+            <ActionChip
+              key={item.key}
+              item={item}
+              onClick={() => navigateToTab(item.tab)}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 dark:border-emerald-800/40 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2.5 text-sm font-medium text-emerald-700 dark:text-emerald-300">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          All clear — no items need attention
         </div>
       )}
 
+      {/* Compact Metrics Row */}
+      <div className="flex items-center gap-4 text-xs text-muted-foreground px-1">
+        {stats.budgetTotal > 0 && (
+          <div className="flex items-center gap-1">
+            <DollarSign className="h-3 w-3" />
+            <span>
+              Billed: <span className="font-semibold text-foreground">{formatCurrency(stats.budgetUsed)}</span>
+            </span>
+          </div>
+        )}
+        {stats.outstandingBilling > 0 && (
+          <div className="flex items-center gap-1">
+            <TrendingUp className="h-3 w-3" />
+            <span>
+              Outstanding: <span className="font-semibold text-foreground">{formatCurrency(stats.outstandingBilling)}</span>
+            </span>
+          </div>
+        )}
+        {stats.schedulePercent > 0 && (
+          <div className="flex items-center gap-1">
+            <CalendarCheck className="h-3 w-3" />
+            <span>
+              Schedule: <span className="font-semibold text-foreground">{stats.schedulePercent}%</span>
+            </span>
+          </div>
+        )}
+      </div>
+
       {/* CTA */}
-      <div className="flex justify-end pt-1">
+      <div className="flex justify-end pt-0.5">
         <Button
           variant="outline"
           size="sm"
