@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
-import { AlertTriangle } from 'lucide-react';
-import { Plus } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { AlertTriangle, Plus, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent } from '@/components/ui/card';
@@ -14,12 +13,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { ViewSwitcher, ViewMode } from '@/components/ui/view-switcher';
 import { toast } from 'sonner';
-import { PurchaseOrder, POStatus, POLineItem, PO_STATUS_LABELS } from '@/types/purchaseOrder';
+import { PurchaseOrder, POStatus, PO_STATUS_LABELS } from '@/types/purchaseOrder';
 import { POWizardV2 } from '@/components/po-wizard-v2';
 import { POWizardV2Data, POWizardV2LineItem } from '@/types/poWizardV2';
-import { POCard, PODetail } from '@/components/purchase-orders';
-import { Package } from 'lucide-react';
+import { POCard, PODetail, POActionBar, POTableView } from '@/components/purchase-orders';
 
 const STATUS_PRIORITY: Record<POStatus, number> = {
   ACTIVE: 0,
@@ -43,6 +43,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const [loading, setLoading] = useState(true);
   const [estimatePackTotals, setEstimatePackTotals] = useState<Map<string, { total: number; itemCount: number }>>(new Map());
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [wizardOpen, setWizardOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedPOId, setSelectedPOId] = useState<string | null>(null);
@@ -53,7 +54,12 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
   const isSupplier = currentOrgType === 'SUPPLIER';
+  const isGC = currentOrgType === 'GC';
+  const isTC = currentOrgType === 'TC';
   const canCreatePO = permissions?.canCreatePOs ?? false;
+
+  // Directional tabs: only show for GC and TC
+  const showDirectionalTabs = isGC || isTC;
 
   useEffect(() => {
     fetchPurchaseOrders();
@@ -125,7 +131,6 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           totalsMap.set(key, existing);
         }
 
-        // Apply each PO's sales tax to its corresponding estimate pack total
         for (const po of pos) {
           if (po.source_estimate_id && po.source_pack_name) {
             const key = `${po.source_estimate_id}|${po.source_pack_name}`;
@@ -164,10 +169,8 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     
     setIsSubmitting(true);
     try {
-      // Determine pricing owner based on material_responsibility from project contracts
       let pricingOwnerOrgId: string | null = null;
       
-      // Query the project's contracts to find material_responsibility setting
       const { data: contracts } = await supabase
         .from('project_contracts')
         .select('material_responsibility, from_org_id, to_org_id')
@@ -175,23 +178,18 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         .not('material_responsibility', 'is', null);
       
       if (contracts && contracts.length > 0) {
-        // Find the contract where material_responsibility is set
         const contractWithMR = contracts.find(c => c.material_responsibility);
         if (contractWithMR) {
-          // If GC is responsible, to_org_id is the GC (payer)
-          // If TC is responsible, from_org_id is the TC (contractor)
           pricingOwnerOrgId = contractWithMR.material_responsibility === 'GC' 
             ? contractWithMR.to_org_id 
             : contractWithMR.from_org_id;
         }
       }
       
-      // Fallback: if no material_responsibility set, current org is pricing owner
       if (!pricingOwnerOrgId) {
         pricingOwnerOrgId = currentOrgId;
       }
 
-      // Fetch estimate tax percent if PO is from an estimate
       let estimateTaxPercent = 0;
       if (data.source_estimate_id) {
         const { data: estData, error: estError } = await supabase
@@ -267,7 +265,6 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         const { error: lineError } = await supabase.from('po_line_items').insert(lineItems);
         if (lineError) throw lineError;
 
-        // Update PO-level totals with tax
         const poSubtotalTotal = estSubtotal + addSubtotal;
         const taxAmount = poSubtotalTotal * (estimateTaxPercent / 100);
         const poTotal = poSubtotalTotal + taxAmount;
@@ -294,7 +291,6 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   };
 
   const handleSubmitToSupplier = async (po: PurchaseOrder) => {
-    // This will be handled by the detail view
     setSelectedPOId(po.id);
   };
 
@@ -360,14 +356,12 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     if (!editingPO) return;
     setIsSubmitting(true);
     try {
-      // Delete old line items
       const { error: deleteErr } = await supabase
         .from('po_line_items')
         .delete()
         .eq('po_id', editingPO.id);
       if (deleteErr) throw deleteErr;
 
-      // Insert new line items
       if (data.line_items.length > 0) {
         let estSubtotal = 0;
         let addSubtotal = 0;
@@ -401,7 +395,6 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         const { error: insertErr } = await supabase.from('po_line_items').insert(lineItems);
         if (insertErr) throw insertErr;
 
-        // Fetch estimate tax percent for edit
         let editTaxPercent = editingPO.sales_tax_percent ?? 0;
         if (data.source_estimate_id) {
           const { data: estData, error: estError } = await supabase
@@ -417,7 +410,6 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           }
         }
 
-        // Update PO-level totals with tax
         const poSubtotalTotal = estSubtotal + addSubtotal;
         const taxAmount = poSubtotalTotal * (editTaxPercent / 100);
         const poTotal = poSubtotalTotal + taxAmount;
@@ -432,7 +424,6 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         }).eq('id', editingPO.id);
       }
 
-      // Update PO metadata
       const { error: updateErr } = await supabase
         .from('purchase_orders')
         .update({
@@ -458,23 +449,100 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     }
   };
 
-  const filteredPOs = (statusFilter === 'all'
-    ? purchaseOrders
-    : purchaseOrders.filter(po => po.status === statusFilter)
-  ).sort((a, b) => {
-    const pa = STATUS_PRIORITY[a.status] ?? 99;
-    const pb = STATUS_PRIORITY[b.status] ?? 99;
-    if (pa !== pb) return pa - pb;
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  });
+  // Split POs into directional buckets
+  const { myPOs, receivedPOs } = useMemo(() => {
+    if (!showDirectionalTabs) return { myPOs: purchaseOrders, receivedPOs: [] };
+    
+    const my = purchaseOrders.filter(po => po.created_by_org_id === currentOrgId);
+    const received = purchaseOrders.filter(po => po.created_by_org_id !== currentOrgId);
+    return { myPOs: my, receivedPOs: received };
+  }, [purchaseOrders, currentOrgId, showDirectionalTabs]);
 
-  const stats = {
-    total: purchaseOrders.length,
-    active: purchaseOrders.filter(po => po.status === 'ACTIVE').length,
-    submitted: purchaseOrders.filter(po => po.status === 'SUBMITTED').length,
-    priced: purchaseOrders.filter(po => po.status === 'PRICED').length,
-    ordered: purchaseOrders.filter(po => po.status === 'ORDERED').length,
-    delivered: purchaseOrders.filter(po => po.status === 'DELIVERED').length,
+  const getCanViewPricing = (po: PurchaseOrder) => {
+    const isPricingOwner = po.pricing_owner_org_id === currentOrgId;
+    const isCreator = po.created_by_org_id === currentOrgId;
+    const isPoSupplier = (po.supplier as { organization_id?: string })?.organization_id === currentOrgId;
+    return isPricingOwner || isPoSupplier || isCreator;
+  };
+
+  const filterAndSort = (pos: PurchaseOrder[]) => {
+    let filtered = pos;
+    if (statusFilter === 'needs_action') {
+      const actionStatuses = isSupplier ? ['SUBMITTED'] : ['ACTIVE'];
+      filtered = pos.filter(po => actionStatuses.includes(po.status));
+    } else if (statusFilter !== 'all') {
+      filtered = pos.filter(po => po.status === statusFilter);
+    }
+    return filtered.sort((a, b) => {
+      const pa = STATUS_PRIORITY[a.status] ?? 99;
+      const pb = STATUS_PRIORITY[b.status] ?? 99;
+      if (pa !== pb) return pa - pb;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+  };
+
+  const renderPOList = (pos: PurchaseOrder[]) => {
+    const filtered = filterAndSort(pos);
+
+    if (filtered.length === 0) {
+      return (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-medium mb-2">No Purchase Orders</h3>
+            <p className="text-sm text-muted-foreground text-center max-w-sm">
+              {isSupplier
+                ? 'No purchase orders have been sent to you for this project yet.'
+                : statusFilter === 'needs_action'
+                  ? 'No POs need your attention right now.'
+                  : 'Create a purchase order to request materials from suppliers.'}
+            </p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    if (viewMode === 'table') {
+      return (
+        <POTableView
+          purchaseOrders={filtered}
+          onView={(po) => setSelectedPOId(po.id)}
+          onEdit={handleEditPO}
+          onSubmit={handleSubmitToSupplier}
+          canCreatePO={canCreatePO}
+          canViewPricing={getCanViewPricing}
+          isInvoiced={(id) => invoicedPOIds.has(id)}
+        />
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filtered.map((po) => {
+          const packKey = po.source_estimate_id && po.source_pack_name
+            ? `${po.source_estimate_id}|${po.source_pack_name}`
+            : null;
+          const packData = packKey ? estimatePackTotals.get(packKey) : null;
+          return (
+            <POCard
+              key={po.id}
+              po={po}
+              onClick={() => setSelectedPOId(po.id)}
+              onEdit={() => handleEditPO(po)}
+              onDownload={handleDownload}
+              onSubmit={handleSubmitToSupplier}
+              canEdit={canCreatePO}
+              canSubmit={canCreatePO}
+              canViewPricing={getCanViewPricing(po)}
+              isSupplier={isSupplier}
+              isInvoiced={invoicedPOIds.has(po.id)}
+              estimatePackTotal={packData?.total ?? null}
+              estimatePackItemCount={packData?.itemCount ?? null}
+            />
+          );
+        })}
+      </div>
+    );
   };
 
   if (loading) {
@@ -487,7 +555,6 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     );
   }
 
-  // Show detail view if a PO is selected
   if (selectedPOId) {
     return (
       <PODetail
@@ -500,6 +567,8 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   }
 
   const isProjectNotActive = projectStatus && projectStatus !== 'active' && !isSupplier;
+
+  const receivedTabLabel = isGC ? 'From Trade Contractors' : 'From GC';
 
   return (
     <>
@@ -515,21 +584,32 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           </Alert>
         )}
 
-        {/* Header with Stats */}
+        {/* Action Bar */}
+        <POActionBar purchaseOrders={purchaseOrders} isSupplier={isSupplier} />
+
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold">Purchase Orders</h2>
             <p className="text-sm text-muted-foreground">
-              {stats.total} PO{stats.total !== 1 ? 's' : ''} • {stats.active} Active • {stats.submitted} Submitted • {stats.delivered} Delivered
+              {purchaseOrders.length} PO{purchaseOrders.length !== 1 ? 's' : ''} on this project
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            <ViewSwitcher
+              value={viewMode}
+              onChange={setViewMode}
+              availableModes={['list', 'table']}
+            />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-36">
+              <SelectTrigger className="w-44">
                 <SelectValue placeholder="Filter" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="needs_action">
+                  {isSupplier ? '⚡ Needs Pricing' : '⚡ Needs My Action'}
+                </SelectItem>
                 <SelectItem value="ACTIVE">Active</SelectItem>
                 <SelectItem value="SUBMITTED">Submitted</SelectItem>
                 <SelectItem value="PRICED">Priced</SelectItem>
@@ -546,49 +626,26 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           </div>
         </div>
 
-        {/* PO Grid */}
-        {filteredPOs.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-medium mb-2">No Purchase Orders</h3>
-              <p className="text-sm text-muted-foreground text-center max-w-sm">
-                {isSupplier
-                  ? 'No purchase orders have been sent to you for this project yet.'
-                  : 'Create a purchase order to request materials from suppliers.'}
-              </p>
-            </CardContent>
-          </Card>
+        {/* Content: Directional Tabs or Flat List */}
+        {showDirectionalTabs ? (
+          <Tabs defaultValue="my" className="w-full">
+            <TabsList>
+              <TabsTrigger value="my">
+                My POs ({myPOs.length})
+              </TabsTrigger>
+              <TabsTrigger value="received">
+                {receivedTabLabel} ({receivedPOs.length})
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="my">
+              {renderPOList(myPOs)}
+            </TabsContent>
+            <TabsContent value="received">
+              {renderPOList(receivedPOs)}
+            </TabsContent>
+          </Tabs>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredPOs.map((po) => {
-              const isPricingOwner = po.pricing_owner_org_id === currentOrgId;
-              const isCreator = po.created_by_org_id === currentOrgId;
-              const isPoSupplier = (po.supplier as { organization_id?: string })?.organization_id === currentOrgId;
-              const canViewPricing = isPricingOwner || isPoSupplier || isCreator;
-              const packKey = po.source_estimate_id && po.source_pack_name
-                ? `${po.source_estimate_id}|${po.source_pack_name}`
-                : null;
-              const packData = packKey ? estimatePackTotals.get(packKey) : null;
-              return (
-                <POCard
-                  key={po.id}
-                  po={po}
-                  onClick={() => setSelectedPOId(po.id)}
-                  onEdit={() => handleEditPO(po)}
-                  onDownload={handleDownload}
-                  onSubmit={handleSubmitToSupplier}
-                  canEdit={canCreatePO}
-                  canSubmit={canCreatePO}
-                  canViewPricing={canViewPricing}
-                  isSupplier={isSupplier}
-                  isInvoiced={invoicedPOIds.has(po.id)}
-                  estimatePackTotal={packData?.total ?? null}
-                  estimatePackItemCount={packData?.itemCount ?? null}
-                />
-              );
-            })}
-          </div>
+          renderPOList(purchaseOrders)
         )}
       </div>
 
