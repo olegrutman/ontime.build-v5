@@ -11,10 +11,19 @@ export interface ActionItem {
   tab?: string; // project tab to navigate to
 }
 
+export interface CriticalScheduleItem {
+  id: string;
+  title: string;
+  progress: number;
+  endDate: string;
+  isOverdue: boolean;
+  daysUntil: number;
+}
+
 export interface ProjectQuickStats {
-  // Action items (role-aware)
   actionItems: ActionItem[];
-  // Summary metrics
+  criticalScheduleItems: CriticalScheduleItem[];
+  totalCriticalCount: number;
   budgetPercent: number;
   budgetUsed: number;
   budgetTotal: number;
