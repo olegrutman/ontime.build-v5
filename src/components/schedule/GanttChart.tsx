@@ -12,6 +12,7 @@ interface GanttChartProps {
   zoom: ZoomLevel;
   criticalPathIds: Set<string>;
   conflictIds: Set<string>;
+  readOnly?: boolean;
 }
 
 const ROW_HEIGHT = 36;
