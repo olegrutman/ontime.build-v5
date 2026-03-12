@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+
 import { Plus, Milestone, Layers, CalendarDays, Trash2, ChevronDown, ChevronRight, Wand2, RefreshCw, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
