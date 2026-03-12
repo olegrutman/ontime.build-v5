@@ -52,6 +52,7 @@ interface PendingCascade {
 
 export function ScheduleTab({ projectId }: ScheduleTabProps) {
   const { items, isLoading, addItem, updateItem, deleteItem } = useProjectSchedule(projectId);
+  const { canEditSchedule, ownerRole, isLoading: ownershipLoading } = useScheduleOwnership(projectId);
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
@@ -62,6 +63,8 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
   const [ganttOpen, setGanttOpen] = useState(true);
   const [tableOpen, setTableOpen] = useState(true);
   const [estimating, setEstimating] = useState(false);
+  const [regenerateOpen, setRegenerateOpen] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   // New state
   const [zoom, setZoom] = useState<ZoomLevel>('day');
