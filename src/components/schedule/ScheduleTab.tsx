@@ -488,9 +488,11 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
                             ) : '—'}
                           </TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={e => { e.stopPropagation(); setDeleteTarget(item.id); }}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            {canEditSchedule && (
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={e => { e.stopPropagation(); setDeleteTarget(item.id); }}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
