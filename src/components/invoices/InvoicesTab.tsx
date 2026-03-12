@@ -486,22 +486,25 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
       <div>
         <h3 className="text-xl font-semibold">{title || 'Invoices'}</h3>
         <p className="text-sm text-muted-foreground">
-          {stats.total} invoice{stats.total !== 1 ? 's' : ''} •{' '}
-          {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0, minimumFractionDigits: 0 }).format(
-            stats.totalBilled
-          )}{' '}
-          billed
+          {currentInvoices.length} invoice{currentInvoices.length !== 1 ? 's' : ''}
         </p>
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as InvoiceStatus | 'ALL')}>
-          <SelectTrigger className="w-[160px]">
+        <ViewSwitcher
+          value={viewMode}
+          onChange={setViewMode}
+          availableModes={['table', 'list']}
+        />
+
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as InvoiceStatus | 'ALL' | 'NEEDS_ACTION')}>
+          <SelectTrigger className="w-[180px]">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Statuses</SelectItem>
+            <SelectItem value="NEEDS_ACTION">⚡ Needs My Action</SelectItem>
             {(Object.keys(INVOICE_STATUS_LABELS) as InvoiceStatus[]).map((status) => (
               <SelectItem key={status} value={status}>
                 {INVOICE_STATUS_LABELS[status]}
@@ -537,11 +540,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
     <div className="space-y-6">
       {renderSOVAlert()}
       {renderHeader(showCreate, title)}
-      <Alert>
-        <AlertCircle className="h-4 w-4" />
-        <AlertDescription>{roleContext.message}</AlertDescription>
-      </Alert>
-      {renderSummaryCards()}
+      <InvoiceActionBar invoices={unfilteredInvoices} isApprover={isApproverView} />
       {renderInvoiceList()}
     </div>
   );
