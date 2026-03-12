@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import { useProjectQuickStats } from '@/hooks/useProjectQuickStats';
 import { ProjectQuickOverview } from './ProjectQuickOverview';
 
@@ -53,14 +53,6 @@ const STATUS_LABELS: Record<string, string> = {
   'archived': 'Archived',
 };
 
-function formatCurrency(amount: number | null): string {
-  if (amount === null) return '—';
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 export function ProjectRow({
   project,

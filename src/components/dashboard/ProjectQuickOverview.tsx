@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
@@ -15,18 +16,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+import { formatCurrency } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import type { ProjectQuickStats, ActionItem, CriticalScheduleItem } from '@/hooks/useProjectQuickStats';
 
 interface ProjectQuickOverviewProps {
   projectId: string;
   stats: ProjectQuickStats;
-}
-
-function formatCurrency(amount: number): string {
-  if (amount >= 1_000_000) return `$${(amount / 1_000_000).toFixed(1)}M`;
-  if (amount >= 1_000) return `$${(amount / 1_000).toFixed(0)}K`;
-  return `$${amount.toLocaleString()}`;
 }
 
 const SEVERITY_STYLES = {
@@ -194,6 +190,53 @@ function KpiTile({
 export function ProjectQuickOverview({ projectId, stats }: ProjectQuickOverviewProps) {
   const navigate = useNavigate();
 
+  // Bug 5 fix: Build KPI tiles array and set dynamic grid cols
+  const kpiTiles = useMemo(() => {
+    const tiles: Array<{
+      icon: React.ElementType;
+      label: string;
+      value: string;
+      subValue?: string;
+      progress?: number;
+    }> = [];
+
+    if (stats.budgetTotal > 0) {
+      tiles.push({
+        icon: DollarSign,
+        label: 'Billed',
+        value: formatCurrency(stats.budgetUsed),
+        subValue: `of ${formatCurrency(stats.budgetTotal)}`,
+        progress: stats.budgetPercent,
+      });
+    }
+
+    if (stats.outstandingBilling > 0) {
+      tiles.push({
+        icon: TrendingUp,
+        label: 'Outstanding',
+        value: formatCurrency(stats.outstandingBilling),
+      });
+    }
+
+    // Bug 6 fix: Show schedule tile when schedule exists, even at 0%
+    if (stats.hasSchedule) {
+      tiles.push({
+        icon: CalendarCheck,
+        label: 'Schedule',
+        value: `${stats.schedulePercent}%`,
+        subValue:
+          stats.scheduleDelta > 0
+            ? `${stats.scheduleDelta}% ahead`
+            : stats.scheduleDelta < 0
+            ? `${Math.abs(stats.scheduleDelta)}% behind`
+            : 'On track',
+        progress: stats.schedulePercent,
+      });
+    }
+
+    return tiles;
+  }, [stats]);
+
   if (stats.loading) {
     return (
       <div className="space-y-3 pt-3 pb-1">
@@ -210,12 +253,21 @@ export function ProjectQuickOverview({ projectId, stats }: ProjectQuickOverviewP
 
   const hasActions = stats.actionItems.length > 0;
   const hasCritical = stats.criticalScheduleItems.length > 0;
-  const hasFinancials = stats.budgetTotal > 0 || stats.outstandingBilling > 0 || stats.schedulePercent > 0;
+  // Bug 7 fix: Also consider scheduleDelta when determining "all clear"
+  const isBehindSchedule = stats.hasSchedule && stats.scheduleDelta < -5;
 
   const navigateToTab = (tab?: string) => {
     const base = `/project/${projectId}`;
     navigate(tab ? `${base}?tab=${tab}` : base);
   };
+
+  // Bug 5 fix: Dynamic grid columns
+  const gridCols =
+    kpiTiles.length === 1
+      ? 'grid-cols-1'
+      : kpiTiles.length === 2
+      ? 'grid-cols-2'
+      : 'grid-cols-3';
 
   return (
     <div className="space-y-3 pt-3 pb-1">
@@ -230,7 +282,7 @@ export function ProjectQuickOverview({ projectId, stats }: ProjectQuickOverviewP
             />
           ))}
         </div>
-      ) : !hasCritical ? (
+      ) : !hasCritical && !isBehindSchedule ? (
         <div className="flex items-center gap-2 rounded-lg border border-emerald-200 dark:border-emerald-800/40 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2.5 text-sm font-medium text-emerald-700 dark:text-emerald-300">
           <CheckCircle2 className="h-4 w-4 shrink-0" />
           All clear — no items need attention
@@ -245,39 +297,11 @@ export function ProjectQuickOverview({ projectId, stats }: ProjectQuickOverviewP
       />
 
       {/* Section 3: Financial KPI Tiles */}
-      {hasFinancials && (
-        <div className="grid grid-cols-3 gap-2">
-          {stats.budgetTotal > 0 && (
-            <KpiTile
-              icon={DollarSign}
-              label="Billed"
-              value={formatCurrency(stats.budgetUsed)}
-              subValue={`of ${formatCurrency(stats.budgetTotal)}`}
-              progress={stats.budgetPercent}
-            />
-          )}
-          {stats.outstandingBilling > 0 && (
-            <KpiTile
-              icon={TrendingUp}
-              label="Outstanding"
-              value={formatCurrency(stats.outstandingBilling)}
-            />
-          )}
-          {stats.schedulePercent > 0 && (
-            <KpiTile
-              icon={CalendarCheck}
-              label="Schedule"
-              value={`${stats.schedulePercent}%`}
-              subValue={
-                stats.scheduleDelta > 0
-                  ? `${stats.scheduleDelta}% ahead`
-                  : stats.scheduleDelta < 0
-                  ? `${Math.abs(stats.scheduleDelta)}% behind`
-                  : 'On track'
-              }
-              progress={stats.schedulePercent}
-            />
-          )}
+      {kpiTiles.length > 0 && (
+        <div className={cn('grid gap-2', gridCols)}>
+          {kpiTiles.map((tile) => (
+            <KpiTile key={tile.label} {...tile} />
+          ))}
         </div>
       )}
 
