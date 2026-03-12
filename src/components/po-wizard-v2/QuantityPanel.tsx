@@ -209,7 +209,15 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
               >
                 <Minus className="h-5 w-5" />
               </Button>
-              <span className="text-3xl font-bold w-20 text-center">{lengthFt}</span>
+              <Input
+                type="number"
+                value={lengthFt}
+                onChange={(e) => setLengthFt(Math.min(60, Math.max(1, parseInt(e.target.value) || 0)))}
+                onBlur={() => { if (!lengthFt || lengthFt < 1) setLengthFt(1); }}
+                className="text-3xl font-bold w-24 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                min={1}
+                max={60}
+              />
               <Button
                 variant="outline"
                 size="icon"
