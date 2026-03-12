@@ -350,8 +350,11 @@ export function useDashboardData(): DashboardData {
         const projectContracts = contracts.filter(c => c.project_id === project.id);
         
         if (orgType === 'GC') {
-          // GC revenue = sum of all contracts where GC is the to_org (what TCs bill GC)
-          const gcContracts = projectContracts.filter(c => c.to_org_id === currentOrg.id);
+          // GC revenue = sum of base contracts where GC is to_org (exclude WO/WO Labor)
+          const gcContracts = projectContracts.filter(c => 
+            c.to_org_id === currentOrg.id && 
+            c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
+          );
           contractValue = gcContracts.length > 0
             ? gcContracts.reduce((sum, c) => sum + (c.contract_sum || 0), 0)
             : null;
