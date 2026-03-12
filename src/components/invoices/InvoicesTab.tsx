@@ -45,10 +45,11 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'ALL'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'ALL' | 'NEEDS_ACTION'>('ALL');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [invoiceDirection, setInvoiceDirection] = useState<'sent' | 'received'>('sent');
+  const [viewMode, setViewMode] = useState<ViewMode>('table');
   // GC sub-tab: 'from_tc' or 'from_supplier'
   const [gcSubTab, setGcSubTab] = useState<'from_tc' | 'from_supplier'>('from_tc');
 
