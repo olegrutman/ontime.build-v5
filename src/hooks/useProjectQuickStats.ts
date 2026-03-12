@@ -118,22 +118,33 @@ export function useProjectQuickStats(
       const allPos = poRes.data ?? [];
       const allContracts = contractRes.data ?? [];
 
-      // Bug 3 & 8 fix: Filter contracts and invoices by orgId when available
+      // Directional contract/invoice filtering by orgId
       let contracts = allContracts;
       let invoices = allInvoices;
+      let receivedInvoices: typeof allInvoices = [];
       let workOrders = allWorkOrders;
       let pos = allPos;
 
       if (orgId) {
-        // Only contracts where this org is a party
-        contracts = allContracts.filter(
-          (c) => c.from_org_id === orgId || c.to_org_id === orgId
-        );
-        const relevantContractIds = new Set(contracts.map((c) => c.id));
+        // Receivable contracts: where this org is the contractor (from_org_id)
+        const sentContracts = allContracts.filter((c) => c.from_org_id === orgId);
+        // Payable contracts: where this org is the client (to_org_id)
+        const receivedContracts = allContracts.filter((c) => c.to_org_id === orgId);
 
-        // Only invoices linked to relevant contracts, or unlinked invoices
+        // Budget = only sent contracts (what the org is contracted for)
+        contracts = sentContracts;
+
+        const sentContractIds = new Set(sentContracts.map((c) => c.id));
+        const receivedContractIds = new Set(receivedContracts.map((c) => c.id));
+
+        // Invoices for budget/billing = only on sent contracts
         invoices = allInvoices.filter(
-          (i) => !i.contract_id || relevantContractIds.has(i.contract_id)
+          (i) => i.contract_id && sentContractIds.has(i.contract_id)
+        );
+
+        // Invoices received (from subs) for action items
+        receivedInvoices = allInvoices.filter(
+          (i) => i.contract_id && receivedContractIds.has(i.contract_id)
         );
 
         // Filter work orders by org
@@ -145,13 +156,13 @@ export function useProjectQuickStats(
         );
       }
 
-      // ── Budget metrics ──
+      // ── Budget metrics (receivables only) ──
       const budgetTotal = contracts.reduce((s, c) => s + (c.contract_sum ?? 0), 0);
       const approvedPaid = invoices.filter((i) => i.status === 'APPROVED' || i.status === 'PAID');
       const budgetUsed = approvedPaid.reduce((s, i) => s + (i.total_amount ?? 0), 0);
       const budgetPercent = budgetTotal > 0 ? Math.round((budgetUsed / budgetTotal) * 100) : 0;
 
-      // Bug 4 fix: Exclude REJECTED invoices from totalBilled
+      // Exclude REJECTED invoices from totalBilled
       const totalBilled = invoices
         .filter((i) => i.status !== 'REJECTED')
         .reduce((s, i) => s + (i.total_amount ?? 0), 0);
@@ -268,18 +279,32 @@ export function useProjectQuickStats(
           });
         }
       } else if (orgType === 'TC' || orgType === 'FC') {
-        // Unpaid invoices
-        const unpaidInvoices = invoices.filter(
+        // Invoices I SENT that are unpaid (receivables)
+        const myUnpaidInvoices = invoices.filter(
           (i) => i.status === 'SUBMITTED' || i.status === 'APPROVED'
         );
-        const unpaidTotal = unpaidInvoices.reduce((s, i) => s + (i.total_amount ?? 0), 0);
-        if (unpaidInvoices.length > 0) {
+        const myUnpaidTotal = myUnpaidInvoices.reduce((s, i) => s + (i.total_amount ?? 0), 0);
+        if (myUnpaidInvoices.length > 0) {
           actionItems.push({
             key: 'unpaid-invoices',
-            label: `${unpaidInvoices.length} invoice${unpaidInvoices.length > 1 ? 's' : ''} unpaid`,
-            count: unpaidInvoices.length,
-            amount: unpaidTotal,
-            severity: unpaidTotal > 10000 ? 'red' : 'amber',
+            label: `${myUnpaidInvoices.length} invoice${myUnpaidInvoices.length > 1 ? 's' : ''} awaiting payment`,
+            count: myUnpaidInvoices.length,
+            amount: myUnpaidTotal,
+            severity: myUnpaidTotal > 10000 ? 'red' : 'amber',
+            tab: 'invoices',
+          });
+        }
+
+        // Invoices I RECEIVED that need my review (payables)
+        const invoicesToReview = receivedInvoices.filter((i) => i.status === 'SUBMITTED');
+        const reviewTotal = invoicesToReview.reduce((s, i) => s + (i.total_amount ?? 0), 0);
+        if (invoicesToReview.length > 0) {
+          actionItems.push({
+            key: 'invoices-to-review',
+            label: `${invoicesToReview.length} invoice${invoicesToReview.length > 1 ? 's' : ''} to review`,
+            count: invoicesToReview.length,
+            amount: reviewTotal,
+            severity: 'amber',
             tab: 'invoices',
           });
         }
