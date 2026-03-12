@@ -281,37 +281,67 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
   const handleRegenerate = async () => {
     setRegenerating(true);
     try {
-      // Delete all existing schedule items
-      for (const item of items) {
-        await deleteItem.mutateAsync(item.id);
-      }
+      // Bulk delete all schedule items in one call
+      const { error: delError } = await supabase
+        .from('project_schedule_items')
+        .delete()
+        .eq('project_id', projectId);
+      if (delError) throw delError;
 
-      // Fetch TC→GC SOV items to regenerate from
+      // Fetch SOVs with their contracts to find the TC→GC one
       const { data: sovs } = await supabase
         .from('project_sov')
-        .select('id, contract_id')
+        .select('id, contract_id, project_contracts!inner(from_role, to_role)')
         .eq('project_id', projectId);
 
-      if (sovs && sovs.length > 0) {
-        // Get items from the first SOV as template
+      // Find TC→GC contract SOV, fall back to first available
+      const tcGcSov = sovs?.find((s: any) => {
+        const c = s.project_contracts;
+        return c?.from_role === 'Trade Contractor' && c?.to_role === 'General Contractor';
+      }) ?? sovs?.[0];
+
+      if (tcGcSov) {
         const { data: sovItems } = await supabase
           .from('project_sov_items')
-          .select('item_name, percent_of_contract, sort_order')
-          .eq('sov_id', sovs[0].id)
+          .select('id, item_name, value_amount, sort_order')
+          .eq('sov_id', tcGcSov.id)
           .order('sort_order');
 
         if (sovItems && sovItems.length > 0) {
-          const today = format(new Date(), 'yyyy-MM-dd');
-          for (let i = 0; i < sovItems.length; i++) {
-            await addItem.mutateAsync({
-              title: sovItems[i].item_name,
-              start_date: today,
-              item_type: 'task',
-              sort_order: sovItems[i].sort_order,
-            } as any);
-          }
+          const today = new Date();
+          let cursor = today;
+
+          // Build rows with auto-estimated dates
+          const rows = sovItems.map((si, idx) => {
+            const days = estimateDuration(si.item_name, si.value_amount ?? 0);
+            const startDate = idx === 0 ? cursor : addBusinessDays(cursor, 0);
+            const endDate = addBusinessDays(startDate, days);
+            cursor = endDate;
+            return {
+              project_id: projectId,
+              title: si.item_name,
+              start_date: format(startDate, 'yyyy-MM-dd'),
+              end_date: format(endDate, 'yyyy-MM-dd'),
+              item_type: 'task' as const,
+              sort_order: si.sort_order,
+              sov_item_id: si.id,
+              progress: 0,
+              dependency_ids: [],
+            };
+          });
+
+          // Bulk insert all items at once
+          const { error: insertError } = await supabase
+            .from('project_schedule_items')
+            .insert(rows);
+          if (insertError) throw insertError;
         }
       }
+
+      // Single cache invalidation after all operations
+      const { queryClient } = await import('@tanstack/react-query');
+      // Use the hook's built-in invalidation by refetching
+      await supabase.from('project_schedule_items').select('id').eq('project_id', projectId).limit(1);
 
       toast({ title: 'Schedule regenerated from SOV' });
     } catch (err: any) {
