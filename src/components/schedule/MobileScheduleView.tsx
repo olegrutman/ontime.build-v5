@@ -14,7 +14,7 @@ interface MobileScheduleViewProps {
   readOnly?: boolean;
 }
 
-export function MobileScheduleView({ items, conflicts, onAdjustDuration, onChangeStartDate }: MobileScheduleViewProps) {
+export function MobileScheduleView({ items, conflicts, onAdjustDuration, onChangeStartDate, readOnly }: MobileScheduleViewProps) {
   const { projectStart, projectEnd, daysRemaining, phases } = useMemo(() => {
     if (!items.length) {
       const today = new Date();
