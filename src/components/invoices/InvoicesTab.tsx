@@ -123,20 +123,27 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
     return gcContract?.to_org_name || 'GC';
   }, [contracts]);
 
-  // Current view invoices based on direction and role
+  // Determine if current view is "approver" side
+  const isApproverView = useMemo(() => {
+    if (currentOrgType === 'GC') return true;
+    if (currentOrgType === 'TC' && invoiceDirection === 'received') return true;
+    return false;
+  }, [currentOrgType, invoiceDirection]);
+
+  // Current view invoices based on direction and role, with NEEDS_ACTION filter
   const currentInvoices = useMemo(() => {
-    if (currentOrgType === 'SUPPLIER') {
-      return sentInvoices;
+    let base: Invoice[];
+    if (currentOrgType === 'SUPPLIER') base = sentInvoices;
+    else if (currentOrgType === 'GC') base = gcSubTab === 'from_tc' ? receivedFromContracts : receivedFromSuppliers;
+    else if (currentOrgType === 'TC') base = invoiceDirection === 'sent' ? sentInvoices : allReceivedInvoices;
+    else base = sentInvoices;
+
+    if (statusFilter === 'NEEDS_ACTION') {
+      const actionStatuses = isApproverView ? ['SUBMITTED'] : ['DRAFT'];
+      return base.filter(i => actionStatuses.includes(i.status));
     }
-    if (currentOrgType === 'GC') {
-      return gcSubTab === 'from_tc' ? receivedFromContracts : receivedFromSuppliers;
-    }
-    if (currentOrgType === 'TC') {
-      return invoiceDirection === 'sent' ? sentInvoices : allReceivedInvoices;
-    }
-    // FC
-    return sentInvoices;
-  }, [currentOrgType, gcSubTab, invoiceDirection, sentInvoices, receivedFromContracts, receivedFromSuppliers, allReceivedInvoices]);
+    return base;
+  }, [currentOrgType, gcSubTab, invoiceDirection, sentInvoices, receivedFromContracts, receivedFromSuppliers, allReceivedInvoices, statusFilter, isApproverView]);
 
   useEffect(() => {
     const fetchContracts = async () => {
