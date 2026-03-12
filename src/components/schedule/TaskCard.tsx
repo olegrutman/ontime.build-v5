@@ -12,8 +12,8 @@ interface TaskCardProps {
   projectStart: Date;
   projectEnd: Date;
   isConflict: boolean;
-  onAdjustDuration: (id: string, delta: number) => void;
-  onChangeStartDate: (id: string, date: string) => void;
+  onAdjustDuration?: (id: string, delta: number) => void;
+  onChangeStartDate?: (id: string, date: string) => void;
 }
 
 const STATUS_PILL: Record<string, { label: string; className: string }> = {
