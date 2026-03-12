@@ -1,51 +1,59 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-## Features Built
+# Redesign PO Tab to Match Invoices Tab Pattern
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
+## What I Understood
 
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
+You want the Purchase Orders tab to follow the same layout and UX patterns as the Invoices tab. Currently the PO tab is a flat grid with a status dropdown -- no directional tabs, no action bar metrics, no table view, no "Needs My Action" filter. The Invoices tab has all of these and is much more usable.
 
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
+## What Changes
 
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
+### 1. Directional Tabs (Sent vs Received)
 
-## Files Created/Modified
-| File | Action |
+Just like Invoices separates "Sent to GC" from "From Field Crews & Suppliers":
+
+- **TC view**: "My POs" (POs the TC created) | "From GC" (POs where GC is pricing owner and TC can see)
+- **GC view**: "My POs" (POs created by GC) | "From Trade Contractors" (POs created by TCs on the project)
+- **Supplier view**: Single view -- POs sent to them (no tabs needed, same as today)
+- **FC view**: Single view or hidden (FC typically doesn't interact with POs)
+
+### 2. PO Action Bar (NEW -- mirrors InvoiceActionBar)
+
+Three metric cards across the top:
+
+| Needs Your Action | Awaiting Delivery | Delivered This Month |
+|---|---|---|
+| 2 ($4,500) | 1 ($21,250) | $13,800 |
+
+- **Needs Your Action**: For TC/GC = ACTIVE (draft) POs. For Supplier = SUBMITTED (needs pricing).
+- **Awaiting Delivery**: ORDERED status POs.
+- **Delivered This Month**: DELIVERED POs delivered in current month, with total spend.
+
+### 3. View Switcher (Table + Card)
+
+Add the same `ViewSwitcher` component with table and list (card) modes. Create a `POTableView` component similar to `InvoiceTableView` with sortable columns: PO Number, Supplier, Items, Status, Total, Date, Age.
+
+### 4. "Needs My Action" Filter
+
+Add a "Needs My Action" option to the status filter dropdown, just like invoices. For TC/GC this filters to ACTIVE POs. For Supplier, it filters to SUBMITTED POs.
+
+### 5. Role Context Messages
+
+Add contextual helper text like invoices does -- different empty states and descriptions per role.
+
+## Files to Create/Modify
+
+| File | Change |
 |------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+| `src/components/purchase-orders/POActionBar.tsx` | **NEW** -- 3 metric cards (mirrors InvoiceActionBar) |
+| `src/components/purchase-orders/POTableView.tsx` | **NEW** -- Sortable table view (mirrors InvoiceTableView) |
+| `src/components/project/PurchaseOrdersTab.tsx` | Redesign: add directional tabs, action bar, view switcher, "Needs My Action" filter, role context |
+
+## What Stays the Same
+
+- `POCard` component (used in card/list view mode)
+- `PODetail` component (detail view on click)
+- `POWizardV2` (create/edit wizards)
+- All data fetching and CRUD logic
+- Supplier filtering (only sees their own POs, excludes ACTIVE)
+
