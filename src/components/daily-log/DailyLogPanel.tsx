@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
 import { CalendarDays, ChevronLeft, ChevronRight, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,25 @@ import type { WeatherData, SafetyIncident } from '@/types/dailyLog';
 
 interface DailyLogPanelProps {
   projectId: string;
+}
+
+function useDebounced<T>(callback: (value: T) => void, delay: number) {
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const callbackRef = useRef(callback);
+  callbackRef.current = callback;
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
+
+  return useCallback((value: T) => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      callbackRef.current(value);
+    }, delay);
+  }, [delay]);
 }
 
 export function DailyLogPanel({ projectId }: DailyLogPanelProps) {
@@ -54,14 +73,30 @@ export function DailyLogPanel({ projectId }: DailyLogPanelProps) {
     enabled: !!projectId,
   });
 
-  // Auto-save helpers
-  const handleWeatherChange = useCallback((weather: WeatherData) => {
+  // Debounced save helpers (500ms for taps, 800ms for typing)
+  const debouncedWeatherSave = useDebounced<WeatherData>((weather) => {
     updateLog.mutate({ weather_data: weather as any });
-  }, [updateLog]);
+  }, 500);
+
+  const debouncedManpowerSave = useDebounced<{ org_id?: string | null; trade: string; headcount: number }[]>((entries) => {
+    upsertManpower.mutate(entries);
+  }, 500);
+
+  const debouncedDelaysSave = useDebounced<{ cause: string; hours_lost: number; notes?: string }[]>((entries) => {
+    upsertDelays.mutate(entries);
+  }, 500);
+
+  const debouncedNotesSave = useDebounced<string>((notes) => {
+    updateLog.mutate({ notes });
+  }, 800);
+
+  const handleWeatherChange = useCallback((weather: WeatherData) => {
+    debouncedWeatherSave(weather);
+  }, [debouncedWeatherSave]);
 
   const handleManpowerChange = useCallback((entries: { org_id?: string | null; trade: string; headcount: number }[]) => {
-    upsertManpower.mutate(entries);
-  }, [upsertManpower]);
+    debouncedManpowerSave(entries);
+  }, [debouncedManpowerSave]);
 
   const handleProgressChange = useCallback((itemId: string, progress: number) => {
     updateScheduleItem.mutate({ id: itemId, progress });
@@ -72,12 +107,12 @@ export function DailyLogPanel({ projectId }: DailyLogPanelProps) {
   }, [updateLog]);
 
   const handleDelaysChange = useCallback((entries: { cause: string; hours_lost: number; notes?: string }[]) => {
-    upsertDelays.mutate(entries);
-  }, [upsertDelays]);
+    debouncedDelaysSave(entries);
+  }, [debouncedDelaysSave]);
 
   const handleNotesChange = useCallback((notes: string) => {
-    updateLog.mutate({ notes });
-  }, [updateLog]);
+    debouncedNotesSave(notes);
+  }, [debouncedNotesSave]);
 
   const handleSubmit = () => {
     submitLog.mutate(undefined, {
@@ -126,6 +161,7 @@ export function DailyLogPanel({ projectId }: DailyLogPanelProps) {
       />
 
       <ManpowerCard
+        key={`manpower-${dateStr}`}
         entries={manpower.map(m => ({ org_id: m.org_id, trade: m.trade, headcount: m.headcount }))}
         projectTrades={projectTrades}
         onChange={handleManpowerChange}
@@ -151,6 +187,7 @@ export function DailyLogPanel({ projectId }: DailyLogPanelProps) {
       />
 
       <DelaysCard
+        key={`delays-${dateStr}`}
         delays={delays.map(d => ({ cause: d.cause, hours_lost: Number(d.hours_lost) }))}
         onChange={handleDelaysChange}
         disabled={isSubmitted}

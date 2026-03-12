@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { PHOTO_TAGS } from '@/types/dailyLog';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 interface PhotoEntry {
   id: string;
@@ -22,6 +23,7 @@ interface PhotosCardProps {
 export function PhotosCard({ photos, onAdd, onDelete, disabled }: PhotosCardProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
+  const { toast } = useToast();
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -34,7 +36,13 @@ export function PhotosCard({ photos, onAdd, onDelete, disabled }: PhotosCardProp
       .from('daily-log-photos')
       .upload(path, file);
 
-    if (!error) {
+    if (error) {
+      toast({
+        title: 'Photo upload failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
       onAdd({ storage_path: path, tag: 'progress' });
     }
 
