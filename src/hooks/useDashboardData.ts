@@ -458,7 +458,7 @@ export function useDashboardData(): DashboardData {
 
       // Outstanding to Collect
       const invoicesToCollect = allInvoices.filter(i => {
-        if (i.status !== 'APPROVED' || !i.contract_id) return false;
+        if (!['SUBMITTED', 'APPROVED'].includes(i.status) || !i.contract_id) return false;
         const contract = contractDetailMap.get(i.contract_id);
         return contract?.from_org_id === currentOrg.id;
       });
