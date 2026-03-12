@@ -1,10 +1,9 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Plus, Receipt, Filter, AlertCircle, Send, Inbox, AlertTriangle, ArrowRight, FileEdit, Clock, CheckCircle2, Wallet, DollarSign, Package } from 'lucide-react';
+import { Plus, Receipt, Filter, AlertCircle, Send, Inbox, AlertTriangle, ArrowRight, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -14,8 +13,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ViewSwitcher, ViewMode } from '@/components/ui/view-switcher';
 import { CreateInvoiceFromSOV } from './CreateInvoiceFromSOV';
 import { InvoiceCard } from './InvoiceCard';
+import { InvoiceTableView } from './InvoiceTableView';
+import { InvoiceActionBar } from './InvoiceActionBar';
 import { InvoiceDetail } from './InvoiceDetail';
 import { Invoice, InvoiceStatus, INVOICE_STATUS_LABELS } from '@/types/invoice';
 import { useAuth } from '@/hooks/useAuth';
