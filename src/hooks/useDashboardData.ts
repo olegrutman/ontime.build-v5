@@ -350,16 +350,25 @@ export function useDashboardData(): DashboardData {
         const projectContracts = contracts.filter(c => c.project_id === project.id);
         
         if (orgType === 'GC') {
-          const gcContract = projectContracts.find(c => c.to_role === 'General Contractor');
-          contractValue = gcContract?.contract_sum || null;
+          // GC revenue = sum of all contracts where GC is the to_org (what TCs bill GC)
+          const gcContracts = projectContracts.filter(c => c.to_org_id === currentOrg.id);
+          contractValue = gcContracts.length > 0
+            ? gcContracts.reduce((sum, c) => sum + (c.contract_sum || 0), 0)
+            : null;
         } else if (orgType === 'TC') {
-          const tcContract = projectContracts.find(c => c.to_role === 'Trade Contractor');
-          contractValue = tcContract?.contract_sum || null;
+          // TC revenue = sum of all contracts where TC is from_org (what TC earns from GC)
+          const tcRevenueContracts = projectContracts.filter(c => c.from_org_id === currentOrg.id);
+          contractValue = tcRevenueContracts.length > 0
+            ? tcRevenueContracts.reduce((sum, c) => sum + (c.contract_sum || 0), 0)
+            : null;
         } else if (orgType === 'FC') {
-          const fcContract = projectContracts.find(c => 
-            c.to_role === 'Field Crew' && c.to_org_id === currentOrg.id
+          // FC revenue = sum of contracts where FC is from_org
+          const fcContracts = projectContracts.filter(c => 
+            c.from_org_id === currentOrg.id
           );
-          contractValue = fcContract?.contract_sum || null;
+          contractValue = fcContracts.length > 0
+            ? fcContracts.reduce((sum, c) => sum + (c.contract_sum || 0), 0)
+            : null;
         }
 
         const projectPendingCOs = pendingCOs.filter(co => co.project_id === project.id).length;
