@@ -42,12 +42,9 @@ export function DashboardProjectsTable({ projects, loading }: Props) {
     <div className="bg-card border border-border rounded-lg overflow-hidden">
       <div className="flex items-center justify-between px-[18px] py-3">
         <h3 className="font-heading text-[1rem] font-bold text-foreground">Active Projects</h3>
-        <button
-          onClick={() => navigate('/projects')}
-          className="text-[0.75rem] font-medium text-primary hover:text-primary/80 transition-colors"
-        >
-          All Projects →
-        </button>
+        <span className="text-[0.75rem] font-medium text-muted-foreground">
+          {activeProjects.length} active
+        </span>
       </div>
 
       <div className="overflow-x-auto">

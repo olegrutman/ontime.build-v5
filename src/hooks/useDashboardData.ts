@@ -572,15 +572,16 @@ export function useDashboardData(): DashboardData {
       } else if (orgType === 'GC') {
         // GC Revenue = owner_contract_value or sum of contracts where GC is to_org (what TCs bill GC)
         // GC Costs = sum of contracts where GC is to_org (amounts owed to TCs) + WO totals
+        const isBaseContract = (c: any) => c.trade !== 'Work Order' && c.trade !== 'Work Order Labor';
         contracts.forEach(c => {
-          if (c.to_org_id === currentOrg.id) {
+          if (c.to_org_id === currentOrg.id && isBaseContract(c)) {
             totalCosts += c.contract_sum || 0;
           }
         });
 
         // Use owner_contract_value as revenue if available
         const ownerValues = contracts
-          .filter(c => c.to_org_id === currentOrg.id)
+          .filter(c => c.to_org_id === currentOrg.id && isBaseContract(c))
           .map(c => (c as any).owner_contract_value)
           .filter((v: any) => v != null && v > 0);
         if (ownerValues.length > 0) {
