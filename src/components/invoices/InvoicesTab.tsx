@@ -271,6 +271,14 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
     }
   };
 
+  // Unfiltered invoices for action bar (always shows full picture)
+  const unfilteredInvoices = useMemo(() => {
+    if (currentOrgType === 'SUPPLIER') return sentInvoices;
+    if (currentOrgType === 'GC') return gcSubTab === 'from_tc' ? receivedFromContracts : receivedFromSuppliers;
+    if (currentOrgType === 'TC') return invoiceDirection === 'sent' ? sentInvoices : allReceivedInvoices;
+    return sentInvoices;
+  }, [currentOrgType, gcSubTab, invoiceDirection, sentInvoices, receivedFromContracts, receivedFromSuppliers, allReceivedInvoices]);
+
   if (selectedInvoiceId) {
     return (
       <InvoiceDetail
@@ -281,14 +289,6 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
       />
     );
   }
-
-  // Unfiltered invoices for action bar (always shows full picture)
-  const unfilteredInvoices = useMemo(() => {
-    if (currentOrgType === 'SUPPLIER') return sentInvoices;
-    if (currentOrgType === 'GC') return gcSubTab === 'from_tc' ? receivedFromContracts : receivedFromSuppliers;
-    if (currentOrgType === 'TC') return invoiceDirection === 'sent' ? sentInvoices : allReceivedInvoices;
-    return sentInvoices;
-  }, [currentOrgType, gcSubTab, invoiceDirection, sentInvoices, receivedFromContracts, receivedFromSuppliers, allReceivedInvoices]);
 
   const getRoleContext = () => {
     if (currentOrgType === 'GC') {
