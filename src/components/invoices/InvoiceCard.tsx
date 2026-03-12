@@ -130,6 +130,7 @@ export function InvoiceCard({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <InvoiceAgeBadge invoice={invoice} />
             <HoverActions actions={hoverActions} />
             <StatusColumn
               value={invoice.status}
