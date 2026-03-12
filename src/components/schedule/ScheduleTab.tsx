@@ -431,6 +431,7 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
                 zoom={zoom}
                 criticalPathIds={criticalPathIds}
                 conflictIds={conflictIds}
+                readOnly={!canEditSchedule}
               />
             </CollapsibleContent>
           </Collapsible>
