@@ -54,6 +54,7 @@ interface PendingCascade {
 export function ScheduleTab({ projectId }: ScheduleTabProps) {
   const { items, isLoading, addItem, updateItem, deleteItem } = useProjectSchedule(projectId);
   const { canEditSchedule, ownerRole, isLoading: ownershipLoading } = useScheduleOwnership(projectId);
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
