@@ -1,51 +1,63 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-## Features Built
+# Invoice Page Redesign -- Analysis and Proposal
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
+## What I See Today (The Problems)
 
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
+After reviewing the full invoice page code, here is what is happening and why it is not ideal:
 
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
+### 1. Cards are nice to look at, but terrible for managing invoices
+Right now every invoice is a card in a grid. When you have 5 invoices, cards are fine. When you have 20 or 50, you cannot scan them. You cannot sort by amount, date, or status. You cannot compare two invoices side by side. In real construction billing, a project manager needs to see a list and immediately spot which invoices are overdue, which are the biggest, and which need their action. Cards do not let you do that.
 
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
+### 2. No aging information
+This is the biggest gap. In construction, the single most important thing about an unpaid invoice is how old it is. "This invoice was submitted 45 days ago and still not approved" is critical information. Right now there is zero indication of aging. A 2-day-old submitted invoice looks identical to a 60-day-old one.
 
-## Files Created/Modified
-| File | Action |
+### 3. Summary cards are counts, not insights
+The 5 summary tiles show Draft: 2, Pending: 3, Approved: 1, Paid: 4, Total Billed: $50K. These are just counts. They do not tell you "You have $21K sitting unpaid for over 30 days" which is what actually matters for cash flow.
+
+### 4. The role context alert is noise
+There is a blue alert box that says "Invoices you send to the General Contractor for completed work" every time you visit the tab. After the first visit, this is just visual clutter taking up space.
+
+### 5. No quick-action workflow for approvers
+If a GC has 8 invoices to review, they have to click into each one individually. There is no way to approve multiple invoices at once or even see a summary of what is waiting for them at a glance.
+
+---
+
+## What I Propose
+
+### A. Replace the card grid with a table view (default) + card view toggle
+Add a table as the primary view. Each row shows: Invoice #, Date, Billing Period, Amount, Status badge, and an **Age column** (e.g., "12d" in green, "34d" in amber, "62d" in red). Sortable by any column. Keep the card grid as an optional toggle for users who prefer it.
+
+### B. Replace summary tiles with an actionable summary bar
+Instead of 5 count cards, show a single compact bar with:
+- **Needs Your Action**: count + total $ (invoices you can approve/submit)
+- **Awaiting Payment**: count + total $ + average age
+- **Paid This Month**: total $
+This is 1 row instead of 5 cards, and every number is meaningful.
+
+### C. Add aging badges to every invoice
+Color-coded age indicator on each invoice (table row or card):
+- Green: 0-14 days
+- Amber: 15-30 days  
+- Red: 30+ days
+Calculated from `submitted_at` (or `approved_at` for approved invoices awaiting payment).
+
+### D. Remove the static role context alert
+The Sent/Received tabs already make it obvious what direction you are looking at. Remove the always-visible blue alert box.
+
+### E. Add "Needs Action" filter preset
+Add a quick-filter button next to the status dropdown: "Needs My Action" that automatically shows only invoices the current user can act on (DRAFT for creators, SUBMITTED for approvers, APPROVED for payers).
+
+---
+
+## Technical Changes
+
+| File | Change |
 |------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+| `src/components/invoices/InvoicesTab.tsx` | Replace summary cards with compact action bar. Remove role context alert. Add table/card view toggle. Add "Needs Action" quick filter. |
+| `src/components/invoices/InvoiceTableView.tsx` | **New file.** Sortable table with columns: Invoice #, Date, Amount, Status, Age, Actions. Clickable rows navigate to detail. |
+| `src/components/invoices/InvoiceCard.tsx` | Add aging badge (calculate days since submission). |
+| `src/components/invoices/InvoiceActionBar.tsx` | **New file.** Compact summary bar showing "Needs Action", "Awaiting Payment", "Paid This Month" with counts and amounts. |
+
+No database changes needed -- all aging calculations use existing `submitted_at`, `approved_at`, and `created_at` timestamps.
+
