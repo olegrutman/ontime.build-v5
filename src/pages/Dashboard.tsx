@@ -11,12 +11,15 @@ import { useToast } from '@/hooks/use-toast';
 import {
   ArchiveProjectDialog,
   CompleteProjectDialog,
+  AddReminderDialog,
+  RemindersTile,
   type ProjectStatusFilter,
 } from '@/components/dashboard';
+import { DashboardWelcome } from '@/components/dashboard/DashboardWelcome';
+import { DashboardFinancialSnapshot } from '@/components/dashboard/DashboardFinancialSnapshot';
 import { DashboardAttentionBanner } from '@/components/dashboard/DashboardAttentionBanner';
 import { DashboardProjectList } from '@/components/dashboard/DashboardProjectList';
 import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
-import { DashboardQuickStats } from '@/components/dashboard/DashboardQuickStats';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { useProfile } from '@/hooks/useProfile';
 
@@ -30,6 +33,8 @@ export default function Dashboard() {
     attentionItems,
     pendingInvites,
     reminders,
+    billing,
+    financials,
     loading: dataLoading,
     refetch,
   } = useDashboardData();
@@ -43,10 +48,12 @@ export default function Dashboard() {
       hasAutoSwitched.current = true;
     }
   }, [dataLoading, statusCounts.setup]);
+
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [projectToArchive, setProjectToArchive] = useState<{ id: string; name: string } | null>(null);
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [projectToComplete, setProjectToComplete] = useState<{ id: string; name: string } | null>(null);
+  const [addReminderOpen, setAddReminderOpen] = useState(false);
 
   const { profile, organization, userSettings, updateUserSettings } = useProfile();
   const currentOrg = userOrgRoles[0]?.organization;
@@ -64,9 +71,7 @@ export default function Dashboard() {
     }
   };
 
-  // 9. Optimistic UI for unarchive
   const handleUnarchive = useCallback(async (projectId: string) => {
-    // Optimistic: trigger refetch immediately after API call
     const { error } = await supabase
       .from('projects')
       .update({ status: 'active' })
@@ -92,7 +97,6 @@ export default function Dashboard() {
     updateProjectStatus(projectId, status);
   };
 
-  // 9. Optimistic UI for status changes
   const updateProjectStatus = useCallback(async (projectId: string, status: 'active' | 'on_hold' | 'completed') => {
     const statusLabels = { active: 'Active', on_hold: 'On Hold', completed: 'Completed' };
     const { error } = await supabase.from('projects').update({ status }).eq('id', projectId);
@@ -127,6 +131,32 @@ export default function Dashboard() {
     refetch();
     setArchiveDialogOpen(false);
     setProjectToArchive(null);
+  };
+
+  const handleAddReminder = async (reminder: { title: string; due_date: string; project_id?: string }) => {
+    if (!user || !currentOrg) return;
+    const { error } = await supabase.from('reminders').insert({
+      title: reminder.title,
+      due_date: reminder.due_date,
+      project_id: reminder.project_id || null,
+      user_id: user.id,
+      org_id: currentOrg.id,
+    });
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to add reminder', variant: 'destructive' });
+    } else {
+      toast({ title: 'Reminder Added' });
+      refetch();
+    }
+  };
+
+  const handleCompleteReminder = async (id: string) => {
+    const { error } = await supabase.from('reminders').update({ completed: true }).eq('id', id);
+    if (error) {
+      toast({ title: 'Error', description: 'Failed to complete reminder', variant: 'destructive' });
+    } else {
+      refetch();
+    }
   };
 
   const loading = authLoading || dataLoading;
@@ -206,16 +236,11 @@ export default function Dashboard() {
   const handleMarkPartOfTeam = () => {
     if (orgId) {
       localStorage.setItem(`ontime_part_of_team_${orgId}`, 'true');
-      setSoleMember(true); // marks step as done without claiming sole member
+      setSoleMember(true);
     }
   };
 
-  // Quick stats
-  const openWorkOrders = attentionItems.filter(i => i.type === 'change_order').length;
-  const pendingInvoicesCount = attentionItems.filter(i => i.type === 'invoice').length;
-  const now = new Date();
-  const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-  const remindersDue = reminders.filter(r => new Date(r.due_date) <= weekFromNow).length;
+  const totalAttention = attentionItems.length + pendingInvites.length;
 
   return (
     <AppLayout
@@ -224,7 +249,7 @@ export default function Dashboard() {
       onNewClick={() => navigate('/create-project')}
       newButtonLabel="New Project"
     >
-      <div className="space-y-4 sm:space-y-6">
+      <div className="space-y-4 sm:space-y-5">
         {showOnboarding && (
           <OnboardingChecklist
             profileComplete={profileComplete}
@@ -240,16 +265,29 @@ export default function Dashboard() {
 
         <OrgInviteBanner />
 
-        <DashboardQuickStats
-          openWorkOrders={openWorkOrders}
-          pendingInvoices={pendingInvoicesCount}
-          remindersDue={remindersDue}
+        {/* Smart Welcome */}
+        <DashboardWelcome
+          firstName={profile?.first_name || null}
+          attentionCount={totalAttention}
+          activeProjects={statusCounts.active}
         />
 
+        {/* Financial Snapshot */}
+        <DashboardFinancialSnapshot billing={billing} financials={financials} />
+
+        {/* Action Items */}
         <DashboardAttentionBanner
           attentionItems={attentionItems}
           pendingInvites={pendingInvites}
+          reminders={reminders}
           onRefresh={refetch}
+        />
+
+        {/* Reminders */}
+        <RemindersTile
+          reminders={reminders}
+          onComplete={handleCompleteReminder}
+          onAdd={() => setAddReminderOpen(true)}
         />
 
         <DashboardProjectList
@@ -278,6 +316,13 @@ export default function Dashboard() {
         onOpenChange={setCompleteDialogOpen}
         projectName={projectToComplete?.name || ''}
         onConfirm={confirmComplete}
+      />
+
+      <AddReminderDialog
+        open={addReminderOpen}
+        onOpenChange={setAddReminderOpen}
+        onAdd={handleAddReminder}
+        projects={projects.map(p => ({ id: p.id, name: p.name }))}
       />
     </AppLayout>
   );
