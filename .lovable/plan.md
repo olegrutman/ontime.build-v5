@@ -1,51 +1,47 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-## Features Built
+# Daily Log Page: Bug Report
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
+## Bug 1: Manpower fires duplicate API calls on every tap
+Looking at the network logs, there are **5 identical DELETE requests** to `daily_log_manpower` all at the same timestamp. Every time you tap +/- on the manpower stepper, `onChange` fires immediately, which calls `upsertManpower.mutate()`. Since the ManpowerCard calls `onChange` on every single tap (no debounce), and the mutation does a delete-then-insert, you get a race condition where multiple in-flight mutations overlap. This can cause data loss or duplicate rows.
 
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
+**Fix**: Debounce the `handleManpowerChange` callback in `DailyLogPanel.tsx` (e.g. 500ms) so rapid taps batch into a single save. Same applies to delays and weather.
 
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
+## Bug 2: Manpower doesn't sync when navigating dates
+The `ManpowerCard` initializes local state in `useState(() => ...)` using the initial `entries` prop. The `useEffect` only updates local state when `entries.length > 0`. If you navigate to a date that has no manpower entries, the card will keep showing the previous date's values because the effect skips empty arrays.
 
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
+**Fix**: Change the `useEffect` to always sync: `setLocal(entries.length > 0 ? entries : projectTrades.map(...))` and add `projectTrades` to the dependency.
 
-## Files Created/Modified
-| File | Action |
+## Bug 3: Weather temp changes trigger a save on every single tap
+Each tap of the +/- temperature buttons calls `onChange` immediately, which calls `updateLog.mutate()`. There's no debounce, so tapping 5 times to go from 50 to 75 degrees fires 5 separate database updates.
+
+**Fix**: Debounce `handleWeatherChange` in `DailyLogPanel.tsx`.
+
+## Bug 4: Notes auto-save fires on every keystroke
+The `QuickNotesCard` textarea calls `onChange` on every keystroke, and `DailyLogPanel` passes that straight to `updateLog.mutate()`. Typing a sentence fires dozens of database updates.
+
+**Fix**: Debounce `handleNotesChange` (e.g. 800ms).
+
+## Bug 5: Photos storage bucket may not exist
+The `PhotosCard` uploads to a bucket called `daily-log-photos`, but there's no guarantee this storage bucket has been created. If it doesn't exist, photo uploads silently fail (the error is caught but no toast shown).
+
+**Fix**: Ensure the bucket exists and show a toast on upload failure.
+
+## Bug 6: Delays card has stale state on date navigation
+Same issue as manpower -- `DelaysCard` initializes with `useState(delays)` and uses `useEffect` to sync, but if the new date has different delays, the effect replaces state. However, if you toggle a cause chip while the effect hasn't fired yet, you get stale data mixed with new data.
+
+**Fix**: Add `logId` or `dateStr` as a key prop on the `DelaysCard` component so React unmounts/remounts it on date change, giving fresh state.
+
+## Bug 7: Future date logs can be created
+There's no guard preventing creation of daily logs for future dates. The date nav allows going forward (disabled at offset >= 0), but if offset somehow becomes positive or the code is bypassed, a future-dated log could be created. Currently the forward button is disabled, so this is low risk but the DB has no constraint either.
+
+---
+
+## Proposed Changes
+
+| File | Change |
 |------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+| `src/components/daily-log/DailyLogPanel.tsx` | Debounce `handleManpowerChange`, `handleWeatherChange`, `handleNotesChange`, and `handleDelaysChange` (500-800ms). Add `key={dateStr}` to ManpowerCard and DelaysCard to reset state on date change. Show toast on photo upload error. |
+| `src/components/daily-log/ManpowerCard.tsx` | Fix useEffect to also handle empty entries by re-initializing from projectTrades |
+| `src/components/daily-log/PhotosCard.tsx` | Show error toast when upload fails |
+
