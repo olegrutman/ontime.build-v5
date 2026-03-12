@@ -134,12 +134,13 @@ export default function Dashboard() {
   };
 
   const handleAddReminder = async (reminder: { title: string; due_date: string; project_id?: string }) => {
-    if (!user) return;
+    if (!user || !currentOrg) return;
     const { error } = await supabase.from('reminders').insert({
       title: reminder.title,
       due_date: reminder.due_date,
       project_id: reminder.project_id || null,
       user_id: user.id,
+      org_id: currentOrg.id,
     });
     if (error) {
       toast({ title: 'Error', description: 'Failed to add reminder', variant: 'destructive' });
