@@ -623,14 +623,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
       {renderSOVAlert()}
       {renderHeader(true)}
 
-      {roleContext.message && (
-        <Alert>
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{roleContext.message}</AlertDescription>
-        </Alert>
-      )}
-
-      {renderSummaryCards()}
+      <InvoiceActionBar invoices={unfilteredInvoices} isApprover={isApproverView} />
       {renderInvoiceList()}
 
       <CreateInvoiceFromSOV
