@@ -15,6 +15,7 @@ interface TaskDetailDrawerProps {
   items: ScheduleItem[];
   onUpdate: (id: string, updates: Partial<ScheduleItem>) => void;
   onDateChange?: (id: string, newStart: string, newEnd: string) => void;
+  readOnly?: boolean;
 }
 
 export function TaskDetailDrawer({ open, onOpenChange, item, items, onUpdate, onDateChange }: TaskDetailDrawerProps) {
