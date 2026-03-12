@@ -36,7 +36,7 @@ export function useScheduleOwnership(projectId: string) {
     const priority = ROLE_PRIORITY[member.role] ?? 99;
     if (priority < bestPriority) {
       bestPriority = priority;
-      ownerOrgId = member.organization_id;
+      ownerOrgId = member.org_id;
       ownerRole = member.role;
     }
   }
