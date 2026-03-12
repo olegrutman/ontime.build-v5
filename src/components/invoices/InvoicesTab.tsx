@@ -382,6 +382,20 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
       );
     }
 
+    if (viewMode === 'table') {
+      return (
+        <InvoiceTableView
+          invoices={currentInvoices}
+          onView={(inv) => setSelectedInvoiceId(inv.id)}
+          onEdit={handleEditInvoice}
+          onSubmit={handleQuickSubmit}
+          onApprove={handleQuickApprove}
+          onDelete={handleDeleteInvoice}
+          getPermissions={getInvoicePermissions}
+        />
+      );
+    }
+
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {currentInvoices.map((invoice) => {
@@ -403,58 +417,6 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
       </div>
     );
   };
-
-  const renderSummaryCards = () => (
-    <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
-      <Card data-sasha-card="Invoice Summary" className="p-4 relative overflow-hidden">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Draft</span>
-          <span className="text-2xl font-bold">{stats.draft}</span>
-        </div>
-        <div className="absolute top-3 right-3 p-2 rounded-full bg-muted">
-          <FileEdit className="w-4 h-4 text-muted-foreground" />
-        </div>
-      </Card>
-      <Card data-sasha-card="Invoice Summary" className="p-4 relative overflow-hidden">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Pending</span>
-          <span className="text-2xl font-bold text-primary">{stats.submitted}</span>
-        </div>
-        <div className="absolute top-3 right-3 p-2 rounded-full bg-primary/10">
-          <Clock className="w-4 h-4 text-primary" />
-        </div>
-      </Card>
-      <Card data-sasha-card="Invoice Summary" className="p-4 relative overflow-hidden">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Approved</span>
-          <span className="text-2xl font-bold text-accent-foreground">{stats.approved}</span>
-        </div>
-        <div className="absolute top-3 right-3 p-2 rounded-full bg-accent">
-          <CheckCircle2 className="w-4 h-4 text-accent-foreground" />
-        </div>
-      </Card>
-      <Card data-sasha-card="Invoice Summary" className="p-4 relative overflow-hidden">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Paid</span>
-          <span className="text-2xl font-bold text-secondary-foreground">{stats.paid}</span>
-        </div>
-        <div className="absolute top-3 right-3 p-2 rounded-full bg-secondary">
-          <Wallet className="w-4 h-4 text-secondary-foreground" />
-        </div>
-      </Card>
-      <Card data-sasha-card="Invoice Summary" className="p-4 relative overflow-hidden col-span-2 sm:col-span-1">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Total Billed</span>
-          <span className="text-2xl font-bold">
-            {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(stats.totalBilled)}
-          </span>
-        </div>
-        <div className="absolute top-3 right-3 p-2 rounded-full bg-primary/10">
-          <DollarSign className="w-4 h-4 text-primary" />
-        </div>
-      </Card>
-    </div>
-  );
 
   const renderSOVAlert = () => {
     if (!isBlocked) return null;
