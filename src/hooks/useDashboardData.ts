@@ -195,7 +195,7 @@ export function useDashboardData(): DashboardData {
         projectIds.length > 0
           ? supabase
               .from('project_contracts')
-              .select('project_id, to_role, from_role, contract_sum, from_org_id, to_org_id')
+              .select('project_id, to_role, from_role, contract_sum, from_org_id, to_org_id, trade, owner_contract_value')
               .in('project_id', projectIds)
           : Promise.resolve({ data: [] }),
         projectIds.length > 0
