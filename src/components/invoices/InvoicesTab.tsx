@@ -282,17 +282,13 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
     );
   }
 
-  // Calculate stats for current view
-  const stats = {
-    total: currentInvoices.length,
-    draft: currentInvoices.filter((i) => i.status === 'DRAFT').length,
-    submitted: currentInvoices.filter((i) => i.status === 'SUBMITTED').length,
-    approved: currentInvoices.filter((i) => i.status === 'APPROVED').length,
-    paid: currentInvoices.filter((i) => i.status === 'PAID').length,
-    totalBilled: currentInvoices
-      .filter((i) => i.status === 'APPROVED' || i.status === 'PAID')
-      .reduce((sum, i) => sum + i.total_amount, 0),
-  };
+  // Unfiltered invoices for action bar (always shows full picture)
+  const unfilteredInvoices = useMemo(() => {
+    if (currentOrgType === 'SUPPLIER') return sentInvoices;
+    if (currentOrgType === 'GC') return gcSubTab === 'from_tc' ? receivedFromContracts : receivedFromSuppliers;
+    if (currentOrgType === 'TC') return invoiceDirection === 'sent' ? sentInvoices : allReceivedInvoices;
+    return sentInvoices;
+  }, [currentOrgType, gcSubTab, invoiceDirection, sentInvoices, receivedFromContracts, receivedFromSuppliers, allReceivedInvoices]);
 
   const getRoleContext = () => {
     if (currentOrgType === 'GC') {
