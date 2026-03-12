@@ -1,56 +1,51 @@
+# Interactive Project Scheduling Module — IMPLEMENTED
 
+## Design Philosophy
+Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-# Schedule Ownership: Highest Upstream User Controls Schedule
+## Features Built
 
-## Problem
-Currently any project member can edit the schedule and generate tasks. The business rule is: **only the highest upstream organization** in the project chain should own/edit the schedule. The hierarchy is GC > TC > FC. If a GC is on the project, they own the schedule. If no GC exists, TC owns it. Additionally, users need the ability to **delete all schedule items and regenerate** from SOV.
+### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
+- Dependency graph walking with BFS
+- Cascade date computation with buffer days support
+- Critical path calculation (longest dependency chain)
+- Conflict detection (tasks starting before predecessors end)
+- `findDownstreamTasks()` for cascade confirmation
 
-## Solution
+### 2. Desktop Gantt Chart (≥768px)
+- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
+- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
+- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
+- **Dependency arrows**: Bezier curves with arrow markers
+- **Critical path toggle**: Highlights longest dependency chain in amber/gold
+- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
+- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
+- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
+- **Undo**: 5-second undo button after any drag action
 
-### 1. Create a hook: `useScheduleOwnership(projectId)`
-Query `project_team` for the current project to determine which roles exist. Determine the "owner role" (GC if present, else TC). Compare against the current user's org to determine if they `canEditSchedule`.
+### 3. Mobile Card View (<768px)
+- **Sticky top bar**: Project start/end dates + days remaining
+- **Phase grouping**: Collapsible sections with total duration
+- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
+- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
+- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
 
-```typescript
-// src/hooks/useScheduleOwnership.ts
-export function useScheduleOwnership(projectId: string) {
-  // Query project_team roles for this project
-  // Determine highest upstream: GC > TC > FC
-  // Check if current user's org matches the owner org
-  // Return { canEditSchedule, ownerRole, isLoading }
-}
-```
+### 4. Shared Logic
+- One unified `items` array drives both views
+- `handleScheduleChange()` checks downstream tasks before applying
+- Optimistic undo with snapshot restoration
+- Auto-estimate dates still available for unscheduled items
 
-**Logic:**
-- Fetch all `project_team` rows for the project with `role` and `org_id`
-- Priority: if any row has `role = 'General Contractor'`, that org owns schedule
-- Else if any row has `role = 'Trade Contractor'`, that org owns it
-- Compare owner `org_id` against the user's current organization (from `useAuth().userOrgRoles`)
-- Return `canEditSchedule: boolean`
-
-### 2. Gate schedule editing in `ScheduleTab.tsx`
-- Import `useScheduleOwnership`
-- Hide add/edit/delete buttons and auto-estimate when `!canEditSchedule`
-- Disable drag interactions on GanttChart when `!canEditSchedule`
-- Show a subtle banner: "Schedule managed by [Owner Role]" for non-owners
-
-### 3. Add "Clear & Regenerate" functionality
-- Add a "Regenerate from SOV" button (visible only to schedule owner)
-- On click, show confirmation dialog
-- Delete all existing `project_schedule_items` for the project
-- Re-trigger task generation by fetching TC→GC SOV items and inserting new schedule items (replicating the trigger logic client-side, since the DB trigger only fires on SOV item insert)
-
-### 4. Pass `readOnly` prop to sub-components
-- `TaskDetailDrawer`: disable all inputs when `readOnly`
-- `GanttChart`: disable drag when `readOnly`
-- `MobileScheduleView`: hide duration adjustment buttons when `readOnly`
-
-## Files
-
-| File | Change |
+## Files Created/Modified
+| File | Action |
 |------|--------|
-| `src/hooks/useScheduleOwnership.ts` | **New** — determines if current user's org is the highest upstream on the project |
-| `src/components/schedule/ScheduleTab.tsx` | Use `useScheduleOwnership` to gate all edit actions; add "Clear & Regenerate" button with confirmation |
-| `src/components/schedule/TaskDetailDrawer.tsx` | Accept `readOnly` prop, disable inputs when true |
-| `src/components/schedule/GanttChart.tsx` | Accept `readOnly` prop, disable drag when true |
-| `src/components/schedule/MobileScheduleView.tsx` | Accept `readOnly` prop, hide edit controls when true |
-
+| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
+| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
+| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
+| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
+| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
+| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
+| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
+| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
+| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
+| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |

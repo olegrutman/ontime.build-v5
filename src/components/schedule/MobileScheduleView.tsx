@@ -11,9 +11,10 @@ interface MobileScheduleViewProps {
   conflicts: Set<string>;
   onAdjustDuration: (id: string, delta: number) => void;
   onChangeStartDate: (id: string, date: string) => void;
+  readOnly?: boolean;
 }
 
-export function MobileScheduleView({ items, conflicts, onAdjustDuration, onChangeStartDate }: MobileScheduleViewProps) {
+export function MobileScheduleView({ items, conflicts, onAdjustDuration, onChangeStartDate, readOnly }: MobileScheduleViewProps) {
   const { projectStart, projectEnd, daysRemaining, phases } = useMemo(() => {
     if (!items.length) {
       const today = new Date();
@@ -84,8 +85,8 @@ export function MobileScheduleView({ items, conflicts, onAdjustDuration, onChang
                 projectStart={projectStart}
                 projectEnd={projectEnd}
                 isConflict={conflicts.has(item.id)}
-                onAdjustDuration={onAdjustDuration}
-                onChangeStartDate={onChangeStartDate}
+                onAdjustDuration={readOnly ? undefined : onAdjustDuration}
+                onChangeStartDate={readOnly ? undefined : onChangeStartDate}
               />
             ))}
           </PhaseCardGroup>

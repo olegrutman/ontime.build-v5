@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { Plus, Milestone, Layers, CalendarDays, Trash2, ChevronDown, ChevronRight, Wand2 } from 'lucide-react';
+import { Plus, Milestone, Layers, CalendarDays, Trash2, ChevronDown, ChevronRight, Wand2, RefreshCw, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -15,6 +15,7 @@ import { CascadeBottomSheet } from './CascadeBottomSheet';
 import { MobileScheduleView } from './MobileScheduleView';
 import { ScheduleItemForm } from './ScheduleItemForm';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useScheduleOwnership } from '@/hooks/useScheduleOwnership';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, addDays, differenceInDays } from 'date-fns';
@@ -51,6 +52,7 @@ interface PendingCascade {
 
 export function ScheduleTab({ projectId }: ScheduleTabProps) {
   const { items, isLoading, addItem, updateItem, deleteItem } = useProjectSchedule(projectId);
+  const { canEditSchedule, ownerRole, isLoading: ownershipLoading } = useScheduleOwnership(projectId);
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
@@ -61,6 +63,8 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
   const [ganttOpen, setGanttOpen] = useState(true);
   const [tableOpen, setTableOpen] = useState(true);
   const [estimating, setEstimating] = useState(false);
+  const [regenerateOpen, setRegenerateOpen] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   // New state
   const [zoom, setZoom] = useState<ZoomLevel>('day');
@@ -274,6 +278,49 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
     setEstimating(false);
   };
 
+  const handleRegenerate = async () => {
+    setRegenerating(true);
+    try {
+      // Delete all existing schedule items
+      for (const item of items) {
+        await deleteItem.mutateAsync(item.id);
+      }
+
+      // Fetch TC→GC SOV items to regenerate from
+      const { data: sovs } = await supabase
+        .from('project_sov')
+        .select('id, contract_id')
+        .eq('project_id', projectId);
+
+      if (sovs && sovs.length > 0) {
+        // Get items from the first SOV as template
+        const { data: sovItems } = await supabase
+          .from('project_sov_items')
+          .select('item_name, percent_of_contract, sort_order')
+          .eq('sov_id', sovs[0].id)
+          .order('sort_order');
+
+        if (sovItems && sovItems.length > 0) {
+          const today = format(new Date(), 'yyyy-MM-dd');
+          for (let i = 0; i < sovItems.length; i++) {
+            await addItem.mutateAsync({
+              title: sovItems[i].item_name,
+              start_date: today,
+              item_type: 'task',
+              sort_order: sovItems[i].sort_order,
+            } as any);
+          }
+        }
+      }
+
+      toast({ title: 'Schedule regenerated from SOV' });
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+    setRegenerating(false);
+    setRegenerateOpen(false);
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -287,22 +334,39 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
 
   return (
     <div className="space-y-4">
+      {/* Read-only banner for non-owners */}
+      {!canEditSchedule && !ownershipLoading && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border text-sm text-muted-foreground">
+          <ShieldAlert className="h-4 w-4 shrink-0" />
+          <span>Schedule managed by <span className="font-medium text-foreground">{ownerRole || 'project owner'}</span>. View only.</span>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" onClick={() => handleAdd('task')} className="gap-1.5">
-          <Plus className="h-4 w-4" /> Task
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => handleAdd('phase')} className="gap-1.5">
-          <Layers className="h-4 w-4" /> Phase
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => handleAdd('milestone')} className="gap-1.5">
-          <Milestone className="h-4 w-4" /> Milestone
-        </Button>
-        {hasUnscheduled && (
-          <Button size="sm" variant="secondary" onClick={handleAutoEstimate} disabled={estimating} className="gap-1.5">
-            <Wand2 className="h-4 w-4" />
-            {estimating ? 'Estimating…' : 'Auto-Estimate'}
-          </Button>
+        {canEditSchedule && (
+          <>
+            <Button size="sm" onClick={() => handleAdd('task')} className="gap-1.5">
+              <Plus className="h-4 w-4" /> Task
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => handleAdd('phase')} className="gap-1.5">
+              <Layers className="h-4 w-4" /> Phase
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => handleAdd('milestone')} className="gap-1.5">
+              <Milestone className="h-4 w-4" /> Milestone
+            </Button>
+            {hasUnscheduled && (
+              <Button size="sm" variant="secondary" onClick={handleAutoEstimate} disabled={estimating} className="gap-1.5">
+                <Wand2 className="h-4 w-4" />
+                {estimating ? 'Estimating…' : 'Auto-Estimate'}
+              </Button>
+            )}
+            {items.length > 0 && (
+              <Button size="sm" variant="outline" onClick={() => setRegenerateOpen(true)} className="gap-1.5 text-destructive hover:text-destructive">
+                <RefreshCw className="h-4 w-4" /> Clear & Regenerate
+              </Button>
+            )}
+          </>
         )}
         <div className="flex-1" />
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -331,6 +395,7 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
           conflicts={conflictIds}
           onAdjustDuration={handleAdjustDuration}
           onChangeStartDate={handleMobileStartChange}
+          readOnly={!canEditSchedule}
         />
       ) : (
         <>
@@ -366,6 +431,7 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
                 zoom={zoom}
                 criticalPathIds={criticalPathIds}
                 conflictIds={conflictIds}
+                readOnly={!canEditSchedule}
               />
             </CollapsibleContent>
           </Collapsible>
@@ -422,9 +488,11 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
                             ) : '—'}
                           </TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={e => { e.stopPropagation(); setDeleteTarget(item.id); }}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            {canEditSchedule && (
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={e => { e.stopPropagation(); setDeleteTarget(item.id); }}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
@@ -445,6 +513,7 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
         items={items}
         onUpdate={handleDrawerUpdate}
         onDateChange={handleScheduleChange}
+        readOnly={!canEditSchedule}
       />
 
       {/* Schedule Item Form (mobile / add new) */}
@@ -490,6 +559,24 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Regenerate Confirmation */}
+      <AlertDialog open={regenerateOpen} onOpenChange={setRegenerateOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear & Regenerate Schedule?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will delete all {items.length} schedule items and regenerate tasks from the SOV. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRegenerate} disabled={regenerating}>
+              {regenerating ? 'Regenerating…' : 'Clear & Regenerate'}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

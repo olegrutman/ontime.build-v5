@@ -15,9 +15,10 @@ interface TaskDetailDrawerProps {
   items: ScheduleItem[];
   onUpdate: (id: string, updates: Partial<ScheduleItem>) => void;
   onDateChange?: (id: string, newStart: string, newEnd: string) => void;
+  readOnly?: boolean;
 }
 
-export function TaskDetailDrawer({ open, onOpenChange, item, items, onUpdate, onDateChange }: TaskDetailDrawerProps) {
+export function TaskDetailDrawer({ open, onOpenChange, item, items, onUpdate, onDateChange, readOnly }: TaskDetailDrawerProps) {
   const [localProgress, setLocalProgress] = useState(0);
 
   useEffect(() => {
@@ -81,6 +82,7 @@ export function TaskDetailDrawer({ open, onOpenChange, item, items, onUpdate, on
                 value={item.start_date}
                 onChange={e => handleStartDateChange(e.target.value)}
                 className="h-9"
+                disabled={readOnly}
               />
             </div>
             <div className="space-y-1.5">
@@ -90,6 +92,7 @@ export function TaskDetailDrawer({ open, onOpenChange, item, items, onUpdate, on
                 value={item.end_date || ''}
                 onChange={e => handleEndDateChange(e.target.value)}
                 className="h-9"
+                disabled={readOnly}
               />
             </div>
           </div>
@@ -121,6 +124,7 @@ export function TaskDetailDrawer({ open, onOpenChange, item, items, onUpdate, on
               onValueCommit={v => onUpdate(item.id, { progress: v[0] })}
               max={100}
               step={5}
+              disabled={readOnly}
             />
           </div>
 
