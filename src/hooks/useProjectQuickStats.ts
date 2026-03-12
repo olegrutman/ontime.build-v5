@@ -279,18 +279,32 @@ export function useProjectQuickStats(
           });
         }
       } else if (orgType === 'TC' || orgType === 'FC') {
-        // Unpaid invoices
-        const unpaidInvoices = invoices.filter(
+        // Invoices I SENT that are unpaid (receivables)
+        const myUnpaidInvoices = invoices.filter(
           (i) => i.status === 'SUBMITTED' || i.status === 'APPROVED'
         );
-        const unpaidTotal = unpaidInvoices.reduce((s, i) => s + (i.total_amount ?? 0), 0);
-        if (unpaidInvoices.length > 0) {
+        const myUnpaidTotal = myUnpaidInvoices.reduce((s, i) => s + (i.total_amount ?? 0), 0);
+        if (myUnpaidInvoices.length > 0) {
           actionItems.push({
             key: 'unpaid-invoices',
-            label: `${unpaidInvoices.length} invoice${unpaidInvoices.length > 1 ? 's' : ''} unpaid`,
-            count: unpaidInvoices.length,
-            amount: unpaidTotal,
-            severity: unpaidTotal > 10000 ? 'red' : 'amber',
+            label: `${myUnpaidInvoices.length} invoice${myUnpaidInvoices.length > 1 ? 's' : ''} awaiting payment`,
+            count: myUnpaidInvoices.length,
+            amount: myUnpaidTotal,
+            severity: myUnpaidTotal > 10000 ? 'red' : 'amber',
+            tab: 'invoices',
+          });
+        }
+
+        // Invoices I RECEIVED that need my review (payables)
+        const invoicesToReview = receivedInvoices.filter((i) => i.status === 'SUBMITTED');
+        const reviewTotal = invoicesToReview.reduce((s, i) => s + (i.total_amount ?? 0), 0);
+        if (invoicesToReview.length > 0) {
+          actionItems.push({
+            key: 'invoices-to-review',
+            label: `${invoicesToReview.length} invoice${invoicesToReview.length > 1 ? 's' : ''} to review`,
+            count: invoicesToReview.length,
+            amount: reviewTotal,
+            severity: 'amber',
             tab: 'invoices',
           });
         }
