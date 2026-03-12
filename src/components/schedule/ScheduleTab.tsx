@@ -334,22 +334,39 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
 
   return (
     <div className="space-y-4">
+      {/* Read-only banner for non-owners */}
+      {!canEditSchedule && !ownershipLoading && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border text-sm text-muted-foreground">
+          <ShieldAlert className="h-4 w-4 shrink-0" />
+          <span>Schedule managed by <span className="font-medium text-foreground">{ownerRole || 'project owner'}</span>. View only.</span>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
-        <Button size="sm" onClick={() => handleAdd('task')} className="gap-1.5">
-          <Plus className="h-4 w-4" /> Task
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => handleAdd('phase')} className="gap-1.5">
-          <Layers className="h-4 w-4" /> Phase
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => handleAdd('milestone')} className="gap-1.5">
-          <Milestone className="h-4 w-4" /> Milestone
-        </Button>
-        {hasUnscheduled && (
-          <Button size="sm" variant="secondary" onClick={handleAutoEstimate} disabled={estimating} className="gap-1.5">
-            <Wand2 className="h-4 w-4" />
-            {estimating ? 'Estimating…' : 'Auto-Estimate'}
-          </Button>
+        {canEditSchedule && (
+          <>
+            <Button size="sm" onClick={() => handleAdd('task')} className="gap-1.5">
+              <Plus className="h-4 w-4" /> Task
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => handleAdd('phase')} className="gap-1.5">
+              <Layers className="h-4 w-4" /> Phase
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => handleAdd('milestone')} className="gap-1.5">
+              <Milestone className="h-4 w-4" /> Milestone
+            </Button>
+            {hasUnscheduled && (
+              <Button size="sm" variant="secondary" onClick={handleAutoEstimate} disabled={estimating} className="gap-1.5">
+                <Wand2 className="h-4 w-4" />
+                {estimating ? 'Estimating…' : 'Auto-Estimate'}
+              </Button>
+            )}
+            {items.length > 0 && (
+              <Button size="sm" variant="outline" onClick={() => setRegenerateOpen(true)} className="gap-1.5 text-destructive hover:text-destructive">
+                <RefreshCw className="h-4 w-4" /> Clear & Regenerate
+              </Button>
+            )}
+          </>
         )}
         <div className="flex-1" />
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
