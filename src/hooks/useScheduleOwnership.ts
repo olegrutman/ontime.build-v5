@@ -9,25 +9,28 @@ const ROLE_PRIORITY: Record<string, number> = {
 };
 
 export function useScheduleOwnership(projectId: string) {
-  const { userOrgRoles } = useAuth();
+  const { user, userOrgRoles } = useAuth();
   const userOrgIds = userOrgRoles.map(r => r.organization_id);
 
   const { data, isLoading } = useQuery({
     queryKey: ['schedule-ownership', projectId],
     queryFn: async () => {
-      const { data: team, error } = await supabase
-        .from('project_team')
-        .select('role, org_id')
-        .eq('project_id', projectId);
-      if (error) throw error;
-      return team || [];
+      const [teamResult, projectResult] = await Promise.all([
+        supabase.from('project_team').select('role, org_id').eq('project_id', projectId),
+        supabase.from('projects').select('created_by').eq('id', projectId).single(),
+      ]);
+      if (teamResult.error) throw teamResult.error;
+      return {
+        team: teamResult.data || [],
+        createdBy: projectResult.data?.created_by ?? null,
+      };
     },
     enabled: !!projectId,
   });
 
-  const team = data || [];
+  const team = data?.team || [];
+  const createdBy = data?.createdBy ?? null;
 
-  // Find highest upstream role on the project
   let ownerOrgId: string | null = null;
   let ownerRole: string | null = null;
   let bestPriority = Infinity;
@@ -41,7 +44,8 @@ export function useScheduleOwnership(projectId: string) {
     }
   }
 
-  const canEditSchedule = ownerOrgId ? userOrgIds.includes(ownerOrgId) : false;
+  const isCreator = !!user && user.id === createdBy;
+  const canEditSchedule = isCreator || (ownerOrgId ? userOrgIds.includes(ownerOrgId) : false);
 
   return { canEditSchedule, ownerRole, ownerOrgId, isLoading };
 }
