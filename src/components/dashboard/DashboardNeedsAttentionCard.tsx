@@ -58,7 +58,7 @@ export function DashboardNeedsAttentionCard({ attentionItems, pendingInvites }: 
       type: 'invite' as const,
       title: `Invite: ${inv.projectName}`,
       subtitle: `From ${inv.invitedByOrgName} · ${inv.role}`,
-      onClick: () => navigate(`/project/${inv.projectId}`),
+      onClick: () => navigate('/dashboard'),
     })),
   ];
 

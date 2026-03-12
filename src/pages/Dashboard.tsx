@@ -210,6 +210,7 @@ export default function Dashboard() {
               financials={financials}
               billing={billing}
               activeProjectName={activeProject?.name || null}
+              activeProjectId={activeProject?.id || null}
             />
             <DashboardNeedsAttentionCard
               attentionItems={attentionItems}

@@ -21,9 +21,6 @@ export function DashboardRecentDocs() {
     <div className="bg-card border border-border rounded-lg overflow-hidden">
       <div className="flex items-center justify-between px-[18px] py-3">
         <h3 className="font-heading text-[1rem] font-bold text-foreground">Recent Documents</h3>
-        <button className="text-[0.75rem] font-medium text-primary hover:text-primary/80 transition-colors">
-          Export ↓
-        </button>
       </div>
 
       <div className="px-[18px] pb-2.5 flex gap-1">

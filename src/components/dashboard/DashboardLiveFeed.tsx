@@ -20,7 +20,7 @@ export function DashboardLiveFeed({ reminders }: Props) {
     <div className="bg-card border border-border rounded-lg">
       <div className="flex items-center gap-2 px-[18px] py-3">
         <span className="w-[6px] h-[6px] rounded-full bg-emerald-500 animate-pulse" />
-        <h3 className="font-heading text-[1rem] font-bold text-foreground">Live</h3>
+        <h3 className="font-heading text-[1rem] font-bold text-foreground">Reminders</h3>
       </div>
 
       <div className="divide-y divide-border">

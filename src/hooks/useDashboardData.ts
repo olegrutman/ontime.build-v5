@@ -195,7 +195,7 @@ export function useDashboardData(): DashboardData {
         projectIds.length > 0
           ? supabase
               .from('project_contracts')
-              .select('project_id, to_role, from_role, contract_sum, from_org_id, to_org_id')
+              .select('project_id, to_role, from_role, contract_sum, from_org_id, to_org_id, trade, owner_contract_value')
               .in('project_id', projectIds)
           : Promise.resolve({ data: [] }),
         projectIds.length > 0
@@ -350,16 +350,25 @@ export function useDashboardData(): DashboardData {
         const projectContracts = contracts.filter(c => c.project_id === project.id);
         
         if (orgType === 'GC') {
-          const gcContract = projectContracts.find(c => c.to_role === 'General Contractor');
-          contractValue = gcContract?.contract_sum || null;
+          // GC revenue = sum of all contracts where GC is the to_org (what TCs bill GC)
+          const gcContracts = projectContracts.filter(c => c.to_org_id === currentOrg.id);
+          contractValue = gcContracts.length > 0
+            ? gcContracts.reduce((sum, c) => sum + (c.contract_sum || 0), 0)
+            : null;
         } else if (orgType === 'TC') {
-          const tcContract = projectContracts.find(c => c.to_role === 'Trade Contractor');
-          contractValue = tcContract?.contract_sum || null;
+          // TC revenue = sum of all contracts where TC is from_org (what TC earns from GC)
+          const tcRevenueContracts = projectContracts.filter(c => c.from_org_id === currentOrg.id);
+          contractValue = tcRevenueContracts.length > 0
+            ? tcRevenueContracts.reduce((sum, c) => sum + (c.contract_sum || 0), 0)
+            : null;
         } else if (orgType === 'FC') {
-          const fcContract = projectContracts.find(c => 
-            c.to_role === 'Field Crew' && c.to_org_id === currentOrg.id
+          // FC revenue = sum of contracts where FC is from_org
+          const fcContracts = projectContracts.filter(c => 
+            c.from_org_id === currentOrg.id
           );
-          contractValue = fcContract?.contract_sum || null;
+          contractValue = fcContracts.length > 0
+            ? fcContracts.reduce((sum, c) => sum + (c.contract_sum || 0), 0)
+            : null;
         }
 
         const projectPendingCOs = pendingCOs.filter(co => co.project_id === project.id).length;
@@ -509,11 +518,17 @@ export function useDashboardData(): DashboardData {
       let totalBilled = 0;
 
       if (orgType === 'TC') {
+        // Exclude WO/CO trade contracts from base sums to avoid double-counting
+        // (WO revenue is added separately from change_order_projects.final_price)
+        const isBaseContract = (c: any) => {
+          const trade = (c as any).trade as string | null;
+          return !trade || !['Work Order', 'Work Order Labor'].includes(trade);
+        };
         contracts.forEach(c => {
-          if (c.from_org_id === currentOrg.id) {
+          if (c.from_org_id === currentOrg.id && isBaseContract(c)) {
             totalRevenue += c.contract_sum || 0;
           }
-          if (c.to_org_id === currentOrg.id) {
+          if (c.to_org_id === currentOrg.id && isBaseContract(c)) {
             totalCosts += c.contract_sum || 0;
           }
         });
