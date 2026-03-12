@@ -115,5 +115,16 @@ export function useProjectSchedule(projectId: string) {
     onSuccess: () => qc.invalidateQueries({ queryKey: key }),
   });
 
-  return { ...query, items: query.data ?? [], addItem, updateItem, deleteItem };
+  const deleteAll = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('project_schedule_items')
+        .delete()
+        .eq('project_id', projectId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: key }),
+  });
+
+  return { ...query, items: query.data ?? [], addItem, updateItem, deleteItem, deleteAll };
 }

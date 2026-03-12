@@ -1,33 +1,51 @@
+# Interactive Project Scheduling Module — IMPLEMENTED
 
+## Design Philosophy
+Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-# Schedule Clear & Regeneration: Bug Analysis
+## Features Built
 
-## What I Found
+### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
+- Dependency graph walking with BFS
+- Cascade date computation with buffer days support
+- Critical path calculation (longest dependency chain)
+- Conflict detection (tasks starting before predecessors end)
+- `findDownstreamTasks()` for cascade confirmation
 
-### Bug 1: No end dates after regeneration
-When you click "Clear & Regenerate," new tasks are created with `start_date: today` but **no `end_date`**. They show up as zero-duration items on the Gantt chart. The user has to manually click "Auto-Estimate" afterwards to give them durations. The regeneration should automatically estimate dates right after creating the new items.
+### 2. Desktop Gantt Chart (≥768px)
+- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
+- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
+- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
+- **Dependency arrows**: Bezier curves with arrow markers
+- **Critical path toggle**: Highlights longest dependency chain in amber/gold
+- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
+- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
+- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
+- **Undo**: 5-second undo button after any drag action
 
-**Fix**: Call `handleAutoEstimate()` (or inline that logic) at the end of `handleRegenerate`, after all SOV items are inserted.
+### 3. Mobile Card View (<768px)
+- **Sticky top bar**: Project start/end dates + days remaining
+- **Phase grouping**: Collapsible sections with total duration
+- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
+- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
+- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
 
-### Bug 2: SOV selection is not filtered to TC→GC contract
-The regeneration grabs the **first SOV** it finds on the project (`sovs[0]`). It should specifically look for the TC→GC contract SOV (matching the auto-generation trigger's behavior). If the first SOV happens to be from a different contract (e.g. a work order SOV), the schedule gets wrong items.
+### 4. Shared Logic
+- One unified `items` array drives both views
+- `handleScheduleChange()` checks downstream tasks before applying
+- Optimistic undo with snapshot restoration
+- Auto-estimate dates still available for unscheduled items
 
-**Fix**: Join `project_sov` with `project_contracts` and filter for `from_role = 'Trade Contractor'` and `to_role = 'General Contractor'` (or fall back to whatever the highest-upstream contract is).
-
-### Bug 3: Sequential deletes are slow
-Each schedule item is deleted one-by-one with `await deleteItem.mutateAsync(item.id)` in a loop. For a schedule with 15+ items, this means 15+ sequential API calls just for deletion, plus N more for insertion. Each call also triggers a query invalidation/refetch.
-
-**Fix**: Use a single bulk delete via Supabase: `supabase.from('project_schedule_items').delete().eq('project_id', projectId)` instead of looping. Then invalidate the query once after.
-
-### Bug 4: Query cache invalidation storms
-Each `deleteItem.mutateAsync` and `addItem.mutateAsync` call triggers `queryClient.invalidateQueries` (via `onSuccess`). During regeneration, this means dozens of refetch cycles mid-operation, causing UI flicker and wasted network calls.
-
-**Fix**: Wrap the regeneration in a single transaction-like approach: do the bulk delete + bulk insert directly via Supabase client, then invalidate the query cache once at the end.
-
-## Proposed Changes
-
-| File | Change |
+## Files Created/Modified
+| File | Action |
 |------|--------|
-| `src/components/schedule/ScheduleTab.tsx` | Rewrite `handleRegenerate`: use bulk delete, filter SOV to TC→GC contract, auto-estimate dates after inserting, single cache invalidation |
-| `src/hooks/useProjectSchedule.ts` | Add a `deleteAll` mutation that deletes all items for a project in one call |
-
+| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
+| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
+| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
+| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
+| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
+| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
+| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
+| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
+| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
+| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
