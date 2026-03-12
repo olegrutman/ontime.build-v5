@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import { useProjectQuickStats } from '@/hooks/useProjectQuickStats';
 import { ProjectQuickOverview } from './ProjectQuickOverview';
 

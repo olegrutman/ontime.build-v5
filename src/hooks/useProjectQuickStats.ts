@@ -29,6 +29,7 @@ export interface ProjectQuickStats {
   budgetTotal: number;
   schedulePercent: number;
   scheduleDelta: number;
+  hasSchedule: boolean;
   totalBilled: number;
   outstandingBilling: number;
   loading: boolean;
@@ -48,6 +49,7 @@ const EMPTY: ProjectQuickStats = {
   budgetTotal: 0,
   schedulePercent: 0,
   scheduleDelta: 0,
+  hasSchedule: false,
   totalBilled: 0,
   outstandingBilling: 0,
   loading: true,
@@ -69,33 +71,33 @@ export function useProjectQuickStats(
       setStats((s) => ({ ...s, loading: true }));
 
       const today = new Date().toISOString().split('T')[0];
-      const sevenDaysOut = new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0];
 
       // Parallel queries
       const [contractRes, invoiceRes, scheduleRes, rfiRes, woRes, poRes] = await Promise.all([
-        // Contracts (budget)
+        // Bug 3 fix: Fetch contracts with org IDs so we can filter by user's org
         supabase
           .from('project_contracts')
-          .select('contract_sum')
+          .select('id, contract_sum, from_org_id, to_org_id')
           .eq('project_id', projectId),
-        // All non-draft invoices
+        // Bug 8 fix: Fetch contract_id so we can filter invoices by relevant contracts
         supabase
           .from('invoices')
-          .select('id, status, total_amount, po_id')
+          .select('id, status, total_amount, po_id, contract_id')
           .eq('project_id', projectId)
           .neq('status', 'DRAFT'),
-        // Schedule items
+        // Bug 1 fix: Filter schedule by item_type = 'task' only
         supabase
           .from('project_schedule_items')
-          .select('id, title, progress, start_date, end_date')
-          .eq('project_id', projectId),
+          .select('id, title, progress, start_date, end_date, item_type')
+          .eq('project_id', projectId)
+          .eq('item_type', 'task'),
         // Open RFIs
         supabase
           .from('project_rfis')
           .select('id, status, due_date')
           .eq('project_id', projectId)
           .eq('status', 'OPEN'),
-        // Work orders (work_items with item_type = 'change_order' or similar)
+        // Work orders
         supabase
           .from('work_items')
           .select('id, state, organization_id')
@@ -109,12 +111,39 @@ export function useProjectQuickStats(
 
       if (cancelled) return;
 
-      const invoices = invoiceRes.data ?? [];
+      const allInvoices = invoiceRes.data ?? [];
       const scheduleItems = scheduleRes.data ?? [];
       const rfis = rfiRes.data ?? [];
-      const workOrders = woRes.data ?? [];
-      const pos = poRes.data ?? [];
-      const contracts = contractRes.data ?? [];
+      const allWorkOrders = woRes.data ?? [];
+      const allPos = poRes.data ?? [];
+      const allContracts = contractRes.data ?? [];
+
+      // Bug 3 & 8 fix: Filter contracts and invoices by orgId when available
+      let contracts = allContracts;
+      let invoices = allInvoices;
+      let workOrders = allWorkOrders;
+      let pos = allPos;
+
+      if (orgId) {
+        // Only contracts where this org is a party
+        contracts = allContracts.filter(
+          (c) => c.from_org_id === orgId || c.to_org_id === orgId
+        );
+        const relevantContractIds = new Set(contracts.map((c) => c.id));
+
+        // Only invoices linked to relevant contracts, or unlinked invoices
+        invoices = allInvoices.filter(
+          (i) => !i.contract_id || relevantContractIds.has(i.contract_id)
+        );
+
+        // Filter work orders by org
+        workOrders = allWorkOrders.filter((w) => w.organization_id === orgId);
+
+        // Filter POs by org (created by or supplier matches)
+        pos = allPos.filter(
+          (p) => p.created_by_org_id === orgId || p.organization_id === orgId
+        );
+      }
 
       // ── Budget metrics ──
       const budgetTotal = contracts.reduce((s, c) => s + (c.contract_sum ?? 0), 0);
@@ -122,17 +151,21 @@ export function useProjectQuickStats(
       const budgetUsed = approvedPaid.reduce((s, i) => s + (i.total_amount ?? 0), 0);
       const budgetPercent = budgetTotal > 0 ? Math.round((budgetUsed / budgetTotal) * 100) : 0;
 
-      const totalBilled = invoices.reduce((s, i) => s + (i.total_amount ?? 0), 0);
+      // Bug 4 fix: Exclude REJECTED invoices from totalBilled
+      const totalBilled = invoices
+        .filter((i) => i.status !== 'REJECTED')
+        .reduce((s, i) => s + (i.total_amount ?? 0), 0);
       const paidAmount = invoices
         .filter((i) => i.status === 'PAID')
         .reduce((s, i) => s + (i.total_amount ?? 0), 0);
       const outstandingBilling = totalBilled - paidAmount;
 
-      // ── Schedule metrics ──
+      // ── Schedule metrics (Bug 2 fix: only tasks with end_date) ──
       let schedulePercent = 0;
       let scheduleDelta = 0;
       const activeSchedule = scheduleItems.filter((s) => s.end_date);
-      if (activeSchedule.length > 0) {
+      const hasSchedule = activeSchedule.length > 0;
+      if (hasSchedule) {
         schedulePercent = Math.round(
           activeSchedule.reduce((sum, p) => sum + (p.progress ?? 0), 0) / activeSchedule.length
         );
@@ -209,7 +242,7 @@ export function useProjectQuickStats(
           });
         }
 
-        // WOs pending approval (state not in final states)
+        // WOs pending approval
         const pendingWOs = workOrders.filter((w) =>
           ['submitted', 'priced', 'pending'].includes(w.state?.toLowerCase() ?? '')
         );
@@ -235,7 +268,7 @@ export function useProjectQuickStats(
           });
         }
       } else if (orgType === 'TC' || orgType === 'FC') {
-        // Unpaid invoices (submitted/approved but not paid)
+        // Unpaid invoices
         const unpaidInvoices = invoices.filter(
           (i) => i.status === 'SUBMITTED' || i.status === 'APPROVED'
         );
@@ -265,7 +298,7 @@ export function useProjectQuickStats(
           });
         }
 
-        // POs needing pricing (where supplier is this org)
+        // POs needing pricing
         const posNeedPricing = pos.filter((p) => p.status === 'SUBMITTED');
         if (posNeedPricing.length > 0) {
           actionItems.push({
@@ -301,7 +334,7 @@ export function useProjectQuickStats(
           });
         }
       } else {
-        // Fallback: show generic stats for unknown org types
+        // Fallback
         const unpaidInvoices = invoices.filter(
           (i) => i.status === 'SUBMITTED' || i.status === 'APPROVED'
         );
@@ -327,6 +360,7 @@ export function useProjectQuickStats(
         budgetTotal,
         schedulePercent,
         scheduleDelta,
+        hasSchedule,
         totalBilled,
         outstandingBilling,
         loading: false,
