@@ -57,6 +57,7 @@ export function DashboardProjectList({
   statusCounts,
   loading,
   orgType,
+  orgId,
   onArchive,
   onUnarchive,
   onStatusChange,
