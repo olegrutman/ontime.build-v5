@@ -339,10 +339,8 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
         }
       }
 
-      // Single cache invalidation after all operations
-      const { queryClient } = await import('@tanstack/react-query');
-      // Use the hook's built-in invalidation by refetching
-      await supabase.from('project_schedule_items').select('id').eq('project_id', projectId).limit(1);
+      // Single cache invalidation
+      queryClient.invalidateQueries({ queryKey: ['project-schedule', projectId] });
 
       toast({ title: 'Schedule regenerated from SOV' });
     } catch (err: any) {
