@@ -41,7 +41,7 @@ interface DragState {
   origEndDate: string;
 }
 
-export function GanttChart({ items, onSelect, onDragEnd, selectedId, zoom, criticalPathIds, conflictIds }: GanttChartProps) {
+export function GanttChart({ items, onSelect, onDragEnd, selectedId, zoom, criticalPathIds, conflictIds, readOnly }: GanttChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [drag, setDrag] = useState<DragState | null>(null);
   const [dragDeltaDays, setDragDeltaDays] = useState(0);
