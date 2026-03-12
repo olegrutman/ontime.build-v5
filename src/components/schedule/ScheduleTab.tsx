@@ -513,6 +513,7 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
         items={items}
         onUpdate={handleDrawerUpdate}
         onDateChange={handleScheduleChange}
+        readOnly={!canEditSchedule}
       />
 
       {/* Schedule Item Form (mobile / add new) */}
