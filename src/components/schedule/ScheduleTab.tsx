@@ -17,7 +17,7 @@ import { MobileScheduleView } from './MobileScheduleView';
 import { ScheduleItemForm } from './ScheduleItemForm';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useScheduleOwnership } from '@/hooks/useScheduleOwnership';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { format, addDays, differenceInDays } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
