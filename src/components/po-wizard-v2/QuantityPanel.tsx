@@ -53,13 +53,11 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
   const isFullBundle = hasBundle && quantity === bundleQty && orderMode === 'bundle';
   const isModifiedBundle = hasBundle && orderMode === 'bundle' && quantity !== bundleQty;
 
-  // When order mode changes, update quantity appropriately (only if not editing)
+  // When order mode changes, update quantity appropriately
   useEffect(() => {
-    if (isEditing) return; // Don't auto-update when editing
-    
     if (orderMode === 'bundle' && hasBundle) {
       setQuantity(bundleQty);
-    } else if (orderMode === 'each') {
+    } else if (orderMode === 'each' && !isEditing) {
       setQuantity(1);
     }
   }, [orderMode, hasBundle, bundleQty, isEditing]);
