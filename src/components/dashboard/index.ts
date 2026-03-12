@@ -12,3 +12,5 @@ export { CompleteProjectDialog } from './CompleteProjectDialog';
 export { DashboardAttentionBanner } from './DashboardAttentionBanner';
 export { DashboardFinancialCard } from './DashboardFinancialCard';
 export { DashboardProjectList } from './DashboardProjectList';
+export { DashboardWelcome } from './DashboardWelcome';
+export { DashboardFinancialSnapshot } from './DashboardFinancialSnapshot';
