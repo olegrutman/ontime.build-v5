@@ -78,41 +78,43 @@ export function TaskCard({ item, projectStart, projectEnd, isConflict, onAdjustD
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 flex-1 gap-1 text-xs"
-          onClick={() => onAdjustDuration(item.id, -1)}
-          disabled={duration <= 1}
-        >
-          <Minus className="h-3.5 w-3.5" /> 1 day
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 flex-1 gap-1 text-xs"
-          onClick={() => onAdjustDuration(item.id, 1)}
-        >
-          <Plus className="h-3.5 w-3.5" /> 1 day
-        </Button>
+      {onAdjustDuration && onChangeStartDate && (
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 flex-1 gap-1 text-xs"
+            onClick={() => onAdjustDuration(item.id, -1)}
+            disabled={duration <= 1}
+          >
+            <Minus className="h-3.5 w-3.5" /> 1 day
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 flex-1 gap-1 text-xs"
+            onClick={() => onAdjustDuration(item.id, 1)}
+          >
+            <Plus className="h-3.5 w-3.5" /> 1 day
+          </Button>
 
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="icon" className="h-9 w-9 shrink-0">
-              <CalendarIcon className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="end">
-            <Calendar
-              mode="single"
-              selected={new Date(item.start_date)}
-              onSelect={d => d && onChangeStartDate(item.id, format(d, 'yyyy-MM-dd'))}
-              className={cn('p-3 pointer-events-auto')}
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="icon" className="h-9 w-9 shrink-0">
+                <CalendarIcon className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <Calendar
+                mode="single"
+                selected={new Date(item.start_date)}
+                onSelect={d => d && onChangeStartDate(item.id, format(d, 'yyyy-MM-dd'))}
+                className={cn('p-3 pointer-events-auto')}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+      )}
     </div>
   );
 }
