@@ -16,15 +16,19 @@ interface ManpowerCardProps {
 }
 
 export function ManpowerCard({ entries, projectTrades, onChange, disabled }: ManpowerCardProps) {
-  // Initialize from project trades if empty
   const [local, setLocal] = useState<ManpowerEntry[]>(() => {
     if (entries.length > 0) return entries;
     return projectTrades.map(t => ({ org_id: t.org_id, trade: t.trade, headcount: 0 }));
   });
 
   useEffect(() => {
-    if (entries.length > 0) setLocal(entries);
-  }, [entries]);
+    if (entries.length > 0) {
+      setLocal(entries);
+    } else {
+      // Re-initialize from project trades when navigating to a date with no entries
+      setLocal(projectTrades.map(t => ({ org_id: t.org_id, trade: t.trade, headcount: 0 })));
+    }
+  }, [entries, projectTrades]);
 
   const total = local.reduce((sum, e) => sum + e.headcount, 0);
 
