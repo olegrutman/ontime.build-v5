@@ -1,5 +1,7 @@
-import { format } from 'date-fns';
+import { format, differenceInDays } from 'date-fns';
 import { FileText, Calendar, DollarSign, Eye, Edit, Download, Send, CheckCircle, XCircle, Loader2, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { InvoiceStatusBadge } from './InvoiceStatusBadge';
