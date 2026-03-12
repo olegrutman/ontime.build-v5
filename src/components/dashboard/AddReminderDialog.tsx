@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { format } from 'date-fns';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,10 @@ interface AddReminderDialogProps {
   projects: Project[];
 }
 
-export function AddReminderDialog({ open, onOpenChange, onAdd, projects }: AddReminderDialogProps) {
+export const AddReminderDialog = React.forwardRef<
+  HTMLDivElement,
+  AddReminderDialogProps
+>(function AddReminderDialog({ open, onOpenChange, onAdd, projects }, ref) {
   const [title, setTitle] = useState('');
   const [dueDate, setDueDate] = useState<Date>();
   const [projectId, setProjectId] = useState<string>();
@@ -50,7 +53,6 @@ export function AddReminderDialog({ open, onOpenChange, onAdd, projects }: AddRe
       project_id: projectId,
     });
     
-    // Reset form
     setTitle('');
     setDueDate(undefined);
     setProjectId(undefined);
@@ -59,7 +61,7 @@ export function AddReminderDialog({ open, onOpenChange, onAdd, projects }: AddRe
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent ref={ref} className="sm:max-w-[425px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Add Reminder</DialogTitle>
@@ -135,4 +137,4 @@ export function AddReminderDialog({ open, onOpenChange, onAdd, projects }: AddRe
       </DialogContent>
     </Dialog>
   );
-}
+});

@@ -1,3 +1,4 @@
+import React from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,15 +17,13 @@ interface CompleteProjectDialogProps {
   onConfirm: () => void;
 }
 
-export function CompleteProjectDialog({
-  open,
-  onOpenChange,
-  projectName,
-  onConfirm,
-}: CompleteProjectDialogProps) {
+export const CompleteProjectDialog = React.forwardRef<
+  HTMLDivElement,
+  CompleteProjectDialogProps
+>(function CompleteProjectDialog({ open, onOpenChange, projectName, onConfirm }, ref) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent ref={ref}>
         <AlertDialogHeader>
           <AlertDialogTitle>Mark Project as Completed</AlertDialogTitle>
           <AlertDialogDescription>
@@ -41,4 +40,4 @@ export function CompleteProjectDialog({
       </AlertDialogContent>
     </AlertDialog>
   );
-}
+});
