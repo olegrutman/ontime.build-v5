@@ -18,7 +18,7 @@ interface TaskDetailDrawerProps {
   readOnly?: boolean;
 }
 
-export function TaskDetailDrawer({ open, onOpenChange, item, items, onUpdate, onDateChange }: TaskDetailDrawerProps) {
+export function TaskDetailDrawer({ open, onOpenChange, item, items, onUpdate, onDateChange, readOnly }: TaskDetailDrawerProps) {
   const [localProgress, setLocalProgress] = useState(0);
 
   useEffect(() => {
