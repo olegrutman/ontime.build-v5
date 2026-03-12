@@ -333,7 +333,14 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
             >
               <Minus className="h-5 w-5" />
             </Button>
-            <span className="text-3xl font-bold w-20 text-center">{quantity}</span>
+            <Input
+              type="number"
+              value={quantity}
+              onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 0))}
+              onBlur={() => { if (!quantity || quantity < 1) setQuantity(1); }}
+              className="text-3xl font-bold w-24 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              min={1}
+            />
             <Button
               variant="outline"
               size="icon"
