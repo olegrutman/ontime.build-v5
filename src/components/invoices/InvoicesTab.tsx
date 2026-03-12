@@ -176,7 +176,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
       .eq('project_id', projectId)
       .order('created_at', { ascending: false });
 
-    if (statusFilter !== 'ALL') {
+    if (statusFilter !== 'ALL' && statusFilter !== 'NEEDS_ACTION') {
       query = query.eq('status', statusFilter);
     }
 
