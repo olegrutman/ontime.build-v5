@@ -11,6 +11,7 @@ interface MobileScheduleViewProps {
   conflicts: Set<string>;
   onAdjustDuration: (id: string, delta: number) => void;
   onChangeStartDate: (id: string, date: string) => void;
+  readOnly?: boolean;
 }
 
 export function MobileScheduleView({ items, conflicts, onAdjustDuration, onChangeStartDate }: MobileScheduleViewProps) {
