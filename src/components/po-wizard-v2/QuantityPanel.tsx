@@ -53,13 +53,11 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
   const isFullBundle = hasBundle && quantity === bundleQty && orderMode === 'bundle';
   const isModifiedBundle = hasBundle && orderMode === 'bundle' && quantity !== bundleQty;
 
-  // When order mode changes, update quantity appropriately (only if not editing)
+  // When order mode changes, update quantity appropriately
   useEffect(() => {
-    if (isEditing) return; // Don't auto-update when editing
-    
     if (orderMode === 'bundle' && hasBundle) {
       setQuantity(bundleQty);
-    } else if (orderMode === 'each') {
+    } else if (orderMode === 'each' && !isEditing) {
       setQuantity(1);
     }
   }, [orderMode, hasBundle, bundleQty, isEditing]);
@@ -179,7 +177,14 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
               >
                 <Minus className="h-5 w-5" />
               </Button>
-              <span className="text-3xl font-bold w-20 text-center">{pieces}</span>
+              <Input
+                type="number"
+                value={pieces}
+                onChange={(e) => setPieces(Math.max(1, parseInt(e.target.value) || 0))}
+                onBlur={() => { if (!pieces || pieces < 1) setPieces(1); }}
+                className="text-3xl font-bold w-24 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                min={1}
+              />
               <Button
                 variant="outline"
                 size="icon"
@@ -204,7 +209,15 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
               >
                 <Minus className="h-5 w-5" />
               </Button>
-              <span className="text-3xl font-bold w-20 text-center">{lengthFt}</span>
+              <Input
+                type="number"
+                value={lengthFt}
+                onChange={(e) => setLengthFt(Math.min(60, Math.max(1, parseInt(e.target.value) || 0)))}
+                onBlur={() => { if (!lengthFt || lengthFt < 1) setLengthFt(1); }}
+                className="text-3xl font-bold w-24 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                min={1}
+                max={60}
+              />
               <Button
                 variant="outline"
                 size="icon"
@@ -268,7 +281,14 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
               >
                 <Minus className="h-5 w-5" />
               </Button>
-              <span className="text-3xl font-bold w-20 text-center">{quantity}</span>
+              <Input
+                type="number"
+                value={quantity}
+                onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 0))}
+                onBlur={() => { if (!quantity || quantity < 1) setQuantity(1); }}
+                className="text-3xl font-bold w-24 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                min={1}
+              />
               <Button
                 variant="outline"
                 size="icon"
@@ -313,7 +333,14 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
             >
               <Minus className="h-5 w-5" />
             </Button>
-            <span className="text-3xl font-bold w-20 text-center">{quantity}</span>
+            <Input
+              type="number"
+              value={quantity}
+              onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 0))}
+              onBlur={() => { if (!quantity || quantity < 1) setQuantity(1); }}
+              className="text-3xl font-bold w-24 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              min={1}
+            />
             <Button
               variant="outline"
               size="icon"
