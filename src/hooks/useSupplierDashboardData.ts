@@ -282,7 +282,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
           subtitle: r.projects?.name || 'Unknown Project',
           amount: r.credit_subtotal,
           actionLabel: 'Respond',
-          actionUrl: `/project/${r.project_id}/returns/${r.id}`,
+          actionUrl: `/project/${r.project_id}`,
         });
       });
 
