@@ -496,6 +496,7 @@ export function useDashboardData(): DashboardData {
           amount: inv.total_amount,
           created_at: inv.created_at,
           projectName: proj?.name || 'Unknown',
+          projectId: inv.project_id,
         });
       });
 
