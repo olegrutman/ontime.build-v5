@@ -104,7 +104,7 @@ export function SupplierMaterialsOverview({ projectId, supplierOrgId, onNavigate
     enabled: !!projectId && !!supplierOrgId,
   });
 
-
+  const [unmatchedView, setUnmatchedView] = useState<'ordered' | 'delivered'>('ordered');
 
   if (data.loading) {
     return (
