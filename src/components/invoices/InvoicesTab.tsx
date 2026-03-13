@@ -44,6 +44,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
   const { userOrgRoles, permissions } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const [poOwnerMap, setPoOwnerMap] = useState<Record<string, { pricingOwnerOrgId: string | null; supplierOrgId: string | null }>>({});
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'ALL' | 'NEEDS_ACTION'>('ALL');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
