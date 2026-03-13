@@ -10,8 +10,14 @@ import { SupplierProjectHealth } from './supplier/SupplierProjectHealth';
 import { SupplierOpenOrders } from './supplier/SupplierOpenOrders';
 import { SupplierReturnsQueue } from './supplier/SupplierReturnsQueue';
 import { OrgInviteBanner } from './OrgInviteBanner';
+import { PendingInvitesPanel, type PendingInvite } from './PendingInvitesPanel';
 
-export function SupplierDashboard() {
+interface SupplierDashboardProps {
+  pendingInvites?: PendingInvite[];
+  onRefreshInvites?: () => void;
+}
+
+export function SupplierDashboard({ pendingInvites = [], onRefreshInvites }: SupplierDashboardProps) {
   const {
     kpis, actionItems, deliveryDays, deliveryRows,
     agingBuckets, velocityTrend, oldestInvoiceDays,
