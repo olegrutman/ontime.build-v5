@@ -51,7 +51,7 @@ export default function Install() {
   if (isInstalled) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen p-6 bg-background text-foreground">
-        <CheckCircle2 className="h-16 w-16 text-green-500 mb-4" />
+        <CheckCircle2 className="h-16 w-16 text-primary mb-4" />
         <h1 className="text-2xl font-bold mb-2">App Installed!</h1>
         <p className="text-muted-foreground text-center mb-6">
           OnTime.Build is installed on your device. You can launch it from your home screen.
