@@ -273,8 +273,8 @@ export default function ProjectHome() {
 
           <main className="flex-1 overflow-auto">
             <div className={cn(
-              "max-w-7xl mx-auto w-full pb-20",
-              activeTab === 'overview' ? 'p-4 sm:p-6' : 'p-4 sm:p-6 space-y-6'
+              "max-w-7xl mx-auto w-full pb-24 lg:pb-6",
+              activeTab === 'overview' ? 'px-3 sm:px-6 py-4 sm:py-6' : 'px-3 sm:px-6 py-4 sm:py-6 space-y-6'
             )}>
               {/* Overview Tab */}
               {activeTab === 'overview' && (

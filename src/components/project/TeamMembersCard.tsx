@@ -292,14 +292,14 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
   };
 
   return (
-    <div data-sasha-card="Team" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5">
+    <div data-sasha-card="Team" className="bg-white dark:bg-card rounded-2xl shadow-sm p-4 md:p-5">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
           <Users className="h-4 w-4 text-muted-foreground" />
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Team</p>
           {!loading && <span className="text-[10px] text-muted-foreground">({team.filter(m => m.status === 'Accepted').length})</span>}
         </div>
-        <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => setIsAddMemberOpen(true)}>
+        <Button variant="ghost" size="sm" className="h-8 md:h-6 px-2 text-[11px]" onClick={() => setIsAddMemberOpen(true)}>
           <Plus className="h-3 w-3 mr-1" />Add
         </Button>
       </div>
@@ -315,10 +315,10 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
             const hasMaterialIcon = materialResp && abbrev === materialResp;
 
             return (
-              <div key={member.id} className="flex items-center gap-2 py-1 group">
-                <span className={cn("h-2 w-2 rounded-full shrink-0", roleDotColors[member.role])} />
+              <div key={member.id} className="flex items-center gap-2 py-1.5 md:py-1 group" style={{ minHeight: '52px' }}>
+                <span className={cn("h-2.5 md:h-2 w-2.5 md:w-2 rounded-full shrink-0", roleDotColors[member.role])} />
                 <span className="text-[10px] font-medium text-muted-foreground uppercase w-7">{abbrev}</span>
-                <span className="text-sm truncate flex-1">{member.invited_org_name || 'Unknown'}</span>
+                <span className="text-[0.85rem] md:text-sm font-semibold md:font-normal truncate flex-1">{member.invited_org_name || 'Unknown'}</span>
 
                 {member.status !== 'Accepted' && (
                   <Badge variant={statusVariant[member.status] || 'outline'} className="text-[9px] px-1 py-0 shrink-0">
