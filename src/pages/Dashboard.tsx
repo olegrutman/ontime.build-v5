@@ -47,7 +47,17 @@ export default function Dashboard() {
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [projectToComplete, setProjectToComplete] = useState<{ id: string; name: string } | null>(null);
   const [addReminderOpen, setAddReminderOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>('setup');
+  const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>('active');
+  const hasInitialized = useRef(false);
+
+  useEffect(() => {
+    if (!dataLoading && !hasInitialized.current) {
+      hasInitialized.current = true;
+      if (statusCounts.setup > 0) {
+        setStatusFilter('setup');
+      }
+    }
+  }, [dataLoading, statusCounts]);
 
   const { profile, organization, userSettings, updateUserSettings } = useProfile();
   const currentOrg = userOrgRoles[0]?.organization;
