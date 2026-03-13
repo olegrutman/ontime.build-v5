@@ -47,9 +47,11 @@ export function SupplierEstimateCatalog({ estimates, hidePricing = false }: Prop
                   <span className={`text-[0.6rem] font-bold px-1.5 py-0.5 rounded ${statusBadge[est.status] || statusBadge.DRAFT}`}>
                     {est.status}
                   </span>
-                  <span className="text-[0.72rem] font-bold text-foreground">
-                    {formatCurrency(est.totalAmount)}
-                  </span>
+                  {!hidePricing && (
+                    <span className="text-[0.72rem] font-bold text-foreground">
+                      {formatCurrency(est.totalAmount)}
+                    </span>
+                  )}
                 </div>
               </div>
 
