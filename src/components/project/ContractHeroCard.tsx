@@ -142,17 +142,17 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
     const fcContract = downstreamContract;
     const fcValue = fcContract?.contract_sum || 0;
     return (
-      <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-6">
+      <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 md:p-6">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
           Contract with {getContractCounterpartyName(fcContract, userOrgIds)}
         </p>
         <div className="flex items-center gap-2 mb-4">
-          <p className="text-3xl font-bold tabular-nums text-foreground">{fcContract ? fmt(fcValue) : '—'}</p>
+          <p className="font-heading text-[1.9rem] md:text-3xl font-black tabular-nums text-foreground">{fcContract ? fmt(fcValue) : '—'}</p>
         </div>
         <div className="border-t pt-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Earned (Approved WOs)</span>
-            <span className="text-sm font-semibold tabular-nums">{fmt(workOrderTotal)}</span>
+            <span className="text-[0.65rem] md:text-xs text-muted-foreground">Earned (Approved WOs)</span>
+            <span className="font-heading text-[1.2rem] md:text-sm font-bold tabular-nums">{fmt(workOrderTotal)}</span>
           </div>
           {approvedWOCount > 0 && (
             <span className="text-[10px] text-muted-foreground">{approvedWOCount} WOs</span>
