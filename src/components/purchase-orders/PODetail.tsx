@@ -290,7 +290,6 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
           }
 
           const promise = supabase
-            supabase
               .from('po_line_items')
               .update({
                 unit_price: edit.unit_price,
