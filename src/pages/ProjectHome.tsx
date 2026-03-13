@@ -332,7 +332,7 @@ export default function ProjectHome() {
                       {(project.status === 'setup' || project.status === 'draft') && !isFC && (
                         <ProjectReadinessCard readiness={readiness} />
                       )}
-  const { data: estimateRows } = useProjectEstimateRows(id || '', projectSupplierOrgId ?? null);
+  
 
                       {/* Mobile attention banner */}
                       <div className="lg:hidden">
