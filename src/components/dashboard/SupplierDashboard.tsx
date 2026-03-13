@@ -7,6 +7,7 @@ import { SupplierDeliverySchedule } from './supplier/SupplierDeliverySchedule';
 import { SupplierReceivables } from './supplier/SupplierReceivables';
 import { SupplierEstimateCatalog } from './supplier/SupplierEstimateCatalog';
 import { SupplierProjectHealth } from './supplier/SupplierProjectHealth';
+import { SupplierProjectList } from './supplier/SupplierProjectList';
 import { SupplierOpenOrders } from './supplier/SupplierOpenOrders';
 import { SupplierReturnsQueue } from './supplier/SupplierReturnsQueue';
 import { OrgInviteBanner } from './OrgInviteBanner';
