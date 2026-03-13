@@ -480,6 +480,40 @@ export function useDashboardData(): DashboardData {
       }));
       setReminders(remindersList);
 
+      // Build recent docs
+      const recentDocsList: RecentDoc[] = [];
+      const recentInvoices = (recentInvoicesResult.data || []) as any[];
+      const recentCOs = (recentCOsResult.data || []) as any[];
+
+      recentInvoices.forEach((inv: any) => {
+        const proj = allProjects.find(p => p.id === inv.project_id);
+        recentDocsList.push({
+          id: inv.id,
+          type: 'invoice',
+          title: inv.invoice_number || 'Invoice',
+          status: inv.status,
+          amount: inv.total_amount,
+          created_at: inv.created_at,
+          projectName: proj?.name || 'Unknown',
+        });
+      });
+
+      recentCOs.forEach((co: any) => {
+        const proj = allProjects.find(p => p.id === co.project_id);
+        recentDocsList.push({
+          id: co.id,
+          type: 'change_order',
+          title: co.title || 'Change Order',
+          status: co.status,
+          amount: co.final_price,
+          created_at: co.created_at,
+          projectName: proj?.name || 'Unknown',
+        });
+      });
+
+      recentDocsList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setRecentDocs(recentDocsList.slice(0, 10));
+
       // Contract detail map for invoice filtering
       const contractIds = [...new Set(allInvoices.map(i => i.contract_id).filter((id): id is string => id !== null))];
       let contractDetailMap = new Map<string, { from_org_id: string | null; to_org_id: string | null }>();
