@@ -181,7 +181,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
         supplierIds.length > 0
           ? supabase
               .from('purchase_orders')
-              .select('id, po_number, po_name, status, po_total, project_id, created_at, delivered_at, ordered_at, ready_for_delivery_at, source_estimate_id, projects:project_id(name, organization_id, organizations:organization_id(name))')
+              .select('id, po_number, po_name, status, po_total, project_id, created_at, delivered_at, ordered_at, ready_for_delivery_at, source_estimate_id, source_pack_name, projects:project_id(name, organization_id, organizations:organization_id(name))')
               .in('supplier_id', supplierIds)
           : Promise.resolve({ data: [] }),
         // Supplier estimates
