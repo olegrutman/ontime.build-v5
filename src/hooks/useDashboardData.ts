@@ -71,6 +71,7 @@ export interface RecentDoc {
   amount: number | null;
   created_at: string;
   projectName: string;
+  projectId: string;
 }
 
 interface DashboardData {
