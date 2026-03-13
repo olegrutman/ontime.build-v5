@@ -12,7 +12,7 @@ const statusBadge: Record<string, string> = {
 
 interface Props { estimates: EstimateRow[]; hidePricing?: boolean; }
 
-export function SupplierEstimateCatalog({ estimates }: Props) {
+export function SupplierEstimateCatalog({ estimates, hidePricing = false }: Props) {
   const navigate = useNavigate();
 
   return (
