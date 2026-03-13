@@ -131,9 +131,11 @@ export default function PlatformProjectDetail() {
   const [estimates, setEstimates] = useState<SupplierEstimateRow[]>([]);
 
   const { execute, loading: actionLoading } = useSupportAction();
+  const { platformRole } = useAuth();
   const [forceAcceptOpen, setForceAcceptOpen] = useState(false);
   const [forceAcceptTeamId, setForceAcceptTeamId] = useState<string | null>(null);
   const [forceAcceptOrgName, setForceAcceptOrgName] = useState('');
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const fetchData = async () => {
     if (!projectId) return;
