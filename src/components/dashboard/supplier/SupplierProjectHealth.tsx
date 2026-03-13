@@ -20,6 +20,7 @@ function PaceBadge({ avgDays }: { avgDays: number | null }) {
 interface Props { rows: ProjectHealthRow[]; }
 
 export function SupplierProjectHealth({ rows }: Props) {
+  const navigate = useNavigate();
   const totalExposure = rows.reduce((s, r) => s + r.exposure, 0);
 
   return (
