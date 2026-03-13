@@ -253,7 +253,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
           subtitle: po.projects?.name || 'Unknown Project',
           amount: po.po_total,
           actionLabel: 'Confirm',
-          actionUrl: `/project/${po.project_id}/materials/purchase-orders/${po.id}`,
+          actionUrl: `/purchase-orders`,
         });
       });
 
@@ -267,7 +267,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
           subtitle: `${differenceInDays(now, new Date(inv.submitted_at))} days since submitted`,
           amount: inv.total_amount,
           actionLabel: 'Follow Up',
-          actionUrl: `/project/${inv.project_id}/invoicing`,
+          actionUrl: `/project/${inv.project_id}`,
         });
       });
 
@@ -282,7 +282,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
           subtitle: r.projects?.name || 'Unknown Project',
           amount: r.credit_subtotal,
           actionLabel: 'Respond',
-          actionUrl: `/project/${r.project_id}/returns/${r.id}`,
+          actionUrl: `/project/${r.project_id}`,
         });
       });
 
@@ -297,7 +297,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
           subtitle: po.projects?.name || 'Unknown Project',
           amount: po.po_total,
           actionLabel: 'Schedule',
-          actionUrl: `/project/${po.project_id}/materials/purchase-orders/${po.id}`,
+          actionUrl: `/purchase-orders`,
         });
       });
 

@@ -34,7 +34,7 @@ export function SupplierEstimateCatalog({ estimates }: Props) {
           estimates.slice(0, 6).map(est => (
             <button
               key={est.id}
-              onClick={() => navigate(`/project/${est.projectId}/estimates`)}
+              onClick={() => navigate(`/supplier/estimates`)}
               className="w-full text-left bg-accent/30 border border-border rounded-md px-3 py-2.5 hover:bg-accent transition-all"
             >
               <div className="flex items-center justify-between mb-1">

@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '@/lib/utils';
 import type { ProjectHealthRow } from '@/hooks/useSupplierDashboardData';
 
@@ -19,6 +20,7 @@ function PaceBadge({ avgDays }: { avgDays: number | null }) {
 interface Props { rows: ProjectHealthRow[]; }
 
 export function SupplierProjectHealth({ rows }: Props) {
+  const navigate = useNavigate();
   const totalExposure = rows.reduce((s, r) => s + r.exposure, 0);
 
   return (
@@ -39,7 +41,11 @@ export function SupplierProjectHealth({ rows }: Props) {
           </div>
         ) : (
           rows.slice(0, 6).map(row => (
-            <div key={row.projectId} className="border border-border rounded-md px-3 py-2.5">
+            <button
+              key={row.projectId}
+              onClick={() => navigate(`/project/${row.projectId}`)}
+              className="w-full text-left border border-border rounded-md px-3 py-2.5 hover:bg-accent transition-colors"
+            >
               <div className="flex items-center justify-between mb-1">
                 <div className="min-w-0 flex-1">
                   <div className="text-[0.78rem] font-semibold text-foreground truncate">{row.projectName}</div>
@@ -60,7 +66,7 @@ export function SupplierProjectHealth({ rows }: Props) {
                   </span>
                 )}
               </div>
-            </div>
+            </button>
           ))
         )}
       </div>

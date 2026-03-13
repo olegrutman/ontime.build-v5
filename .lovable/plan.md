@@ -1,48 +1,51 @@
+# Interactive Project Scheduling Module — IMPLEMENTED
 
+## Design Philosophy
+Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-# Fix Broken Links on Supplier Dashboard
+## Features Built
 
-## The Problem
+### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
+- Dependency graph walking with BFS
+- Cascade date computation with buffer days support
+- Critical path calculation (longest dependency chain)
+- Conflict detection (tasks starting before predecessors end)
+- `findDownstreamTasks()` for cascade confirmation
 
-The supplier dashboard generates URLs that don't match any route in `App.tsx`. The console logs confirm 404s. Here's every broken pattern:
+### 2. Desktop Gantt Chart (≥768px)
+- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
+- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
+- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
+- **Dependency arrows**: Bezier curves with arrow markers
+- **Critical path toggle**: Highlights longest dependency chain in amber/gold
+- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
+- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
+- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
+- **Undo**: 5-second undo button after any drag action
 
-| Component | URL generated | Why it's broken |
-|-----------|--------------|-----------------|
-| **SupplierActionQueue** | `/project/:id/materials/purchase-orders/:poId` | No such route exists |
-| **SupplierActionQueue** | `/project/:id/invoicing` | No such route exists |
-| **SupplierActionQueue** | `/project/:id/returns/:returnId` | No such route exists |
-| **SupplierOpenOrders** | `/project/:id/materials/purchase-orders/:poId` | Same — no nested project routes |
-| **SupplierEstimateCatalog** | `/project/:id/estimates` | No such route — estimates live at `/estimates` or `/supplier/estimates` |
-| **SupplierReturnsQueue** | `/project/:id/returns/:returnId` | No such route |
+### 3. Mobile Card View (<768px)
+- **Sticky top bar**: Project start/end dates + days remaining
+- **Phase grouping**: Collapsible sections with total duration
+- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
+- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
+- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
 
-The app only has `/project/:id` (ProjectHome) and `/project/:id/edit`. There are no sub-routes under `/project/:id/` for materials, invoicing, returns, or estimates. Those features live at top-level routes like `/purchase-orders`, `/estimates`, `/supplier/estimates`.
+### 4. Shared Logic
+- One unified `items` array drives both views
+- `handleScheduleChange()` checks downstream tasks before applying
+- Optimistic undo with snapshot restoration
+- Auto-estimate dates still available for unscheduled items
 
-Additionally, the supplier has no way to navigate to a **project list** from the dashboard — there's no "View All Projects" link anywhere.
-
-## The Fix
-
-### 1. Fix all navigation URLs in the data hook (`useSupplierDashboardData.ts`)
-Replace broken `actionUrl` values in the action queue builder:
-- PO confirmation actions: `/purchase-orders` (the top-level PO list page)
-- Overdue invoice actions: `/invoices` (if that route exists) or `/dashboard` as fallback
-- Return actions: `/returns` or `/dashboard`
-- Delivery scheduling actions: `/purchase-orders`
-
-### 2. Fix direct navigation in components
-- **SupplierOpenOrders**: Change `navigate(/project/.../materials/purchase-orders/...)` → `navigate(/purchase-orders)` 
-- **SupplierEstimateCatalog**: Change `navigate(/project/.../estimates)` → `navigate(/supplier/estimates)` or `/estimates`
-- **SupplierReturnsQueue**: Change `navigate(/project/.../returns/...)` → whatever the correct returns route is
-
-### 3. Check which top-level routes actually exist
-Need to verify these routes exist: `/invoices`, `/returns`, `/purchase-orders`. If any are missing, fall back to `/project/:id` (the project home page) which does exist.
-
-### 4. Add "View Projects" link
-Add a simple link to `/dashboard` sidebar or the supplier dashboard header that navigates to a projects listing. Or add a "View Project" action on the Project Health rows that goes to `/project/:projectId`.
-
-## Files to Change
-- `src/hooks/useSupplierDashboardData.ts` — fix all `actionUrl` values
-- `src/components/dashboard/supplier/SupplierOpenOrders.tsx` — fix navigate URL
-- `src/components/dashboard/supplier/SupplierEstimateCatalog.tsx` — fix navigate URL
-- `src/components/dashboard/supplier/SupplierReturnsQueue.tsx` — fix navigate URL
-- `src/components/dashboard/supplier/SupplierProjectHealth.tsx` — make project names clickable to `/project/:id`
-
+## Files Created/Modified
+| File | Action |
+|------|--------|
+| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
+| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
+| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
+| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
+| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
+| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
+| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
+| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
+| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
+| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
