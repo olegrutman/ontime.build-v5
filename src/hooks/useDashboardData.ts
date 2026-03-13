@@ -114,6 +114,7 @@ export function useDashboardData(): DashboardData {
   const [attentionItems, setAttentionItems] = useState<AttentionItem[]>([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [recentDocs, setRecentDocs] = useState<RecentDoc[]>([]);
   const [financials, setFinancials] = useState<FinancialSummary>({
     totalContracts: 0,
     totalRevenue: 0,
