@@ -253,7 +253,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
           subtitle: po.projects?.name || 'Unknown Project',
           amount: po.po_total,
           actionLabel: 'Confirm',
-          actionUrl: `/project/${po.project_id}/materials/purchase-orders/${po.id}`,
+          actionUrl: `/purchase-orders`,
         });
       });
 
