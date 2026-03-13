@@ -161,6 +161,7 @@ export default function ProjectHome() {
     },
     enabled: !!id && !isSupplier,
   });
+  const { data: estimateRows } = useProjectEstimateRows(id || '', projectSupplierOrgId ?? null);
 
   const activeTab = searchParams.get('tab') || 'overview';
 
