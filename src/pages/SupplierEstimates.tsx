@@ -14,6 +14,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Plus, Upload, Send, FileText, Package, Lock, Unlock } from 'lucide-react';
+import { SupplierEstimateCatalog } from '@/components/dashboard/supplier/SupplierEstimateCatalog';
+import type { EstimateRow } from '@/hooks/useSupplierDashboardData';
 import { 
   ProjectEstimate, 
   EstimatePack, 
@@ -34,6 +36,7 @@ export default function SupplierEstimates() {
   const [suppliers, setSuppliers] = useState<{ id: string; name: string; supplier_code: string }[]>([]);
   const [selectedEstimate, setSelectedEstimate] = useState<ProjectEstimate | null>(null);
   const [loading, setLoading] = useState(true);
+  const [estimateRows, setEstimateRows] = useState<EstimateRow[]>([]);
   
   // New estimate form
   const [newEstimateOpen, setNewEstimateOpen] = useState(false);
@@ -61,8 +64,73 @@ export default function SupplierEstimates() {
 
   const fetchData = async () => {
     setLoading(true);
-    await Promise.all([fetchEstimates(), fetchProjects(), fetchSuppliers()]);
+    await Promise.all([fetchEstimates(), fetchProjects(), fetchSuppliers(), fetchEstimateOrderRows()]);
     setLoading(false);
+  };
+
+  const fetchEstimateOrderRows = async () => {
+    if (!organizationId) return;
+
+    // Fetch supplier_estimates for this org
+    const { data: supplierEsts } = await supabase
+      .from('supplier_estimates')
+      .select('id, name, project_id, total_amount, status, projects:project_id(name)')
+      .eq('supplier_org_id', organizationId);
+
+    if (!supplierEsts || supplierEsts.length === 0) {
+      setEstimateRows([]);
+      return;
+    }
+
+    const estIds = supplierEsts.map(e => e.id);
+
+    // Fetch items (for pack names) and POs in parallel
+    const [itemsRes, posRes] = await Promise.all([
+      supabase
+        .from('supplier_estimate_items')
+        .select('estimate_id, pack_name')
+        .in('estimate_id', estIds),
+      supabase
+        .from('purchase_orders')
+        .select('id, source_estimate_id, source_pack_name, po_total, status')
+        .in('source_estimate_id', estIds),
+    ]);
+
+    const items = itemsRes.data || [];
+    const pos = posRes.data || [];
+
+    // Build ordered amounts & pack names per estimate
+    const orderedByEst: Record<string, number> = {};
+    const orderedPacksByEst: Record<string, Set<string>> = {};
+    pos.forEach(po => {
+      if (po.source_estimate_id && po.status !== 'ACTIVE') {
+        orderedByEst[po.source_estimate_id] = (orderedByEst[po.source_estimate_id] || 0) + (po.po_total || 0);
+        if (po.source_pack_name) {
+          if (!orderedPacksByEst[po.source_estimate_id]) orderedPacksByEst[po.source_estimate_id] = new Set();
+          orderedPacksByEst[po.source_estimate_id].add(po.source_pack_name);
+        }
+      }
+    });
+
+    setEstimateRows(supplierEsts.map((est: any) => {
+      const estItems = items.filter(i => i.estimate_id === est.id);
+      const packs = [...new Set(estItems.map(i => i.pack_name).filter(Boolean))];
+      const orderedAmt = orderedByEst[est.id] || 0;
+      const total = est.total_amount || 0;
+      return {
+        id: est.id,
+        name: est.name,
+        projectName: est.projects?.name || 'Unknown',
+        projectId: est.project_id,
+        totalAmount: total,
+        lineItemCount: estItems.length,
+        packNames: packs as string[],
+        orderedPackNames: [...(orderedPacksByEst[est.id] || [])],
+        orderedAmount: orderedAmt,
+        orderedPercent: total > 0 ? Math.round((orderedAmt / total) * 100) : 0,
+        status: est.status,
+      };
+    }));
   };
 
   const fetchEstimates = async () => {
@@ -356,6 +424,13 @@ export default function SupplierEstimates() {
             </DialogContent>
           </Dialog>
         </div>
+
+        {/* Estimate → Orders card */}
+        {estimateRows.length > 0 && (
+          <div className="mb-6">
+            <SupplierEstimateCatalog estimates={estimateRows} />
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Estimates List */}
