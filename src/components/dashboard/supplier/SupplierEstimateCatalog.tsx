@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { Check } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { EstimateRow } from '@/hooks/useSupplierDashboardData';
 
