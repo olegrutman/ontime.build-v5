@@ -174,6 +174,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
         estimatesResult,
         returnsResult,
         invoicesResult,
+        acceptedProjectsResult,
       ] = await Promise.all([
         // All POs where supplier_id is one of our supplier records
         supplierIds.length > 0
