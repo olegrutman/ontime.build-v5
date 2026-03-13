@@ -47,7 +47,7 @@ export default function Dashboard() {
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [projectToComplete, setProjectToComplete] = useState<{ id: string; name: string } | null>(null);
   const [addReminderOpen, setAddReminderOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>('active');
+  const [statusFilter, setStatusFilter] = useState<ProjectStatusFilter>('setup');
 
   const { profile, organization, userSettings, updateUserSettings } = useProfile();
   const currentOrg = userOrgRoles[0]?.organization;
