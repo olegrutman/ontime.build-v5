@@ -213,6 +213,15 @@ export function useSupplierDashboardData(): SupplierDashboardData {
       const allEstimates = (estimatesResult.data || []) as any[];
       const allReturns = (returnsResult.data || []) as any[];
       const allInvoicesRaw = (invoicesResult.data || []) as any[];
+      const allAcceptedProjects = (acceptedProjectsResult.data || []) as any[];
+
+      // Build accepted projects list
+      setAcceptedProjects(allAcceptedProjects.map((p: any) => ({
+        projectId: p.project_id,
+        projectName: p.projects?.name || 'Unknown',
+        gcName: p.projects?.organizations?.name || 'Unknown',
+        role: p.role || '',
+      })));
 
       // Filter invoices to only those linked to our POs
       const poIdSet = new Set(allPOs.map((po: any) => po.id));
