@@ -870,14 +870,49 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
             Cancel
           </Button>
           <Button variant="outline" onClick={() => savePriceEdits(false)} disabled={actionLoading}>
-            {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            Save Pricing
+            {actionLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Saving {Object.keys(priceEdits).length} items…
+              </>
+            ) : (
+              'Save Pricing'
+            )}
           </Button>
-          <Button onClick={() => savePriceEdits(true)} disabled={actionLoading}>
-            {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Lock className="h-4 w-4 mr-2" />}
+          <Button onClick={() => setLockConfirmOpen(true)} disabled={actionLoading}>
+            <Lock className="h-4 w-4 mr-2" />
             Lock Pricing
           </Button>
         </div>
+
+        {/* Lock Pricing Confirmation Dialog */}
+        <AlertDialog open={lockConfirmOpen} onOpenChange={setLockConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Lock Pricing?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will lock pricing at{' '}
+                <span className="font-semibold text-foreground">
+                  {formatCurrency(computeEditTotal())}
+                </span>{' '}
+                and mark the PO as <strong>Priced</strong>. The buyer will be notified. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={actionLoading}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => savePriceEdits(true)} disabled={actionLoading}>
+                {actionLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Locking {Object.keys(priceEdits).length} items…
+                  </>
+                ) : (
+                  'Confirm & Lock'
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       )}
 
       {/* Notes */}
