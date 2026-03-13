@@ -81,6 +81,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [lockConfirmOpen, setLockConfirmOpen] = useState(false);
   const [editingPrices, setEditingPrices] = useState(false);
   const [priceEdits, setPriceEdits] = useState<Record<string, PriceEdit>>({});
   const [salesTaxPercent, setSalesTaxPercent] = useState<number>(0);
