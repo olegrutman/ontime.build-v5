@@ -143,6 +143,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
   const [projectHealth, setProjectHealth] = useState<ProjectHealthRow[]>([]);
   const [openPOs, setOpenPOs] = useState<OpenPO[]>([]);
   const [returns, setReturns] = useState<ReturnRow[]>([]);
+  const [acceptedProjects, setAcceptedProjects] = useState<AcceptedProject[]>([]);
 
   const fetchData = useCallback(async () => {
     if (!orgId || !user) { setLoading(false); return; }
