@@ -6,6 +6,10 @@ import { useSupplierMaterialsOverview } from '@/hooks/useSupplierMaterialsOvervi
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { LineChart, Line, XAxis, YAxis, ReferenceLine, CartesianGrid } from 'recharts';
 import { format } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { SupplierEstimateCatalog } from '@/components/dashboard/supplier/SupplierEstimateCatalog';
+import type { EstimateRow } from '@/hooks/useSupplierDashboardData';
 
 interface Props {
   projectId: string;
@@ -30,6 +34,76 @@ const chartConfig = {
 
 export function SupplierMaterialsOverview({ projectId, supplierOrgId, onNavigate }: Props) {
   const data = useSupplierMaterialsOverview(projectId, supplierOrgId);
+  const { data: estimateRows = [] } = useQuery<EstimateRow[]>({
+    queryKey: ['supplier-estimate-rows', projectId, supplierOrgId],
+    queryFn: async () => {
+      const { data: estimates } = await supabase
+        .from('supplier_estimates')
+        .select('id, name, status, total_amount, supplier_estimate_items(pack_name)')
+        .eq('project_id', projectId)
+        .eq('supplier_org_id', supplierOrgId);
+
+      if (!estimates?.length) return [];
+
+      const estimateIds = estimates.map(e => e.id);
+      const { data: pos } = await supabase
+        .from('purchase_orders')
+        .select('id, status, source_estimate_id, source_pack_name')
+        .eq('project_id', projectId)
+        .in('source_estimate_id', estimateIds);
+
+      const orderedPacksByEst: Record<string, Set<string>> = {};
+      const orderedAmountByEst: Record<string, number> = {};
+      (pos || []).forEach(po => {
+        if (po.source_estimate_id && po.status !== 'ACTIVE') {
+          if (po.source_pack_name) {
+            if (!orderedPacksByEst[po.source_estimate_id]) orderedPacksByEst[po.source_estimate_id] = new Set();
+            orderedPacksByEst[po.source_estimate_id].add(po.source_pack_name);
+          }
+        }
+      });
+
+      // Get ordered amounts
+      const activePOIds = (pos || []).filter(p => ['PRICED','ORDERED','DELIVERED'].includes(p.status)).map(p => p.id);
+      if (activePOIds.length > 0) {
+        const { data: lineItems } = await supabase
+          .from('po_line_items')
+          .select('po_id, line_total, source_estimate_item_id')
+          .in('po_id', activePOIds)
+          .not('source_estimate_item_id', 'is', null);
+        (lineItems || []).forEach(li => {
+          const po = (pos || []).find(p => p.id === li.po_id);
+          if (po?.source_estimate_id) {
+            orderedAmountByEst[po.source_estimate_id] = (orderedAmountByEst[po.source_estimate_id] || 0) + (li.line_total || 0);
+          }
+        });
+      }
+
+      const { data: project } = await supabase.from('projects').select('name').eq('id', projectId).maybeSingle();
+
+      return estimates.map(est => {
+        const items = (est.supplier_estimate_items as any[]) || [];
+        const packNames = [...new Set(items.map(i => i.pack_name).filter(Boolean))] as string[];
+        const orderedPacks = [...(orderedPacksByEst[est.id] || [])];
+        const orderedAmt = orderedAmountByEst[est.id] || 0;
+        return {
+          id: est.id,
+          name: est.name,
+          projectName: project?.name || '',
+          projectId,
+          totalAmount: est.total_amount || 0,
+          lineItemCount: items.length,
+          packNames,
+          orderedPackNames: orderedPacks,
+          orderedAmount: orderedAmt,
+          orderedPercent: packNames.length > 0 ? Math.round((orderedPacks.length / packNames.length) * 100) : 0,
+          status: est.status,
+        } as EstimateRow;
+      });
+    },
+    enabled: !!projectId && !!supplierOrgId,
+  });
+
   const [unmatchedView, setUnmatchedView] = useState<'ordered' | 'delivered'>('ordered');
 
   if (data.loading) {
@@ -273,6 +347,11 @@ export function SupplierMaterialsOverview({ projectId, supplierOrgId, onNavigate
           )}
         </div>
       </div>
+
+      {/* SECTION 7 — Estimates → Orders */}
+      {estimateRows.length > 0 && (
+        <SupplierEstimateCatalog estimates={estimateRows} />
+      )}
     </div>
   );
 }
