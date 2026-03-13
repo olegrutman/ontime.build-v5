@@ -56,11 +56,22 @@ export function SupplierEstimateCatalog({ estimates }: Props) {
               {/* Pack tags */}
               {est.packNames.length > 0 && (
                 <div className="flex flex-wrap gap-1 mb-1.5">
-                  {est.packNames.slice(0, 4).map(p => (
-                    <span key={p} className="text-[0.58rem] bg-secondary/10 text-secondary dark:bg-secondary/20 dark:text-secondary-foreground px-1.5 py-0.5 rounded">
-                      {p}
-                    </span>
-                  ))}
+                  {est.packNames.slice(0, 4).map(p => {
+                    const isOrdered = est.orderedPackNames?.includes(p);
+                    return (
+                      <span
+                        key={p}
+                        className={`text-[0.58rem] px-1.5 py-0.5 rounded inline-flex items-center gap-0.5 ${
+                          isOrdered
+                            ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 font-semibold'
+                            : 'bg-secondary/10 text-secondary dark:bg-secondary/20 dark:text-secondary-foreground'
+                        }`}
+                      >
+                        {isOrdered && <Check className="w-2.5 h-2.5" />}
+                        {p}
+                      </span>
+                    );
+                  })}
                   {est.packNames.length > 4 && (
                     <span className="text-[0.58rem] text-muted-foreground">+{est.packNames.length - 4}</span>
                   )}

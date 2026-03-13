@@ -419,11 +419,18 @@ export function useSupplierDashboardData(): SupplierDashboardData {
         estimateItemsData = data || [];
       }
 
-      // Calculate ordered amounts from POs linked to estimates
+      // Calculate ordered amounts and ordered pack names from POs linked to estimates
       const orderedByEstimate: Record<string, number> = {};
+      const orderedPacksByEstimate: Record<string, Set<string>> = {};
       allPOs.forEach((po: any) => {
         if (po.source_estimate_id && po.status !== 'ACTIVE') {
           orderedByEstimate[po.source_estimate_id] = (orderedByEstimate[po.source_estimate_id] || 0) + (po.po_total || 0);
+          if (po.source_pack_name) {
+            if (!orderedPacksByEstimate[po.source_estimate_id]) {
+              orderedPacksByEstimate[po.source_estimate_id] = new Set();
+            }
+            orderedPacksByEstimate[po.source_estimate_id].add(po.source_pack_name);
+          }
         }
       });
 
@@ -440,6 +447,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
           totalAmount: total,
           lineItemCount: items.length,
           packNames: packs,
+          orderedPackNames: [...(orderedPacksByEstimate[est.id] || [])],
           orderedAmount: orderedAmt,
           orderedPercent: total > 0 ? Math.min(Math.round((orderedAmt / total) * 100), 100) : 0,
           status: est.status,
