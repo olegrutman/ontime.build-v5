@@ -1,14 +1,17 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, Plus, HardHat, Truck, ChevronDown } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Briefcase, Plus, MoreVertical, HardHat, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@/components/ui/collapsible';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { cn } from '@/lib/utils';
-import { StatusMenu, type ProjectStatusFilter } from './StatusMenu';
-import { ProjectRow } from './ProjectRow';
+import { cn, formatCurrency } from '@/lib/utils';
+import type { ProjectStatusFilter } from './StatusMenu';
 
 const STATUS_LABELS: Record<ProjectStatusFilter, string> = {
   setup: 'Setup',
@@ -18,12 +21,22 @@ const STATUS_LABELS: Record<ProjectStatusFilter, string> = {
   archived: 'Archived',
 };
 
-const STATUS_COLORS: Record<ProjectStatusFilter, string> = {
+const STATUS_DOT_COLORS: Record<string, string> = {
   setup: 'bg-violet-500',
+  draft: 'bg-violet-500',
   active: 'bg-green-500',
   on_hold: 'bg-amber-500',
   completed: 'bg-blue-500',
   archived: 'bg-muted-foreground',
+};
+
+const STATUS_BADGE_STYLES: Record<string, string> = {
+  setup: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
+  draft: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
+  active: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+  on_hold: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+  completed: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  archived: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
 };
 
 interface Project {
@@ -50,6 +63,14 @@ interface DashboardProjectListProps {
   onStatusChange: (projectId: string, status: 'active' | 'on_hold' | 'completed') => void;
 }
 
+const filters: { key: ProjectStatusFilter; label: string }[] = [
+  { key: 'active', label: 'Active' },
+  { key: 'setup', label: 'Setup' },
+  { key: 'on_hold', label: 'On Hold' },
+  { key: 'completed', label: 'Completed' },
+  { key: 'archived', label: 'Archived' },
+];
+
 export function DashboardProjectList({
   projects,
   statusFilter,
@@ -63,9 +84,6 @@ export function DashboardProjectList({
   onStatusChange,
 }: DashboardProjectListProps) {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const [statusOpen, setStatusOpen] = useState(false);
-  const [expandedProjectId, setExpandedProjectId] = useState<string | null>(null);
 
   const filteredProjects = useMemo(() => {
     if (statusFilter === 'setup') {
@@ -76,154 +94,172 @@ export function DashboardProjectList({
 
   const canCreateProject = orgType === 'GC' || orgType === 'TC';
 
-  const hasOtherItems = useMemo(() => {
-    return Object.entries(statusCounts).some(
-      ([key, count]) => key !== statusFilter && count > 0
-    );
-  }, [statusCounts, statusFilter]);
-
-  const handleMobileFilterChange = (filter: ProjectStatusFilter) => {
-    onStatusFilterChange(filter);
-    setStatusOpen(false);
-    setExpandedProjectId(null);
+  const emptyIcons: Record<string, React.ReactNode> = {
+    GC: <Briefcase className="h-8 w-8 text-muted-foreground" />,
+    TC: <Briefcase className="h-8 w-8 text-muted-foreground" />,
+    FC: <HardHat className="h-8 w-8 text-muted-foreground" />,
+    SUPPLIER: <Truck className="h-8 w-8 text-muted-foreground" />,
   };
-
-  const handleToggleExpand = (projectId: string) => {
-    setExpandedProjectId((prev) => (prev === projectId ? null : projectId));
-  };
-
-  const emptyStateConfig = {
-    GC: {
-      icon: <Briefcase className="h-8 w-8 text-muted-foreground" />,
-      title: 'No Projects Yet',
-      description: 'Create your first project to start managing work orders, invoices, and your team.',
-      showCTA: true,
-    },
-    TC: {
-      icon: <Briefcase className="h-8 w-8 text-muted-foreground" />,
-      title: 'No Projects Yet',
-      description: 'Create a project or wait for a general contractor to invite you.',
-      showCTA: true,
-    },
-    FC: {
-      icon: <HardHat className="h-8 w-8 text-muted-foreground" />,
-      title: 'No Projects Yet',
-      description: "You'll see projects here once a contractor invites you to their team.",
-      showCTA: false,
-    },
-    SUPPLIER: {
-      icon: <Truck className="h-8 w-8 text-muted-foreground" />,
-      title: 'No Projects Yet',
-      description: "Projects will appear once you're added to a contractor's team.",
-      showCTA: false,
-    },
-  };
-
-  const emptyState = emptyStateConfig[orgType as keyof typeof emptyStateConfig] || emptyStateConfig.FC;
 
   return (
-    <div className="space-y-0">
-      {/* Status Tabs */}
-      {isMobile ? (
-        <Collapsible open={statusOpen} onOpenChange={setStatusOpen}>
-          <CollapsibleTrigger className="flex items-center justify-between w-full py-2.5 px-1">
-            <div className="flex items-center gap-2">
-              <span className={cn('w-2.5 h-2.5 rounded-full', STATUS_COLORS[statusFilter])} />
-              <span className="text-sm font-medium">{STATUS_LABELS[statusFilter]}</span>
-              <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
-                {statusCounts[statusFilter]}
-              </span>
-              {hasOtherItems && !statusOpen && (
-                <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-              )}
-            </div>
-            <ChevronDown className={cn(
-              'h-4 w-4 text-muted-foreground transition-transform',
-              statusOpen && 'rotate-180'
-            )} />
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <StatusMenu
-              currentFilter={statusFilter}
-              onFilterChange={handleMobileFilterChange}
-              counts={statusCounts}
-            />
-          </CollapsibleContent>
-        </Collapsible>
-      ) : (
-        <StatusMenu
-          currentFilter={statusFilter}
-          onFilterChange={(f) => {
-            onStatusFilterChange(f);
-            setExpandedProjectId(null);
-          }}
-          counts={statusCounts}
-        />
-      )}
+    <div className="bg-card border border-border rounded-lg overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3">
+        <h3 className="font-heading text-[1rem] font-bold text-foreground">Projects</h3>
+        <span className="text-[0.72rem] text-muted-foreground">{filteredProjects.length} items</span>
+      </div>
 
-      {/* Project List */}
-      <div className="mt-4">
-        {loading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-20 w-full" />
-            ))}
-          </div>
-        ) : filteredProjects.length === 0 ? (
-          <Card>
-            <CardContent className="p-10 text-center">
-              <div className="flex justify-center mb-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                  {statusFilter !== 'active' ? (
-                    <Briefcase className="h-8 w-8 text-muted-foreground" />
-                  ) : (
-                    emptyState.icon
+      {/* Status Filter Tabs */}
+      <div className="px-4 pb-2.5 flex gap-1 overflow-x-auto scrollbar-hide">
+        {filters.map((f) => (
+          <button
+            key={f.key}
+            onClick={() => onStatusFilterChange(f.key)}
+            className={cn(
+              'text-[0.75rem] md:text-[0.7rem] font-medium px-3 py-1.5 md:px-2.5 md:py-1 rounded transition-colors whitespace-nowrap min-h-[36px] md:min-h-0 flex items-center gap-1.5',
+              statusFilter === f.key
+                ? 'bg-secondary text-secondary-foreground'
+                : 'text-muted-foreground hover:bg-accent'
+            )}
+          >
+            <span className={cn('w-2 h-2 rounded-full shrink-0', STATUS_DOT_COLORS[f.key])} />
+            {f.label}
+            {statusCounts[f.key] > 0 && (
+              <span className="text-[0.62rem] text-muted-foreground bg-muted px-1.5 py-0 rounded-full">
+                {statusCounts[f.key]}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      {loading ? (
+        <div className="px-4 pb-4 space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-14 w-full" />
+          ))}
+        </div>
+      ) : filteredProjects.length === 0 ? (
+        <div className="px-4 py-8 text-center">
+          <span className="text-[1.8rem]">📋</span>
+          <p className="text-[0.82rem] text-muted-foreground mt-1">
+            {statusFilter === 'active'
+              ? 'No active projects yet'
+              : `No ${STATUS_LABELS[statusFilter].toLowerCase()} projects`}
+          </p>
+          {statusFilter === 'active' && canCreateProject && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/create-project')}
+              className="mt-3 h-9 text-xs"
+            >
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Create Project
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="divide-y divide-border">
+          {filteredProjects.map((project) => (
+            <div
+              key={project.id}
+              className="px-4 py-3 hover:bg-accent/50 transition-colors cursor-pointer flex items-center gap-3 group"
+              style={{ minHeight: '56px' }}
+              onClick={() => navigate(`/project/${project.id}`)}
+            >
+              {/* Status dot */}
+              <span
+                className={cn(
+                  'w-2 h-2 rounded-full shrink-0',
+                  STATUS_DOT_COLORS[project.status] || 'bg-muted-foreground'
+                )}
+              />
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[0.82rem] font-semibold text-foreground truncate">
+                    {project.name}
+                  </span>
+                  {project.pendingActions > 0 && (
+                    <Badge className="text-[0.58rem] px-1.5 py-0 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 shrink-0">
+                      {project.pendingActions} pending
+                    </Badge>
                   )}
                 </div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-[0.68rem] text-muted-foreground truncate">
+                    {project.project_type}
+                  </span>
+                  {project.userRole && (
+                    <Badge className="text-[0.58rem] px-1.5 py-0 bg-secondary text-secondary-foreground shrink-0">
+                      {project.userRole}
+                    </Badge>
+                  )}
+                  <Badge
+                    className={cn(
+                      'text-[0.58rem] px-1.5 py-0 capitalize shrink-0',
+                      STATUS_BADGE_STYLES[project.status] || STATUS_BADGE_STYLES.active
+                    )}
+                  >
+                    {project.status.replace(/_/g, ' ')}
+                  </Badge>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold mb-2">
-                {statusFilter === 'archived'
-                  ? 'No Archived Projects'
-                  : statusFilter !== 'active'
-                  ? 'No Projects Found'
-                  : emptyState.title}
-              </h3>
-              <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
-                {statusFilter === 'active'
-                  ? emptyState.description
-                  : statusFilter === 'archived'
-                  ? 'Archived projects will appear here.'
-                  : 'No projects match this filter.'}
-              </p>
-              {statusFilter === 'active' && canCreateProject && emptyState.showCTA && (
-                <Button onClick={() => navigate('/create-project')} className="h-11">
-                  <Plus className="mr-2 h-5 w-5" />
-                  Create Project
-                </Button>
-              )}
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {filteredProjects.map((project) => (
-              <ProjectRow
-                key={project.id}
-                project={project}
-                userRole={project.userRole}
-                contractValue={project.contractValue}
-                pendingActions={project.pendingActions}
-                orgType={orgType}
-                orgId={orgId}
-                isExpanded={expandedProjectId === project.id}
-                onToggleExpand={handleToggleExpand}
-                onArchive={onArchive}
-                onUnarchive={onUnarchive}
-                onStatusChange={onStatusChange}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+
+              {/* Contract value */}
+              <span className="text-[0.82rem] font-semibold text-foreground shrink-0">
+                {project.contractValue != null ? formatCurrency(project.contractValue) : '—'}
+              </span>
+
+              {/* Actions menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    className="p-1.5 rounded hover:bg-accent opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MoreVertical className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  {project.status === 'archived' ? (
+                    <DropdownMenuItem onClick={() => onUnarchive(project.id)}>
+                      Unarchive
+                    </DropdownMenuItem>
+                  ) : (
+                    <>
+                      {project.status !== 'active' && (
+                        <DropdownMenuItem onClick={() => onStatusChange(project.id, 'active')}>
+                          Set Active
+                        </DropdownMenuItem>
+                      )}
+                      {project.status !== 'on_hold' && (
+                        <DropdownMenuItem onClick={() => onStatusChange(project.id, 'on_hold')}>
+                          Put On Hold
+                        </DropdownMenuItem>
+                      )}
+                      {project.status !== 'completed' && (
+                        <DropdownMenuItem onClick={() => onStatusChange(project.id, 'completed')}>
+                          Mark Completed
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuItem
+                        onClick={() => onArchive(project.id)}
+                        className="text-destructive"
+                      >
+                        Archive
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
