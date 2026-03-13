@@ -446,6 +446,24 @@ export function useDashboardData(): DashboardData {
               .order('due_date', { ascending: true })
               .limit(10)
           : Promise.resolve({ data: [] }),
+        // Recent invoices for docs card
+        projectIds.length > 0
+          ? supabase
+              .from('invoices')
+              .select('id, invoice_number, status, total_amount, created_at, project_id')
+              .in('project_id', projectIds)
+              .order('created_at', { ascending: false })
+              .limit(20)
+          : Promise.resolve({ data: [] }),
+        // Recent change orders for docs card
+        projectIds.length > 0
+          ? supabase
+              .from('change_order_projects')
+              .select('id, title, status, final_price, created_at, project_id')
+              .in('project_id', projectIds)
+              .order('created_at', { ascending: false })
+              .limit(20)
+          : Promise.resolve({ data: [] }),
       ]);
 
       const allInvoices = (allInvoicesResult.data || []) as { status: string; total_amount: number; created_at: string; contract_id: string | null }[];
