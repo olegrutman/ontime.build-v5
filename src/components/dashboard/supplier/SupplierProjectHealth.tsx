@@ -41,7 +41,11 @@ export function SupplierProjectHealth({ rows }: Props) {
           </div>
         ) : (
           rows.slice(0, 6).map(row => (
-            <div key={row.projectId} className="border border-border rounded-md px-3 py-2.5">
+            <button
+              key={row.projectId}
+              onClick={() => navigate(`/project/${row.projectId}`)}
+              className="w-full text-left border border-border rounded-md px-3 py-2.5 hover:bg-accent transition-colors"
+            >
               <div className="flex items-center justify-between mb-1">
                 <div className="min-w-0 flex-1">
                   <div className="text-[0.78rem] font-semibold text-foreground truncate">{row.projectName}</div>
