@@ -1,61 +1,51 @@
+# Interactive Project Scheduling Module — IMPLEMENTED
 
+## Design Philosophy
+Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-# Supplier Dashboard Bugs -- Analysis & Fix Plan
+## Features Built
 
-## Bugs Found (Plain English)
+### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
+- Dependency graph walking with BFS
+- Cascade date computation with buffer days support
+- Critical path calculation (longest dependency chain)
+- Conflict detection (tasks starting before predecessors end)
+- `findDownstreamTasks()` for cascade confirmation
 
-### Bug 1: No way to see or click into projects
-The Supplier Dashboard has no "Projects" section at all. Unlike the regular dashboard which has a project list you can click, the supplier dashboard only shows project names as small text inside other cards (like POs, returns, estimates). There is no clickable list of projects the supplier is part of.
+### 2. Desktop Gantt Chart (≥768px)
+- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
+- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
+- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
+- **Dependency arrows**: Bezier curves with arrow markers
+- **Critical path toggle**: Highlights longest dependency chain in amber/gold
+- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
+- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
+- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
+- **Undo**: 5-second undo button after any drag action
 
-### Bug 2: Action Queue items link to wrong pages
-When a supplier clicks action items in the "Action Queue" section:
-- **"Confirm PO"** goes to `/purchase-orders` -- this is a global PO list page, not the specific project's PO tab where they can actually confirm it.
-- **"Schedule delivery"** also goes to `/purchase-orders` -- same problem.
-- **"Follow Up" (overdue invoice)** goes to `/project/{id}` -- lands on the project home page, not the invoices tab.
-- **"Respond" (return)** goes to `/project/{id}` -- lands on the project home page, not the returns tab.
+### 3. Mobile Card View (<768px)
+- **Sticky top bar**: Project start/end dates + days remaining
+- **Phase grouping**: Collapsible sections with total duration
+- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
+- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
+- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
 
-### Bug 3: Other cards also have wrong links
-- **Open Purchase Orders** card: every PO clicks to `/purchase-orders` (global page) instead of the specific project's PO tab.
-- **Estimates** card: clicks to `/supplier/estimates` which exists but doesn't take you to the specific project context.
-- **Returns** card: clicks to `/project/{id}` but doesn't navigate to the returns tab.
+### 4. Shared Logic
+- One unified `items` array drives both views
+- `handleScheduleChange()` checks downstream tasks before applying
+- Optimistic undo with snapshot restoration
+- Auto-estimate dates still available for unscheduled items
 
-## Fix Plan
-
-### 1. Add a Projects section to the Supplier Dashboard
-**File:** `src/components/dashboard/SupplierDashboard.tsx`
-- Add a new `SupplierProjectList` component (or reuse data from the hook) that shows accepted projects as clickable cards.
-- Place it after the Action Queue section.
-- Each project links to `/project/{id}`.
-
-### 2. Fix Action Queue URLs
-**File:** `src/hooks/useSupplierDashboardData.ts` (lines 247-301)
-- "Confirm PO": change from `/purchase-orders` to `/project/${po.project_id}?tab=purchase-orders`
-- "Follow Up" overdue invoice: change from `/project/${inv.project_id}` to `/project/${inv.project_id}?tab=invoices`
-- "Respond" return: change from `/project/${r.project_id}` to `/project/${r.project_id}?tab=returns`
-- "Schedule delivery": change from `/purchase-orders` to `/project/${po.project_id}?tab=purchase-orders`
-
-### 3. Fix Open POs card links
-**File:** `src/components/dashboard/supplier/SupplierOpenOrders.tsx` (line 34)
-- Change from `navigate('/purchase-orders')` to `navigate('/project/${po.projectId}?tab=purchase-orders')`
-
-### 4. Fix Estimates card links
-**File:** `src/components/dashboard/supplier/SupplierEstimateCatalog.tsx` (line 37)
-- Change from `navigate('/supplier/estimates')` to `navigate('/project/${est.projectId}?tab=estimates')` (or keep `/supplier/estimates` if that's the correct global view -- need to verify the tab name exists on the project page)
-
-### 5. Fix Returns card links
-**File:** `src/components/dashboard/supplier/SupplierReturnsQueue.tsx` (line ~57)
-- Change from `navigate('/project/${ret.projectId}')` to `navigate('/project/${ret.projectId}?tab=returns')`
-
-### 6. Fix Project Health card links
-**File:** `src/components/dashboard/supplier/SupplierProjectHealth.tsx` (line 46)
-- Already links to `/project/${row.projectId}` which is reasonable for a health overview -- keep as is.
-
-### Files Changed
-| File | Change |
-|---|---|
-| `src/hooks/useSupplierDashboardData.ts` | Fix 4 action URL patterns to include `?tab=` params |
-| `src/components/dashboard/supplier/SupplierOpenOrders.tsx` | Fix navigate to project-specific PO tab |
-| `src/components/dashboard/supplier/SupplierEstimateCatalog.tsx` | Fix navigate to project-specific estimates |
-| `src/components/dashboard/supplier/SupplierReturnsQueue.tsx` | Fix navigate to project returns tab |
-| `src/components/dashboard/SupplierDashboard.tsx` | Add a clickable project list section |
-
+## Files Created/Modified
+| File | Action |
+|------|--------|
+| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
+| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
+| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
+| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
+| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
+| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
+| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
+| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
+| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
+| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
