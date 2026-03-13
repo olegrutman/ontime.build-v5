@@ -27,6 +27,7 @@ const ACTION_MIN_ROLE: Record<string, string> = {
   CHANGE_USER_ROLE: "PLATFORM_OWNER",
   EDIT_USER_PROFILE: "PLATFORM_OWNER",
   EDIT_MEMBER_PERMISSIONS: "PLATFORM_OWNER",
+  DELETE_PROJECT: "PLATFORM_OWNER",
 };
 
 function hasPermission(callerRole: string, requiredRole: string): boolean {
@@ -721,6 +722,51 @@ Deno.serve(async (req) => {
         const changedPerms = Object.keys(permUpdate).join(", ");
         logMeta = { p_action_summary: `Edited member permissions (${changedPerms}) for role ${user_org_role_id}` };
         result = { success: true, message: "Permissions updated" };
+        break;
+      }
+
+      case "DELETE_PROJECT": {
+        const { project_id } = params;
+        if (!project_id) {
+          return new Response(JSON.stringify({ error: "project_id is required" }), {
+            status: 400, headers: corsHeaders,
+          });
+        }
+        targetId = project_id;
+
+        // Snapshot before deletion
+        const { data: projData } = await adminClient
+          .from("projects")
+          .select("name, status, created_by")
+          .eq("id", project_id)
+          .single();
+        if (!projData) {
+          return new Response(JSON.stringify({ error: "Project not found" }), {
+            status: 404, headers: corsHeaders,
+          });
+        }
+        snapshotBefore = { name: projData.name, status: projData.status, created_by: projData.created_by };
+
+        // Clean up notifications referencing this project
+        await adminClient
+          .from("notifications")
+          .delete()
+          .eq("entity_type", "project")
+          .eq("entity_id", project_id);
+
+        // Delete the project — FKs cascade everything else
+        const { error: delProjErr } = await adminClient
+          .from("projects")
+          .delete()
+          .eq("id", project_id);
+        if (delProjErr) {
+          return new Response(JSON.stringify({ error: delProjErr.message }), {
+            status: 500, headers: corsHeaders,
+          });
+        }
+
+        logMeta = { p_target_project_id: project_id, p_target_project_name: projData.name, p_action_summary: `Deleted project "${projData.name}"` };
+        result = { success: true, message: "Project deleted" };
         break;
       }
 

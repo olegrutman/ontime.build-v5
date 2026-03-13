@@ -1,56 +1,51 @@
+# Interactive Project Scheduling Module — IMPLEMENTED
 
+## Design Philosophy
+Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-# Allow Platform Owner to Delete Projects Completely
+## Features Built
 
-## What needs to happen
+### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
+- Dependency graph walking with BFS
+- Cascade date computation with buffer days support
+- Critical path calculation (longest dependency chain)
+- Conflict detection (tasks starting before predecessors end)
+- `findDownstreamTasks()` for cascade confirmation
 
-Add a "Delete Project" action to the Platform Project Detail page, restricted to Platform Owners only. The action requires a reason (audit logged), shows a confirmation dialog, and performs a full cascading deletion via the edge function.
+### 2. Desktop Gantt Chart (≥768px)
+- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
+- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
+- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
+- **Dependency arrows**: Bezier curves with arrow markers
+- **Critical path toggle**: Highlights longest dependency chain in amber/gold
+- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
+- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
+- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
+- **Undo**: 5-second undo button after any drag action
 
-## Database constraint issue
+### 3. Mobile Card View (<768px)
+- **Sticky top bar**: Project start/end dates + days remaining
+- **Phase grouping**: Collapsible sections with total duration
+- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
+- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
+- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
 
-Two tables will block or orphan data on project deletion:
-- **`supplier_estimates`**: FK with `NO ACTION` — will **block** the DELETE
-- **`purchase_orders`**: FK with `SET NULL` — won't block but orphans PO rows
+### 4. Shared Logic
+- One unified `items` array drives both views
+- `handleScheduleChange()` checks downstream tasks before applying
+- Optimistic undo with snapshot restoration
+- Auto-estimate dates still available for unscheduled items
 
-**Fix via migration**: Change both FKs to `CASCADE` so deleting a project cleans up everything.
-
-## Changes
-
-### 1. Database migration
-Drop and re-add the foreign key constraints:
-```sql
-ALTER TABLE supplier_estimates DROP CONSTRAINT supplier_estimates_project_id_fkey;
-ALTER TABLE supplier_estimates ADD CONSTRAINT supplier_estimates_project_id_fkey 
-  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE;
-
-ALTER TABLE purchase_orders DROP CONSTRAINT purchase_orders_project_id_fkey;
-ALTER TABLE purchase_orders ADD CONSTRAINT purchase_orders_project_id_fkey 
-  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE;
-```
-
-### 2. Edge function: add `DELETE_PROJECT` action (`supabase/functions/platform-support-action/index.ts`)
-- Add `DELETE_PROJECT: "PLATFORM_OWNER"` to `ACTION_MIN_ROLE`
-- Add a new case that:
-  1. Snapshots the project name, status, created_by
-  2. Deletes notifications referencing this project
-  3. Deletes the project row (FKs cascade everything else)
-  4. Logs the action with project name in summary
-
-### 3. Type update (`src/types/platform.ts`)
-- Add `'DELETE_PROJECT'` to `SupportActionType` union
-- Add label in `ACTION_TYPE_LABELS`: `'Project Deleted'`
-
-### 4. UI: Delete button on Project Detail page (`src/pages/platform/PlatformProjectDetail.tsx`)
-- Add a red "Delete Project" button in the summary card header area
-- Wire it to a `SupportActionDialog` with destructive warning text
-- On confirm, call `execute({ action_type: 'DELETE_PROJECT', reason, project_id })` then navigate back to `/platform/projects`
-- Only show for Platform Owners (check `platformRole` from `useAuth`)
-
-## Files to change
-| File | Change |
-|---|---|
-| Migration SQL | Fix FK constraints on `supplier_estimates` and `purchase_orders` |
-| `supabase/functions/platform-support-action/index.ts` | Add `DELETE_PROJECT` handler |
-| `src/types/platform.ts` | Add type + label |
-| `src/pages/platform/PlatformProjectDetail.tsx` | Add delete button + dialog |
-
+## Files Created/Modified
+| File | Action |
+|------|--------|
+| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
+| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
+| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
+| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
+| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
+| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
+| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
+| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
+| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
+| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |

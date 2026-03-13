@@ -9,8 +9,9 @@ import { Button } from '@/components/ui/button';
 import { SupportActionDialog } from '@/components/platform/SupportActionDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupportAction } from '@/hooks/useSupportAction';
+import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { CheckCircle, DollarSign, FileText, ClipboardList, ShoppingCart, Package } from 'lucide-react';
+import { CheckCircle, DollarSign, FileText, ClipboardList, ShoppingCart, Package, Trash2 } from 'lucide-react';
 
 interface ProjectData {
   id: string;
@@ -130,9 +131,11 @@ export default function PlatformProjectDetail() {
   const [estimates, setEstimates] = useState<SupplierEstimateRow[]>([]);
 
   const { execute, loading: actionLoading } = useSupportAction();
+  const { platformRole } = useAuth();
   const [forceAcceptOpen, setForceAcceptOpen] = useState(false);
   const [forceAcceptTeamId, setForceAcceptTeamId] = useState<string | null>(null);
   const [forceAcceptOrgName, setForceAcceptOrgName] = useState('');
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const fetchData = async () => {
     if (!projectId) return;
@@ -268,7 +271,19 @@ export default function PlatformProjectDetail() {
     >
       {/* Summary */}
       <Card className="mb-6">
-        <CardContent className="pt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+          <CardTitle className="text-base">Project Summary</CardTitle>
+          {platformRole === 'PLATFORM_OWNER' && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" /> Delete Project
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Status</p>
             <Badge variant="outline" className="capitalize mt-1">{project.status}</Badge>
@@ -640,6 +655,26 @@ export default function PlatformProjectDetail() {
         title="Force Accept Team Member"
         description={`Force-accept ${forceAcceptOrgName}'s participation in ${project.name}. This bypasses the normal invitation acceptance flow.`}
         onConfirm={handleForceAccept}
+        loading={actionLoading}
+      />
+
+      {/* Delete Project Dialog */}
+      <SupportActionDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Permanently Delete Project"
+        description={`This will permanently delete "${project.name}" and ALL associated data including contracts, invoices, purchase orders, work orders, estimates, and team memberships. This action cannot be undone.`}
+        onConfirm={async (reason) => {
+          const ok = await execute({
+            action_type: 'DELETE_PROJECT',
+            reason,
+            project_id: project.id,
+          });
+          if (ok) {
+            setDeleteOpen(false);
+            navigate('/platform/projects');
+          }
+        }}
         loading={actionLoading}
       />
     </PlatformLayout>

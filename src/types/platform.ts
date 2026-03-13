@@ -26,7 +26,8 @@ export type SupportActionType =
   | 'EDIT_WORK_ORDER'
   | 'RESTORE_DELETED_ITEM'
   | 'REBUILD_PERMISSIONS'
-  | 'MANUAL_VERIFY_SUPPLIER';
+  | 'MANUAL_VERIFY_SUPPLIER'
+  | 'DELETE_PROJECT';
 
 export interface SupportActionLog {
   id: string;
@@ -125,4 +126,5 @@ export const ACTION_TYPE_LABELS: Record<SupportActionType, string> = {
   RESTORE_DELETED_ITEM: 'Deleted Item Restored',
   REBUILD_PERMISSIONS: 'Permissions Rebuilt',
   MANUAL_VERIFY_SUPPLIER: 'Supplier Manually Verified',
+  DELETE_PROJECT: 'Project Deleted',
 };
