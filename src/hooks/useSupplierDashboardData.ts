@@ -267,7 +267,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
           subtitle: `${differenceInDays(now, new Date(inv.submitted_at))} days since submitted`,
           amount: inv.total_amount,
           actionLabel: 'Follow Up',
-          actionUrl: `/project/${inv.project_id}/invoicing`,
+          actionUrl: `/project/${inv.project_id}`,
         });
       });
 
