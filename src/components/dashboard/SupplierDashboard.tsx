@@ -57,6 +57,9 @@ export function SupplierDashboard({ pendingInvites = [], onRefreshInvites }: Sup
         {/* Section 2: Action Queue */}
         <SupplierActionQueue items={actionItems} />
 
+        {/* Section 2.5: Projects */}
+        <SupplierProjectList projects={projectHealth} />
+
         {/* Section 3: Delivery Schedule + Receivables */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5">
           <SupplierDeliverySchedule days={deliveryDays} rows={deliveryRows} />
