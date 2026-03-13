@@ -63,6 +63,16 @@ interface FinancialSummary {
   potentialProfit: number;
 }
 
+export interface RecentDoc {
+  id: string;
+  type: 'invoice' | 'change_order';
+  title: string;
+  status: string;
+  amount: number | null;
+  created_at: string;
+  projectName: string;
+}
+
 interface DashboardData {
   projects: ProjectWithDetails[];
   statusCounts: {
@@ -89,6 +99,7 @@ interface DashboardData {
   };
   financials: FinancialSummary;
   reminders: Reminder[];
+  recentDocs: RecentDoc[];
   thisMonth: {
     invoices: number;
     changeOrders: number;
