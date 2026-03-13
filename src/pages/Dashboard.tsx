@@ -15,6 +15,7 @@ import {
   AddReminderDialog,
 } from '@/components/dashboard';
 import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
+import { PendingInvitesPanel } from '@/components/dashboard/PendingInvitesPanel';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { useProfile } from '@/hooks/useProfile';
 import { DashboardKPIRow } from '@/components/dashboard/DashboardKPIRow';
