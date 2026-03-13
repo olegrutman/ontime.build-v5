@@ -271,7 +271,19 @@ export default function PlatformProjectDetail() {
     >
       {/* Summary */}
       <Card className="mb-6">
-        <CardContent className="pt-6 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <CardHeader className="pb-3 flex flex-row items-center justify-between">
+          <CardTitle className="text-base">Project Summary</CardTitle>
+          {platformRole === 'PLATFORM_OWNER' && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" /> Delete Project
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wide">Status</p>
             <Badge variant="outline" className="capitalize mt-1">{project.status}</Badge>
