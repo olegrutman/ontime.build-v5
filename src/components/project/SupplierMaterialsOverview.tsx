@@ -347,6 +347,11 @@ export function SupplierMaterialsOverview({ projectId, supplierOrgId, onNavigate
           )}
         </div>
       </div>
+
+      {/* SECTION 7 — Estimates → Orders */}
+      {estimateRows.length > 0 && (
+        <SupplierEstimateCatalog estimates={estimateRows} />
+      )}
     </div>
   );
 }
