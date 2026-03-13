@@ -155,6 +155,11 @@ export default function Dashboard() {
     );
   }
 
+  // Supplier gets a completely different dashboard
+  if (orgType === 'SUPPLIER') {
+    return <SupplierDashboard />;
+  }
+
   const canCreateProject = orgType === 'GC' || orgType === 'TC';
   const isOrgAdmin = userOrgRoles[0]?.is_admin ?? false;
   const showOnboarding = userSettings && !userSettings.onboarding_dismissed;
