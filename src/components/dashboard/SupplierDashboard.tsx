@@ -22,7 +22,7 @@ export function SupplierDashboard({ pendingInvites = [], onRefreshInvites }: Sup
   const {
     kpis, actionItems, deliveryDays, deliveryRows,
     agingBuckets, velocityTrend, oldestInvoiceDays,
-    estimates, projectHealth, openPOs, returns, loading,
+    estimates, projectHealth, acceptedProjects, openPOs, returns, loading,
   } = useSupplierDashboardData();
 
   if (loading) {
