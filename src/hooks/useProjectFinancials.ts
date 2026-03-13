@@ -312,8 +312,22 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         );
 
         const receivableInvs = submitted.filter((inv: any) => inv.contract_id && upstreamContractIds.has(inv.contract_id));
+
+        // Fetch PO ownership to filter supplier invoices by pricing_owner_org_id
+        const poLinkedInvs = submitted.filter((inv: any) => inv.po_id);
+        const poIds = [...new Set(poLinkedInvs.map((inv: any) => inv.po_id as string))];
+        let poOwnerMap = new Map<string, string>();
+        if (poIds.length > 0) {
+          const { data: poOwners } = await supabase
+            .from('purchase_orders')
+            .select('id, pricing_owner_org_id')
+            .in('id', poIds);
+          poOwnerMap = new Map((poOwners || []).map(po => [po.id, po.pricing_owner_org_id || '']));
+        }
+
         const payableInvs = submitted.filter((inv: any) =>
-          (inv.contract_id && downstreamContractIds.has(inv.contract_id)) || (inv.po_id != null)
+          (inv.contract_id && downstreamContractIds.has(inv.contract_id)) ||
+          (inv.po_id && poOwnerMap.has(inv.po_id) && orgIds.includes(poOwnerMap.get(inv.po_id)!))
         );
 
         setReceivablesInvoiced(receivableInvs.reduce((s, i: any) => s + (i.subtotal || 0), 0));
