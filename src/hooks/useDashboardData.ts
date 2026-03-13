@@ -63,6 +63,16 @@ interface FinancialSummary {
   potentialProfit: number;
 }
 
+export interface RecentDoc {
+  id: string;
+  type: 'invoice' | 'change_order';
+  title: string;
+  status: string;
+  amount: number | null;
+  created_at: string;
+  projectName: string;
+}
+
 interface DashboardData {
   projects: ProjectWithDetails[];
   statusCounts: {
@@ -89,6 +99,7 @@ interface DashboardData {
   };
   financials: FinancialSummary;
   reminders: Reminder[];
+  recentDocs: RecentDoc[];
   thisMonth: {
     invoices: number;
     changeOrders: number;
@@ -103,6 +114,7 @@ export function useDashboardData(): DashboardData {
   const [attentionItems, setAttentionItems] = useState<AttentionItem[]>([]);
   const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [recentDocs, setRecentDocs] = useState<RecentDoc[]>([]);
   const [financials, setFinancials] = useState<FinancialSummary>({
     totalContracts: 0,
     totalRevenue: 0,
@@ -392,7 +404,7 @@ export function useDashboardData(): DashboardData {
 
       setProjects(projectsWithDetails);
 
-      // GROUP 3: Parallel financial queries
+      // GROUP 3: Parallel financial queries + recent docs
       const monthStart = startOfMonth(new Date()).toISOString();
       const monthEnd = endOfMonth(new Date()).toISOString();
 
@@ -400,6 +412,8 @@ export function useDashboardData(): DashboardData {
         allInvoicesResult,
         thisMonthCOsResult,
         remindersResult,
+        recentInvoicesResult,
+        recentCOsResult,
       ] = await Promise.all([
         projectIds.length > 0
           ? supabase
@@ -432,6 +446,24 @@ export function useDashboardData(): DashboardData {
               .order('due_date', { ascending: true })
               .limit(10)
           : Promise.resolve({ data: [] }),
+        // Recent invoices for docs card
+        projectIds.length > 0
+          ? supabase
+              .from('invoices')
+              .select('id, invoice_number, status, total_amount, created_at, project_id')
+              .in('project_id', projectIds)
+              .order('created_at', { ascending: false })
+              .limit(20)
+          : Promise.resolve({ data: [] }),
+        // Recent change orders for docs card
+        projectIds.length > 0
+          ? supabase
+              .from('change_order_projects')
+              .select('id, title, status, final_price, created_at, project_id')
+              .in('project_id', projectIds)
+              .order('created_at', { ascending: false })
+              .limit(20)
+          : Promise.resolve({ data: [] }),
       ]);
 
       const allInvoices = (allInvoicesResult.data || []) as { status: string; total_amount: number; created_at: string; contract_id: string | null }[];
@@ -447,6 +479,40 @@ export function useDashboardData(): DashboardData {
         completed: r.completed,
       }));
       setReminders(remindersList);
+
+      // Build recent docs
+      const recentDocsList: RecentDoc[] = [];
+      const recentInvoices = (recentInvoicesResult.data || []) as any[];
+      const recentCOs = (recentCOsResult.data || []) as any[];
+
+      recentInvoices.forEach((inv: any) => {
+        const proj = allProjects.find(p => p.id === inv.project_id);
+        recentDocsList.push({
+          id: inv.id,
+          type: 'invoice',
+          title: inv.invoice_number || 'Invoice',
+          status: inv.status,
+          amount: inv.total_amount,
+          created_at: inv.created_at,
+          projectName: proj?.name || 'Unknown',
+        });
+      });
+
+      recentCOs.forEach((co: any) => {
+        const proj = allProjects.find(p => p.id === co.project_id);
+        recentDocsList.push({
+          id: co.id,
+          type: 'change_order',
+          title: co.title || 'Change Order',
+          status: co.status,
+          amount: co.final_price,
+          created_at: co.created_at,
+          projectName: proj?.name || 'Unknown',
+        });
+      });
+
+      recentDocsList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      setRecentDocs(recentDocsList.slice(0, 10));
 
       // Contract detail map for invoice filtering
       const contractIds = [...new Set(allInvoices.map(i => i.contract_id).filter((id): id is string => id !== null))];
@@ -711,6 +777,7 @@ export function useDashboardData(): DashboardData {
     billing: { ...billing, role: billingRole },
     financials,
     reminders,
+    recentDocs,
     thisMonth,
     loading,
     refetch: fetchData,
