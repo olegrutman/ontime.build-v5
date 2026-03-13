@@ -256,6 +256,21 @@ export default function ProjectHome() {
     );
   }
 
+  if (pendingInvite) {
+    return (
+      <SidebarProvider defaultOpen={defaultOpen}>
+        <div className="min-h-screen flex w-full">
+          <AppSidebar />
+          <SidebarInset className="flex flex-col flex-1">
+            <div className="flex items-center justify-center min-h-[50vh]">
+              <PendingInviteCard projectId={id!} />
+            </div>
+          </SidebarInset>
+        </div>
+      </SidebarProvider>
+    );
+  }
+
   if (!project) {
     return (
       <SidebarProvider defaultOpen={defaultOpen}>
