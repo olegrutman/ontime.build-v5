@@ -118,6 +118,7 @@ export interface SupplierDashboardData {
   oldestInvoiceDays: number | null;
   estimates: EstimateRow[];
   projectHealth: ProjectHealthRow[];
+  acceptedProjects: AcceptedProject[];
   openPOs: OpenPO[];
   returns: ReturnRow[];
   loading: boolean;
