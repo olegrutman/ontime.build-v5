@@ -1,51 +1,44 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
+Goal: make project invites actionable for Supplier users on the Supplier Dashboard.
 
-## Features Built
+Why this is happening:
+- Supplier users are routed to a separate dashboard component (`SupplierDashboard`).
+- Invite accept/decline UI exists on the standard dashboard cards/panels, but not inside `SupplierDashboard`.
+- Notification clicks for project invites route to `/dashboard`, so Supplier users land on a page with no project-invite actions.
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
+Implementation plan:
 
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
+1) Wire pending project invites into Supplier Dashboard
+- File: `src/pages/Dashboard.tsx`
+- Change supplier branch from:
+  - `return <SupplierDashboard />`
+- To:
+  - `return <SupplierDashboard pendingInvites={pendingInvites} onRefreshInvites={refetch} />`
+- This reuses already-fetched invite data (no new backend query needed).
 
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
+2) Render invite response UI inside Supplier Dashboard
+- File: `src/components/dashboard/SupplierDashboard.tsx`
+- Add props for `pendingInvites` and `onRefreshInvites`.
+- Reuse existing `PendingInvitesPanel` so Supplier users get working Accept/Decline buttons immediately.
+- Place the panel near the top (right under `OrgInviteBanner`) so invite actions are visible first.
+- On accept/decline success, call `onRefreshInvites` (and optionally local supplier refetch) so the card clears instantly.
 
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
+3) Keep behavior consistent with current invite routing
+- No backend migration needed.
+- Existing notification routing to `/dashboard` remains correct because Supplier Dashboard will now include the invite actions.
 
-## Files Created/Modified
-| File | Action |
-|------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+Technical details:
+- Reused components/hooks:
+  - `useDashboardData` (already provides `pendingInvites` + `refetch`)
+  - `PendingInvitesPanel` (already uses `useProjectInvite` RPCs)
+- Files touched:
+  - `src/pages/Dashboard.tsx`
+  - `src/components/dashboard/SupplierDashboard.tsx`
+- No schema/RLS/function changes required.
+
+Validation checklist (end-to-end):
+1. Log in as Supplier with a pending project invite.
+2. Open `/dashboard` and confirm “Project Invitations” section appears.
+3. Click Accept → invitation disappears after refresh and access to `/project/:id` works.
+4. Re-test with Decline → invitation disappears and project access is denied.
+5. Verify non-supplier dashboard behavior is unchanged.
