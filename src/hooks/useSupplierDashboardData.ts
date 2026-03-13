@@ -79,6 +79,13 @@ export interface ProjectHealthRow {
   avgApprovalDays: number | null;
 }
 
+export interface AcceptedProject {
+  projectId: string;
+  projectName: string;
+  gcName: string;
+  role: string;
+}
+
 export interface OpenPO {
   id: string;
   poNumber: string;
@@ -111,6 +118,7 @@ export interface SupplierDashboardData {
   oldestInvoiceDays: number | null;
   estimates: EstimateRow[];
   projectHealth: ProjectHealthRow[];
+  acceptedProjects: AcceptedProject[];
   openPOs: OpenPO[];
   returns: ReturnRow[];
   loading: boolean;
@@ -135,6 +143,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
   const [projectHealth, setProjectHealth] = useState<ProjectHealthRow[]>([]);
   const [openPOs, setOpenPOs] = useState<OpenPO[]>([]);
   const [returns, setReturns] = useState<ReturnRow[]>([]);
+  const [acceptedProjects, setAcceptedProjects] = useState<AcceptedProject[]>([]);
 
   const fetchData = useCallback(async () => {
     if (!orgId || !user) { setLoading(false); return; }
@@ -165,6 +174,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
         estimatesResult,
         returnsResult,
         invoicesResult,
+        acceptedProjectsResult,
       ] = await Promise.all([
         // All POs where supplier_id is one of our supplier records
         supplierIds.length > 0
@@ -191,12 +201,27 @@ export function useSupplierDashboardData(): SupplierDashboardData {
               .select('id, invoice_number, status, total_amount, submitted_at, approved_at, paid_at, created_at, project_id, po_id')
               .not('po_id', 'is', null)
           : Promise.resolve({ data: [] }),
+        // Accepted projects for this org
+        supabase
+          .from('project_participants')
+          .select('project_id, role, projects:project_id(name, organization_id, organizations:organization_id(name))')
+          .eq('organization_id', orgId)
+          .eq('invite_status', 'ACCEPTED'),
       ]);
 
       const allPOs = (posResult.data || []) as any[];
       const allEstimates = (estimatesResult.data || []) as any[];
       const allReturns = (returnsResult.data || []) as any[];
       const allInvoicesRaw = (invoicesResult.data || []) as any[];
+      const allAcceptedProjects = (acceptedProjectsResult.data || []) as any[];
+
+      // Build accepted projects list
+      setAcceptedProjects(allAcceptedProjects.map((p: any) => ({
+        projectId: p.project_id,
+        projectName: p.projects?.name || 'Unknown',
+        gcName: p.projects?.organizations?.name || 'Unknown',
+        role: p.role || '',
+      })));
 
       // Filter invoices to only those linked to our POs
       const poIdSet = new Set(allPOs.map((po: any) => po.id));
@@ -499,6 +524,6 @@ export function useSupplierDashboardData(): SupplierDashboardData {
   return {
     kpis, actionItems, deliveryDays, deliveryRows, agingBuckets,
     velocityTrend, oldestInvoiceDays, estimates, projectHealth,
-    openPOs, returns, loading, refetch: fetchData,
+    acceptedProjects, openPOs, returns, loading, refetch: fetchData,
   };
 }
