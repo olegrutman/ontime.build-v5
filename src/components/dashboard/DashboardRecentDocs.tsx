@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
@@ -45,6 +46,12 @@ interface Props {
 export function DashboardRecentDocs({ docs }: Props) {
   const [filter, setFilter] = useState<DocFilter>('all');
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
+
+  const handleRowClick = (doc: RecentDoc) => {
+    const tab = doc.type === 'invoice' ? 'invoices' : 'work-orders';
+    navigate(`/project/${doc.projectId}?tab=${tab}`);
+  };
 
   const filtered = filter === 'all'
     ? docs
@@ -83,7 +90,7 @@ export function DashboardRecentDocs({ docs }: Props) {
       ) : isMobile ? (
         <div className="divide-y divide-border">
           {filtered.map(doc => (
-            <div key={doc.id} className="px-4 py-3" style={{ minHeight: '56px' }}>
+            <div key={doc.id} className="px-4 py-3 cursor-pointer hover:bg-accent/50 transition-colors" style={{ minHeight: '56px' }} onClick={() => handleRowClick(doc)}>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   <span className="text-[0.82rem] font-semibold text-foreground truncate">{doc.title}</span>
@@ -116,7 +123,7 @@ export function DashboardRecentDocs({ docs }: Props) {
           </thead>
           <tbody>
             {filtered.map(doc => (
-              <tr key={doc.id} className="border-b border-border">
+              <tr key={doc.id} className="border-b border-border cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => handleRowClick(doc)}>
                 <td className="px-[18px] py-[10px]">
                   <div className="text-[0.8rem] font-semibold text-foreground">{doc.title}</div>
                   <div className="text-[0.68rem] text-muted-foreground">{doc.projectName}</div>

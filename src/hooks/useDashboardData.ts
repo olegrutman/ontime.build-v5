@@ -71,6 +71,7 @@ export interface RecentDoc {
   amount: number | null;
   created_at: string;
   projectName: string;
+  projectId: string;
 }
 
 interface DashboardData {
@@ -495,6 +496,7 @@ export function useDashboardData(): DashboardData {
           amount: inv.total_amount,
           created_at: inv.created_at,
           projectName: proj?.name || 'Unknown',
+          projectId: inv.project_id,
         });
       });
 
@@ -508,6 +510,7 @@ export function useDashboardData(): DashboardData {
           amount: co.final_price,
           created_at: co.created_at,
           projectName: proj?.name || 'Unknown',
+          projectId: co.project_id,
         });
       });
 
