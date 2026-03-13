@@ -107,7 +107,7 @@ export function InvoiceCard({
         onDownload(invoice);
       },
     }] : []),
-    ...(onDelete && invoice.status === 'DRAFT' && canSubmit ? [{
+    ...(onDelete && ['DRAFT', 'SUBMITTED', 'REJECTED'].includes(invoice.status) && canSubmit ? [{
       icon: <Trash2 className="h-4 w-4" />,
       label: 'Delete Invoice',
       variant: 'destructive' as const,
