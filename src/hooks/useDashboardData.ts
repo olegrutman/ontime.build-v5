@@ -777,6 +777,7 @@ export function useDashboardData(): DashboardData {
     billing: { ...billing, role: billingRole },
     financials,
     reminders,
+    recentDocs,
     thisMonth,
     loading,
     refetch: fetchData,

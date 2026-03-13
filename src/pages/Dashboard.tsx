@@ -203,8 +203,29 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-2.5">
           {/* Left column */}
           <div className="space-y-2.5">
-            <DashboardProjectsTable projects={projects} loading={loading} />
-            <DashboardRecentDocs />
+            <DashboardProjectList
+              projects={projects}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              statusCounts={statusCounts}
+              loading={loading}
+              orgType={orgType}
+              orgId={orgId}
+              onArchive={(id) => {
+                const p = projects.find(proj => proj.id === id);
+                if (p) { setProjectToArchive({ id, name: p.name }); setArchiveDialogOpen(true); }
+              }}
+              onUnarchive={(id) => updateProjectStatus(id, 'active')}
+              onStatusChange={(id, status) => {
+                if (status === 'completed') {
+                  const p = projects.find(proj => proj.id === id);
+                  if (p) { setProjectToComplete({ id, name: p.name }); setCompleteDialogOpen(true); }
+                } else {
+                  updateProjectStatus(id, status);
+                }
+              }}
+            />
+            <DashboardRecentDocs docs={recentDocs} />
           </div>
 
           {/* Right column */}
