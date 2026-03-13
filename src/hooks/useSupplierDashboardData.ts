@@ -79,6 +79,13 @@ export interface ProjectHealthRow {
   avgApprovalDays: number | null;
 }
 
+export interface AcceptedProject {
+  projectId: string;
+  projectName: string;
+  gcName: string;
+  role: string;
+}
+
 export interface OpenPO {
   id: string;
   poNumber: string;
