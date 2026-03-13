@@ -196,6 +196,25 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
       setInvoices([]);
     } else {
       const allInvoices = (data || []) as Invoice[];
+      
+      // Fetch PO ownership info for PO-linked invoices
+      const poIds = [...new Set(allInvoices.filter(i => i.po_id).map(i => i.po_id!))];
+      if (poIds.length > 0) {
+        const { data: poData } = await supabase
+          .from('purchase_orders')
+          .select('id, pricing_owner_org_id, supplier:suppliers!purchase_orders_supplier_id_fkey(organization_id)')
+          .in('id', poIds);
+        
+        const map: Record<string, { pricingOwnerOrgId: string | null; supplierOrgId: string | null }> = {};
+        (poData || []).forEach((po: any) => {
+          map[po.id] = {
+            pricingOwnerOrgId: po.pricing_owner_org_id,
+            supplierOrgId: po.supplier?.organization_id || null,
+          };
+        });
+        setPoOwnerMap(map);
+      }
+
       const contractIds = contractsWhereUserIsParty.map(c => c.id);
       const visibleInvoices = currentOrgId && contractIds.length > 0
         ? allInvoices.filter(inv => 
