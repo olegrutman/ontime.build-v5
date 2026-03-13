@@ -51,6 +51,8 @@ import { useToast } from '@/hooks/use-toast';
 import { FeatureGate, TAB_FEATURE_MAP } from '@/components/auth/FeatureGate';
 import { useProjectFinancials } from '@/hooks/useProjectFinancials';
 import { useProjectReadiness } from '@/hooks/useProjectReadiness';
+import { useProjectEstimateRows } from '@/hooks/useProjectEstimateRows';
+import { SupplierEstimateCatalog } from '@/components/dashboard/supplier/SupplierEstimateCatalog';
 
 interface Project {
   id: string;
@@ -159,6 +161,7 @@ export default function ProjectHome() {
     },
     enabled: !!id && !isSupplier,
   });
+  const { data: estimateRows } = useProjectEstimateRows(id || '', projectSupplierOrgId ?? null);
 
   const activeTab = searchParams.get('tab') || 'overview';
 
@@ -330,7 +333,7 @@ export default function ProjectHome() {
                       {(project.status === 'setup' || project.status === 'draft') && !isFC && (
                         <ProjectReadinessCard readiness={readiness} />
                       )}
-                      
+  
 
                       {/* Mobile attention banner */}
                       <div className="lg:hidden">
@@ -356,6 +359,9 @@ export default function ProjectHome() {
                               supplierOrgId={projectSupplierOrgId}
                               financials={financials}
                             />
+                          )}
+                          {estimateRows && estimateRows.length > 0 && (
+                            <SupplierEstimateCatalog estimates={estimateRows} />
                           )}
                           <CriticalScheduleCard projectId={id!} onNavigate={handleTabChange} />
                           <MaterialMarkupEditor financials={financials} projectId={id!} projectStatus={projectStatus} />
