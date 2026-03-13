@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useDashboardData } from '@/hooks/useDashboardData';
+import { SupplierDashboard } from '@/components/dashboard/SupplierDashboard';
 import { AppLayout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -152,6 +153,11 @@ export default function Dashboard() {
         </div>
       </AppLayout>
     );
+  }
+
+  // Supplier gets a completely different dashboard
+  if (orgType === 'SUPPLIER') {
+    return <SupplierDashboard />;
   }
 
   const canCreateProject = orgType === 'GC' || orgType === 'TC';
