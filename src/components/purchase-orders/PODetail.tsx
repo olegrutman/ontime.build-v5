@@ -303,8 +303,8 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
                 price_source: isNewPrice ? 'SUPPLIER_MANUAL' : (item.price_source || null),
               })
               .eq('id', itemId)
-              .then(({ error }) => { if (error) throw error; })
-          );
+              .then(({ error }) => { if (error) throw error; });
+          updatePromises.push(promise as unknown as Promise<void>);
         }
       }
 
