@@ -510,6 +510,7 @@ export function useDashboardData(): DashboardData {
           amount: co.final_price,
           created_at: co.created_at,
           projectName: proj?.name || 'Unknown',
+          projectId: co.project_id,
         });
       });
 
