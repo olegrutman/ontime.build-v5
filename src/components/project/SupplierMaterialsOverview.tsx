@@ -6,6 +6,10 @@ import { useSupplierMaterialsOverview } from '@/hooks/useSupplierMaterialsOvervi
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { LineChart, Line, XAxis, YAxis, ReferenceLine, CartesianGrid } from 'recharts';
 import { format } from 'date-fns';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { SupplierEstimateCatalog } from '@/components/dashboard/supplier/SupplierEstimateCatalog';
+import type { EstimateRow } from '@/hooks/useSupplierDashboardData';
 
 interface Props {
   projectId: string;
