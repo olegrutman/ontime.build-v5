@@ -66,7 +66,7 @@ export function SupplierProjectHealth({ rows }: Props) {
                   </span>
                 )}
               </div>
-            </div>
+            </button>
           ))
         )}
       </div>
