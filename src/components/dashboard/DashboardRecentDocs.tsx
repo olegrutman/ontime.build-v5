@@ -46,6 +46,12 @@ interface Props {
 export function DashboardRecentDocs({ docs }: Props) {
   const [filter, setFilter] = useState<DocFilter>('all');
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
+
+  const handleRowClick = (doc: RecentDoc) => {
+    const tab = doc.type === 'invoice' ? 'invoices' : 'work-orders';
+    navigate(`/project/${doc.projectId}?tab=${tab}`);
+  };
 
   const filtered = filter === 'all'
     ? docs
