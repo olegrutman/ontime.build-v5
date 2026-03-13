@@ -209,6 +209,10 @@ export default function Dashboard() {
 
         <OrgInviteBanner />
 
+        {pendingInvites.length > 0 && (
+          <PendingInvitesPanel invites={pendingInvites} onRefresh={refetch} />
+        )}
+
         {/* KPI Row */}
         <DashboardKPIRow
           financials={financials}
