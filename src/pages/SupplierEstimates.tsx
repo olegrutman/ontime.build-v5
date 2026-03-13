@@ -36,6 +36,7 @@ export default function SupplierEstimates() {
   const [suppliers, setSuppliers] = useState<{ id: string; name: string; supplier_code: string }[]>([]);
   const [selectedEstimate, setSelectedEstimate] = useState<ProjectEstimate | null>(null);
   const [loading, setLoading] = useState(true);
+  const [estimateRows, setEstimateRows] = useState<EstimateRow[]>([]);
   
   // New estimate form
   const [newEstimateOpen, setNewEstimateOpen] = useState(false);
