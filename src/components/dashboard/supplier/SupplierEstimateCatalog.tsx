@@ -10,7 +10,7 @@ const statusBadge: Record<string, string> = {
   REJECTED: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300',
 };
 
-interface Props { estimates: EstimateRow[]; }
+interface Props { estimates: EstimateRow[]; hidePricing?: boolean; }
 
 export function SupplierEstimateCatalog({ estimates }: Props) {
   const navigate = useNavigate();
