@@ -63,6 +63,7 @@ export interface EstimateRow {
   totalAmount: number;
   lineItemCount: number;
   packNames: string[];
+  orderedPackNames: string[];
   orderedAmount: number;
   orderedPercent: number;
   status: string;
