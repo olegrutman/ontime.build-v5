@@ -425,6 +425,13 @@ export default function SupplierEstimates() {
           </Dialog>
         </div>
 
+        {/* Estimate → Orders card */}
+        {estimateRows.length > 0 && (
+          <div className="mb-6">
+            <SupplierEstimateCatalog estimates={estimateRows} />
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Estimates List */}
           <div className="md:col-span-1 space-y-4">
