@@ -39,6 +39,7 @@ import { UrgentTasksCard } from '@/components/project/UrgentTasksCard';
 import { TeamMembersCard } from '@/components/project/TeamMembersCard';
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
 import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
+import { PendingInviteCard } from '@/components/project/PendingInviteCard';
 
 import { InvoicesTab } from '@/components/invoices';
 import { ReturnsTab } from '@/components/returns';
