@@ -39,6 +39,7 @@ import { UrgentTasksCard } from '@/components/project/UrgentTasksCard';
 import { TeamMembersCard } from '@/components/project/TeamMembersCard';
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
 import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
+import { PendingInviteCard } from '@/components/project/PendingInviteCard';
 
 import { InvoicesTab } from '@/components/invoices';
 import { ReturnsTab } from '@/components/returns';
@@ -190,6 +191,8 @@ export default function ProjectHome() {
     checkDesignated();
   }, [id, user, isRealSupplier, isInDemoMode]);
 
+  const [pendingInvite, setPendingInvite] = useState(false);
+
   useEffect(() => {
     if (isInDemoMode && id) {
       const demoProject = getDemoProjectById(id);
@@ -200,12 +203,35 @@ export default function ProjectHome() {
     const fetchProject = async () => {
       if (!id) return;
       const { data: proj, error } = await supabase.from('projects').select('*').eq('id', id).single();
-      if (error) { console.error('Error fetching project:', error); navigate('/dashboard'); return; }
+      if (error) {
+        console.error('Error fetching project:', error);
+        // Check if user has a pending invite for this project
+        if (user) {
+          const { data: invite } = await supabase
+            .from('project_participants')
+            .select('id, organization_id')
+            .eq('project_id', id)
+            .eq('invite_status', 'INVITED')
+            .limit(1)
+            .maybeSingle();
+          if (invite) {
+            // Check if this invite belongs to the user's org
+            const userOrgIds = userOrgRoles.map(r => r.organization?.id).filter(Boolean);
+            if (userOrgIds.includes(invite.organization_id)) {
+              setPendingInvite(true);
+              setLoading(false);
+              return;
+            }
+          }
+        }
+        navigate('/dashboard');
+        return;
+      }
       setProject(proj as Project);
       setLoading(false);
     };
     fetchProject();
-  }, [id, navigate, isInDemoMode]);
+  }, [id, navigate, isInDemoMode, user, userOrgRoles]);
 
   const defaultOpen = useDefaultSidebarOpen();
 
@@ -226,6 +252,21 @@ export default function ProjectHome() {
             </main>
           </SidebarInset>
           <BottomNav />
+        </div>
+      </SidebarProvider>
+    );
+  }
+
+  if (pendingInvite) {
+    return (
+      <SidebarProvider defaultOpen={defaultOpen}>
+        <div className="min-h-screen flex w-full">
+          <AppSidebar />
+          <SidebarInset className="flex flex-col flex-1">
+            <div className="flex items-center justify-center min-h-[50vh]">
+              <PendingInviteCard projectId={id!} />
+            </div>
+          </SidebarInset>
         </div>
       </SidebarProvider>
     );

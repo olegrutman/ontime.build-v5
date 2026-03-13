@@ -59,7 +59,9 @@ export function NotificationItem({ notification, onMarkRead, onClose }: Notifica
       onMarkRead(notification.id);
     }
     onClose();
-    navigate(notification.action_url);
+    // PROJECT_INVITE links should always go to dashboard where the accept/decline UI lives
+    const targetUrl = notification.type === 'PROJECT_INVITE' ? '/dashboard' : notification.action_url;
+    navigate(targetUrl);
   };
 
   const isProjectInvite = notification.type === 'PROJECT_INVITE';
