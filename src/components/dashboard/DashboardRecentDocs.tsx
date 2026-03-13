@@ -90,7 +90,7 @@ export function DashboardRecentDocs({ docs }: Props) {
       ) : isMobile ? (
         <div className="divide-y divide-border">
           {filtered.map(doc => (
-            <div key={doc.id} className="px-4 py-3" style={{ minHeight: '56px' }}>
+            <div key={doc.id} className="px-4 py-3 cursor-pointer hover:bg-accent/50 transition-colors" style={{ minHeight: '56px' }} onClick={() => handleRowClick(doc)}>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
                   <span className="text-[0.82rem] font-semibold text-foreground truncate">{doc.title}</span>
