@@ -34,6 +34,7 @@ export default function Dashboard() {
     attentionItems,
     pendingInvites,
     reminders,
+    recentDocs,
     billing,
     financials,
     loading: dataLoading,
