@@ -14,6 +14,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Plus, Upload, Send, FileText, Package, Lock, Unlock } from 'lucide-react';
+import { SupplierEstimateCatalog } from '@/components/dashboard/supplier/SupplierEstimateCatalog';
+import type { EstimateRow } from '@/hooks/useSupplierDashboardData';
 import { 
   ProjectEstimate, 
   EstimatePack, 
