@@ -1,51 +1,47 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-## Features Built
+# Fix PO Pricing Lock — 3 Bugs Found
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
+## Bug 1: Broken Promise.all (Root Cause of Timeouts)
 
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
+Lines 292-293 in `PODetail.tsx` have a syntax error from the previous refactor:
 
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
+```typescript
+const promise = supabase        // ← assigns the client object
+  supabase                       // ← starts a NEW detached expression
+    .from('po_line_items')
+    .update({...})
+```
 
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
+`promise` gets assigned the bare `supabase` client (not a Promise). The actual `.from().update()` chain runs as a detached, fire-and-forget expression. So `Promise.all(updatePromises)` resolves instantly, and the PO-level PATCH fires while all line item PATCHes are still in flight — causing lock contention and the `statement timeout` errors seen in the network logs.
 
-## Files Created/Modified
-| File | Action |
-|------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+**Fix**: Remove the duplicate `supabase` on line 293 so the chain is properly assigned to `promise`.
+
+## Bug 2: Database Trigger References Invalid Enum Value
+
+The trigger `trg_cleanup_po_notification` contains:
+```sql
+IF NEW.status IN ('ORDERED', 'DELIVERED', 'CANCELLED') THEN
+```
+
+`'CANCELLED'` does not exist in the `po_status` enum. When Postgres evaluates this expression during any PO update, it attempts to cast `'CANCELLED'` to `po_status` and throws error `22P02: invalid input value for enum po_status: "CANCELLED"`. This is the second error in the console logs — it fires when the user clicks "Mark Ordered" after the pricing lock attempt.
+
+**Fix**: Database migration to replace the trigger function, removing `'CANCELLED'` from the IN list.
+
+## Bug 3: AlertDialogFooter ref warning (minor)
+
+`AlertDialogFooter` is a plain function component receiving a ref from Radix. Minor console noise, no functional impact.
+
+**Fix**: Skip for now — cosmetic only.
+
+## Files to Change
+
+| File / Resource | Change |
+|---|---|
+| `src/components/purchase-orders/PODetail.tsx` | Fix line 292-293: remove duplicate `supabase` so promise chain is captured correctly |
+| Database migration | Fix `cleanup_po_notification` trigger function to remove `'CANCELLED'` from the IN clause |
+
+## Summary
+
+The timeout is not a parallelization design problem — it's that the parallelization was broken by a syntax error. Once the promise chain is properly captured, `Promise.all` will actually wait for all line items to finish before updating the PO header, eliminating lock contention. The trigger fix eliminates the enum cast error on status transitions.
+
