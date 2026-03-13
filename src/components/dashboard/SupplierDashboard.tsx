@@ -10,8 +10,14 @@ import { SupplierProjectHealth } from './supplier/SupplierProjectHealth';
 import { SupplierOpenOrders } from './supplier/SupplierOpenOrders';
 import { SupplierReturnsQueue } from './supplier/SupplierReturnsQueue';
 import { OrgInviteBanner } from './OrgInviteBanner';
+import { PendingInvitesPanel, type PendingInvite } from './PendingInvitesPanel';
 
-export function SupplierDashboard() {
+interface SupplierDashboardProps {
+  pendingInvites?: PendingInvite[];
+  onRefreshInvites?: () => void;
+}
+
+export function SupplierDashboard({ pendingInvites = [], onRefreshInvites }: SupplierDashboardProps) {
   const {
     kpis, actionItems, deliveryDays, deliveryRows,
     agingBuckets, velocityTrend, oldestInvoiceDays,
@@ -39,6 +45,10 @@ export function SupplierDashboard() {
     <AppLayout title="Dashboard">
       <div className="space-y-2.5">
         <OrgInviteBanner />
+
+        {pendingInvites.length > 0 && onRefreshInvites && (
+          <PendingInvitesPanel invites={pendingInvites} onRefresh={onRefreshInvites} />
+        )}
 
         {/* Section 1: KPI Strip */}
         <SupplierKPIStrip kpis={kpis} />

@@ -157,7 +157,7 @@ export default function Dashboard() {
 
   // Supplier gets a completely different dashboard
   if (orgType === 'SUPPLIER') {
-    return <SupplierDashboard />;
+    return <SupplierDashboard pendingInvites={pendingInvites} onRefreshInvites={refetch} />;
   }
 
   const canCreateProject = orgType === 'GC' || orgType === 'TC';
