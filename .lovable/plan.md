@@ -1,29 +1,51 @@
+# Interactive Project Scheduling Module — IMPLEMENTED
 
+## Design Philosophy
+Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-# Bug: TC Can't Accept GC's Project Invite on Dashboard
+## Features Built
 
-## Problem
+### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
+- Dependency graph walking with BFS
+- Cascade date computation with buffer days support
+- Critical path calculation (longest dependency chain)
+- Conflict detection (tasks starting before predecessors end)
+- `findDownstreamTasks()` for cascade confirmation
 
-The dashboard shows pending project invitations in the "Needs Attention" card with a "Respond" badge. But clicking an invite item just navigates to `/dashboard` — the same page the user is already on. There are **no accept/decline buttons** anywhere on the dashboard.
+### 2. Desktop Gantt Chart (≥768px)
+- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
+- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
+- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
+- **Dependency arrows**: Bezier curves with arrow markers
+- **Critical path toggle**: Highlights longest dependency chain in amber/gold
+- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
+- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
+- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
+- **Undo**: 5-second undo button after any drag action
 
-The `PendingInvitesPanel` component (which has accept/decline buttons) exists in `src/components/dashboard/PendingInvitesPanel.tsx` but is **never rendered** on the Dashboard page. The `DashboardAttentionBanner` also has inline accept/decline logic but is also unused.
+### 3. Mobile Card View (<768px)
+- **Sticky top bar**: Project start/end dates + days remaining
+- **Phase grouping**: Collapsible sections with total duration
+- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
+- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
+- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
 
-## Fix
+### 4. Shared Logic
+- One unified `items` array drives both views
+- `handleScheduleChange()` checks downstream tasks before applying
+- Optimistic undo with snapshot restoration
+- Auto-estimate dates still available for unscheduled items
 
-Modify `DashboardNeedsAttentionCard` to render inline **Accept / Decline** buttons for invite items instead of a plain navigation link. This gives the TC user a way to actually respond to the invite without leaving the dashboard.
-
-### Changes
-
-| File | Change |
-|---|---|
-| `src/components/dashboard/DashboardNeedsAttentionCard.tsx` | Add `useProjectInvite` hook, render Accept/Decline buttons for invite-type items, call `onRefresh` callback after action |
-| `src/pages/Dashboard.tsx` | Pass `onRefresh={refetch}` prop to `DashboardNeedsAttentionCard` |
-
-### Detail
-
-In `DashboardNeedsAttentionCard`:
-- Import `useProjectInvite` and add local state for processing
-- For invite items, replace the clickable row with a row that has two small buttons (Accept / Decline)
-- On accept/decline success, call the `onRefresh` callback to re-fetch dashboard data
-- Keep the existing click-to-navigate behavior for non-invite items (change orders, invoices)
-
+## Files Created/Modified
+| File | Action |
+|------|--------|
+| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
+| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
+| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
+| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
+| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
+| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
+| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
+| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
+| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
+| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |

@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Check, X, Loader2 } from 'lucide-react';
+import { useProjectInvite } from '@/hooks/useProjectInvite';
 
 interface AttentionItem {
   id: string;
@@ -19,6 +22,7 @@ interface PendingInvite {
 interface Props {
   attentionItems: AttentionItem[];
   pendingInvites: PendingInvite[];
+  onRefresh?: () => void;
 }
 
 const typeConfig: Record<string, { emoji: string; borderColor: string; badge: string; badgeStyle: string }> = {
@@ -42,8 +46,24 @@ const typeConfig: Record<string, { emoji: string; borderColor: string; badge: st
   },
 };
 
-export function DashboardNeedsAttentionCard({ attentionItems, pendingInvites }: Props) {
+export function DashboardNeedsAttentionCard({ attentionItems, pendingInvites, onRefresh }: Props) {
   const navigate = useNavigate();
+  const { acceptInvite, declineInvite, loading: inviteLoading } = useProjectInvite();
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
+  const handleAccept = async (projectId: string, id: string) => {
+    setProcessingId(id);
+    const ok = await acceptInvite(projectId);
+    if (ok) onRefresh?.();
+    setProcessingId(null);
+  };
+
+  const handleDecline = async (projectId: string, id: string) => {
+    setProcessingId(id);
+    const ok = await declineInvite(projectId);
+    if (ok) onRefresh?.();
+    setProcessingId(null);
+  };
 
   const allItems = [
     ...attentionItems.map(item => ({
@@ -51,6 +71,7 @@ export function DashboardNeedsAttentionCard({ attentionItems, pendingInvites }: 
       type: item.type,
       title: item.title,
       subtitle: item.projectName,
+      projectId: item.projectId,
       onClick: () => navigate(`/project/${item.projectId}`),
     })),
     ...pendingInvites.map(inv => ({
@@ -58,7 +79,8 @@ export function DashboardNeedsAttentionCard({ attentionItems, pendingInvites }: 
       type: 'invite' as const,
       title: `Invite: ${inv.projectName}`,
       subtitle: `From ${inv.invitedByOrgName} · ${inv.role}`,
-      onClick: () => navigate('/dashboard'),
+      projectId: inv.projectId,
+      onClick: () => {},
     })),
   ];
 
@@ -82,6 +104,42 @@ export function DashboardNeedsAttentionCard({ attentionItems, pendingInvites }: 
         ) : (
           allItems.slice(0, 5).map(item => {
             const config = typeConfig[item.type] || typeConfig.change_order;
+            const isInvite = item.type === 'invite';
+            const isProcessing = processingId === item.id;
+
+            if (isInvite) {
+              return (
+                <div
+                  key={item.id}
+                  className={`w-full bg-card border border-border rounded-md border-l-[3px] md:border-l-[2.5px] ${config.borderColor} px-3 md:px-[10px] py-2.5 md:py-[9px] flex items-center gap-2.5 md:gap-2`}
+                  style={{ minHeight: '56px' }}
+                >
+                  <span className="text-base md:text-sm flex-shrink-0">{config.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[0.82rem] md:text-[0.78rem] font-semibold text-foreground truncate">{item.title}</div>
+                    <div className="text-[0.72rem] md:text-[0.67rem] text-muted-foreground truncate">{item.subtitle}</div>
+                  </div>
+                  <div className="flex gap-1.5 flex-shrink-0">
+                    <button
+                      onClick={() => handleAccept(item.projectId, item.id)}
+                      disabled={inviteLoading || isProcessing}
+                      className="inline-flex items-center gap-1 text-[0.65rem] font-semibold px-2 py-1 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                    >
+                      {isProcessing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => handleDecline(item.projectId, item.id)}
+                      disabled={inviteLoading || isProcessing}
+                      className="inline-flex items-center gap-1 text-[0.65rem] font-semibold px-2 py-1 rounded-md border border-border text-muted-foreground hover:bg-accent disabled:opacity-50 transition-colors"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              );
+            }
+
             return (
               <button
                 key={item.id}

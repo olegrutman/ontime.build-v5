@@ -245,6 +245,7 @@ export default function Dashboard() {
             <DashboardNeedsAttentionCard
               attentionItems={attentionItems}
               pendingInvites={pendingInvites}
+              onRefresh={refetch}
             />
             <DashboardLiveFeed reminders={reminders} />
           </div>
