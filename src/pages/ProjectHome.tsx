@@ -137,6 +137,7 @@ export default function ProjectHome() {
   const realtimeKey = useProjectRealtime(id);
   const financials = useProjectFinancials(id || '', isSupplier, supplierOrgId);
   const readiness = useProjectReadiness(id);
+  const { data: estimateRows } = useProjectEstimateRows(id || '', projectSupplierOrgId ?? null);
 
   // Sync local project status when auto-activation completes
   useEffect(() => {
