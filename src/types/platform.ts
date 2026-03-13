@@ -126,4 +126,5 @@ export const ACTION_TYPE_LABELS: Record<SupportActionType, string> = {
   RESTORE_DELETED_ITEM: 'Deleted Item Restored',
   REBUILD_PERMISSIONS: 'Permissions Rebuilt',
   MANUAL_VERIFY_SUPPLIER: 'Supplier Manually Verified',
+  DELETE_PROJECT: 'Project Deleted',
 };

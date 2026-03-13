@@ -657,6 +657,26 @@ export default function PlatformProjectDetail() {
         onConfirm={handleForceAccept}
         loading={actionLoading}
       />
+
+      {/* Delete Project Dialog */}
+      <SupportActionDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Permanently Delete Project"
+        description={`This will permanently delete "${project.name}" and ALL associated data including contracts, invoices, purchase orders, work orders, estimates, and team memberships. This action cannot be undone.`}
+        onConfirm={async (reason) => {
+          const ok = await execute({
+            action_type: 'DELETE_PROJECT',
+            reason,
+            project_id: project.id,
+          });
+          if (ok) {
+            setDeleteOpen(false);
+            navigate('/platform/projects');
+          }
+        }}
+        loading={actionLoading}
+      />
     </PlatformLayout>
   );
 }
