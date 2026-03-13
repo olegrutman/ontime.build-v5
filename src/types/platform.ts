@@ -26,7 +26,8 @@ export type SupportActionType =
   | 'EDIT_WORK_ORDER'
   | 'RESTORE_DELETED_ITEM'
   | 'REBUILD_PERMISSIONS'
-  | 'MANUAL_VERIFY_SUPPLIER';
+  | 'MANUAL_VERIFY_SUPPLIER'
+  | 'DELETE_PROJECT';
 
 export interface SupportActionLog {
   id: string;
