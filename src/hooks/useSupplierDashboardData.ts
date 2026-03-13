@@ -201,6 +201,12 @@ export function useSupplierDashboardData(): SupplierDashboardData {
               .select('id, invoice_number, status, total_amount, submitted_at, approved_at, paid_at, created_at, project_id, po_id')
               .not('po_id', 'is', null)
           : Promise.resolve({ data: [] }),
+        // Accepted projects for this org
+        supabase
+          .from('project_participants')
+          .select('project_id, role, projects:project_id(name, organization_id, organizations:organization_id(name))')
+          .eq('organization_id', orgId)
+          .eq('invite_status', 'ACCEPTED'),
       ]);
 
       const allPOs = (posResult.data || []) as any[];
