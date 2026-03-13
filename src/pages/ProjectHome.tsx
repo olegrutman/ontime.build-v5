@@ -360,6 +360,9 @@ export default function ProjectHome() {
                               financials={financials}
                             />
                           )}
+                          {estimateRows && estimateRows.length > 0 && (
+                            <SupplierEstimateCatalog estimates={estimateRows} />
+                          )}
                           <CriticalScheduleCard projectId={id!} onNavigate={handleTabChange} />
                           <MaterialMarkupEditor financials={financials} projectId={id!} projectStatus={projectStatus} />
                           <CollapsibleOperations
