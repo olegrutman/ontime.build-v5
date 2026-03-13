@@ -9,8 +9,9 @@ import { Button } from '@/components/ui/button';
 import { SupportActionDialog } from '@/components/platform/SupportActionDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupportAction } from '@/hooks/useSupportAction';
+import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { CheckCircle, DollarSign, FileText, ClipboardList, ShoppingCart, Package } from 'lucide-react';
+import { CheckCircle, DollarSign, FileText, ClipboardList, ShoppingCart, Package, Trash2 } from 'lucide-react';
 
 interface ProjectData {
   id: string;
