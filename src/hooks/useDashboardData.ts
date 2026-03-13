@@ -404,7 +404,7 @@ export function useDashboardData(): DashboardData {
 
       setProjects(projectsWithDetails);
 
-      // GROUP 3: Parallel financial queries
+      // GROUP 3: Parallel financial queries + recent docs
       const monthStart = startOfMonth(new Date()).toISOString();
       const monthEnd = endOfMonth(new Date()).toISOString();
 
@@ -412,6 +412,8 @@ export function useDashboardData(): DashboardData {
         allInvoicesResult,
         thisMonthCOsResult,
         remindersResult,
+        recentInvoicesResult,
+        recentCOsResult,
       ] = await Promise.all([
         projectIds.length > 0
           ? supabase
