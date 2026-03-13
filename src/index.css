@@ -338,3 +338,31 @@
     display: none;
   }
 }
+
+/* ── Mobile-First Native App Styles ── */
+@media (max-width: 767px) {
+  body {
+    font-size: 15px;
+    line-height: 1.6;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .bg-card {
+    border-radius: 12px;
+  }
+
+  /* Ensure all tappable elements have 44px min */
+  button, a[role="button"], [role="menuitem"], .touch-target {
+    min-height: 44px;
+  }
+
+  /* Safe area insets for notched devices */
+  .safe-area-bottom {
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+  .safe-area-x {
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
+}

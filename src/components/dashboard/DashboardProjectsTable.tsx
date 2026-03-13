@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Project {
   id: string;
@@ -35,45 +36,79 @@ const projectColors = ['hsl(var(--primary))', 'hsl(var(--secondary))', '#059669'
 
 export function DashboardProjectsTable({ projects, loading }: Props) {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const activeProjects = projects.filter(p => !['archived'].includes(p.status));
   const totalValue = activeProjects.reduce((sum, p) => sum + (p.contractValue || 0), 0);
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
-      <div className="flex items-center justify-between px-[18px] py-3">
-        <h3 className="font-heading text-[1rem] font-bold text-foreground">Active Projects</h3>
+      <div className="flex items-center justify-between px-4 py-3">
+        <h3 className="font-heading text-[1rem] md:text-[1rem] font-bold text-foreground">Active Projects</h3>
         <span className="text-[0.75rem] font-medium text-muted-foreground">
           {activeProjects.length} active
         </span>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left">
-          <thead>
-            <tr className="border-y border-border bg-accent">
-              <th className="px-[18px] py-[7px] text-[0.64rem] uppercase tracking-[0.8px] text-muted-foreground font-medium">Project</th>
-              <th className="px-[18px] py-[7px] text-[0.64rem] uppercase tracking-[0.8px] text-muted-foreground font-medium hidden sm:table-cell">Type</th>
-              <th className="px-[18px] py-[7px] text-[0.64rem] uppercase tracking-[0.8px] text-muted-foreground font-medium hidden md:table-cell">Value</th>
-              <th className="px-[18px] py-[7px] text-[0.64rem] uppercase tracking-[0.8px] text-muted-foreground font-medium">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <tr key={i} className="border-b border-border">
-                  <td className="px-[18px] py-3" colSpan={4}>
-                    <div className="h-5 bg-accent rounded animate-pulse" />
-                  </td>
-                </tr>
-              ))
-            ) : activeProjects.length === 0 ? (
-              <tr>
-                <td className="px-[18px] py-6 text-center text-[0.8rem] text-muted-foreground" colSpan={4}>
-                  No projects yet
-                </td>
+      {loading ? (
+        <div className="px-4 pb-4 space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-14 bg-accent rounded-lg animate-pulse" />
+          ))}
+        </div>
+      ) : activeProjects.length === 0 ? (
+        <div className="px-4 py-8 text-center">
+          <span className="text-[1.8rem]">📋</span>
+          <p className="text-[0.82rem] text-muted-foreground mt-1">No projects yet</p>
+        </div>
+      ) : isMobile ? (
+        /* ── Mobile: Stacked card rows ── */
+        <div className="divide-y divide-border">
+          {activeProjects.slice(0, 6).map((project, idx) => (
+            <button
+              key={project.id}
+              className="w-full text-left px-4 py-3 hover:bg-[hsl(var(--amber-pale))] transition-colors active:bg-[hsl(var(--amber-pale))]"
+              style={{ minHeight: '60px' }}
+              onClick={() => navigate(`/project/${project.id}`)}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <span
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ backgroundColor: projectColors[idx % projectColors.length] }}
+                  />
+                  <span className="text-[0.85rem] font-semibold text-foreground truncate">
+                    {project.name}
+                  </span>
+                </div>
+                <span className="text-[0.82rem] font-semibold text-foreground ml-2 shrink-0">
+                  {formatCurrency(project.contractValue)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between mt-1 pl-4">
+                <span className="text-[0.72rem] text-muted-foreground capitalize">
+                  {project.project_type?.replace(/_/g, ' ') || '—'}
+                </span>
+                <span className={`text-[0.68rem] font-bold px-2 py-0.5 rounded-[10px] ${statusStyles[project.status] || statusStyles.active}`}>
+                  {statusLabels[project.status] || project.status}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      ) : (
+        /* ── Desktop: Table ── */
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-y border-border bg-accent">
+                <th className="px-[18px] py-[7px] text-[0.64rem] uppercase tracking-[0.8px] text-muted-foreground font-medium">Project</th>
+                <th className="px-[18px] py-[7px] text-[0.64rem] uppercase tracking-[0.8px] text-muted-foreground font-medium hidden sm:table-cell">Type</th>
+                <th className="px-[18px] py-[7px] text-[0.64rem] uppercase tracking-[0.8px] text-muted-foreground font-medium hidden md:table-cell">Value</th>
+                <th className="px-[18px] py-[7px] text-[0.64rem] uppercase tracking-[0.8px] text-muted-foreground font-medium">Status</th>
               </tr>
-            ) : (
-              activeProjects.slice(0, 6).map((project, idx) => (
+            </thead>
+            <tbody>
+              {activeProjects.slice(0, 6).map((project, idx) => (
                 <tr
                   key={project.id}
                   className="border-b border-border cursor-pointer hover:bg-[hsl(var(--amber-pale))] transition-colors"
@@ -106,14 +141,14 @@ export function DashboardProjectsTable({ projects, loading }: Props) {
                     </span>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {activeProjects.length > 0 && (
-        <div className="flex items-center justify-between px-[18px] py-[11px] bg-accent border-t border-border">
+        <div className="flex items-center justify-between px-4 py-[11px] bg-accent border-t border-border">
           <span className="text-[0.72rem] text-muted-foreground">Portfolio Total</span>
           <span className="font-heading text-[1.1rem] font-black text-secondary">
             {formatCurrency(totalValue)}

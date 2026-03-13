@@ -64,7 +64,7 @@ export function DashboardNeedsAttentionCard({ attentionItems, pendingInvites }: 
 
   return (
     <div className="bg-card border border-border rounded-lg">
-      <div className="flex items-center justify-between px-[18px] py-3">
+      <div className="flex items-center justify-between px-4 py-3">
         <h3 className="font-heading text-[1rem] font-bold text-foreground">Needs Attention</h3>
         {allItems.length > 0 && (
           <span className="text-[0.68rem] font-semibold bg-red-50 text-red-700 px-2 py-0.5 rounded-full">
@@ -73,10 +73,11 @@ export function DashboardNeedsAttentionCard({ attentionItems, pendingInvites }: 
         )}
       </div>
 
-      <div className="px-[14px] pb-3 space-y-[5px]">
+      <div className="px-3.5 md:px-[14px] pb-3 space-y-[5px]">
         {allItems.length === 0 ? (
-          <div className="text-center py-6 text-[0.8rem] text-muted-foreground">
-            All caught up 🎉
+          <div className="text-center py-8 md:py-6">
+            <span className="text-[1.8rem]">🎉</span>
+            <p className="text-[0.82rem] text-muted-foreground mt-1">All caught up</p>
           </div>
         ) : (
           allItems.slice(0, 5).map(item => {
@@ -85,14 +86,15 @@ export function DashboardNeedsAttentionCard({ attentionItems, pendingInvites }: 
               <button
                 key={item.id}
                 onClick={item.onClick}
-                className={`w-full text-left bg-card border border-border rounded-md border-l-[2.5px] ${config.borderColor} px-[10px] py-[9px] hover:bg-accent hover:translate-x-px transition-all flex items-center gap-2`}
+                className={`w-full text-left bg-card border border-border rounded-md border-l-[3px] md:border-l-[2.5px] ${config.borderColor} px-3 md:px-[10px] py-2.5 md:py-[9px] hover:bg-accent hover:translate-x-px transition-all flex items-center gap-2.5 md:gap-2`}
+                style={{ minHeight: '56px' }}
               >
-                <span className="text-sm flex-shrink-0">{config.emoji}</span>
+                <span className="text-base md:text-sm flex-shrink-0">{config.emoji}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-[0.78rem] font-semibold text-foreground truncate">{item.title}</div>
-                  <div className="text-[0.67rem] text-muted-foreground truncate">{item.subtitle}</div>
+                  <div className="text-[0.82rem] md:text-[0.78rem] font-semibold text-foreground truncate">{item.title}</div>
+                  <div className="text-[0.72rem] md:text-[0.67rem] text-muted-foreground truncate">{item.subtitle}</div>
                 </div>
-                <span className={`text-[0.63rem] font-bold px-[7px] py-[2px] rounded-md flex-shrink-0 ${config.badgeStyle}`}>
+                <span className={`text-[0.68rem] md:text-[0.63rem] font-bold px-[7px] py-[2px] rounded-md flex-shrink-0 ${config.badgeStyle}`}>
                   {config.badge}
                 </span>
               </button>

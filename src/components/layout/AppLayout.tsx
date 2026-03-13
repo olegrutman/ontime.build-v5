@@ -36,7 +36,7 @@ export function AppLayout({
             newButtonLabel={newButtonLabel}
           />
           <main className="flex-1 overflow-auto">
-            <div className="max-w-7xl mx-auto w-full px-4 sm:px-5 md:px-6 py-4 sm:py-6 pb-20">
+            <div className="max-w-7xl mx-auto w-full px-3 sm:px-5 md:px-6 py-4 sm:py-6 pb-24 lg:pb-6">
               {children}
             </div>
           </main>

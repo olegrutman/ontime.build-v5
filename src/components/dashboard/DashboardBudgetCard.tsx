@@ -49,7 +49,7 @@ export function DashboardBudgetCard({ financials, billing, activeProjectName, ac
 
   return (
     <div className="bg-card border border-border rounded-lg">
-      <div className="flex items-center justify-between px-[18px] py-3">
+      <div className="flex items-center justify-between px-4 py-3">
         <h3 className="font-heading text-[1rem] font-bold text-foreground">Budget Overview</h3>
         <button
           onClick={() => activeProjectId && navigate(`/project/${activeProjectId}`)}
@@ -59,9 +59,9 @@ export function DashboardBudgetCard({ financials, billing, activeProjectName, ac
         </button>
       </div>
 
-      <div className="mx-[18px] mb-3 bg-accent border border-border rounded-md px-3.5 py-3">
+      <div className="mx-4 mb-3 bg-accent border border-border rounded-md px-3.5 py-3">
         <div className="text-[0.68rem] text-muted-foreground uppercase tracking-wide mb-0.5">Contract Total</div>
-        <div className="font-heading text-[1.5rem] font-black text-foreground leading-none">
+        <div className="font-heading text-[1.6rem] md:text-[1.5rem] font-black text-foreground leading-none">
           {formatCurrency(total)}
         </div>
         {activeProjectName && (
@@ -69,20 +69,20 @@ export function DashboardBudgetCard({ financials, billing, activeProjectName, ac
         )}
       </div>
 
-      <div className="px-[18px] pb-4 space-y-3">
+      <div className="px-4 pb-4 space-y-3.5 md:space-y-3">
         {rows.map((row, idx) => (
           <div key={row.label}>
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-sm flex-shrink-0 ${row.color}`} />
-                <span className="text-[0.78rem] text-foreground">{row.label}</span>
+                <span className="text-[0.82rem] md:text-[0.78rem] text-foreground">{row.label}</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[0.78rem] font-semibold text-foreground">{formatCurrency(row.value)}</span>
-                <span className="text-[0.68rem] text-muted-foreground">{row.percent}%</span>
+                <span className="text-[0.82rem] md:text-[0.78rem] font-semibold text-foreground">{formatCurrency(row.value)}</span>
+                <span className="text-[0.7rem] md:text-[0.68rem] text-muted-foreground">{row.percent}%</span>
               </div>
             </div>
-            <div className="h-[3px] bg-accent rounded-full overflow-hidden">
+            <div className="h-1.5 md:h-[3px] bg-accent rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-1000 ease-out ${row.color}`}
                 style={{ width: `${animatedWidths[idx]}%`, transitionDelay: `${200 + idx * 100}ms` }}

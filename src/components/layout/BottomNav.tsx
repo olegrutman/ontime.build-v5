@@ -50,9 +50,8 @@ export function BottomNav() {
   const posEnabled = useFeatureEnabled('purchase_orders');
   const returnsEnabled = useFeatureEnabled('returns_tracking');
 
-  // 10. Updated dashboard items with global pages
   const dashboardPrimaryItems: NavItem[] = [
-    { label: 'Dashboard', icon: Home, path: '/dashboard' },
+    { label: 'Home', icon: Home, path: '/dashboard' },
     { label: 'Partners', icon: Handshake, path: '/partners' },
     { label: 'Reminders', icon: Bell, path: '/reminders' },
     { label: 'RFIs', icon: MessageSquareMore, path: '/rfis' },
@@ -63,7 +62,7 @@ export function BottomNav() {
   ];
 
   const primaryProjectItems: NavItem[] = [
-    { label: 'Dashboard', icon: Home, path: '/dashboard' },
+    { label: 'Home', icon: Home, path: '/dashboard' },
     { label: 'Overview', icon: LayoutDashboard, tab: 'overview' },
     ...(!isSupplier && changeOrdersEnabled ? [{ label: 'WOs', icon: ClipboardList, tab: 'work-orders' }] : []),
   ];
@@ -100,8 +99,15 @@ export function BottomNav() {
 
   return (
     <>
-      <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-card border-t border-border">
-        <div className="flex items-stretch justify-around h-16">
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-50 lg:hidden"
+        style={{
+          backgroundColor: 'hsl(216 56% 14%)',
+          borderTop: '1px solid rgba(255,255,255,0.08)',
+          paddingBottom: 'max(0px, env(safe-area-inset-bottom))',
+        }}
+      >
+        <div className="flex items-stretch justify-around" style={{ height: '58px' }}>
           {items.map((item) => {
             const active = isActive(item);
             const Icon = item.icon;
@@ -109,30 +115,28 @@ export function BottomNav() {
               <button
                 key={item.label}
                 onClick={() => handleClick(item)}
-                className={cn(
-                  'flex flex-col items-center justify-center gap-0.5 flex-1 min-h-[44px] transition-colors',
-                  active
-                    ? 'text-primary'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
+                className="flex flex-col items-center justify-center gap-0.5 flex-1 transition-colors"
+                style={{
+                  color: active ? '#F5A623' : 'rgba(255,255,255,0.35)',
+                  minHeight: '58px',
+                }}
               >
-                <Icon className="w-5 h-5" />
-                <span className="text-[10px] font-medium">{item.label}</span>
+                <Icon className="w-6 h-6" />
+                <span className="text-[11px] font-semibold">{item.label}</span>
               </button>
             );
           })}
-          {/* More button — always shown */}
+          {/* More button */}
           <button
             onClick={() => setMoreOpen(true)}
-            className={cn(
-              'flex flex-col items-center justify-center gap-0.5 flex-1 min-h-[44px] transition-colors',
-              moreIsActive
-                ? 'text-primary'
-                : 'text-muted-foreground hover:text-foreground'
-            )}
+            className="flex flex-col items-center justify-center gap-0.5 flex-1 transition-colors"
+            style={{
+              color: moreIsActive ? '#F5A623' : 'rgba(255,255,255,0.35)',
+              minHeight: '58px',
+            }}
           >
-            <MoreHorizontal className="w-5 h-5" />
-            <span className="text-[10px] font-medium">More</span>
+            <MoreHorizontal className="w-6 h-6" />
+            <span className="text-[11px] font-semibold">More</span>
           </button>
         </div>
       </nav>
@@ -152,7 +156,7 @@ export function BottomNav() {
                     setMoreOpen(false);
                   }}
                   className={cn(
-                    'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors',
+                    'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px]',
                     active
                       ? 'text-primary bg-primary/10'
                       : 'text-foreground hover:bg-muted'
