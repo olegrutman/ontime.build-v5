@@ -46,6 +46,10 @@ export function SupplierDashboard({ pendingInvites = [], onRefreshInvites }: Sup
       <div className="space-y-2.5">
         <OrgInviteBanner />
 
+        {pendingInvites.length > 0 && onRefreshInvites && (
+          <PendingInvitesPanel invites={pendingInvites} onRefresh={onRefreshInvites} />
+        )}
+
         {/* Section 1: KPI Strip */}
         <SupplierKPIStrip kpis={kpis} />
 
