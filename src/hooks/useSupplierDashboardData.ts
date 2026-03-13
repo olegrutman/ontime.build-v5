@@ -524,6 +524,6 @@ export function useSupplierDashboardData(): SupplierDashboardData {
   return {
     kpis, actionItems, deliveryDays, deliveryRows, agingBuckets,
     velocityTrend, oldestInvoiceDays, estimates, projectHealth,
-    openPOs, returns, loading, refetch: fetchData,
+    acceptedProjects, openPOs, returns, loading, refetch: fetchData,
   };
 }
