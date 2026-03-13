@@ -297,7 +297,7 @@ export function useSupplierDashboardData(): SupplierDashboardData {
           subtitle: po.projects?.name || 'Unknown Project',
           amount: po.po_total,
           actionLabel: 'Schedule',
-          actionUrl: `/purchase-orders`,
+          actionUrl: `/project/${po.project_id}?tab=purchase-orders`,
         });
       });
 
