@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { formatCurrency } from '@/lib/utils';
 import type { ProjectHealthRow } from '@/hooks/useSupplierDashboardData';
 
