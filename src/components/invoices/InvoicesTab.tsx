@@ -101,17 +101,18 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
         if (sentContractIds.includes(inv.contract_id)) sent.push(inv);
         else if (receivedContractIds.includes(inv.contract_id)) recContracts.push(inv);
       } else if (inv.po_id) {
-        // PO-based supplier invoices
+        const poInfo = poOwnerMap[inv.po_id];
         if (currentOrgType === 'SUPPLIER') {
           sent.push(inv); // Supplier sees their own PO invoices as "sent"
-        } else {
-          recSuppliers.push(inv); // GC/TC sees them as "received from suppliers"
+        } else if (poInfo && poInfo.pricingOwnerOrgId === currentOrgId) {
+          recSuppliers.push(inv); // Only the pricing owner sees them as "received from suppliers"
         }
+        // If current org is NOT the pricing owner and NOT the supplier, invoice is excluded
       }
     }
     
     return { sentInvoices: sent, receivedFromContracts: recContracts, receivedFromSuppliers: recSuppliers };
-  }, [invoices, currentOrgId, currentOrgType, contractsWhereUserCanInvoice, contractsWhereUserReceivesInvoices]);
+  }, [invoices, currentOrgId, currentOrgType, contractsWhereUserCanInvoice, contractsWhereUserReceivesInvoices, poOwnerMap]);
 
   // Combined received for TC view
   const allReceivedInvoices = useMemo(() => 
