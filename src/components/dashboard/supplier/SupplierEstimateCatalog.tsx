@@ -10,9 +10,9 @@ const statusBadge: Record<string, string> = {
   REJECTED: 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300',
 };
 
-interface Props { estimates: EstimateRow[]; }
+interface Props { estimates: EstimateRow[]; hidePricing?: boolean; }
 
-export function SupplierEstimateCatalog({ estimates }: Props) {
+export function SupplierEstimateCatalog({ estimates, hidePricing = false }: Props) {
   const navigate = useNavigate();
 
   return (
@@ -47,9 +47,11 @@ export function SupplierEstimateCatalog({ estimates }: Props) {
                   <span className={`text-[0.6rem] font-bold px-1.5 py-0.5 rounded ${statusBadge[est.status] || statusBadge.DRAFT}`}>
                     {est.status}
                   </span>
-                  <span className="text-[0.72rem] font-bold text-foreground">
-                    {formatCurrency(est.totalAmount)}
-                  </span>
+                  {!hidePricing && (
+                    <span className="text-[0.72rem] font-bold text-foreground">
+                      {formatCurrency(est.totalAmount)}
+                    </span>
+                  )}
                 </div>
               </div>
 

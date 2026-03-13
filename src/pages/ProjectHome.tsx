@@ -361,7 +361,7 @@ export default function ProjectHome() {
                             />
                           )}
                           {estimateRows && estimateRows.length > 0 && (
-                            <SupplierEstimateCatalog estimates={estimateRows} />
+                            <SupplierEstimateCatalog estimates={estimateRows} hidePricing={currentOrg?.type === 'TC' && materialResponsibility === 'GC'} />
                           )}
                           <CriticalScheduleCard projectId={id!} onNavigate={handleTabChange} />
                           <MaterialMarkupEditor financials={financials} projectId={id!} projectStatus={projectStatus} />
