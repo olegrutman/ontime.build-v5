@@ -289,7 +289,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
             addSubtotal += lineTotal;
           }
 
-          updatePromises.push(
+          const promise = supabase
             supabase
               .from('po_line_items')
               .update({
