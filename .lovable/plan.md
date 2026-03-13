@@ -1,51 +1,33 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-## Features Built
+# Fix: TC Seeing Supplier Invoices When GC Is Material-Responsible
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
+## Bug
+When **GC is material-responsible**, supplier invoices created from delivered POs are visible to the **TC** in their "From Field Crews & Suppliers" received tab. The TC should **not** see these invoices because the GC is the buyer/payer — the `pricing_owner_org_id` on the PO determines who receives the supplier invoice.
 
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
+## Root Cause
+Two issues in `src/components/invoices/InvoicesTab.tsx`:
 
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
+1. **Visibility filter (lines 198-201)**: Only filters by `contract_id`. PO-linked invoices (`contract_id` is null, `po_id` set) pass through for everyone on the project.
+2. **Categorization (lines 102-108)**: All PO-linked invoices are blindly categorized as "received from suppliers" for any non-supplier org — no check whether the current org is the actual buyer (`pricing_owner_org_id`) on that PO.
 
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
+## Fix
 
-## Files Created/Modified
-| File | Action |
-|------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+### `src/components/invoices/InvoicesTab.tsx`
+
+1. **Fetch PO buyer info**: After fetching invoices, for any PO-linked invoices, look up the `pricing_owner_org_id` from the `purchase_orders` table. This can be done by joining or by a separate query for PO-linked invoice `po_id`s.
+
+2. **Filter visibility**: Only show PO-linked invoices to the org that matches `pricing_owner_org_id` (the buyer) or the supplier org. Build a map of `po_id → pricing_owner_org_id` and filter accordingly.
+
+3. **Fix categorization**: In the sent/received bucketing logic (line 102-108), change the `else` branch to check if `currentOrgId === poOwnerMap[inv.po_id]` before putting it in `recSuppliers`. If the current org is not the pricing owner, exclude the invoice entirely.
+
+### Approach
+- When fetching invoices, also fetch `purchase_orders` for the PO-linked invoice `po_id`s to get `pricing_owner_org_id` and `supplier_org_id` (from the supplier relation).
+- Store as a `Record<string, { pricingOwnerOrgId: string; supplierOrgId: string }>`.
+- Use this map in both the visibility filter and the sent/received categorization.
+
+### Single file change
+| File | Change |
+|---|---|
+| `src/components/invoices/InvoicesTab.tsx` | Fetch PO ownership data; filter PO-linked invoices to only show for pricing_owner_org and supplier org |
+
