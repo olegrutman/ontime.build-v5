@@ -81,6 +81,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [lockConfirmOpen, setLockConfirmOpen] = useState(false);
   const [editingPrices, setEditingPrices] = useState(false);
   const [priceEdits, setPriceEdits] = useState<Record<string, PriceEdit>>({});
   const [salesTaxPercent, setSalesTaxPercent] = useState<number>(0);
@@ -253,6 +254,17 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
     setEditingPrices(true);
   };
 
+  // Compute the current grand total from price edits for display
+  const computeEditTotal = () => {
+    let subtotal = 0;
+    for (const [itemId, edit] of Object.entries(priceEdits)) {
+      const item = lineItems.find((li) => li.id === itemId);
+      if (item) subtotal += edit.unit_price * item.quantity;
+    }
+    const tax = subtotal * (salesTaxPercent / 100);
+    return subtotal + tax;
+  };
+
   const savePriceEdits = async (lockPricing: boolean) => {
     if (!user) return;
 
@@ -260,6 +272,9 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
     try {
       let estSubtotal = 0;
       let addSubtotal = 0;
+
+      // Build all line item updates in parallel
+      const updatePromises: Promise<void>[] = [];
 
       for (const [itemId, edit] of Object.entries(priceEdits)) {
         const item = lineItems.find((li) => li.id === itemId);
@@ -274,22 +289,27 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
             addSubtotal += lineTotal;
           }
 
-          const { error: lineError } = await supabase
-            .from('po_line_items')
-            .update({
-              unit_price: edit.unit_price,
-              line_total: lineTotal,
-              lead_time_days: edit.lead_time_days,
-              supplier_notes: edit.supplier_notes || null,
-              original_unit_price: isNewPrice ? edit.unit_price : item.original_unit_price,
-              price_adjusted_by_supplier: wasAdjusted,
-              adjustment_reason: wasAdjusted ? (edit.adjustment_reason || null) : null,
-              price_source: isNewPrice ? 'SUPPLIER_MANUAL' : (item.price_source || null),
-            })
-            .eq('id', itemId);
-          if (lineError) throw lineError;
+          const promise = supabase
+            supabase
+              .from('po_line_items')
+              .update({
+                unit_price: edit.unit_price,
+                line_total: lineTotal,
+                lead_time_days: edit.lead_time_days,
+                supplier_notes: edit.supplier_notes || null,
+                original_unit_price: isNewPrice ? edit.unit_price : item.original_unit_price,
+                price_adjusted_by_supplier: wasAdjusted,
+                adjustment_reason: wasAdjusted ? (edit.adjustment_reason || null) : null,
+                price_source: isNewPrice ? 'SUPPLIER_MANUAL' : (item.price_source || null),
+              })
+              .eq('id', itemId)
+              .then(({ error }) => { if (error) throw error; });
+          updatePromises.push(promise as unknown as Promise<void>);
         }
       }
+
+      // Fire all line item updates in parallel
+      await Promise.all(updatePromises);
 
       const poSubtotalTotal = estSubtotal + addSubtotal;
       const taxAmount = poSubtotalTotal * (salesTaxPercent / 100);
@@ -317,6 +337,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
 
       toast.success(lockPricing ? 'Pricing locked' : 'Pricing saved');
       setEditingPrices(false);
+      setLockConfirmOpen(false);
       setPriceEdits({});
       fetchPO();
       onUpdate();
@@ -849,15 +870,50 @@ export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
             Cancel
           </Button>
           <Button variant="outline" onClick={() => savePriceEdits(false)} disabled={actionLoading}>
-            {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-            Save Pricing
+            {actionLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Saving {Object.keys(priceEdits).length} items…
+              </>
+            ) : (
+              'Save Pricing'
+            )}
           </Button>
-          <Button onClick={() => savePriceEdits(true)} disabled={actionLoading}>
-            {actionLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Lock className="h-4 w-4 mr-2" />}
+          <Button onClick={() => setLockConfirmOpen(true)} disabled={actionLoading}>
+            <Lock className="h-4 w-4 mr-2" />
             Lock Pricing
           </Button>
         </div>
       )}
+
+      {/* Lock Pricing Confirmation Dialog */}
+      <AlertDialog open={lockConfirmOpen} onOpenChange={setLockConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Lock Pricing?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will lock pricing at{' '}
+              <span className="font-semibold text-foreground">
+                {formatCurrency(computeEditTotal())}
+              </span>{' '}
+              and mark the PO as <strong>Priced</strong>. The buyer will be notified. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={actionLoading}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => savePriceEdits(true)} disabled={actionLoading}>
+              {actionLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Locking {Object.keys(priceEdits).length} items…
+                </>
+              ) : (
+                'Confirm & Lock'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Notes */}
       {po.notes && (
