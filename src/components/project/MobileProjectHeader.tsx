@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, Download, Loader2, User, Users, Settings, LogOut } from 'lucide-react';
+import { ChevronDown, Download, Loader2, User, Users, Settings, LogOut, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -83,9 +83,21 @@ export function MobileProjectHeader({
       setDownloading(false);
     }
   };
+
   return (
     <header className="sticky top-0 z-40 border-b bg-card backdrop-blur lg:hidden">
-      <div className="flex items-center gap-2 px-3 h-12">
+      {/* Top row: back + actions */}
+      <div className="flex items-center gap-2 px-3" style={{ height: '52px' }}>
+        {/* Back arrow */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-11 w-11 shrink-0 -ml-1"
+          onClick={() => navigate('/dashboard')}
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+
         {/* Project name */}
         <h1 className="flex-1 text-sm font-semibold truncate min-w-0">
           {projectName}
@@ -94,7 +106,7 @@ export function MobileProjectHeader({
         {/* Status dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-7 gap-1 px-1.5 shrink-0">
+            <Button variant="ghost" size="sm" className="h-11 gap-1 px-1.5 shrink-0">
               <Badge className={`${STATUS_COLORS[projectStatus]} text-[10px] px-1.5 py-0 pointer-events-none`}>
                 {STATUS_LABELS[projectStatus] || projectStatus}
               </Badge>
@@ -106,7 +118,7 @@ export function MobileProjectHeader({
               <DropdownMenuItem
                 key={option.value}
                 onClick={() => onStatusChange?.(option.value)}
-                className={projectStatus === option.value ? 'bg-muted' : ''}
+                className={`min-h-[44px] ${projectStatus === option.value ? 'bg-muted' : ''}`}
               >
                 <Badge className={`${STATUS_COLORS[option.value]} mr-2`}>
                   {option.label}
@@ -118,8 +130,8 @@ export function MobileProjectHeader({
         </DropdownMenu>
 
         {/* Download */}
-        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0" onClick={handleDownloadSummary} disabled={downloading}>
-          {downloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+        <Button variant="ghost" size="sm" className="h-11 w-11 p-0 shrink-0" onClick={handleDownloadSummary} disabled={downloading}>
+          {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
         </Button>
 
         {/* Notifications */}
@@ -128,8 +140,8 @@ export function MobileProjectHeader({
         {/* Profile avatar + dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-7 w-7 p-0 rounded-full shrink-0">
-              <Avatar className="h-7 w-7">
+            <Button variant="ghost" size="icon" className="h-11 w-11 p-0 rounded-full shrink-0">
+              <Avatar className="h-8 w-8">
                 <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
                   {initials}
                 </AvatarFallback>
@@ -137,22 +149,22 @@ export function MobileProjectHeader({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => navigate('/profile')}>
+            <DropdownMenuItem onClick={() => navigate('/profile')} className="min-h-[44px]">
               <User className="mr-2 h-4 w-4" />
               Profile
             </DropdownMenuItem>
             {(currentRole === 'GC_PM' || currentRole === 'TC_PM' || currentRole === 'FC_PM') && (
-              <DropdownMenuItem onClick={() => navigate('/org/team')}>
+              <DropdownMenuItem onClick={() => navigate('/org/team')} className="min-h-[44px]">
                 <Users className="mr-2 h-4 w-4" />
                 My Team
               </DropdownMenuItem>
             )}
-            <DropdownMenuItem onClick={() => navigate('/settings')}>
+            <DropdownMenuItem onClick={() => navigate('/settings')} className="min-h-[44px]">
               <Settings className="mr-2 h-4 w-4" />
               Settings
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => signOut()}>
+            <DropdownMenuItem onClick={() => signOut()} className="min-h-[44px]">
               <LogOut className="mr-2 h-4 w-4" />
               Sign out
             </DropdownMenuItem>

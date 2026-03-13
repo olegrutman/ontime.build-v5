@@ -22,7 +22,6 @@ function useCountUp(target: number, duration = 900, delay = 0) {
       const animate = (now: number) => {
         const elapsed = now - start;
         const progress = Math.min(elapsed / duration, 1);
-        // cubic ease-out
         const eased = 1 - Math.pow(1 - progress, 3);
         setCurrent(Math.round(target * eased));
         if (progress < 1) {
@@ -72,12 +71,12 @@ function KPICard({ label, value, tag, tagColor, subText, barPercent, barColor, d
 
   return (
     <div
-      className={`bg-card border border-border rounded-lg px-4 py-[18px] transition-all duration-300 hover:-translate-y-px hover:shadow-md ${
+      className={`bg-card border border-border rounded-lg px-3.5 md:px-4 py-3.5 md:py-[18px] transition-all duration-300 hover:-translate-y-px hover:shadow-md ${
         visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2.5'
       }`}
       style={{ transitionDelay: `${delay}ms` }}
     >
-      <div className="text-[0.72rem] uppercase tracking-[0.5px] text-muted-foreground mb-2">
+      <div className="text-[0.7rem] md:text-[0.72rem] uppercase tracking-[0.4px] md:tracking-[0.5px] text-muted-foreground mb-2">
         {label}
       </div>
       <div className="flex items-center justify-between mb-1">
@@ -89,7 +88,7 @@ function KPICard({ label, value, tag, tagColor, subText, barPercent, barColor, d
         </span>
       </div>
       <div className="text-[0.72rem] text-muted-foreground mb-3">{subText}</div>
-      <div className="h-[3px] bg-accent rounded-full overflow-hidden">
+      <div className="h-1 md:h-[3px] bg-accent rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-1000 ease-out ${barStyles[barColor]}`}
           style={{ width: `${barWidth}%` }}
@@ -116,19 +115,16 @@ export function DashboardKPIRow({ financials, billing, attentionCount }: Dashboa
   const invoicesPaid = financials.totalBilled || 0;
   const billedPercent = contractValue > 0 ? Math.round((invoicesPaid / contractValue) * 100) : 0;
 
-  // For TC: show both directions. For GC: outstanding to pay. For FC: outstanding to collect.
   const outstandingToPay = billing.outstandingToPay || 0;
   const outstandingToCollect = billing.outstandingToCollect || 0;
 
-  // "Pending" = invoices awaiting review (to pay)
   const pendingValue = outstandingToPay;
   const pendingPercent = contractValue > 0 ? Math.round((pendingValue / contractValue) * 100) : 0;
 
-  // "Outstanding" = what we're owed (to collect)
   const collectPercent = contractValue > 0 ? Math.min(Math.round((outstandingToCollect / contractValue) * 100), 100) : 0;
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
       <KPICard
         label="Contract Value"
         value={contractValue}
