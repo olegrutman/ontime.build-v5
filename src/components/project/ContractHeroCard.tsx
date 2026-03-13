@@ -116,21 +116,21 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
   if (isSupplier) {
     const supplierOutstanding = supplierInvoiced - supplierPaid;
     return (
-      <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-6">
+      <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 md:p-6">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Order Value</p>
-        <p className="text-3xl font-bold tabular-nums text-foreground">{fmt(supplierOrderValue)}</p>
+        <p className="font-heading text-[1.9rem] md:text-3xl font-black tabular-nums text-foreground">{fmt(supplierOrderValue)}</p>
         <div className="border-t mt-4 pt-4 grid grid-cols-3 gap-4">
           <div>
-            <p className="text-xs text-muted-foreground mb-0.5">Invoiced</p>
-            <p className="text-sm font-semibold tabular-nums">{fmt(supplierInvoiced)}</p>
+            <p className="text-[0.65rem] md:text-xs text-muted-foreground mb-0.5">Invoiced</p>
+            <p className="font-heading text-[1.2rem] md:text-sm font-bold tabular-nums">{fmt(supplierInvoiced)}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground mb-0.5">Paid</p>
-            <p className="text-sm font-semibold tabular-nums text-green-600 dark:text-green-400">{fmt(supplierPaid)}</p>
+            <p className="text-[0.65rem] md:text-xs text-muted-foreground mb-0.5">Paid</p>
+            <p className="font-heading text-[1.2rem] md:text-sm font-bold tabular-nums text-green-600 dark:text-green-400">{fmt(supplierPaid)}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground mb-0.5">Outstanding</p>
-            <p className={cn("text-sm font-semibold tabular-nums", supplierOutstanding > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-foreground')}>{fmt(supplierOutstanding)}</p>
+            <p className="text-[0.65rem] md:text-xs text-muted-foreground mb-0.5">Outstanding</p>
+            <p className={cn("font-heading text-[1.2rem] md:text-sm font-bold tabular-nums", supplierOutstanding > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-foreground')}>{fmt(supplierOutstanding)}</p>
           </div>
         </div>
       </div>
