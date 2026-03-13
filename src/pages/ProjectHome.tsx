@@ -51,6 +51,8 @@ import { useToast } from '@/hooks/use-toast';
 import { FeatureGate, TAB_FEATURE_MAP } from '@/components/auth/FeatureGate';
 import { useProjectFinancials } from '@/hooks/useProjectFinancials';
 import { useProjectReadiness } from '@/hooks/useProjectReadiness';
+import { useProjectEstimateRows } from '@/hooks/useProjectEstimateRows';
+import { SupplierEstimateCatalog } from '@/components/dashboard/supplier/SupplierEstimateCatalog';
 
 interface Project {
   id: string;
