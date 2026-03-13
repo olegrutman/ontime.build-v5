@@ -1,51 +1,23 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-## Features Built
+# Allow Invoice Deletion Before Approval
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
+## Problem
+Currently, the delete button only appears on invoices with `DRAFT` status. Users should be able to delete invoices they created as long as they haven't been approved yet -- meaning `DRAFT`, `SUBMITTED`, and `REJECTED` statuses should all be deletable by the creator/submitter.
 
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
+## Changes
 
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
+### 1. `src/components/invoices/InvoiceCard.tsx`
+- Line 110: Change condition from `invoice.status === 'DRAFT'` to `['DRAFT', 'SUBMITTED', 'REJECTED'].includes(invoice.status)` for the delete hover action
 
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
+### 2. `src/components/invoices/InvoiceTableView.tsx`
+- Line 175: Same condition change for the delete button in the table actions column
 
-## Files Created/Modified
-| File | Action |
-|------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+### 3. `src/components/invoices/InvoicesTab.tsx`
+- Line 411: Change `canSubmit ? handleDeleteInvoice : undefined` -- the `canSubmit` permission check is correct (it means the user is the creator/from-org), but need to confirm it's passed for non-DRAFT invoices too. The `onDelete` prop is already gated by `canSubmit` which is the right permission (creator org can delete their own invoices before approval).
+
+### 4. Add confirmation dialog
+- Wrap the delete action in an `AlertDialog` confirmation, especially important for `SUBMITTED` invoices since they're already in review. The dialog should warn: "This invoice has been submitted and is awaiting review. Are you sure you want to delete it?"
+
+All 3 files, ~10 lines changed total. No database changes needed -- the existing RLS policies already allow the creator org to delete their invoices.
+
