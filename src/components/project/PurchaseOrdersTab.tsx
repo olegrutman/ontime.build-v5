@@ -596,7 +596,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const filterAndSort = (pos: PurchaseOrder[]) => {
     let filtered = pos;
     if (statusFilter === 'needs_action') {
-      const actionStatuses = isSupplier ? ['SUBMITTED'] : ['ACTIVE'];
+      const actionStatuses = isSupplier ? ['SUBMITTED'] : isGC ? ['ACTIVE', 'PENDING_APPROVAL'] : ['ACTIVE'];
       filtered = pos.filter(po => actionStatuses.includes(po.status));
     } else if (statusFilter !== 'all') {
       filtered = pos.filter(po => po.status === statusFilter);
