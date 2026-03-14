@@ -95,10 +95,13 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
   const currentOrgType = userOrgRoles[0]?.organization?.type;
   const { sendNudge, loading: nudgeLoading, wasSent } = useNudge();
   
-  const { canViewPricing, canEditPricing, isSupplier, isPricingOwner } = usePOPricingVisibility(
+  const pricingVis = usePOPricingVisibility(
     po,
     currentOrgId || null
   );
+  const canViewPricing = hidePricingOverride ? false : pricingVis.canViewPricing;
+  const canEditPricing = hidePricingOverride ? false : pricingVis.canEditPricing;
+  const { isSupplier, isPricingOwner } = pricingVis;
   
   const isSupplierOrg = currentOrgType === 'SUPPLIER';
   const effectiveIsSupplier = isSupplier || isSupplierOrg;
