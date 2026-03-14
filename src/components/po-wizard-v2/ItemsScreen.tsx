@@ -159,9 +159,11 @@ export function ItemsScreen({
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <span className="text-sm font-semibold min-w-[60px] text-right">
-                        {lineTotal != null ? formatCurrency(lineTotal) : '—'}
-                      </span>
+                      {!hidePricing && (
+                        <span className="text-sm font-semibold min-w-[60px] text-right">
+                          {lineTotal != null ? formatCurrency(lineTotal) : '—'}
+                        </span>
+                      )}
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditItem(item)}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
