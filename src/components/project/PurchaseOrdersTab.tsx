@@ -742,6 +742,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
                   {isSupplier ? '⚡ Needs Pricing' : '⚡ Needs My Action'}
                 </SelectItem>
                 <SelectItem value="ACTIVE">Active</SelectItem>
+                <SelectItem value="PENDING_APPROVAL">Pending Approval</SelectItem>
                 <SelectItem value="SUBMITTED">Submitted</SelectItem>
                 <SelectItem value="PRICED">Priced</SelectItem>
                 <SelectItem value="ORDERED">Ordered</SelectItem>

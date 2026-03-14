@@ -179,17 +179,25 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Update PO status + refresh download token expiration using service role
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+    const updateFields: Record<string, unknown> = {
+      status: "SUBMITTED",
+      submitted_at: new Date().toISOString(),
+      submitted_by: userId,
+      sent_at: new Date().toISOString(),
+      sent_by: userId,
+      download_token_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      download_count: 0,
+    };
+
+    // If PO was PENDING_APPROVAL, record approval
+    if (po.status === "PENDING_APPROVAL") {
+      updateFields.approved_by = userId;
+      updateFields.approved_at = new Date().toISOString();
+    }
+
     await serviceClient
       .from("purchase_orders")
-      .update({
-        status: "SUBMITTED",
-        submitted_at: new Date().toISOString(),
-        submitted_by: userId,
-        sent_at: new Date().toISOString(),
-        sent_by: userId,
-        download_token_expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        download_count: 0,
-      })
+      .update(updateFields)
       .eq("id", po_id);
 
     console.log("PO email sent successfully:", emailResult);
