@@ -138,6 +138,12 @@ export function EstimateSummaryCard({ items, totalWithTax, estimateId }: Estimat
                           <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${isOpen ? 'rotate-90' : ''}`} />
                           <span className="font-medium">{pack.name}</span>
                           <Badge variant="outline" className="text-[10px]">{pack.itemCount} items</Badge>
+                          {orderedPackNames.has(pack.name) && (
+                            <Badge className="text-[10px] bg-green-100 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
+                              <ShoppingCart className="h-3 w-3 mr-0.5" />
+                              Ordered
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-3 text-right">
                           <span className="text-muted-foreground text-xs">{pack.percentOfTotal.toFixed(1)}%</span>

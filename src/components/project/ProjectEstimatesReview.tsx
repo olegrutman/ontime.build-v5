@@ -430,6 +430,7 @@ export function ProjectEstimatesReview({ projectId }: ProjectEstimatesReviewProp
                   <EstimateSummaryCard
                     items={lineItems as any}
                     totalWithTax={selectedEstimate.total_amount || 0}
+                    estimateId={selectedEstimate.id}
                   />
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">

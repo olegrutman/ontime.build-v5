@@ -222,6 +222,31 @@ export function PackSelector({
             );
           })}
         </div>
+
+      {/* Confirm re-order dialog */}
+      <AlertDialog open={!!confirmPack} onOpenChange={(open) => !open && setConfirmPack(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Pack Already Ordered</AlertDialogTitle>
+            <AlertDialogDescription>
+              "{confirmPack?.name}" already has a purchase order. Are you sure you want to create another PO for this pack?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (confirmPack && estimateId) {
+                  onSelectPack(confirmPack, estimateId);
+                  setConfirmPack(null);
+                }
+              }}
+            >
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
