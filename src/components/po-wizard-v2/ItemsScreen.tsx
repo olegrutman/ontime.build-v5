@@ -151,7 +151,7 @@ export function ItemsScreen({
                             ? `${item.quantity} pcs × ${item.length_ft}' = ${item.computed_lf} LF`
                             : `${item.quantity} ${item.unit_mode === 'BUNDLE' ? item.bundle_name || 'BDL' : item.uom}`}
                         </span>
-                        {item.unit_price != null && (
+                        {!hidePricing && item.unit_price != null && (
                           <span className="text-muted-foreground">
                             @ {formatCurrency(item.unit_price)}/{item.uom}
                           </span>
