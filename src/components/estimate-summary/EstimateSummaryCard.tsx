@@ -21,8 +21,24 @@ interface PackSummary {
   percentOfTotal: number;
 }
 
-export function EstimateSummaryCard({ items, totalWithTax }: EstimateSummaryCardProps) {
+export function EstimateSummaryCard({ items, totalWithTax, estimateId }: EstimateSummaryCardProps) {
   const [expandedPacks, setExpandedPacks] = useState<Set<string>>(new Set());
+  const [orderedPackNames, setOrderedPackNames] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!estimateId) return;
+    const fetchOrderedPacks = async () => {
+      const { data } = await supabase
+        .from('purchase_orders')
+        .select('source_pack_name')
+        .eq('source_estimate_id', estimateId)
+        .neq('status', 'ACTIVE');
+      if (data) {
+        setOrderedPackNames(new Set(data.map(po => po.source_pack_name).filter(Boolean) as string[]));
+      }
+    };
+    fetchOrderedPacks();
+  }, [estimateId]);
 
   const { subtotal, packs, totalItems, packItems } = useMemo(() => {
     let subtotal = 0;
