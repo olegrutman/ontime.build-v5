@@ -23,10 +23,11 @@ import { POCard, PODetail, POActionBar, POTableView } from '@/components/purchas
 
 const STATUS_PRIORITY: Record<POStatus, number> = {
   ACTIVE: 0,
-  SUBMITTED: 1,
-  PRICED: 2,
-  ORDERED: 3,
-  DELIVERED: 4,
+  PENDING_APPROVAL: 1,
+  SUBMITTED: 2,
+  PRICED: 3,
+  ORDERED: 4,
+  DELIVERED: 5,
 };
 
 interface PurchaseOrdersTabProps {
