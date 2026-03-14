@@ -71,10 +71,12 @@ export function POActionBar({ purchaseOrders, isSupplier, hidePricing = false }:
             Awaiting Delivery
           </p>
           <p className="text-lg font-bold leading-tight">
-            {metrics.awaitingCount}{' '}
-            <span className="text-sm font-normal text-muted-foreground">
-              ({formatCurrency(metrics.awaitingTotal)})
-            </span>
+            {metrics.awaitingCount}
+            {!hidePricing && (
+              <span className="text-sm font-normal text-muted-foreground">
+                {' '}({formatCurrency(metrics.awaitingTotal)})
+              </span>
+            )}
           </p>
         </div>
       </Card>
