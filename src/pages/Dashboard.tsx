@@ -262,7 +262,14 @@ export default function Dashboard() {
               pendingInvites={pendingInvites}
               onRefresh={refetch}
             />
-            <DashboardLiveFeed reminders={reminders} />
+            <RemindersTile
+              reminders={reminders.map(r => ({ ...r, completed: false }))}
+              onComplete={async (id) => {
+                await supabase.from('reminders').update({ completed: true }).eq('id', id);
+                refetch();
+              }}
+              onAdd={() => setAddReminderOpen(true)}
+            />
           </div>
         </div>
       </div>

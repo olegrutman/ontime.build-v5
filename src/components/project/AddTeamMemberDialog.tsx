@@ -264,11 +264,6 @@ export function AddTeamMemberDialog({
     }
   };
 
-  // Get current user's org ID and type
-  const getCurrentUserOrg = () => {
-    const membership = user ? undefined : undefined; // Will be fetched below
-    return null;
-  };
 
   const handleAddExisting = async () => {
     if (!selectedResult || !user?.id) return;
