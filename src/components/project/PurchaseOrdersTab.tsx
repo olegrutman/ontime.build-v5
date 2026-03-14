@@ -88,14 +88,24 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
 
       // Get approval requirement from project_relationships
       if (isTC) {
-        const { data: rels } = await supabase
-          .from('project_relationships')
-          .select('po_requires_upstream_approval')
+        // First find our participant ID
+        const { data: participants } = await supabase
+          .from('project_participants')
+          .select('id')
           .eq('project_id', projectId)
-          .eq('downstream_org_id', currentOrgId)
+          .eq('organization_id', currentOrgId)
           .limit(1);
-        if (rels && rels.length > 0) {
-          setPORequiresApproval(rels[0].po_requires_upstream_approval ?? true);
+        
+        if (participants && participants.length > 0) {
+          const { data: rels } = await supabase
+            .from('project_relationships')
+            .select('po_requires_upstream_approval')
+            .eq('project_id', projectId)
+            .eq('downstream_participant_id', participants[0].id)
+            .limit(1);
+          if (rels && rels.length > 0) {
+            setPORequiresApproval(rels[0].po_requires_upstream_approval ?? true);
+          }
         }
       }
     };
