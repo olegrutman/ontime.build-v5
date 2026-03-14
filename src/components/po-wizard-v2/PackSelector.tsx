@@ -177,19 +177,37 @@ export function PackSelector({
             const matchedCount = pack.items.filter(i => i.catalog_item_id).length;
             const totalCount = pack.items.length;
             const allMatched = matchedCount === totalCount;
+            const isOrdered = orderedPackNames.has(pack.name);
+
+            const handlePackClick = () => {
+              if (!estimateId) return;
+              if (isOrdered) {
+                setConfirmPack(pack);
+              } else {
+                onSelectPack(pack, estimateId);
+              }
+            };
 
             return (
               <Card
                 key={pack.name}
-                className="cursor-pointer hover:border-primary/50 transition-colors"
-                onClick={() => estimateId && onSelectPack(pack, estimateId)}
+                className={`cursor-pointer transition-colors ${isOrdered ? 'border-amber-300 bg-amber-50/50 hover:border-amber-400 dark:border-amber-700 dark:bg-amber-950/20' : 'hover:border-primary/50'}`}
+                onClick={handlePackClick}
               >
                 <CardContent className="p-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 min-w-0">
                       <Package className="h-4 w-4 text-muted-foreground shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-medium text-sm truncate">{pack.name}</p>
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-medium text-sm truncate">{pack.name}</p>
+                          {isOrdered && (
+                            <Badge className="text-[10px] bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-700">
+                              <ShoppingCart className="h-3 w-3 mr-0.5" />
+                              Already Ordered
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-xs text-muted-foreground">
                           {totalCount} item{totalCount !== 1 ? 's' : ''}
                         </p>
