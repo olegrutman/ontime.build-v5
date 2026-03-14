@@ -64,6 +64,7 @@ export function ProductPicker({
   projectId,
   onLoadPack,
   onAddPSMItem,
+  hidePricing = false,
 }: ProductPickerProps) {
   const isMobile = useIsMobile();
   const filterRef = useRef<StepByStepFilterHandle>(null);
