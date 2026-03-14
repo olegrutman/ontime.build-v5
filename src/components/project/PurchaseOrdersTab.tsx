@@ -51,6 +51,8 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const [editingPO, setEditingPO] = useState<PurchaseOrder | null>(null);
   const [editWizardOpen, setEditWizardOpen] = useState(false);
   const [editInitialData, setEditInitialData] = useState<Partial<POWizardV2Data> | null>(null);
+  const [materialResponsibility, setMaterialResponsibility] = useState<string | null>(null);
+  const [poRequiresApproval, setPORequiresApproval] = useState<boolean>(true);
 
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
@@ -58,6 +60,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const isGC = currentOrgType === 'GC';
   const isTC = currentOrgType === 'TC';
   const canCreatePO = permissions?.canCreatePOs ?? false;
+
+  // TC cannot see pricing when GC is material-responsible
+  const hidePricing = isTC && materialResponsibility === 'GC';
 
   // Directional tabs: only show for GC and TC
   const showDirectionalTabs = isGC || isTC;
