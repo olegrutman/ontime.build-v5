@@ -57,6 +57,7 @@ interface POWizardV2Props {
   onPOCreated?: (poId: string) => Promise<void>;
   editMode?: boolean;
   initialData?: Partial<POWizardV2Data>;
+  hidePricing?: boolean;
 }
 
 export function POWizardV2({
@@ -72,6 +73,7 @@ export function POWizardV2({
   onPOCreated,
   editMode = false,
   initialData,
+  hidePricing = false,
 }: POWizardV2Props) {
   const isMobile = useIsMobile();
   const [screen, setScreen] = useState<Screen>('header');
@@ -346,6 +348,7 @@ export function POWizardV2({
             canAdvance={canAdvanceFromItems}
             sourcePackName={formData.source_pack_name}
             onClearPack={handleClearPack}
+            hidePricing={hidePricing}
           />
         )}
         {screen === 'review' && (
@@ -359,6 +362,7 @@ export function POWizardV2({
             onBack={() => setScreen('items')}
             onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
+            hidePricing={hidePricing}
           />
         )}
       </div>
@@ -376,6 +380,7 @@ export function POWizardV2({
         projectId={projectId}
         onLoadPack={handleLoadPack}
         onAddPSMItem={handleAddItem}
+        hidePricing={hidePricing}
       />
 
       {/* Unmatched Item Editor */}

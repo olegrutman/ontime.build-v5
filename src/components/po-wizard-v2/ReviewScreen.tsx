@@ -28,6 +28,7 @@ interface ReviewScreenProps {
   onBack: () => void;
   onSubmit: () => void;
   isSubmitting: boolean;
+  hidePricing?: boolean;
 }
 
 export function ReviewScreen({
@@ -37,6 +38,7 @@ export function ReviewScreen({
   onBack,
   onSubmit,
   isSubmitting,
+  hidePricing = false,
 }: ReviewScreenProps) {
   const totals = useMemo(() => {
     let estimateSubtotal = 0;
@@ -121,11 +123,11 @@ export function ReviewScreen({
           <div className="rounded-lg border overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-muted/50 text-xs text-muted-foreground">
-                  <th className="text-left py-2 px-3 font-medium">Item</th>
-                  <th className="text-center py-2 px-2 font-medium w-14">Qty</th>
-                  <th className="text-right py-2 px-3 font-medium w-20">Total</th>
-                </tr>
+                 <tr className="bg-muted/50 text-xs text-muted-foreground">
+                   <th className="text-left py-2 px-3 font-medium">Item</th>
+                   <th className="text-center py-2 px-2 font-medium w-14">Qty</th>
+                   {!hidePricing && <th className="text-right py-2 px-3 font-medium w-20">Total</th>}
+                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {data.line_items.map((item) => {
@@ -142,7 +144,7 @@ export function ReviewScreen({
                           : `${item.quantity} ${item.uom}`}
                       </td>
                       <td className="py-2.5 px-3 text-right font-medium">
-                        {lineTotal != null ? formatCurrency(lineTotal) : '—'}
+                        {!hidePricing && (lineTotal != null ? formatCurrency(lineTotal) : '—')}
                       </td>
                     </tr>
                   );
@@ -153,32 +155,34 @@ export function ReviewScreen({
         </div>
 
         {/* Totals */}
-        <div className="wz-totals-bar space-y-1">
-          {totals.estimateSubtotal > 0 && (
-            <div className="flex justify-between text-sm text-secondary-foreground/70">
-              <span>Estimate Items</span>
-              <span>{formatCurrency(totals.estimateSubtotal)}</span>
+        {!hidePricing && (
+          <div className="wz-totals-bar space-y-1">
+            {totals.estimateSubtotal > 0 && (
+              <div className="flex justify-between text-sm text-secondary-foreground/70">
+                <span>Estimate Items</span>
+                <span>{formatCurrency(totals.estimateSubtotal)}</span>
+              </div>
+            )}
+            {totals.additionalSubtotal > 0 && (
+              <div className="flex justify-between text-sm text-secondary-foreground/70">
+                <span>Additional Items</span>
+                <span>{formatCurrency(totals.additionalSubtotal)}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-baseline">
+              <span className="text-sm font-medium text-secondary-foreground">
+                {totals.unpricedCount > 0 ? 'Total (Pending)' : 'Total'}
+              </span>
+              <span className="wz-totals-value">{formatCurrency(totals.subtotal)}</span>
             </div>
-          )}
-          {totals.additionalSubtotal > 0 && (
-            <div className="flex justify-between text-sm text-secondary-foreground/70">
-              <span>Additional Items</span>
-              <span>{formatCurrency(totals.additionalSubtotal)}</span>
-            </div>
-          )}
-          <div className="flex justify-between items-baseline">
-            <span className="text-sm font-medium text-secondary-foreground">
-              {totals.unpricedCount > 0 ? 'Total (Pending)' : 'Total'}
-            </span>
-            <span className="wz-totals-value">{formatCurrency(totals.subtotal)}</span>
+            {totals.unpricedCount > 0 && (
+              <div className="flex items-center gap-1.5 text-primary text-xs pt-1">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                <span>{totals.unpricedCount} item{totals.unpricedCount !== 1 ? 's' : ''} need supplier pricing</span>
+              </div>
+            )}
           </div>
-          {totals.unpricedCount > 0 && (
-            <div className="flex items-center gap-1.5 text-primary text-xs pt-1">
-              <AlertTriangle className="h-3.5 w-3.5" />
-              <span>{totals.unpricedCount} item{totals.unpricedCount !== 1 ? 's' : ''} need supplier pricing</span>
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Footer */}

@@ -3289,6 +3289,8 @@ export type Database = {
       }
       purchase_orders: {
         Row: {
+          approved_at: string | null
+          approved_by: string | null
           created_at: string
           created_by_org_id: string | null
           delivered_at: string | null
@@ -3327,6 +3329,8 @@ export type Database = {
           work_item_id: string | null
         }
         Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           created_by_org_id?: string | null
           delivered_at?: string | null
@@ -3365,6 +3369,8 @@ export type Database = {
           work_item_id?: string | null
         }
         Update: {
+          approved_at?: string | null
+          approved_by?: string | null
           created_at?: string
           created_by_org_id?: string | null
           delivered_at?: string | null
@@ -5511,6 +5517,7 @@ export type Database = {
         | "DRAFT"
         | "SENT"
         | "ACTIVE"
+        | "PENDING_APPROVAL"
         | "SUBMITTED"
         | "PRICED"
         | "ORDERED"
@@ -5701,6 +5708,7 @@ export const Constants = {
         "DRAFT",
         "SENT",
         "ACTIVE",
+        "PENDING_APPROVAL",
         "SUBMITTED",
         "PRICED",
         "ORDERED",

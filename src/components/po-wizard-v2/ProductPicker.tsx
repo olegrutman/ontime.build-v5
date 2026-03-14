@@ -49,6 +49,7 @@ interface ProductPickerProps {
   projectId?: string;
   onLoadPack?: (items: POWizardV2LineItem[], estimateId: string, packName: string) => void;
   onAddPSMItem?: (item: POWizardV2LineItem) => void;
+  hidePricing?: boolean;
 }
 
 export function ProductPicker({
@@ -63,6 +64,7 @@ export function ProductPicker({
   projectId,
   onLoadPack,
   onAddPSMItem,
+  hidePricing = false,
 }: ProductPickerProps) {
   const isMobile = useIsMobile();
   const filterRef = useRef<StepByStepFilterHandle>(null);
@@ -453,6 +455,7 @@ export function ProductPicker({
             onUpdate={onUpdateItem}
             onClose={handleClose}
             editingItem={editingItem}
+            hidePricing={hidePricing}
           />
         )}
       </div>

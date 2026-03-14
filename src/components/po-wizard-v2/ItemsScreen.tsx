@@ -31,6 +31,7 @@ interface ItemsScreenProps {
   canAdvance: boolean;
   sourcePackName: string | null;
   onClearPack: () => void;
+  hidePricing?: boolean;
 }
 
 export function ItemsScreen({
@@ -43,6 +44,7 @@ export function ItemsScreen({
   canAdvance,
   sourcePackName,
   onClearPack,
+  hidePricing = false,
 }: ItemsScreenProps) {
   const totals = useMemo(() => {
     let estimateSubtotal = 0;
@@ -70,6 +72,7 @@ export function ItemsScreen({
   }, [items]);
 
   function getSourceTag(item: POWizardV2LineItem) {
+    if (hidePricing) return null;
     if (item.price_adjusted_by_supplier) {
       return <Badge variant="outline" className="text-[10px] border-primary/50 text-primary">Adjusted</Badge>;
     }
@@ -148,7 +151,7 @@ export function ItemsScreen({
                             ? `${item.quantity} pcs × ${item.length_ft}' = ${item.computed_lf} LF`
                             : `${item.quantity} ${item.unit_mode === 'BUNDLE' ? item.bundle_name || 'BDL' : item.uom}`}
                         </span>
-                        {item.unit_price != null && (
+                        {!hidePricing && item.unit_price != null && (
                           <span className="text-muted-foreground">
                             @ {formatCurrency(item.unit_price)}/{item.uom}
                           </span>
@@ -156,9 +159,11 @@ export function ItemsScreen({
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <span className="text-sm font-semibold min-w-[60px] text-right">
-                        {lineTotal != null ? formatCurrency(lineTotal) : '—'}
-                      </span>
+                      {!hidePricing && (
+                        <span className="text-sm font-semibold min-w-[60px] text-right">
+                          {lineTotal != null ? formatCurrency(lineTotal) : '—'}
+                        </span>
+                      )}
                       <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditItem(item)}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
@@ -178,30 +183,32 @@ export function ItemsScreen({
             </button>
 
             {/* Totals bar */}
-            <div className="wz-totals-bar space-y-1">
-              {totals.estimateSubtotal > 0 && (
-                <div className="flex justify-between text-sm text-secondary-foreground/70">
-                  <span>Estimate Items</span>
-                  <span>{formatCurrency(totals.estimateSubtotal)}</span>
+            {!hidePricing && (
+              <div className="wz-totals-bar space-y-1">
+                {totals.estimateSubtotal > 0 && (
+                  <div className="flex justify-between text-sm text-secondary-foreground/70">
+                    <span>Estimate Items</span>
+                    <span>{formatCurrency(totals.estimateSubtotal)}</span>
+                  </div>
+                )}
+                {totals.additionalSubtotal > 0 && (
+                  <div className="flex justify-between text-sm text-secondary-foreground/70">
+                    <span>Additional Items</span>
+                    <span>{formatCurrency(totals.additionalSubtotal)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-baseline">
+                  <span className="text-sm font-medium text-secondary-foreground">Subtotal</span>
+                  <span className="wz-totals-value">{formatCurrency(totals.subtotal)}</span>
                 </div>
-              )}
-              {totals.additionalSubtotal > 0 && (
-                <div className="flex justify-between text-sm text-secondary-foreground/70">
-                  <span>Additional Items</span>
-                  <span>{formatCurrency(totals.additionalSubtotal)}</span>
-                </div>
-              )}
-              <div className="flex justify-between items-baseline">
-                <span className="text-sm font-medium text-secondary-foreground">Subtotal</span>
-                <span className="wz-totals-value">{formatCurrency(totals.subtotal)}</span>
+                {totals.unpricedCount > 0 && (
+                  <div className="flex items-center gap-1.5 text-primary text-xs pt-1">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    <span>{totals.unpricedCount} item{totals.unpricedCount !== 1 ? 's' : ''} need supplier pricing</span>
+                  </div>
+                )}
               </div>
-              {totals.unpricedCount > 0 && (
-                <div className="flex items-center gap-1.5 text-primary text-xs pt-1">
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                  <span>{totals.unpricedCount} item{totals.unpricedCount !== 1 ? 's' : ''} need supplier pricing</span>
-                </div>
-              )}
-            </div>
+            )}
           </>
         )}
       </div>

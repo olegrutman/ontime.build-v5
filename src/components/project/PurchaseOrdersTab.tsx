@@ -23,10 +23,11 @@ import { POCard, PODetail, POActionBar, POTableView } from '@/components/purchas
 
 const STATUS_PRIORITY: Record<POStatus, number> = {
   ACTIVE: 0,
-  SUBMITTED: 1,
-  PRICED: 2,
-  ORDERED: 3,
-  DELIVERED: 4,
+  PENDING_APPROVAL: 1,
+  SUBMITTED: 2,
+  PRICED: 3,
+  ORDERED: 4,
+  DELIVERED: 5,
 };
 
 interface PurchaseOrdersTabProps {
@@ -50,6 +51,8 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const [editingPO, setEditingPO] = useState<PurchaseOrder | null>(null);
   const [editWizardOpen, setEditWizardOpen] = useState(false);
   const [editInitialData, setEditInitialData] = useState<Partial<POWizardV2Data> | null>(null);
+  const [materialResponsibility, setMaterialResponsibility] = useState<string | null>(null);
+  const [poRequiresApproval, setPORequiresApproval] = useState<boolean>(true);
 
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
@@ -58,12 +61,56 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const isTC = currentOrgType === 'TC';
   const canCreatePO = permissions?.canCreatePOs ?? false;
 
+  // TC cannot see pricing when GC is material-responsible
+  const hidePricing = isTC && materialResponsibility === 'GC';
+
   // Directional tabs: only show for GC and TC
   const showDirectionalTabs = isGC || isTC;
 
   useEffect(() => {
     fetchPurchaseOrders();
   }, [projectId, currentOrgId]);
+
+  // Fetch material_responsibility and approval settings
+  useEffect(() => {
+    if (!projectId || !currentOrgId) return;
+    const fetchContractInfo = async () => {
+      // Get material responsibility
+      const { data: contracts } = await supabase
+        .from('project_contracts')
+        .select('material_responsibility')
+        .eq('project_id', projectId)
+        .not('material_responsibility', 'is', null)
+        .limit(1);
+      if (contracts && contracts.length > 0) {
+        setMaterialResponsibility(contracts[0].material_responsibility);
+      }
+
+      // Get approval requirement from project_relationships
+      if (isTC) {
+        // First find our participant ID
+        const { data: participants } = await supabase
+          .from('project_participants')
+          .select('id')
+          .eq('project_id', projectId)
+          .eq('organization_id', currentOrgId)
+          .limit(1);
+        
+        if (participants && participants.length > 0) {
+          const { data: rels } = await supabase
+            .from('project_relationships')
+            .select('po_requires_upstream_approval')
+            .eq('project_id', projectId)
+            .eq('downstream_participant_id', participants[0].id)
+            .limit(1);
+          if (rels && rels.length > 0) {
+            setPORequiresApproval(rels[0].po_requires_upstream_approval ?? true);
+          }
+        }
+      }
+    };
+    fetchContractInfo();
+  }, [projectId, currentOrgId, isTC]);
 
   const fetchPurchaseOrders = async () => {
     setLoading(true);
@@ -291,7 +338,86 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   };
 
   const handleSubmitToSupplier = async (po: PurchaseOrder) => {
+    // TC approval gate: if approval required and TC is creator, set to PENDING_APPROVAL
+    if (isTC && poRequiresApproval && po.created_by_org_id === currentOrgId) {
+      try {
+        const { error } = await supabase
+          .from('purchase_orders')
+          .update({ status: 'PENDING_APPROVAL' as any })
+          .eq('id', po.id);
+        if (error) throw error;
+        toast.success('PO sent to GC for approval');
+        fetchPurchaseOrders();
+      } catch (err: any) {
+        toast.error('Failed to submit for approval: ' + (err?.message || 'Unknown error'));
+      }
+      return;
+    }
     setSelectedPOId(po.id);
+  };
+
+  const handleApprovePO = async (po: PurchaseOrder) => {
+    if (!user) return;
+    try {
+      // Look up supplier email
+      let supplierEmail = po.supplier?.contact_info || '';
+      if (po.project_id) {
+        const { data: ds } = await supabase
+          .from('project_designated_suppliers')
+          .select('po_email')
+          .eq('project_id', po.project_id)
+          .neq('status', 'removed')
+          .maybeSingle();
+        if (ds?.po_email) supplierEmail = ds.po_email;
+      }
+      
+      if (!supplierEmail) {
+        toast.error('No supplier email found. Please set up supplier contact.');
+        return;
+      }
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) {
+        toast.error('Please log in to approve POs');
+        return;
+      }
+
+      // Update status to approved first
+      const { error: updateErr } = await supabase
+        .from('purchase_orders')
+        .update({
+          approved_by: user.id,
+          approved_at: new Date().toISOString(),
+        })
+        .eq('id', po.id);
+      if (updateErr) throw updateErr;
+
+      // Send via edge function
+      const { error: sendErr } = await supabase.functions.invoke('send-po', {
+        body: { po_id: po.id, supplier_email: supplierEmail },
+      });
+      if (sendErr) throw sendErr;
+
+      toast.success('PO approved and sent to supplier');
+      fetchPurchaseOrders();
+    } catch (err: any) {
+      toast.error('Failed to approve PO: ' + (err?.message || 'Unknown error'));
+    }
+  };
+
+  const handleRejectPO = async (po: PurchaseOrder) => {
+    try {
+      const { error } = await supabase
+        .from('purchase_orders')
+        .update({ status: 'ACTIVE' as any })
+        .eq('id', po.id);
+      if (error) throw error;
+      toast.success('PO returned to active');
+      fetchPurchaseOrders();
+    } catch (err: any) {
+      toast.error('Failed to reject PO: ' + (err?.message || 'Unknown error'));
+    }
   };
 
   const handleDownload = (po: PurchaseOrder) => {
@@ -459,6 +585,8 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   }, [purchaseOrders, currentOrgId, showDirectionalTabs]);
 
   const getCanViewPricing = (po: PurchaseOrder) => {
+    // TC cannot see pricing when GC is material-responsible
+    if (hidePricing) return false;
     const isPricingOwner = po.pricing_owner_org_id === currentOrgId;
     const isCreator = po.created_by_org_id === currentOrgId;
     const isPoSupplier = (po.supplier as { organization_id?: string })?.organization_id === currentOrgId;
@@ -468,7 +596,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const filterAndSort = (pos: PurchaseOrder[]) => {
     let filtered = pos;
     if (statusFilter === 'needs_action') {
-      const actionStatuses = isSupplier ? ['SUBMITTED'] : ['ACTIVE'];
+      const actionStatuses = isSupplier ? ['SUBMITTED'] : isGC ? ['ACTIVE', 'PENDING_APPROVAL'] : ['ACTIVE'];
       filtered = pos.filter(po => actionStatuses.includes(po.status));
     } else if (statusFilter !== 'all') {
       filtered = pos.filter(po => po.status === statusFilter);
@@ -531,10 +659,13 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
               onEdit={() => handleEditPO(po)}
               onDownload={handleDownload}
               onSubmit={handleSubmitToSupplier}
+              onApprove={isGC ? handleApprovePO : undefined}
+              onReject={isGC ? handleRejectPO : undefined}
               canEdit={canCreatePO}
               canSubmit={canCreatePO}
               canViewPricing={getCanViewPricing(po)}
               isSupplier={isSupplier}
+              isGC={isGC}
               isInvoiced={invoicedPOIds.has(po.id)}
               estimatePackTotal={packData?.total ?? null}
               estimatePackItemCount={packData?.itemCount ?? null}
@@ -611,6 +742,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
                   {isSupplier ? '⚡ Needs Pricing' : '⚡ Needs My Action'}
                 </SelectItem>
                 <SelectItem value="ACTIVE">Active</SelectItem>
+                <SelectItem value="PENDING_APPROVAL">Pending Approval</SelectItem>
                 <SelectItem value="SUBMITTED">Submitted</SelectItem>
                 <SelectItem value="PRICED">Priced</SelectItem>
                 <SelectItem value="ORDERED">Ordered</SelectItem>
@@ -658,6 +790,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         projectAddress={projectAddress || ''}
         onComplete={handleCreatePO}
         isSubmitting={isSubmitting}
+        hidePricing={hidePricing}
       />
 
       {/* PO Edit Wizard */}
@@ -675,6 +808,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           isSubmitting={isSubmitting}
           editMode
           initialData={editInitialData}
+          hidePricing={hidePricing}
         />
       )}
     </>

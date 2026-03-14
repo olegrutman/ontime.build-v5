@@ -1,4 +1,4 @@
-export type POStatus = 'ACTIVE' | 'SUBMITTED' | 'PRICED' | 'ORDERED' | 'DELIVERED';
+export type POStatus = 'ACTIVE' | 'PENDING_APPROVAL' | 'SUBMITTED' | 'PRICED' | 'ORDERED' | 'DELIVERED';
 
 export interface PurchaseOrder {
   id: string;
@@ -26,6 +26,8 @@ export interface PurchaseOrder {
   source_pack_name?: string | null;
   pack_modified?: boolean | null;
   created_at: string;
+  approved_by?: string | null;
+  approved_at?: string | null;
   updated_at: string;
   // Pricing visibility
   created_by_org_id?: string | null;
@@ -75,6 +77,7 @@ export interface POLineItem {
 
 export const PO_STATUS_LABELS: Record<POStatus, string> = {
   ACTIVE: 'Active',
+  PENDING_APPROVAL: 'Pending Approval',
   SUBMITTED: 'Submitted',
   PRICED: 'Priced',
   ORDERED: 'Ordered',
@@ -83,6 +86,7 @@ export const PO_STATUS_LABELS: Record<POStatus, string> = {
 
 export const PO_STATUS_COLORS: Record<POStatus, string> = {
   ACTIVE: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
+  PENDING_APPROVAL: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
   SUBMITTED: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
   PRICED: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
   ORDERED: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',

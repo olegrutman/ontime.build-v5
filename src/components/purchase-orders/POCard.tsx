@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { Eye, Edit, Download, Send, Loader2, Lock, Truck, Receipt, ClipboardList } from 'lucide-react';
+import { Eye, Edit, Download, Send, Loader2, Lock, Truck, Receipt, ClipboardList, CheckCircle, XCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,10 +14,13 @@ interface POCardProps {
   onEdit?: (po: PurchaseOrder) => void;
   onDownload?: (po: PurchaseOrder) => void;
   onSubmit?: (po: PurchaseOrder) => Promise<void>;
+  onApprove?: (po: PurchaseOrder) => Promise<void>;
+  onReject?: (po: PurchaseOrder) => Promise<void>;
   canEdit?: boolean;
   canSubmit?: boolean;
   canViewPricing?: boolean;
   isSupplier?: boolean;
+  isGC?: boolean;
   isInvoiced?: boolean;
   estimatePackTotal?: number | null;
   estimatePackItemCount?: number | null;
@@ -35,13 +38,17 @@ export function POCard({
   onEdit,
   onDownload,
   onSubmit,
+  onApprove,
+  onReject,
   canEdit = false,
   canSubmit = false,
   canViewPricing = false,
+  isGC = false,
   isInvoiced = false,
   estimatePackTotal = null,
 }: POCardProps) {
   const [submitting, setSubmitting] = useState(false);
+  const [approving, setApproving] = useState(false);
 
   const handleSubmit = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -80,6 +87,7 @@ export function POCard({
 
   const showSubmitButton = canSubmit && status === 'ACTIVE' && onSubmit;
   const showEditButton = canEdit && status === 'ACTIVE' && onEdit;
+  const showApprovalButtons = isGC && status === 'PENDING_APPROVAL' && onApprove;
 
   const lineItemCount = po.line_items?.length || 0;
 
@@ -189,7 +197,7 @@ export function POCard({
         )}
 
         {/* Action buttons */}
-        {(showSubmitButton || showEditButton) && (
+        {(showSubmitButton || showEditButton || showApprovalButtons) && (
           <div className="flex items-center gap-2 mt-4 pt-3 border-t">
             {showEditButton && (
               <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onEdit!(po); }}>
@@ -202,6 +210,34 @@ export function POCard({
                 {submitting ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}
                 Submit to Supplier
               </Button>
+            )}
+            {showApprovalButtons && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    onReject?.(po);
+                  }}
+                >
+                  <XCircle className="h-3.5 w-3.5 mr-1.5" />
+                  Reject
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    setApproving(true);
+                    try { await onApprove!(po); } finally { setApproving(false); }
+                  }}
+                  disabled={approving}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                >
+                  {approving ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5 mr-1.5" />}
+                  Approve & Send
+                </Button>
+              </>
             )}
           </div>
         )}
