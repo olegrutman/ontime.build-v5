@@ -7,6 +7,7 @@ import { formatCurrency } from '@/lib/utils';
 interface POActionBarProps {
   purchaseOrders: PurchaseOrder[];
   isSupplier: boolean;
+  hidePricing?: boolean;
 }
 
 export function POActionBar({ purchaseOrders, isSupplier }: POActionBarProps) {
