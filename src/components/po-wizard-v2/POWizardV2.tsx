@@ -380,6 +380,7 @@ export function POWizardV2({
         projectId={projectId}
         onLoadPack={handleLoadPack}
         onAddPSMItem={handleAddItem}
+        hidePricing={hidePricing}
       />
 
       {/* Unmatched Item Editor */}
