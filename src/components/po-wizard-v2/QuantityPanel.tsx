@@ -26,7 +26,7 @@ interface QuantityPanelProps {
   hidePricing?: boolean;
 }
 
-export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, estimateUnitPrice, estimateItemId, estimatePackName }: QuantityPanelProps) {
+export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, estimateUnitPrice, estimateItemId, estimatePackName, hidePricing = false }: QuantityPanelProps) {
   const isEditing = !!editingItem;
   
   const isEngineered = product.category === 'Engineered';
