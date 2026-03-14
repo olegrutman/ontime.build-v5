@@ -659,10 +659,13 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
               onEdit={() => handleEditPO(po)}
               onDownload={handleDownload}
               onSubmit={handleSubmitToSupplier}
+              onApprove={isGC ? handleApprovePO : undefined}
+              onReject={isGC ? handleRejectPO : undefined}
               canEdit={canCreatePO}
               canSubmit={canCreatePO}
               canViewPricing={getCanViewPricing(po)}
               isSupplier={isSupplier}
+              isGC={isGC}
               isInvoiced={invoicedPOIds.has(po.id)}
               estimatePackTotal={packData?.total ?? null}
               estimatePackItemCount={packData?.itemCount ?? null}
