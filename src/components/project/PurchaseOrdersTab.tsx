@@ -338,14 +338,87 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   };
 
   const handleSubmitToSupplier = async (po: PurchaseOrder) => {
+    // TC approval gate: if approval required and TC is creator, set to PENDING_APPROVAL
+    if (isTC && poRequiresApproval && po.created_by_org_id === currentOrgId) {
+      try {
+        const { error } = await supabase
+          .from('purchase_orders')
+          .update({ status: 'PENDING_APPROVAL' as any })
+          .eq('id', po.id);
+        if (error) throw error;
+        toast.success('PO sent to GC for approval');
+        fetchPurchaseOrders();
+      } catch (err: any) {
+        toast.error('Failed to submit for approval: ' + (err?.message || 'Unknown error'));
+      }
+      return;
+    }
     setSelectedPOId(po.id);
   };
 
-  const handleDownload = (po: PurchaseOrder) => {
-    if (!po.download_token) {
-      toast.error('Download not available');
-      return;
+  const handleApprovePO = async (po: PurchaseOrder) => {
+    if (!user) return;
+    try {
+      // Look up supplier email
+      let supplierEmail = po.supplier?.contact_info || '';
+      if (po.project_id) {
+        const { data: ds } = await supabase
+          .from('project_designated_suppliers')
+          .select('po_email')
+          .eq('project_id', po.project_id)
+          .neq('status', 'removed')
+          .maybeSingle();
+        if (ds?.po_email) supplierEmail = ds.po_email;
+      }
+      
+      if (!supplierEmail) {
+        toast.error('No supplier email found. Please set up supplier contact.');
+        return;
+      }
+
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) {
+        toast.error('Please log in to approve POs');
+        return;
+      }
+
+      // Update status to approved first
+      const { error: updateErr } = await supabase
+        .from('purchase_orders')
+        .update({
+          approved_by: user.id,
+          approved_at: new Date().toISOString(),
+        })
+        .eq('id', po.id);
+      if (updateErr) throw updateErr;
+
+      // Send via edge function
+      const { error: sendErr } = await supabase.functions.invoke('send-po', {
+        body: { po_id: po.id, supplier_email: supplierEmail },
+      });
+      if (sendErr) throw sendErr;
+
+      toast.success('PO approved and sent to supplier');
+      fetchPurchaseOrders();
+    } catch (err: any) {
+      toast.error('Failed to approve PO: ' + (err?.message || 'Unknown error'));
     }
+  };
+
+  const handleRejectPO = async (po: PurchaseOrder) => {
+    try {
+      const { error } = await supabase
+        .from('purchase_orders')
+        .update({ status: 'ACTIVE' as any })
+        .eq('id', po.id);
+      if (error) throw error;
+      toast.success('PO returned to active');
+      fetchPurchaseOrders();
+    } catch (err: any) {
+      toast.error('Failed to reject PO: ' + (err?.message || 'Unknown error'));
+    }
+  };
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?token=${po.download_token}&format=pdf`;
     window.open(url, '_blank');
   };
