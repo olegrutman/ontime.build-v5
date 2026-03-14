@@ -789,6 +789,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         projectAddress={projectAddress || ''}
         onComplete={handleCreatePO}
         isSubmitting={isSubmitting}
+        hidePricing={hidePricing}
       />
 
       {/* PO Edit Wizard */}
