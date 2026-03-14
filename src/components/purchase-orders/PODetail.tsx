@@ -56,6 +56,7 @@ interface PODetailProps {
   projectId: string;
   onBack: () => void;
   onUpdate: () => void;
+  hidePricingOverride?: boolean;
 }
 
 interface PriceEdit {

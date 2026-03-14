@@ -91,7 +91,7 @@ export function POActionBar({ purchaseOrders, isSupplier, hidePricing = false }:
             Delivered This Month
           </p>
           <p className="text-lg font-bold leading-tight">
-            {formatCurrency(metrics.deliveredTotal)}
+            {hidePricing ? metrics.deliveredCount : formatCurrency(metrics.deliveredTotal)}
           </p>
         </div>
       </Card>

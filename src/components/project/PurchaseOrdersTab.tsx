@@ -693,6 +693,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         projectId={projectId}
         onBack={() => setSelectedPOId(null)}
         onUpdate={fetchPurchaseOrders}
+        hidePricingOverride={hidePricing}
       />
     );
   }
