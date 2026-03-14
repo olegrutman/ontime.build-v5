@@ -716,7 +716,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         )}
 
         {/* Action Bar */}
-        <POActionBar purchaseOrders={purchaseOrders} isSupplier={isSupplier} />
+        <POActionBar purchaseOrders={purchaseOrders} isSupplier={isSupplier} hidePricing={hidePricing} />
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
