@@ -38,13 +38,15 @@ export function POCard({
   onEdit,
   onDownload,
   onSubmit,
+  onApprove,
+  onReject,
   canEdit = false,
   canSubmit = false,
   canViewPricing = false,
+  isGC = false,
   isInvoiced = false,
   estimatePackTotal = null,
 }: POCardProps) {
-  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.MouseEvent) => {
     e.stopPropagation();
