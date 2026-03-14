@@ -1,10 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Minus, Plus, Check, Package, Ruler } from 'lucide-react';
 import { CatalogProduct, POWizardV2LineItem } from '@/types/poWizardV2';
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
 
 interface QuantityPanelProps {
   product: CatalogProduct;
@@ -20,12 +28,10 @@ interface QuantityPanelProps {
 export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, estimateUnitPrice, estimateItemId, estimatePackName }: QuantityPanelProps) {
   const isEditing = !!editingItem;
   
-  // Detection
   const isEngineered = product.category === 'Engineered';
   const hasBundle = !!product.bundle_type && !!product.bundle_qty;
   const bundleQty = product.bundle_qty || 0;
 
-  // State for engineered lumber - pre-fill if editing
   const [pieces, setPieces] = useState(() => 
     editingItem?.is_engineered ? editingItem.quantity : 1
   );
@@ -34,26 +40,19 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
   );
   const computedLf = pieces * lengthFt;
 
-  // State for standard/bundle products - pre-fill if editing
   const [orderMode, setOrderMode] = useState<'bundle' | 'each'>(() => {
-    if (editingItem) {
-      return editingItem.unit_mode === 'BUNDLE' ? 'bundle' : 'each';
-    }
+    if (editingItem) return editingItem.unit_mode === 'BUNDLE' ? 'bundle' : 'each';
     return hasBundle ? 'bundle' : 'each';
   });
   const [quantity, setQuantity] = useState(() => {
-    if (editingItem && !editingItem.is_engineered) {
-      return editingItem.quantity;
-    }
+    if (editingItem && !editingItem.is_engineered) return editingItem.quantity;
     return hasBundle ? bundleQty : 1;
   });
   const [notes, setNotes] = useState(() => editingItem?.item_notes || '');
 
-  // Smart detection: quantity matches bundle = full bundle
   const isFullBundle = hasBundle && quantity === bundleQty && orderMode === 'bundle';
   const isModifiedBundle = hasBundle && orderMode === 'bundle' && quantity !== bundleQty;
 
-  // When order mode changes, update quantity appropriately
   useEffect(() => {
     if (orderMode === 'bundle' && hasBundle) {
       setQuantity(bundleQty);
@@ -69,12 +68,16 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
     if (product.color) parts.push(product.color);
     if (product.thickness) parts.push(product.thickness);
     if (product.wood_species) parts.push(product.wood_species);
-    return parts.join(' | ');
+    return parts.join(' · ');
   };
 
+  // Compute line total for display
+  const resolvedUnitPrice = editingItem?.unit_price ?? estimateUnitPrice ?? null;
+  const displayLineTotal = isEngineered
+    ? (resolvedUnitPrice != null ? computedLf * resolvedUnitPrice : null)
+    : (resolvedUnitPrice != null ? quantity * resolvedUnitPrice : null);
+
   const handleSubmit = () => {
-    // Determine pricing fields
-    const resolvedUnitPrice = editingItem?.unit_price ?? estimateUnitPrice ?? null;
     const resolvedEstItemId = editingItem?.source_estimate_item_id ?? estimateItemId ?? null;
     const resolvedPackName = editingItem?.source_pack_name ?? estimatePackName ?? null;
     const resolvedPriceSource = editingItem?.price_source ?? (resolvedUnitPrice != null && resolvedEstItemId ? 'FROM_ESTIMATE' as const : null);
@@ -101,12 +104,7 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
         price_source: resolvedPriceSource,
         original_unit_price: editingItem?.original_unit_price ?? resolvedUnitPrice,
       };
-      
-      if (isEditing && onUpdate) {
-        onUpdate(item);
-      } else {
-        onAdd(item);
-      }
+      if (isEditing && onUpdate) onUpdate(item); else onAdd(item);
     } else {
       const computedLineTotal = resolvedUnitPrice != null ? quantity * resolvedUnitPrice : null;
       const item: POWizardV2LineItem = {
@@ -128,17 +126,11 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
         price_source: resolvedPriceSource,
         original_unit_price: editingItem?.original_unit_price ?? resolvedUnitPrice,
       };
-      
-      if (isEditing && onUpdate) {
-        onUpdate(item);
-      } else {
-        onAdd(item);
-      }
+      if (isEditing && onUpdate) onUpdate(item); else onAdd(item);
     }
     onClose();
   };
 
-  // Steppers
   const incrementPieces = () => setPieces(p => p + 1);
   const decrementPieces = () => setPieces(p => Math.max(1, p - 1));
   const incrementLength = () => setLengthFt(l => Math.min(60, l + 1));
@@ -148,230 +140,163 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
 
   return (
     <div className="h-full overflow-y-auto min-h-0">
-      <div className="p-4 space-y-4">
-      {/* Product Summary */}
-      <Card className="bg-muted/30">
-        <CardContent className="p-4">
-          <h3 className="font-semibold">{product.name || product.description}</h3>
-          <p className="text-sm text-muted-foreground">SKU: {product.supplier_sku}</p>
-          <p className="text-sm text-muted-foreground mt-1">{formatSpecs()}</p>
+      <div className="p-4 space-y-5">
+        {/* Product summary card */}
+        <div className="rounded-xl border bg-muted/30 p-4">
+          <h3 className="font-semibold text-sm">{product.name || product.description}</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">{product.supplier_sku} · {formatSpecs()}</p>
           {isEngineered && (
-            <p className="text-xs text-primary mt-2">📐 Priced per Linear Foot</p>
+            <p className="text-xs text-primary mt-1 flex items-center gap-1">
+              <Ruler className="h-3 w-3" /> Priced per Linear Foot
+            </p>
           )}
-        </CardContent>
-      </Card>
+        </div>
 
-      {isEngineered ? (
-        /* ============ ENGINEERED LUMBER MODE ============ */
-        <>
-          {/* Pieces Stepper */}
-          <div className="space-y-2">
-            <Label className="text-sm text-muted-foreground">How many pieces?</Label>
-            <div className="flex items-center justify-center gap-4">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-12 w-12 rounded-full"
-                onClick={decrementPieces}
-                disabled={pieces <= 1}
-              >
-                <Minus className="h-5 w-5" />
-              </Button>
-              <Input
-                type="number"
-                value={pieces}
-                onChange={(e) => setPieces(Math.max(1, parseInt(e.target.value) || 0))}
-                onBlur={() => { if (!pieces || pieces < 1) setPieces(1); }}
-                className="text-3xl font-bold w-24 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                min={1}
-              />
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-12 w-12 rounded-full"
-                onClick={incrementPieces}
-              >
-                <Plus className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Length Stepper */}
-          <div className="space-y-2">
-            <Label className="text-sm text-muted-foreground">Length per piece (ft)</Label>
-            <div className="flex items-center justify-center gap-4">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-12 w-12 rounded-full"
-                onClick={decrementLength}
-                disabled={lengthFt <= 1}
-              >
-                <Minus className="h-5 w-5" />
-              </Button>
-              <Input
-                type="number"
-                value={lengthFt}
-                onChange={(e) => setLengthFt(Math.min(60, Math.max(1, parseInt(e.target.value) || 0)))}
-                onBlur={() => { if (!lengthFt || lengthFt < 1) setLengthFt(1); }}
-                className="text-3xl font-bold w-24 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                min={1}
-                max={60}
-              />
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-12 w-12 rounded-full"
-                onClick={incrementLength}
-                disabled={lengthFt >= 60}
-              >
-                <Plus className="h-5 w-5" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Total LF Display */}
-          <Card className="bg-primary/5 border-primary/20">
-            <CardContent className="p-4 text-center">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <Ruler className="h-5 w-5 text-primary" />
-                <span className="text-lg font-semibold">Total: {computedLf} Linear Feet</span>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                ({pieces} {pieces === 1 ? 'piece' : 'pieces'} × {lengthFt} ft each)
-              </p>
-            </CardContent>
-          </Card>
-        </>
-      ) : hasBundle ? (
-        /* ============ BUNDLE MODE ============ */
-        <>
-          {/* Order Mode Selection */}
-          <div className="space-y-2">
-            <Label className="text-sm text-muted-foreground">Order as:</Label>
+        {isEngineered ? (
+          <>
+            {/* Pieces */}
             <div className="space-y-2">
-              <Button
-                variant={orderMode === 'bundle' ? 'default' : 'outline'}
-                className="w-full h-12 justify-start"
-                onClick={() => setOrderMode('bundle')}
-              >
-                <Package className="h-5 w-5 mr-3" />
-                {product.bundle_type} of {bundleQty}
-              </Button>
-              <Button
-                variant={orderMode === 'each' ? 'default' : 'outline'}
-                className="w-full h-12 justify-start"
-                onClick={() => setOrderMode('each')}
-              >
-                Individual Pieces
-              </Button>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Pieces</Label>
+              <div className="flex items-center justify-center gap-4">
+                <button className="wz-stepper-btn" onClick={decrementPieces} disabled={pieces <= 1}>
+                  <Minus className="h-4 w-4" />
+                </button>
+                <Input
+                  type="number" value={pieces}
+                  onChange={(e) => setPieces(Math.max(1, parseInt(e.target.value) || 0))}
+                  onBlur={() => { if (!pieces || pieces < 1) setPieces(1); }}
+                  className="text-2xl font-bold w-20 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  min={1}
+                />
+                <button className="wz-stepper-btn" onClick={incrementPieces}>
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* Quantity Stepper */}
+            {/* Length */}
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Length (ft)</Label>
+              <div className="flex items-center justify-center gap-4">
+                <button className="wz-stepper-btn" onClick={decrementLength} disabled={lengthFt <= 1}>
+                  <Minus className="h-4 w-4" />
+                </button>
+                <Input
+                  type="number" value={lengthFt}
+                  onChange={(e) => setLengthFt(Math.min(60, Math.max(1, parseInt(e.target.value) || 0)))}
+                  onBlur={() => { if (!lengthFt || lengthFt < 1) setLengthFt(1); }}
+                  className="text-2xl font-bold w-20 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  min={1} max={60}
+                />
+                <button className="wz-stepper-btn" onClick={incrementLength} disabled={lengthFt >= 60}>
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* LF total */}
+            <div className="wz-totals-bar text-center">
+              <p className="text-xs text-secondary-foreground/70 mb-1">
+                {pieces} {pieces === 1 ? 'piece' : 'pieces'} × {lengthFt} ft
+              </p>
+              <span className="wz-totals-value">{computedLf} LF</span>
+            </div>
+          </>
+        ) : hasBundle ? (
+          <>
+            {/* Order mode toggle */}
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Order As</Label>
+              <div className="flex gap-2">
+                <button
+                  className={`wz-pill flex-1 ${orderMode === 'bundle' ? 'wz-pill--active' : 'wz-pill--inactive'}`}
+                  onClick={() => setOrderMode('bundle')}
+                >
+                  <Package className="h-4 w-4 mr-1" />
+                  {product.bundle_type} ({bundleQty})
+                </button>
+                <button
+                  className={`wz-pill flex-1 ${orderMode === 'each' ? 'wz-pill--active' : 'wz-pill--inactive'}`}
+                  onClick={() => setOrderMode('each')}
+                >
+                  Individual
+                </button>
+              </div>
+            </div>
+
+            {/* Quantity stepper */}
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Quantity</Label>
+              <div className="flex items-center justify-center gap-4">
+                <button className="wz-stepper-btn" onClick={decrementQty} disabled={quantity <= 1}>
+                  <Minus className="h-4 w-4" />
+                </button>
+                <Input
+                  type="number" value={quantity}
+                  onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 0))}
+                  onBlur={() => { if (!quantity || quantity < 1) setQuantity(1); }}
+                  className="text-2xl font-bold w-20 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  min={1}
+                />
+                <button className="wz-stepper-btn" onClick={incrementQty}>
+                  <Plus className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Status */}
+            {isModifiedBundle && (
+              <p className="text-xs text-center text-primary">
+                ⚠ {quantity} pieces (not a full {product.bundle_type?.toLowerCase()})
+              </p>
+            )}
+          </>
+        ) : (
+          /* Standard quantity */
           <div className="space-y-2">
-            <Label className="text-sm text-muted-foreground">Quantity</Label>
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Quantity</Label>
             <div className="flex items-center justify-center gap-4">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-12 w-12 rounded-full"
-                onClick={decrementQty}
-                disabled={quantity <= 1}
-              >
-                <Minus className="h-5 w-5" />
-              </Button>
+              <button className="wz-stepper-btn" onClick={decrementQty} disabled={quantity <= 1}>
+                <Minus className="h-4 w-4" />
+              </button>
               <Input
-                type="number"
-                value={quantity}
+                type="number" value={quantity}
                 onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 0))}
                 onBlur={() => { if (!quantity || quantity < 1) setQuantity(1); }}
-                className="text-3xl font-bold w-24 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="text-2xl font-bold w-20 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 min={1}
               />
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-12 w-12 rounded-full"
-                onClick={incrementQty}
-              >
-                <Plus className="h-5 w-5" />
-              </Button>
+              <button className="wz-stepper-btn" onClick={incrementQty}>
+                <Plus className="h-4 w-4" />
+              </button>
             </div>
           </div>
+        )}
 
-          {/* Status Message */}
-          <Card className={isFullBundle ? 'bg-primary/5 border-primary/20' : 'bg-amber-500/10 border-amber-500/30'}>
-            <CardContent className="p-3 text-center">
-              {isFullBundle ? (
-                <p className="text-sm font-medium">
-                  📦 Ordering: 1 {product.bundle_type} ({bundleQty} pieces)
-                </p>
-              ) : isModifiedBundle ? (
-                <p className="text-sm font-medium text-amber-600 dark:text-amber-400">
-                  ⚠️ Modified: {quantity} pieces (not a full {product.bundle_type?.toLowerCase()})
-                </p>
-              ) : (
-                <p className="text-sm font-medium">
-                  Ordering: {quantity} individual {quantity === 1 ? 'piece' : 'pieces'}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </>
-      ) : (
-        /* ============ STANDARD MODE ============ */
-        <div className="space-y-2">
-          <Label className="text-sm text-muted-foreground">Quantity</Label>
-          <div className="flex items-center justify-center gap-4">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-12 w-12 rounded-full"
-              onClick={decrementQty}
-              disabled={quantity <= 1}
-            >
-              <Minus className="h-5 w-5" />
-            </Button>
-            <Input
-              type="number"
-              value={quantity}
-              onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 0))}
-              onBlur={() => { if (!quantity || quantity < 1) setQuantity(1); }}
-              className="text-3xl font-bold w-24 text-center h-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              min={1}
-            />
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-12 w-12 rounded-full"
-              onClick={incrementQty}
-            >
-              <Plus className="h-5 w-5" />
-            </Button>
+        {/* Line total bar */}
+        {displayLineTotal != null && (
+          <div className="wz-totals-bar flex items-center justify-between">
+            <span className="text-sm text-secondary-foreground/70">Line Total</span>
+            <span className="wz-totals-value">{formatCurrency(displayLineTotal)}</span>
           </div>
+        )}
+
+        {/* Notes */}
+        <div className="space-y-1.5">
+          <Label className="text-xs text-muted-foreground uppercase tracking-wide">Notes (Optional)</Label>
+          <Input
+            placeholder="Add a note for this item..."
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="h-11 text-sm"
+          />
         </div>
-      )}
 
-      {/* Optional Notes */}
-      <div className="space-y-2">
-        <Label className="text-sm text-muted-foreground">Notes (Optional)</Label>
-        <Input
-          placeholder="Add a note for this item..."
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className="h-12"
-        />
-      </div>
-
-      {/* Submit Button */}
-      <Button
-        className="w-full h-14 text-base"
-        onClick={handleSubmit}
-      >
-        <Check className="h-5 w-5 mr-2" />
-        {isEditing ? 'Update Item' : 'Add to PO'}
-      </Button>
+        {/* Submit */}
+        <Button className="w-full h-12 text-sm" onClick={handleSubmit}>
+          <Check className="h-4 w-4 mr-2" />
+          {isEditing ? 'Update Item' : 'Add to PO'}
+        </Button>
       </div>
     </div>
   );

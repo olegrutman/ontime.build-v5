@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -52,11 +52,9 @@ interface POWizardV2Props {
   projectAddress: string;
   onComplete: (data: POWizardV2Data) => Promise<void>;
   isSubmitting?: boolean;
-  // Work Order context (optional)
   workOrderId?: string;
   workOrderTitle?: string;
   onPOCreated?: (poId: string) => Promise<void>;
-  // Edit mode
   editMode?: boolean;
   initialData?: Partial<POWizardV2Data>;
 }
@@ -97,7 +95,6 @@ export function POWizardV2({
     const fetchSuppliers = async () => {
       setLoadingSuppliers(true);
       try {
-        // Get supplier org IDs from project team
         const { data: teamData, error: teamError } = await supabase
           .from('project_team')
           .select('org_id')
@@ -111,7 +108,6 @@ export function POWizardV2({
         let projectSuppliers: ProjectSupplier[] = [];
 
         if (orgIds.length > 0) {
-          // Get supplier records for these orgs
           const { data: supplierData, error: supplierError } = await supabase
             .from('suppliers')
             .select('id, name, supplier_code, organization_id')
@@ -127,7 +123,6 @@ export function POWizardV2({
           }));
         }
 
-        // Fallback to system supplier if no project suppliers
         if (projectSuppliers.length === 0) {
           const { data: systemSupplier } = await supabase
             .from('suppliers')
@@ -148,7 +143,6 @@ export function POWizardV2({
 
         setSuppliers(projectSuppliers);
 
-        // Auto-select if single supplier
         if (projectSuppliers.length === 1) {
           setFormData(prev => ({
             ...prev,
@@ -211,7 +205,6 @@ export function POWizardV2({
     setFormData(prev => ({
       ...prev,
       line_items: [...prev.line_items, item],
-      // If we had a pack loaded, mark as modified
       pack_modified: prev.source_pack_name ? true : prev.pack_modified,
     }));
     setPickerOpen(false);
@@ -272,10 +265,8 @@ export function POWizardV2({
   };
 
   const canAdvanceFromHeader = !!formData.supplier_id;
-
   const canAdvanceFromItems = formData.line_items.length > 0;
 
-  // Fix 1: Auto-open picker when arriving at items screen with no items
   const handleAdvanceToItems = useCallback(() => {
     setScreen('items');
     if (formData.line_items.length === 0) {
@@ -283,53 +274,94 @@ export function POWizardV2({
     }
   }, [formData.line_items.length]);
 
+  // Progress bar width
+  const progressWidth = useMemo(() => {
+    switch (screen) {
+      case 'header': return '12%';
+      case 'items': return '50%';
+      case 'review': return '95%';
+    }
+  }, [screen]);
+
+  // Trail chips
+  const trailChips = useMemo(() => {
+    const chips: { label: string; filled: boolean }[] = [];
+    if (formData.supplier_name) {
+      chips.push({ label: formData.supplier_name, filled: true });
+    }
+    if (formData.source_pack_name) {
+      chips.push({ label: formData.source_pack_name, filled: true });
+    }
+    if (formData.line_items.length > 0) {
+      chips.push({ label: `${formData.line_items.length} items`, filled: screen !== 'header' });
+    }
+    return chips;
+  }, [formData.supplier_name, formData.source_pack_name, formData.line_items.length, screen]);
+
   const content = (
     <div className="flex flex-col h-full">
-      {screen === 'header' && (
-        <HeaderScreen
-          data={formData}
-          suppliers={suppliers}
-          loadingSuppliers={loadingSuppliers}
-          onChange={handleChange}
-          onNext={handleAdvanceToItems}
-          canAdvance={canAdvanceFromHeader}
-          workOrderTitle={workOrderTitle}
-        />
+      {/* Trail + Progress */}
+      {trailChips.length > 0 && (
+        <div className="wz-trail scrollbar-hide">
+          {trailChips.map((chip, i) => (
+            <span key={i} className={`wz-trail-chip ${chip.filled ? 'wz-trail-chip--filled' : 'wz-trail-chip--muted'}`}>
+              {chip.label}
+            </span>
+          ))}
+        </div>
       )}
-      {screen === 'items' && (
-        <ItemsScreen
-          items={formData.line_items}
-          onAddItem={() => setPickerOpen(true)}
-          onEditItem={(item) => {
-            const isUnmatched = !item.catalog_item_id;
-            setEditingItem(item);
-            if (isUnmatched) {
-              setUnmatchedEditorOpen(true);
-            } else {
+      <div className="wz-progress">
+        <div className="wz-progress-fill" style={{ width: progressWidth }} />
+      </div>
+
+      {/* Screen content with entry animation */}
+      <div className="flex-1 min-h-0 wz-body" key={screen}>
+        {screen === 'header' && (
+          <HeaderScreen
+            data={formData}
+            suppliers={suppliers}
+            loadingSuppliers={loadingSuppliers}
+            onChange={handleChange}
+            onNext={handleAdvanceToItems}
+            canAdvance={canAdvanceFromHeader}
+            workOrderTitle={workOrderTitle}
+          />
+        )}
+        {screen === 'items' && (
+          <ItemsScreen
+            items={formData.line_items}
+            onAddItem={() => setPickerOpen(true)}
+            onEditItem={(item) => {
+              const isUnmatched = !item.catalog_item_id;
+              setEditingItem(item);
+              if (isUnmatched) {
+                setUnmatchedEditorOpen(true);
+              } else {
+                setPickerOpen(true);
+              }
+            }}
+            onRemoveItem={handleRemoveItem}
+            onBack={() => setScreen('header')}
+            onNext={() => setScreen('review')}
+            canAdvance={canAdvanceFromItems}
+            sourcePackName={formData.source_pack_name}
+            onClearPack={handleClearPack}
+          />
+        )}
+        {screen === 'review' && (
+          <ReviewScreen
+            data={formData}
+            onAddMore={() => {
+              setScreen('items');
               setPickerOpen(true);
-            }
-          }}
-          onRemoveItem={handleRemoveItem}
-          onBack={() => setScreen('header')}
-          onNext={() => setScreen('review')}
-          canAdvance={canAdvanceFromItems}
-          sourcePackName={formData.source_pack_name}
-          onClearPack={handleClearPack}
-        />
-      )}
-      {screen === 'review' && (
-        <ReviewScreen
-          data={formData}
-          onAddMore={() => {
-            setScreen('items');
-            setPickerOpen(true);
-          }}
-          onEditItems={() => setScreen('items')}
-          onBack={() => setScreen('items')}
-          onSubmit={handleSubmit}
-          isSubmitting={isSubmitting}
-        />
-      )}
+            }}
+            onEditItems={() => setScreen('items')}
+            onBack={() => setScreen('items')}
+            onSubmit={handleSubmit}
+            isSubmitting={isSubmitting}
+          />
+        )}
+      </div>
 
       {/* Product Picker Modal */}
       <ProductPicker
@@ -362,7 +394,6 @@ export function POWizardV2({
     </div>
   );
 
-  // Use Sheet on mobile for better UX
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={handleClose}>

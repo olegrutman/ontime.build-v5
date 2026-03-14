@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -30,14 +29,14 @@ export function ProductList({ products, loading, onSelect }: ProductListProps) {
     if (product.length) parts.push(product.length);
     if (product.color) parts.push(product.color);
     if (product.thickness) parts.push(product.thickness);
-    return parts.join(' | ') || product.category;
+    return parts.join(' · ') || product.category;
   };
 
   if (loading) {
     return (
-      <div className="p-4 space-y-3">
+      <div className="p-4 space-y-2">
         {[1, 2, 3, 4, 5].map(i => (
-          <Skeleton key={i} className="h-20 w-full" />
+          <Skeleton key={i} className="h-16 w-full rounded-xl" />
         ))}
       </div>
     );
@@ -49,30 +48,27 @@ export function ProductList({ products, loading, onSelect }: ProductListProps) {
       <div className="px-4 py-2 border-b">
         {searchOpen ? (
           <div className="flex items-center gap-2">
-            <Search className="h-5 w-5 text-muted-foreground shrink-0" />
+            <Search className="h-4 w-4 text-muted-foreground shrink-0" />
             <Input
               placeholder="Search products..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-10 flex-1"
+              className="h-9 flex-1 text-sm"
               autoFocus
             />
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 shrink-0"
-              onClick={() => {
-                setSearchOpen(false);
-                setSearchQuery('');
-              }}
+              className="h-9 w-9 shrink-0"
+              onClick={() => { setSearchOpen(false); setSearchQuery(''); }}
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
         ) : (
           <Button
             variant="ghost"
-            className="w-full justify-start text-muted-foreground h-10"
+            className="w-full justify-start text-muted-foreground h-9 text-sm"
             onClick={() => setSearchOpen(true)}
           >
             <Search className="h-4 w-4 mr-2" />
@@ -85,44 +81,37 @@ export function ProductList({ products, loading, onSelect }: ProductListProps) {
       <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-2">
         {filteredProducts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
-            <p className="text-muted-foreground mb-4">
+            <p className="text-muted-foreground mb-4 text-sm">
               {searchQuery ? 'No products match your search.' : 'No products found.'}
             </p>
             {searchQuery && (
-              <Button variant="outline" onClick={() => setSearchQuery('')}>
+              <Button variant="outline" size="sm" onClick={() => setSearchQuery('')}>
                 Clear Search
               </Button>
             )}
           </div>
         ) : (
           filteredProducts.map(product => (
-            <Card
+            <button
               key={product.id}
-              className="cursor-pointer hover:bg-accent transition-colors active:scale-[0.99]"
+              className="wz-ans"
               onClick={() => onSelect(product)}
             >
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium truncate">
-                      {product.name || product.description}
-                    </p>
-                    <p className="text-sm text-muted-foreground truncate">
-                      SKU: {product.supplier_sku}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {formatSpecs(product)}
-                    </p>
-                    {product.bundle_type && (
-                      <p className="text-xs text-primary mt-1">
-                        Bundle: {product.bundle_type} ({product.bundle_qty} pcs)
-                      </p>
-                    )}
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
-                </div>
-              </CardContent>
-            </Card>
+              <div className="flex-1 min-w-0 text-left">
+                <p className="font-medium text-sm truncate">
+                  {product.name || product.description}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {product.supplier_sku} · {formatSpecs(product)}
+                </p>
+                {product.bundle_type && (
+                  <p className="text-xs text-primary mt-0.5">
+                    Bundle: {product.bundle_type} ({product.bundle_qty} pcs)
+                  </p>
+                )}
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            </button>
           ))
         )}
       </div>
