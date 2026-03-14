@@ -348,6 +348,7 @@ export function POWizardV2({
             canAdvance={canAdvanceFromItems}
             sourcePackName={formData.source_pack_name}
             onClearPack={handleClearPack}
+            hidePricing={hidePricing}
           />
         )}
         {screen === 'review' && (
