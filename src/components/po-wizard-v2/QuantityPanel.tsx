@@ -23,6 +23,7 @@ interface QuantityPanelProps {
   estimateUnitPrice?: number | null;
   estimateItemId?: string | null;
   estimatePackName?: string | null;
+  hidePricing?: boolean;
 }
 
 export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, estimateUnitPrice, estimateItemId, estimatePackName }: QuantityPanelProps) {
