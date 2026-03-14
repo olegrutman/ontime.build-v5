@@ -77,6 +77,7 @@ export interface POLineItem {
 
 export const PO_STATUS_LABELS: Record<POStatus, string> = {
   ACTIVE: 'Active',
+  PENDING_APPROVAL: 'Pending Approval',
   SUBMITTED: 'Submitted',
   PRICED: 'Priced',
   ORDERED: 'Ordered',
