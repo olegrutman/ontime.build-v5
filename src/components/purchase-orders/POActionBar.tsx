@@ -10,7 +10,7 @@ interface POActionBarProps {
   hidePricing?: boolean;
 }
 
-export function POActionBar({ purchaseOrders, isSupplier }: POActionBarProps) {
+export function POActionBar({ purchaseOrders, isSupplier, hidePricing = false }: POActionBarProps) {
   const metrics = useMemo(() => {
     const now = new Date();
 
