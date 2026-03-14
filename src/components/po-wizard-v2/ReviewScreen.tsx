@@ -38,6 +38,7 @@ export function ReviewScreen({
   onBack,
   onSubmit,
   isSubmitting,
+  hidePricing = false,
 }: ReviewScreenProps) {
   const totals = useMemo(() => {
     let estimateSubtotal = 0;
