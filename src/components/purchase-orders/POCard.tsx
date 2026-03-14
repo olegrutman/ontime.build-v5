@@ -14,10 +14,13 @@ interface POCardProps {
   onEdit?: (po: PurchaseOrder) => void;
   onDownload?: (po: PurchaseOrder) => void;
   onSubmit?: (po: PurchaseOrder) => Promise<void>;
+  onApprove?: (po: PurchaseOrder) => Promise<void>;
+  onReject?: (po: PurchaseOrder) => Promise<void>;
   canEdit?: boolean;
   canSubmit?: boolean;
   canViewPricing?: boolean;
   isSupplier?: boolean;
+  isGC?: boolean;
   isInvoiced?: boolean;
   estimatePackTotal?: number | null;
   estimatePackItemCount?: number | null;
