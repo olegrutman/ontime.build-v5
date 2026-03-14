@@ -120,6 +120,17 @@ export function PackSelector({
       setPacks(packList);
     }
 
+    // Fetch already-ordered packs for this estimate
+    const { data: existingPOs } = await supabase
+      .from('purchase_orders')
+      .select('source_pack_name')
+      .eq('source_estimate_id', estimate.id)
+      .neq('status', 'ACTIVE');
+
+    if (existingPOs) {
+      setOrderedPackNames(new Set(existingPOs.map(po => po.source_pack_name).filter(Boolean) as string[]));
+    }
+
     setLoading(false);
   };
 
