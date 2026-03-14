@@ -71,6 +71,37 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     fetchPurchaseOrders();
   }, [projectId, currentOrgId]);
 
+  // Fetch material_responsibility and approval settings
+  useEffect(() => {
+    if (!projectId || !currentOrgId) return;
+    const fetchContractInfo = async () => {
+      // Get material responsibility
+      const { data: contracts } = await supabase
+        .from('project_contracts')
+        .select('material_responsibility')
+        .eq('project_id', projectId)
+        .not('material_responsibility', 'is', null)
+        .limit(1);
+      if (contracts && contracts.length > 0) {
+        setMaterialResponsibility(contracts[0].material_responsibility);
+      }
+
+      // Get approval requirement from project_relationships
+      if (isTC) {
+        const { data: rels } = await supabase
+          .from('project_relationships')
+          .select('po_requires_upstream_approval')
+          .eq('project_id', projectId)
+          .eq('downstream_org_id', currentOrgId)
+          .limit(1);
+        if (rels && rels.length > 0) {
+          setPORequiresApproval(rels[0].po_requires_upstream_approval ?? true);
+        }
+      }
+    };
+    fetchContractInfo();
+  }, [projectId, currentOrgId, isTC]);
+
   const fetchPurchaseOrders = async () => {
     setLoading(true);
     
