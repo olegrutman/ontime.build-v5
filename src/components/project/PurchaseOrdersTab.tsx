@@ -419,6 +419,12 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
       toast.error('Failed to reject PO: ' + (err?.message || 'Unknown error'));
     }
   };
+
+  const handleDownload = (po: PurchaseOrder) => {
+    if (!po.download_token) {
+      toast.error('Download not available');
+      return;
+    }
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?token=${po.download_token}&format=pdf`;
     window.open(url, '_blank');
   };
