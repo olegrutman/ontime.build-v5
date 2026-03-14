@@ -144,7 +144,7 @@ export function ReviewScreen({
                           : `${item.quantity} ${item.uom}`}
                       </td>
                       <td className="py-2.5 px-3 text-right font-medium">
-                        {lineTotal != null ? formatCurrency(lineTotal) : '—'}
+                        {!hidePricing && (lineTotal != null ? formatCurrency(lineTotal) : '—')}
                       </td>
                     </tr>
                   );
