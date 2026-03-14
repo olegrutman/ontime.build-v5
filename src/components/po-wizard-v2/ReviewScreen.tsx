@@ -28,6 +28,7 @@ interface ReviewScreenProps {
   onBack: () => void;
   onSubmit: () => void;
   isSubmitting: boolean;
+  hidePricing?: boolean;
 }
 
 export function ReviewScreen({
