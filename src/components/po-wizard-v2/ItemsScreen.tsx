@@ -183,30 +183,32 @@ export function ItemsScreen({
             </button>
 
             {/* Totals bar */}
-            <div className="wz-totals-bar space-y-1">
-              {totals.estimateSubtotal > 0 && (
-                <div className="flex justify-between text-sm text-secondary-foreground/70">
-                  <span>Estimate Items</span>
-                  <span>{formatCurrency(totals.estimateSubtotal)}</span>
+            {!hidePricing && (
+              <div className="wz-totals-bar space-y-1">
+                {totals.estimateSubtotal > 0 && (
+                  <div className="flex justify-between text-sm text-secondary-foreground/70">
+                    <span>Estimate Items</span>
+                    <span>{formatCurrency(totals.estimateSubtotal)}</span>
+                  </div>
+                )}
+                {totals.additionalSubtotal > 0 && (
+                  <div className="flex justify-between text-sm text-secondary-foreground/70">
+                    <span>Additional Items</span>
+                    <span>{formatCurrency(totals.additionalSubtotal)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-baseline">
+                  <span className="text-sm font-medium text-secondary-foreground">Subtotal</span>
+                  <span className="wz-totals-value">{formatCurrency(totals.subtotal)}</span>
                 </div>
-              )}
-              {totals.additionalSubtotal > 0 && (
-                <div className="flex justify-between text-sm text-secondary-foreground/70">
-                  <span>Additional Items</span>
-                  <span>{formatCurrency(totals.additionalSubtotal)}</span>
-                </div>
-              )}
-              <div className="flex justify-between items-baseline">
-                <span className="text-sm font-medium text-secondary-foreground">Subtotal</span>
-                <span className="wz-totals-value">{formatCurrency(totals.subtotal)}</span>
+                {totals.unpricedCount > 0 && (
+                  <div className="flex items-center gap-1.5 text-primary text-xs pt-1">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    <span>{totals.unpricedCount} item{totals.unpricedCount !== 1 ? 's' : ''} need supplier pricing</span>
+                  </div>
+                )}
               </div>
-              {totals.unpricedCount > 0 && (
-                <div className="flex items-center gap-1.5 text-primary text-xs pt-1">
-                  <AlertTriangle className="h-3.5 w-3.5" />
-                  <span>{totals.unpricedCount} item{totals.unpricedCount !== 1 ? 's' : ''} need supplier pricing</span>
-                </div>
-              )}
-            </div>
+            )}
           </>
         )}
       </div>
