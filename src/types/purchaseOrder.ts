@@ -26,6 +26,8 @@ export interface PurchaseOrder {
   source_pack_name?: string | null;
   pack_modified?: boolean | null;
   created_at: string;
+  approved_by?: string | null;
+  approved_at?: string | null;
   updated_at: string;
   // Pricing visibility
   created_by_org_id?: string | null;
