@@ -1,15 +1,17 @@
-import { useMemo, useState } from 'react';
-import { Package, Receipt, ChevronRight } from 'lucide-react';
+import { useMemo, useState, useEffect } from 'react';
+import { Package, Receipt, ChevronRight, ShoppingCart } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { supabase } from '@/integrations/supabase/client';
 import type { SupplierEstimateItem } from '@/types/supplierEstimate';
 
 interface EstimateSummaryCardProps {
   items: SupplierEstimateItem[];
   totalWithTax: number;
+  estimateId?: string;
 }
 
 interface PackSummary {
