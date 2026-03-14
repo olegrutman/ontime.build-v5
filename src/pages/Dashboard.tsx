@@ -24,7 +24,7 @@ import { DashboardRecentDocs } from '@/components/dashboard/DashboardRecentDocs'
 import type { ProjectStatusFilter } from '@/components/dashboard/StatusMenu';
 import { DashboardBudgetCard } from '@/components/dashboard/DashboardBudgetCard';
 import { DashboardNeedsAttentionCard } from '@/components/dashboard/DashboardNeedsAttentionCard';
-import { DashboardLiveFeed } from '@/components/dashboard/DashboardLiveFeed';
+import { RemindersTile } from '@/components/dashboard/RemindersTile';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -262,7 +262,14 @@ export default function Dashboard() {
               pendingInvites={pendingInvites}
               onRefresh={refetch}
             />
-            <DashboardLiveFeed reminders={reminders} />
+            <RemindersTile
+              reminders={reminders.map(r => ({ ...r, completed: false }))}
+              onComplete={async (id) => {
+                await supabase.from('reminders').update({ completed: true }).eq('id', id);
+                refetch();
+              }}
+              onAdd={() => setAddReminderOpen(true)}
+            />
           </div>
         </div>
       </div>
