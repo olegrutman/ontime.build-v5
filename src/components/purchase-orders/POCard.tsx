@@ -197,7 +197,7 @@ export function POCard({
         )}
 
         {/* Action buttons */}
-        {(showSubmitButton || showEditButton) && (
+        {(showSubmitButton || showEditButton || showApprovalButtons) && (
           <div className="flex items-center gap-2 mt-4 pt-3 border-t">
             {showEditButton && (
               <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); onEdit!(po); }}>
@@ -210,6 +210,34 @@ export function POCard({
                 {submitting ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <Send className="h-3.5 w-3.5 mr-1.5" />}
                 Submit to Supplier
               </Button>
+            )}
+            {showApprovalButtons && (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    onReject?.(po);
+                  }}
+                >
+                  <XCircle className="h-3.5 w-3.5 mr-1.5" />
+                  Reject
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    setApproving(true);
+                    try { await onApprove!(po); } finally { setApproving(false); }
+                  }}
+                  disabled={approving}
+                  className="bg-emerald-600 hover:bg-emerald-700"
+                >
+                  {approving ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5 mr-1.5" />}
+                  Approve & Send
+                </Button>
+              </>
             )}
           </div>
         )}
