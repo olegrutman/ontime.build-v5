@@ -72,6 +72,7 @@ export function ItemsScreen({
   }, [items]);
 
   function getSourceTag(item: POWizardV2LineItem) {
+    if (hidePricing) return null;
     if (item.price_adjusted_by_supplier) {
       return <Badge variant="outline" className="text-[10px] border-primary/50 text-primary">Adjusted</Badge>;
     }
