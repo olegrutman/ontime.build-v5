@@ -1,4 +1,4 @@
-export type POStatus = 'ACTIVE' | 'SUBMITTED' | 'PRICED' | 'ORDERED' | 'DELIVERED';
+export type POStatus = 'ACTIVE' | 'PENDING_APPROVAL' | 'SUBMITTED' | 'PRICED' | 'ORDERED' | 'DELIVERED';
 
 export interface PurchaseOrder {
   id: string;
