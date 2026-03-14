@@ -24,7 +24,7 @@ import { DashboardRecentDocs } from '@/components/dashboard/DashboardRecentDocs'
 import type { ProjectStatusFilter } from '@/components/dashboard/StatusMenu';
 import { DashboardBudgetCard } from '@/components/dashboard/DashboardBudgetCard';
 import { DashboardNeedsAttentionCard } from '@/components/dashboard/DashboardNeedsAttentionCard';
-import { DashboardLiveFeed } from '@/components/dashboard/DashboardLiveFeed';
+import { RemindersTile } from '@/components/dashboard/RemindersTile';
 
 export default function Dashboard() {
   const navigate = useNavigate();
