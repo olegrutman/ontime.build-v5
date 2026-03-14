@@ -57,6 +57,7 @@ interface POWizardV2Props {
   onPOCreated?: (poId: string) => Promise<void>;
   editMode?: boolean;
   initialData?: Partial<POWizardV2Data>;
+  hidePricing?: boolean;
 }
 
 export function POWizardV2({
