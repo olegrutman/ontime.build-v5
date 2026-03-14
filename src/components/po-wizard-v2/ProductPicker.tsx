@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, X, Package, ShoppingCart } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Package, ShoppingCart } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -45,7 +45,6 @@ interface ProductPickerProps {
   onUpdateItem?: (item: POWizardV2LineItem) => void;
   editingItem: POWizardV2LineItem | null;
   onClearEdit: () => void;
-  // Estimate support
   hasApprovedEstimate?: boolean;
   projectId?: string;
   onLoadPack?: (items: POWizardV2LineItem[], estimateId: string, packName: string) => void;
@@ -77,16 +76,13 @@ export function ProductPicker({
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Determine the initial step based on whether estimate is available
   const initialStep: PickerStep = hasApprovedEstimate ? 'source' : 'category';
 
-  // Get the actual DB category for queries
   const getDbCategory = useCallback(() => {
     if (!selectedVirtualCategory) return null;
     return VIRTUAL_CATEGORIES[selectedVirtualCategory]?.dbCategory || null;
   }, [selectedVirtualCategory]);
 
-  // Handle editing - load the product and go to quantity screen
   useEffect(() => {
     if (open && editingItem && supplierId) {
       const fetchEditingProduct = async () => {
@@ -97,9 +93,7 @@ export function ProductPicker({
             .select('*')
             .eq('id', editingItem.catalog_item_id)
             .single();
-          
           if (error) throw error;
-          
           if (data) {
             setSelectedProduct(data as CatalogProduct);
             setStep('quantity');
@@ -110,11 +104,8 @@ export function ProductPicker({
           setLoading(false);
         }
       };
-      
       fetchEditingProduct();
     } else if (open && !editingItem) {
-      // Only reset if no pack is loaded (fresh open resets, re-open after pack preserves step)
-      // Don't reset step if we're coming back from a pack load (step is 'estimate')
       if (step !== 'estimate') {
         setStep(initialStep);
         setSelectedVirtualCategory(null);
@@ -137,12 +128,10 @@ export function ProductPicker({
         .from('catalog_items')
         .select('category, secondary_category')
         .eq('supplier_id', supplierId);
-
       if (error) throw error;
 
       const secondaryCounts: Record<string, number> = {};
       const categoryCounts: Record<string, number> = {};
-      
       data?.forEach(item => {
         const sec = item.secondary_category || 'UNCATEGORIZED';
         const cat = item.category;
@@ -151,10 +140,8 @@ export function ProductPicker({
       });
 
       const virtualCounts: CategoryCount[] = [];
-      
       Object.entries(VIRTUAL_CATEGORIES).forEach(([key, virtual]) => {
         let count = 0;
-        
         if (virtual.secondaryCategories.length === 0) {
           count = categoryCounts[virtual.dbCategory] || 0;
         } else {
@@ -162,14 +149,8 @@ export function ProductPicker({
             count += secondaryCounts[sec] || 0;
           });
         }
-        
         if (count > 0) {
-          virtualCounts.push({
-            category: key,
-            count,
-            displayName: virtual.displayName,
-            icon: virtual.icon,
-          });
+          virtualCounts.push({ category: key, count, displayName: virtual.displayName, icon: virtual.icon });
         }
       });
 
@@ -184,10 +165,8 @@ export function ProductPicker({
 
   const fetchSecondaryCategories = async (virtualKey: string) => {
     if (!supplierId) return [];
-    
     const virtual = VIRTUAL_CATEGORIES[virtualKey];
     if (!virtual) return [];
-    
     setLoading(true);
     try {
       let query = supabase
@@ -196,13 +175,10 @@ export function ProductPicker({
         .eq('supplier_id', supplierId)
         .eq('category', virtual.dbCategory as any)
         .not('secondary_category', 'is', null);
-
       if (virtual.secondaryCategories.length > 0) {
         query = query.in('secondary_category', virtual.secondaryCategories);
       }
-
       const { data, error } = await query;
-
       if (error) throw error;
 
       const counts: Record<string, number> = {};
@@ -229,40 +205,25 @@ export function ProductPicker({
 
   const fetchProducts = async (virtualKey: string, secondary: string | null, specFilters: Record<string, string>) => {
     if (!supplierId) return;
-    
     const virtual = VIRTUAL_CATEGORIES[virtualKey];
     if (!virtual) return;
-    
     setLoading(true);
     try {
       const filterObj: Record<string, any> = {
         supplier_id: supplierId,
         category: virtual.dbCategory,
       };
-
-      if (secondary) {
-        filterObj.secondary_category = secondary;
-      }
-
+      if (secondary) filterObj.secondary_category = secondary;
       Object.entries(specFilters).forEach(([key, value]) => {
-        if (value) {
-          filterObj[key] = value;
-        }
+        if (value) filterObj[key] = value;
       });
 
-      let query = supabase
-        .from('catalog_items')
-        .select('*')
-        .match(filterObj);
-
+      let query = supabase.from('catalog_items').select('*').match(filterObj);
       if (!secondary && virtual.secondaryCategories.length > 0) {
         query = query.in('secondary_category', virtual.secondaryCategories);
       }
-
       const { data, error } = await query.limit(100);
-
       if (error) throw error;
-
       setProducts((data || []) as CatalogProduct[]);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -283,17 +244,13 @@ export function ProductPicker({
   const handleCategorySelect = useCallback(async (virtualKey: string) => {
     setSelectedVirtualCategory(virtualKey);
     setAppliedFilters({});
-    
     const virtual = VIRTUAL_CATEGORIES[virtualKey];
     if (!virtual) return;
-    
     const secondaries = await fetchSecondaryCategories(virtualKey);
-    
     if (secondaries && secondaries.length > 1) {
       setStep('secondary');
     } else if (secondaries && secondaries.length === 1) {
-      const secondary = secondaries[0].secondary_category;
-      setSelectedSecondary(secondary);
+      setSelectedSecondary(secondaries[0].secondary_category);
       setStep('filter-step');
     } else {
       setStep('filter-step');
@@ -338,7 +295,6 @@ export function ProductPicker({
           setStep('source');
           setSelectedVirtualCategory(null);
         }
-        // If no estimate, category is the first step — do nothing
         break;
       case 'secondary':
         setStep('category');
@@ -377,17 +333,14 @@ export function ProductPicker({
       original_unit_price: item.unit_price,
     }));
     onLoadPack(lineItems, estimateId, pack.name);
-    // Just close overlay, keep step at 'estimate' so user can return to pack list
     onOpenChange(false);
   }, [onLoadPack, onOpenChange]);
 
-  // Soft close: just dismiss overlay without resetting step state
   const handleSoftClose = () => {
     onClearEdit();
     onOpenChange(false);
   };
 
-  // Full close: reset everything (used when parent resets)
   const handleClose = () => {
     onClearEdit();
     setStep(initialStep);
@@ -401,27 +354,18 @@ export function ProductPicker({
 
   const getTitle = () => {
     const virtual = selectedVirtualCategory ? VIRTUAL_CATEGORIES[selectedVirtualCategory] : null;
-    
     switch (step) {
-      case 'source':
-        return 'Add Materials';
-      case 'estimate':
-        return 'Project Estimate';
-      case 'category':
-        return 'Select Category';
-      case 'secondary':
-        return virtual?.displayName || 'Select Type';
-      case 'filter-step':
-        return selectedSecondary || virtual?.displayName || 'Filter Products';
-      case 'products':
-        return 'Select Product';
-      case 'quantity':
-        return 'Add to PO';
+      case 'source': return 'Add Materials';
+      case 'estimate': return 'Project Estimate';
+      case 'category': return 'Select Category';
+      case 'secondary': return virtual?.displayName || 'Select Type';
+      case 'filter-step': return selectedSecondary || virtual?.displayName || 'Filter Products';
+      case 'products': return 'Select Product';
+      case 'quantity': return 'Add to PO';
     }
   };
 
   const dbCategory = selectedVirtualCategory ? VIRTUAL_CATEGORIES[selectedVirtualCategory]?.dbCategory : null;
-
   const showBackButton = step !== 'source' && !(step === 'category' && !hasApprovedEstimate);
 
   const content = (
@@ -429,46 +373,46 @@ export function ProductPicker({
       {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/30">
         {showBackButton && (
-          <Button variant="ghost" size="icon" className="h-10 w-10" onClick={handleBack}>
-            <ChevronLeft className="h-5 w-5" />
+          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleBack}>
+            <ChevronLeft className="h-4 w-4" />
           </Button>
         )}
-        <h2 className="text-lg font-semibold flex-1">{getTitle()}</h2>
-        <Button variant="ghost" size="icon" className="h-10 w-10" onClick={handleSoftClose}>
-          <X className="h-5 w-5" />
+        <h2 className="text-sm font-semibold flex-1 truncate">{getTitle()}</h2>
+        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleSoftClose}>
+          <X className="h-4 w-4" />
         </Button>
       </div>
 
       {/* Content */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto wz-body" key={step}>
         {step === 'source' && (
-          <div className="p-4 space-y-3">
-            <Button
-              variant="outline"
-              className="w-full h-16 justify-start gap-4 px-5"
+          <div className="p-4 space-y-2">
+            <button
+              className="wz-ans"
               onClick={() => handleSourceSelect('estimate')}
             >
               <div className="p-2 rounded-lg bg-primary/10">
-                <Package className="h-6 w-6 text-primary" />
+                <Package className="h-5 w-5 text-primary" />
               </div>
-              <div className="text-left">
-                <p className="font-medium">From Project Estimate</p>
-                <p className="text-sm text-muted-foreground">Packs & matched materials</p>
+              <div className="flex-1 text-left">
+                <p className="font-medium text-sm">From Project Estimate</p>
+                <p className="text-xs text-muted-foreground">Packs & matched materials</p>
               </div>
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full h-16 justify-start gap-4 px-5"
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
+            <button
+              className="wz-ans"
               onClick={() => handleSourceSelect('catalog')}
             >
               <div className="p-2 rounded-lg bg-secondary">
-                <ShoppingCart className="h-6 w-6 text-secondary-foreground" />
+                <ShoppingCart className="h-5 w-5 text-secondary-foreground" />
               </div>
-              <div className="text-left">
-                <p className="font-medium">Browse Full Catalog</p>
-                <p className="text-sm text-muted-foreground">All supplier products</p>
+              <div className="flex-1 text-left">
+                <p className="font-medium text-sm">Browse Full Catalog</p>
+                <p className="text-xs text-muted-foreground">All supplier products</p>
               </div>
-            </Button>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
           </div>
         )}
         {step === 'estimate' && projectId && (
@@ -483,18 +427,10 @@ export function ProductPicker({
           </div>
         )}
         {step === 'category' && (
-          <CategoryGrid
-            categories={categories}
-            loading={loading}
-            onSelect={handleCategorySelect}
-          />
+          <CategoryGrid categories={categories} loading={loading} onSelect={handleCategorySelect} />
         )}
         {step === 'secondary' && (
-          <SecondaryCategoryList
-            categories={secondaryCategories}
-            loading={loading}
-            onSelect={handleSecondarySelect}
-          />
+          <SecondaryCategoryList categories={secondaryCategories} loading={loading} onSelect={handleSecondarySelect} />
         )}
         {step === 'filter-step' && dbCategory && (
           <StepByStepFilter
@@ -508,11 +444,7 @@ export function ProductPicker({
           />
         )}
         {step === 'products' && (
-          <ProductList
-            products={products}
-            loading={loading}
-            onSelect={handleProductSelect}
-          />
+          <ProductList products={products} loading={loading} onSelect={handleProductSelect} />
         )}
         {step === 'quantity' && selectedProduct && (
           <QuantityPanel

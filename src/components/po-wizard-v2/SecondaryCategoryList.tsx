@@ -11,49 +11,42 @@ interface SecondaryCategoryListProps {
 export function SecondaryCategoryList({ categories, loading, onSelect }: SecondaryCategoryListProps) {
   if (loading) {
     return (
-      <div className="h-full overflow-y-auto">
-        <div className="p-4 space-y-2">
-          {[1, 2, 3, 4].map(i => (
-            <Skeleton key={i} className="h-14 w-full" />
-          ))}
-        </div>
+      <div className="p-4 space-y-2">
+        {[1, 2, 3, 4].map(i => (
+          <Skeleton key={i} className="h-16 w-full rounded-xl" />
+        ))}
       </div>
     );
   }
 
   if (categories.length === 0) {
     return (
-      <div className="h-full overflow-y-auto">
-        <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-          <p className="text-muted-foreground">No subcategories available.</p>
-        </div>
+      <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+        <p className="text-muted-foreground">No subcategories available.</p>
       </div>
     );
   }
 
   return (
-    <div className="h-full overflow-y-auto min-h-0">
-      <div className="p-4 space-y-2">
-        {categories.map(category => {
-          const displayName = SECONDARY_DISPLAY_NAMES[category.secondary_category] || category.secondary_category;
-          
-          return (
-            <button
-              key={category.secondary_category}
-              onClick={() => onSelect(category.secondary_category)}
-              className="flex items-center justify-between w-full p-4 rounded-xl border bg-card hover:bg-accent hover:border-accent-foreground/20 transition-colors active:scale-[0.99]"
-            >
-              <span className="font-medium">{displayName}</span>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground bg-muted px-2 py-0.5 rounded-full">
-                  {category.count}
-                </span>
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              </div>
-            </button>
-          );
-        })}
-      </div>
+    <div className="h-full overflow-y-auto min-h-0 p-4 space-y-2">
+      {categories.map(category => {
+        const displayName = SECONDARY_DISPLAY_NAMES[category.secondary_category] || category.secondary_category;
+        return (
+          <button
+            key={category.secondary_category}
+            onClick={() => onSelect(category.secondary_category)}
+            className="wz-ans"
+          >
+            <div className="flex-1 min-w-0 text-left">
+              <p className="font-medium text-sm">{displayName}</p>
+            </div>
+            <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full shrink-0">
+              {category.count}
+            </span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          </button>
+        );
+      })}
     </div>
   );
 }
