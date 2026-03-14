@@ -301,6 +301,7 @@ export function SupplierEstimatesSection({ projectId, projectName, supplierOrgId
             <EstimateSummaryCard
               items={estimateItems}
               totalWithTax={estimate.total_amount || 0}
+              estimateId={estimate.id}
             />
           )}
         </CardContent>

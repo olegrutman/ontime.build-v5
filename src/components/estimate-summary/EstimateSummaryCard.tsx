@@ -1,15 +1,17 @@
-import { useMemo, useState } from 'react';
-import { Package, Receipt, ChevronRight } from 'lucide-react';
+import { useMemo, useState, useEffect } from 'react';
+import { Package, Receipt, ChevronRight, ShoppingCart } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { supabase } from '@/integrations/supabase/client';
 import type { SupplierEstimateItem } from '@/types/supplierEstimate';
 
 interface EstimateSummaryCardProps {
   items: SupplierEstimateItem[];
   totalWithTax: number;
+  estimateId?: string;
 }
 
 interface PackSummary {
@@ -19,8 +21,24 @@ interface PackSummary {
   percentOfTotal: number;
 }
 
-export function EstimateSummaryCard({ items, totalWithTax }: EstimateSummaryCardProps) {
+export function EstimateSummaryCard({ items, totalWithTax, estimateId }: EstimateSummaryCardProps) {
   const [expandedPacks, setExpandedPacks] = useState<Set<string>>(new Set());
+  const [orderedPackNames, setOrderedPackNames] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!estimateId) return;
+    const fetchOrderedPacks = async () => {
+      const { data } = await supabase
+        .from('purchase_orders')
+        .select('source_pack_name')
+        .eq('source_estimate_id', estimateId)
+        .neq('status', 'ACTIVE');
+      if (data) {
+        setOrderedPackNames(new Set(data.map(po => po.source_pack_name).filter(Boolean) as string[]));
+      }
+    };
+    fetchOrderedPacks();
+  }, [estimateId]);
 
   const { subtotal, packs, totalItems, packItems } = useMemo(() => {
     let subtotal = 0;
@@ -120,6 +138,12 @@ export function EstimateSummaryCard({ items, totalWithTax }: EstimateSummaryCard
                           <ChevronRight className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${isOpen ? 'rotate-90' : ''}`} />
                           <span className="font-medium">{pack.name}</span>
                           <Badge variant="outline" className="text-[10px]">{pack.itemCount} items</Badge>
+                          {orderedPackNames.has(pack.name) && (
+                            <Badge className="text-[10px] bg-green-100 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-800">
+                              <ShoppingCart className="h-3 w-3 mr-0.5" />
+                              Ordered
+                            </Badge>
+                          )}
                         </div>
                         <div className="flex items-center gap-3 text-right">
                           <span className="text-muted-foreground text-xs">{pack.percentOfTotal.toFixed(1)}%</span>
