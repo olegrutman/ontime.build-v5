@@ -1,51 +1,44 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-## Features Built
+# Highlight Ordered Packs on Estimate Page & PO Wizard
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
+## Summary
+Add visual "Already Ordered" indicators to packs in two places:
+1. **EstimateSummaryCard** (estimate detail view on the Estimates tab)
+2. **PackSelector** (PO Wizard pack picker)
 
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
+Both will query `purchase_orders` for matching `source_estimate_id` + `source_pack_name` (excluding `ACTIVE` drafts). Ordered packs get an amber/green badge. In the PO Wizard, clicking an ordered pack shows a confirmation dialog before proceeding.
 
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
+---
 
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
+## Changes
 
-## Files Created/Modified
-| File | Action |
-|------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+### 1. `EstimateSummaryCard.tsx`
+- Add optional `estimateId?: string` prop
+- When provided, fetch POs with `source_estimate_id = estimateId` and collect `source_pack_name` values (status != `ACTIVE`)
+- On each pack row, show a `✓ Ordered` badge (green) next to the pack name if it's in the ordered set
+
+### 2. `ProjectEstimatesReview.tsx`
+- Pass `estimateId={selectedEstimate.id}` to `EstimateSummaryCard`
+
+### 3. `SupplierEstimatesSection.tsx`
+- Pass `estimateId` to `EstimateSummaryCard` (same pattern)
+
+### 4. `PackSelector.tsx`
+- After fetching estimate items, also fetch POs where `source_estimate_id = estimateId` and `status != ACTIVE`
+- Build a `Set<string>` of ordered pack names
+- Show an amber "Already Ordered" badge on ordered pack cards
+- On click of an ordered pack: show a confirmation dialog ("This pack already has a PO. Create another?") with Cancel / Continue buttons
+- Unordered packs proceed as normal
+
+---
+
+## Files to Modify
+
+| File | Change |
+|---|---|
+| `src/components/estimate-summary/EstimateSummaryCard.tsx` | Add `estimateId` prop, fetch ordered packs, show badge |
+| `src/components/project/ProjectEstimatesReview.tsx` | Pass `estimateId` |
+| `src/components/project/SupplierEstimatesSection.tsx` | Pass `estimateId` |
+| `src/components/po-wizard-v2/PackSelector.tsx` | Fetch ordered packs, badge + confirm dialog |
+
