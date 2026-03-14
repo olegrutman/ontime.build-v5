@@ -506,6 +506,8 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   }, [purchaseOrders, currentOrgId, showDirectionalTabs]);
 
   const getCanViewPricing = (po: PurchaseOrder) => {
+    // TC cannot see pricing when GC is material-responsible
+    if (hidePricing) return false;
     const isPricingOwner = po.pricing_owner_org_id === currentOrgId;
     const isCreator = po.created_by_org_id === currentOrgId;
     const isPoSupplier = (po.supplier as { organization_id?: string })?.organization_id === currentOrgId;
