@@ -807,6 +807,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           isSubmitting={isSubmitting}
           editMode
           initialData={editInitialData}
+          hidePricing={hidePricing}
         />
       )}
     </>
