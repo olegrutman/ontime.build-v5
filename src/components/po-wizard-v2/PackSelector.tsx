@@ -49,6 +49,8 @@ export function PackSelector({
   const [packs, setPacks] = useState<EstimatePack[]>([]);
   const [estimateId, setEstimateId] = useState<string | null>(null);
   const [estimateName, setEstimateName] = useState<string>('');
+  const [orderedPackNames, setOrderedPackNames] = useState<Set<string>>(new Set());
+  const [confirmPack, setConfirmPack] = useState<EstimatePack | null>(null);
 
   useEffect(() => {
     fetchApprovedEstimate();
