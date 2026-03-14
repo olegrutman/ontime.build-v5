@@ -123,11 +123,11 @@ export function ReviewScreen({
           <div className="rounded-lg border overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-muted/50 text-xs text-muted-foreground">
-                  <th className="text-left py-2 px-3 font-medium">Item</th>
-                  <th className="text-center py-2 px-2 font-medium w-14">Qty</th>
-                  <th className="text-right py-2 px-3 font-medium w-20">Total</th>
-                </tr>
+                 <tr className="bg-muted/50 text-xs text-muted-foreground">
+                   <th className="text-left py-2 px-3 font-medium">Item</th>
+                   <th className="text-center py-2 px-2 font-medium w-14">Qty</th>
+                   {!hidePricing && <th className="text-right py-2 px-3 font-medium w-20">Total</th>}
+                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {data.line_items.map((item) => {
