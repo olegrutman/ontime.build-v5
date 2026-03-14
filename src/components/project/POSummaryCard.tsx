@@ -82,8 +82,21 @@ export function POSummaryCard({ projectId }: POSummaryCardProps) {
       const isTCView = currentRole === 'Trade Contractor';
       const isGCView = currentRole === 'General Contractor';
       
-      // FC cannot view pricing
-      setCanViewPricing(!isFCView);
+      // Check material_responsibility for TC pricing visibility
+      let matResp: string | null = null;
+      if (isTCView && currentOrgId) {
+        const { data: contracts } = await supabase
+          .from('project_contracts')
+          .select('material_responsibility')
+          .eq('project_id', projectId)
+          .or(`from_org_id.eq.${currentOrgId},to_org_id.eq.${currentOrgId}`)
+          .limit(1);
+        matResp = contracts?.[0]?.material_responsibility || null;
+      }
+
+      // FC cannot view pricing; TC cannot view when GC is material-responsible
+      const tcHidePricing = isTCView && matResp === 'GC';
+      setCanViewPricing(!isFCView && !tcHidePricing);
 
       // Fetch all POs for this project
       const { data: pos, error } = await supabase

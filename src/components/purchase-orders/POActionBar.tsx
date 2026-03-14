@@ -7,9 +7,10 @@ import { formatCurrency } from '@/lib/utils';
 interface POActionBarProps {
   purchaseOrders: PurchaseOrder[];
   isSupplier: boolean;
+  hidePricing?: boolean;
 }
 
-export function POActionBar({ purchaseOrders, isSupplier }: POActionBarProps) {
+export function POActionBar({ purchaseOrders, isSupplier, hidePricing = false }: POActionBarProps) {
   const metrics = useMemo(() => {
     const now = new Date();
 
@@ -50,10 +51,12 @@ export function POActionBar({ purchaseOrders, isSupplier }: POActionBarProps) {
             {isSupplier ? 'Needs Pricing' : 'Needs Your Action'}
           </p>
           <p className="text-lg font-bold leading-tight">
-            {metrics.needsAction}{' '}
-            <span className="text-sm font-normal text-muted-foreground">
-              ({formatCurrency(metrics.needsActionTotal)})
-            </span>
+            {metrics.needsAction}
+            {!hidePricing && (
+              <span className="text-sm font-normal text-muted-foreground">
+                {' '}({formatCurrency(metrics.needsActionTotal)})
+              </span>
+            )}
           </p>
         </div>
       </Card>
@@ -68,10 +71,12 @@ export function POActionBar({ purchaseOrders, isSupplier }: POActionBarProps) {
             Awaiting Delivery
           </p>
           <p className="text-lg font-bold leading-tight">
-            {metrics.awaitingCount}{' '}
-            <span className="text-sm font-normal text-muted-foreground">
-              ({formatCurrency(metrics.awaitingTotal)})
-            </span>
+            {metrics.awaitingCount}
+            {!hidePricing && (
+              <span className="text-sm font-normal text-muted-foreground">
+                {' '}({formatCurrency(metrics.awaitingTotal)})
+              </span>
+            )}
           </p>
         </div>
       </Card>
@@ -86,7 +91,7 @@ export function POActionBar({ purchaseOrders, isSupplier }: POActionBarProps) {
             Delivered This Month
           </p>
           <p className="text-lg font-bold leading-tight">
-            {formatCurrency(metrics.deliveredTotal)}
+            {hidePricing ? metrics.deliveredCount : formatCurrency(metrics.deliveredTotal)}
           </p>
         </div>
       </Card>
