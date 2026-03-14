@@ -455,6 +455,7 @@ export function ProductPicker({
             onUpdate={onUpdateItem}
             onClose={handleClose}
             editingItem={editingItem}
+            hidePricing={hidePricing}
           />
         )}
       </div>

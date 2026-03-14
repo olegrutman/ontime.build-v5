@@ -275,7 +275,7 @@ export function QuantityPanel({ product, onAdd, onUpdate, onClose, editingItem, 
         )}
 
         {/* Line total bar */}
-        {displayLineTotal != null && (
+        {!hidePricing && displayLineTotal != null && (
           <div className="wz-totals-bar flex items-center justify-between">
             <span className="text-sm text-secondary-foreground/70">Line Total</span>
             <span className="wz-totals-value">{formatCurrency(displayLineTotal)}</span>
