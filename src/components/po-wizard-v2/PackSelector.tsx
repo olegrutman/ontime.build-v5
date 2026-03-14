@@ -1,10 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
-
 import { Button } from '@/components/ui/button';
-
+import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Package, CheckCircle2, Plus } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Package, CheckCircle2, Plus, ShoppingCart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface EstimatePack {
