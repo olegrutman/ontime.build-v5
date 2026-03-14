@@ -75,7 +75,7 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function PODetail({ poId, projectId, onBack, onUpdate }: PODetailProps) {
+export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverride = false }: PODetailProps) {
   const { user, userOrgRoles, currentRole } = useAuth();
   const [po, setPO] = useState<PurchaseOrder | null>(null);
   const [lineItems, setLineItems] = useState<POLineItem[]>([]);
