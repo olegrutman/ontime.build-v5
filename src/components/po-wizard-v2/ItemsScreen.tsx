@@ -31,6 +31,7 @@ interface ItemsScreenProps {
   canAdvance: boolean;
   sourcePackName: string | null;
   onClearPack: () => void;
+  hidePricing?: boolean;
 }
 
 export function ItemsScreen({
