@@ -73,6 +73,7 @@ export function POWizardV2({
   onPOCreated,
   editMode = false,
   initialData,
+  hidePricing = false,
 }: POWizardV2Props) {
   const isMobile = useIsMobile();
   const [screen, setScreen] = useState<Screen>('header');
