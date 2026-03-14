@@ -87,6 +87,7 @@ export function POCard({
 
   const showSubmitButton = canSubmit && status === 'ACTIVE' && onSubmit;
   const showEditButton = canEdit && status === 'ACTIVE' && onEdit;
+  const showApprovalButtons = isGC && status === 'PENDING_APPROVAL' && onApprove;
 
   const lineItemCount = po.line_items?.length || 0;
 
