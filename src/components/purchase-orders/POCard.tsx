@@ -47,6 +47,8 @@ export function POCard({
   isInvoiced = false,
   estimatePackTotal = null,
 }: POCardProps) {
+  const [submitting, setSubmitting] = useState(false);
+  const [approving, setApproving] = useState(false);
 
   const handleSubmit = async (e: React.MouseEvent) => {
     e.stopPropagation();
