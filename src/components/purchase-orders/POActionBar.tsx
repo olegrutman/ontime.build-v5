@@ -51,10 +51,12 @@ export function POActionBar({ purchaseOrders, isSupplier, hidePricing = false }:
             {isSupplier ? 'Needs Pricing' : 'Needs Your Action'}
           </p>
           <p className="text-lg font-bold leading-tight">
-            {metrics.needsAction}{' '}
-            <span className="text-sm font-normal text-muted-foreground">
-              ({formatCurrency(metrics.needsActionTotal)})
-            </span>
+            {metrics.needsAction}
+            {!hidePricing && (
+              <span className="text-sm font-normal text-muted-foreground">
+                {' '}({formatCurrency(metrics.needsActionTotal)})
+              </span>
+            )}
           </p>
         </div>
       </Card>
