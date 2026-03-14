@@ -362,6 +362,7 @@ export function POWizardV2({
             onBack={() => setScreen('items')}
             onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
+            hidePricing={hidePricing}
           />
         )}
       </div>
