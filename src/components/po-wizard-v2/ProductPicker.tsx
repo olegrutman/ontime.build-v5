@@ -49,6 +49,7 @@ interface ProductPickerProps {
   projectId?: string;
   onLoadPack?: (items: POWizardV2LineItem[], estimateId: string, packName: string) => void;
   onAddPSMItem?: (item: POWizardV2LineItem) => void;
+  hidePricing?: boolean;
 }
 
 export function ProductPicker({
