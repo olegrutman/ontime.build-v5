@@ -44,6 +44,7 @@ export function ItemsScreen({
   canAdvance,
   sourcePackName,
   onClearPack,
+  hidePricing = false,
 }: ItemsScreenProps) {
   const totals = useMemo(() => {
     let estimateSubtotal = 0;
