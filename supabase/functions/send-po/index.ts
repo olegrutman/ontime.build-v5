@@ -49,19 +49,17 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    const userClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
-    });
+    const anonClient = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: { user }, error: authError } = await anonClient.auth.getUser(token);
 
-    const { data: claimsData, error: claimsError } = await userClient.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    if (authError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
-    const userId = claimsData.claims.sub as string;
+    const userId = user.id;
 
     const RESEND_API_KEY = getValidatedResendApiKey();
     const { po_id, supplier_email }: SendPORequest = await req.json();
@@ -74,8 +72,10 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    // --- FETCH PO VIA RLS-ENABLED CLIENT ---
-    const { data: po, error: poError } = await userClient
+    // --- Use service client for all DB operations (auth already verified above) ---
+    const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+
+    const { data: po, error: poError } = await serviceClient
       .from("purchase_orders")
       .select(`
         *,
@@ -88,14 +88,15 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
 
     if (poError || !po) {
-      return new Response(JSON.stringify({ error: "Purchase order not found or access denied" }), {
+      console.error("PO fetch error:", poError);
+      return new Response(JSON.stringify({ error: "Purchase order not found" }), {
         status: 404,
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
 
-    // Fetch line items via user client (RLS enforced)
-    const { data: lineItems } = await userClient
+    // Fetch line items
+    const { data: lineItems } = await serviceClient
       .from("po_line_items")
       .select("*")
       .eq("po_id", po_id)
@@ -177,8 +178,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error(emailResult.message || "Failed to send email");
     }
 
-    // Update PO status + refresh download token expiration using service role
-    const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
+    // Update PO status + refresh download token expiration
     const updateFields: Record<string, unknown> = {
       status: "SUBMITTED",
       submitted_at: new Date().toISOString(),
