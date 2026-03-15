@@ -19,6 +19,7 @@ import { ProductPickerContent, ProductPickerHandle } from './ProductPicker';
 import { UnmatchedItemPanel } from './UnmatchedItemEditor';
 
 type Screen = 'header' | 'items' | 'review' | 'picker' | 'unmatched-editor';
+type PickerInitialStep = 'source' | 'estimate' | undefined;
 
 /** Check if an approved estimate exists for this project + supplier combo */
 async function checkApprovedEstimate(projectId: string, supplierId: string | null): Promise<boolean> {

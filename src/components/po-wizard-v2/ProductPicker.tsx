@@ -72,9 +72,10 @@ export const ProductPickerContent = forwardRef<ProductPickerHandle, ProductPicke
   hidePricing = false,
   onClose,
   onExitPicker,
+  initialStep,
 }, ref) => {
   const filterRef = useRef<StepByStepFilterHandle>(null);
-  const [step, setStep] = useState<PickerStep>('source');
+  const [step, setStep] = useState<PickerStep>(initialStep ?? 'source');
   const [categories, setCategories] = useState<CategoryCount[]>([]);
   const [secondaryCategories, setSecondaryCategories] = useState<SecondaryCount[]>([]);
   const [selectedVirtualCategory, setSelectedVirtualCategory] = useState<string | null>(null);
