@@ -63,7 +63,7 @@ export function FieldCaptureCard({ capture, onConvert }: FieldCaptureCardProps) 
             onClick={() => onConvert(capture)}
             className="w-full min-h-[44px] mt-1"
           >
-            Convert to Task
+            Convert to Work Order
             <ArrowRight className="h-4 w-4 ml-1" />
           </Button>
         )}

@@ -18,6 +18,8 @@ import { ChangeOrderStatus, CHANGE_ORDER_STATUS_LABELS } from '@/types/changeOrd
 import { StatusColumn, CHANGE_ORDER_STATUS_OPTIONS } from '@/components/ui/status-column';
 import { HoverActions, HoverAction } from '@/components/ui/hover-actions';
 import { enrichWorkOrderTotals } from '@/lib/computeWorkOrderTotal';
+import { FieldCaptureList } from '@/components/field-capture';
+import type { FieldCapture } from '@/hooks/useFieldCaptures';
 
 const STATUS_PRIORITY: Record<ChangeOrderStatus, number> = {
   rejected: 0,
@@ -41,6 +43,7 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
   const [showWizard, setShowWizard] = useState(false);
   const [showFCDialog, setShowFCDialog] = useState(false);
   const [activeTab, setActiveTab] = useState<ChangeOrderStatus | 'ALL'>('ALL');
+  const [captureToConvert, setCaptureToConvert] = useState<FieldCapture | null>(null);
 
   const {
     changeOrders,
@@ -93,6 +96,15 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
   const isFC = currentRole === 'FC_PM' || currentRole === 'FS';
   const canCreate = permissions?.canCreateWorkOrders ?? false;
   const isBlocked = !isFC && !sovReadiness.isReady && !sovReadiness.loading;
+
+  const handleConvertCapture = (capture: FieldCapture) => {
+    setCaptureToConvert(capture);
+    if (isFC) {
+      setShowFCDialog(true);
+    } else {
+      setShowWizard(true);
+    }
+  };
 
   const statusCounts = useMemo(() => ({
     ALL: changeOrders.length,
@@ -296,6 +308,15 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
         ))}
       </div>
 
+      {/* Field Captures */}
+      {userOrgId && (
+        <FieldCaptureList
+          projectId={projectId}
+          organizationId={userOrgId}
+          onConvert={handleConvertCapture}
+        />
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -385,13 +406,27 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
       {!isFC && (
         <WorkOrderWizard
           open={showWizard}
-          onOpenChange={setShowWizard}
+          onOpenChange={(open) => {
+            setShowWizard(open);
+            if (!open) setCaptureToConvert(null);
+          }}
           projectId={projectId}
           projectName={projectName}
           onComplete={async (data) => {
             await createChangeOrder(data);
+            if (captureToConvert) {
+              await supabase
+                .from('field_captures')
+                .update({ status: 'converted' })
+                .eq('id', captureToConvert.id);
+              setCaptureToConvert(null);
+            }
           }}
           isSubmitting={isCreating}
+          initialData={captureToConvert ? {
+            title: captureToConvert.description || '',
+            description: captureToConvert.description || '',
+          } : undefined}
         />
       )}
 
@@ -399,7 +434,10 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
       {isFC && (
         <FCWorkOrderDialog
           open={showFCDialog}
-          onOpenChange={setShowFCDialog}
+          onOpenChange={(open) => {
+            setShowFCDialog(open);
+            if (!open) setCaptureToConvert(null);
+          }}
           projectId={projectId}
           projectName={projectName}
           onSubmit={async (data: FCWorkOrderData) => {
@@ -407,8 +445,16 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
               project_id: projectId,
               ...data,
             });
+            if (captureToConvert) {
+              await supabase
+                .from('field_captures')
+                .update({ status: 'converted' })
+                .eq('id', captureToConvert.id);
+              setCaptureToConvert(null);
+            }
           }}
           isSubmitting={isCreatingFC}
+          
         />
       )}
     </div>
