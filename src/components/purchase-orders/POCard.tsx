@@ -85,7 +85,8 @@ export function POCard({
       : []),
   ];
 
-  const showSubmitButton = canSubmit && status === 'ACTIVE' && onSubmit;
+  // Only show submit on card for TC (approval gate). GC submits from detail view.
+  const showSubmitButton = canSubmit && status === 'ACTIVE' && onSubmit && !isGC;
   const showEditButton = canEdit && status === 'ACTIVE' && onEdit;
   const showApprovalButtons = isGC && status === 'PENDING_APPROVAL' && onApprove;
 

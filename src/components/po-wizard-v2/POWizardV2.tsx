@@ -483,7 +483,9 @@ export function POWizardV2({
             onEditItems={() => setScreen('items')}
             onBack={() => setScreen('items')}
             onSubmit={handleSubmit}
+            onCreateAndSend={!editMode && onCreateAndSend ? handleCreateAndSend : undefined}
             isSubmitting={isSubmitting}
+            isSending={isSending}
             hidePricing={hidePricing}
             onTaxChange={(tax) => setFormData(prev => ({ ...prev, sales_tax_percent: tax }))}
             onDeliveryChange={handleChange}

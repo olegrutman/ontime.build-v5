@@ -368,22 +368,31 @@ export function ReviewScreen({
         )}
       </div>
 
-      {/* Footer — clean 2-button layout */}
+      {/* Footer */}
       <div className="wz-footer flex gap-2">
-        <Button variant="ghost" className="h-11" onClick={onBack}>
+        <Button variant="ghost" className="h-11 shrink-0" onClick={onBack}>
           <ChevronLeft className="h-4 w-4 mr-1" />
           Back
         </Button>
-        <Button className="flex-1 h-11" onClick={onSubmit} disabled={isSubmitting}>
+        <Button variant="outline" className="flex-1 h-11" onClick={onSubmit} disabled={isSubmitting || isSending}>
           {isSubmitting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <>
-              <Send className="h-4 w-4 mr-2" />
-              Submit PO
-            </>
+            'Create PO'
           )}
         </Button>
+        {onCreateAndSend && (
+          <Button className="flex-1 h-11" onClick={onCreateAndSend} disabled={isSubmitting || isSending}>
+            {isSending ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Create & Send
+              </>
+            )}
+          </Button>
+        )}
       </div>
     </div>
   );
