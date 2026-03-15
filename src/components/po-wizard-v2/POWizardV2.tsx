@@ -180,7 +180,6 @@ export function POWizardV2({
           ...initialData,
         });
       } else {
-        setScreen('header');
         setHasApprovedEstimate(false);
         setFormData({
           ...INITIAL_PO_WIZARD_V2_DATA,
@@ -190,9 +189,24 @@ export function POWizardV2({
           work_order_id: workOrderId,
           work_order_title: workOrderTitle,
         });
+        // Auto-advance will be handled after suppliers load
+        setScreen('header');
       }
     }
   }, [open, projectId, projectName, projectAddress, workOrderId, workOrderTitle, editMode, initialData]);
+
+  // Auto-advance past header for single supplier (non-edit mode)
+  useEffect(() => {
+    if (!open || editMode || loadingSuppliers || screen !== 'header') return;
+    if (suppliers.length === 1) {
+      // Supplier already set in supplier fetch effect, skip to items/picker
+      if (formData.line_items.length === 0) {
+        setScreen('picker');
+      } else {
+        setScreen('items');
+      }
+    }
+  }, [open, editMode, loadingSuppliers, suppliers.length]);
 
   // Check for approved estimate and resolve tax when supplier changes
   useEffect(() => {
