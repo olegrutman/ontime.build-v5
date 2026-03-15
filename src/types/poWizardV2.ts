@@ -1,6 +1,7 @@
 export interface POWizardV2Data {
   // Header (Screen 1)
   project_id: string;
+  sales_tax_percent: number;
   project_name: string;
   delivery_address: string;
   supplier_id: string | null;
