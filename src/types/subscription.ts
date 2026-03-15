@@ -11,7 +11,8 @@ export type FeatureKey =
   | 'supplier_estimates'
   | 'custom_reports'
   | 'api_access'
-  | 'daily_logs';
+  | 'daily_logs'
+  | 'field_capture';
 
 export const FEATURE_LABELS: Record<FeatureKey, string> = {
   max_projects: 'Projects',
@@ -27,6 +28,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   custom_reports: 'Custom Reports / Export',
   api_access: 'API Access',
   daily_logs: 'Daily Logs',
+  field_capture: 'Field Capture',
 };
 
 export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
@@ -43,6 +45,7 @@ export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   custom_reports: 'Custom reporting and data export',
   api_access: 'Programmatic API access',
   daily_logs: 'Daily field log entries with weather and manpower',
+  field_capture: 'Instant field issue capture with photo and voice',
 };
 
 export const FEATURE_KEYS: FeatureKey[] = Object.keys(FEATURE_LABELS) as FeatureKey[];

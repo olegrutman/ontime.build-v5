@@ -18,6 +18,8 @@ import { DeliveriesCard } from './DeliveriesCard';
 import { PhotosCard } from './PhotosCard';
 import { QuickNotesCard } from './QuickNotesCard';
 import { CriticalScheduleCard } from '@/components/project/CriticalScheduleCard';
+import { FieldCaptureList } from '@/components/field-capture/FieldCaptureList';
+import { useAuth } from '@/hooks/useAuth';
 
 import type { WeatherData, SafetyIncident } from '@/types/dailyLog';
 
@@ -46,6 +48,8 @@ function useDebounced<T>(callback: (value: T) => void, delay: number) {
 
 export function DailyLogPanel({ projectId }: DailyLogPanelProps) {
   const { toast } = useToast();
+  const { userOrgRoles } = useAuth();
+  const orgId = userOrgRoles[0]?.organization_id;
   const [dateOffset, setDateOffset] = useState(0);
   const logDate = new Date();
   logDate.setDate(logDate.getDate() + dateOffset);
@@ -206,7 +210,15 @@ export function DailyLogPanel({ projectId }: DailyLogPanelProps) {
         disabled={isSubmitted}
       />
 
-      {/* Submit button */}
+      {/* Field Captures for this date */}
+      {orgId && (
+        <FieldCaptureList
+          projectId={projectId}
+          organizationId={orgId}
+          date={dateStr}
+        />
+      )}
+
       {!isSubmitted && logId && (
         <Button
           onClick={handleSubmit}

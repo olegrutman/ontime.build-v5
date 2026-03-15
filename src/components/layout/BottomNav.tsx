@@ -14,11 +14,13 @@ import {
   Users,
   Undo2,
   CalendarDays,
+  Camera,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { useFeatureEnabled } from '@/components/auth/FeatureGate';
+import { FieldCaptureSheet } from '@/components/field-capture/FieldCaptureSheet';
 
 interface NavItem {
   label: string;
@@ -33,6 +35,7 @@ export function BottomNav() {
   const [searchParams] = useSearchParams();
   const { permissions, userOrgRoles } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [captureOpen, setCaptureOpen] = useState(false);
 
   const canManageOrg = permissions?.canManageOrg ?? false;
   const isSupplier = userOrgRoles[0]?.organization?.type === 'SUPPLIER';
@@ -49,6 +52,8 @@ export function BottomNav() {
   const invoicingEnabled = useFeatureEnabled('invoicing');
   const posEnabled = useFeatureEnabled('purchase_orders');
   const returnsEnabled = useFeatureEnabled('returns_tracking');
+  const fieldCaptureEnabled = useFeatureEnabled('field_capture');
+  const orgId = userOrgRoles[0]?.organization_id;
 
   const dashboardPrimaryItems: NavItem[] = [
     { label: 'Home', icon: Home, path: '/dashboard' },
@@ -126,6 +131,19 @@ export function BottomNav() {
               </button>
             );
           })}
+          {/* Capture FAB — only on project pages */}
+          {isProjectPage && fieldCaptureEnabled && (
+            <button
+              onClick={() => setCaptureOpen(true)}
+              className="flex flex-col items-center justify-center gap-0.5 flex-1 transition-colors"
+              style={{ color: '#F5A623', minHeight: '58px' }}
+            >
+              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                <Camera className="w-4.5 h-4.5 text-primary-foreground" />
+              </div>
+              <span className="text-[10px] font-bold">Capture</span>
+            </button>
+          )}
           {/* More button */}
           <button
             onClick={() => setMoreOpen(true)}
@@ -170,6 +188,16 @@ export function BottomNav() {
           </div>
         </DrawerContent>
       </Drawer>
+
+      {/* Field Capture Sheet */}
+      {isProjectPage && projectId && orgId && (
+        <FieldCaptureSheet
+          open={captureOpen}
+          onOpenChange={setCaptureOpen}
+          projectId={projectId}
+          organizationId={orgId}
+        />
+      )}
     </>
   );
 }
