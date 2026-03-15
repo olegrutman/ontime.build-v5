@@ -173,12 +173,15 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     const emailResult = await emailResponse.json();
+    const emailSent = emailResponse.ok;
 
-    if (!emailResponse.ok) {
-      throw new Error(emailResult.message || "Failed to send email");
+    if (!emailSent) {
+      console.error("Email send failed (non-blocking):", emailResult);
+    } else {
+      console.log("PO email sent successfully:", emailResult);
     }
 
-    // Update PO status + refresh download token expiration
+    // Always update PO status regardless of email outcome
     const updateFields: Record<string, unknown> = {
       status: "SUBMITTED",
       submitted_at: new Date().toISOString(),
@@ -200,9 +203,11 @@ const handler = async (req: Request): Promise<Response> => {
       .update(updateFields)
       .eq("id", po_id);
 
-    console.log("PO email sent successfully:", emailResult);
-
-    return new Response(JSON.stringify({ success: true, emailId: emailResult.id }), {
+    return new Response(JSON.stringify({
+      success: true,
+      emailSent,
+      ...(emailSent ? { emailId: emailResult.id } : { emailError: emailResult.message || "Email delivery failed" }),
+    }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
