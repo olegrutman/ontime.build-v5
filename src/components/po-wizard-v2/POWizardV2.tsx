@@ -467,6 +467,7 @@ export function POWizardV2({
             onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
             hidePricing={hidePricing}
+            onTaxChange={(tax) => setFormData(prev => ({ ...prev, sales_tax_percent: tax }))}
           />
         )}
         {screen === 'picker' && (
