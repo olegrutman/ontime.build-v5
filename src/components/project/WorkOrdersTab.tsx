@@ -406,13 +406,28 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
       {!isFC && (
         <WorkOrderWizard
           open={showWizard}
-          onOpenChange={setShowWizard}
+          onOpenChange={(open) => {
+            setShowWizard(open);
+            if (!open) setCaptureToConvert(null);
+          }}
           projectId={projectId}
           projectName={projectName}
           onComplete={async (data) => {
             await createChangeOrder(data);
+            if (captureToConvert) {
+              await supabase
+                .from('field_captures')
+                .update({ status: 'converted' })
+                .eq('id', captureToConvert.id);
+              setCaptureToConvert(null);
+            }
           }}
           isSubmitting={isCreating}
+          defaultValues={captureToConvert ? {
+            title: captureToConvert.description || '',
+            description: captureToConvert.description || '',
+            reason: captureToConvert.reason_category || undefined,
+          } : undefined}
         />
       )}
 
@@ -420,7 +435,10 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
       {isFC && (
         <FCWorkOrderDialog
           open={showFCDialog}
-          onOpenChange={setShowFCDialog}
+          onOpenChange={(open) => {
+            setShowFCDialog(open);
+            if (!open) setCaptureToConvert(null);
+          }}
           projectId={projectId}
           projectName={projectName}
           onSubmit={async (data: FCWorkOrderData) => {
@@ -428,8 +446,16 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
               project_id: projectId,
               ...data,
             });
+            if (captureToConvert) {
+              await supabase
+                .from('field_captures')
+                .update({ status: 'converted' })
+                .eq('id', captureToConvert.id);
+              setCaptureToConvert(null);
+            }
           }}
           isSubmitting={isCreatingFC}
+          defaultDescription={captureToConvert?.description || undefined}
         />
       )}
     </div>
