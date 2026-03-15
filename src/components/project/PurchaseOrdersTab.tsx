@@ -922,7 +922,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         projectName={projectName || 'Project'}
         projectAddress={projectAddress || ''}
         onComplete={handleCreatePO}
+        onCreateAndSend={handleCreateAndSend}
         isSubmitting={isSubmitting}
+        isSending={isSending}
         hidePricing={hidePricing}
       />
 
