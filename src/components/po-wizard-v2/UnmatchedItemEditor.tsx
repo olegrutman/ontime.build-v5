@@ -1,29 +1,23 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Minus, Plus, Check, Trash2, AlertTriangle } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { POWizardV2LineItem } from '@/types/poWizardV2';
 
-interface UnmatchedItemEditorProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+interface UnmatchedItemPanelProps {
   item: POWizardV2LineItem;
   onUpdate: (item: POWizardV2LineItem) => void;
   onRemove: (itemId: string) => void;
+  onBack: () => void;
 }
 
-export function UnmatchedItemEditor({
-  open,
-  onOpenChange,
+export function UnmatchedItemPanel({
   item,
   onUpdate,
   onRemove,
-}: UnmatchedItemEditorProps) {
-  const isMobile = useIsMobile();
+  onBack,
+}: UnmatchedItemPanelProps) {
   const [quantity, setQuantity] = useState(item.quantity);
   const [notes, setNotes] = useState(item.item_notes || '');
 
@@ -36,15 +30,13 @@ export function UnmatchedItemEditor({
       quantity,
       item_notes: notes || undefined,
     });
-    onOpenChange(false);
   };
 
   const handleDelete = () => {
     onRemove(item.id);
-    onOpenChange(false);
   };
 
-  const body = (
+  return (
     <div className="space-y-4 p-4">
       {/* Warning banner */}
       <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3">
@@ -124,29 +116,5 @@ export function UnmatchedItemEditor({
         </Button>
       </div>
     </div>
-  );
-
-  if (isMobile) {
-    return (
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="rounded-t-2xl p-0">
-          <div className="px-4 py-3 border-b">
-            <h2 className="text-lg font-semibold">Edit Unmatched Item</h2>
-          </div>
-          {body}
-        </SheetContent>
-      </Sheet>
-    );
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm p-0 gap-0">
-        <DialogHeader className="px-4 py-3 border-b">
-          <DialogTitle>Edit Unmatched Item</DialogTitle>
-        </DialogHeader>
-        {body}
-      </DialogContent>
-    </Dialog>
   );
 }

@@ -1,9 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { useState, useEffect, useCallback, useRef, useImperativeHandle, forwardRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, X, Package, ShoppingCart } from 'lucide-react';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { ChevronLeft, ChevronRight, Package, ShoppingCart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   POWizardV2LineItem,
@@ -19,7 +16,7 @@ import { ProductList } from './ProductList';
 import { QuantityPanel } from './QuantityPanel';
 import { EstimateSubTabs } from './EstimateSubTabs';
 
-type PickerStep = 'source' | 'estimate' | 'category' | 'secondary' | 'filter-step' | 'products' | 'quantity';
+export type PickerStep = 'source' | 'estimate' | 'category' | 'secondary' | 'filter-step' | 'products' | 'quantity';
 
 interface EstimatePackItem {
   id: string;
@@ -37,9 +34,14 @@ interface EstimatePack {
   items: EstimatePackItem[];
 }
 
-interface ProductPickerProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+export interface ProductPickerHandle {
+  goBack: () => void;
+  getStep: () => PickerStep;
+  getTitle: () => string;
+  showBackButton: () => boolean;
+}
+
+interface ProductPickerContentProps {
   supplierId: string | null;
   onAddItem: (item: POWizardV2LineItem) => void;
   onUpdateItem?: (item: POWizardV2LineItem) => void;
@@ -50,11 +52,12 @@ interface ProductPickerProps {
   onLoadPack?: (items: POWizardV2LineItem[], estimateId: string, packName: string) => void;
   onAddPSMItem?: (item: POWizardV2LineItem) => void;
   hidePricing?: boolean;
+  onClose: () => void;
+  /** Called when picker wants to fully exit back to items screen */
+  onExitPicker: () => void;
 }
 
-export function ProductPicker({
-  open,
-  onOpenChange,
+export const ProductPickerContent = forwardRef<ProductPickerHandle, ProductPickerContentProps>(({
   supplierId,
   onAddItem,
   onUpdateItem,
@@ -65,8 +68,9 @@ export function ProductPicker({
   onLoadPack,
   onAddPSMItem,
   hidePricing = false,
-}: ProductPickerProps) {
-  const isMobile = useIsMobile();
+  onClose,
+  onExitPicker,
+}, ref) => {
   const filterRef = useRef<StepByStepFilterHandle>(null);
   const [step, setStep] = useState<PickerStep>('source');
   const [categories, setCategories] = useState<CategoryCount[]>([]);
@@ -80,13 +84,8 @@ export function ProductPicker({
 
   const initialStep: PickerStep = hasApprovedEstimate ? 'source' : 'category';
 
-  const getDbCategory = useCallback(() => {
-    if (!selectedVirtualCategory) return null;
-    return VIRTUAL_CATEGORIES[selectedVirtualCategory]?.dbCategory || null;
-  }, [selectedVirtualCategory]);
-
   useEffect(() => {
-    if (open && editingItem && supplierId) {
+    if (editingItem && supplierId) {
       const fetchEditingProduct = async () => {
         setLoading(true);
         try {
@@ -107,7 +106,7 @@ export function ProductPicker({
         }
       };
       fetchEditingProduct();
-    } else if (open && !editingItem) {
+    } else if (!editingItem) {
       if (step !== 'estimate') {
         setStep(initialStep);
         setSelectedVirtualCategory(null);
@@ -120,7 +119,7 @@ export function ProductPicker({
         fetchCategories();
       }
     }
-  }, [open, supplierId, editingItem, hasApprovedEstimate]);
+  }, [supplierId, editingItem, hasApprovedEstimate]);
 
   const fetchCategories = async () => {
     if (!supplierId) return;
@@ -291,11 +290,18 @@ export function ProductPicker({
 
   const handleBack = useCallback(() => {
     switch (step) {
+      case 'source':
+        // At top of picker, exit back to items
+        onExitPicker();
+        break;
       case 'estimate':
       case 'category':
         if (hasApprovedEstimate) {
           setStep('source');
           setSelectedVirtualCategory(null);
+        } else {
+          // No source step, exit back to items
+          onExitPicker();
         }
         break;
       case 'secondary':
@@ -313,7 +319,7 @@ export function ProductPicker({
         setSelectedProduct(null);
         break;
     }
-  }, [step, hasApprovedEstimate]);
+  }, [step, hasApprovedEstimate, onExitPicker]);
 
   const handleSelectPack = useCallback((pack: EstimatePack, estimateId: string) => {
     if (!onLoadPack) return;
@@ -335,26 +341,10 @@ export function ProductPicker({
       original_unit_price: item.unit_price,
     }));
     onLoadPack(lineItems, estimateId, pack.name);
-    onOpenChange(false);
-  }, [onLoadPack, onOpenChange]);
+    onExitPicker();
+  }, [onLoadPack, onExitPicker]);
 
-  const handleSoftClose = () => {
-    onClearEdit();
-    onOpenChange(false);
-  };
-
-  const handleClose = () => {
-    onClearEdit();
-    setStep(initialStep);
-    setSelectedVirtualCategory(null);
-    setSelectedSecondary(null);
-    setAppliedFilters({});
-    setProducts([]);
-    setSelectedProduct(null);
-    onOpenChange(false);
-  };
-
-  const getTitle = () => {
+  const getTitle = useCallback(() => {
     const virtual = selectedVirtualCategory ? VIRTUAL_CATEGORIES[selectedVirtualCategory] : null;
     switch (step) {
       case 'source': return 'Add Materials';
@@ -365,118 +355,97 @@ export function ProductPicker({
       case 'products': return 'Select Product';
       case 'quantity': return 'Add to PO';
     }
-  };
+  }, [step, selectedVirtualCategory, selectedSecondary]);
+
+  const showBackButton = useCallback(() => {
+    // Always show back button — handleBack will exit picker when at top
+    return true;
+  }, []);
+
+  useImperativeHandle(ref, () => ({
+    goBack: handleBack,
+    getStep: () => step,
+    getTitle,
+    showBackButton,
+  }), [handleBack, step, getTitle, showBackButton]);
 
   const dbCategory = selectedVirtualCategory ? VIRTUAL_CATEGORIES[selectedVirtualCategory]?.dbCategory : null;
-  const showBackButton = step !== 'source' && !(step === 'category' && !hasApprovedEstimate);
-
-  const content = (
-    <div className="flex flex-col h-full min-h-0">
-      {/* Header */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/30">
-        {showBackButton && (
-          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleBack}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-        )}
-        <h2 className="text-sm font-semibold flex-1 truncate">{getTitle()}</h2>
-        <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleSoftClose}>
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 min-h-0 overflow-y-auto wz-body" key={step}>
-        {step === 'source' && (
-          <div className="p-4 space-y-2">
-            <button
-              className="wz-ans"
-              onClick={() => handleSourceSelect('estimate')}
-            >
-              <div className="p-2 rounded-lg bg-primary/10">
-                <Package className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="font-medium text-sm">From Project Estimate</p>
-                <p className="text-xs text-muted-foreground">Packs & matched materials</p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </button>
-            <button
-              className="wz-ans"
-              onClick={() => handleSourceSelect('catalog')}
-            >
-              <div className="p-2 rounded-lg bg-secondary">
-                <ShoppingCart className="h-5 w-5 text-secondary-foreground" />
-              </div>
-              <div className="flex-1 text-left">
-                <p className="font-medium text-sm">Browse Full Catalog</p>
-                <p className="text-xs text-muted-foreground">All supplier products</p>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </button>
-          </div>
-        )}
-        {step === 'estimate' && projectId && (
-          <div className="p-4">
-            <EstimateSubTabs
-              projectId={projectId}
-              supplierId={supplierId}
-              onSelectPack={handleSelectPack}
-              onSwitchToCatalog={() => handleSourceSelect('catalog')}
-              onAddPSMItem={onAddPSMItem || onAddItem}
-            />
-          </div>
-        )}
-        {step === 'category' && (
-          <CategoryGrid categories={categories} loading={loading} onSelect={handleCategorySelect} />
-        )}
-        {step === 'secondary' && (
-          <SecondaryCategoryList categories={secondaryCategories} loading={loading} onSelect={handleSecondarySelect} />
-        )}
-        {step === 'filter-step' && dbCategory && (
-          <StepByStepFilter
-            ref={filterRef}
-            supplierId={supplierId}
-            category={dbCategory}
-            secondaryCategory={selectedSecondary}
-            onComplete={handleFilterComplete}
-            onBack={handleFilterStepBack}
-            onClose={handleClose}
-          />
-        )}
-        {step === 'products' && (
-          <ProductList products={products} loading={loading} onSelect={handleProductSelect} />
-        )}
-        {step === 'quantity' && selectedProduct && (
-          <QuantityPanel
-            product={selectedProduct}
-            onAdd={onAddItem}
-            onUpdate={onUpdateItem}
-            onClose={handleClose}
-            editingItem={editingItem}
-            hidePricing={hidePricing}
-          />
-        )}
-      </div>
-    </div>
-  );
-
-  if (isMobile) {
-    return (
-      <Sheet open={open} onOpenChange={handleSoftClose}>
-        <SheetContent side="bottom" className="h-[95vh] p-0 rounded-t-2xl">
-          {content}
-        </SheetContent>
-      </Sheet>
-    );
-  }
 
   return (
-    <Dialog open={open} onOpenChange={handleSoftClose}>
-      <DialogContent className="flex flex-col h-[85vh] min-h-0 max-w-lg p-0 gap-0 overflow-hidden [&>button]:hidden">
-        {content}
-      </DialogContent>
-    </Dialog>
+    <>
+      {step === 'source' && (
+        <div className="p-4 space-y-2">
+          <button
+            className="wz-ans"
+            onClick={() => handleSourceSelect('estimate')}
+          >
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Package className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="font-medium text-sm">From Project Estimate</p>
+              <p className="text-xs text-muted-foreground">Packs & matched materials</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+          <button
+            className="wz-ans"
+            onClick={() => handleSourceSelect('catalog')}
+          >
+            <div className="p-2 rounded-lg bg-secondary">
+              <ShoppingCart className="h-5 w-5 text-secondary-foreground" />
+            </div>
+            <div className="flex-1 text-left">
+              <p className="font-medium text-sm">Browse Full Catalog</p>
+              <p className="text-xs text-muted-foreground">All supplier products</p>
+            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </button>
+        </div>
+      )}
+      {step === 'estimate' && projectId && (
+        <div className="p-4">
+          <EstimateSubTabs
+            projectId={projectId}
+            supplierId={supplierId}
+            onSelectPack={handleSelectPack}
+            onSwitchToCatalog={() => handleSourceSelect('catalog')}
+            onAddPSMItem={onAddPSMItem || onAddItem}
+          />
+        </div>
+      )}
+      {step === 'category' && (
+        <CategoryGrid categories={categories} loading={loading} onSelect={handleCategorySelect} />
+      )}
+      {step === 'secondary' && (
+        <SecondaryCategoryList categories={secondaryCategories} loading={loading} onSelect={handleSecondarySelect} />
+      )}
+      {step === 'filter-step' && dbCategory && (
+        <StepByStepFilter
+          ref={filterRef}
+          supplierId={supplierId}
+          category={dbCategory}
+          secondaryCategory={selectedSecondary}
+          onComplete={handleFilterComplete}
+          onBack={handleFilterStepBack}
+          onClose={onClose}
+        />
+      )}
+      {step === 'products' && (
+        <ProductList products={products} loading={loading} onSelect={handleProductSelect} />
+      )}
+      {step === 'quantity' && selectedProduct && (
+        <QuantityPanel
+          product={selectedProduct}
+          onAdd={onAddItem}
+          onUpdate={onUpdateItem}
+          onClose={onClose}
+          editingItem={editingItem}
+          hidePricing={hidePricing}
+        />
+      )}
+    </>
   );
-}
+});
+
+ProductPickerContent.displayName = 'ProductPickerContent';
