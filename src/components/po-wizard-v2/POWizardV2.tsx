@@ -316,6 +316,12 @@ export function POWizardV2({
     onOpenChange(false);
   };
 
+  const handleCreateAndSend = async () => {
+    if (!onCreateAndSend) return;
+    await onCreateAndSend(formData);
+    onOpenChange(false);
+  };
+
   const handleClose = () => {
     setScreen('header');
     setEditingItem(null);
