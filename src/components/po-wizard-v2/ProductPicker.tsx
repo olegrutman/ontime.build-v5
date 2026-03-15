@@ -441,7 +441,7 @@ export const ProductPickerContent = forwardRef<ProductPickerHandle, ProductPicke
           product={selectedProduct}
           onAdd={onAddItem}
           onUpdate={onUpdateItem}
-          onClose={onClose}
+          onClose={onExitPicker}
           editingItem={editingItem}
           hidePricing={hidePricing}
         />
