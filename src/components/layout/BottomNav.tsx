@@ -52,6 +52,8 @@ export function BottomNav() {
   const invoicingEnabled = useFeatureEnabled('invoicing');
   const posEnabled = useFeatureEnabled('purchase_orders');
   const returnsEnabled = useFeatureEnabled('returns_tracking');
+  const fieldCaptureEnabled = useFeatureEnabled('field_capture');
+  const orgId = userOrgRoles[0]?.organization_id;
 
   const dashboardPrimaryItems: NavItem[] = [
     { label: 'Home', icon: Home, path: '/dashboard' },
