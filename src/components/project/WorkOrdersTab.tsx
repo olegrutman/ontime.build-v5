@@ -423,10 +423,9 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
             }
           }}
           isSubmitting={isCreating}
-          defaultValues={captureToConvert ? {
+          initialData={captureToConvert ? {
             title: captureToConvert.description || '',
             description: captureToConvert.description || '',
-            reason: captureToConvert.reason_category || undefined,
           } : undefined}
         />
       )}
