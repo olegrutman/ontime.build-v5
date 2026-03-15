@@ -97,6 +97,15 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
   const canCreate = permissions?.canCreateWorkOrders ?? false;
   const isBlocked = !isFC && !sovReadiness.isReady && !sovReadiness.loading;
 
+  const handleConvertCapture = (capture: FieldCapture) => {
+    setCaptureToConvert(capture);
+    if (isFC) {
+      setShowFCDialog(true);
+    } else {
+      setShowWizard(true);
+    }
+  };
+
   const statusCounts = useMemo(() => ({
     ALL: changeOrders.length,
     draft: changeOrders.filter((co) => co.status === 'draft').length,
