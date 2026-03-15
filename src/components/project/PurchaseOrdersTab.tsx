@@ -466,14 +466,15 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         if (ds?.po_email) supplierEmail = ds.po_email;
 
         if (!supplierEmail) {
-          // Fallback: try supplier contact_info
+          // Fallback: try supplier contact_info (may contain "email / phone")
           if (data.supplier_id) {
             const { data: sup } = await supabase
               .from('suppliers')
               .select('contact_info')
               .eq('id', data.supplier_id)
               .single();
-            supplierEmail = sup?.contact_info || '';
+            const emailMatch = (sup?.contact_info || '').match(/[^\s@]+@[^\s@]+\.[^\s@]+/);
+            if (emailMatch) supplierEmail = emailMatch[0];
           }
         }
 
