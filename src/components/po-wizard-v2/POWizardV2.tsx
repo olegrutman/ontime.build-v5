@@ -19,6 +19,7 @@ import { ProductPickerContent, ProductPickerHandle } from './ProductPicker';
 import { UnmatchedItemPanel } from './UnmatchedItemEditor';
 
 type Screen = 'header' | 'items' | 'review' | 'picker' | 'unmatched-editor';
+type PickerInitialStep = 'source' | 'estimate' | undefined;
 
 /** Check if an approved estimate exists for this project + supplier combo */
 async function checkApprovedEstimate(projectId: string, supplierId: string | null): Promise<boolean> {
@@ -80,6 +81,7 @@ export function POWizardV2({
   const isMobile = useIsMobile();
   const pickerRef = useRef<ProductPickerHandle>(null);
   const [screen, setScreen] = useState<Screen>('header');
+  const [pickerInitialStep, setPickerInitialStep] = useState<PickerInitialStep>(undefined);
   const [editingItem, setEditingItem] = useState<POWizardV2LineItem | null>(null);
   const [suppliers, setSuppliers] = useState<ProjectSupplier[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState(true);
@@ -284,6 +286,7 @@ export function POWizardV2({
 
   const handleOpenPicker = useCallback(() => {
     setEditingItem(null);
+    setPickerInitialStep(undefined);
     setScreen('picker');
   }, []);
 
@@ -407,7 +410,15 @@ export function POWizardV2({
               }
             }}
             onRemoveItem={handleRemoveItem}
-            onBack={() => setScreen('header')}
+            onBack={() => {
+              if (formData.source_pack_name) {
+                handleClearPack();
+                setPickerInitialStep('estimate');
+                setScreen('picker');
+              } else {
+                setScreen('header');
+              }
+            }}
             onNext={() => setScreen('review')}
             canAdvance={canAdvanceFromItems}
             sourcePackName={formData.source_pack_name}
@@ -443,6 +454,7 @@ export function POWizardV2({
             hidePricing={hidePricing}
             onClose={handleClose}
             onExitPicker={handleExitPicker}
+            initialStep={pickerInitialStep}
           />
         )}
         {screen === 'unmatched-editor' && editingItem && (

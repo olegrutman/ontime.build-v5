@@ -55,6 +55,8 @@ interface ProductPickerContentProps {
   onClose: () => void;
   /** Called when picker wants to fully exit back to items screen */
   onExitPicker: () => void;
+  /** Optional initial step to open the picker on (e.g. 'estimate' to go straight to pack list) */
+  initialStep?: PickerStep;
 }
 
 export const ProductPickerContent = forwardRef<ProductPickerHandle, ProductPickerContentProps>(({
@@ -70,9 +72,11 @@ export const ProductPickerContent = forwardRef<ProductPickerHandle, ProductPicke
   hidePricing = false,
   onClose,
   onExitPicker,
+  initialStep,
 }, ref) => {
   const filterRef = useRef<StepByStepFilterHandle>(null);
-  const [step, setStep] = useState<PickerStep>('source');
+  const defaultStep: PickerStep = hasApprovedEstimate ? 'source' : 'category';
+  const [step, setStep] = useState<PickerStep>(initialStep ?? defaultStep);
   const [categories, setCategories] = useState<CategoryCount[]>([]);
   const [secondaryCategories, setSecondaryCategories] = useState<SecondaryCount[]>([]);
   const [selectedVirtualCategory, setSelectedVirtualCategory] = useState<string | null>(null);
@@ -81,8 +85,6 @@ export const ProductPickerContent = forwardRef<ProductPickerHandle, ProductPicke
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const initialStep: PickerStep = hasApprovedEstimate ? 'source' : 'category';
 
   useEffect(() => {
     if (editingItem && supplierId) {
@@ -108,7 +110,7 @@ export const ProductPickerContent = forwardRef<ProductPickerHandle, ProductPicke
       fetchEditingProduct();
     } else if (!editingItem) {
       if (step !== 'estimate') {
-        setStep(initialStep);
+        setStep(defaultStep);
         setSelectedVirtualCategory(null);
         setSelectedSecondary(null);
         setAppliedFilters({});
