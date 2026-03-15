@@ -47,6 +47,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const [wizardOpen, setWizardOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [selectedPOId, setSelectedPOId] = useState<string | null>(null);
   const [editingPO, setEditingPO] = useState<PurchaseOrder | null>(null);
   const [editWizardOpen, setEditWizardOpen] = useState(false);
