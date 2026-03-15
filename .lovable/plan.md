@@ -1,51 +1,33 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-## Features Built
+# Fix: Back Button on Items Screen After Pack Selection
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
+## Problem
+When a user selects a pack from an estimate, they land on the Items screen with the pack loaded. Pressing **Back** takes them to the Header (step 1) — skipping over the pack list entirely. The "Change" button exists but is easy to miss and its purpose is unclear.
 
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
+## Fix
 
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
+**Make the Back button context-aware on the Items screen:**
 
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
+- **If a pack is loaded** (`sourcePackName` is set): Back clears the pack items and navigates to the picker's estimate step (the pack list), so the user can pick a different pack.
+- **If no pack is loaded** (manual catalog items or empty): Back goes to the Header as it does today.
 
-## Files Created/Modified
-| File | Action |
-|------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+### Changes
+
+**`POWizardV2.tsx`**
+- Add a new handler `handleBackFromItems` that checks `formData.source_pack_name`:
+  - If set: call `handleClearPack()`, then `setScreen('picker')` — and set a flag so the picker opens on the `estimate` step instead of `source`.
+- Pass this handler as `onBack` to `ItemsScreen` instead of the current `() => setScreen('header')`.
+
+**`ProductPicker.tsx`**
+- Accept an optional `initialStep` prop (e.g. `'estimate'`) so when the wizard navigates back to the picker after clearing a pack, it lands directly on the pack list rather than the source selection screen.
+
+**`ItemsScreen.tsx`**
+- No changes needed — it already calls `onBack`, the parent just needs to change what that does.
+
+### Files Modified
+| File | Change |
+|---|---|
+| `src/components/po-wizard-v2/POWizardV2.tsx` | Context-aware back handler; pass `initialStep` to picker |
+| `src/components/po-wizard-v2/ProductPicker.tsx` | Accept `initialStep` prop to open on estimate step |
+
