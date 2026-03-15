@@ -28,6 +28,7 @@ export const FEATURE_LABELS: Record<FeatureKey, string> = {
   custom_reports: 'Custom Reports / Export',
   api_access: 'API Access',
   daily_logs: 'Daily Logs',
+  field_capture: 'Field Capture',
 };
 
 export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
