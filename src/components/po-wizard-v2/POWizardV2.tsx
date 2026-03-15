@@ -404,19 +404,10 @@ export function POWizardV2({
 
   const content = (
     <div className="flex flex-col h-full">
-      {/* Trail + Progress */}
-      {trailChips.length > 0 && (
-        <div className="wz-trail scrollbar-hide">
-          {trailChips.map((chip, i) => (
-            <span key={i} className={`wz-trail-chip ${chip.filled ? 'wz-trail-chip--filled' : 'wz-trail-chip--muted'}`}>
-              {chip.label}
-            </span>
-          ))}
-        </div>
+      {/* Step Indicator */}
+      {!showInternalHeader && (
+        <StepIndicator steps={stepIndicatorSteps} />
       )}
-      <div className="wz-progress">
-        <div className="wz-progress-fill" style={{ width: progressWidth }} />
-      </div>
 
       {/* Internal header for picker/editor screens */}
       {showInternalHeader && (
