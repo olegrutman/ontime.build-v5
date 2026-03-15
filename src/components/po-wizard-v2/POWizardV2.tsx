@@ -17,6 +17,7 @@ import { ItemsScreen } from './ItemsScreen';
 import { ReviewScreen } from './ReviewScreen';
 import { ProductPickerContent, ProductPickerHandle } from './ProductPicker';
 import { UnmatchedItemPanel } from './UnmatchedItemEditor';
+import { StepIndicator } from './StepIndicator';
 
 type Screen = 'header' | 'items' | 'review' | 'picker' | 'unmatched-editor';
 type PickerInitialStep = 'source' | 'estimate' | undefined;
