@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, X } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -13,10 +15,10 @@ import {
 import { HeaderScreen } from './HeaderScreen';
 import { ItemsScreen } from './ItemsScreen';
 import { ReviewScreen } from './ReviewScreen';
-import { ProductPicker } from './ProductPicker';
-import { UnmatchedItemEditor } from './UnmatchedItemEditor';
+import { ProductPickerContent, ProductPickerHandle } from './ProductPicker';
+import { UnmatchedItemPanel } from './UnmatchedItemEditor';
 
-type Screen = 'header' | 'items' | 'review';
+type Screen = 'header' | 'items' | 'review' | 'picker' | 'unmatched-editor';
 
 /** Check if an approved estimate exists for this project + supplier combo */
 async function checkApprovedEstimate(projectId: string, supplierId: string | null): Promise<boolean> {
@@ -76,10 +78,9 @@ export function POWizardV2({
   hidePricing = false,
 }: POWizardV2Props) {
   const isMobile = useIsMobile();
+  const pickerRef = useRef<ProductPickerHandle>(null);
   const [screen, setScreen] = useState<Screen>('header');
-  const [pickerOpen, setPickerOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<POWizardV2LineItem | null>(null);
-  const [unmatchedEditorOpen, setUnmatchedEditorOpen] = useState(false);
   const [suppliers, setSuppliers] = useState<ProjectSupplier[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState(true);
   const [hasApprovedEstimate, setHasApprovedEstimate] = useState(false);
@@ -209,7 +210,8 @@ export function POWizardV2({
       line_items: [...prev.line_items, item],
       pack_modified: prev.source_pack_name ? true : prev.pack_modified,
     }));
-    setPickerOpen(false);
+    setScreen('items');
+    setEditingItem(null);
     toast.success('Item added');
   }, []);
 
@@ -221,7 +223,7 @@ export function POWizardV2({
       ),
       pack_modified: prev.source_pack_name ? true : prev.pack_modified,
     }));
-    setPickerOpen(false);
+    setScreen('items');
     setEditingItem(null);
     toast.success('Item updated');
   }, []);
@@ -232,6 +234,8 @@ export function POWizardV2({
       line_items: prev.line_items.filter(item => item.id !== itemId),
       pack_modified: prev.source_pack_name ? true : prev.pack_modified,
     }));
+    setScreen('items');
+    setEditingItem(null);
     toast.success('Item removed');
   }, []);
 
@@ -263,6 +267,7 @@ export function POWizardV2({
 
   const handleClose = () => {
     setScreen('header');
+    setEditingItem(null);
     onOpenChange(false);
   };
 
@@ -270,17 +275,51 @@ export function POWizardV2({
   const canAdvanceFromItems = formData.line_items.length > 0;
 
   const handleAdvanceToItems = useCallback(() => {
-    setScreen('items');
     if (formData.line_items.length === 0) {
-      setPickerOpen(true);
+      setScreen('picker');
+    } else {
+      setScreen('items');
     }
   }, [formData.line_items.length]);
+
+  const handleOpenPicker = useCallback(() => {
+    setEditingItem(null);
+    setScreen('picker');
+  }, []);
+
+  const handleExitPicker = useCallback(() => {
+    setEditingItem(null);
+    setScreen('items');
+  }, []);
+
+  const handleBack = useCallback(() => {
+    switch (screen) {
+      case 'header':
+        handleClose();
+        break;
+      case 'items':
+        setScreen('header');
+        break;
+      case 'review':
+        setScreen('items');
+        break;
+      case 'picker':
+        pickerRef.current?.goBack();
+        break;
+      case 'unmatched-editor':
+        setEditingItem(null);
+        setScreen('items');
+        break;
+    }
+  }, [screen]);
 
   // Progress bar width
   const progressWidth = useMemo(() => {
     switch (screen) {
       case 'header': return '12%';
       case 'items': return '50%';
+      case 'picker': return '50%';
+      case 'unmatched-editor': return '50%';
       case 'review': return '95%';
     }
   }, [screen]);
@@ -300,6 +339,19 @@ export function POWizardV2({
     return chips;
   }, [formData.supplier_name, formData.source_pack_name, formData.line_items.length, screen]);
 
+  // Dynamic header title for picker/editor screens
+  const getHeaderTitle = useCallback(() => {
+    if (screen === 'picker' && pickerRef.current) {
+      return pickerRef.current.getTitle();
+    }
+    if (screen === 'unmatched-editor') {
+      return 'Edit Unmatched Item';
+    }
+    return null; // header/items/review have their own titles
+  }, [screen]);
+
+  const showInternalHeader = screen === 'picker' || screen === 'unmatched-editor';
+
   const content = (
     <div className="flex flex-col h-full">
       {/* Trail + Progress */}
@@ -316,8 +368,21 @@ export function POWizardV2({
         <div className="wz-progress-fill" style={{ width: progressWidth }} />
       </div>
 
+      {/* Internal header for picker/editor screens */}
+      {showInternalHeader && (
+        <div className="flex items-center gap-2 px-4 py-3 border-b bg-muted/30">
+          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={handleBack}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <h2 className="text-sm font-semibold flex-1 truncate">{getHeaderTitle()}</h2>
+          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => setScreen('items')}>
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       {/* Screen content with entry animation */}
-      <div className="flex-1 min-h-0 wz-body" key={screen}>
+      <div className="flex-1 min-h-0 overflow-y-auto wz-body" key={screen}>
         {screen === 'header' && (
           <HeaderScreen
             data={formData}
@@ -332,14 +397,13 @@ export function POWizardV2({
         {screen === 'items' && (
           <ItemsScreen
             items={formData.line_items}
-            onAddItem={() => setPickerOpen(true)}
+            onAddItem={handleOpenPicker}
             onEditItem={(item) => {
-              const isUnmatched = !item.catalog_item_id;
               setEditingItem(item);
-              if (isUnmatched) {
-                setUnmatchedEditorOpen(true);
+              if (!item.catalog_item_id) {
+                setScreen('unmatched-editor');
               } else {
-                setPickerOpen(true);
+                setScreen('picker');
               }
             }}
             onRemoveItem={handleRemoveItem}
@@ -355,8 +419,7 @@ export function POWizardV2({
           <ReviewScreen
             data={formData}
             onAddMore={() => {
-              setScreen('items');
-              setPickerOpen(true);
+              setScreen('picker');
             }}
             onEditItems={() => setScreen('items')}
             onBack={() => setScreen('items')}
@@ -365,37 +428,35 @@ export function POWizardV2({
             hidePricing={hidePricing}
           />
         )}
+        {screen === 'picker' && (
+          <ProductPickerContent
+            ref={pickerRef}
+            supplierId={formData.supplier_id}
+            onAddItem={handleAddItem}
+            onUpdateItem={handleUpdateItem}
+            editingItem={editingItem}
+            onClearEdit={() => setEditingItem(null)}
+            hasApprovedEstimate={hasApprovedEstimate}
+            projectId={projectId}
+            onLoadPack={handleLoadPack}
+            onAddPSMItem={handleAddItem}
+            hidePricing={hidePricing}
+            onClose={handleClose}
+            onExitPicker={handleExitPicker}
+          />
+        )}
+        {screen === 'unmatched-editor' && editingItem && (
+          <UnmatchedItemPanel
+            item={editingItem}
+            onUpdate={handleUpdateItem}
+            onRemove={handleRemoveItem}
+            onBack={() => {
+              setEditingItem(null);
+              setScreen('items');
+            }}
+          />
+        )}
       </div>
-
-      {/* Product Picker Modal */}
-      <ProductPicker
-        open={pickerOpen}
-        onOpenChange={setPickerOpen}
-        supplierId={formData.supplier_id}
-        onAddItem={handleAddItem}
-        onUpdateItem={handleUpdateItem}
-        editingItem={editingItem}
-        onClearEdit={() => setEditingItem(null)}
-        hasApprovedEstimate={hasApprovedEstimate}
-        projectId={projectId}
-        onLoadPack={handleLoadPack}
-        onAddPSMItem={handleAddItem}
-        hidePricing={hidePricing}
-      />
-
-      {/* Unmatched Item Editor */}
-      {editingItem && !editingItem.catalog_item_id && (
-        <UnmatchedItemEditor
-          open={unmatchedEditorOpen}
-          onOpenChange={(open) => {
-            setUnmatchedEditorOpen(open);
-            if (!open) setEditingItem(null);
-          }}
-          item={editingItem}
-          onUpdate={handleUpdateItem}
-          onRemove={handleRemoveItem}
-        />
-      )}
     </div>
   );
 
