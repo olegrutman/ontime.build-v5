@@ -308,6 +308,15 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
         ))}
       </div>
 
+      {/* Field Captures */}
+      {userOrgId && (
+        <FieldCaptureList
+          projectId={projectId}
+          organizationId={userOrgId}
+          onConvert={handleConvertCapture}
+        />
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
