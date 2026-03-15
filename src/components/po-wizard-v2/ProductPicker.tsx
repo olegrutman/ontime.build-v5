@@ -55,6 +55,8 @@ interface ProductPickerContentProps {
   onClose: () => void;
   /** Called when picker wants to fully exit back to items screen */
   onExitPicker: () => void;
+  /** Optional initial step to open the picker on (e.g. 'estimate' to go straight to pack list) */
+  initialStep?: PickerStep;
 }
 
 export const ProductPickerContent = forwardRef<ProductPickerHandle, ProductPickerContentProps>(({
