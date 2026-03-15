@@ -1160,6 +1160,88 @@ export type Database = {
           },
         ]
       }
+      field_captures: {
+        Row: {
+          converted_work_order_id: string | null
+          created_at: string
+          description: string | null
+          device_info: Json | null
+          gps_lat: number | null
+          gps_lng: number | null
+          id: string
+          location: Json | null
+          organization_id: string
+          photo_url: string | null
+          project_id: string
+          reason_category: string | null
+          status: string
+          timestamp: string
+          user_id: string
+          video_url: string | null
+          voice_note_url: string | null
+        }
+        Insert: {
+          converted_work_order_id?: string | null
+          created_at?: string
+          description?: string | null
+          device_info?: Json | null
+          gps_lat?: number | null
+          gps_lng?: number | null
+          id?: string
+          location?: Json | null
+          organization_id: string
+          photo_url?: string | null
+          project_id: string
+          reason_category?: string | null
+          status?: string
+          timestamp?: string
+          user_id: string
+          video_url?: string | null
+          voice_note_url?: string | null
+        }
+        Update: {
+          converted_work_order_id?: string | null
+          created_at?: string
+          description?: string | null
+          device_info?: Json | null
+          gps_lat?: number | null
+          gps_lng?: number | null
+          id?: string
+          location?: Json | null
+          organization_id?: string
+          photo_url?: string | null
+          project_id?: string
+          reason_category?: string | null
+          status?: string
+          timestamp?: string
+          user_id?: string
+          video_url?: string | null
+          voice_note_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_captures_converted_work_order_id_fkey"
+            columns: ["converted_work_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_order_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_captures_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "field_captures_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_line_items: {
         Row: {
           billed_percent: number | null
