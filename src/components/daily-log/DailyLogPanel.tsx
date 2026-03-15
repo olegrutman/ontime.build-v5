@@ -48,6 +48,8 @@ function useDebounced<T>(callback: (value: T) => void, delay: number) {
 
 export function DailyLogPanel({ projectId }: DailyLogPanelProps) {
   const { toast } = useToast();
+  const { userOrgRoles } = useAuth();
+  const orgId = userOrgRoles[0]?.organization_id;
   const [dateOffset, setDateOffset] = useState(0);
   const logDate = new Date();
   logDate.setDate(logDate.getDate() + dateOffset);
