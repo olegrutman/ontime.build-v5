@@ -1,51 +1,30 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-## Features Built
+# Fix: "Create & Send" Doesn't Set SUBMITTED Status
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
+## Root Cause
 
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
+The `send-po` edge function returns **404** ("Purchase order not found or access denied") because it queries the PO using a user-scoped client with RLS. After verifying auth, it should use the **service role client** to fetch and update the PO, avoiding RLS issues entirely.
 
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
+Additionally, `auth.getClaims(token)` is not a standard supabase-js method and is fragile. It should be replaced with `auth.getUser(token)`.
 
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
+## Bugs Found
 
-## Files Created/Modified
-| File | Action |
-|------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+| # | Location | Bug |
+|---|----------|-----|
+| 1 | `send-po/index.ts` | `getClaims(token)` is non-standard; should use `getUser(token)` |
+| 2 | `send-po/index.ts` | PO fetched via userClient (RLS) after auth is verified — causes 404. Should use service client |
+| 3 | `PurchaseOrdersTab.tsx` | If `send-po` fails, PO stays as ACTIVE with no status update — user thinks PO was sent |
+
+## Fix
+
+| File | Change |
+|---|---|
+| `supabase/functions/send-po/index.ts` | Replace `getClaims(token)` with `getUser(token)`. Use service client for PO fetch and line items query (auth already verified). Keep service client for status update (already there). |
+| `src/components/project/PurchaseOrdersTab.tsx` | After `send-po` fails, ensure PO stays ACTIVE and error message is clear (already handled, just verify toast shows the actual edge function error) |
+
+The edge function changes:
+- Line 56: `auth.getClaims(token)` → `auth.getUser(token)`, extract `user.id` instead of `claims.sub`
+- Lines 78-95: Replace `userClient.from("purchase_orders")` with `serviceClient.from("purchase_orders")` (service client is already created later — move it up)
+- Lines 98-101: Replace `userClient.from("po_line_items")` with `serviceClient.from("po_line_items")`
+
