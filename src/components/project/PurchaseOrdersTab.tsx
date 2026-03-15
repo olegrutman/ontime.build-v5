@@ -481,22 +481,30 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         if (!supplierEmail) {
           toast.warning(`PO ${poNumber} created as draft — no supplier email found to send.`);
         } else {
-          const { error: sendErr } = await supabase.functions.invoke('send-po', {
-            body: { po_id: newPO.id, supplier_email: supplierEmail },
-          });
-          if (sendErr) throw sendErr;
-          toast.success(`PO ${poNumber} created and sent to supplier`);
+          try {
+            const { error: sendErr } = await supabase.functions.invoke('send-po', {
+              body: { po_id: newPO.id, supplier_email: supplierEmail },
+            });
+            if (sendErr) {
+              console.warn('Email send failed (PO still created):', sendErr);
+              toast.warning(`PO ${poNumber} created but email could not be sent.`);
+            } else {
+              toast.success(`PO ${poNumber} created and sent to supplier`);
+            }
+          } catch (emailErr) {
+            console.warn('Email send threw (PO still created):', emailErr);
+            toast.warning(`PO ${poNumber} created but email could not be sent.`);
+          }
         }
       }
-
-      setWizardOpen(false);
-      fetchPurchaseOrders();
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       console.error('Error creating & sending PO:', error);
       toast.error('Failed to create & send PO: ' + message);
     } finally {
       setIsSending(false);
+      setWizardOpen(false);
+      fetchPurchaseOrders();
     }
   };
 
