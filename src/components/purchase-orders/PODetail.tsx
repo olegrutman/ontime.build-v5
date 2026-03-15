@@ -197,8 +197,8 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
 
     setActionLoading(true);
     try {
-      // Resolve supplier email
-      let supplierEmail = po.supplier?.contact_info || '';
+      // Resolve supplier email — prefer designated supplier, fallback to contact_info
+      let supplierEmail = '';
       if (po.project?.id) {
         const { data: ds } = await supabase
           .from('project_designated_suppliers')
@@ -207,6 +207,11 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
           .neq('status', 'removed')
           .maybeSingle();
         if (ds?.po_email) supplierEmail = ds.po_email;
+      }
+      if (!supplierEmail && po.supplier?.contact_info) {
+        // contact_info may contain "email / phone" — extract just the email
+        const emailMatch = po.supplier.contact_info.match(/[^\s@]+@[^\s@]+\.[^\s@]+/);
+        if (emailMatch) supplierEmail = emailMatch[0];
       }
 
       if (!supplierEmail) {

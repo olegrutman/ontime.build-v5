@@ -466,14 +466,15 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         if (ds?.po_email) supplierEmail = ds.po_email;
 
         if (!supplierEmail) {
-          // Fallback: try supplier contact_info
+          // Fallback: try supplier contact_info (may contain "email / phone")
           if (data.supplier_id) {
             const { data: sup } = await supabase
               .from('suppliers')
               .select('contact_info')
               .eq('id', data.supplier_id)
               .single();
-            supplierEmail = sup?.contact_info || '';
+            const emailMatch = (sup?.contact_info || '').match(/[^\s@]+@[^\s@]+\.[^\s@]+/);
+            if (emailMatch) supplierEmail = emailMatch[0];
           }
         }
 
@@ -502,8 +503,10 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const handleApprovePO = async (po: PurchaseOrder) => {
     if (!user) return;
     try {
-      // Look up supplier email
-      let supplierEmail = po.supplier?.contact_info || '';
+      // Look up supplier email — prefer designated supplier, fallback to contact_info
+      let supplierEmail = '';
+      const contactEmailMatch = (po.supplier?.contact_info || '').match(/[^\s@]+@[^\s@]+\.[^\s@]+/);
+      if (contactEmailMatch) supplierEmail = contactEmailMatch[0];
       if (po.project_id) {
         const { data: ds } = await supabase
           .from('project_designated_suppliers')
