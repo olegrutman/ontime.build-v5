@@ -55,7 +55,9 @@ interface POWizardV2Props {
   projectName: string;
   projectAddress: string;
   onComplete: (data: POWizardV2Data) => Promise<void>;
+  onCreateAndSend?: (data: POWizardV2Data) => Promise<void>;
   isSubmitting?: boolean;
+  isSending?: boolean;
   workOrderId?: string;
   workOrderTitle?: string;
   onPOCreated?: (poId: string) => Promise<void>;
@@ -71,7 +73,9 @@ export function POWizardV2({
   projectName,
   projectAddress,
   onComplete,
+  onCreateAndSend,
   isSubmitting = false,
+  isSending = false,
   workOrderId,
   workOrderTitle,
   onPOCreated,
@@ -312,6 +316,12 @@ export function POWizardV2({
     onOpenChange(false);
   };
 
+  const handleCreateAndSend = async () => {
+    if (!onCreateAndSend) return;
+    await onCreateAndSend(formData);
+    onOpenChange(false);
+  };
+
   const handleClose = () => {
     setScreen('header');
     setEditingItem(null);
@@ -473,7 +483,9 @@ export function POWizardV2({
             onEditItems={() => setScreen('items')}
             onBack={() => setScreen('items')}
             onSubmit={handleSubmit}
+            onCreateAndSend={!editMode && onCreateAndSend ? handleCreateAndSend : undefined}
             isSubmitting={isSubmitting}
+            isSending={isSending}
             hidePricing={hidePricing}
             onTaxChange={(tax) => setFormData(prev => ({ ...prev, sales_tax_percent: tax }))}
             onDeliveryChange={handleChange}

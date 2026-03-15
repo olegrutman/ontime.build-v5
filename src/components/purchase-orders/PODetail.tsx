@@ -197,18 +197,39 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
 
     setActionLoading(true);
     try {
-      const { error } = await supabase
-        .from('purchase_orders')
-        .update({
-          status: 'SUBMITTED',
-          submitted_at: new Date().toISOString(),
-          submitted_by: user.id,
-        })
-        .eq('id', poId);
+      // Resolve supplier email
+      let supplierEmail = po.supplier?.contact_info || '';
+      if (po.project?.id) {
+        const { data: ds } = await supabase
+          .from('project_designated_suppliers')
+          .select('po_email')
+          .eq('project_id', po.project.id)
+          .neq('status', 'removed')
+          .maybeSingle();
+        if (ds?.po_email) supplierEmail = ds.po_email;
+      }
 
-      if (error) throw error;
+      if (!supplierEmail) {
+        toast.error('No supplier email found. Please set up supplier contact.');
+        setActionLoading(false);
+        return;
+      }
 
-      toast.success('PO submitted to supplier for pricing');
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) {
+        toast.error('Please log in to submit POs');
+        setActionLoading(false);
+        return;
+      }
+
+      // Send via edge function (handles status update to SUBMITTED)
+      const { error: sendErr } = await supabase.functions.invoke('send-po', {
+        body: { po_id: poId, supplier_email: supplierEmail },
+      });
+      if (sendErr) throw sendErr;
+
+      toast.success('PO submitted and sent to supplier');
       fetchPO();
       onUpdate();
     } catch (error: unknown) {
