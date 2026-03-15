@@ -79,7 +79,7 @@ const handler = async (req: Request): Promise<Response> => {
       .from("purchase_orders")
       .select(`
         *,
-        organization:organizations(name, org_code),
+        organization:organizations!purchase_orders_organization_id_fkey(name, org_code),
         supplier:suppliers(name, supplier_code),
         project:projects(name),
         work_item:work_items(title)
