@@ -410,7 +410,15 @@ export function POWizardV2({
               }
             }}
             onRemoveItem={handleRemoveItem}
-            onBack={() => setScreen('header')}
+            onBack={() => {
+              if (formData.source_pack_name) {
+                handleClearPack();
+                setPickerInitialStep('estimate');
+                setScreen('picker');
+              } else {
+                setScreen('header');
+              }
+            }}
             onNext={() => setScreen('review')}
             canAdvance={canAdvanceFromItems}
             sourcePackName={formData.source_pack_name}
