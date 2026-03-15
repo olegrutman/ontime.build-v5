@@ -35,6 +35,7 @@ export function BottomNav() {
   const [searchParams] = useSearchParams();
   const { permissions, userOrgRoles } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [captureOpen, setCaptureOpen] = useState(false);
 
   const canManageOrg = permissions?.canManageOrg ?? false;
   const isSupplier = userOrgRoles[0]?.organization?.type === 'SUPPLIER';
