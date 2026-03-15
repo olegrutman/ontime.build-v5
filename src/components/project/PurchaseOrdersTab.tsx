@@ -237,20 +237,8 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         pricingOwnerOrgId = currentOrgId;
       }
 
-      let estimateTaxPercent = 0;
-      if (data.source_estimate_id) {
-        const { data: estData, error: estError } = await supabase
-          .from('supplier_estimates')
-          .select('sales_tax_percent')
-          .eq('id', data.source_estimate_id)
-          .single();
-        if (estError) {
-          console.warn('Failed to fetch estimate tax percent:', estError.message);
-        }
-        if (estData?.sales_tax_percent) {
-          estimateTaxPercent = estData.sales_tax_percent;
-        }
-      }
+      // Use tax from wizard data (already resolved from estimate or user-edited)
+      const estimateTaxPercent = data.sales_tax_percent ?? 0;
       
       const { data: poNumber } = await supabase.rpc('generate_po_number', {
         org_id: currentOrgId,
