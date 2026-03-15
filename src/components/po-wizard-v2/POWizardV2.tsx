@@ -81,6 +81,7 @@ export function POWizardV2({
   const isMobile = useIsMobile();
   const pickerRef = useRef<ProductPickerHandle>(null);
   const [screen, setScreen] = useState<Screen>('header');
+  const [pickerInitialStep, setPickerInitialStep] = useState<PickerInitialStep>(undefined);
   const [editingItem, setEditingItem] = useState<POWizardV2LineItem | null>(null);
   const [suppliers, setSuppliers] = useState<ProjectSupplier[]>([]);
   const [loadingSuppliers, setLoadingSuppliers] = useState(true);
