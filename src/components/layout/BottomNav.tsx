@@ -188,6 +188,16 @@ export function BottomNav() {
           </div>
         </DrawerContent>
       </Drawer>
+
+      {/* Field Capture Sheet */}
+      {isProjectPage && projectId && orgId && (
+        <FieldCaptureSheet
+          open={captureOpen}
+          onOpenChange={setCaptureOpen}
+          projectId={projectId}
+          organizationId={orgId}
+        />
+      )}
     </>
   );
 }

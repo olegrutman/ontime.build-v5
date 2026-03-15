@@ -18,6 +18,8 @@ import { DeliveriesCard } from './DeliveriesCard';
 import { PhotosCard } from './PhotosCard';
 import { QuickNotesCard } from './QuickNotesCard';
 import { CriticalScheduleCard } from '@/components/project/CriticalScheduleCard';
+import { FieldCaptureList } from '@/components/field-capture/FieldCaptureList';
+import { useAuth } from '@/hooks/useAuth';
 
 import type { WeatherData, SafetyIncident } from '@/types/dailyLog';
 
