@@ -341,13 +341,46 @@
 
 /* ── PO Wizard V2 Design System ── */
 @layer components {
-  /* Progress bar */
-  .wz-progress {
-    @apply h-0.5 bg-border;
+  /* Step indicator */
+  .wz-steps {
+    @apply flex items-center justify-center gap-0 px-6 py-3;
   }
-  .wz-progress-fill {
-    @apply h-full bg-primary;
-    transition: width 0.35s ease;
+  .wz-step {
+    @apply flex flex-col items-center gap-1 relative;
+    flex: 1;
+  }
+  .wz-step-dot {
+    @apply h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all duration-200;
+  }
+  .wz-step-dot--upcoming {
+    @apply border-border bg-background text-muted-foreground;
+  }
+  .wz-step-dot--active {
+    @apply border-primary bg-primary text-primary-foreground;
+  }
+  .wz-step-dot--done {
+    @apply border-primary bg-primary/10 text-primary;
+  }
+  .wz-step-label {
+    @apply text-[10px] font-semibold tracking-wide uppercase;
+  }
+  .wz-step-label--upcoming {
+    @apply text-muted-foreground;
+  }
+  .wz-step-label--active {
+    @apply text-primary;
+  }
+  .wz-step-label--done {
+    @apply text-primary;
+  }
+  .wz-step-line {
+    @apply absolute top-4 h-0.5 bg-border;
+    left: 50%;
+    width: 100%;
+    z-index: 0;
+  }
+  .wz-step-line--done {
+    @apply bg-primary;
   }
 
   /* Screen entry animation */
