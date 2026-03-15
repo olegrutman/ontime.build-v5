@@ -457,6 +457,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         supplier_id: po.supplier_id,
         supplier_name: po.supplier?.name,
         notes: po.notes || '',
+        sales_tax_percent: po.sales_tax_percent ?? 0,
         line_items: wizardItems,
       });
       setEditWizardOpen(true);
