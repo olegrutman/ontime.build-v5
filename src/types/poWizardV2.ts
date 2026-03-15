@@ -236,6 +236,7 @@ export const SECONDARY_DISPLAY_NAMES: Record<string, string> = {
 
 export const INITIAL_PO_WIZARD_V2_DATA: POWizardV2Data = {
   project_id: '',
+  sales_tax_percent: 0,
   project_name: '',
   delivery_address: '',
   supplier_id: null,
