@@ -18,6 +18,8 @@ import { ChangeOrderStatus, CHANGE_ORDER_STATUS_LABELS } from '@/types/changeOrd
 import { StatusColumn, CHANGE_ORDER_STATUS_OPTIONS } from '@/components/ui/status-column';
 import { HoverActions, HoverAction } from '@/components/ui/hover-actions';
 import { enrichWorkOrderTotals } from '@/lib/computeWorkOrderTotal';
+import { FieldCaptureList } from '@/components/field-capture';
+import type { FieldCapture } from '@/hooks/useFieldCaptures';
 
 const STATUS_PRIORITY: Record<ChangeOrderStatus, number> = {
   rejected: 0,
