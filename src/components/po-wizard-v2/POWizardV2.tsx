@@ -55,7 +55,9 @@ interface POWizardV2Props {
   projectName: string;
   projectAddress: string;
   onComplete: (data: POWizardV2Data) => Promise<void>;
+  onCreateAndSend?: (data: POWizardV2Data) => Promise<void>;
   isSubmitting?: boolean;
+  isSending?: boolean;
   workOrderId?: string;
   workOrderTitle?: string;
   onPOCreated?: (poId: string) => Promise<void>;
