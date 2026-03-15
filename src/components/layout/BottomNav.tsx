@@ -14,11 +14,13 @@ import {
   Users,
   Undo2,
   CalendarDays,
+  Camera,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { useFeatureEnabled } from '@/components/auth/FeatureGate';
+import { FieldCaptureSheet } from '@/components/field-capture/FieldCaptureSheet';
 
 interface NavItem {
   label: string;
