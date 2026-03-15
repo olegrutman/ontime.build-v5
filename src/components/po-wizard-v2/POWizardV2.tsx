@@ -454,6 +454,7 @@ export function POWizardV2({
             hidePricing={hidePricing}
             onClose={handleClose}
             onExitPicker={handleExitPicker}
+            initialStep={pickerInitialStep}
           />
         )}
         {screen === 'unmatched-editor' && editingItem && (
