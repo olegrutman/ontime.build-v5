@@ -45,6 +45,7 @@ export const FEATURE_DESCRIPTIONS: Record<FeatureKey, string> = {
   custom_reports: 'Custom reporting and data export',
   api_access: 'Programmatic API access',
   daily_logs: 'Daily field log entries with weather and manpower',
+  field_capture: 'Instant field issue capture with photo and voice',
 };
 
 export const FEATURE_KEYS: FeatureKey[] = Object.keys(FEATURE_LABELS) as FeatureKey[];
