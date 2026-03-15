@@ -286,6 +286,7 @@ export function POWizardV2({
 
   const handleOpenPicker = useCallback(() => {
     setEditingItem(null);
+    setPickerInitialStep(undefined);
     setScreen('picker');
   }, []);
 
