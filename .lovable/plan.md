@@ -82,3 +82,29 @@ Mobile-first feature enabling Field Crew to instantly capture jobsite issues (ph
 | `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
 | `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
 | `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+
+---
+
+# Multi-Item Work Order — IMPLEMENTED
+
+## Overview
+Transforms Work Orders from single-task entities into **package containers** holding multiple task line items, mirroring how POs hold multiple material lines.
+
+## Database
+- `work_order_tasks` table with RLS (project participants CRUD) linked to `change_order_projects` header via `work_order_id`
+- Status validation trigger (`pending`, `in_progress`, `complete`, `skipped`)
+- Realtime enabled via `supabase_realtime` publication
+
+## Frontend Components
+| File | Purpose |
+|------|---------|
+| `src/types/workOrderTask.ts` | TypeScript types for work order tasks |
+| `src/hooks/useWorkOrderTasks.ts` | React Query hook with realtime, CRUD mutations |
+| `src/components/work-order-tasks/WorkOrderTaskList.tsx` | Task list with completion counter |
+| `src/components/work-order-tasks/WorkOrderTaskCard.tsx` | Individual task card with status, location, menu |
+| `src/components/work-order-tasks/AddTaskSheet.tsx` | Mobile-first bottom sheet for adding/editing tasks |
+| `src/components/work-order-tasks/TaskQuickAdd.tsx` | Inline quick-add input for FC users |
+
+## Integration Points
+- `ChangeOrderDetailPage.tsx` — Tasks section after header card, FC quick-add below
+- `useChangeOrderRealtime.ts` — Subscribes to `work_order_tasks` changes
