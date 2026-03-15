@@ -11,7 +11,8 @@ export type FeatureKey =
   | 'supplier_estimates'
   | 'custom_reports'
   | 'api_access'
-  | 'daily_logs';
+  | 'daily_logs'
+  | 'field_capture';
 
 export const FEATURE_LABELS: Record<FeatureKey, string> = {
   max_projects: 'Projects',
