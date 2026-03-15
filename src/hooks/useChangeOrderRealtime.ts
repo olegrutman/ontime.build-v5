@@ -25,6 +25,7 @@ export function useChangeOrderRealtime(changeOrderId: string | undefined) {
       invalidate('change-order-materials');
       invalidate('change-order-equipment');
       invalidate('change-order-checklist');
+      queryClient.invalidateQueries({ queryKey: ['work-order-tasks', changeOrderId] });
     };
 
     const channel = supabase
