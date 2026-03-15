@@ -4843,6 +4843,99 @@ export type Database = {
           },
         ]
       }
+      work_order_tasks: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          equipment_cost_responsibility: string | null
+          field_capture_id: string | null
+          id: string
+          location_data: Json | null
+          material_cost_responsibility: string | null
+          photo_url: string | null
+          pricing_mode: string | null
+          reason: string | null
+          requires_equipment: boolean | null
+          requires_materials: boolean | null
+          scope_size: string | null
+          sort_order: number
+          status: string
+          structural_element: string | null
+          title: string
+          updated_at: string | null
+          urgency: string | null
+          voice_note_url: string | null
+          work_order_id: string
+          work_type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          equipment_cost_responsibility?: string | null
+          field_capture_id?: string | null
+          id?: string
+          location_data?: Json | null
+          material_cost_responsibility?: string | null
+          photo_url?: string | null
+          pricing_mode?: string | null
+          reason?: string | null
+          requires_equipment?: boolean | null
+          requires_materials?: boolean | null
+          scope_size?: string | null
+          sort_order?: number
+          status?: string
+          structural_element?: string | null
+          title?: string
+          updated_at?: string | null
+          urgency?: string | null
+          voice_note_url?: string | null
+          work_order_id: string
+          work_type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          equipment_cost_responsibility?: string | null
+          field_capture_id?: string | null
+          id?: string
+          location_data?: Json | null
+          material_cost_responsibility?: string | null
+          photo_url?: string | null
+          pricing_mode?: string | null
+          reason?: string | null
+          requires_equipment?: boolean | null
+          requires_materials?: boolean | null
+          scope_size?: string | null
+          sort_order?: number
+          status?: string
+          structural_element?: string | null
+          title?: string
+          updated_at?: string | null
+          urgency?: string | null
+          voice_note_url?: string | null
+          work_order_id?: string
+          work_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_tasks_field_capture_id_fkey"
+            columns: ["field_capture_id"]
+            isOneToOne: false
+            referencedRelation: "field_captures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_tasks_work_order_id_fkey"
+            columns: ["work_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_order_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       cost_rollups_gc: {
