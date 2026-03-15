@@ -454,7 +454,7 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
             }
           }}
           isSubmitting={isCreatingFC}
-          defaultDescription={captureToConvert?.description || undefined}
+          
         />
       )}
     </div>
