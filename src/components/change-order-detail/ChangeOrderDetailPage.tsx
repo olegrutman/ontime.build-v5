@@ -211,6 +211,11 @@ export function ChangeOrderDetailPage() {
 
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [description, setDescription] = useState('');
+  const [showAddTaskSheet, setShowAddTaskSheet] = useState(false);
+  const [editingTask, setEditingTask] = useState<WorkOrderTask | null>(null);
+
+  // Work order tasks
+  const { tasks, isLoading: isLoadingTasks, addTask, updateTask, updateTaskStatus, deleteTask } = useWorkOrderTasks(id);
 
   const isGC = currentRole === 'GC_PM';
   const isTC = currentRole === 'TC_PM';
