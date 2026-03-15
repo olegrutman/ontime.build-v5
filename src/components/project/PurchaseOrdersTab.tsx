@@ -237,20 +237,8 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         pricingOwnerOrgId = currentOrgId;
       }
 
-      let estimateTaxPercent = 0;
-      if (data.source_estimate_id) {
-        const { data: estData, error: estError } = await supabase
-          .from('supplier_estimates')
-          .select('sales_tax_percent')
-          .eq('id', data.source_estimate_id)
-          .single();
-        if (estError) {
-          console.warn('Failed to fetch estimate tax percent:', estError.message);
-        }
-        if (estData?.sales_tax_percent) {
-          estimateTaxPercent = estData.sales_tax_percent;
-        }
-      }
+      // Use tax from wizard data (already resolved from estimate or user-edited)
+      const estimateTaxPercent = data.sales_tax_percent ?? 0;
       
       const { data: poNumber } = await supabase.rpc('generate_po_number', {
         org_id: currentOrgId,
@@ -521,20 +509,8 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         const { error: insertErr } = await supabase.from('po_line_items').insert(lineItems);
         if (insertErr) throw insertErr;
 
-        let editTaxPercent = editingPO.sales_tax_percent ?? 0;
-        if (data.source_estimate_id) {
-          const { data: estData, error: estError } = await supabase
-            .from('supplier_estimates')
-            .select('sales_tax_percent')
-            .eq('id', data.source_estimate_id)
-            .single();
-          if (estError) {
-            console.warn('Failed to fetch estimate tax percent on edit:', estError.message);
-          }
-          if (estData?.sales_tax_percent) {
-            editTaxPercent = estData.sales_tax_percent;
-          }
-        }
+        // Use tax from wizard data (already resolved or user-edited)
+        let editTaxPercent = data.sales_tax_percent ?? editingPO.sales_tax_percent ?? 0;
 
         const poSubtotalTotal = estSubtotal + addSubtotal;
         const taxAmount = poSubtotalTotal * (editTaxPercent / 100);

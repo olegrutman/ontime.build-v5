@@ -193,13 +193,43 @@ export function POWizardV2({
     }
   }, [open, projectId, projectName, projectAddress, workOrderId, workOrderTitle, editMode, initialData]);
 
-  // Check for approved estimate when supplier changes
+  // Check for approved estimate and resolve tax when supplier changes
   useEffect(() => {
     if (!open || !formData.supplier_id) {
       setHasApprovedEstimate(false);
       return;
     }
     checkApprovedEstimate(projectId, formData.supplier_id).then(setHasApprovedEstimate);
+
+    // Resolve tax rate from most recent approved estimate for this supplier
+    const resolveTax = async () => {
+      try {
+        // Get supplier org id
+        const { data: supplierData } = await supabase
+          .from('suppliers')
+          .select('organization_id')
+          .eq('id', formData.supplier_id!)
+          .single();
+        if (!supplierData?.organization_id) return;
+
+        const { data: estData } = await supabase
+          .from('supplier_estimates')
+          .select('sales_tax_percent')
+          .eq('project_id', projectId)
+          .eq('supplier_org_id', supplierData.organization_id)
+          .eq('status', 'APPROVED')
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (estData?.sales_tax_percent != null) {
+          setFormData(prev => ({ ...prev, sales_tax_percent: estData.sales_tax_percent ?? 0 }));
+        }
+      } catch (err) {
+        console.warn('Failed to resolve tax rate:', err);
+      }
+    };
+    resolveTax();
   }, [open, projectId, formData.supplier_id]);
 
   const handleChange = useCallback((updates: Partial<POWizardV2Data>) => {
@@ -437,6 +467,7 @@ export function POWizardV2({
             onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
             hidePricing={hidePricing}
+            onTaxChange={(tax) => setFormData(prev => ({ ...prev, sales_tax_percent: tax }))}
           />
         )}
         {screen === 'picker' && (

@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { 
   ChevronLeft, 
@@ -29,6 +30,7 @@ interface ReviewScreenProps {
   onSubmit: () => void;
   isSubmitting: boolean;
   hidePricing?: boolean;
+  onTaxChange?: (tax: number) => void;
 }
 
 export function ReviewScreen({
@@ -39,7 +41,11 @@ export function ReviewScreen({
   onSubmit,
   isSubmitting,
   hidePricing = false,
+  onTaxChange,
 }: ReviewScreenProps) {
+  const [editingTax, setEditingTax] = useState(false);
+  const [taxInput, setTaxInput] = useState('');
+
   const totals = useMemo(() => {
     let estimateSubtotal = 0;
     let additionalSubtotal = 0;
@@ -58,8 +64,24 @@ export function ReviewScreen({
     }
 
     const subtotal = estimateSubtotal + additionalSubtotal;
-    return { estimateSubtotal, additionalSubtotal, subtotal, unpricedCount };
-  }, [data.line_items]);
+    const taxPercent = data.sales_tax_percent ?? 0;
+    const taxAmount = subtotal * (taxPercent / 100);
+    const grandTotal = subtotal + taxAmount;
+    return { estimateSubtotal, additionalSubtotal, subtotal, unpricedCount, taxPercent, taxAmount, grandTotal };
+  }, [data.line_items, data.sales_tax_percent]);
+
+  const handleTaxEdit = () => {
+    setTaxInput(String(totals.taxPercent));
+    setEditingTax(true);
+  };
+
+  const handleTaxSave = () => {
+    const parsed = parseFloat(taxInput);
+    if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
+      onTaxChange?.(parsed);
+    }
+    setEditingTax(false);
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -169,16 +191,59 @@ export function ReviewScreen({
                 <span>{formatCurrency(totals.additionalSubtotal)}</span>
               </div>
             )}
-            <div className="flex justify-between items-baseline">
+            <div className="flex justify-between text-sm text-secondary-foreground/70">
+              <span>Subtotal</span>
+              <span>{formatCurrency(totals.subtotal)}</span>
+            </div>
+
+            {/* Tax line — editable */}
+            <div className="flex justify-between items-center text-sm text-secondary-foreground/70">
+              {editingTax ? (
+                <div className="flex items-center gap-1">
+                  <span>Tax</span>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={taxInput}
+                    onChange={(e) => setTaxInput(e.target.value)}
+                    onBlur={handleTaxSave}
+                    onKeyDown={(e) => e.key === 'Enter' && handleTaxSave()}
+                    className="h-6 w-16 text-xs px-1"
+                    autoFocus
+                  />
+                  <span>%</span>
+                </div>
+              ) : (
+                <button
+                  className="flex items-center gap-1 hover:text-primary transition-colors"
+                  onClick={handleTaxEdit}
+                >
+                  <span>Tax ({totals.taxPercent}%)</span>
+                  <Pencil className="h-2.5 w-2.5" />
+                </button>
+              )}
+              <span>{formatCurrency(totals.taxAmount)}</span>
+            </div>
+
+            {/* Grand Total */}
+            <div className="flex justify-between items-baseline pt-1 border-t border-border/50">
               <span className="text-sm font-medium text-secondary-foreground">
                 {totals.unpricedCount > 0 ? 'Total (Pending)' : 'Total'}
               </span>
-              <span className="wz-totals-value">{formatCurrency(totals.subtotal)}</span>
+              <span className="wz-totals-value">{formatCurrency(totals.grandTotal)}</span>
             </div>
             {totals.unpricedCount > 0 && (
               <div className="flex items-center gap-1.5 text-primary text-xs pt-1">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 <span>{totals.unpricedCount} item{totals.unpricedCount !== 1 ? 's' : ''} need supplier pricing</span>
+              </div>
+            )}
+            {totals.taxPercent === 0 && (
+              <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-xs pt-1">
+                <AlertTriangle className="h-3.5 w-3.5" />
+                <span>No tax rate set — tap to edit</span>
               </div>
             )}
           </div>
