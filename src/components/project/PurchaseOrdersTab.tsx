@@ -503,8 +503,10 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const handleApprovePO = async (po: PurchaseOrder) => {
     if (!user) return;
     try {
-      // Look up supplier email
-      let supplierEmail = po.supplier?.contact_info || '';
+      // Look up supplier email — prefer designated supplier, fallback to contact_info
+      let supplierEmail = '';
+      const contactEmailMatch = (po.supplier?.contact_info || '').match(/[^\s@]+@[^\s@]+\.[^\s@]+/);
+      if (contactEmailMatch) supplierEmail = contactEmailMatch[0];
       if (po.project_id) {
         const { data: ds } = await supabase
           .from('project_designated_suppliers')
