@@ -1,7 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import { 
   ChevronLeft, 
   Plus,
@@ -9,6 +14,9 @@ import {
   Send,
   Pencil,
   AlertTriangle,
+  Calendar as CalendarIcon,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { POWizardV2Data } from '@/types/poWizardV2';
@@ -31,6 +39,7 @@ interface ReviewScreenProps {
   isSubmitting: boolean;
   hidePricing?: boolean;
   onTaxChange?: (tax: number) => void;
+  onDeliveryChange?: (updates: Partial<POWizardV2Data>) => void;
 }
 
 export function ReviewScreen({
@@ -42,9 +51,11 @@ export function ReviewScreen({
   isSubmitting,
   hidePricing = false,
   onTaxChange,
+  onDeliveryChange,
 }: ReviewScreenProps) {
   const [editingTax, setEditingTax] = useState(false);
   const [taxInput, setTaxInput] = useState('');
+  const [editingDelivery, setEditingDelivery] = useState(false);
 
   const totals = useMemo(() => {
     let estimateSubtotal = 0;
@@ -94,39 +105,135 @@ export function ReviewScreen({
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-5">
-        {/* Delivery Details Block */}
+        {/* Delivery Details Block — inline editable */}
         <div>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-bold tracking-wide uppercase text-muted-foreground">Delivery Details</h3>
+            <button
+              className="text-xs font-medium text-primary flex items-center gap-1"
+              onClick={() => setEditingDelivery(!editingDelivery)}
+            >
+              {editingDelivery ? (
+                <>
+                  <ChevronUp className="h-3 w-3" /> Done
+                </>
+              ) : (
+                <>
+                  <Pencil className="h-3 w-3" /> Edit
+                </>
+              )}
+            </button>
           </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Project</span>
-              <span className="font-medium text-right truncate ml-4">{data.project_name}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Supplier</span>
-              <span className="font-medium">{data.supplier_name}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Delivery</span>
-              <span className="font-medium">
-                {data.requested_delivery_date
-                  ? format(data.requested_delivery_date, 'PPP')
-                  : 'Not set'}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Window</span>
-              <span className="font-medium">{data.delivery_window}</span>
-            </div>
-            {data.notes && (
-              <div className="pt-1">
-                <span className="text-muted-foreground">Notes</span>
-                <p className="text-sm mt-0.5">{data.notes}</p>
+
+          {editingDelivery ? (
+            <div className="space-y-4 rounded-lg border p-3 bg-muted/20">
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Project</span>
+                  <span className="font-medium text-right truncate ml-4">{data.project_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Supplier</span>
+                  <span className="font-medium">{data.supplier_name}</span>
+                </div>
               </div>
-            )}
-          </div>
+
+              <Separator />
+
+              {/* Delivery Date */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                  Delivery Date
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        'w-full h-11 justify-start text-left font-normal',
+                        !data.requested_delivery_date && 'text-muted-foreground'
+                      )}
+                    >
+                      <CalendarIcon className="h-4 w-4 mr-2 text-muted-foreground" />
+                      {data.requested_delivery_date
+                        ? format(data.requested_delivery_date, 'PPP')
+                        : 'Select date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={data.requested_delivery_date || undefined}
+                      onSelect={(date) => onDeliveryChange?.({ requested_delivery_date: date || null })}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                      className={cn("p-3 pointer-events-auto")}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Delivery Window */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                  Delivery Window
+                </Label>
+                <div className="flex gap-2">
+                  {(['AM', 'PM', 'ANY'] as const).map((window) => (
+                    <button
+                      key={window}
+                      className={`wz-pill flex-1 ${data.delivery_window === window ? 'wz-pill--active' : 'wz-pill--inactive'}`}
+                      onClick={() => onDeliveryChange?.({ delivery_window: window })}
+                    >
+                      {window === 'ANY' ? 'Any' : window}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                  Notes
+                </Label>
+                <Textarea
+                  placeholder="Delivery instructions, gate codes, etc."
+                  value={data.notes}
+                  onChange={(e) => onDeliveryChange?.({ notes: e.target.value })}
+                  className="min-h-[72px] resize-none text-sm"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Project</span>
+                <span className="font-medium text-right truncate ml-4">{data.project_name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Supplier</span>
+                <span className="font-medium">{data.supplier_name}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Delivery</span>
+                <span className="font-medium">
+                  {data.requested_delivery_date
+                    ? format(data.requested_delivery_date, 'PPP')
+                    : 'Not set'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Window</span>
+                <span className="font-medium">{data.delivery_window}</span>
+              </div>
+              {data.notes && (
+                <div className="pt-1">
+                  <span className="text-muted-foreground">Notes</span>
+                  <p className="text-sm mt-0.5">{data.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <Separator />
@@ -137,9 +244,14 @@ export function ReviewScreen({
             <h3 className="text-xs font-bold tracking-wide uppercase text-muted-foreground">
               Items ({data.line_items.length})
             </h3>
-            <button className="text-xs font-medium text-primary flex items-center gap-1" onClick={onEditItems}>
-              <Pencil className="h-3 w-3" /> Edit
-            </button>
+            <div className="flex items-center gap-2">
+              <button className="text-xs font-medium text-primary flex items-center gap-1" onClick={onAddMore}>
+                <Plus className="h-3 w-3" /> Add
+              </button>
+              <button className="text-xs font-medium text-primary flex items-center gap-1" onClick={onEditItems}>
+                <Pencil className="h-3 w-3" /> Edit
+              </button>
+            </div>
           </div>
 
           <div className="rounded-lg border overflow-hidden">
@@ -165,9 +277,11 @@ export function ReviewScreen({
                           ? `${item.computed_lf} LF`
                           : `${item.quantity} ${item.uom}`}
                       </td>
-                      <td className="py-2.5 px-3 text-right font-medium">
-                        {!hidePricing && (lineTotal != null ? formatCurrency(lineTotal) : '—')}
-                      </td>
+                      {!hidePricing && (
+                        <td className="py-2.5 px-3 text-right font-medium">
+                          {lineTotal != null ? formatCurrency(lineTotal) : '—'}
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
@@ -250,15 +364,11 @@ export function ReviewScreen({
         )}
       </div>
 
-      {/* Footer */}
+      {/* Footer — clean 2-button layout */}
       <div className="wz-footer flex gap-2">
         <Button variant="ghost" className="h-11" onClick={onBack}>
           <ChevronLeft className="h-4 w-4 mr-1" />
           Back
-        </Button>
-        <Button variant="outline" className="h-11" onClick={onAddMore}>
-          <Plus className="h-4 w-4 mr-1" />
-          Add More
         </Button>
         <Button className="flex-1 h-11" onClick={onSubmit} disabled={isSubmitting}>
           {isSubmitting ? (

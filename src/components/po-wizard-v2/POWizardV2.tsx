@@ -17,6 +17,7 @@ import { ItemsScreen } from './ItemsScreen';
 import { ReviewScreen } from './ReviewScreen';
 import { ProductPickerContent, ProductPickerHandle } from './ProductPicker';
 import { UnmatchedItemPanel } from './UnmatchedItemEditor';
+import { StepIndicator } from './StepIndicator';
 
 type Screen = 'header' | 'items' | 'review' | 'picker' | 'unmatched-editor';
 type PickerInitialStep = 'source' | 'estimate' | undefined;
@@ -179,7 +180,6 @@ export function POWizardV2({
           ...initialData,
         });
       } else {
-        setScreen('header');
         setHasApprovedEstimate(false);
         setFormData({
           ...INITIAL_PO_WIZARD_V2_DATA,
@@ -189,9 +189,24 @@ export function POWizardV2({
           work_order_id: workOrderId,
           work_order_title: workOrderTitle,
         });
+        // Auto-advance will be handled after suppliers load
+        setScreen('header');
       }
     }
   }, [open, projectId, projectName, projectAddress, workOrderId, workOrderTitle, editMode, initialData]);
+
+  // Auto-advance past header for single supplier (non-edit mode)
+  useEffect(() => {
+    if (!open || editMode || loadingSuppliers || screen !== 'header') return;
+    if (suppliers.length === 1) {
+      // Supplier already set in supplier fetch effect, skip to items/picker
+      if (formData.line_items.length === 0) {
+        setScreen('picker');
+      } else {
+        setScreen('items');
+      }
+    }
+  }, [open, editMode, loadingSuppliers, suppliers.length]);
 
   // Check for approved estimate and resolve tax when supplier changes
   useEffect(() => {
@@ -346,15 +361,17 @@ export function POWizardV2({
     }
   }, [screen]);
 
-  // Progress bar width
-  const progressWidth = useMemo(() => {
-    switch (screen) {
-      case 'header': return '12%';
-      case 'items': return '50%';
-      case 'picker': return '50%';
-      case 'unmatched-editor': return '50%';
-      case 'review': return '95%';
-    }
+  // Step indicator state
+  const stepIndicatorSteps = useMemo(() => {
+    const mainScreenIndex = screen === 'header' ? 0
+      : (screen === 'items' || screen === 'picker' || screen === 'unmatched-editor') ? 1
+      : 2;
+
+    return [
+      { label: 'Delivery', status: mainScreenIndex > 0 ? 'done' as const : 'active' as const },
+      { label: 'Items', status: mainScreenIndex > 1 ? 'done' as const : mainScreenIndex === 1 ? 'active' as const : 'upcoming' as const },
+      { label: 'Review', status: mainScreenIndex === 2 ? 'active' as const : 'upcoming' as const },
+    ];
   }, [screen]);
 
   // Trail chips
@@ -387,19 +404,10 @@ export function POWizardV2({
 
   const content = (
     <div className="flex flex-col h-full">
-      {/* Trail + Progress */}
-      {trailChips.length > 0 && (
-        <div className="wz-trail scrollbar-hide">
-          {trailChips.map((chip, i) => (
-            <span key={i} className={`wz-trail-chip ${chip.filled ? 'wz-trail-chip--filled' : 'wz-trail-chip--muted'}`}>
-              {chip.label}
-            </span>
-          ))}
-        </div>
+      {/* Step Indicator */}
+      {!showInternalHeader && (
+        <StepIndicator steps={stepIndicatorSteps} />
       )}
-      <div className="wz-progress">
-        <div className="wz-progress-fill" style={{ width: progressWidth }} />
-      </div>
 
       {/* Internal header for picker/editor screens */}
       {showInternalHeader && (
@@ -468,6 +476,7 @@ export function POWizardV2({
             isSubmitting={isSubmitting}
             hidePricing={hidePricing}
             onTaxChange={(tax) => setFormData(prev => ({ ...prev, sales_tax_percent: tax }))}
+            onDeliveryChange={handleChange}
           />
         )}
         {screen === 'picker' && (
