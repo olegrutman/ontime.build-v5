@@ -342,7 +342,161 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
       }
       return;
     }
+    // For GC/others, open detail view where they can submit with email
     setSelectedPOId(po.id);
+  };
+
+  /** Create PO and immediately send to supplier (or route to approval for TC) */
+  const handleCreateAndSend = async (data: POWizardV2Data) => {
+    if (!currentOrgId || !user) return;
+
+    setIsSending(true);
+    try {
+      // 1. Create the PO (reuse same logic as handleCreatePO but return the new PO id)
+      let pricingOwnerOrgId: string | null = null;
+
+      const { data: contracts } = await supabase
+        .from('project_contracts')
+        .select('material_responsibility, from_org_id, to_org_id')
+        .eq('project_id', data.project_id)
+        .not('material_responsibility', 'is', null);
+
+      if (contracts && contracts.length > 0) {
+        const contractWithMR = contracts.find(c => c.material_responsibility);
+        if (contractWithMR) {
+          pricingOwnerOrgId = contractWithMR.material_responsibility === 'GC'
+            ? contractWithMR.to_org_id
+            : contractWithMR.from_org_id;
+        }
+      }
+
+      if (!pricingOwnerOrgId) pricingOwnerOrgId = currentOrgId;
+
+      const estimateTaxPercent = data.sales_tax_percent ?? 0;
+
+      const { data: poNumber } = await supabase.rpc('generate_po_number', {
+        org_id: currentOrgId,
+      });
+
+      const { data: newPO, error: poError } = await supabase
+        .from('purchase_orders')
+        .insert({
+          organization_id: currentOrgId,
+          po_number: poNumber,
+          po_name: `PO for ${data.project_name || 'Materials'}`,
+          supplier_id: data.supplier_id,
+          project_id: data.project_id,
+          notes: data.notes || null,
+          status: 'ACTIVE',
+          created_by_org_id: currentOrgId,
+          pricing_owner_org_id: pricingOwnerOrgId,
+          source_estimate_id: data.source_estimate_id || null,
+          source_pack_name: data.source_pack_name || null,
+          pack_modified: data.pack_modified || false,
+          sales_tax_percent: estimateTaxPercent,
+        })
+        .select()
+        .single();
+
+      if (poError) throw poError;
+
+      if (data.line_items.length > 0) {
+        let estSubtotal = 0;
+        let addSubtotal = 0;
+
+        const lineItems = data.line_items.map((item, idx) => {
+          const lineTotal = item.unit_price != null ? item.quantity * item.unit_price : null;
+          if (item.source_estimate_item_id) {
+            estSubtotal += lineTotal ?? 0;
+          } else if (lineTotal != null) {
+            addSubtotal += lineTotal;
+          }
+          return {
+            po_id: newPO.id,
+            line_number: idx + 1,
+            supplier_sku: item.supplier_sku,
+            description: item.name,
+            quantity: item.quantity,
+            uom: item.uom,
+            pieces: item.unit_mode === 'BUNDLE' ? item.bundle_count : null,
+            length_ft: item.length_ft || null,
+            computed_lf: item.computed_lf || null,
+            notes: item.item_notes || null,
+            unit_price: item.unit_price ?? null,
+            line_total: lineTotal,
+            source_estimate_item_id: item.source_estimate_item_id || null,
+            source_pack_name: item.source_pack_name || null,
+            price_source: item.price_source || null,
+            original_unit_price: item.unit_price ?? null,
+          };
+        });
+
+        const { error: lineError } = await supabase.from('po_line_items').insert(lineItems);
+        if (lineError) throw lineError;
+
+        const poSubtotalTotal = estSubtotal + addSubtotal;
+        const taxAmount = poSubtotalTotal * (estimateTaxPercent / 100);
+        const poTotal = poSubtotalTotal + taxAmount;
+        await supabase.from('purchase_orders').update({
+          po_subtotal_estimate_items: estSubtotal,
+          po_subtotal_non_estimate_items: addSubtotal,
+          po_subtotal_total: poSubtotalTotal,
+          po_tax_total: taxAmount,
+          tax_percent_applied: estimateTaxPercent,
+          po_total: poTotal,
+        }).eq('id', newPO.id);
+      }
+
+      // 2. TC with approval required → set PENDING_APPROVAL
+      if (isTC && poRequiresApproval) {
+        await supabase
+          .from('purchase_orders')
+          .update({ status: 'PENDING_APPROVAL' as any })
+          .eq('id', newPO.id);
+        toast.success(`PO ${poNumber} created and sent to GC for approval`);
+      } else {
+        // 3. GC/others → send email via edge function
+        let supplierEmail = '';
+        const { data: ds } = await supabase
+          .from('project_designated_suppliers')
+          .select('po_email')
+          .eq('project_id', data.project_id)
+          .neq('status', 'removed')
+          .maybeSingle();
+        if (ds?.po_email) supplierEmail = ds.po_email;
+
+        if (!supplierEmail) {
+          // Fallback: try supplier contact_info
+          if (data.supplier_id) {
+            const { data: sup } = await supabase
+              .from('suppliers')
+              .select('contact_info')
+              .eq('id', data.supplier_id)
+              .single();
+            supplierEmail = sup?.contact_info || '';
+          }
+        }
+
+        if (!supplierEmail) {
+          toast.warning(`PO ${poNumber} created as draft — no supplier email found to send.`);
+        } else {
+          const { error: sendErr } = await supabase.functions.invoke('send-po', {
+            body: { po_id: newPO.id, supplier_email: supplierEmail },
+          });
+          if (sendErr) throw sendErr;
+          toast.success(`PO ${poNumber} created and sent to supplier`);
+        }
+      }
+
+      setWizardOpen(false);
+      fetchPurchaseOrders();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Error creating & sending PO:', error);
+      toast.error('Failed to create & send PO: ' + message);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const handleApprovePO = async (po: PurchaseOrder) => {
