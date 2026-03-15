@@ -75,7 +75,8 @@ export const ProductPickerContent = forwardRef<ProductPickerHandle, ProductPicke
   initialStep,
 }, ref) => {
   const filterRef = useRef<StepByStepFilterHandle>(null);
-  const [step, setStep] = useState<PickerStep>(initialStep ?? 'source');
+  const defaultStep: PickerStep = hasApprovedEstimate ? 'source' : 'category';
+  const [step, setStep] = useState<PickerStep>(initialStep ?? defaultStep);
   const [categories, setCategories] = useState<CategoryCount[]>([]);
   const [secondaryCategories, setSecondaryCategories] = useState<SecondaryCount[]>([]);
   const [selectedVirtualCategory, setSelectedVirtualCategory] = useState<string | null>(null);
@@ -84,8 +85,6 @@ export const ProductPickerContent = forwardRef<ProductPickerHandle, ProductPicke
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<CatalogProduct | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const initialStep: PickerStep = hasApprovedEstimate ? 'source' : 'category';
 
   useEffect(() => {
     if (editingItem && supplierId) {
