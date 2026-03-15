@@ -36,6 +36,39 @@ Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (C
 - Optimistic undo with snapshot restoration
 - Auto-estimate dates still available for unscheduled items
 
+---
+
+# Field Capture Mode — IMPLEMENTED
+
+## Overview
+Mobile-first feature enabling Field Crew to instantly capture jobsite issues (photo, voice note, location, reason category) in under 10 seconds.
+
+## Database
+- `field_captures` table with RLS (project participants SELECT, creator INSERT/UPDATE)
+- `field-captures` storage bucket (public read, authenticated upload)
+- Realtime enabled via `supabase_realtime` publication
+
+## Frontend Components
+| File | Purpose |
+|------|---------|
+| `src/hooks/useFieldCaptures.ts` | React Query hook with realtime, create/update mutations, media upload |
+| `src/components/field-capture/FieldCaptureSheet.tsx` | Full-screen capture UI (photo, voice, text, reason chips) |
+| `src/components/field-capture/CapturePhotoInput.tsx` | Camera-first photo capture with large touch target |
+| `src/components/field-capture/CaptureVoiceInput.tsx` | Hold-to-record voice note (MediaRecorder API) |
+| `src/components/field-capture/CaptureReasonChips.tsx` | Tap-to-select reason category chips |
+| `src/components/field-capture/FieldCaptureList.tsx` | List of captures with "+ Capture" button |
+| `src/components/field-capture/FieldCaptureCard.tsx` | Individual capture card with "Convert to Task" button |
+
+## Entry Points
+1. **BottomNav FAB** — Amber "Capture" button on project pages (mobile)
+2. **Daily Log tab** — Field Captures section for the active date
+
+## Feature Gate
+- `field_capture` added to `FeatureKey` type and labels
+
+## Auto-captured Data
+- Timestamp, user ID, org ID, GPS coordinates, device info (userAgent)
+
 ## Files Created/Modified
 | File | Action |
 |------|--------|
