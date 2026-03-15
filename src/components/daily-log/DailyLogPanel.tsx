@@ -210,7 +210,15 @@ export function DailyLogPanel({ projectId }: DailyLogPanelProps) {
         disabled={isSubmitted}
       />
 
-      {/* Submit button */}
+      {/* Field Captures for this date */}
+      {orgId && (
+        <FieldCaptureList
+          projectId={projectId}
+          organizationId={orgId}
+          date={dateStr}
+        />
+      )}
+
       {!isSubmitted && logId && (
         <Button
           onClick={handleSubmit}
