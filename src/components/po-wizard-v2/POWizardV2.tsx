@@ -361,15 +361,17 @@ export function POWizardV2({
     }
   }, [screen]);
 
-  // Progress bar width
-  const progressWidth = useMemo(() => {
-    switch (screen) {
-      case 'header': return '12%';
-      case 'items': return '50%';
-      case 'picker': return '50%';
-      case 'unmatched-editor': return '50%';
-      case 'review': return '95%';
-    }
+  // Step indicator state
+  const stepIndicatorSteps = useMemo(() => {
+    const mainScreenIndex = screen === 'header' ? 0
+      : (screen === 'items' || screen === 'picker' || screen === 'unmatched-editor') ? 1
+      : 2;
+
+    return [
+      { label: 'Delivery', status: mainScreenIndex > 0 ? 'done' as const : 'active' as const },
+      { label: 'Items', status: mainScreenIndex > 1 ? 'done' as const : mainScreenIndex === 1 ? 'active' as const : 'upcoming' as const },
+      { label: 'Review', status: mainScreenIndex === 2 ? 'active' as const : 'upcoming' as const },
+    ];
   }, [screen]);
 
   // Trail chips
