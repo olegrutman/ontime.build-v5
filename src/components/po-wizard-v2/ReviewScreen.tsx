@@ -36,7 +36,9 @@ interface ReviewScreenProps {
   onEditItems: () => void;
   onBack: () => void;
   onSubmit: () => void;
+  onCreateAndSend?: () => void;
   isSubmitting: boolean;
+  isSending?: boolean;
   hidePricing?: boolean;
   onTaxChange?: (tax: number) => void;
   onDeliveryChange?: (updates: Partial<POWizardV2Data>) => void;
