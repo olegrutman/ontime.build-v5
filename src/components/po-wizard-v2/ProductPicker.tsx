@@ -110,7 +110,7 @@ export const ProductPickerContent = forwardRef<ProductPickerHandle, ProductPicke
       fetchEditingProduct();
     } else if (!editingItem) {
       if (step !== 'estimate') {
-        setStep(initialStep);
+        setStep(defaultStep);
         setSelectedVirtualCategory(null);
         setSelectedSecondary(null);
         setAppliedFilters({});
