@@ -1,110 +1,98 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-## Features Built
+# Bug Report: Unified Work Order Wizard
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
-
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
-
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
-
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
+After analyzing all wizard files, hooks, and integration code, here are the bugs found:
 
 ---
 
-# Field Capture Mode — IMPLEMENTED
+## Critical Bugs
 
-## Overview
-Mobile-first feature enabling Field Crew to instantly capture jobsite issues (photo, voice note, location, reason category) in under 10 seconds.
+### 1. Missing `DialogDescription` — Console Warning
+**File:** `UnifiedWOWizard.tsx` (line 158)
+The `DialogContent` has no `DialogDescription`, causing the console warning: `Missing Description or aria-describedby`.
+**Fix:** Add `<DialogDescription className="sr-only">...</DialogDescription>` inside DialogContent.
 
-## Database
-- `field_captures` table with RLS (project participants SELECT, creator INSERT/UPDATE)
-- `field-captures` storage bucket (public read, authenticated upload)
-- Realtime enabled via `supabase_realtime` publication
+### 2. `useMemo` Used as Side Effect (Lines 59-66)
+**File:** `UnifiedWOWizard.tsx`
+`useMemo` is called with `setFormData` inside it — this is a React anti-pattern. `useMemo` should not have side effects. This can cause unpredictable behavior on re-renders.
+**Fix:** Replace with `useEffect` (or better, set defaults in the initial state factory).
 
-## Frontend Components
-| File | Purpose |
-|------|---------|
-| `src/hooks/useFieldCaptures.ts` | React Query hook with realtime, create/update mutations, media upload |
-| `src/components/field-capture/FieldCaptureSheet.tsx` | Full-screen capture UI (photo, voice, text, reason chips) |
-| `src/components/field-capture/CapturePhotoInput.tsx` | Camera-first photo capture with large touch target |
-| `src/components/field-capture/CaptureVoiceInput.tsx` | Hold-to-record voice note (MediaRecorder API) |
-| `src/components/field-capture/CaptureReasonChips.tsx` | Tap-to-select reason category chips |
-| `src/components/field-capture/FieldCaptureList.tsx` | List of captures with "+ Capture" button |
-| `src/components/field-capture/FieldCaptureCard.tsx` | Individual capture card with "Convert to Task" button |
+### 3. Wizard Has No `onComplete` Handler — Submit Does Nothing
+**File:** `WorkOrdersTab.tsx` (line 494-499)
+The `UnifiedWOWizard` is rendered without an `onComplete` prop. When the user clicks "Submit Work Order", `handleSubmit` calls `onComplete` which is undefined, so **nothing is saved to the database**. The wizard closes and all data is lost.
+**Fix:** Pass an `onComplete` handler that calls `useWorkOrderDraft.saveDraft()` and `convertToWorkOrder()`.
 
-## Entry Points
-1. **BottomNav FAB** — Amber "Capture" button on project pages (mobile)
-2. **Daily Log tab** — Field Captures section for the active date
+### 4. Old Wizards Still Rendered
+**File:** `WorkOrdersTab.tsx` (lines 438-491)
+Both `WorkOrderWizard` and `FCWorkOrderDialog` are still rendered and functional. The "Create your first work order" empty-state button (line 422) still opens the **old** wizard (`setShowWizard(true)`), not the unified one. The field capture conversion flow (line 104-111) also still routes to old wizards.
+**Fix:** Either remove old wizards or route all create flows through `showUnifiedWizard`.
 
-## Feature Gate
-- `field_capture` added to `FeatureKey` type and labels
-
-## Auto-captured Data
-- Timestamp, user ID, org ID, GPS coordinates, device info (userAgent)
-
-## Files Created/Modified
-| File | Action |
-|------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+### 5. FC Role Check is Incomplete
+**File:** `UnifiedWOWizard.tsx` (line 53)
+`isFC = currentRole === 'FC_PM' || currentRole === 'FS'` — but the `FS` role (Field Supervisor) is treated as FC. Meanwhile `useWorkOrderDraft.ts` (line 98) determines `addedByRole` from `organization.type`, not from `currentRole`. These two approaches could diverge if an FS user belongs to a TC org.
+**Fix:** Use consistent role detection — prefer org type over currentRole for FC/TC determination.
 
 ---
 
-# Multi-Item Work Order — IMPLEMENTED
+## Medium Bugs
 
-## Overview
-Transforms Work Orders from single-task entities into **package containers** holding multiple task line items, mirroring how POs hold multiple material lines.
+### 6. `ScopeStep` Ref Warning
+**File:** Console log shows `Function components cannot be given refs` for `ScopeStep`. The Dialog system is trying to pass a ref to a function component.
+**Fix:** Wrap `ScopeStep` with `React.forwardRef` or ensure the parent doesn't pass a ref.
 
-## Database
-- `work_order_tasks` table with RLS (project participants CRUD) linked to `change_order_projects` header via `work_order_id`
-- Status validation trigger (`pending`, `in_progress`, `complete`, `skipped`)
-- Realtime enabled via `supabase_realtime` publication
+### 7. Financial Summary Shows Wrong Markup % Label
+**File:** `FinancialSummaryStrip.tsx` (lines 52, 59)
+The markup label shows `data.materials_markup_pct` (the default), not the actual per-row markup. If a user overrides markup on individual rows, the label is misleading.
+**Fix:** Calculate effective average markup from rows, or remove the % from the label.
 
-## Frontend Components
-| File | Purpose |
-|------|---------|
-| `src/types/workOrderTask.ts` | TypeScript types for work order tasks |
-| `src/hooks/useWorkOrderTasks.ts` | React Query hook with realtime, CRUD mutations |
-| `src/components/work-order-tasks/WorkOrderTaskList.tsx` | Task list with completion counter |
-| `src/components/work-order-tasks/WorkOrderTaskCard.tsx` | Individual task card with status, location, menu |
-| `src/components/work-order-tasks/AddTaskSheet.tsx` | Mobile-first bottom sheet for adding/editing tasks |
-| `src/components/work-order-tasks/TaskQuickAdd.tsx` | Inline quick-add input for FC users |
+### 8. `useProjectLaborRates` Matches Wrong Row
+**File:** `useProjectLaborRates.ts` (line 22)
+Uses `.maybeSingle()` which returns null if multiple rows match. A project can have multiple `project_team` entries for the same org (different users). This should filter by user or use a more specific query.
+**Fix:** Add `.eq('user_id', user.id)` or use `.limit(1)` with an order.
 
-## Integration Points
-- `ChangeOrderDetailPage.tsx` — Tasks section after header card, FC quick-add below
-- `useChangeOrderRealtime.ts` — Subscribes to `work_order_tasks` changes
+### 9. Location Step Always Shows Elevations When No Items Selected
+**File:** `LocationStep.tsx` (line 57)
+`if (hasExteriorItems || data.selectedCatalogItems.length === 0)` — Elevations show when zero items are selected (which is always true at first). Per spec, elevations should only show for exterior/roofing/waterproofing divisions.
+**Fix:** Only show elevations when `hasExteriorItems` is true.
+
+### 10. Quick Capture Auto-Save Banner is Cosmetic Only
+**File:** `LocationStep.tsx` (lines 110-118)
+The green "Draft saved" banner appears but no actual save happens. The auto-save trigger described in the spec (upsert to `change_order_projects`) is not implemented.
+**Fix:** Call `saveDraft()` when conditions are met. This requires passing the draft hook into the LocationStep or lifting the auto-save logic to the wizard shell.
+
+---
+
+## Minor Bugs
+
+### 11. Labor Validation Allows Zero Hours
+**File:** `UnifiedWOWizard.tsx` (line 81)
+`canGoNext` for labor in hourly mode only checks `hourly_rate > 0`, not hours. A user can proceed with rate set but 0 hours, resulting in $0 labor total.
+
+### 12. No Supplier Field in Materials UI
+**File:** `MaterialsStep.tsx`
+The `WOMaterialRowDraft` type has a `supplier` field but the UI has no input for it. Per spec, FC should see columns A-D which includes supplier context.
+
+### 13. Review Step "Edit" Jumps Don't Work for All Steps
+**File:** `ReviewStep.tsx` — `onJumpToStep('scope')` calls `jumpToStepByKey` which uses `setCurrentStepIndex`. But it only allows jumping to steps with index < currentStepIndex (line 103 of wizard). Since Review is the last step, all jumps work. However, after jumping back and then forward, the user must click through each step again — there's no "jump forward" to return to Review.
+
+---
+
+## Summary of Required Fixes
+
+| # | Severity | Fix |
+|---|----------|-----|
+| 1 | Critical | Add DialogDescription for accessibility |
+| 2 | Critical | Replace useMemo side effect with useEffect |
+| 3 | Critical | Wire onComplete to actually save data |
+| 4 | Critical | Remove or unify old wizard entry points |
+| 5 | Medium | Consistent FC/TC role detection |
+| 6 | Low | forwardRef on ScopeStep |
+| 7 | Low | Fix markup % label accuracy |
+| 8 | Medium | Fix labor rate query ambiguity |
+| 9 | Medium | Fix elevation chips visibility logic |
+| 10 | Medium | Implement actual auto-save for Quick Capture |
+| 11 | Low | Validate hours > 0 for hourly mode |
+| 12 | Low | Add supplier field to Materials UI |
+| 13 | Low | Allow forward navigation after edit jumps |
+
