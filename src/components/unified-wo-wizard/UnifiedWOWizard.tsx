@@ -1,13 +1,20 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Check, Circle, Lock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, Circle, Lock, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useProjectLaborRates } from '@/hooks/useProjectLaborRates';
 import { UnifiedWizardData, INITIAL_UNIFIED_WIZARD_DATA, ALL_WIZARD_STEPS, WizardStepDef } from '@/types/unifiedWizard';
 import { IntentStep } from './steps/IntentStep';
 import { CaptureModeStep } from './steps/CaptureModeStep';
 import { ScopeStep } from './steps/ScopeStep';
+import { LocationStep } from './steps/LocationStep';
+import { LaborStep } from './steps/LaborStep';
+import { MaterialsStep } from './steps/MaterialsStep';
+import { EquipmentStep } from './steps/EquipmentStep';
+import { ReviewStep } from './steps/ReviewStep';
+import { FinancialSummaryStrip } from './FinancialSummaryStrip';
 
 interface UnifiedWOWizardProps {
   open: boolean;
@@ -28,6 +35,7 @@ export function UnifiedWOWizard({
 }: UnifiedWOWizardProps) {
   const { currentRole } = useAuth();
   const isMobile = useIsMobile();
+  const { myRate: projectRate } = useProjectLaborRates(projectId);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [formData, setFormData] = useState<UnifiedWizardData>({ ...INITIAL_UNIFIED_WIZARD_DATA });
 
@@ -40,6 +48,9 @@ export function UnifiedWOWizard({
       return true;
     });
   }, [currentRole]);
+
+  const isTC = currentRole === 'TC_PM';
+  const isFC = currentRole === 'FC_PM' || currentRole === 'FS';
 
   const currentStep = visibleSteps[currentStepIndex];
   const totalSteps = visibleSteps.length;
@@ -107,6 +118,11 @@ export function UnifiedWOWizard({
     handleClose();
   };
 
+  const jumpToStepByKey = (key: string) => {
+    const idx = visibleSteps.findIndex(s => s.key === key);
+    if (idx >= 0) setCurrentStepIndex(idx);
+  };
+
   const renderStepContent = () => {
     if (!currentStep) return null;
     switch (currentStep.key) {
@@ -116,12 +132,18 @@ export function UnifiedWOWizard({
         return <CaptureModeStep data={formData} onChange={handleChange} />;
       case 'scope':
         return <ScopeStep data={formData} onChange={handleChange} />;
+      case 'location':
+        return <LocationStep data={formData} onChange={handleChange} projectId={projectId} />;
+      case 'labor':
+        return <LaborStep data={formData} onChange={handleChange} isTC={isTC} projectRate={projectRate} />;
+      case 'materials':
+        return <MaterialsStep data={formData} onChange={handleChange} isTC={isTC} />;
+      case 'equipment':
+        return <EquipmentStep data={formData} onChange={handleChange} isTC={isTC} />;
+      case 'review':
+        return <ReviewStep data={formData} isTC={isTC} isFC={isFC} onJumpToStep={jumpToStepByKey} />;
       default:
-        return (
-          <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">
-            Step "{currentStep.title}" — coming in next phase
-          </div>
-        );
+        return null;
     }
   };
 
@@ -198,13 +220,20 @@ export function UnifiedWOWizard({
             </div>
           )}
 
-          {/* Step content */}
+          {/* Step content + financial strip */}
           <div className="flex-1 overflow-y-auto p-6">
             <div className="mb-4">
               <h3 className="text-base font-semibold text-foreground">{currentStep?.title}</h3>
               <p className="text-sm text-muted-foreground">{currentStep?.description}</p>
             </div>
             {renderStepContent()}
+
+            {/* Financial summary (desktop, below step content when on labor+ steps) */}
+            {!isMobile && currentStep && ['labor', 'materials', 'equipment', 'review'].includes(currentStep.key) && (
+              <div className="mt-6">
+                <FinancialSummaryStrip data={formData} isTC={isTC} isFC={isFC} />
+              </div>
+            )}
           </div>
         </div>
 
@@ -222,7 +251,8 @@ export function UnifiedWOWizard({
             </Button>
           ) : (
             <Button onClick={handleSubmit} disabled={isSubmitting}>
-              Submit Work Order
+              {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {formData.wo_mode === 'quick_capture' ? 'Save & Submit' : 'Submit Work Order'}
             </Button>
           )}
         </div>
