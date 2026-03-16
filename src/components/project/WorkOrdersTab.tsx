@@ -319,54 +319,76 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
         />
       )}
 
-      {/* Header */}
+      {/* Mode Toggle + Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold">Work Orders</h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            {statusCounts.ALL} work order{statusCounts.ALL !== 1 ? 's' : ''}
-          </p>
-        </div>
         <div className="flex items-center gap-3">
-          <Select value={activeTab} onValueChange={(v) => setActiveTab(v as ChangeOrderStatus | 'ALL')}>
-            <SelectTrigger className="w-[180px]">
-              <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All Statuses ({statusCounts.ALL})</SelectItem>
-              {(['draft', 'fc_input', 'tc_pricing', 'ready_for_approval', 'approved', 'rejected', 'contracted'] as ChangeOrderStatus[]).map(
-                (status) => (
-                  <SelectItem key={status} value={status}>
-                    {CHANGE_ORDER_STATUS_LABELS[status]} ({statusCounts[status]})
-                  </SelectItem>
-                )
-              )}
-            </SelectContent>
-          </Select>
-          {canCreate && !isProjectNotActive && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span>
-                    <Button
-                      onClick={() => isFC ? setShowFCDialog(true) : setShowWizard(true)}
-                      disabled={isBlocked}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      {isFC ? 'Submit Work Order' : 'New Work Order'}
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                {isBlocked && (
-                  <TooltipContent>
-                    <p>Create SOVs for all contracts first</p>
-                  </TooltipContent>
-                )}
-              </Tooltip>
-            </TooltipProvider>
+          <div className="flex items-center rounded-lg border border-border p-0.5 bg-muted/50">
+            <button
+              onClick={() => setMode('orders')}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                mode === 'orders' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Work Orders
+            </button>
+            <button
+              onClick={() => setMode('quicklog')}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                mode === 'quicklog' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Zap className="h-3.5 w-3.5" />
+              Quick Log
+            </button>
+          </div>
+          {mode === 'orders' && (
+            <p className="text-sm text-muted-foreground">
+              {statusCounts.ALL} work order{statusCounts.ALL !== 1 ? 's' : ''}
+            </p>
           )}
         </div>
+        {mode === 'orders' && (
+          <div className="flex items-center gap-3">
+            <Select value={activeTab} onValueChange={(v) => setActiveTab(v as ChangeOrderStatus | 'ALL')}>
+              <SelectTrigger className="w-[180px]">
+                <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Statuses ({statusCounts.ALL})</SelectItem>
+                {(['draft', 'fc_input', 'tc_pricing', 'ready_for_approval', 'approved', 'rejected', 'contracted'] as ChangeOrderStatus[]).map(
+                  (status) => (
+                    <SelectItem key={status} value={status}>
+                      {CHANGE_ORDER_STATUS_LABELS[status]} ({statusCounts[status]})
+                    </SelectItem>
+                  )
+                )}
+              </SelectContent>
+            </Select>
+            {canCreate && !isProjectNotActive && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <Button
+                        onClick={() => isFC ? setShowFCDialog(true) : setShowWizard(true)}
+                        disabled={isBlocked}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        {isFC ? 'Submit Work Order' : 'New Work Order'}
+                      </Button>
+                    </span>
+                  </TooltipTrigger>
+                  {isBlocked && (
+                    <TooltipContent>
+                      <p>Create SOVs for all contracts first</p>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Work Orders Content */}
