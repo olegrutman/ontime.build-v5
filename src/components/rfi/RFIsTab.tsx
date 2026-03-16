@@ -6,12 +6,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { RFICard } from './RFICard';
 import { CreateRFIDialog } from './CreateRFIDialog';
 import { RFIDetailDialog } from './RFIDetailDialog';
-import { WorkOrderWizard } from '@/components/work-order-wizard';
+import { UnifiedWOWizard } from '@/components/unified-wo-wizard';
 import { useProjectRFIs } from '@/hooks/useProjectRFIs';
 import { useAuth } from '@/hooks/useAuth';
-import { useChangeOrderProject } from '@/hooks/useChangeOrderProject';
+import { useWorkOrderDraft } from '@/hooks/useWorkOrderDraft';
+import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { INITIAL_WIZARD_DATA, type WorkOrderWizardData } from '@/types/workOrderWizard';
+import type { UnifiedWizardData } from '@/types/unifiedWizard';
 import type { ProjectRFI, RFIStatus } from '@/types/rfi';
 
 interface RFIsTabProps {
@@ -26,17 +27,19 @@ interface TeamOrg {
 export function RFIsTab({ projectId }: RFIsTabProps) {
   const { user, userOrgRoles, permissions } = useAuth();
   const { rfis, isLoading, createRFI, answerRFI, closeRFI } = useProjectRFIs(projectId);
-  const { createChangeOrder, isCreating } = useChangeOrderProject(projectId);
+  const { saveDraft } = useWorkOrderDraft(projectId);
+  const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<'ALL' | RFIStatus>('ALL');
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedRFI, setSelectedRFI] = useState<ProjectRFI | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [teamOrgs, setTeamOrgs] = useState<TeamOrg[]>([]);
   const [woWizardOpen, setWoWizardOpen] = useState(false);
-  const [woInitialData, setWoInitialData] = useState<Partial<WorkOrderWizardData>>({});
+  const [wizardSubmitting, setWizardSubmitting] = useState(false);
   const [projectName, setProjectName] = useState('');
 
   const currentOrgId = userOrgRoles[0]?.organization?.id;
+  const currentOrgType = userOrgRoles[0]?.organization?.type;
   const canCreate = permissions?.canCreateRFIs ?? false;
   const canCreateWorkOrders = permissions?.canCreateWorkOrders ?? false;
 
@@ -77,15 +80,98 @@ export function RFIsTab({ projectId }: RFIsTabProps) {
   };
 
   const handleConvertToWO = (rfi: ProjectRFI) => {
-    const description = `RFI-${rfi.rfi_number}: ${rfi.question}${rfi.answer ? `\n\nAnswer: ${rfi.answer}` : ''}`;
-    setWoInitialData({
-      ...INITIAL_WIZARD_DATA,
-      title: rfi.subject,
-      location_data: (rfi.location_data as any) || {},
-      description,
-    });
+    // Close the detail dialog and open the unified wizard
     setDetailOpen(false);
     setWoWizardOpen(true);
+  };
+
+  const handleWizardComplete = async (data: UnifiedWizardData & { project_id: string }) => {
+    setWizardSubmitting(true);
+    try {
+      const draftId = await saveDraft({
+        title: data.title || data.selectedCatalogItems.map(i => i.item_name).join(', ') || 'Work Order',
+        description: data.description || undefined,
+        wo_mode: data.wo_mode!,
+        wo_request_type: data.wo_request_type || undefined,
+        location_tag: data.location_tags.join(', ') || undefined,
+        tc_labor_rate: data.labor_mode === 'hourly' ? data.hourly_rate : null,
+        use_fc_hours_at_tc_rate: data.use_fc_hours_at_tc_rate,
+        materials_markup_pct: data.materials_markup_pct,
+        equipment_markup_pct: data.equipment_markup_pct,
+        pricing_mode: 'fixed',
+      });
+
+      const orgId = userOrgRoles[0]?.organization?.id;
+      if (!orgId || !user) throw new Error('Missing org or user');
+
+      for (const item of data.selectedCatalogItems) {
+        const unitRate = data.labor_mode === 'hourly' ? (data.hourly_rate || 0) : 0;
+        const { error } = await supabase
+          .from('work_order_line_items')
+          .insert({
+            project_id: projectId,
+            change_order_id: draftId,
+            org_id: orgId,
+            created_by_user_id: user.id,
+            catalog_item_id: item.id,
+            item_name: item.item_name,
+            division: item.division || null,
+            category_name: item.category_name || null,
+            group_label: item.group_label || null,
+            unit: item.unit,
+            qty: null,
+            hours: data.labor_mode === 'hourly' ? data.hours : null,
+            unit_rate: unitRate,
+            location_tag: data.location_tags.join(', ') || null,
+          } as never);
+        if (error) throw error;
+      }
+
+      for (const mat of data.materials) {
+        if (!mat.description) continue;
+        const { error } = await supabase
+          .from('work_order_materials')
+          .insert({
+            project_id: projectId,
+            change_order_id: draftId,
+            org_id: orgId,
+            created_by_user_id: user.id,
+            description: mat.description,
+            supplier: mat.supplier || null,
+            quantity: mat.quantity,
+            unit: mat.unit,
+            unit_cost: mat.unit_cost,
+            markup_percent: mat.markup_percent,
+            added_by_role: currentOrgType === 'FC' ? 'fc' : 'tc',
+          } as never);
+        if (error) throw error;
+      }
+
+      for (const eq of data.equipment) {
+        if (!eq.description) continue;
+        const { error } = await supabase
+          .from('work_order_equipment')
+          .insert({
+            project_id: projectId,
+            change_order_id: draftId,
+            org_id: orgId,
+            created_by_user_id: user.id,
+            description: eq.description,
+            duration_note: eq.duration_note || null,
+            cost: eq.cost,
+            markup_percent: eq.markup_percent,
+            added_by_role: currentOrgType === 'FC' ? 'fc' : 'tc',
+          } as never);
+        if (error) throw error;
+      }
+
+      toast({ title: 'Work order created from RFI' });
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Failed to create work order', description: err.message });
+      throw err;
+    } finally {
+      setWizardSubmitting(false);
+    }
   };
 
   if (isLoading) {
@@ -157,17 +243,14 @@ export function RFIsTab({ projectId }: RFIsTabProps) {
         canCreateWorkOrders={canCreateWorkOrders}
       />
 
-      {/* Work Order Wizard */}
-      <WorkOrderWizard
+      {/* Unified Work Order Wizard */}
+      <UnifiedWOWizard
         open={woWizardOpen}
         onOpenChange={setWoWizardOpen}
         projectId={projectId}
         projectName={projectName}
-        initialData={woInitialData}
-        onComplete={async (data) => {
-          await createChangeOrder(data);
-        }}
-        isSubmitting={isCreating}
+        onComplete={handleWizardComplete}
+        isSubmitting={wizardSubmitting}
       />
     </div>
   );

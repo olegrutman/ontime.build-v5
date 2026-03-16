@@ -6,7 +6,7 @@ import {
 } from '@/components/ui/select';
 import { MapPin, Home, Building2, Layers, DoorOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ROOM_AREA_OPTIONS } from '@/types/workOrderWizard';
+import { ROOM_AREA_OPTIONS } from '@/types/changeOrderProject';
 import {
   ProjectScopeDetails,
   getLevelOptions,
