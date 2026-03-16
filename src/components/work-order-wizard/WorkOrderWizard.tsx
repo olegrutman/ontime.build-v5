@@ -4,25 +4,21 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Check, Circle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useProjectLaborRates } from '@/hooks/useProjectLaborRates';
-import { WorkOrderWizardData, INITIAL_WIZARD_DATA, ALL_WIZARD_STEPS } from '@/types/workOrderWizard';
-import { IntentStep } from './steps/IntentStep';
-import { CaptureModeStep } from './steps/CaptureModeStep';
+import { WorkOrderWizardData, INITIAL_WIZARD_DATA, FULL_WO_STEPS } from '@/types/workOrderWizard';
+import { PathChoiceStep } from './steps/PathChoiceStep';
 import { ScopeStep } from './steps/ScopeStep';
 import { LocationStep } from './steps/LocationStep';
-import { LaborStep } from './steps/LaborStep';
-import { MaterialsStep } from './steps/MaterialsStep';
-import { EquipmentStep } from './steps/EquipmentStep';
 import { AssignStep } from './steps/AssignStep';
 import { ReviewStep } from './steps/ReviewStep';
-import { FinancialSummaryBar } from './FinancialSummaryBar';
 
 interface WorkOrderWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string;
   projectName: string;
+  organizationId?: string;
   onComplete?: (data: WorkOrderWizardData & { project_id: string }) => Promise<void>;
+  onFieldCapture?: () => void;
   isSubmitting?: boolean;
 }
 
@@ -31,12 +27,13 @@ export function WorkOrderWizard({
   onOpenChange,
   projectId,
   projectName,
+  organizationId,
   onComplete,
+  onFieldCapture,
   isSubmitting = false,
 }: WorkOrderWizardProps) {
   const { userOrgRoles } = useAuth();
   const isMobile = useIsMobile();
-  const { myRate: projectRate } = useProjectLaborRates(projectId);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [maxVisitedIndex, setMaxVisitedIndex] = useState(0);
 
@@ -45,31 +42,23 @@ export function WorkOrderWizard({
   const isFC = currentOrgType === 'FC';
   const isGC = currentOrgType === 'GC';
 
-  const getInitialData = useCallback((): WorkOrderWizardData => {
-    const base = { ...INITIAL_WIZARD_DATA };
-    if (isGC) base.wo_request_type = 'request';
-    if (isFC) base.wo_request_type = 'log';
-    return base;
-  }, [isGC, isFC]);
-
-  const [formData, setFormData] = useState<WorkOrderWizardData>(getInitialData);
+  const [formData, setFormData] = useState<WorkOrderWizardData>({ ...INITIAL_WIZARD_DATA });
 
   useEffect(() => {
     if (open) {
-      setFormData(getInitialData());
+      setFormData({ ...INITIAL_WIZARD_DATA });
       setCurrentStepIndex(0);
       setMaxVisitedIndex(0);
     }
-  }, [open, getInitialData]);
+  }, [open]);
 
-  // Filter steps by role
+  // Filter steps: FC skips assign
   const visibleSteps = useMemo(() => {
-    return ALL_WIZARD_STEPS.filter((step) => {
-      if (step.key === 'intent' && !isTC) return false;
+    return FULL_WO_STEPS.filter((step) => {
       if (step.key === 'assign' && isFC) return false;
       return true;
     });
-  }, [isTC, isFC]);
+  }, [isFC]);
 
   const currentStep = visibleSteps[currentStepIndex];
   const totalSteps = visibleSteps.length;
@@ -78,22 +67,23 @@ export function WorkOrderWizard({
     setFormData(prev => ({ ...prev, ...updates }));
   }, []);
 
+  // When user picks "field_capture" path, close wizard and open field capture sheet
+  useEffect(() => {
+    if (formData.creation_path === 'field_capture' && open) {
+      onOpenChange(false);
+      onFieldCapture?.();
+    }
+  }, [formData.creation_path, open, onOpenChange, onFieldCapture]);
+
   const canGoNext = (): boolean => {
     if (!currentStep) return false;
     switch (currentStep.key) {
-      case 'intent': return !!formData.wo_request_type;
-      case 'mode': return !!formData.wo_mode;
+      case 'path': return formData.creation_path === 'full_work_order';
       case 'scope': return formData.selectedCatalogItems.length > 0;
       case 'location': return formData.location_tags.length > 0;
-      case 'labor': {
-        if (formData.labor_mode === 'lump_sum') return (formData.lump_sum_amount ?? 0) > 0;
-        return (formData.hourly_rate ?? 0) > 0 && (formData.hours ?? 0) > 0;
-      }
-      case 'materials': return true;
-      case 'equipment': return true;
       case 'assign': {
         if (isGC) return !!formData.assigned_org_id;
-        return true; // TC assign is optional
+        return true;
       }
       case 'review': return true;
       default: return true;
@@ -133,24 +123,16 @@ export function WorkOrderWizard({
   const renderStepContent = () => {
     if (!currentStep) return null;
     switch (currentStep.key) {
-      case 'intent':
-        return <IntentStep data={formData} onChange={handleChange} />;
-      case 'mode':
-        return <CaptureModeStep data={formData} onChange={handleChange} />;
+      case 'path':
+        return <PathChoiceStep data={formData} onChange={handleChange} />;
       case 'scope':
         return <ScopeStep data={formData} onChange={handleChange} />;
       case 'location':
         return <LocationStep data={formData} onChange={handleChange} projectId={projectId} />;
-      case 'labor':
-        return <LaborStep data={formData} onChange={handleChange} isTC={isTC} projectRate={projectRate} />;
-      case 'materials':
-        return <MaterialsStep data={formData} onChange={handleChange} isTC={isTC} />;
-      case 'equipment':
-        return <EquipmentStep data={formData} onChange={handleChange} isTC={isTC} />;
       case 'assign':
         return <AssignStep data={formData} onChange={handleChange} projectId={projectId} isGC={isGC} isTC={isTC} />;
       case 'review':
-        return <ReviewStep data={formData} isTC={isTC} isFC={isFC} onJumpToStep={jumpToStepByKey} />;
+        return <ReviewStep data={formData} onJumpToStep={jumpToStepByKey} />;
       default:
         return null;
     }
@@ -238,13 +220,6 @@ export function WorkOrderWizard({
               <p className="text-sm text-muted-foreground">{currentStep?.description}</p>
             </div>
             {renderStepContent()}
-
-            {/* Financial summary on financial steps (desktop) */}
-            {!isMobile && currentStep && ['labor', 'materials', 'equipment', 'review'].includes(currentStep.key) && (
-              <div className="mt-6">
-                <FinancialSummaryBar data={formData} isTC={isTC} isFC={isFC} />
-              </div>
-            )}
           </div>
         </div>
 
@@ -261,17 +236,10 @@ export function WorkOrderWizard({
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           ) : (
-            <div className="flex gap-2">
-              {formData.wo_mode === 'quick_capture' && (
-                <Button variant="outline" onClick={handleSubmit} disabled={isSubmitting}>
-                  Save draft
-                </Button>
-              )}
-              <Button onClick={handleSubmit} disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {formData.wo_mode === 'quick_capture' ? 'Submit for approval' : 'Submit Work Order'}
-              </Button>
-            </div>
+            <Button onClick={handleSubmit} disabled={isSubmitting}>
+              {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Create Work Order
+            </Button>
           )}
         </div>
       </DialogContent>
