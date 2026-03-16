@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Plus } from 'lucide-react';
 import { WorkOrderTask } from '@/types/workOrderTask';
-import { ROOM_AREA_OPTIONS } from '@/types/workOrderWizard';
+import { ROOM_AREA_OPTIONS } from '@/types/changeOrderProject';
 import { ChangeOrderWorkType, WORK_TYPE_LABELS } from '@/types/changeOrderProject';
 
 const WORK_TYPE_OPTIONS: ChangeOrderWorkType[] = ['reframe', 'reinstall', 'addition', 'adjust', 'fixing'];
