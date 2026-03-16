@@ -91,7 +91,7 @@ export function QuickLogView({ projectId, orgId }: QuickLogViewProps) {
 
       {/* Mobile detail sheet */}
       <QuickLogMobileSheet
-        open={!!selectedItem}
+        open={isMobile && !!selectedItem}
         onOpenChange={(open) => { if (!open) setSelectedItem(null); }}
         item={selectedItem}
         role={role}

@@ -31,6 +31,7 @@ export function SubmitAllSheet({ open, onOpenChange, items, role, onConfirm, isS
         <DrawerTitle className="px-4 pt-4 pb-2 text-lg font-bold">
           Submit {items.length} Item{items.length !== 1 ? 's' : ''}
         </DrawerTitle>
+        <DrawerDescription className="sr-only">Review and confirm submission of open work order items</DrawerDescription>
 
         <div className="overflow-y-auto px-4 pb-4 space-y-4">
           {Object.entries(grouped).map(([division, divItems]) => (
