@@ -4,15 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import type {
-  WOLineItem,
-  WOMaterialRow,
-  WOEquipmentRow,
-  WOFinancials,
-  WOLineItemStatus,
   WOMode,
   WORequestType,
-  WOLaborMode,
-} from '@/types/unifiedWizard';
+} from '@/types/workOrderWizard';
 import type { CatalogItem } from '@/types/quickLog';
 
 interface DraftRecord {
