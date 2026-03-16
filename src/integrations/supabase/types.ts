@@ -496,25 +496,32 @@ export type Database = {
       }
       change_order_projects: {
         Row: {
+          converted_at: string | null
           created_at: string
           created_by: string | null
           created_by_role: string | null
           description: string | null
+          draft_started_at: string | null
           equipment_cost_responsibility: string | null
+          equipment_markup_pct: number
           equipment_total: number | null
           fc_hourly_rate: number | null
+          fc_labor_rate: number | null
           final_price: number | null
           fixing_trade_notes: string | null
+          gc_request_note: string | null
           id: string
           labor_total: number | null
           linked_po_id: string | null
           location_data: Json | null
+          location_tag: string | null
           material_cost_responsibility: string | null
           material_markup_amount: number | null
           material_markup_percent: number | null
           material_markup_type: string | null
           material_total: number | null
           materials_locked_at: string | null
+          materials_markup_pct: number
           materials_pricing_locked: boolean | null
           pricing_mode: string
           project_id: string
@@ -523,32 +530,44 @@ export type Database = {
           requires_equipment: boolean | null
           requires_materials: boolean | null
           status: string
+          submitted_by_user_id: string | null
           tc_hourly_rate: number | null
           tc_internal_cost: number | null
+          tc_labor_rate: number | null
           title: string
           updated_at: string
+          use_fc_hours_at_tc_rate: boolean
+          wo_mode: string | null
+          wo_request_type: string | null
           work_type: string | null
         }
         Insert: {
+          converted_at?: string | null
           created_at?: string
           created_by?: string | null
           created_by_role?: string | null
           description?: string | null
+          draft_started_at?: string | null
           equipment_cost_responsibility?: string | null
+          equipment_markup_pct?: number
           equipment_total?: number | null
           fc_hourly_rate?: number | null
+          fc_labor_rate?: number | null
           final_price?: number | null
           fixing_trade_notes?: string | null
+          gc_request_note?: string | null
           id?: string
           labor_total?: number | null
           linked_po_id?: string | null
           location_data?: Json | null
+          location_tag?: string | null
           material_cost_responsibility?: string | null
           material_markup_amount?: number | null
           material_markup_percent?: number | null
           material_markup_type?: string | null
           material_total?: number | null
           materials_locked_at?: string | null
+          materials_markup_pct?: number
           materials_pricing_locked?: boolean | null
           pricing_mode?: string
           project_id: string
@@ -557,32 +576,44 @@ export type Database = {
           requires_equipment?: boolean | null
           requires_materials?: boolean | null
           status?: string
+          submitted_by_user_id?: string | null
           tc_hourly_rate?: number | null
           tc_internal_cost?: number | null
+          tc_labor_rate?: number | null
           title: string
           updated_at?: string
+          use_fc_hours_at_tc_rate?: boolean
+          wo_mode?: string | null
+          wo_request_type?: string | null
           work_type?: string | null
         }
         Update: {
+          converted_at?: string | null
           created_at?: string
           created_by?: string | null
           created_by_role?: string | null
           description?: string | null
+          draft_started_at?: string | null
           equipment_cost_responsibility?: string | null
+          equipment_markup_pct?: number
           equipment_total?: number | null
           fc_hourly_rate?: number | null
+          fc_labor_rate?: number | null
           final_price?: number | null
           fixing_trade_notes?: string | null
+          gc_request_note?: string | null
           id?: string
           labor_total?: number | null
           linked_po_id?: string | null
           location_data?: Json | null
+          location_tag?: string | null
           material_cost_responsibility?: string | null
           material_markup_amount?: number | null
           material_markup_percent?: number | null
           material_markup_type?: string | null
           material_total?: number | null
           materials_locked_at?: string | null
+          materials_markup_pct?: number
           materials_pricing_locked?: boolean | null
           pricing_mode?: string
           project_id?: string
@@ -591,10 +622,15 @@ export type Database = {
           requires_equipment?: boolean | null
           requires_materials?: boolean | null
           status?: string
+          submitted_by_user_id?: string | null
           tc_hourly_rate?: number | null
           tc_internal_cost?: number | null
+          tc_labor_rate?: number | null
           title?: string
           updated_at?: string
+          use_fc_hours_at_tc_rate?: boolean
+          wo_mode?: string | null
+          wo_request_type?: string | null
           work_type?: string | null
         }
         Relationships: [
@@ -610,6 +646,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_order_projects_submitted_by_user_id_fkey"
+            columns: ["submitted_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
