@@ -12,7 +12,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useWorkOrderDraft } from '@/hooks/useWorkOrderDraft';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import type { UnifiedWizardData } from '@/types/unifiedWizard';
+import type { WorkOrderWizardData } from '@/types/workOrderWizard';
 import type { ProjectRFI, RFIStatus } from '@/types/rfi';
 
 interface RFIsTabProps {
