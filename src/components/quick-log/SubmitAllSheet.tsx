@@ -1,4 +1,4 @@
-import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
+import { Drawer, DrawerContent, DrawerTitle, DrawerDescription } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import type { LogItem } from '@/types/quickLog';
