@@ -22,7 +22,7 @@ import { enrichWorkOrderTotals } from '@/lib/computeWorkOrderTotal';
 import { FieldCaptureList } from '@/components/field-capture';
 import type { FieldCapture } from '@/hooks/useFieldCaptures';
 import { QuickLogView } from '@/components/quick-log';
-import type { UnifiedWizardData } from '@/types/unifiedWizard';
+import type { WorkOrderWizardData } from '@/types/workOrderWizard';
 
 const STATUS_PRIORITY: Record<ChangeOrderStatus, number> = {
   rejected: 0,
