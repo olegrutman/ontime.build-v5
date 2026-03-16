@@ -432,7 +432,7 @@ const ChangeOrders = () => {
 
         {/* Unified Work Order Wizard */}
         {selectedProject && (
-          <UnifiedWOWizard
+          <WorkOrderWizard
             open={showWizard}
             onOpenChange={setShowWizard}
             projectId={selectedProject.id}

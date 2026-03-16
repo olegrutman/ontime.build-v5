@@ -546,7 +546,7 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
       )}
 
       {/* Unified WO Wizard — single entry point for all roles */}
-      <UnifiedWOWizard
+      <WorkOrderWizard
         open={showUnifiedWizard}
         onOpenChange={(open) => {
           setShowUnifiedWizard(open);

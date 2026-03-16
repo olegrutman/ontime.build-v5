@@ -244,7 +244,7 @@ export function RFIsTab({ projectId }: RFIsTabProps) {
       />
 
       {/* Unified Work Order Wizard */}
-      <UnifiedWOWizard
+      <WorkOrderWizard
         open={woWizardOpen}
         onOpenChange={setWoWizardOpen}
         projectId={projectId}
