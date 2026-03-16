@@ -11,6 +11,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { WorkOrderWizard } from '@/components/work-order-wizard';
 import { FCWorkOrderDialog, FCWorkOrderData } from '@/components/fc-work-order';
+import { UnifiedWOWizard } from '@/components/unified-wo-wizard';
 import { Plus, FileEdit, Eye, Edit, AlertTriangle, ArrowRight, User, Filter, Clock, CheckCircle2, Wallet, DollarSign, Zap } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +44,7 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
   const { currentRole, user, permissions, userOrgRoles } = useAuth();
   const [showWizard, setShowWizard] = useState(false);
   const [showFCDialog, setShowFCDialog] = useState(false);
+  const [showUnifiedWizard, setShowUnifiedWizard] = useState(false);
   const [activeTab, setActiveTab] = useState<ChangeOrderStatus | 'ALL'>('ALL');
   const [captureToConvert, setCaptureToConvert] = useState<FieldCapture | null>(null);
   const [mode, setMode] = useState<'orders' | 'quicklog'>('orders');
@@ -371,11 +373,11 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
                   <TooltipTrigger asChild>
                     <span>
                       <Button
-                        onClick={() => isFC ? setShowFCDialog(true) : setShowWizard(true)}
+                        onClick={() => setShowUnifiedWizard(true)}
                         disabled={isBlocked}
                       >
                         <Plus className="h-4 w-4 mr-2" />
-                        {isFC ? 'Submit Work Order' : 'New Work Order'}
+                        New Work Order
                       </Button>
                     </span>
                   </TooltipTrigger>
@@ -488,6 +490,13 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
           
         />
       )}
+      {/* Unified WO Wizard */}
+      <UnifiedWOWizard
+        open={showUnifiedWizard}
+        onOpenChange={setShowUnifiedWizard}
+        projectId={projectId}
+        projectName={projectName}
+      />
     </div>
   );
 }
