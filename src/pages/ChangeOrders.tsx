@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useChangeOrderProject } from '@/hooks/useChangeOrderProject';
+import { useWorkOrderDraft } from '@/hooks/useWorkOrderDraft';
+import { useToast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { WorkOrderWizard } from '@/components/work-order-wizard';
+import { UnifiedWOWizard } from '@/components/unified-wo-wizard';
 import { Plus, FileEdit, Building2 } from 'lucide-react';
 import {
   Select,
@@ -17,6 +19,7 @@ import {
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { ChangeOrderStatus } from '@/types/changeOrderProject';
+import type { UnifiedWizardData } from '@/types/unifiedWizard';
 
 interface Project {
   id: string;
@@ -26,10 +29,12 @@ interface Project {
 const ChangeOrders = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, userOrgRoles, currentRole, permissions } = useAuth();
+  const { user, userOrgRoles, permissions } = useAuth();
+  const { toast } = useToast();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [showWizard, setShowWizard] = useState(false);
+  const [wizardSubmitting, setWizardSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<ChangeOrderStatus | 'ALL'>('ALL');
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId);
@@ -37,10 +42,11 @@ const ChangeOrders = () => {
   const {
     changeOrders,
     isLoading,
-    createChangeOrder,
-    isCreating,
   } = useChangeOrderProject(selectedProjectId || undefined);
 
+  const { saveDraft } = useWorkOrderDraft(selectedProjectId || '');
+
+  const currentOrgType = userOrgRoles[0]?.organization?.type;
   const canCreate = permissions?.canCreateWorkOrders ?? false;
   const validStatuses: ChangeOrderStatus[] = [
     'draft', 'fc_input', 'tc_pricing', 'ready_for_approval', 'approved', 'rejected', 'contracted'
@@ -52,7 +58,6 @@ const ChangeOrders = () => {
     const statusParam = searchParams.get('status');
     const newParam = searchParams.get('new');
     
-    // Handle status filter from URL
     if (statusParam && validStatuses.includes(statusParam as ChangeOrderStatus)) {
       setActiveTab(statusParam as ChangeOrderStatus);
     }
@@ -61,11 +66,8 @@ const ChangeOrders = () => {
       const matchingProject = projects.find(p => p.id === projectParam);
       if (matchingProject) {
         setSelectedProjectId(projectParam);
-        
-        // Auto-open wizard if new=true
         if (newParam === 'true') {
           setShowWizard(true);
-          // Clear the 'new' param to prevent re-opening on refresh
           searchParams.delete('new');
           setSearchParams(searchParams, { replace: true });
         }
@@ -77,17 +79,14 @@ const ChangeOrders = () => {
   useEffect(() => {
     const fetchProjects = async () => {
       if (!user) return;
-
       const currentOrg = userOrgRoles[0]?.organization;
       if (!currentOrg?.id) return;
 
-      // Fetch owned projects
       const { data: ownedProjects } = await supabase
         .from('projects')
         .select('id, name')
         .eq('organization_id', currentOrg.id);
 
-      // Fetch projects where org is on the team
       const { data: teamMemberships } = await supabase
         .from('project_team')
         .select('project_id')
@@ -106,7 +105,6 @@ const ChangeOrders = () => {
         assignedProjects = (data || []) as Project[];
       }
 
-      // Merge and dedupe
       const allProjectsMap = new Map<string, Project>();
       (ownedProjects || []).forEach((p) => allProjectsMap.set(p.id, p as Project));
       assignedProjects.forEach((p) => allProjectsMap.set(p.id, p));
@@ -116,8 +114,6 @@ const ChangeOrders = () => {
       );
       
       setProjects(allProjects);
-      
-      // Auto-select first project if only one
       if (allProjects.length === 1) {
         setSelectedProjectId(allProjects[0].id);
       }
@@ -125,6 +121,96 @@ const ChangeOrders = () => {
 
     fetchProjects();
   }, [user, userOrgRoles]);
+
+  // Unified wizard onComplete handler (matches WorkOrdersTab pattern)
+  const handleWizardComplete = async (data: UnifiedWizardData & { project_id: string }) => {
+    setWizardSubmitting(true);
+    try {
+      const draftId = await saveDraft({
+        title: data.title || data.selectedCatalogItems.map(i => i.item_name).join(', ') || 'Work Order',
+        description: data.description || undefined,
+        wo_mode: data.wo_mode!,
+        wo_request_type: data.wo_request_type || undefined,
+        location_tag: data.location_tags.join(', ') || undefined,
+        tc_labor_rate: data.labor_mode === 'hourly' ? data.hourly_rate : null,
+        use_fc_hours_at_tc_rate: data.use_fc_hours_at_tc_rate,
+        materials_markup_pct: data.materials_markup_pct,
+        equipment_markup_pct: data.equipment_markup_pct,
+        pricing_mode: 'fixed',
+      });
+
+      const orgId = userOrgRoles[0]?.organization?.id;
+      if (!orgId || !user) throw new Error('Missing org or user');
+
+      for (const item of data.selectedCatalogItems) {
+        const unitRate = data.labor_mode === 'hourly' ? (data.hourly_rate || 0) : 0;
+        const { error } = await supabase
+          .from('work_order_line_items')
+          .insert({
+            project_id: data.project_id,
+            change_order_id: draftId,
+            org_id: orgId,
+            created_by_user_id: user.id,
+            catalog_item_id: item.id,
+            item_name: item.item_name,
+            division: item.division || null,
+            category_name: item.category_name || null,
+            group_label: item.group_label || null,
+            unit: item.unit,
+            qty: null,
+            hours: data.labor_mode === 'hourly' ? data.hours : null,
+            unit_rate: unitRate,
+            location_tag: data.location_tags.join(', ') || null,
+          } as never);
+        if (error) throw error;
+      }
+
+      for (const mat of data.materials) {
+        if (!mat.description) continue;
+        const { error } = await supabase
+          .from('work_order_materials')
+          .insert({
+            project_id: data.project_id,
+            change_order_id: draftId,
+            org_id: orgId,
+            created_by_user_id: user.id,
+            description: mat.description,
+            supplier: mat.supplier || null,
+            quantity: mat.quantity,
+            unit: mat.unit,
+            unit_cost: mat.unit_cost,
+            markup_percent: mat.markup_percent,
+            added_by_role: currentOrgType === 'FC' ? 'fc' : 'tc',
+          } as never);
+        if (error) throw error;
+      }
+
+      for (const eq of data.equipment) {
+        if (!eq.description) continue;
+        const { error } = await supabase
+          .from('work_order_equipment')
+          .insert({
+            project_id: data.project_id,
+            change_order_id: draftId,
+            org_id: orgId,
+            created_by_user_id: user.id,
+            description: eq.description,
+            duration_note: eq.duration_note || null,
+            cost: eq.cost,
+            markup_percent: eq.markup_percent,
+            added_by_role: currentOrgType === 'FC' ? 'fc' : 'tc',
+          } as never);
+        if (error) throw error;
+      }
+
+      toast({ title: 'Work order created successfully' });
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Failed to create work order', description: err.message });
+      throw err;
+    } finally {
+      setWizardSubmitting(false);
+    }
+  };
 
   const filteredChangeOrders =
     activeTab === 'ALL'
@@ -344,17 +430,15 @@ const ChangeOrders = () => {
           </Card>
         )}
 
-        {/* Change Order Wizard */}
+        {/* Unified Work Order Wizard */}
         {selectedProject && (
-          <WorkOrderWizard
+          <UnifiedWOWizard
             open={showWizard}
             onOpenChange={setShowWizard}
             projectId={selectedProject.id}
             projectName={selectedProject.name}
-            onComplete={async (data) => {
-              await createChangeOrder(data);
-            }}
-            isSubmitting={isCreating}
+            onComplete={handleWizardComplete}
+            isSubmitting={wizardSubmitting}
           />
         )}
       </div>

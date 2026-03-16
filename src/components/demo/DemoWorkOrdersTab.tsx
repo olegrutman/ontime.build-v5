@@ -6,7 +6,6 @@ import { Plus, MapPin, CheckCircle2, Circle, Clock, FileText, ArrowRight } from 
 import { useDemoProjectData } from '@/hooks/useDemoData';
 import { useDemo } from '@/contexts/DemoContext';
 import { type DemoWorkOrder } from '@/data/demoData';
-import { WorkOrderWizard } from '@/components/work-order-wizard/WorkOrderWizard';
 import { toast } from 'sonner';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Progress } from '@/components/ui/progress';
@@ -25,7 +24,6 @@ interface Props {
 export function DemoWorkOrdersTab({ projectId, projectName }: Props) {
   const data = useDemoProjectData();
   const { demoRole, addWorkOrder, updateWorkOrderStatus } = useDemo();
-  const [wizardOpen, setWizardOpen] = useState(false);
   const [selectedWO, setSelectedWO] = useState<DemoWorkOrder | null>(null);
 
   if (!data) return null;
@@ -68,7 +66,6 @@ export function DemoWorkOrdersTab({ projectId, projectName }: Props) {
       ],
     });
     toast.success('Work Order created! 🎉 It appears as "draft" — a TC would now price it.');
-    setWizardOpen(false);
   };
 
   const handleStatusChange = (wo: DemoWorkOrder, newStatus: string) => {
@@ -87,7 +84,7 @@ export function DemoWorkOrdersTab({ projectId, projectName }: Props) {
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Work Orders</h2>
         {canCreate && (
-          <Button size="sm" onClick={() => setWizardOpen(true)}>
+          <Button size="sm" onClick={handleCreateWO}>
             <Plus className="h-4 w-4 mr-1" /> Create Work Order
           </Button>
         )}
@@ -240,17 +237,6 @@ export function DemoWorkOrdersTab({ projectId, projectName }: Props) {
           )}
         </SheetContent>
       </Sheet>
-
-      <WorkOrderWizard
-        open={wizardOpen}
-        onOpenChange={setWizardOpen}
-        projectId={projectId}
-        projectName={projectName}
-        isSubmitting={false}
-        onComplete={async () => {
-          handleCreateWO();
-        }}
-      />
     </div>
   );
 }
