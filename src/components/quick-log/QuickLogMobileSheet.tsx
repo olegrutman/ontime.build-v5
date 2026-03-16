@@ -19,7 +19,7 @@ export function QuickLogMobileSheet({ open, onOpenChange, item, role, projectId,
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent className="max-h-[90dvh] lg:hidden">
+      <DrawerContent className="max-h-[90dvh]">
         <DrawerTitle className="sr-only">Log Work</DrawerTitle>
         <div className="overflow-y-auto px-4 py-4" style={{ maxHeight: 'calc(90dvh - 40px)' }}>
           <QuickLogDetailPanel

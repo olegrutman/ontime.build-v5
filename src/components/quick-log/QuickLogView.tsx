@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useWorkOrderCatalog } from '@/hooks/useWorkOrderCatalog';
 import { useWorkOrderLog } from '@/hooks/useWorkOrderLog';
 import { QuickLogKPIStrip } from './QuickLogKPIStrip';
@@ -18,6 +19,7 @@ interface QuickLogViewProps {
 
 export function QuickLogView({ projectId, orgId }: QuickLogViewProps) {
   const { currentRole } = useAuth();
+  const isMobile = useIsMobile();
   const catalog = useWorkOrderCatalog(orgId);
   const log = useWorkOrderLog(projectId, orgId);
   const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null);
@@ -89,7 +91,7 @@ export function QuickLogView({ projectId, orgId }: QuickLogViewProps) {
 
       {/* Mobile detail sheet */}
       <QuickLogMobileSheet
-        open={!!selectedItem}
+        open={isMobile && !!selectedItem}
         onOpenChange={(open) => { if (!open) setSelectedItem(null); }}
         item={selectedItem}
         role={role}
