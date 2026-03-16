@@ -49,6 +49,9 @@ export function UnifiedWOWizard({
     });
   }, [currentRole]);
 
+  const isTC = currentRole === 'TC_PM';
+  const isFC = currentRole === 'FC_PM' || currentRole === 'FS';
+
   const currentStep = visibleSteps[currentStepIndex];
   const totalSteps = visibleSteps.length;
 
