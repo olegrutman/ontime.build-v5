@@ -118,6 +118,11 @@ export function UnifiedWOWizard({
     handleClose();
   };
 
+  const jumpToStepByKey = (key: string) => {
+    const idx = visibleSteps.findIndex(s => s.key === key);
+    if (idx >= 0) setCurrentStepIndex(idx);
+  };
+
   const renderStepContent = () => {
     if (!currentStep) return null;
     switch (currentStep.key) {
@@ -127,12 +132,18 @@ export function UnifiedWOWizard({
         return <CaptureModeStep data={formData} onChange={handleChange} />;
       case 'scope':
         return <ScopeStep data={formData} onChange={handleChange} />;
+      case 'location':
+        return <LocationStep data={formData} onChange={handleChange} projectId={projectId} />;
+      case 'labor':
+        return <LaborStep data={formData} onChange={handleChange} isTC={isTC} projectRate={projectRate} />;
+      case 'materials':
+        return <MaterialsStep data={formData} onChange={handleChange} isTC={isTC} />;
+      case 'equipment':
+        return <EquipmentStep data={formData} onChange={handleChange} isTC={isTC} />;
+      case 'review':
+        return <ReviewStep data={formData} isTC={isTC} isFC={isFC} onJumpToStep={jumpToStepByKey} />;
       default:
-        return (
-          <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">
-            Step "{currentStep.title}" — coming in next phase
-          </div>
-        );
+        return null;
     }
   };
 
