@@ -251,7 +251,8 @@ export function UnifiedWOWizard({
             </Button>
           ) : (
             <Button onClick={handleSubmit} disabled={isSubmitting}>
-              Submit Work Order
+              {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {formData.wo_mode === 'quick_capture' ? 'Save & Submit' : 'Submit Work Order'}
             </Button>
           )}
         </div>
