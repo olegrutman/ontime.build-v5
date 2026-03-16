@@ -1,110 +1,189 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-## Features Built
+# Quick Log — Work Order Task Logging System
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
+## Scope
 
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
-
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
-
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
+This is a large feature with ~20 new files. It adds a fast-entry "Quick Log" mode alongside the existing work order wizard inside the Work Orders tab, plus a mode toggle in the Field Capture sheet.
 
 ---
 
-# Field Capture Mode — IMPLEMENTED
+## 1. Database Changes (2 migrations)
 
-## Overview
-Mobile-first feature enabling Field Crew to instantly capture jobsite issues (photo, voice note, location, reason category) in under 10 seconds.
+### Migration 1: `work_order_catalog` table + seed data
 
-## Database
-- `field_captures` table with RLS (project participants SELECT, creator INSERT/UPDATE)
-- `field-captures` storage bucket (public read, authenticated upload)
-- Realtime enabled via `supabase_realtime` publication
+```sql
+CREATE TABLE public.work_order_catalog (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  division TEXT NOT NULL,
+  category_id TEXT NOT NULL,
+  category_name TEXT NOT NULL,
+  group_id TEXT NOT NULL,
+  group_label TEXT NOT NULL,
+  item_name TEXT NOT NULL,
+  unit TEXT NOT NULL,
+  category_color TEXT,
+  category_bg TEXT,
+  category_icon TEXT,
+  sort_order INT DEFAULT 0,
+  org_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE
+);
+ALTER TABLE public.work_order_catalog ENABLE ROW LEVEL SECURITY;
+-- RLS: global items (org_id IS NULL) readable by all authenticated; org-specific by org members
+```
 
-## Frontend Components
-| File | Purpose |
-|------|---------|
-| `src/hooks/useFieldCaptures.ts` | React Query hook with realtime, create/update mutations, media upload |
-| `src/components/field-capture/FieldCaptureSheet.tsx` | Full-screen capture UI (photo, voice, text, reason chips) |
-| `src/components/field-capture/CapturePhotoInput.tsx` | Camera-first photo capture with large touch target |
-| `src/components/field-capture/CaptureVoiceInput.tsx` | Hold-to-record voice note (MediaRecorder API) |
-| `src/components/field-capture/CaptureReasonChips.tsx` | Tap-to-select reason category chips |
-| `src/components/field-capture/FieldCaptureList.tsx` | List of captures with "+ Capture" button |
-| `src/components/field-capture/FieldCaptureCard.tsx` | Individual capture card with "Convert to Task" button |
+Seed all ~160 catalog items from the spec (Framing, Exterior Skin, Roofing, Waterproofing, Windows & Doors, Decorative divisions).
 
-## Entry Points
-1. **BottomNav FAB** — Amber "Capture" button on project pages (mobile)
-2. **Daily Log tab** — Field Captures section for the active date
+### Migration 2: `work_order_log_items` table
 
-## Feature Gate
-- `field_capture` added to `FeatureKey` type and labels
+```sql
+CREATE TABLE public.work_order_log_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES public.projects(id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES public.organizations(id),
+  created_by_user_id UUID NOT NULL REFERENCES auth.users(id),
+  catalog_item_id UUID REFERENCES public.work_order_catalog(id),
+  item_name TEXT NOT NULL,
+  division TEXT NOT NULL,
+  category_name TEXT NOT NULL,
+  unit TEXT NOT NULL,
+  qty DECIMAL,
+  hours DECIMAL,
+  unit_rate DECIMAL NOT NULL,
+  line_total DECIMAL GENERATED ALWAYS AS (COALESCE(qty, hours) * unit_rate) STORED,
+  material_spec TEXT,
+  location TEXT,
+  note TEXT,
+  status TEXT NOT NULL DEFAULT 'open',
+  linked_change_order_id UUID REFERENCES public.change_order_projects(id),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  period_week DATE GENERATED ALWAYS AS (date_trunc('week', created_at)::date) STORED
+);
+ALTER TABLE public.work_order_log_items ENABLE ROW LEVEL SECURITY;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.work_order_log_items;
+```
 
-## Auto-captured Data
-- Timestamp, user ID, org ID, GPS coordinates, device info (userAgent)
-
-## Files Created/Modified
-| File | Action |
-|------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+RLS: project participants can SELECT; authenticated users can INSERT their own rows (created_by_user_id = auth.uid()); users can UPDATE own open items only. Status validation trigger for valid transitions.
 
 ---
 
-# Multi-Item Work Order — IMPLEMENTED
+## 2. New Hooks
 
-## Overview
-Transforms Work Orders from single-task entities into **package containers** holding multiple task line items, mirroring how POs hold multiple material lines.
+### `src/hooks/useWorkOrderCatalog.ts`
+- Fetches `work_order_catalog` (global + user's org items)
+- Organizes into nested structure: division → category → group → items
+- `search(query)` returns flat results with path metadata
+- Memoized, cached via react-query
 
-## Database
-- `work_order_tasks` table with RLS (project participants CRUD) linked to `change_order_projects` header via `work_order_id`
-- Status validation trigger (`pending`, `in_progress`, `complete`, `skipped`)
-- Realtime enabled via `supabase_realtime` publication
+### `src/hooks/useWorkOrderLog.ts`
+- Fetches `work_order_log_items` for project + org
+- Realtime subscription for live KPI updates
+- Mutations: `logItem`, `submitAllOpen`, `updateStatus`
+- `submitAllOpen`: updates all open items to `submitted_to_tc` (FC) or `submitted_to_gc` (TC), creates a draft change order linking them
+- Computed: `openCount`, `submittedCount`, `approvedCount`, `openTotal`
 
-## Frontend Components
-| File | Purpose |
-|------|---------|
-| `src/types/workOrderTask.ts` | TypeScript types for work order tasks |
-| `src/hooks/useWorkOrderTasks.ts` | React Query hook with realtime, CRUD mutations |
-| `src/components/work-order-tasks/WorkOrderTaskList.tsx` | Task list with completion counter |
-| `src/components/work-order-tasks/WorkOrderTaskCard.tsx` | Individual task card with status, location, menu |
-| `src/components/work-order-tasks/AddTaskSheet.tsx` | Mobile-first bottom sheet for adding/editing tasks |
-| `src/components/work-order-tasks/TaskQuickAdd.tsx` | Inline quick-add input for FC users |
+---
 
-## Integration Points
-- `ChangeOrderDetailPage.tsx` — Tasks section after header card, FC quick-add below
-- `useChangeOrderRealtime.ts` — Subscribes to `work_order_tasks` changes
+## 3. New Components: `src/components/quick-log/`
+
+### `QuickLogView.tsx` — Main container
+- Two-column layout (desktop), single-column stacked (mobile)
+- Left: KPI strip + Alert banner + Catalog card + Logged items list
+- Right (sticky): Detail panel
+- Receives `projectId`, `orgId`, role info
+
+### `QuickLogKPIStrip.tsx`
+- Three metric cards: Open (amber), With TC/GC, Approved (green)
+- Uses counts from `useWorkOrderLog`
+
+### `QuickLogAlertBanner.tsx`
+- Role-specific messaging with action button
+- FC: "X unsubmitted" → "Submit →"
+- TC: "X FC tasks not sent to GC — $Y" → "Bundle & send →"
+- GC: "X requests awaiting estimate" → "Follow up →"
+
+### `CatalogBrowser.tsx` — 4-level drill-down catalog
+- Search bar at top with flat results showing `division › category › group` path
+- Breadcrumb navigation (tappable segments)
+- Level 1: Division tiles (3×2 grid, colored icons)
+- Level 2: Category rows (icon, name, counts)
+- Level 3: Sub-group tiles (2-column grid, colored dots)
+- Level 4: Item list with unit labels, circular checkboxes, amber selected state
+- State: `selectedItemId` lifted to parent
+
+### `QuickLogDetailPanel.tsx` — Right panel / bottom sheet
+- Empty state: "Select a task from the catalog"
+- Selected state: header strip, qty/hours field (based on unit), rate field (always empty, required), material/spec dropdown (category-specific), location chips (single-select), note textarea, line total preview (amber pill), submit button
+- GC-only: Send To chips (Trade Co. / Field Crew) + Priority chips (Normal / Urgent)
+- Submit disabled until qty/hours AND rate > 0
+- On submit: insert via `logItem`, toast, clear fields but keep catalog position
+
+### `LoggedItemsList.tsx`
+- Card "Open this period" with unsubmitted count + total
+- List of items: colored left bar, item name, meta line, amount, status badge
+- Footer: count + total, "Submit All Open →" button
+- Hidden for GC; GC sees request history card instead
+
+### `SubmitAllSheet.tsx`
+- Confirmation bottom sheet grouping items by division
+- Shows total, confirm button
+- On confirm: calls `submitAllOpen`
+
+### `QuickLogMobileSheet.tsx`
+- Bottom sheet wrapper for detail panel on mobile (<768px)
+- Triggered when item selected in catalog
+- Submit button pinned to bottom
+
+---
+
+## 4. Modified Files
+
+### `WorkOrdersTab.tsx`
+- Add mode toggle state: `'orders' | 'quicklog'`
+- Add "Quick Log" button next to "New Work Order" in the header area
+- When `mode === 'quicklog'`, render `<QuickLogView>` instead of the work orders list
+- Keep all existing wizard/dialog code untouched
+
+### `FieldCaptureSheet.tsx`
+- Add a toggle at top of the sheet body: "Note" (current behavior) | "Quick Log"
+- When "Quick Log" selected, show a simplified inline version: catalog search → item select → qty + rate fields → submit
+- Reuse `CatalogBrowser` in compact mode and `QuickLogDetailPanel` inline
+
+### `FieldCaptureCard.tsx`
+- No changes needed (convert button stays as-is)
+
+---
+
+## 5. Types
+
+### `src/types/quickLog.ts`
+- `CatalogItem`, `CatalogDivision`, `CatalogCategory`, `CatalogGroup`
+- `LogItem` matching the DB schema
+- `LogItemStatus = 'open' | 'submitted_to_tc' | 'submitted_to_gc' | 'approved' | 'invoiced'`
+- Material spec options map by category
+
+---
+
+## Files Summary
+
+**New files (~15):**
+- `src/types/quickLog.ts`
+- `src/hooks/useWorkOrderCatalog.ts`
+- `src/hooks/useWorkOrderLog.ts`
+- `src/components/quick-log/QuickLogView.tsx`
+- `src/components/quick-log/QuickLogKPIStrip.tsx`
+- `src/components/quick-log/QuickLogAlertBanner.tsx`
+- `src/components/quick-log/CatalogBrowser.tsx`
+- `src/components/quick-log/QuickLogDetailPanel.tsx`
+- `src/components/quick-log/LoggedItemsList.tsx`
+- `src/components/quick-log/SubmitAllSheet.tsx`
+- `src/components/quick-log/QuickLogMobileSheet.tsx`
+- `src/components/quick-log/index.ts`
+- 2 migration files
+
+**Modified files (2):**
+- `src/components/project/WorkOrdersTab.tsx` — mode toggle + QuickLogView render
+- `src/components/field-capture/FieldCaptureSheet.tsx` — Note/Quick Log toggle
+
+**Not changed:** WorkOrderWizard, FCWorkOrderDialog, change_order_projects schema, invoice flows, WorkOrdersTab overall structure.
+
