@@ -4951,6 +4951,107 @@ export type Database = {
           },
         ]
       }
+      work_order_line_items: {
+        Row: {
+          added_at: string | null
+          catalog_item_id: string | null
+          category_name: string | null
+          change_order_id: string | null
+          created_by_user_id: string
+          division: string | null
+          group_label: string | null
+          hours: number | null
+          id: string
+          item_name: string
+          line_total: number
+          location_tag: string | null
+          material_spec: string | null
+          note: string | null
+          org_id: string
+          period_week: string
+          project_id: string
+          qty: number | null
+          status: string
+          unit: string
+          unit_rate: number
+        }
+        Insert: {
+          added_at?: string | null
+          catalog_item_id?: string | null
+          category_name?: string | null
+          change_order_id?: string | null
+          created_by_user_id: string
+          division?: string | null
+          group_label?: string | null
+          hours?: number | null
+          id?: string
+          item_name: string
+          line_total?: number
+          location_tag?: string | null
+          material_spec?: string | null
+          note?: string | null
+          org_id: string
+          period_week?: string
+          project_id: string
+          qty?: number | null
+          status?: string
+          unit: string
+          unit_rate: number
+        }
+        Update: {
+          added_at?: string | null
+          catalog_item_id?: string | null
+          category_name?: string | null
+          change_order_id?: string | null
+          created_by_user_id?: string
+          division?: string | null
+          group_label?: string | null
+          hours?: number | null
+          id?: string
+          item_name?: string
+          line_total?: number
+          location_tag?: string | null
+          material_spec?: string | null
+          note?: string | null
+          org_id?: string
+          period_week?: string
+          project_id?: string
+          qty?: number | null
+          status?: string
+          unit?: string
+          unit_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_line_items_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_line_items_change_order_id_fkey"
+            columns: ["change_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_order_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_line_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_line_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_order_log_items: {
         Row: {
           catalog_item_id: string | null
