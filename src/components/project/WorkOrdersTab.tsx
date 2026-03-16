@@ -391,7 +391,13 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
         )}
       </div>
 
+      {/* Quick Log Mode */}
+      {mode === 'quicklog' && userOrgId && (
+        <QuickLogView projectId={projectId} orgId={userOrgId} />
+      )}
+
       {/* Work Orders Content */}
+      {mode === 'orders' && (
       {isLoading ? (
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
