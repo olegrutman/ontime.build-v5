@@ -85,7 +85,7 @@ export function RFIsTab({ projectId }: RFIsTabProps) {
     setWoWizardOpen(true);
   };
 
-  const handleWizardComplete = async (data: UnifiedWizardData & { project_id: string }) => {
+  const handleWizardComplete = async (data: WorkOrderWizardData & { project_id: string }) => {
     setWizardSubmitting(true);
     try {
       const draftId = await saveDraft({
