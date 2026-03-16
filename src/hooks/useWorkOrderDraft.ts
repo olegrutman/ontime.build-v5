@@ -7,6 +7,12 @@ import type {
   WOMode,
   WORequestType,
 } from '@/types/workOrderWizard';
+
+// Inline types for DB row shapes (previously from unifiedWizard)
+interface WOLineItem { id: string; line_total: number; [k: string]: any; }
+interface WOMaterialRow { id: string; line_cost: number; markup_amount: number; billed_amount: number; [k: string]: any; }
+interface WOEquipmentRow { id: string; cost: number; markup_amount: number; billed_amount: number; [k: string]: any; }
+interface WOFinancials { laborTotal: number; materialsLineCost: number; materialsMarkup: number; materialsBilled: number; equipmentCost: number; equipmentMarkup: number; equipmentBilled: number; totalBilledToGC: number; tcTotalCost: number; runningMarginPct: number; }
 import type { CatalogItem } from '@/types/quickLog';
 
 interface DraftRecord {
