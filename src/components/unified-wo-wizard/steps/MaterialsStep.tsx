@@ -90,6 +90,16 @@ export function MaterialsStep({ data, onChange, isTC }: MaterialsStepProps) {
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
+                {/* Bug #12: Add supplier field */}
+                <div>
+                  <label className="text-[10px] text-muted-foreground uppercase">Supplier</label>
+                  <Input
+                    placeholder="Supplier name (optional)"
+                    value={row.supplier}
+                    onChange={(e) => updateRow(row.tempId, { supplier: e.target.value })}
+                    className="text-sm"
+                  />
+                </div>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
                     <label className="text-[10px] text-muted-foreground uppercase">Qty</label>

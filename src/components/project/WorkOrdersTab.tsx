@@ -4,13 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useChangeOrderProject } from '@/hooks/useChangeOrderProject';
 import { useSOVReadiness } from '@/hooks/useSOVReadiness';
+import { useWorkOrderDraft } from '@/hooks/useWorkOrderDraft';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { WorkOrderWizard } from '@/components/work-order-wizard';
-import { FCWorkOrderDialog, FCWorkOrderData } from '@/components/fc-work-order';
 import { UnifiedWOWizard } from '@/components/unified-wo-wizard';
 import { Plus, FileEdit, Eye, Edit, AlertTriangle, ArrowRight, User, Filter, Clock, CheckCircle2, Wallet, DollarSign, Zap } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -22,6 +22,7 @@ import { enrichWorkOrderTotals } from '@/lib/computeWorkOrderTotal';
 import { FieldCaptureList } from '@/components/field-capture';
 import type { FieldCapture } from '@/hooks/useFieldCaptures';
 import { QuickLogView } from '@/components/quick-log';
+import type { UnifiedWizardData } from '@/types/unifiedWizard';
 
 const STATUS_PRIORITY: Record<ChangeOrderStatus, number> = {
   rejected: 0,
@@ -42,12 +43,12 @@ interface WorkOrdersTabProps {
 export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrdersTabProps) {
   const navigate = useNavigate();
   const { currentRole, user, permissions, userOrgRoles } = useAuth();
-  const [showWizard, setShowWizard] = useState(false);
-  const [showFCDialog, setShowFCDialog] = useState(false);
+  const { toast } = useToast();
   const [showUnifiedWizard, setShowUnifiedWizard] = useState(false);
   const [activeTab, setActiveTab] = useState<ChangeOrderStatus | 'ALL'>('ALL');
   const [captureToConvert, setCaptureToConvert] = useState<FieldCapture | null>(null);
   const [mode, setMode] = useState<'orders' | 'quicklog'>('orders');
+  const [wizardSubmitting, setWizardSubmitting] = useState(false);
 
   const {
     changeOrders,
@@ -58,7 +59,11 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
     isCreatingFC,
   } = useChangeOrderProject(projectId);
 
+  const { saveDraft, addLineItem, addMaterial, addEquipment, convertToWorkOrder } = useWorkOrderDraft(projectId);
+
   const userOrgId = userOrgRoles.length > 0 ? userOrgRoles[0].organization_id : undefined;
+  const currentOrgType = userOrgRoles[0]?.organization?.type;
+  const isFC = currentOrgType === 'FC';
 
   // Check if current user is the project creator
   const [isProjectCreator, setIsProjectCreator] = useState(false);
@@ -97,16 +102,121 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
     ).then(setEnrichedTotals);
   }, [changeOrders]);
 
-  const isFC = currentRole === 'FC_PM' || currentRole === 'FS';
   const canCreate = permissions?.canCreateWorkOrders ?? false;
   const isBlocked = !isFC && !sovReadiness.isReady && !sovReadiness.loading;
 
+  // Bug #4: All entry points route through unified wizard
   const handleConvertCapture = (capture: FieldCapture) => {
     setCaptureToConvert(capture);
-    if (isFC) {
-      setShowFCDialog(true);
-    } else {
-      setShowWizard(true);
+    setShowUnifiedWizard(true);
+  };
+
+  // Bug #3: Wire onComplete to actually save data
+  const handleWizardComplete = async (data: UnifiedWizardData & { project_id: string }) => {
+    setWizardSubmitting(true);
+    try {
+      // 1. Create the draft header
+      const draftId = await saveDraft({
+        title: data.title || data.selectedCatalogItems.map(i => i.item_name).join(', ') || 'Work Order',
+        description: data.description || undefined,
+        wo_mode: data.wo_mode!,
+        wo_request_type: data.wo_request_type || undefined,
+        location_tag: data.location_tags.join(', ') || undefined,
+        tc_labor_rate: data.labor_mode === 'hourly' ? data.hourly_rate : null,
+        use_fc_hours_at_tc_rate: data.use_fc_hours_at_tc_rate,
+        materials_markup_pct: data.materials_markup_pct,
+        equipment_markup_pct: data.equipment_markup_pct,
+        pricing_mode: 'fixed',
+      });
+
+      // We need to create a new hook instance with the draftId to add items
+      // Instead, directly insert line items, materials, equipment via supabase
+      const orgId = userOrgRoles[0]?.organization?.id;
+      if (!orgId || !user) throw new Error('Missing org or user');
+
+      // 2. Add line items from selected catalog items
+      const lineItemIds: string[] = [];
+      for (const item of data.selectedCatalogItems) {
+        const unitRate = data.labor_mode === 'hourly' ? (data.hourly_rate || 0) : 0;
+        const { data: inserted, error } = await supabase
+          .from('work_order_line_items')
+          .insert({
+            project_id: projectId,
+            change_order_id: draftId,
+            org_id: orgId,
+            created_by_user_id: user.id,
+            catalog_item_id: item.id,
+            item_name: item.item_name,
+            division: item.division || null,
+            category_name: item.category_name || null,
+            group_label: item.group_label || null,
+            unit: item.unit,
+            qty: null,
+            hours: data.labor_mode === 'hourly' ? data.hours : null,
+            unit_rate: unitRate,
+            location_tag: data.location_tags.join(', ') || null,
+          } as never)
+          .select('id')
+          .single();
+        if (error) throw error;
+        if (inserted) lineItemIds.push((inserted as any).id);
+      }
+
+      // 3. Add materials
+      for (const mat of data.materials) {
+        if (!mat.description) continue;
+        const { error } = await supabase
+          .from('work_order_materials')
+          .insert({
+            project_id: projectId,
+            change_order_id: draftId,
+            org_id: orgId,
+            created_by_user_id: user.id,
+            description: mat.description,
+            supplier: mat.supplier || null,
+            quantity: mat.quantity,
+            unit: mat.unit,
+            unit_cost: mat.unit_cost,
+            markup_percent: mat.markup_percent,
+            added_by_role: currentOrgType === 'FC' ? 'fc' : 'tc',
+          } as never);
+        if (error) throw error;
+      }
+
+      // 4. Add equipment
+      for (const eq of data.equipment) {
+        if (!eq.description) continue;
+        const { error } = await supabase
+          .from('work_order_equipment')
+          .insert({
+            project_id: projectId,
+            change_order_id: draftId,
+            org_id: orgId,
+            created_by_user_id: user.id,
+            description: eq.description,
+            duration_note: eq.duration_note || null,
+            cost: eq.cost,
+            markup_percent: eq.markup_percent,
+            added_by_role: currentOrgType === 'FC' ? 'fc' : 'tc',
+          } as never);
+        if (error) throw error;
+      }
+
+      // 5. Convert capture if applicable
+      if (captureToConvert) {
+        await supabase
+          .from('field_captures')
+          .update({ status: 'converted', converted_work_order_id: draftId })
+          .eq('id', captureToConvert.id);
+        setCaptureToConvert(null);
+      }
+
+      toast({ title: 'Work order created successfully' });
+    } catch (err: any) {
+      toast({ variant: 'destructive', title: 'Failed to create work order', description: err.message });
+      throw err;
+    } finally {
+      setWizardSubmitting(false);
     }
   };
 
@@ -419,7 +529,7 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
                 <Button
                   variant="outline"
                   className="mt-4"
-                  onClick={() => setShowWizard(true)}
+                  onClick={() => setShowUnifiedWizard(true)}
                 >
                   <Plus className="w-4 h-4 mr-2" />
                   Create your first work order
@@ -435,67 +545,17 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
         )
       )}
 
-      {/* Work Order Wizard (GC/TC) */}
-      {!isFC && (
-        <WorkOrderWizard
-          open={showWizard}
-          onOpenChange={(open) => {
-            setShowWizard(open);
-            if (!open) setCaptureToConvert(null);
-          }}
-          projectId={projectId}
-          projectName={projectName}
-          onComplete={async (data) => {
-            await createChangeOrder(data);
-            if (captureToConvert) {
-              await supabase
-                .from('field_captures')
-                .update({ status: 'converted' })
-                .eq('id', captureToConvert.id);
-              setCaptureToConvert(null);
-            }
-          }}
-          isSubmitting={isCreating}
-          initialData={captureToConvert ? {
-            title: captureToConvert.description || '',
-            description: captureToConvert.description || '',
-          } : undefined}
-        />
-      )}
-
-      {/* FC Work Order Dialog (simplified) */}
-      {isFC && (
-        <FCWorkOrderDialog
-          open={showFCDialog}
-          onOpenChange={(open) => {
-            setShowFCDialog(open);
-            if (!open) setCaptureToConvert(null);
-          }}
-          projectId={projectId}
-          projectName={projectName}
-          onSubmit={async (data: FCWorkOrderData) => {
-            await createFCWorkOrder({
-              project_id: projectId,
-              ...data,
-            });
-            if (captureToConvert) {
-              await supabase
-                .from('field_captures')
-                .update({ status: 'converted' })
-                .eq('id', captureToConvert.id);
-              setCaptureToConvert(null);
-            }
-          }}
-          isSubmitting={isCreatingFC}
-          
-        />
-      )}
-      {/* Unified WO Wizard */}
+      {/* Unified WO Wizard — single entry point for all roles */}
       <UnifiedWOWizard
         open={showUnifiedWizard}
-        onOpenChange={setShowUnifiedWizard}
+        onOpenChange={(open) => {
+          setShowUnifiedWizard(open);
+          if (!open) setCaptureToConvert(null);
+        }}
         projectId={projectId}
         projectName={projectName}
+        onComplete={handleWizardComplete}
+        isSubmitting={wizardSubmitting}
       />
     </div>
   );

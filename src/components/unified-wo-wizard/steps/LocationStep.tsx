@@ -49,12 +49,12 @@ export function LocationStep({ data, onChange, projectId }: LocationStepProps) {
       });
     }
 
-    // Elevations — show for exterior/roofing/waterproofing items
+    // Bug #9: Only show elevations when exterior items are actually selected
     const exteriorDivisions = new Set(['exterior', 'roofing', 'waterproofing']);
     const hasExteriorItems = data.selectedCatalogItems.some(
       item => exteriorDivisions.has(item.division)
     );
-    if (hasExteriorItems || data.selectedCatalogItems.length === 0) {
+    if (hasExteriorItems) {
       groups.push({
         label: 'Elevations',
         chips: ['East elev.', 'West elev.', 'North elev.', 'South elev.'],
@@ -105,17 +105,6 @@ export function LocationStep({ data, onChange, projectId }: LocationStepProps) {
           </div>
         </div>
       ))}
-
-      {/* Quick Capture auto-save banner */}
-      {data.wo_mode === 'quick_capture' &&
-        data.selectedCatalogItems.length > 0 &&
-        data.location_tags.length > 0 && (
-        <div className="rounded-lg bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 px-4 py-3">
-          <p className="text-sm text-emerald-700 dark:text-emerald-300">
-            ✓ Draft saved. You can exit and return to this work order at any time.
-          </p>
-        </div>
-      )}
     </div>
   );
 }

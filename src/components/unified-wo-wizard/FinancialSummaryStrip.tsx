@@ -22,16 +22,20 @@ export function FinancialSummaryStrip({ data, isTC, isFC }: FinancialSummaryStri
     const matMarkup = data.materials.reduce((s, m) => s + m.quantity * m.unit_cost * m.markup_percent / 100, 0);
     const matBilled = matCost + matMarkup;
 
+    // Bug #7: Calculate effective average markup from actual rows
+    const effectiveMatMarkupPct = matCost > 0 ? (matMarkup / matCost) * 100 : 0;
+
     // Equipment
     const eqCost = data.equipment.reduce((s, e) => s + e.cost, 0);
     const eqMarkup = data.equipment.reduce((s, e) => s + e.cost * e.markup_percent / 100, 0);
     const eqBilled = eqCost + eqMarkup;
+    const effectiveEqMarkupPct = eqCost > 0 ? (eqMarkup / eqCost) * 100 : 0;
 
     const totalBilled = laborTotal + matBilled + eqBilled;
     const totalCost = laborTotal + matCost + eqCost;
     const margin = totalBilled > 0 ? ((totalBilled - totalCost) / totalBilled) * 100 : 0;
 
-    return { laborTotal, matCost, matMarkup, matBilled, eqCost, eqMarkup, eqBilled, totalBilled, totalCost, margin };
+    return { laborTotal, matCost, matMarkup, matBilled, eqCost, eqMarkup, eqBilled, totalBilled, totalCost, margin, effectiveMatMarkupPct, effectiveEqMarkupPct };
   }, [data]);
 
   const fmt = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(n);
@@ -49,14 +53,14 @@ export function FinancialSummaryStrip({ data, isTC, isFC }: FinancialSummaryStri
           {totals.matCost > 0 && (
             <>
               <Row label="Materials cost" value={fmt(totals.matCost)} muted />
-              <Row label={`Markup (${data.materials_markup_pct}%)`} value={`+ ${fmt(totals.matMarkup)}`} muted />
+              <Row label={`Markup (${totals.effectiveMatMarkupPct.toFixed(0)}%)`} value={`+ ${fmt(totals.matMarkup)}`} muted />
               <Row label="Materials billed" value={fmt(totals.matBilled)} />
             </>
           )}
           {totals.eqCost > 0 && (
             <>
               <Row label="Equipment cost" value={fmt(totals.eqCost)} muted />
-              <Row label={`Markup (${data.equipment_markup_pct}%)`} value={`+ ${fmt(totals.eqMarkup)}`} muted />
+              <Row label={`Markup (${totals.effectiveEqMarkupPct.toFixed(0)}%)`} value={`+ ${fmt(totals.eqMarkup)}`} muted />
               <Row label="Equipment billed" value={fmt(totals.eqBilled)} />
             </>
           )}
