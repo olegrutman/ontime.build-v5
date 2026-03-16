@@ -35,6 +35,8 @@ export function UnifiedWOWizard({
 }: UnifiedWOWizardProps) {
   const { currentRole } = useAuth();
   const isMobile = useIsMobile();
+  const { myRate: projectRate } = useProjectLaborRates(projectId);
+  const isMobile = useIsMobile();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [formData, setFormData] = useState<UnifiedWizardData>({ ...INITIAL_UNIFIED_WIZARD_DATA });
 
