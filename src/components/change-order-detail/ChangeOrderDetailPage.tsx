@@ -13,6 +13,8 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { useState } from 'react';
 import { useWorkOrderTasks } from '@/hooks/useWorkOrderTasks';
+import { useWorkOrderLineItems } from '@/hooks/useWorkOrderLineItems';
+import { WorkOrderLineItemsList } from './WorkOrderLineItemsList';
 import { WorkOrderTaskList } from '@/components/work-order-tasks/WorkOrderTaskList';
 import { AddTaskSheet } from '@/components/work-order-tasks/AddTaskSheet';
 import { TaskQuickAdd } from '@/components/work-order-tasks/TaskQuickAdd';
