@@ -23,7 +23,10 @@ interface FieldCaptureSheetProps {
 export function FieldCaptureSheet({ open, onOpenChange, projectId, organizationId }: FieldCaptureSheetProps) {
   const { toast } = useToast();
   const { createCapture } = useFieldCaptures(projectId);
+  const catalog = useWorkOrderCatalog(organizationId);
+  const log = useWorkOrderLog(projectId, organizationId);
 
+  const [captureMode, setCaptureMode] = useState<'note' | 'quicklog'>('note');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [voiceBlob, setVoiceBlob] = useState<Blob | null>(null);
@@ -31,6 +34,7 @@ export function FieldCaptureSheet({ open, onOpenChange, projectId, organizationI
   const [reason, setReason] = useState<ReasonCategory | null>(null);
   const [gps, setGps] = useState<{ lat: number; lng: number } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [selectedCatalogItem, setSelectedCatalogItem] = useState<CatalogItem | null>(null);
 
   // Auto-capture GPS on open
   useEffect(() => {
