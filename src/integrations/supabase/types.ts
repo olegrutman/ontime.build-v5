@@ -496,25 +496,32 @@ export type Database = {
       }
       change_order_projects: {
         Row: {
+          converted_at: string | null
           created_at: string
           created_by: string | null
           created_by_role: string | null
           description: string | null
+          draft_started_at: string | null
           equipment_cost_responsibility: string | null
+          equipment_markup_pct: number
           equipment_total: number | null
           fc_hourly_rate: number | null
+          fc_labor_rate: number | null
           final_price: number | null
           fixing_trade_notes: string | null
+          gc_request_note: string | null
           id: string
           labor_total: number | null
           linked_po_id: string | null
           location_data: Json | null
+          location_tag: string | null
           material_cost_responsibility: string | null
           material_markup_amount: number | null
           material_markup_percent: number | null
           material_markup_type: string | null
           material_total: number | null
           materials_locked_at: string | null
+          materials_markup_pct: number
           materials_pricing_locked: boolean | null
           pricing_mode: string
           project_id: string
@@ -523,32 +530,44 @@ export type Database = {
           requires_equipment: boolean | null
           requires_materials: boolean | null
           status: string
+          submitted_by_user_id: string | null
           tc_hourly_rate: number | null
           tc_internal_cost: number | null
+          tc_labor_rate: number | null
           title: string
           updated_at: string
+          use_fc_hours_at_tc_rate: boolean
+          wo_mode: string | null
+          wo_request_type: string | null
           work_type: string | null
         }
         Insert: {
+          converted_at?: string | null
           created_at?: string
           created_by?: string | null
           created_by_role?: string | null
           description?: string | null
+          draft_started_at?: string | null
           equipment_cost_responsibility?: string | null
+          equipment_markup_pct?: number
           equipment_total?: number | null
           fc_hourly_rate?: number | null
+          fc_labor_rate?: number | null
           final_price?: number | null
           fixing_trade_notes?: string | null
+          gc_request_note?: string | null
           id?: string
           labor_total?: number | null
           linked_po_id?: string | null
           location_data?: Json | null
+          location_tag?: string | null
           material_cost_responsibility?: string | null
           material_markup_amount?: number | null
           material_markup_percent?: number | null
           material_markup_type?: string | null
           material_total?: number | null
           materials_locked_at?: string | null
+          materials_markup_pct?: number
           materials_pricing_locked?: boolean | null
           pricing_mode?: string
           project_id: string
@@ -557,32 +576,44 @@ export type Database = {
           requires_equipment?: boolean | null
           requires_materials?: boolean | null
           status?: string
+          submitted_by_user_id?: string | null
           tc_hourly_rate?: number | null
           tc_internal_cost?: number | null
+          tc_labor_rate?: number | null
           title: string
           updated_at?: string
+          use_fc_hours_at_tc_rate?: boolean
+          wo_mode?: string | null
+          wo_request_type?: string | null
           work_type?: string | null
         }
         Update: {
+          converted_at?: string | null
           created_at?: string
           created_by?: string | null
           created_by_role?: string | null
           description?: string | null
+          draft_started_at?: string | null
           equipment_cost_responsibility?: string | null
+          equipment_markup_pct?: number
           equipment_total?: number | null
           fc_hourly_rate?: number | null
+          fc_labor_rate?: number | null
           final_price?: number | null
           fixing_trade_notes?: string | null
+          gc_request_note?: string | null
           id?: string
           labor_total?: number | null
           linked_po_id?: string | null
           location_data?: Json | null
+          location_tag?: string | null
           material_cost_responsibility?: string | null
           material_markup_amount?: number | null
           material_markup_percent?: number | null
           material_markup_type?: string | null
           material_total?: number | null
           materials_locked_at?: string | null
+          materials_markup_pct?: number
           materials_pricing_locked?: boolean | null
           pricing_mode?: string
           project_id?: string
@@ -591,10 +622,15 @@ export type Database = {
           requires_equipment?: boolean | null
           requires_materials?: boolean | null
           status?: string
+          submitted_by_user_id?: string | null
           tc_hourly_rate?: number | null
           tc_internal_cost?: number | null
+          tc_labor_rate?: number | null
           title?: string
           updated_at?: string
+          use_fc_hours_at_tc_rate?: boolean
+          wo_mode?: string | null
+          wo_request_type?: string | null
           work_type?: string | null
         }
         Relationships: [
@@ -610,6 +646,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_order_projects_submitted_by_user_id_fkey"
+            columns: ["submitted_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1954,6 +1997,8 @@ export type Database = {
           allow_join_requests: boolean
           created_at: string
           created_by: string | null
+          default_equipment_markup_pct: number
+          default_materials_markup_pct: number
           id: string
           insurance_expiration_date: string | null
           license_number: string | null
@@ -1971,6 +2016,8 @@ export type Database = {
           allow_join_requests?: boolean
           created_at?: string
           created_by?: string | null
+          default_equipment_markup_pct?: number
+          default_materials_markup_pct?: number
           id?: string
           insurance_expiration_date?: string | null
           license_number?: string | null
@@ -1988,6 +2035,8 @@ export type Database = {
           allow_join_requests?: boolean
           created_at?: string
           created_by?: string | null
+          default_equipment_markup_pct?: number
+          default_materials_markup_pct?: number
           id?: string
           insurance_expiration_date?: string | null
           license_number?: string | null
@@ -3216,6 +3265,7 @@ export type Database = {
           invited_name: string | null
           invited_org_name: string | null
           is_self_performing: boolean
+          labor_rate: number | null
           org_id: string | null
           project_id: string
           role: string
@@ -3236,6 +3286,7 @@ export type Database = {
           invited_name?: string | null
           invited_org_name?: string | null
           is_self_performing?: boolean
+          labor_rate?: number | null
           org_id?: string | null
           project_id: string
           role: string
@@ -3256,6 +3307,7 @@ export type Database = {
           invited_name?: string | null
           invited_org_name?: string | null
           is_self_performing?: boolean
+          labor_rate?: number | null
           org_id?: string | null
           project_id?: string
           role?: string
@@ -4899,6 +4951,183 @@ export type Database = {
           },
         ]
       }
+      work_order_equipment: {
+        Row: {
+          added_at: string | null
+          added_by_role: string
+          billed_amount: number
+          change_order_id: string | null
+          cost: number
+          created_by_user_id: string
+          description: string
+          duration_note: string | null
+          id: string
+          markup_amount: number
+          markup_percent: number
+          notes: string | null
+          org_id: string
+          project_id: string
+          status: string
+        }
+        Insert: {
+          added_at?: string | null
+          added_by_role: string
+          billed_amount?: number
+          change_order_id?: string | null
+          cost: number
+          created_by_user_id: string
+          description: string
+          duration_note?: string | null
+          id?: string
+          markup_amount?: number
+          markup_percent?: number
+          notes?: string | null
+          org_id: string
+          project_id: string
+          status?: string
+        }
+        Update: {
+          added_at?: string | null
+          added_by_role?: string
+          billed_amount?: number
+          change_order_id?: string | null
+          cost?: number
+          created_by_user_id?: string
+          description?: string
+          duration_note?: string | null
+          id?: string
+          markup_amount?: number
+          markup_percent?: number
+          notes?: string | null
+          org_id?: string
+          project_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_equipment_change_order_id_fkey"
+            columns: ["change_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_order_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_equipment_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_equipment_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_order_line_items: {
+        Row: {
+          added_at: string | null
+          catalog_item_id: string | null
+          category_name: string | null
+          change_order_id: string | null
+          created_by_user_id: string
+          division: string | null
+          group_label: string | null
+          hours: number | null
+          id: string
+          item_name: string
+          line_total: number
+          location_tag: string | null
+          material_spec: string | null
+          note: string | null
+          org_id: string
+          period_week: string
+          project_id: string
+          qty: number | null
+          status: string
+          unit: string
+          unit_rate: number
+        }
+        Insert: {
+          added_at?: string | null
+          catalog_item_id?: string | null
+          category_name?: string | null
+          change_order_id?: string | null
+          created_by_user_id: string
+          division?: string | null
+          group_label?: string | null
+          hours?: number | null
+          id?: string
+          item_name: string
+          line_total?: number
+          location_tag?: string | null
+          material_spec?: string | null
+          note?: string | null
+          org_id: string
+          period_week?: string
+          project_id: string
+          qty?: number | null
+          status?: string
+          unit: string
+          unit_rate: number
+        }
+        Update: {
+          added_at?: string | null
+          catalog_item_id?: string | null
+          category_name?: string | null
+          change_order_id?: string | null
+          created_by_user_id?: string
+          division?: string | null
+          group_label?: string | null
+          hours?: number | null
+          id?: string
+          item_name?: string
+          line_total?: number
+          location_tag?: string | null
+          material_spec?: string | null
+          note?: string | null
+          org_id?: string
+          period_week?: string
+          project_id?: string
+          qty?: number | null
+          status?: string
+          unit?: string
+          unit_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_line_items_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_line_items_change_order_id_fkey"
+            columns: ["change_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_order_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_line_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_line_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_order_log_items: {
         Row: {
           catalog_item_id: string | null
@@ -4990,6 +5219,91 @@ export type Database = {
           },
           {
             foreignKeyName: "work_order_log_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_order_materials: {
+        Row: {
+          added_at: string | null
+          added_by_role: string
+          billed_amount: number
+          change_order_id: string | null
+          created_by_user_id: string
+          description: string
+          id: string
+          line_cost: number
+          markup_amount: number
+          markup_percent: number
+          org_id: string
+          project_id: string
+          quantity: number
+          receipt_note: string | null
+          status: string
+          supplier: string | null
+          unit: string
+          unit_cost: number
+        }
+        Insert: {
+          added_at?: string | null
+          added_by_role: string
+          billed_amount?: number
+          change_order_id?: string | null
+          created_by_user_id: string
+          description: string
+          id?: string
+          line_cost?: number
+          markup_amount?: number
+          markup_percent?: number
+          org_id: string
+          project_id: string
+          quantity?: number
+          receipt_note?: string | null
+          status?: string
+          supplier?: string | null
+          unit?: string
+          unit_cost: number
+        }
+        Update: {
+          added_at?: string | null
+          added_by_role?: string
+          billed_amount?: number
+          change_order_id?: string | null
+          created_by_user_id?: string
+          description?: string
+          id?: string
+          line_cost?: number
+          markup_amount?: number
+          markup_percent?: number
+          org_id?: string
+          project_id?: string
+          quantity?: number
+          receipt_note?: string | null
+          status?: string
+          supplier?: string | null
+          unit?: string
+          unit_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_materials_change_order_id_fkey"
+            columns: ["change_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_order_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_materials_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_materials_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
