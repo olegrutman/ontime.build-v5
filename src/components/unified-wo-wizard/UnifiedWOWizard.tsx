@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { useState, useEffect, useMemo, useCallback, useRef, forwardRef } from 'react';
+import { Dialog, DialogContent, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Check, Circle, Lock, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -33,42 +33,53 @@ export function UnifiedWOWizard({
   onComplete,
   isSubmitting = false,
 }: UnifiedWOWizardProps) {
-  const { currentRole } = useAuth();
+  const { currentRole, userOrgRoles } = useAuth();
   const isMobile = useIsMobile();
   const { myRate: projectRate } = useProjectLaborRates(projectId);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [formData, setFormData] = useState<UnifiedWizardData>({ ...INITIAL_UNIFIED_WIZARD_DATA });
+  const [maxVisitedIndex, setMaxVisitedIndex] = useState(0);
+
+  // Bug #5: Use org type for consistent role detection
+  const currentOrgType = userOrgRoles[0]?.organization?.type;
+  const isTC = currentOrgType === 'TC';
+  const isFC = currentOrgType === 'FC';
+
+  // Bug #2: Compute initial data with role defaults instead of useMemo side effect
+  const getInitialData = useCallback((): UnifiedWizardData => {
+    const base = { ...INITIAL_UNIFIED_WIZARD_DATA };
+    if (currentOrgType === 'GC') base.wo_request_type = 'request';
+    if (currentOrgType === 'FC') base.wo_request_type = 'log';
+    return base;
+  }, [currentOrgType]);
+
+  const [formData, setFormData] = useState<UnifiedWizardData>(getInitialData);
+
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      setFormData(getInitialData());
+      setCurrentStepIndex(0);
+      setMaxVisitedIndex(0);
+    }
+  }, [open, getInitialData]);
 
   // Determine which steps to show based on role
   const visibleSteps = useMemo(() => {
-    const isTC = currentRole === 'TC_PM';
     return ALL_WIZARD_STEPS.filter((step) => {
       // Step 0 (Intent) is TC-only
       if (step.key === 'intent' && !isTC) return false;
       return true;
     });
-  }, [currentRole]);
-
-  const isTC = currentRole === 'TC_PM';
-  const isFC = currentRole === 'FC_PM' || currentRole === 'FS';
+  }, [isTC]);
 
   const currentStep = visibleSteps[currentStepIndex];
   const totalSteps = visibleSteps.length;
-
-  // Pre-set defaults based on role
-  useMemo(() => {
-    if (currentRole === 'GC_PM' && !formData.wo_request_type) {
-      setFormData(prev => ({ ...prev, wo_request_type: 'request' }));
-    }
-    if (currentRole === 'FC_PM' && !formData.wo_request_type) {
-      setFormData(prev => ({ ...prev, wo_request_type: 'log' }));
-    }
-  }, [currentRole]);
 
   const handleChange = useCallback((updates: Partial<UnifiedWizardData>) => {
     setFormData(prev => ({ ...prev, ...updates }));
   }, []);
 
+  // Bug #11: Validate hours > 0 for hourly mode
   const canGoNext = (): boolean => {
     if (!currentStep) return false;
     switch (currentStep.key) {
@@ -78,7 +89,7 @@ export function UnifiedWOWizard({
       case 'location': return formData.location_tags.length > 0;
       case 'labor': {
         if (formData.labor_mode === 'lump_sum') return (formData.lump_sum_amount ?? 0) > 0;
-        return (formData.hourly_rate ?? 0) > 0;
+        return (formData.hourly_rate ?? 0) > 0 && (formData.hours ?? 0) > 0;
       }
       case 'materials': return true;
       case 'equipment': return true;
@@ -89,7 +100,9 @@ export function UnifiedWOWizard({
 
   const goNext = () => {
     if (currentStepIndex < totalSteps - 1 && canGoNext()) {
-      setCurrentStepIndex(i => i + 1);
+      const nextIndex = currentStepIndex + 1;
+      setCurrentStepIndex(nextIndex);
+      setMaxVisitedIndex(prev => Math.max(prev, nextIndex));
     }
   };
 
@@ -99,15 +112,14 @@ export function UnifiedWOWizard({
     }
   };
 
+  // Bug #13: Allow jumping to any previously visited step
   const jumpToStep = (index: number) => {
-    if (index < currentStepIndex) {
+    if (index <= maxVisitedIndex) {
       setCurrentStepIndex(index);
     }
   };
 
   const handleClose = () => {
-    setFormData({ ...INITIAL_UNIFIED_WIZARD_DATA });
-    setCurrentStepIndex(0);
     onOpenChange(false);
   };
 
@@ -118,9 +130,10 @@ export function UnifiedWOWizard({
     handleClose();
   };
 
+  // Bug #13: jumpToStepByKey allows jumping to any visited step
   const jumpToStepByKey = (key: string) => {
     const idx = visibleSteps.findIndex(s => s.key === key);
-    if (idx >= 0) setCurrentStepIndex(idx);
+    if (idx >= 0 && idx <= maxVisitedIndex) setCurrentStepIndex(idx);
   };
 
   const renderStepContent = () => {
@@ -150,12 +163,18 @@ export function UnifiedWOWizard({
   const getStepStatus = (index: number): 'complete' | 'current' | 'locked' => {
     if (index < currentStepIndex) return 'complete';
     if (index === currentStepIndex) return 'current';
+    if (index <= maxVisitedIndex) return 'complete';
     return 'locked';
   };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden max-h-[90vh] flex flex-col">
+        {/* Bug #1: Add DialogDescription for accessibility */}
+        <DialogDescription className="sr-only">
+          Create a new work order for {projectName}
+        </DialogDescription>
+
         {/* Header */}
         <div className="border-b bg-card px-6 py-4">
           <div className="flex items-center justify-between">

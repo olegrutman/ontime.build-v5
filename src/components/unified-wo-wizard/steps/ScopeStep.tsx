@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, forwardRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Search, X, ChevronRight } from 'lucide-react';
@@ -14,7 +14,8 @@ interface ScopeStepProps {
   onChange: (updates: Partial<UnifiedWizardData>) => void;
 }
 
-export function ScopeStep({ data, onChange }: ScopeStepProps) {
+// Bug #6: Wrap with forwardRef for Radix UI compatibility
+export const ScopeStep = forwardRef<HTMLDivElement, ScopeStepProps>(function ScopeStep({ data, onChange }, ref) {
   const catalog = useWorkOrderCatalog();
   const [searchQuery, setSearchQuery] = useState('');
   const [level, setLevel] = useState<DrillLevel>('division');
@@ -93,7 +94,7 @@ export function ScopeStep({ data, onChange }: ScopeStepProps) {
   );
 
   return (
-    <div className="space-y-4">
+    <div ref={ref} className="space-y-4">
       {/* Title (Full Scope only) */}
       {data.wo_mode === 'full_scope' && (
         <div>
@@ -324,4 +325,4 @@ export function ScopeStep({ data, onChange }: ScopeStepProps) {
       </div>
     </div>
   );
-}
+});

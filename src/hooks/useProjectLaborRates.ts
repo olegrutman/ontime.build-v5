@@ -10,6 +10,7 @@ export function useProjectLaborRates(projectId?: string) {
 
   const currentOrgId = userOrgRoles[0]?.organization?.id;
 
+  // Bug #8: Use .limit(1) with order to avoid maybeSingle failure on multiple rows
   const { data: myRate, isLoading } = useQuery({
     queryKey: ['project-labor-rate', projectId, currentOrgId],
     queryFn: async () => {
@@ -20,10 +21,11 @@ export function useProjectLaborRates(projectId?: string) {
         .select('id, labor_rate')
         .eq('project_id', projectId)
         .eq('org_id', currentOrgId)
-        .maybeSingle();
+        .order('created_at', { ascending: false })
+        .limit(1);
 
       if (error) throw error;
-      return data?.labor_rate as number | null;
+      return data?.[0]?.labor_rate as number | null ?? null;
     },
     enabled: !!projectId && !!currentOrgId,
   });
