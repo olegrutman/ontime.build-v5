@@ -44,6 +44,7 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
   const { currentRole, user, permissions, userOrgRoles } = useAuth();
   const [showWizard, setShowWizard] = useState(false);
   const [showFCDialog, setShowFCDialog] = useState(false);
+  const [showUnifiedWizard, setShowUnifiedWizard] = useState(false);
   const [activeTab, setActiveTab] = useState<ChangeOrderStatus | 'ALL'>('ALL');
   const [captureToConvert, setCaptureToConvert] = useState<FieldCapture | null>(null);
   const [mode, setMode] = useState<'orders' | 'quicklog'>('orders');
