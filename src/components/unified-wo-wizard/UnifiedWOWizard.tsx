@@ -220,13 +220,20 @@ export function UnifiedWOWizard({
             </div>
           )}
 
-          {/* Step content */}
+          {/* Step content + financial strip */}
           <div className="flex-1 overflow-y-auto p-6">
             <div className="mb-4">
               <h3 className="text-base font-semibold text-foreground">{currentStep?.title}</h3>
               <p className="text-sm text-muted-foreground">{currentStep?.description}</p>
             </div>
             {renderStepContent()}
+
+            {/* Financial summary (desktop, below step content when on labor+ steps) */}
+            {!isMobile && currentStep && ['labor', 'materials', 'equipment', 'review'].includes(currentStep.key) && (
+              <div className="mt-6">
+                <FinancialSummaryStrip data={formData} isTC={isTC} isFC={isFC} />
+              </div>
+            )}
           </div>
         </div>
 
