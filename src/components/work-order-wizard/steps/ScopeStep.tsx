@@ -5,16 +5,15 @@ import { Search, X, ChevronRight } from 'lucide-react';
 import { useWorkOrderCatalog } from '@/hooks/useWorkOrderCatalog';
 import type { CatalogItem } from '@/types/quickLog';
 import { DIVISION_LABELS } from '@/types/quickLog';
-import type { UnifiedWizardData } from '@/types/unifiedWizard';
+import type { WorkOrderWizardData } from '@/types/workOrderWizard';
 
 type DrillLevel = 'division' | 'category' | 'group' | 'item';
 
 interface ScopeStepProps {
-  data: UnifiedWizardData;
-  onChange: (updates: Partial<UnifiedWizardData>) => void;
+  data: WorkOrderWizardData;
+  onChange: (updates: Partial<WorkOrderWizardData>) => void;
 }
 
-// Bug #6: Wrap with forwardRef for Radix UI compatibility
 export const ScopeStep = forwardRef<HTMLDivElement, ScopeStepProps>(function ScopeStep({ data, onChange }, ref) {
   const catalog = useWorkOrderCatalog();
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,7 +41,6 @@ export const ScopeStep = forwardRef<HTMLDivElement, ScopeStepProps>(function Sco
     onChange({ selectedCatalogItems: data.selectedCatalogItems.filter(i => i.id !== id) });
   };
 
-  // Breadcrumbs
   const breadcrumbs = useMemo(() => {
     const crumbs: { label: string; onClick: () => void }[] = [
       { label: 'All trades', onClick: () => { setLevel('division'); setActiveDivision(null); setActiveCategory(null); setActiveGroup(null); } },
@@ -72,7 +70,6 @@ export const ScopeStep = forwardRef<HTMLDivElement, ScopeStepProps>(function Sco
   const currentCategory = currentDivision?.categories.find(c => c.category_id === activeCategory);
   const currentGroup = currentCategory?.groups.find(g => g.group_id === activeGroup);
 
-  // Count selected items per category for badges
   const selectedByCategory = useMemo(() => {
     const map = new Map<string, number>();
     for (const item of data.selectedCatalogItems) {
@@ -170,7 +167,6 @@ export const ScopeStep = forwardRef<HTMLDivElement, ScopeStepProps>(function Sco
           </div>
         ) : (
           <div className="p-2">
-            {/* Level 1: Divisions */}
             {level === 'division' && (
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {catalog.divisions.map((div) => {
@@ -197,7 +193,6 @@ export const ScopeStep = forwardRef<HTMLDivElement, ScopeStepProps>(function Sco
               </div>
             )}
 
-            {/* Level 2: Categories */}
             {level === 'category' && currentDivision && (
               <div className="space-y-0.5">
                 {currentDivision.categories.map((cat) => {
@@ -230,7 +225,6 @@ export const ScopeStep = forwardRef<HTMLDivElement, ScopeStepProps>(function Sco
               </div>
             )}
 
-            {/* Level 3: Sub-groups */}
             {level === 'group' && currentCategory && (
               <div className="grid grid-cols-2 gap-2">
                 {currentCategory.groups.map((grp) => {
@@ -240,16 +234,11 @@ export const ScopeStep = forwardRef<HTMLDivElement, ScopeStepProps>(function Sco
                       key={grp.group_id}
                       onClick={() => { setActiveGroup(grp.group_id); setLevel('item'); }}
                       className={`flex items-center gap-2 p-3 rounded-lg border text-left transition-colors ${
-                        hasSelected
-                          ? 'border-current'
-                          : 'border-border hover:border-primary/40'
+                        hasSelected ? 'border-current' : 'border-border hover:border-primary/40'
                       } hover:bg-muted/50`}
                       style={hasSelected ? { borderColor: currentCategory.category_color, backgroundColor: currentCategory.category_bg + '40' } : {}}
                     >
-                      <span
-                        className="w-2 h-2 rounded-full shrink-0"
-                        style={{ backgroundColor: currentCategory.category_color }}
-                      />
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: currentCategory.category_color }} />
                       <div>
                         <p className="text-[13px] font-medium">{grp.group_label}</p>
                         <p className="text-[11px] text-muted-foreground">{grp.items.length} tasks</p>
@@ -260,7 +249,6 @@ export const ScopeStep = forwardRef<HTMLDivElement, ScopeStepProps>(function Sco
               </div>
             )}
 
-            {/* Level 4: Items */}
             {level === 'item' && currentGroup && (
               <div className="space-y-0.5">
                 {currentGroup.items.map((item) => {

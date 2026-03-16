@@ -8,7 +8,7 @@ import { AppLayout } from '@/components/layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { UnifiedWOWizard } from '@/components/unified-wo-wizard';
+import { WorkOrderWizard } from '@/components/work-order-wizard';
 import { Plus, FileEdit, Building2 } from 'lucide-react';
 import {
   Select,
@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { ChangeOrderStatus } from '@/types/changeOrderProject';
-import type { UnifiedWizardData } from '@/types/unifiedWizard';
+import type { WorkOrderWizardData } from '@/types/workOrderWizard';
 
 interface Project {
   id: string;
@@ -123,7 +123,7 @@ const ChangeOrders = () => {
   }, [user, userOrgRoles]);
 
   // Unified wizard onComplete handler (matches WorkOrdersTab pattern)
-  const handleWizardComplete = async (data: UnifiedWizardData & { project_id: string }) => {
+  const handleWizardComplete = async (data: WorkOrderWizardData & { project_id: string }) => {
     setWizardSubmitting(true);
     try {
       const draftId = await saveDraft({
@@ -432,7 +432,7 @@ const ChangeOrders = () => {
 
         {/* Unified Work Order Wizard */}
         {selectedProject && (
-          <UnifiedWOWizard
+          <WorkOrderWizard
             open={showWizard}
             onOpenChange={setShowWizard}
             projectId={selectedProject.id}

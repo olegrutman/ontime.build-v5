@@ -6,13 +6,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { RFICard } from './RFICard';
 import { CreateRFIDialog } from './CreateRFIDialog';
 import { RFIDetailDialog } from './RFIDetailDialog';
-import { UnifiedWOWizard } from '@/components/unified-wo-wizard';
+import { WorkOrderWizard } from '@/components/work-order-wizard';
 import { useProjectRFIs } from '@/hooks/useProjectRFIs';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkOrderDraft } from '@/hooks/useWorkOrderDraft';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import type { UnifiedWizardData } from '@/types/unifiedWizard';
+import type { WorkOrderWizardData } from '@/types/workOrderWizard';
 import type { ProjectRFI, RFIStatus } from '@/types/rfi';
 
 interface RFIsTabProps {
@@ -85,7 +85,7 @@ export function RFIsTab({ projectId }: RFIsTabProps) {
     setWoWizardOpen(true);
   };
 
-  const handleWizardComplete = async (data: UnifiedWizardData & { project_id: string }) => {
+  const handleWizardComplete = async (data: WorkOrderWizardData & { project_id: string }) => {
     setWizardSubmitting(true);
     try {
       const draftId = await saveDraft({
@@ -244,7 +244,7 @@ export function RFIsTab({ projectId }: RFIsTabProps) {
       />
 
       {/* Unified Work Order Wizard */}
-      <UnifiedWOWizard
+      <WorkOrderWizard
         open={woWizardOpen}
         onOpenChange={setWoWizardOpen}
         projectId={projectId}

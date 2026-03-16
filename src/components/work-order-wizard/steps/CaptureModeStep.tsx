@@ -1,31 +1,25 @@
 import { Zap, FileText } from 'lucide-react';
-import type { UnifiedWizardData, WOMode } from '@/types/unifiedWizard';
+import type { WorkOrderWizardData, WOMode } from '@/types/workOrderWizard';
 
 interface CaptureModeStepProps {
-  data: UnifiedWizardData;
-  onChange: (updates: Partial<UnifiedWizardData>) => void;
+  data: WorkOrderWizardData;
+  onChange: (updates: Partial<WorkOrderWizardData>) => void;
 }
 
-const MODE_OPTIONS: {
-  value: WOMode;
-  icon: typeof Zap;
-  title: string;
-  body: string;
-  sub: string;
-}[] = [
+const MODE_OPTIONS: { value: WOMode; icon: typeof Zap; title: string; body: string; sub: string }[] = [
   {
     value: 'quick_capture',
     icon: Zap,
     title: 'Quick Capture',
-    body: 'Pick tasks from the catalog. Log hours and costs as work happens. The draft saves automatically — come back anytime to add more.',
-    sub: 'Best for daily field logging and small recurring tasks.',
+    body: 'Pick tasks as you find them. Auto-saves after location. Come back anytime to add more.',
+    sub: 'Best for job walks and reactive work.',
   },
   {
     value: 'full_scope',
     icon: FileText,
     title: 'Full Scope',
-    body: 'Write a complete scope, set your price, and submit for GC approval in one sitting.',
-    sub: 'Best for defined change orders where GC needs a formal proposal.',
+    body: 'Write the complete scope in one sitting. Best for planned changes and formal proposals.',
+    sub: 'Best for defined change orders.',
   },
 ];
 

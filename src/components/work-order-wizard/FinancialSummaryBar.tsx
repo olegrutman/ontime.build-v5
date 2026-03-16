@@ -1,15 +1,25 @@
 import { useMemo } from 'react';
-import type { UnifiedWizardData } from '@/types/unifiedWizard';
+import type { WorkOrderWizardData } from '@/types/workOrderWizard';
 
-interface FinancialSummaryStripProps {
-  data: UnifiedWizardData;
+interface FinancialSummaryBarProps {
+  data: WorkOrderWizardData;
   isTC: boolean;
   isFC: boolean;
 }
 
-export function FinancialSummaryStrip({ data, isTC, isFC }: FinancialSummaryStripProps) {
+function Row({ label, value, bold, muted }: { label: string; value: string; bold?: boolean; muted?: boolean }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className={muted ? 'text-xs text-muted-foreground' : 'text-sm text-foreground'}>{label}</span>
+      <span className={`font-barlow-condensed ${bold ? 'font-bold text-foreground' : muted ? 'text-xs text-muted-foreground' : 'text-foreground'}`}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+export function FinancialSummaryBar({ data, isTC, isFC }: FinancialSummaryBarProps) {
   const totals = useMemo(() => {
-    // Labor
     let laborTotal = 0;
     if (data.labor_mode === 'lump_sum') {
       laborTotal = data.lump_sum_amount || 0;
@@ -17,15 +27,11 @@ export function FinancialSummaryStrip({ data, isTC, isFC }: FinancialSummaryStri
       laborTotal = (data.hourly_rate || 0) * (data.hours || 0);
     }
 
-    // Materials
     const matCost = data.materials.reduce((s, m) => s + m.quantity * m.unit_cost, 0);
     const matMarkup = data.materials.reduce((s, m) => s + m.quantity * m.unit_cost * m.markup_percent / 100, 0);
     const matBilled = matCost + matMarkup;
-
-    // Bug #7: Calculate effective average markup from actual rows
     const effectiveMatMarkupPct = matCost > 0 ? (matMarkup / matCost) * 100 : 0;
 
-    // Equipment
     const eqCost = data.equipment.reduce((s, e) => s + e.cost, 0);
     const eqMarkup = data.equipment.reduce((s, e) => s + e.cost * e.markup_percent / 100, 0);
     const eqBilled = eqCost + eqMarkup;
@@ -94,17 +100,6 @@ export function FinancialSummaryStrip({ data, isTC, isFC }: FinancialSummaryStri
           <Row label="Total" value={fmt(totals.totalBilled)} bold />
         </>
       )}
-    </div>
-  );
-}
-
-function Row({ label, value, bold, muted }: { label: string; value: string; bold?: boolean; muted?: boolean }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className={`${muted ? 'text-xs text-muted-foreground' : 'text-sm text-foreground'}`}>{label}</span>
-      <span className={`font-barlow-condensed ${bold ? 'font-bold text-foreground' : muted ? 'text-xs text-muted-foreground' : 'text-foreground'}`}>
-        {value}
-      </span>
     </div>
   );
 }

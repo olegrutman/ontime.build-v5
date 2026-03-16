@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo, useCallback, useRef, forwardRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Dialog, DialogContent, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Check, Circle, Lock, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, Circle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useProjectLaborRates } from '@/hooks/useProjectLaborRates';
-import { UnifiedWizardData, INITIAL_UNIFIED_WIZARD_DATA, ALL_WIZARD_STEPS, WizardStepDef } from '@/types/unifiedWizard';
+import { WorkOrderWizardData, INITIAL_WIZARD_DATA, ALL_WIZARD_STEPS } from '@/types/workOrderWizard';
 import { IntentStep } from './steps/IntentStep';
 import { CaptureModeStep } from './steps/CaptureModeStep';
 import { ScopeStep } from './steps/ScopeStep';
@@ -13,48 +13,47 @@ import { LocationStep } from './steps/LocationStep';
 import { LaborStep } from './steps/LaborStep';
 import { MaterialsStep } from './steps/MaterialsStep';
 import { EquipmentStep } from './steps/EquipmentStep';
+import { AssignStep } from './steps/AssignStep';
 import { ReviewStep } from './steps/ReviewStep';
-import { FinancialSummaryStrip } from './FinancialSummaryStrip';
+import { FinancialSummaryBar } from './FinancialSummaryBar';
 
-interface UnifiedWOWizardProps {
+interface WorkOrderWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: string;
   projectName: string;
-  onComplete?: (data: UnifiedWizardData & { project_id: string }) => Promise<void>;
+  onComplete?: (data: WorkOrderWizardData & { project_id: string }) => Promise<void>;
   isSubmitting?: boolean;
 }
 
-export function UnifiedWOWizard({
+export function WorkOrderWizard({
   open,
   onOpenChange,
   projectId,
   projectName,
   onComplete,
   isSubmitting = false,
-}: UnifiedWOWizardProps) {
-  const { currentRole, userOrgRoles } = useAuth();
+}: WorkOrderWizardProps) {
+  const { userOrgRoles } = useAuth();
   const isMobile = useIsMobile();
   const { myRate: projectRate } = useProjectLaborRates(projectId);
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [maxVisitedIndex, setMaxVisitedIndex] = useState(0);
 
-  // Bug #5: Use org type for consistent role detection
   const currentOrgType = userOrgRoles[0]?.organization?.type;
   const isTC = currentOrgType === 'TC';
   const isFC = currentOrgType === 'FC';
+  const isGC = currentOrgType === 'GC';
 
-  // Bug #2: Compute initial data with role defaults instead of useMemo side effect
-  const getInitialData = useCallback((): UnifiedWizardData => {
-    const base = { ...INITIAL_UNIFIED_WIZARD_DATA };
-    if (currentOrgType === 'GC') base.wo_request_type = 'request';
-    if (currentOrgType === 'FC') base.wo_request_type = 'log';
+  const getInitialData = useCallback((): WorkOrderWizardData => {
+    const base = { ...INITIAL_WIZARD_DATA };
+    if (isGC) base.wo_request_type = 'request';
+    if (isFC) base.wo_request_type = 'log';
     return base;
-  }, [currentOrgType]);
+  }, [isGC, isFC]);
 
-  const [formData, setFormData] = useState<UnifiedWizardData>(getInitialData);
+  const [formData, setFormData] = useState<WorkOrderWizardData>(getInitialData);
 
-  // Reset form when dialog opens
   useEffect(() => {
     if (open) {
       setFormData(getInitialData());
@@ -63,23 +62,22 @@ export function UnifiedWOWizard({
     }
   }, [open, getInitialData]);
 
-  // Determine which steps to show based on role
+  // Filter steps by role
   const visibleSteps = useMemo(() => {
     return ALL_WIZARD_STEPS.filter((step) => {
-      // Step 0 (Intent) is TC-only
       if (step.key === 'intent' && !isTC) return false;
+      if (step.key === 'assign' && isFC) return false;
       return true;
     });
-  }, [isTC]);
+  }, [isTC, isFC]);
 
   const currentStep = visibleSteps[currentStepIndex];
   const totalSteps = visibleSteps.length;
 
-  const handleChange = useCallback((updates: Partial<UnifiedWizardData>) => {
+  const handleChange = useCallback((updates: Partial<WorkOrderWizardData>) => {
     setFormData(prev => ({ ...prev, ...updates }));
   }, []);
 
-  // Bug #11: Validate hours > 0 for hourly mode
   const canGoNext = (): boolean => {
     if (!currentStep) return false;
     switch (currentStep.key) {
@@ -93,6 +91,10 @@ export function UnifiedWOWizard({
       }
       case 'materials': return true;
       case 'equipment': return true;
+      case 'assign': {
+        if (isGC) return !!formData.assigned_org_id;
+        return true; // TC assign is optional
+      }
       case 'review': return true;
       default: return true;
     }
@@ -107,33 +109,25 @@ export function UnifiedWOWizard({
   };
 
   const goBack = () => {
-    if (currentStepIndex > 0) {
-      setCurrentStepIndex(i => i - 1);
-    }
+    if (currentStepIndex > 0) setCurrentStepIndex(i => i - 1);
   };
 
-  // Bug #13: Allow jumping to any previously visited step
   const jumpToStep = (index: number) => {
-    if (index <= maxVisitedIndex) {
-      setCurrentStepIndex(index);
-    }
+    if (index <= maxVisitedIndex) setCurrentStepIndex(index);
   };
 
-  const handleClose = () => {
-    onOpenChange(false);
+  const jumpToStepByKey = (key: string) => {
+    const idx = visibleSteps.findIndex(s => s.key === key);
+    if (idx >= 0 && idx <= maxVisitedIndex) setCurrentStepIndex(idx);
   };
+
+  const handleClose = () => onOpenChange(false);
 
   const handleSubmit = async () => {
     if (onComplete) {
       await onComplete({ ...formData, project_id: projectId });
     }
     handleClose();
-  };
-
-  // Bug #13: jumpToStepByKey allows jumping to any visited step
-  const jumpToStepByKey = (key: string) => {
-    const idx = visibleSteps.findIndex(s => s.key === key);
-    if (idx >= 0 && idx <= maxVisitedIndex) setCurrentStepIndex(idx);
   };
 
   const renderStepContent = () => {
@@ -153,6 +147,8 @@ export function UnifiedWOWizard({
         return <MaterialsStep data={formData} onChange={handleChange} isTC={isTC} />;
       case 'equipment':
         return <EquipmentStep data={formData} onChange={handleChange} isTC={isTC} />;
+      case 'assign':
+        return <AssignStep data={formData} onChange={handleChange} projectId={projectId} isGC={isGC} isTC={isTC} />;
       case 'review':
         return <ReviewStep data={formData} isTC={isTC} isFC={isFC} onJumpToStep={jumpToStepByKey} />;
       default:
@@ -170,7 +166,6 @@ export function UnifiedWOWizard({
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden max-h-[90vh] flex flex-col">
-        {/* Bug #1: Add DialogDescription for accessibility */}
         <DialogDescription className="sr-only">
           Create a new work order for {projectName}
         </DialogDescription>
@@ -188,7 +183,6 @@ export function UnifiedWOWizard({
               Step {currentStepIndex + 1} of {totalSteps}
             </div>
           </div>
-          {/* Progress bar */}
           <div className="mt-3 h-1 rounded-full bg-muted/40 overflow-hidden">
             <div
               className="h-full rounded-full bg-primary transition-all duration-300"
@@ -199,7 +193,7 @@ export function UnifiedWOWizard({
 
         {/* Body */}
         <div className="flex flex-1 overflow-hidden min-h-0">
-          {/* Desktop step list (left sidebar) */}
+          {/* Desktop sidebar */}
           {!isMobile && (
             <div className="w-56 border-r bg-muted/20 p-4 space-y-1 overflow-y-auto shrink-0">
               {visibleSteps.map((step, i) => {
@@ -226,10 +220,8 @@ export function UnifiedWOWizard({
                     }`}>
                       {status === 'complete' ? (
                         <Check className="w-3 h-3" />
-                      ) : status === 'current' ? (
-                        <Circle className="w-2 h-2 fill-current" />
                       ) : (
-                        <Circle className="w-2 h-2" />
+                        <Circle className="w-2 h-2 fill-current" />
                       )}
                     </span>
                     <span className="truncate">{step.title}</span>
@@ -239,7 +231,7 @@ export function UnifiedWOWizard({
             </div>
           )}
 
-          {/* Step content + financial strip */}
+          {/* Step content */}
           <div className="flex-1 overflow-y-auto p-6">
             <div className="mb-4">
               <h3 className="text-base font-semibold text-foreground">{currentStep?.title}</h3>
@@ -247,10 +239,10 @@ export function UnifiedWOWizard({
             </div>
             {renderStepContent()}
 
-            {/* Financial summary (desktop, below step content when on labor+ steps) */}
+            {/* Financial summary on financial steps (desktop) */}
             {!isMobile && currentStep && ['labor', 'materials', 'equipment', 'review'].includes(currentStep.key) && (
               <div className="mt-6">
-                <FinancialSummaryStrip data={formData} isTC={isTC} isFC={isFC} />
+                <FinancialSummaryBar data={formData} isTC={isTC} isFC={isFC} />
               </div>
             )}
           </div>
@@ -269,10 +261,17 @@ export function UnifiedWOWizard({
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit} disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {formData.wo_mode === 'quick_capture' ? 'Save & Submit' : 'Submit Work Order'}
-            </Button>
+            <div className="flex gap-2">
+              {formData.wo_mode === 'quick_capture' && (
+                <Button variant="outline" onClick={handleSubmit} disabled={isSubmitting}>
+                  Save draft
+                </Button>
+              )}
+              <Button onClick={handleSubmit} disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {formData.wo_mode === 'quick_capture' ? 'Submit for approval' : 'Submit Work Order'}
+              </Button>
+            </div>
           )}
         </div>
       </DialogContent>

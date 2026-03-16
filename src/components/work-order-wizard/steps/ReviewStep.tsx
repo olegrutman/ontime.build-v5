@@ -1,15 +1,27 @@
 import { useMemo } from 'react';
-import { Button } from '@/components/ui/button';
 import { ChevronRight } from 'lucide-react';
-import { DIVISION_LABELS } from '@/types/quickLog';
-import type { UnifiedWizardData } from '@/types/unifiedWizard';
-import { FinancialSummaryStrip } from '../FinancialSummaryStrip';
+import type { WorkOrderWizardData } from '@/types/workOrderWizard';
+import { FinancialSummaryBar } from '../FinancialSummaryBar';
 
 interface ReviewStepProps {
-  data: UnifiedWizardData;
+  data: WorkOrderWizardData;
   isTC: boolean;
   isFC: boolean;
   onJumpToStep: (key: string) => void;
+}
+
+function Section({ title, children, onEdit }: { title: string; children: React.ReactNode; onEdit: () => void }) {
+  return (
+    <div className="rounded-lg border border-border p-4">
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-sm font-semibold text-foreground">{title}</h4>
+        <button onClick={onEdit} className="text-xs text-primary hover:underline flex items-center gap-0.5">
+          Edit <ChevronRight className="w-3 h-3" />
+        </button>
+      </div>
+      {children}
+    </div>
+  );
 }
 
 export function ReviewStep({ data, isTC, isFC, onJumpToStep }: ReviewStepProps) {
@@ -26,6 +38,7 @@ export function ReviewStep({ data, isTC, isFC, onJumpToStep }: ReviewStepProps) 
     <div className="space-y-5">
       {/* Scope */}
       <Section title="Scope" onEdit={() => onJumpToStep('scope')}>
+        {data.title && <p className="text-sm font-medium mb-1">{data.title}</p>}
         {data.selectedCatalogItems.length > 0 ? (
           <ul className="space-y-1">
             {data.selectedCatalogItems.map(item => (
@@ -42,9 +55,7 @@ export function ReviewStep({ data, isTC, isFC, onJumpToStep }: ReviewStepProps) 
           <p className="text-sm text-muted-foreground mt-2 italic">"{data.description}"</p>
         )}
         {data.location_tags.length > 0 && (
-          <p className="text-xs text-muted-foreground mt-1">
-            📍 {data.location_tags.join(', ')}
-          </p>
+          <p className="text-xs text-muted-foreground mt-1">📍 {data.location_tags.join(', ')}</p>
         )}
       </Section>
 
@@ -95,22 +106,20 @@ export function ReviewStep({ data, isTC, isFC, onJumpToStep }: ReviewStepProps) 
         </Section>
       )}
 
-      {/* Financial Summary */}
-      <FinancialSummaryStrip data={data} isTC={isTC} isFC={isFC} />
-    </div>
-  );
-}
+      {/* Assign */}
+      {(data.assigned_org_id || data.request_fc_input) && (
+        <Section title="Assignment" onEdit={() => onJumpToStep('assign')}>
+          {data.assigned_org_id && (
+            <p className="text-sm">Assigned to TC</p>
+          )}
+          {data.request_fc_input && data.selected_fc_org_id && (
+            <p className="text-sm text-muted-foreground">FC input requested</p>
+          )}
+        </Section>
+      )}
 
-function Section({ title, children, onEdit }: { title: string; children: React.ReactNode; onEdit: () => void }) {
-  return (
-    <div className="rounded-lg border border-border p-4">
-      <div className="flex items-center justify-between mb-2">
-        <h4 className="text-sm font-semibold text-foreground">{title}</h4>
-        <button onClick={onEdit} className="text-xs text-primary hover:underline flex items-center gap-0.5">
-          Edit <ChevronRight className="w-3 h-3" />
-        </button>
-      </div>
-      {children}
+      {/* Financial Summary */}
+      <FinancialSummaryBar data={data} isTC={isTC} isFC={isFC} />
     </div>
   );
 }

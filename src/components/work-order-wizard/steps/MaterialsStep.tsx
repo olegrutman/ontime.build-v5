@@ -2,12 +2,12 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2 } from 'lucide-react';
-import type { UnifiedWizardData, WOMaterialRowDraft, WOMaterialUnit } from '@/types/unifiedWizard';
-import { MATERIAL_UNIT_OPTIONS } from '@/types/unifiedWizard';
+import type { WorkOrderWizardData, WOMaterialRowDraft, WOMaterialUnit } from '@/types/workOrderWizard';
+import { MATERIAL_UNIT_OPTIONS } from '@/types/workOrderWizard';
 
 interface MaterialsStepProps {
-  data: UnifiedWizardData;
-  onChange: (updates: Partial<UnifiedWizardData>) => void;
+  data: WorkOrderWizardData;
+  onChange: (updates: Partial<WorkOrderWizardData>) => void;
   isTC: boolean;
 }
 
@@ -49,7 +49,6 @@ export function MaterialsStep({ data, onChange, isTC }: MaterialsStepProps) {
 
   return (
     <div className="space-y-4">
-      {/* TC markup default */}
       {isTC && (
         <div className="flex items-center gap-3">
           <div className="flex-1">
@@ -69,7 +68,7 @@ export function MaterialsStep({ data, onChange, isTC }: MaterialsStepProps) {
 
       {rows.length === 0 ? (
         <div className="text-center py-8 text-sm text-muted-foreground">
-          No materials added yet. Tap Add material to log costs.
+          No materials added yet.
         </div>
       ) : (
         <div className="space-y-3">
@@ -90,7 +89,6 @@ export function MaterialsStep({ data, onChange, isTC }: MaterialsStepProps) {
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
-                {/* Bug #12: Add supplier field */}
                 <div>
                   <label className="text-[10px] text-muted-foreground uppercase">Supplier</label>
                   <Input

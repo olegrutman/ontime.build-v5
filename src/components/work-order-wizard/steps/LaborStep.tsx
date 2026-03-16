@@ -1,11 +1,11 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import type { UnifiedWizardData } from '@/types/unifiedWizard';
+import type { WorkOrderWizardData } from '@/types/workOrderWizard';
 
 interface LaborStepProps {
-  data: UnifiedWizardData;
-  onChange: (updates: Partial<UnifiedWizardData>) => void;
+  data: WorkOrderWizardData;
+  onChange: (updates: Partial<WorkOrderWizardData>) => void;
   isTC: boolean;
   projectRate: number | null;
 }
@@ -37,7 +37,6 @@ export function LaborStep({ data, onChange, isTC, projectRate }: LaborStepProps)
 
       {isHourly ? (
         <div className="space-y-5">
-          {/* Rate */}
           <div>
             <Label className="text-sm font-medium">
               {projectRate ? 'Your rate for this project' : 'Your hourly rate $'}
@@ -61,7 +60,6 @@ export function LaborStep({ data, onChange, isTC, projectRate }: LaborStepProps)
             </div>
           </div>
 
-          {/* Hours */}
           <div>
             <Label className="text-sm font-medium">Hours (this entry)</Label>
             <Input
@@ -75,7 +73,6 @@ export function LaborStep({ data, onChange, isTC, projectRate }: LaborStepProps)
             />
           </div>
 
-          {/* TC-only toggle */}
           {isTC && (
             <div className="flex items-center justify-between rounded-lg border border-border p-4">
               <div>

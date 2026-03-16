@@ -1,18 +1,20 @@
+import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2 } from 'lucide-react';
-import type { UnifiedWizardData, WOEquipmentRowDraft } from '@/types/unifiedWizard';
+import { Plus, Trash2, List } from 'lucide-react';
+import type { WorkOrderWizardData, WOEquipmentRowDraft } from '@/types/workOrderWizard';
+import { EquipmentPicker } from '../EquipmentPicker';
 
 interface EquipmentStepProps {
-  data: UnifiedWizardData;
-  onChange: (updates: Partial<UnifiedWizardData>) => void;
+  data: WorkOrderWizardData;
+  onChange: (updates: Partial<WorkOrderWizardData>) => void;
   isTC: boolean;
 }
 
-function newEquipmentRow(markupPct: number): WOEquipmentRowDraft {
+function newEquipmentRow(markupPct: number, description = ''): WOEquipmentRowDraft {
   return {
     tempId: crypto.randomUUID(),
-    description: '',
+    description,
     duration_note: '',
     cost: 0,
     markup_percent: markupPct,
@@ -20,6 +22,7 @@ function newEquipmentRow(markupPct: number): WOEquipmentRowDraft {
 }
 
 export function EquipmentStep({ data, onChange, isTC }: EquipmentStepProps) {
+  const [pickerOpen, setPickerOpen] = useState(false);
   const rows = data.equipment;
 
   const addRow = () => {
@@ -64,13 +67,12 @@ export function EquipmentStep({ data, onChange, isTC }: EquipmentStepProps) {
 
       {rows.length === 0 ? (
         <div className="text-center py-8 text-sm text-muted-foreground">
-          No equipment added yet. Tap Add equipment to log costs.
+          No equipment added yet.
         </div>
       ) : (
         <div className="space-y-3">
           {rows.map((row) => {
             const billed = row.cost * (1 + row.markup_percent / 100);
-
             return (
               <div key={row.tempId} className="rounded-lg border border-border p-3 space-y-2">
                 <div className="flex items-start gap-2">
@@ -129,10 +131,24 @@ export function EquipmentStep({ data, onChange, isTC }: EquipmentStepProps) {
         </div>
       )}
 
-      <Button variant="outline" size="sm" onClick={addRow} className="w-full">
-        <Plus className="w-4 h-4 mr-1" />
-        Add equipment
-      </Button>
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" onClick={() => setPickerOpen(true)} className="flex-1">
+          <List className="w-4 h-4 mr-1" />
+          Pick from list
+        </Button>
+        <Button variant="outline" size="sm" onClick={addRow} className="flex-1">
+          <Plus className="w-4 h-4 mr-1" />
+          Add equipment
+        </Button>
+      </div>
+
+      <EquipmentPicker
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onSelect={(item) => {
+          onChange({ equipment: [...rows, newEquipmentRow(data.equipment_markup_pct, item.name)] });
+        }}
+      />
     </div>
   );
 }

@@ -1,9 +1,9 @@
 import { Zap, FileText } from 'lucide-react';
-import type { UnifiedWizardData, WORequestType } from '@/types/unifiedWizard';
+import type { WorkOrderWizardData, WORequestType } from '@/types/workOrderWizard';
 
 interface IntentStepProps {
-  data: UnifiedWizardData;
-  onChange: (updates: Partial<UnifiedWizardData>) => void;
+  data: WorkOrderWizardData;
+  onChange: (updates: Partial<WorkOrderWizardData>) => void;
 }
 
 const INTENT_OPTIONS: { value: WORequestType; icon: typeof Zap; title: string; body: string }[] = [
@@ -11,13 +11,13 @@ const INTENT_OPTIONS: { value: WORequestType; icon: typeof Zap; title: string; b
     value: 'request',
     icon: Zap,
     title: 'Request from GC',
-    body: 'Submit a scope and price to GC for approval before work begins.',
+    body: 'Submit scope and price to GC for approval before work starts.',
   },
   {
     value: 'log',
     icon: FileText,
-    title: 'Log work in progress',
-    body: 'Capture what your crew is doing now. Submit for approval when ready.',
+    title: 'Log own work',
+    body: 'Capture what your crew is doing now. Submit when ready.',
   },
 ];
 

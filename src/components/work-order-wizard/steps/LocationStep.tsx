@@ -1,21 +1,21 @@
-import { useMemo } from 'react';
-import { Badge } from '@/components/ui/badge';
+import { useMemo, useEffect, useRef } from 'react';
 import { useProjectScope } from '@/hooks/useProjectScope';
-import type { UnifiedWizardData } from '@/types/unifiedWizard';
+import type { WorkOrderWizardData } from '@/types/workOrderWizard';
 
 interface LocationStepProps {
-  data: UnifiedWizardData;
-  onChange: (updates: Partial<UnifiedWizardData>) => void;
+  data: WorkOrderWizardData;
+  onChange: (updates: Partial<WorkOrderWizardData>) => void;
   projectId: string;
+  onAutoSave?: () => void;
 }
 
-export function LocationStep({ data, onChange, projectId }: LocationStepProps) {
+export function LocationStep({ data, onChange, projectId, onAutoSave }: LocationStepProps) {
   const { data: scope } = useProjectScope(projectId);
+  const autoSaved = useRef(false);
 
   const chipGroups = useMemo(() => {
     const groups: { label: string; chips: string[] }[] = [];
 
-    // Buildings
     const numBuildings = scope?.num_buildings || 1;
     if (numBuildings > 1) {
       groups.push({
@@ -26,7 +26,6 @@ export function LocationStep({ data, onChange, projectId }: LocationStepProps) {
       });
     }
 
-    // Levels / Floors
     const floorCount = scope?.floors || scope?.stories || 2;
     const levelChips: string[] = [];
     if (scope?.foundation_type?.toLowerCase() === 'basement') {
@@ -39,7 +38,6 @@ export function LocationStep({ data, onChange, projectId }: LocationStepProps) {
       groups.push({ label: 'Levels / Floors', chips: levelChips });
     }
 
-    // Units
     if (scope?.num_units && scope.num_units > 1) {
       groups.push({
         label: 'Units',
@@ -49,7 +47,6 @@ export function LocationStep({ data, onChange, projectId }: LocationStepProps) {
       });
     }
 
-    // Bug #9: Only show elevations when exterior items are actually selected
     const exteriorDivisions = new Set(['exterior', 'roofing', 'waterproofing']);
     const hasExteriorItems = data.selectedCatalogItems.some(
       item => exteriorDivisions.has(item.division)
@@ -61,7 +58,6 @@ export function LocationStep({ data, onChange, projectId }: LocationStepProps) {
       });
     }
 
-    // Other — always show
     groups.push({
       label: 'Other',
       chips: ['Roof deck', 'Garage', 'Common area', 'Mechanical room'],
@@ -69,6 +65,20 @@ export function LocationStep({ data, onChange, projectId }: LocationStepProps) {
 
     return groups;
   }, [scope, data.selectedCatalogItems]);
+
+  // Auto-save for Quick Capture when scope + location are set
+  useEffect(() => {
+    if (
+      data.wo_mode === 'quick_capture' &&
+      data.selectedCatalogItems.length > 0 &&
+      data.location_tags.length > 0 &&
+      !autoSaved.current &&
+      onAutoSave
+    ) {
+      autoSaved.current = true;
+      onAutoSave();
+    }
+  }, [data.wo_mode, data.selectedCatalogItems.length, data.location_tags.length, onAutoSave]);
 
   const toggleChip = (chip: string) => {
     const current = data.location_tags;
@@ -105,6 +115,15 @@ export function LocationStep({ data, onChange, projectId }: LocationStepProps) {
           </div>
         </div>
       ))}
+
+      {/* Auto-save banner */}
+      {data.wo_mode === 'quick_capture' && autoSaved.current && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-800 p-3">
+          <p className="text-sm text-emerald-700 dark:text-emerald-300">
+            ✓ Draft saved. You can exit and return to this work order anytime.
+          </p>
+        </div>
+      )}
     </div>
   );
 }

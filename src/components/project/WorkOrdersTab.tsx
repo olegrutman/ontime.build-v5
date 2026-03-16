@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { UnifiedWOWizard } from '@/components/unified-wo-wizard';
+import { WorkOrderWizard } from '@/components/work-order-wizard';
 import { Plus, FileEdit, Eye, Edit, AlertTriangle, ArrowRight, User, Filter, Clock, CheckCircle2, Wallet, DollarSign, Zap } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -22,7 +22,7 @@ import { enrichWorkOrderTotals } from '@/lib/computeWorkOrderTotal';
 import { FieldCaptureList } from '@/components/field-capture';
 import type { FieldCapture } from '@/hooks/useFieldCaptures';
 import { QuickLogView } from '@/components/quick-log';
-import type { UnifiedWizardData } from '@/types/unifiedWizard';
+import type { WorkOrderWizardData } from '@/types/workOrderWizard';
 
 const STATUS_PRIORITY: Record<ChangeOrderStatus, number> = {
   rejected: 0,
@@ -112,7 +112,7 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
   };
 
   // Bug #3: Wire onComplete to actually save data
-  const handleWizardComplete = async (data: UnifiedWizardData & { project_id: string }) => {
+  const handleWizardComplete = async (data: WorkOrderWizardData & { project_id: string }) => {
     setWizardSubmitting(true);
     try {
       // 1. Create the draft header
@@ -546,7 +546,7 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
       )}
 
       {/* Unified WO Wizard — single entry point for all roles */}
-      <UnifiedWOWizard
+      <WorkOrderWizard
         open={showUnifiedWizard}
         onOpenChange={(open) => {
           setShowUnifiedWizard(open);
