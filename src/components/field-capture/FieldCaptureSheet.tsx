@@ -107,35 +107,56 @@ export function FieldCaptureSheet({ open, onOpenChange, projectId, organizationI
           </button>
         </div>
 
-        {/* Scrollable body */}
-        <div className="overflow-y-auto px-4 py-4 space-y-4" style={{ maxHeight: 'calc(95dvh - 140px)' }}>
-          {/* 1. Photo — camera first */}
-          <CapturePhotoInput
-            onCapture={handlePhoto}
-            preview={photoPreview}
-            onClear={clearPhoto}
-          />
-
-          {/* 2. Voice note */}
-          <CaptureVoiceInput
-            onRecord={setVoiceBlob}
-            hasRecording={!!voiceBlob}
-            onClear={() => setVoiceBlob(null)}
-          />
-
-          {/* 3. Quick note */}
-          <Input
-            placeholder="Quick note…"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="min-h-[48px] text-base rounded-xl"
-          />
-
-          {/* 4. Reason category */}
-          <div>
-            <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Reason</p>
-            <CaptureReasonChips value={reason} onChange={setReason} />
+        {/* Mode toggle */}
+        <div className="px-4 pt-3">
+          <div className="flex items-center rounded-lg border border-border p-0.5 bg-muted/50 w-fit">
+            <button
+              onClick={() => setCaptureMode('note')}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                captureMode === 'note' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'
+              }`}
+            >
+              <StickyNote className="h-3.5 w-3.5" /> Note
+            </button>
+            <button
+              onClick={() => setCaptureMode('quicklog')}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5 ${
+                captureMode === 'quicklog' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'
+              }`}
+            >
+              <Zap className="h-3.5 w-3.5" /> Quick Log
+            </button>
           </div>
+        </div>
+
+        {/* Scrollable body */}
+        <div className="overflow-y-auto px-4 py-4 space-y-4" style={{ maxHeight: 'calc(95dvh - 180px)' }}>
+          {captureMode === 'note' ? (
+            <>
+              <CapturePhotoInput onCapture={handlePhoto} preview={photoPreview} onClear={clearPhoto} />
+              <CaptureVoiceInput onRecord={setVoiceBlob} hasRecording={!!voiceBlob} onClear={() => setVoiceBlob(null)} />
+              <Input placeholder="Quick note…" value={description} onChange={(e) => setDescription(e.target.value)} className="min-h-[48px] text-base rounded-xl" />
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">Reason</p>
+                <CaptureReasonChips value={reason} onChange={setReason} />
+              </div>
+            </>
+          ) : (
+            <>
+              <CatalogBrowser catalog={catalog} selectedItemId={selectedCatalogItem?.id || null} onSelect={setSelectedCatalogItem} compact />
+              {selectedCatalogItem && (
+                <QuickLogDetailPanel
+                  item={selectedCatalogItem}
+                  role="fc"
+                  projectId={projectId}
+                  orgId={organizationId}
+                  onSuccess={() => setSelectedCatalogItem(null)}
+                  logItem={log.logItem}
+                  inline
+                />
+              )}
+            </>
+          )}
         </div>
 
         {/* Save button */}
