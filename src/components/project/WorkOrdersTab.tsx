@@ -398,38 +398,39 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
 
       {/* Work Orders Content */}
       {mode === 'orders' && (
-      {isLoading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-24 w-full" />
-          ))}
-        </div>
-      ) : sortedOrders.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <FileEdit className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-            <p className="text-muted-foreground">
-              {activeTab === 'ALL'
-                ? 'No work orders yet for this project'
-                : `No ${getStatusTabLabel(activeTab).toLowerCase()} work orders`}
-            </p>
-            {canCreate && activeTab === 'ALL' && (
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => setShowWizard(true)}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Create your first work order
-              </Button>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-6">
-          {renderOrderSection('Fixed Price', fixedOrders)}
-          {renderOrderSection('Time & Material', tmOrders)}
-        </div>
+        isLoading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-24 w-full" />
+            ))}
+          </div>
+        ) : sortedOrders.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <FileEdit className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+              <p className="text-muted-foreground">
+                {activeTab === 'ALL'
+                  ? 'No work orders yet for this project'
+                  : `No ${getStatusTabLabel(activeTab).toLowerCase()} work orders`}
+              </p>
+              {canCreate && activeTab === 'ALL' && (
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => setShowWizard(true)}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create your first work order
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-6">
+            {renderOrderSection('Fixed Price', fixedOrders)}
+            {renderOrderSection('Time & Material', tmOrders)}
+          </div>
+        )
       )}
 
       {/* Work Order Wizard (GC/TC) */}
