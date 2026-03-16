@@ -20,6 +20,7 @@ import { HoverActions, HoverAction } from '@/components/ui/hover-actions';
 import { enrichWorkOrderTotals } from '@/lib/computeWorkOrderTotal';
 import { FieldCaptureList } from '@/components/field-capture';
 import type { FieldCapture } from '@/hooks/useFieldCaptures';
+import { QuickLogView } from '@/components/quick-log';
 
 const STATUS_PRIORITY: Record<ChangeOrderStatus, number> = {
   rejected: 0,
