@@ -159,22 +159,24 @@ export function FieldCaptureSheet({ open, onOpenChange, projectId, organizationI
           )}
         </div>
 
-        {/* Save button */}
-        <div className="px-4 pb-4 pt-2" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full min-h-[56px] rounded-xl text-base font-bold"
-            size="lg"
-          >
-            {saving ? (
-              <Loader2 className="h-5 w-5 animate-spin mr-2" />
-            ) : (
-              <Check className="h-5 w-5 mr-2" />
-            )}
-            Save Capture
-          </Button>
-        </div>
+        {/* Save button — only for note mode */}
+        {captureMode === 'note' && (
+          <div className="px-4 pb-4 pt-2" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
+            <Button
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full min-h-[56px] rounded-xl text-base font-bold"
+              size="lg"
+            >
+              {saving ? (
+                <Loader2 className="h-5 w-5 animate-spin mr-2" />
+              ) : (
+                <Check className="h-5 w-5 mr-2" />
+              )}
+              Save Capture
+            </Button>
+          </div>
+        )}
       </DrawerContent>
     </Drawer>
   );
