@@ -1997,6 +1997,8 @@ export type Database = {
           allow_join_requests: boolean
           created_at: string
           created_by: string | null
+          default_equipment_markup_pct: number
+          default_materials_markup_pct: number
           id: string
           insurance_expiration_date: string | null
           license_number: string | null
@@ -2014,6 +2016,8 @@ export type Database = {
           allow_join_requests?: boolean
           created_at?: string
           created_by?: string | null
+          default_equipment_markup_pct?: number
+          default_materials_markup_pct?: number
           id?: string
           insurance_expiration_date?: string | null
           license_number?: string | null
@@ -2031,6 +2035,8 @@ export type Database = {
           allow_join_requests?: boolean
           created_at?: string
           created_by?: string | null
+          default_equipment_markup_pct?: number
+          default_materials_markup_pct?: number
           id?: string
           insurance_expiration_date?: string | null
           license_number?: string | null
@@ -3259,6 +3265,7 @@ export type Database = {
           invited_name: string | null
           invited_org_name: string | null
           is_self_performing: boolean
+          labor_rate: number | null
           org_id: string | null
           project_id: string
           role: string
@@ -3279,6 +3286,7 @@ export type Database = {
           invited_name?: string | null
           invited_org_name?: string | null
           is_self_performing?: boolean
+          labor_rate?: number | null
           org_id?: string | null
           project_id: string
           role: string
@@ -3299,6 +3307,7 @@ export type Database = {
           invited_name?: string | null
           invited_org_name?: string | null
           is_self_performing?: boolean
+          labor_rate?: number | null
           org_id?: string | null
           project_id?: string
           role?: string
