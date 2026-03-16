@@ -373,11 +373,11 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
                   <TooltipTrigger asChild>
                     <span>
                       <Button
-                        onClick={() => isFC ? setShowFCDialog(true) : setShowWizard(true)}
+                        onClick={() => setShowUnifiedWizard(true)}
                         disabled={isBlocked}
                       >
                         <Plus className="h-4 w-4 mr-2" />
-                        {isFC ? 'Submit Work Order' : 'New Work Order'}
+                        New Work Order
                       </Button>
                     </span>
                   </TooltipTrigger>
