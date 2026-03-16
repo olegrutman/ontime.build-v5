@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useWorkOrderCatalog } from '@/hooks/useWorkOrderCatalog';
 import { useWorkOrderLog } from '@/hooks/useWorkOrderLog';
 import { QuickLogKPIStrip } from './QuickLogKPIStrip';
