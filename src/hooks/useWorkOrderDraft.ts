@@ -3,10 +3,8 @@ import { useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
-import type {
-  WOMode,
-  WORequestType,
-} from '@/types/workOrderWizard';
+type WOMode = 'quick_capture' | 'full_scope';
+type WORequestType = 'request' | 'log';
 
 // Inline types for DB row shapes (previously from unifiedWizard)
 interface WOLineItem { id: string; line_total: number; [k: string]: any; }

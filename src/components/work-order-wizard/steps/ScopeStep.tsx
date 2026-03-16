@@ -80,10 +80,10 @@ export const ScopeStep = forwardRef<HTMLDivElement, ScopeStepProps>(function Sco
 
   const renderCheckbox = (isSelected: boolean) => (
     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${
-      isSelected ? 'border-amber-500 bg-amber-500' : 'border-muted-foreground/40'
+      isSelected ? 'border-primary bg-primary' : 'border-muted-foreground/40'
     }`}>
       {isSelected && (
-        <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+        <svg className="w-3 h-3 text-primary-foreground" fill="currentColor" viewBox="0 0 20 20">
           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
         </svg>
       )}
@@ -92,18 +92,16 @@ export const ScopeStep = forwardRef<HTMLDivElement, ScopeStepProps>(function Sco
 
   return (
     <div ref={ref} className="space-y-4">
-      {/* Title (Full Scope only) */}
-      {data.wo_mode === 'full_scope' && (
-        <div>
-          <label className="text-sm font-medium text-foreground">Work order title</label>
-          <Input
-            value={data.title}
-            onChange={(e) => onChange({ title: e.target.value })}
-            placeholder="Enter a descriptive title"
-            className="mt-1"
-          />
-        </div>
-      )}
+      {/* Title */}
+      <div>
+        <label className="text-sm font-medium text-foreground">Work order title</label>
+        <Input
+          value={data.title}
+          onChange={(e) => onChange({ title: e.target.value })}
+          placeholder="Enter a descriptive title"
+          className="mt-1"
+        />
+      </div>
 
       {/* Search */}
       <div className="relative">
@@ -149,7 +147,7 @@ export const ScopeStep = forwardRef<HTMLDivElement, ScopeStepProps>(function Sco
                     key={item.id}
                     onClick={() => toggleItem(item)}
                     className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg transition-colors ${
-                      isSelected ? 'bg-amber-50 dark:bg-amber-900/20' : 'hover:bg-muted/50'
+                      isSelected ? 'bg-primary/10' : 'hover:bg-muted/50'
                     }`}
                   >
                     <div className="text-left">
@@ -258,7 +256,7 @@ export const ScopeStep = forwardRef<HTMLDivElement, ScopeStepProps>(function Sco
                       key={item.id}
                       onClick={() => toggleItem(item)}
                       className={`w-full flex items-center justify-between px-3 py-3 rounded-lg transition-colors ${
-                        isSelected ? 'bg-amber-50 dark:bg-amber-900/20' : 'hover:bg-muted/50'
+                        isSelected ? 'bg-primary/10' : 'hover:bg-muted/50'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -285,10 +283,10 @@ export const ScopeStep = forwardRef<HTMLDivElement, ScopeStepProps>(function Sco
             {data.selectedCatalogItems.map((item) => (
               <span
                 key={item.id}
-                className="inline-flex items-center gap-1 text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 px-2 py-1 rounded-full"
+                className="inline-flex items-center gap-1 text-xs bg-primary/10 text-primary px-2 py-1 rounded-full"
               >
                 {item.item_name}
-                <button onClick={() => removeItem(item.id)} className="hover:text-amber-600">
+                <button onClick={() => removeItem(item.id)} className="hover:text-primary/70">
                   <X className="w-3 h-3" />
                 </button>
               </span>
@@ -303,10 +301,7 @@ export const ScopeStep = forwardRef<HTMLDivElement, ScopeStepProps>(function Sco
         <Textarea
           value={data.description}
           onChange={(e) => onChange({ description: e.target.value })}
-          placeholder={data.wo_mode === 'quick_capture'
-            ? data.selectedCatalogItems.map(i => i.item_name).join(', ') || 'Optional description…'
-            : 'Describe the scope of work…'
-          }
+          placeholder="Describe the scope of work…"
           className="mt-1 min-h-[80px]"
           rows={3}
         />

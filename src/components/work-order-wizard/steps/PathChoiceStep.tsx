@@ -1,41 +1,38 @@
-import { Zap, FileText } from 'lucide-react';
-import type { WorkOrderWizardData, WOMode } from '@/types/workOrderWizard';
+import { Camera, ClipboardList } from 'lucide-react';
+import type { WorkOrderWizardData, WOCreationPath } from '@/types/workOrderWizard';
 
-interface CaptureModeStepProps {
+interface PathChoiceStepProps {
   data: WorkOrderWizardData;
   onChange: (updates: Partial<WorkOrderWizardData>) => void;
 }
 
-const MODE_OPTIONS: { value: WOMode; icon: typeof Zap; title: string; body: string; sub: string }[] = [
+const PATH_OPTIONS: { value: WOCreationPath; icon: typeof Camera; title: string; body: string; sub: string }[] = [
   {
-    value: 'quick_capture',
-    icon: Zap,
-    title: 'Quick Capture',
-    body: 'Pick tasks as you find them. Auto-saves after location. Come back anytime to add more.',
-    sub: 'Best for job walks and reactive work.',
+    value: 'field_capture',
+    icon: Camera,
+    title: 'Field Capture',
+    body: 'Quick photo, voice note, or text to document an issue on site.',
+    sub: 'Best for job walks and reactive issues.',
   },
   {
-    value: 'full_scope',
-    icon: FileText,
-    title: 'Full Scope',
-    body: 'Write the complete scope in one sitting. Best for planned changes and formal proposals.',
-    sub: 'Best for defined change orders.',
+    value: 'full_work_order',
+    icon: ClipboardList,
+    title: 'Full Work Order',
+    body: 'Select scope, assign location, and invite team members. Pricing added later by assigned parties.',
+    sub: 'Best for planned change work.',
   },
 ];
 
-export function CaptureModeStep({ data, onChange }: CaptureModeStepProps) {
+export function PathChoiceStep({ data, onChange }: PathChoiceStepProps) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-      {MODE_OPTIONS.map((opt) => {
-        const isSelected = data.wo_mode === opt.value;
+      {PATH_OPTIONS.map((opt) => {
+        const isSelected = data.creation_path === opt.value;
         const Icon = opt.icon;
         return (
           <button
             key={opt.value}
-            onClick={() => onChange({
-              wo_mode: opt.value,
-              labor_mode: opt.value === 'quick_capture' ? 'hourly' : 'lump_sum',
-            })}
+            onClick={() => onChange({ creation_path: opt.value })}
             className={`flex flex-col items-start gap-3 p-5 rounded-xl border-2 text-left transition-all ${
               isSelected
                 ? 'border-primary bg-primary/5 shadow-sm'
