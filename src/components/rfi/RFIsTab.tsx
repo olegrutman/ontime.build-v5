@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { RFICard } from './RFICard';
 import { CreateRFIDialog } from './CreateRFIDialog';
 import { RFIDetailDialog } from './RFIDetailDialog';
-import { UnifiedWOWizard } from '@/components/unified-wo-wizard';
+import { WorkOrderWizard } from '@/components/work-order-wizard';
 import { useProjectRFIs } from '@/hooks/useProjectRFIs';
 import { useAuth } from '@/hooks/useAuth';
 import { useWorkOrderDraft } from '@/hooks/useWorkOrderDraft';
