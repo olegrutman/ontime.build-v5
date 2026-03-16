@@ -1,13 +1,20 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight, Check, Circle, Lock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Check, Circle, Lock, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useProjectLaborRates } from '@/hooks/useProjectLaborRates';
 import { UnifiedWizardData, INITIAL_UNIFIED_WIZARD_DATA, ALL_WIZARD_STEPS, WizardStepDef } from '@/types/unifiedWizard';
 import { IntentStep } from './steps/IntentStep';
 import { CaptureModeStep } from './steps/CaptureModeStep';
 import { ScopeStep } from './steps/ScopeStep';
+import { LocationStep } from './steps/LocationStep';
+import { LaborStep } from './steps/LaborStep';
+import { MaterialsStep } from './steps/MaterialsStep';
+import { EquipmentStep } from './steps/EquipmentStep';
+import { ReviewStep } from './steps/ReviewStep';
+import { FinancialSummaryStrip } from './FinancialSummaryStrip';
 
 interface UnifiedWOWizardProps {
   open: boolean;
