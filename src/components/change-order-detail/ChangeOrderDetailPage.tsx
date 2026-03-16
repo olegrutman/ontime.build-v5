@@ -424,16 +424,21 @@ export function ChangeOrderDetailPage() {
                     </div>
                   </Card>
 
-                  {/* Work Order Tasks */}
-                  <WorkOrderTaskList
-                    tasks={tasks}
-                    isLoading={isLoadingTasks}
-                    isEditable={isEditable || isFC}
-                    onAddTask={() => { setEditingTask(null); setShowAddTaskSheet(true); }}
-                    onEditTask={(task) => { setEditingTask(task); setShowAddTaskSheet(true); }}
-                    onStatusChange={(taskId, status) => updateTaskStatus.mutate({ taskId, status })}
-                    onDeleteTask={(taskId) => deleteTask.mutate(taskId)}
-                  />
+                  {/* Work Order Line Items (new wizard) */}
+                  <WorkOrderLineItemsList lineItems={lineItems} isLoading={isLoadingLineItems} />
+
+                  {/* Legacy Work Order Tasks (backwards compat) */}
+                  {(tasks.length > 0 || (lineItems.length === 0 && !isLoadingLineItems)) && (
+                    <WorkOrderTaskList
+                      tasks={tasks}
+                      isLoading={isLoadingTasks}
+                      isEditable={isEditable || isFC}
+                      onAddTask={() => { setEditingTask(null); setShowAddTaskSheet(true); }}
+                      onEditTask={(task) => { setEditingTask(task); setShowAddTaskSheet(true); }}
+                      onStatusChange={(taskId, status) => updateTaskStatus.mutate({ taskId, status })}
+                      onDeleteTask={(taskId) => deleteTask.mutate(taskId)}
+                    />
+                  )}
 
                   {/* Quick Add for FC */}
                   {isFC && (
