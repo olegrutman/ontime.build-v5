@@ -112,7 +112,7 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
   };
 
   // Bug #3: Wire onComplete to actually save data
-  const handleWizardComplete = async (data: UnifiedWizardData & { project_id: string }) => {
+  const handleWizardComplete = async (data: WorkOrderWizardData & { project_id: string }) => {
     setWizardSubmitting(true);
     try {
       // 1. Create the draft header
