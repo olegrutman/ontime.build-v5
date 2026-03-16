@@ -1,13 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
-import { X, Loader2, Check } from 'lucide-react';
+import { X, Loader2, Check, Zap, StickyNote } from 'lucide-react';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFieldCaptures, type ReasonCategory } from '@/hooks/useFieldCaptures';
+import { useWorkOrderCatalog } from '@/hooks/useWorkOrderCatalog';
+import { useWorkOrderLog } from '@/hooks/useWorkOrderLog';
 import { CapturePhotoInput } from './CapturePhotoInput';
 import { CaptureVoiceInput } from './CaptureVoiceInput';
 import { CaptureReasonChips } from './CaptureReasonChips';
+import { CatalogBrowser, QuickLogDetailPanel } from '@/components/quick-log';
+import type { CatalogItem } from '@/types/quickLog';
 
 interface FieldCaptureSheetProps {
   open: boolean;
