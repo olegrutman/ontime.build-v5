@@ -19,6 +19,7 @@ interface QuickLogViewProps {
 
 export function QuickLogView({ projectId, orgId }: QuickLogViewProps) {
   const { currentRole } = useAuth();
+  const isMobile = useIsMobile();
   const catalog = useWorkOrderCatalog(orgId);
   const log = useWorkOrderLog(projectId, orgId);
   const [selectedItem, setSelectedItem] = useState<CatalogItem | null>(null);
