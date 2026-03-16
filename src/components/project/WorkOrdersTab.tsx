@@ -490,6 +490,13 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
           
         />
       )}
+      {/* Unified WO Wizard */}
+      <UnifiedWOWizard
+        open={showUnifiedWizard}
+        onOpenChange={setShowUnifiedWizard}
+        projectId={projectId}
+        projectName={projectName}
+      />
     </div>
   );
 }
