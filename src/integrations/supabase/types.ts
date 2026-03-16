@@ -4843,6 +4843,160 @@ export type Database = {
           },
         ]
       }
+      work_order_catalog: {
+        Row: {
+          category_bg: string | null
+          category_color: string | null
+          category_icon: string | null
+          category_id: string
+          category_name: string
+          division: string
+          group_id: string
+          group_label: string
+          id: string
+          item_name: string
+          org_id: string | null
+          sort_order: number | null
+          unit: string
+        }
+        Insert: {
+          category_bg?: string | null
+          category_color?: string | null
+          category_icon?: string | null
+          category_id: string
+          category_name: string
+          division: string
+          group_id: string
+          group_label: string
+          id?: string
+          item_name: string
+          org_id?: string | null
+          sort_order?: number | null
+          unit: string
+        }
+        Update: {
+          category_bg?: string | null
+          category_color?: string | null
+          category_icon?: string | null
+          category_id?: string
+          category_name?: string
+          division?: string
+          group_id?: string
+          group_label?: string
+          id?: string
+          item_name?: string
+          org_id?: string | null
+          sort_order?: number | null
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_catalog_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      work_order_log_items: {
+        Row: {
+          catalog_item_id: string | null
+          category_name: string
+          created_at: string | null
+          created_by_user_id: string
+          division: string
+          hours: number | null
+          id: string
+          item_name: string
+          line_total: number
+          linked_change_order_id: string | null
+          location: string | null
+          material_spec: string | null
+          note: string | null
+          org_id: string
+          period_week: string | null
+          project_id: string
+          qty: number | null
+          status: string
+          unit: string
+          unit_rate: number
+        }
+        Insert: {
+          catalog_item_id?: string | null
+          category_name: string
+          created_at?: string | null
+          created_by_user_id: string
+          division: string
+          hours?: number | null
+          id?: string
+          item_name: string
+          line_total?: number
+          linked_change_order_id?: string | null
+          location?: string | null
+          material_spec?: string | null
+          note?: string | null
+          org_id: string
+          period_week?: string | null
+          project_id: string
+          qty?: number | null
+          status?: string
+          unit: string
+          unit_rate: number
+        }
+        Update: {
+          catalog_item_id?: string | null
+          category_name?: string
+          created_at?: string | null
+          created_by_user_id?: string
+          division?: string
+          hours?: number | null
+          id?: string
+          item_name?: string
+          line_total?: number
+          linked_change_order_id?: string | null
+          location?: string | null
+          material_spec?: string | null
+          note?: string | null
+          org_id?: string
+          period_week?: string | null
+          project_id?: string
+          qty?: number | null
+          status?: string
+          unit?: string
+          unit_rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_log_items_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_log_items_linked_change_order_id_fkey"
+            columns: ["linked_change_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_order_projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_log_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "work_order_log_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       work_order_tasks: {
         Row: {
           created_at: string | null
