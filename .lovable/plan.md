@@ -1,110 +1,141 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-## Features Built
+# Work Order Wizard Rewrite — Implementation Plan
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
+## What We're Building
 
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
+A single `WorkOrderWizard` component replacing both `ChangeOrderWizardDialog` and `UnifiedWOWizard`. It serves all three roles (GC, TC, FC) with role-adaptive steps, full-screen layout, live financial summary, and proper database persistence including an Assign step and line-item-level submission.
 
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
+## Current State
 
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
+- **Database**: All required tables (`work_order_line_items`, `work_order_materials`, `work_order_equipment`) and columns (`wo_mode`, `wo_request_type`, `location_tag`, `draft_started_at`, `converted_at`, `submitted_by_user_id`, `labor_rate` on `project_team`, `default_materials_markup_pct` / `default_equipment_markup_pct` on `organizations`) already exist. No schema changes needed.
+- **Existing components**: `CatalogBrowser` is reusable as-is. `FieldCaptureSheet` stays untouched. `useWorkOrderDraft` hook handles draft persistence and conversion. `useProjectLaborRates` handles rate read/write.
+- **Entry points**: `UnifiedWOWizard` is imported in `WorkOrdersTab.tsx`, `ChangeOrders.tsx`, and `RFIsTab.tsx`. `ChangeOrderWizardDialog` is imported only from its own barrel file (no external consumers).
 
----
+## Implementation Steps
 
-# Field Capture Mode — IMPLEMENTED
+### 1. Create new WorkOrderWizard component
+**File**: `src/components/work-order-wizard/WorkOrderWizard.tsx`
 
-## Overview
-Mobile-first feature enabling Field Crew to instantly capture jobsite issues (photo, voice note, location, reason category) in under 10 seconds.
+Full-screen dialog (desktop) / sheet (mobile). Left sidebar with step list on desktop, progress bar on mobile. Financial summary bar pinned at bottom.
 
-## Database
-- `field_captures` table with RLS (project participants SELECT, creator INSERT/UPDATE)
-- `field-captures` storage bucket (public read, authenticated upload)
-- Realtime enabled via `supabase_realtime` publication
+Steps in order (role-filtered):
+- Step 0 — Intent (TC only): Two cards, same as existing `IntentStep`
+- Step 1 — Mode: Two cards, same as existing `CaptureModeStep`  
+- Step 2 — Scope: Import `CatalogBrowser` directly from `@/components/quick-log/CatalogBrowser`. Multi-select with chip tray. Title input for Full Scope only. Scope description textarea with auto-fill for Quick Capture.
+- Step 3 — Location: Chip groups from project scope (buildings, levels, units, elevations, other). Auto-save draft for Quick Capture when scope+location are set.
+- Step 4 — Labor: Hourly/Lump sum toggle. Rate from `useProjectLaborRates`. TC toggle for FC billing.
+- Step 5 — Materials: TC markup default from `organizations.default_materials_markup_pct`. Row-based entry. Supplier field visible for all.
+- Step 6 — Equipment: Same pattern as Materials. New flat equipment picker (searchable list of ~35 common items grouped by 5 categories). Picker slides up from "Pick from list" button.
+- Step 7 — Assign (GC and TC only): GC selects TC from project team. TC optionally requests FC input and/or adds participants.
+- Step 8 — Review: Read-only summary with edit jumps. Quick Capture gets dual buttons (save draft / submit with item checkboxes). Full Scope gets single submit.
 
-## Frontend Components
-| File | Purpose |
-|------|---------|
-| `src/hooks/useFieldCaptures.ts` | React Query hook with realtime, create/update mutations, media upload |
-| `src/components/field-capture/FieldCaptureSheet.tsx` | Full-screen capture UI (photo, voice, text, reason chips) |
-| `src/components/field-capture/CapturePhotoInput.tsx` | Camera-first photo capture with large touch target |
-| `src/components/field-capture/CaptureVoiceInput.tsx` | Hold-to-record voice note (MediaRecorder API) |
-| `src/components/field-capture/CaptureReasonChips.tsx` | Tap-to-select reason category chips |
-| `src/components/field-capture/FieldCaptureList.tsx` | List of captures with "+ Capture" button |
-| `src/components/field-capture/FieldCaptureCard.tsx` | Individual capture card with "Convert to Task" button |
+### 2. Create new step components
 
-## Entry Points
-1. **BottomNav FAB** — Amber "Capture" button on project pages (mobile)
-2. **Daily Log tab** — Field Captures section for the active date
+Rewrite each step from scratch in `src/components/work-order-wizard/steps/`:
 
-## Feature Gate
-- `field_capture` added to `FeatureKey` type and labels
+- `IntentStep.tsx` — port from unified, no changes
+- `CaptureModeStep.tsx` — port from unified, no changes
+- `ScopeStep.tsx` — **NEW**: Uses `CatalogBrowser` directly (imported, not rewritten). Multi-select mode (the existing CatalogBrowser only supports single-select via `selectedItemId`/`onSelect`). We'll wrap it to support multi-select by managing selection state externally and rendering checkboxes on items.
+- `LocationStep.tsx` — port with auto-save logic added
+- `LaborStep.tsx` — port with running total display and rate save-back
+- `MaterialsStep.tsx` — port with org default markup fetch
+- `EquipmentStep.tsx` — port with new flat equipment picker
+- `AssignStep.tsx` — **NEW**: GC picks TC, TC optionally picks FC and additional participants
+- `ReviewStep.tsx` — rewrite with Quick Capture dual-action (item checkboxes + selective submit)
 
-## Auto-captured Data
-- Timestamp, user ID, org ID, GPS coordinates, device info (userAgent)
+### 3. Build EquipmentPicker component
+**File**: `src/components/work-order-wizard/EquipmentPicker.tsx`
 
-## Files Created/Modified
-| File | Action |
-|------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+Flat searchable list of ~35 equipment items across 5 categories (Heavy Equipment, Power Tools, Scaffolding & Access, Transportation, Specialty). Same visual style as CatalogBrowser but single-level. Selecting adds a row and closes picker.
 
----
+### 4. Build FinancialSummaryBar component
+**File**: `src/components/work-order-wizard/FinancialSummaryBar.tsx`
 
-# Multi-Item Work Order — IMPLEMENTED
+Pinned at bottom. Role-aware content:
+- TC: Full breakdown with labor (FC + TC), materials cost/markup/billed, equipment cost/markup/billed, total billed to GC, TC total cost, running margin (color-coded)
+- FC: Labor, materials, equipment, total FC claim
+- GC: Labor total, materials total, equipment total, grand total
 
-## Overview
-Transforms Work Orders from single-task entities into **package containers** holding multiple task line items, mirroring how POs hold multiple material lines.
+### 5. Update entry points
 
-## Database
-- `work_order_tasks` table with RLS (project participants CRUD) linked to `change_order_projects` header via `work_order_id`
-- Status validation trigger (`pending`, `in_progress`, `complete`, `skipped`)
-- Realtime enabled via `supabase_realtime` publication
+**`WorkOrdersTab.tsx`**: Replace `UnifiedWOWizard` import with new `WorkOrderWizard`. Keep `handleWizardComplete` but update to handle the new Assign step data (assigned_org_id, participant_org_ids, fc_requested).
 
-## Frontend Components
-| File | Purpose |
-|------|---------|
-| `src/types/workOrderTask.ts` | TypeScript types for work order tasks |
-| `src/hooks/useWorkOrderTasks.ts` | React Query hook with realtime, CRUD mutations |
-| `src/components/work-order-tasks/WorkOrderTaskList.tsx` | Task list with completion counter |
-| `src/components/work-order-tasks/WorkOrderTaskCard.tsx` | Individual task card with status, location, menu |
-| `src/components/work-order-tasks/AddTaskSheet.tsx` | Mobile-first bottom sheet for adding/editing tasks |
-| `src/components/work-order-tasks/TaskQuickAdd.tsx` | Inline quick-add input for FC users |
+**`ChangeOrders.tsx`**: Same replacement.
 
-## Integration Points
-- `ChangeOrderDetailPage.tsx` — Tasks section after header card, FC quick-add below
-- `useChangeOrderRealtime.ts` — Subscribes to `work_order_tasks` changes
+**`RFIsTab.tsx`**: Same replacement, passing RFI context as initial scope data.
+
+### 6. Update handleWizardComplete / submission logic
+
+The submission handler in `WorkOrdersTab.tsx` and `ChangeOrders.tsx` needs to:
+1. Save draft header via `useWorkOrderDraft.saveDraft()`
+2. Insert line items, materials, equipment
+3. Insert participants via `change_order_participants`
+4. For "Submit for approval": call `convertToWorkOrder()` which sets statuses, computes totals, sets `converted_at`
+5. Insert `project_activity` record
+6. For Quick Capture "Save draft": just save and close, status stays `draft`
+
+### 7. Scope step — CatalogBrowser integration
+
+The existing `CatalogBrowser` supports single-select (`selectedItemId` + `onSelect`). The spec requires multi-select. Two options:
+- **Option A**: Build a wrapper that renders CatalogBrowser in a controlled way, intercepting selections to toggle in/out of a Set, and overriding the visual selected state per item.
+- **Option B**: Build the catalog drill-down inline (as the current `ScopeStep` already does).
+
+**Decision**: Keep the current inline approach from `ScopeStep` (it already supports multi-select perfectly). The spec says "use CatalogBrowser as-is" but the existing ScopeStep already replicates CatalogBrowser's drill-down with multi-select support. We'll keep this pattern since CatalogBrowser doesn't support multi-select natively.
+
+### 8. Delete old components
+
+After confirming the new wizard works:
+- Delete `src/components/unified-wo-wizard/` (entire directory)
+- Delete `src/components/change-order-wizard/ChangeOrderWizardDialog.tsx`
+- Keep `src/components/change-order-wizard/index.ts` exporting nothing (or remove if no other imports)
+- Keep `src/components/work-order-wizard/WizardProgress.tsx` (used by other wizards)
+- Update `src/components/work-order-wizard/index.ts` to export `WorkOrderWizard` and `WizardProgress`
+
+### 9. Types update
+
+**File**: `src/types/workOrderWizard.ts` (recreate)
+
+New `WorkOrderWizardData` type extending `UnifiedWizardData` with:
+- `assigned_org_id: string | null`
+- `participant_org_ids: string[]`
+- `request_fc_input: boolean`
+- `selected_fc_org_id: string | null`
+- `submit_item_ids: string[]` (for Quick Capture selective submit)
+
+### What stays untouched
+- `change_order_projects` existing columns
+- Approval flow: `ApprovalPanel`, `ChangeOrderChecklist`, `ContractedPricingCard`
+- Invoice/payment/PO flows
+- `project_activity` table
+- Existing Supabase RPC functions
+- Sidebar, topbar, project tabs
+- `WorkOrderTopBar`, `WorkOrderProgressBar`, `TMTimeCardsPanel`
+- `CatalogBrowser` component
+- `FieldCaptureSheet` component
+- `ChangeOrderDetailPage` (kept as-is for now)
+
+## File Summary
+
+| Action | File |
+|--------|------|
+| Create | `src/components/work-order-wizard/WorkOrderWizard.tsx` |
+| Create | `src/components/work-order-wizard/steps/IntentStep.tsx` |
+| Create | `src/components/work-order-wizard/steps/CaptureModeStep.tsx` |
+| Create | `src/components/work-order-wizard/steps/ScopeStep.tsx` |
+| Create | `src/components/work-order-wizard/steps/LocationStep.tsx` |
+| Create | `src/components/work-order-wizard/steps/LaborStep.tsx` |
+| Create | `src/components/work-order-wizard/steps/MaterialsStep.tsx` |
+| Create | `src/components/work-order-wizard/steps/EquipmentStep.tsx` |
+| Create | `src/components/work-order-wizard/steps/AssignStep.tsx` |
+| Create | `src/components/work-order-wizard/steps/ReviewStep.tsx` |
+| Create | `src/components/work-order-wizard/EquipmentPicker.tsx` |
+| Create | `src/components/work-order-wizard/FinancialSummaryBar.tsx` |
+| Create | `src/types/workOrderWizard.ts` |
+| Edit | `src/components/work-order-wizard/index.ts` |
+| Edit | `src/components/project/WorkOrdersTab.tsx` |
+| Edit | `src/pages/ChangeOrders.tsx` |
+| Edit | `src/components/rfi/RFIsTab.tsx` |
+| Delete | `src/components/unified-wo-wizard/` (entire directory) |
+| Delete | `src/components/change-order-wizard/ChangeOrderWizardDialog.tsx` |
+
