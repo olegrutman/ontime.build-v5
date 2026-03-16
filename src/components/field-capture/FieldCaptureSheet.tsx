@@ -55,6 +55,8 @@ export function FieldCaptureSheet({ open, onOpenChange, projectId, organizationI
       setDescription('');
       setReason(null);
       setGps(null);
+      setCaptureMode('note');
+      setSelectedCatalogItem(null);
     }
   }, [open]);
 
