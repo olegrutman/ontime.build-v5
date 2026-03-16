@@ -45,6 +45,7 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
   const [showFCDialog, setShowFCDialog] = useState(false);
   const [activeTab, setActiveTab] = useState<ChangeOrderStatus | 'ALL'>('ALL');
   const [captureToConvert, setCaptureToConvert] = useState<FieldCapture | null>(null);
+  const [mode, setMode] = useState<'orders' | 'quicklog'>('orders');
 
   const {
     changeOrders,
