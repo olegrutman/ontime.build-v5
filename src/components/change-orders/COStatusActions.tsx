@@ -42,6 +42,8 @@ export function COStatusActions({
 }: COStatusActionsProps) {
   const { submitCO, approveCO, rejectCO } = useChangeOrderDetail(co.id);
   const { shareCO, updateCO }             = useChangeOrders(projectId);
+  const { user } = useAuth();
+  const actorRole = isGC ? 'GC' : isTC ? 'TC' : 'FC';
 
   const [acting, setActing]           = useState(false);
   const [rejectOpen, setRejectOpen]   = useState(false);
@@ -49,6 +51,19 @@ export function COStatusActions({
   const [approveOpen, setApproveOpen] = useState(false);
 
   const status = co.status as COStatus;
+
+  async function logActivity(action: string, detail?: string, amount?: number) {
+    if (!user) return;
+    await supabase.from('co_activity').insert({
+      co_id:         co.id,
+      project_id:    projectId,
+      actor_user_id: user.id,
+      actor_role:    actorRole,
+      action,
+      detail:        detail ?? null,
+      amount:        amount ?? null,
+    });
+  }
 
   async function doShare() {
     setActing(true);
