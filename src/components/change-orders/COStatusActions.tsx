@@ -98,11 +98,13 @@ export function COStatusActions({
     }
   }
 
+  async function doShare() {
     setActing(true);
     try {
       await shareCO.mutateAsync(co.id);
       toast.success('CO shared');
       await logActivity('shared');
+      await notifyAssignedParty('CO_SHARED');
       onRefresh();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to share');
@@ -117,6 +119,7 @@ export function COStatusActions({
       await submitCO.mutateAsync(co.id);
       toast.success('CO submitted for approval');
       await logActivity('submitted');
+      await notifyAssignedParty('CHANGE_SUBMITTED', financials?.grandTotal);
       onRefresh();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to submit');
