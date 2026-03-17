@@ -411,15 +411,7 @@ export function useDashboardData(): DashboardData {
               .select('status, total_amount, created_at, contract_id')
               .in('project_id', projectIds)
           : Promise.resolve({ data: [] }),
-        projectIds.length > 0
-          ? supabase
-              .from('work_items')
-              .select('id', { count: 'exact', head: true })
-              .in('project_id', projectIds)
-              .eq('item_type', 'CHANGE_WORK')
-              .gte('created_at', monthStart)
-              .lte('created_at', monthEnd)
-          : Promise.resolve({ count: 0 }),
+        Promise.resolve({ count: 0 }),
         user?.id
           ? supabase
               .from('reminders')
