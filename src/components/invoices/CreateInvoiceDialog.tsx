@@ -78,49 +78,10 @@ export function CreateInvoiceDialog({
   }, [open, projectId]);
 
   const fetchWorkItemsWithPreviousBilling = async () => {
-    // Fetch work items
-    const { data: workItemsData } = await supabase
-      .from('work_items')
-      .select('id, title, code, amount')
-      .eq('project_id', projectId)
-      .in('item_type', ['SOV_ITEM', 'CHANGE_WORK'])
-      .eq('state', 'APPROVED');
-
-    if (!workItemsData) return;
-    setWorkItems(workItemsData);
-
-    // Fetch all previous invoice line items for this project to calculate previous billing
-    const { data: previousLineItems } = await supabase
-      .from('invoice_line_items')
-      .select(`
-        work_item_id,
-        total_billed,
-        invoice:invoices!inner(project_id, status)
-      `)
-      .eq('invoice.project_id', projectId)
-      .in('invoice.status', ['SUBMITTED', 'APPROVED', 'PAID']);
-
-    // Calculate total previously billed per work item
-    const previousBilledByWorkItem: Record<string, number> = {};
-    if (previousLineItems) {
-      previousLineItems.forEach((item: any) => {
-        if (item.work_item_id) {
-          previousBilledByWorkItem[item.work_item_id] = 
-            (previousBilledByWorkItem[item.work_item_id] || 0) + (item.total_billed || 0);
-        }
-      });
-    }
-
-    // Auto-populate line items with calculated previous billing
-    const items: LineItemDraft[] = workItemsData.map((wi, index) => ({
-      id: `temp-${index}`,
-      work_item_id: wi.id,
-      description: wi.code ? `${wi.code} - ${wi.title}` : wi.title,
-      scheduled_value: wi.amount || 0,
-      previous_billed: previousBilledByWorkItem[wi.id] || 0,
-      current_billed: 0,
-    }));
-    setLineItems(items);
+    // Work items table has been removed — use SOV items instead
+    // For now, start with empty line items (user adds manually or uses SOV-based flow)
+    setWorkItems([]);
+    setLineItems([]);
   };
 
   const generateInvoiceNumber = async () => {

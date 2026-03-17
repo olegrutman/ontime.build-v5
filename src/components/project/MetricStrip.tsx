@@ -78,25 +78,13 @@ export function MetricStrip({ projectId, onNavigate, isSupplier, supplierOrgId }
             },
           ]);
         } else {
-          const woRes = await supabase.from('change_order_projects').select('status').eq('project_id', projectId);
           const invRes = await supabase.from('invoices').select('status').eq('project_id', projectId);
           const poRes = await supabase.from('purchase_orders').select('status').eq('project_id', projectId);
 
-          const workOrders = woRes.data || [];
           const invoices = invRes.data || [];
           const pos = poRes.data || [];
 
           setCells([
-            {
-              icon: <ClipboardList className="h-5 w-5" />,
-              label: 'Work Orders',
-              tab: 'work-orders',
-              segments: [
-                { count: workOrders.filter(w => ['approved', 'contracted'].includes(w.status)).length, label: 'Approved', color: 'text-green-600' },
-                { count: workOrders.filter(w => !['draft', 'approved', 'contracted'].includes(w.status)).length, label: 'Pending', color: 'text-amber-600' },
-                { count: workOrders.length, label: 'Total', color: 'text-muted-foreground' },
-              ],
-            },
             {
               icon: <Receipt className="h-5 w-5" />,
               label: 'Invoices',
