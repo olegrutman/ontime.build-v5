@@ -604,18 +604,6 @@ export function useDashboardData(): DashboardData {
           totalRevenue = totalCosts; // fallback: show contract obligations
         }
 
-        if (projectIds.length > 0) {
-          const { data: workOrders } = await supabase
-            .from('change_order_projects')
-            .select('id, final_price, status')
-            .in('project_id', projectIds)
-            .in('status', ['approved', 'contracted']);
-
-          const woList = workOrders || [];
-          totalWorkOrders = woList.length;
-          totalWorkOrderValue = woList.reduce((sum, wo) => sum + (wo.final_price || 0), 0);
-          totalCosts += totalWorkOrderValue;
-        }
 
         // GC billed = invoices received (where GC is to_org)
         const receivedInvoices = allInvoices.filter(i => {
