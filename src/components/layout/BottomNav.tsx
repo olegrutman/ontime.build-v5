@@ -70,6 +70,7 @@ export function BottomNav() {
     { label: 'Home', icon: Home, path: '/dashboard' },
     { label: 'Overview', icon: LayoutDashboard, tab: 'overview' },
     ...(!isSupplier && changeOrdersEnabled ? [{ label: 'WOs', icon: ClipboardList, tab: 'work-orders' }] : []),
+    ...(changeOrdersEnabled ? [{ label: 'COs', icon: FileText, tab: 'change-orders' }] : []),
   ];
 
   const moreProjectItems: NavItem[] = [
