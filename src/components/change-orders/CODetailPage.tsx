@@ -118,12 +118,26 @@ export function CODetailPage() {
     );
   }
 
-  const title        = co.title ?? co.co_number ?? 'Change Order';
-  const reasonColors = co.reason ? CO_REASON_COLORS[co.reason as COReasonCode] : null;
+  const isCombinedParent = memberCOs.length > 0;
+  const displayTitle     = co.title ?? co.co_number ?? (isCombinedParent ? 'Combined Change Order' : 'Change Order');
+  const reasonColors     = co.reason ? CO_REASON_COLORS[co.reason as COReasonCode] : null;
 
   const billableEntries = laborEntries.filter(e => !e.is_actual_cost);
   const fcEntries       = billableEntries.filter(e => e.entered_by_role === 'FC');
   const tcEntries       = billableEntries.filter(e => e.entered_by_role === 'TC');
+
+  // Group line items by member CO for combined parents
+  const scopeSections: { memberCO: ChangeOrder | null; items: typeof lineItems }[] = [];
+  if (isCombinedParent) {
+    for (const mco of memberCOs) {
+      const items = lineItems.filter(li => li.co_id === mco.id);
+      if (items.length > 0 || true) { // show section even if empty for visibility
+        scopeSections.push({ memberCO: mco, items });
+      }
+    }
+  } else {
+    scopeSections.push({ memberCO: null, items: lineItems });
+  }
 
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
