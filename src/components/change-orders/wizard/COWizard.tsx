@@ -171,6 +171,11 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
         if (lineError) throw lineError;
       }
 
+      // Share immediately if requested
+      if (data.shareDraftNow) {
+        await shareCO.mutateAsync(newCO.id);
+      }
+
       toast.success('Change order created');
       handleClose();
     } catch (err: any) {
