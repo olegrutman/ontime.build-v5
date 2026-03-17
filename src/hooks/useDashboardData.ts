@@ -22,7 +22,7 @@ interface ProjectWithDetails extends Project {
 
 interface AttentionItem {
   id: string;
-  type: 'invoice' | 'invite';
+  type: 'invoice' | 'invite' | 'sent_invite';
   title: string;
   projectName: string;
   projectId: string;
