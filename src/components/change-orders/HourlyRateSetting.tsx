@@ -21,7 +21,7 @@ export function HourlyRateSetting() {
     supabase
       .from('profiles')
       .select('hourly_rate')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single()
       .then(({ data }) => {
         if (data?.hourly_rate != null) {
@@ -40,7 +40,7 @@ export function HourlyRateSetting() {
       const { error } = await supabase
         .from('profiles')
         .update({ hourly_rate: parsed })
-        .eq('id', user.id);
+        .eq('user_id', user.id);
       if (error) throw error;
       setCurrent(parsed);
       setEditing(false);

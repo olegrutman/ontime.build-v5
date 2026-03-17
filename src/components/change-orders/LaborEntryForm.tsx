@@ -54,7 +54,7 @@ export function LaborEntryForm({
       const { data } = await supabase
         .from('profiles')
         .select('hourly_rate')
-        .eq('id', user.id)
+        .eq('user_id', user.id)
         .single();
       if (data?.hourly_rate) {
         setRate(String(data.hourly_rate));
@@ -97,6 +97,7 @@ export function LaborEntryForm({
         hours: mode === 'hourly' ? parseFloat(hours) || null : null,
         hourly_rate: mode === 'hourly' ? parseFloat(rate) || null : null,
         lump_sum: mode === 'lump_sum' ? parseFloat(lumpSum) || null : null,
+        line_total: computedTotal,
         description: description.trim() || null,
         is_actual_cost: isActualCost,
       });
