@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { HourlyRateSetting } from '@/components/change-orders/HourlyRateSetting';
 import { formatPhone } from '@/lib/formatPhone';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';

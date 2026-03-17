@@ -7,3 +7,4 @@ export { COEquipmentPanel }  from './COEquipmentPanel';
 export { COStatusActions }   from './COStatusActions';
 export { CONTEPanel }        from './CONTEPanel';
 export { COActivityFeed }    from './COActivityFeed';
+export { HourlyRateSetting } from './HourlyRateSetting';

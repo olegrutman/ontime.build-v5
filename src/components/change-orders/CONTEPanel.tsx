@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Loader2, AlertTriangle, Check, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { sendCONotification, buildCONotification } from '@/lib/coNotifications';
+import { supabase } from '@/integrations/supabase/client';
 import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { toast } from 'sonner';
 import type { ChangeOrder, CONTELogEntry } from '@/types/changeOrder';

@@ -171,6 +171,7 @@ export function COStatusActions({
       });
       toast.success('CO recalled');
       await logActivity('recalled');
+      await notifyAssignedParty('CO_RECALLED');
       onRefresh();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to recall');
