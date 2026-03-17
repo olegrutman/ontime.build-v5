@@ -271,10 +271,11 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
             {currentStep.key === 'location' && (
               <StepLocation data={data} onChange={update} projectId={projectId} />
             )}
-            {(currentStep.key === 'reason' || currentStep.key === 'config') && (
-              <div className="text-sm text-muted-foreground py-8 text-center">
-                Step content for "{currentStep.label}" coming in next prompt.
-              </div>
+            {currentStep.key === 'reason' && (
+              <StepReason data={data} onChange={update} />
+            )}
+            {currentStep.key === 'config' && (
+              <StepConfig data={data} onChange={update} role={role} projectId={projectId} />
             )}
           </div>
 
