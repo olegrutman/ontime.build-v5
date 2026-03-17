@@ -21,7 +21,7 @@ interface FieldCaptureSheetProps {
   onCaptureComplete?: (captureId: string, captureData: { description?: string; photo_url?: string | null; voice_note_url?: string | null; reason_category?: string | null }) => void;
 }
 
-export function FieldCaptureSheet({ open, onOpenChange, projectId, organizationId }: FieldCaptureSheetProps) {
+export function FieldCaptureSheet({ open, onOpenChange, projectId, organizationId, onCaptureComplete }: FieldCaptureSheetProps) {
   const { toast } = useToast();
   const { createCapture } = useFieldCaptures(projectId);
   const catalog = useWorkOrderCatalog(organizationId);
