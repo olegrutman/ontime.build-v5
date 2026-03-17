@@ -393,14 +393,6 @@ export default function ProjectHome() {
                   {isInDemoMode ? <DemoSOVTab /> : <ContractSOVEditor projectId={id!} />}
                 </FeatureGate>
               )}
-              {activeTab === 'work-orders' && !isSupplier && (
-                <FeatureGate feature="change_orders">
-                  {isInDemoMode
-                    ? <DemoWorkOrdersTab projectId={id!} projectName={project.name} />
-                    : <WorkOrdersTab projectId={id!} projectName={project.name} projectStatus={projectStatus} />
-                  }
-                </FeatureGate>
-              )}
               {activeTab === 'rfis' && (
                 isInDemoMode ? <DemoRFIsTab /> : <RFIsTab projectId={id!} />
               )}
