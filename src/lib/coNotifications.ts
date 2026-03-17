@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface CONotificationPayload {
   recipient_user_id: string;
+  recipient_org_id: string;
   co_id: string;
   project_id: string;
   type: string;
