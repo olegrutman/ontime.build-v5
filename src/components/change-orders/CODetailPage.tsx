@@ -47,7 +47,7 @@ export function CODetailPage() {
   const { projectId, coId } = useParams<{ projectId: string; coId: string }>();
   const navigate            = useNavigate();
   const defaultOpen         = useDefaultSidebarOpen();
-  const { currentRole }     = useAuth();
+  const { currentRole, userOrgRoles } = useAuth();
 
   const {
     co,
