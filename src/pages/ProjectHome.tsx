@@ -447,6 +447,11 @@ export default function ProjectHome() {
                   <ReturnsTab projectId={id!} />
                 </FeatureGate>
               )}
+              {activeTab === 'change-orders' && (
+                <FeatureGate feature="change_orders">
+                  <COListPage projectId={id!} />
+                </FeatureGate>
+              )}
             </div>
           </main>
         </SidebarInset>

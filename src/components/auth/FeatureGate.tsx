@@ -60,6 +60,7 @@ export const TAB_FEATURE_MAP: Record<string, FeatureKey> = {
   'purchase-orders': 'purchase_orders',
   'invoices': 'invoicing',
   'work-orders': 'change_orders',
+  'change-orders': 'change_orders',
   'daily-log': 'daily_logs',
   'returns': 'returns_tracking',
   'estimates': 'supplier_estimates',

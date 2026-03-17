@@ -173,6 +173,16 @@ export function ProjectTopBar({
                 <span className="hidden lg:inline">Work Orders</span>
               </TabsTrigger>
               )}
+              {changeOrdersEnabled && (
+              <TabsTrigger
+                value="change-orders"
+                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
+                onClick={() => onTabChange('change-orders')}
+              >
+                <span className="lg:hidden">COs</span>
+                <span className="hidden lg:inline">Change Orders</span>
+              </TabsTrigger>
+              )}
               <TabsTrigger
                 value="rfis"
                 className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
