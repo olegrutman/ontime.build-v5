@@ -29,12 +29,6 @@ interface InvoiceRow {
   total_amount: number;
 }
 
-interface WorkOrderRow {
-  id: string;
-  title: string;
-  status: string;
-  created_at: string;
-}
 
 const roleDotColors: Record<string, string> = {
   'General Contractor': 'bg-blue-500',
