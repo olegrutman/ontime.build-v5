@@ -537,17 +537,11 @@ export function useDashboardData(): DashboardData {
       let totalBilled = 0;
 
       if (orgType === 'TC') {
-        // Exclude WO/CO trade contracts from base sums to avoid double-counting
-        // (WO revenue is added separately from change_order_projects.final_price)
-        const isBaseContract = (c: any) => {
-          const trade = (c as any).trade as string | null;
-          return !trade || !['Work Order', 'Work Order Labor'].includes(trade);
-        };
         contracts.forEach(c => {
-          if (c.from_org_id === currentOrg.id && isBaseContract(c)) {
+          if (c.from_org_id === currentOrg.id) {
             totalRevenue += c.contract_sum || 0;
           }
-          if (c.to_org_id === currentOrg.id && isBaseContract(c)) {
+          if (c.to_org_id === currentOrg.id) {
             totalCosts += c.contract_sum || 0;
           }
         });
