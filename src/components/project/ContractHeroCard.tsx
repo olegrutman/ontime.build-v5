@@ -148,15 +148,6 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
         <div className="flex items-center gap-2 mb-4">
           <p className="font-heading text-[1.9rem] md:text-3xl font-black tabular-nums text-foreground">{fcContract ? fmt(fcValue) : '—'}</p>
         </div>
-        <div className="border-t pt-4">
-          <div className="flex items-center justify-between">
-            <span className="text-[0.65rem] md:text-xs text-muted-foreground">Earned (Approved WOs)</span>
-            <span className="font-heading text-[1.2rem] md:text-sm font-bold tabular-nums">{fmt(workOrderTotal)}</span>
-          </div>
-          {approvedWOCount > 0 && (
-            <span className="text-[10px] text-muted-foreground">{approvedWOCount} WOs</span>
-          )}
-        </div>
       </div>
     );
   }
