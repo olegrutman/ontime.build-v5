@@ -117,9 +117,6 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [ownerContractValue, setOwnerContractValue] = useState<number | null>(null);
   const [materialMarkupType, setMaterialMarkupType] = useState<string | null>(null);
   const [materialMarkupValue, setMaterialMarkupValue] = useState<number | null>(null);
-  const [woLaborTotal, setWoLaborTotal] = useState(0);
-  const [woMaterialTotal, setWoMaterialTotal] = useState(0);
-  const [woEquipmentTotal, setWoEquipmentTotal] = useState(0);
   const [receivablesInvoiced, setReceivablesInvoiced] = useState(0);
   const [receivablesCollected, setReceivablesCollected] = useState(0);
   const [receivablesRetainage, setReceivablesRetainage] = useState(0);
