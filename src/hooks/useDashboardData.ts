@@ -22,7 +22,7 @@ interface ProjectWithDetails extends Project {
 
 interface AttentionItem {
   id: string;
-  type: 'change_order' | 'invoice' | 'invite';
+  type: 'invoice' | 'invite';
   title: string;
   projectName: string;
   projectId: string;
@@ -63,7 +63,7 @@ interface FinancialSummary {
 
 export interface RecentDoc {
   id: string;
-  type: 'invoice' | 'change_order';
+  type: 'invoice';
   title: string;
   status: string;
   amount: number | null;
@@ -82,7 +82,6 @@ interface DashboardData {
     archived: number;
   };
   needsAttention: {
-    changeOrders: number;
     invoices: number;
     pendingInvites: number;
   };
@@ -101,7 +100,6 @@ interface DashboardData {
   recentDocs: RecentDoc[];
   thisMonth: {
     invoices: number;
-    changeOrders: number;
   };
   loading: boolean;
   refetch: () => Promise<void>;
@@ -130,7 +128,7 @@ export function useDashboardData(): DashboardData {
     outstandingToCollect: 0,
     profit: 0,
   });
-  const [thisMonth, setThisMonth] = useState({ invoices: 0, changeOrders: 0 });
+  const [thisMonth, setThisMonth] = useState({ invoices: 0 });
   const [loading, setLoading] = useState(true);
 
   const currentOrg = userOrgRoles[0]?.organization;
@@ -247,7 +245,6 @@ export function useDashboardData(): DashboardData {
       ]);
 
       const contracts = contractsResult.data || [];
-      const pendingCOs = (pendingCOsResult.data || []) as { id: string; project_id: string | null; title: string | null }[];
       const pendingInvoices = ((pendingInvoicesResult.data || []) as any[]).map((inv: any) => ({
         id: inv.id,
         project_id: inv.project_id,
@@ -297,20 +294,6 @@ export function useDashboardData(): DashboardData {
 
       // Build attention items
       const attentionList: AttentionItem[] = [];
-      
-      if (orgType === 'GC') {
-        pendingCOs.forEach(co => {
-          if (!co.project_id) return;
-          const proj = allProjects.find(p => p.id === co.project_id);
-          attentionList.push({
-            id: co.id,
-            type: 'change_order',
-            title: co.title || 'Change Order',
-            projectName: proj?.name || 'Unknown Project',
-            projectId: co.project_id,
-          });
-        });
-      }
 
       pendingInvoices.forEach(inv => {
         const proj = allProjects.find(p => p.id === inv.project_id);
@@ -352,10 +335,9 @@ export function useDashboardData(): DashboardData {
         const projectContracts = contracts.filter(c => c.project_id === project.id);
         
         if (orgType === 'GC') {
-          // GC revenue = sum of base contracts where GC is to_org (exclude WO/WO Labor)
+      // GC revenue = sum of contracts where GC is to_org
           const gcContracts = projectContracts.filter(c => 
-            c.to_org_id === currentOrg.id && 
-            c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
+            c.to_org_id === currentOrg.id
           );
           contractValue = gcContracts.length > 0
             ? gcContracts.reduce((sum, c) => sum + (c.contract_sum || 0), 0)
@@ -376,9 +358,8 @@ export function useDashboardData(): DashboardData {
             : null;
         }
 
-        const projectPendingCOs = pendingCOs.filter(co => co.project_id === project.id).length;
         const projectPendingInvoices = pendingInvoices.filter(inv => inv.project_id === project.id).length;
-        const pendingActions = (orgType === 'GC' || orgType === 'TC') ? projectPendingCOs + projectPendingInvoices : 0;
+        const pendingActions = (orgType === 'GC' || orgType === 'TC') ? projectPendingInvoices : 0;
 
         return {
           ...project,
@@ -400,10 +381,8 @@ export function useDashboardData(): DashboardData {
 
       const [
         allInvoicesResult,
-        thisMonthCOsResult,
         remindersResult,
         recentInvoicesResult,
-        recentCOsResult,
       ] = await Promise.all([
         projectIds.length > 0
           ? supabase
@@ -411,7 +390,6 @@ export function useDashboardData(): DashboardData {
               .select('status, total_amount, created_at, contract_id')
               .in('project_id', projectIds)
           : Promise.resolve({ data: [] }),
-        Promise.resolve({ count: 0 }),
         user?.id
           ? supabase
               .from('reminders')
@@ -437,12 +415,9 @@ export function useDashboardData(): DashboardData {
               .order('created_at', { ascending: false })
               .limit(20)
           : Promise.resolve({ data: [] }),
-        // Recent change orders removed (tables dropped)
-        Promise.resolve({ data: [] }),
       ]);
 
       const allInvoices = (allInvoicesResult.data || []) as { status: string; total_amount: number; created_at: string; contract_id: string | null }[];
-      const thisMonthCOs = (thisMonthCOsResult as any).count || 0;
 
       // Process reminders
       const remindersList: Reminder[] = ((remindersResult.data || []) as any[]).map((r: any) => ({
@@ -458,7 +433,6 @@ export function useDashboardData(): DashboardData {
       // Build recent docs
       const recentDocsList: RecentDoc[] = [];
       const recentInvoices = (recentInvoicesResult.data || []) as any[];
-      const recentCOs = (recentCOsResult.data || []) as any[];
 
       recentInvoices.forEach((inv: any) => {
         const proj = allProjects.find(p => p.id === inv.project_id);
@@ -471,20 +445,6 @@ export function useDashboardData(): DashboardData {
           created_at: inv.created_at,
           projectName: proj?.name || 'Unknown',
           projectId: inv.project_id,
-        });
-      });
-
-      recentCOs.forEach((co: any) => {
-        const proj = allProjects.find(p => p.id === co.project_id);
-        recentDocsList.push({
-          id: co.id,
-          type: 'change_order',
-          title: co.title || 'Change Order',
-          status: co.status,
-          amount: co.final_price,
-          created_at: co.created_at,
-          projectName: proj?.name || 'Unknown',
-          projectId: co.project_id,
         });
       });
 
@@ -540,7 +500,6 @@ export function useDashboardData(): DashboardData {
 
       setThisMonth({
         invoices: thisMonthInvoices,
-        changeOrders: thisMonthCOs,
       });
 
       // 7. Calculate financial summary
@@ -562,17 +521,11 @@ export function useDashboardData(): DashboardData {
       let totalBilled = 0;
 
       if (orgType === 'TC') {
-        // Exclude WO/CO trade contracts from base sums to avoid double-counting
-        // (WO revenue is added separately from change_order_projects.final_price)
-        const isBaseContract = (c: any) => {
-          const trade = (c as any).trade as string | null;
-          return !trade || !['Work Order', 'Work Order Labor'].includes(trade);
-        };
         contracts.forEach(c => {
-          if (c.from_org_id === currentOrg.id && isBaseContract(c)) {
+          if (c.from_org_id === currentOrg.id) {
             totalRevenue += c.contract_sum || 0;
           }
-          if (c.to_org_id === currentOrg.id && isBaseContract(c)) {
+          if (c.to_org_id === currentOrg.id) {
             totalCosts += c.contract_sum || 0;
           }
         });
@@ -584,18 +537,17 @@ export function useDashboardData(): DashboardData {
         });
         totalBilled = billedInvoices.reduce((sum, i) => sum + (i.total_amount || 0), 0);
       } else if (orgType === 'GC') {
-        // GC Revenue = owner_contract_value or sum of contracts where GC is to_org (what TCs bill GC)
-        // GC Costs = sum of contracts where GC is to_org (amounts owed to TCs) + WO totals
-        const isBaseContract = (c: any) => c.trade !== 'Work Order' && c.trade !== 'Work Order Labor';
+        // GC Revenue = owner_contract_value or sum of contracts where GC is to_org
+        // GC Costs = sum of contracts where GC is to_org (amounts owed to TCs)
         contracts.forEach(c => {
-          if (c.to_org_id === currentOrg.id && isBaseContract(c)) {
+          if (c.to_org_id === currentOrg.id) {
             totalCosts += c.contract_sum || 0;
           }
         });
 
         // Use owner_contract_value as revenue if available
         const ownerValues = contracts
-          .filter(c => c.to_org_id === currentOrg.id && isBaseContract(c))
+          .filter(c => c.to_org_id === currentOrg.id)
           .map(c => (c as any).owner_contract_value)
           .filter((v: any) => v != null && v > 0);
         if (ownerValues.length > 0) {
@@ -613,7 +565,7 @@ export function useDashboardData(): DashboardData {
         });
         totalBilled = receivedInvoices.reduce((sum, i) => sum + (i.total_amount || 0), 0);
       } else if (orgType === 'FC') {
-        // FC Revenue = contracts where FC is from_org + FC hours from WOs
+        // FC Revenue = contracts where FC is from_org
         contracts.forEach(c => {
           if (c.from_org_id === currentOrg.id) {
             totalRevenue += c.contract_sum || 0;
@@ -675,7 +627,6 @@ export function useDashboardData(): DashboardData {
 
   const needsAttention = useMemo(() => {
     return {
-      changeOrders: attentionItems.filter(i => i.type === 'change_order').length,
       invoices: attentionItems.filter(i => i.type === 'invoice').length,
       pendingInvites: attentionItems.filter(i => i.type === 'invite').length + pendingInvites.length,
     };

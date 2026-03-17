@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Badge } from '@/components/ui/badge';
@@ -6,22 +5,12 @@ import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import type { RecentDoc } from '@/hooks/useDashboardData';
 
-type DocFilter = 'all' | 'invoices' | 'change_orders';
-
-const filters: { key: DocFilter; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'invoices', label: 'Invoices' },
-  { key: 'change_orders', label: 'Change Orders' },
-];
-
 const typeLabels: Record<string, string> = {
   invoice: 'Invoice',
-  change_order: 'Change Order',
 };
 
 const typeBadgeStyles: Record<string, string> = {
   invoice: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  change_order: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
 };
 
 const statusBadgeStyles: Record<string, string> = {
@@ -44,52 +33,28 @@ interface Props {
 }
 
 export function DashboardRecentDocs({ docs }: Props) {
-  const [filter, setFilter] = useState<DocFilter>('all');
   const isMobile = useIsMobile();
   const navigate = useNavigate();
 
   const handleRowClick = (doc: RecentDoc) => {
-    const tab = doc.type === 'invoice' ? 'invoices' : 'work-orders';
-    navigate(`/project/${doc.projectId}?tab=${tab}`);
+    navigate(`/project/${doc.projectId}?tab=invoices`);
   };
-
-  const filtered = filter === 'all'
-    ? docs
-    : filter === 'invoices'
-    ? docs.filter(d => d.type === 'invoice')
-    : docs.filter(d => d.type === 'change_order');
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3">
-        <h3 className="font-heading text-[1rem] font-bold text-foreground">Recent Documents</h3>
-        <span className="text-[0.72rem] text-muted-foreground">{filtered.length} items</span>
+        <h3 className="font-heading text-[1rem] font-bold text-foreground">Recent Invoices</h3>
+        <span className="text-[0.72rem] text-muted-foreground">{docs.length} items</span>
       </div>
 
-      <div className="px-4 pb-2.5 flex gap-1 overflow-x-auto scrollbar-hide">
-        {filters.map(f => (
-          <button
-            key={f.key}
-            onClick={() => setFilter(f.key)}
-            className={`text-[0.75rem] md:text-[0.7rem] font-medium px-3 py-1.5 md:px-2.5 md:py-1 rounded transition-colors whitespace-nowrap min-h-[36px] md:min-h-0 ${
-              filter === f.key
-                ? 'bg-secondary text-secondary-foreground'
-                : 'text-muted-foreground hover:bg-accent'
-            }`}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      {filtered.length === 0 ? (
+      {docs.length === 0 ? (
         <div className="px-4 py-8 text-center">
           <span className="text-[1.8rem]">📄</span>
-          <p className="text-[0.82rem] text-muted-foreground mt-1">No recent documents</p>
+          <p className="text-[0.82rem] text-muted-foreground mt-1">No recent invoices</p>
         </div>
       ) : isMobile ? (
         <div className="divide-y divide-border">
-          {filtered.map(doc => (
+          {docs.map(doc => (
             <div key={doc.id} className="px-4 py-3 cursor-pointer hover:bg-accent/50 transition-colors" style={{ minHeight: '56px' }} onClick={() => handleRowClick(doc)}>
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -122,7 +87,7 @@ export function DashboardRecentDocs({ docs }: Props) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map(doc => (
+            {docs.map(doc => (
               <tr key={doc.id} className="border-b border-border cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => handleRowClick(doc)}>
                 <td className="px-[18px] py-[10px]">
                   <div className="text-[0.8rem] font-semibold text-foreground">{doc.title}</div>

@@ -5,7 +5,7 @@ import { useProjectInvite } from '@/hooks/useProjectInvite';
 
 interface AttentionItem {
   id: string;
-  type: 'change_order' | 'invoice' | 'invite';
+  type: 'invoice' | 'invite';
   title: string;
   projectName: string;
   projectId: string;
@@ -31,12 +31,6 @@ const typeConfig: Record<string, { emoji: string; borderColor: string; badge: st
     borderColor: 'border-l-red-500',
     badge: 'Review',
     badgeStyle: 'bg-red-50 text-red-700',
-  },
-  change_order: {
-    emoji: '⚒',
-    borderColor: 'border-l-amber-500',
-    badge: 'Pending',
-    badgeStyle: 'bg-amber-50 text-amber-700',
   },
   invite: {
     emoji: '📨',
