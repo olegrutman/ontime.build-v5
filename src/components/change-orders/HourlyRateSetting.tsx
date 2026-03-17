@@ -21,7 +21,7 @@ export function HourlyRateSetting() {
     supabase
       .from('profiles')
       .select('hourly_rate')
-      .eq('id', user.id)
+      .eq('user_id', user.id)
       .single()
       .then(({ data }) => {
         if (data?.hourly_rate != null) {
