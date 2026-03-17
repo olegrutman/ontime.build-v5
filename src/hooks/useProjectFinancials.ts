@@ -94,10 +94,6 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [userOrgIds, setUserOrgIds] = useState<string[]>([]);
   const [billedToDate, setBilledToDate] = useState(0);
-  const [workOrderTotal, setWorkOrderTotal] = useState(0);
-  const [workOrderFCCost, setWorkOrderFCCost] = useState(0);
-  const [tcInternalCostTotal, setTcInternalCostTotal] = useState(0);
-  const [fcWorkOrderEarnings, setFcWorkOrderEarnings] = useState(0);
   const [materialEstimate, setMaterialEstimate] = useState(0);
   const [materialOrdered, setMaterialOrdered] = useState(0);
   const [totalPaidToFC, setTotalPaidToFC] = useState(0);
