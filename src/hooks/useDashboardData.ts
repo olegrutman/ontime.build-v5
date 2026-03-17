@@ -56,8 +56,6 @@ interface FinancialSummary {
   totalRevenue: number;
   totalCosts: number;
   profitMargin: number;
-  totalWorkOrders: number;
-  totalWorkOrderValue: number;
   totalBilled: number;
   outstandingBilling: number;
   potentialProfit: number;
