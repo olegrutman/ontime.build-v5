@@ -642,7 +642,6 @@ export function useDashboardData(): DashboardData {
 
   const needsAttention = useMemo(() => {
     return {
-      changeOrders: attentionItems.filter(i => i.type === 'change_order').length,
       invoices: attentionItems.filter(i => i.type === 'invoice').length,
       pendingInvites: attentionItems.filter(i => i.type === 'invite').length + pendingInvites.length,
     };

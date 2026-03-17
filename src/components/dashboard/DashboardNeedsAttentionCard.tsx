@@ -32,12 +32,6 @@ const typeConfig: Record<string, { emoji: string; borderColor: string; badge: st
     badge: 'Review',
     badgeStyle: 'bg-red-50 text-red-700',
   },
-  change_order: {
-    emoji: '⚒',
-    borderColor: 'border-l-amber-500',
-    badge: 'Pending',
-    badgeStyle: 'bg-amber-50 text-amber-700',
-  },
   invite: {
     emoji: '📨',
     borderColor: 'border-l-blue-500',

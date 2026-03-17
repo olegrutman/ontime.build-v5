@@ -88,7 +88,7 @@ export function DashboardRecentDocs({ docs }: Props) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map(doc => (
+            {docs.map(doc => (
               <tr key={doc.id} className="border-b border-border cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => handleRowClick(doc)}>
                 <td className="px-[18px] py-[10px]">
                   <div className="text-[0.8rem] font-semibold text-foreground">{doc.title}</div>
