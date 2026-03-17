@@ -27,7 +27,10 @@ export type SupportActionType =
   | 'RESTORE_DELETED_ITEM'
   | 'REBUILD_PERMISSIONS'
   | 'MANUAL_VERIFY_SUPPLIER'
-  | 'DELETE_PROJECT';
+  | 'DELETE_PROJECT'
+  | 'DELETE_INVOICE'
+  | 'DELETE_PURCHASE_ORDER'
+  | 'DELETE_WORK_ORDER';
 
 export interface SupportActionLog {
   id: string;
