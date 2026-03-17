@@ -69,13 +69,13 @@ export default function PlatformProjects() {
         if (!ownerMap.has(t.project_id)) ownerMap.set(t.project_id, t.organization?.name || '—');
       });
 
-      const [woRes, poRes, invRes] = await Promise.all([
-        supabase.from('work_items').select('project_id').in('project_id', projectIds),
+      const [_woRemoved, poRes, invRes] = await Promise.all([
+        Promise.resolve({ data: [] }),
         supabase.from('purchase_orders').select('project_id').in('project_id', projectIds),
         supabase.from('invoices').select('project_id').in('project_id', projectIds),
       ]);
 
-      (woRes.data || []).forEach((r: any) => countMaps.wo.set(r.project_id, (countMaps.wo.get(r.project_id) || 0) + 1));
+      // WO counts removed
       (poRes.data || []).forEach((r: any) => countMaps.po.set(r.project_id, (countMaps.po.get(r.project_id) || 0) + 1));
       (invRes.data || []).forEach((r: any) => countMaps.inv.set(r.project_id, (countMaps.inv.get(r.project_id) || 0) + 1));
     }

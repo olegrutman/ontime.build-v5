@@ -21,7 +21,6 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
   const { userOrgRoles } = useAuth();
   const {
     loading, viewerRole, upstreamContract, downstreamContract,
-    workOrderTotal, workOrderFCCost, tcInternalCostTotal,
     ownerContractValue, materialMarkupType, materialMarkupValue,
     materialDelivered, laborBudget,
     isTCMaterialResponsible, isTCSelfPerforming, updateOwnerContract,
@@ -68,7 +67,7 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
 
   const gcContractValue = upstreamContract?.contract_sum || 0;
   const fcContractValue = downstreamContract?.contract_sum || 0;
-  const currentTotal = gcContractValue + workOrderTotal;
+  const currentTotal = gcContractValue;
 
   const handleSaveOwnerContract = async () => {
     if (!upstreamContract) return;
@@ -138,10 +137,9 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
 
   // FC Profit
   if (viewerRole === 'Field Crew') {
-    const { fcWorkOrderEarnings } = financials;
     const fcValue = downstreamContract?.contract_sum || 0;
     const hasLaborBudget = laborBudget != null && laborBudget > 0;
-    const fcContractTotal = fcValue + fcWorkOrderEarnings;
+    const fcContractTotal = fcValue;
     const hasActualCost = totalActualCost > 0;
     const fcProfit = hasActualCost
       ? fcContractTotal - totalActualCost
@@ -203,8 +201,8 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
     const estimateCost = isTCMaterialResponsible ? (materialEstimate || approvedEstimateSum || 0) : 0;
     // Self-performing TC: deduct actual cost instead of FC labor
     const laborDeduction = isTCSelfPerforming
-      ? (hasActualCost ? totalActualCost : tcInternalCostTotal)
-      : (fcContractValue + workOrderFCCost + tcInternalCostTotal);
+      ? (hasActualCost ? totalActualCost : 0)
+      : fcContractValue;
     const laborMargin = revenueTotal - laborDeduction - estimateCost;
     const laborMarginPct = revenueTotal > 0 ? (laborMargin / revenueTotal) * 100 : 0;
     const netPosition = receivablesInvoiced - payablesInvoiced;
@@ -230,7 +228,7 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
           {!isTCSelfPerforming && (
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">FC Labor Cost</span>
-              <span className="text-sm font-semibold tabular-nums text-orange-600 dark:text-orange-400">-{fmt(fcContractValue + workOrderFCCost)}</span>
+              <span className="text-sm font-semibold tabular-nums text-orange-600 dark:text-orange-400">-{fmt(fcContractValue)}</span>
             </div>
           )}
 
@@ -242,7 +240,7 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
               {isTCSelfPerforming ? (hasActualCost ? 'Actual Cost' : 'Internal Cost') : (hasActualCost ? 'Actual Cost' : 'Internal Cost')}
             </span>
             <span className="text-sm font-semibold tabular-nums">
-              {fmt(hasActualCost ? totalActualCost : tcInternalCostTotal)}
+              {fmt(hasActualCost ? totalActualCost : 0)}
             </span>
           </button>
 
@@ -327,7 +325,7 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
             {hasActualCost ? 'Actual Cost' : 'Internal Cost'}
           </span>
           <span className="text-sm font-semibold tabular-nums">
-            {fmt(hasActualCost ? totalActualCost : tcInternalCostTotal)}
+            {fmt(hasActualCost ? totalActualCost : 0)}
           </span>
         </button>
 

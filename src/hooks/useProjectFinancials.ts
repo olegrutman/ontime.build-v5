@@ -28,11 +28,6 @@ export interface ProjectFinancials {
 
   // Aggregated metrics
   billedToDate: number;
-  workOrderTotal: number;
-  approvedWOCount: number;
-  workOrderFCCost: number;
-  tcInternalCostTotal: number;
-  fcWorkOrderEarnings: number;
   retainageAmount: number;
   outstanding: number;
   materialEstimate: number;
@@ -52,9 +47,6 @@ export interface ProjectFinancials {
   ownerContractValue: number | null;
   materialMarkupType: string | null;
   materialMarkupValue: number | null;
-  woLaborTotal: number;
-  woMaterialTotal: number;
-  woEquipmentTotal: number;
 
   // Supplier-specific
   supplierOrderValue: number;
@@ -102,10 +94,6 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [userOrgIds, setUserOrgIds] = useState<string[]>([]);
   const [billedToDate, setBilledToDate] = useState(0);
-  const [workOrderTotal, setWorkOrderTotal] = useState(0);
-  const [workOrderFCCost, setWorkOrderFCCost] = useState(0);
-  const [tcInternalCostTotal, setTcInternalCostTotal] = useState(0);
-  const [fcWorkOrderEarnings, setFcWorkOrderEarnings] = useState(0);
   const [materialEstimate, setMaterialEstimate] = useState(0);
   const [materialOrdered, setMaterialOrdered] = useState(0);
   const [totalPaidToFC, setTotalPaidToFC] = useState(0);
@@ -125,13 +113,10 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [materialOrderedPending, setMaterialOrderedPending] = useState(0);
   const [actualLaborCost, setActualLaborCost] = useState(0);
   const [laborBudget, setLaborBudget] = useState<number | null>(null);
-  const [approvedWOCount, setApprovedWOCount] = useState(0);
+  
   const [ownerContractValue, setOwnerContractValue] = useState<number | null>(null);
   const [materialMarkupType, setMaterialMarkupType] = useState<string | null>(null);
   const [materialMarkupValue, setMaterialMarkupValue] = useState<number | null>(null);
-  const [woLaborTotal, setWoLaborTotal] = useState(0);
-  const [woMaterialTotal, setWoMaterialTotal] = useState(0);
-  const [woEquipmentTotal, setWoEquipmentTotal] = useState(0);
   const [receivablesInvoiced, setReceivablesInvoiced] = useState(0);
   const [receivablesCollected, setReceivablesCollected] = useState(0);
   const [receivablesRetainage, setReceivablesRetainage] = useState(0);
@@ -204,7 +189,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       }
 
       // 3. Non-supplier: fetch all in parallel
-      const [contractsRes, invoicesRes, workOrdersRes, fcParticipantsRes] = await Promise.all([
+      const [contractsRes, invoicesRes, _woRemoved, fcParticipantsRes] = await Promise.all([
         supabase.from('project_contracts').select(`
           id, from_role, to_role, contract_sum, retainage_percent, trade, from_org_id, to_org_id,
           material_responsibility, material_estimate_total, labor_budget,
@@ -213,7 +198,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           to_org:organizations!project_contracts_to_org_id_fkey(name)
         `).eq('project_id', projectId),
         supabase.from('invoices').select('id, invoice_number, status, subtotal, total_amount, created_at, paid_at, contract_id, po_id, retainage_amount').eq('project_id', projectId),
-        supabase.from('change_order_projects').select('id, title, status, created_at, final_price, material_total, labor_total, equipment_total, linked_po_id, tc_internal_cost').eq('project_id', projectId),
+        Promise.resolve({ data: [] }),
         supabase.from('project_participants').select('organization_id, organizations:organization_id(name)').eq('project_id', projectId).eq('role', 'FC').eq('invite_status', 'ACCEPTED'),
       ]);
 
@@ -332,15 +317,6 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         setPayablesRetainage(payableInvs.reduce((s, i: any) => s + (i.retainage_amount || 0), 0));
       }
 
-      // Work orders — only sum approved/contracted for contract total
-      const wos = workOrdersRes.data || [];
-      const approvedWOs = wos.filter(wo => ['approved', 'contracted'].includes(wo.status));
-      const woTotal = approvedWOs.reduce((sum: number, wo: any) => sum + (wo.final_price || 0), 0);
-      setWorkOrderTotal(woTotal);
-      setApprovedWOCount(approvedWOs.length);
-
-      // Material estimates vs ordered
-      const matEstimate = wos.reduce((sum, wo) => sum + (wo.material_total || 0), 0);
       // Use material_estimate_total from the material-responsible contract (GC or TC) if set
       const materialContract = (contractsRes.data || []).find((c: any) =>
         c.material_responsibility != null && c.material_estimate_total != null &&
@@ -349,7 +325,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           : true)
       );
       const contractMatEst = materialContract ? (materialContract as any).material_estimate_total : null;
-      setMaterialEstimate(contractMatEst != null ? contractMatEst : (estSum > 0 ? estSum : matEstimate));
+      setMaterialEstimate(contractMatEst != null ? contractMatEst : estSum);
 
       const { data: orderedPOs } = await supabase
         .from('purchase_orders')
@@ -373,9 +349,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       setMaterialDelivered(calcPOTotal(deliveredPOs));
       setMaterialOrderedPending(calcPOTotal(pendingPOs));
 
-      // Actual labor cost from approved/contracted work orders (reuse already-filtered list)
-      const laborCost = approvedWOs.reduce((sum, wo: any) => sum + (wo.labor_total || 0), 0);
-      setActualLaborCost(laborCost);
+      setActualLaborCost(0);
 
       // Labor budget from primary contract
       const primaryC = contractsWithNames.find(c =>
@@ -400,43 +374,10 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       setMaterialMarkupType((primaryC as any)?.material_markup_type ?? null);
       setMaterialMarkupValue((primaryC as any)?.material_markup_value ?? null);
 
-      // WO breakdowns (labor, material, equipment) from approved WOs
-      const woLabor = approvedWOs.reduce((sum, wo: any) => sum + (wo.labor_total || 0), 0);
-      const woMaterial = approvedWOs.reduce((sum, wo: any) => sum + (wo.material_total || 0), 0);
-      const woEquipment = approvedWOs.reduce((sum, wo: any) => sum + (wo.equipment_total || 0), 0);
-      setWoLaborTotal(woLabor);
-      setWoMaterialTotal(woMaterial);
-      setWoEquipmentTotal(woEquipment);
-
-      // FC-specific WO earnings (Bug 1/7: FC needs their own hours, not full WO price)
-      if (detectedRole === 'Field Crew') {
-        const approvedWOIds = approvedWOs.map(wo => wo.id);
-        if (approvedWOIds.length > 0) {
-          const { data: fcHoursData } = await supabase
-            .from('change_order_fc_hours')
-            .select('labor_total')
-            .in('change_order_id', approvedWOIds);
-          const fcEarnings = (fcHoursData || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0);
-          setFcWorkOrderEarnings(fcEarnings);
-        }
-      }
-
-      // FC costs (TC view)
+      // Total paid to FC from invoices (TC view)
       if (detectedRole === 'Trade Contractor') {
-        const woIds = wos.map(wo => wo.id);
-        if (woIds.length > 0) {
-          const { data: fcHours } = await supabase.from('change_order_fc_hours').select('labor_total').in('change_order_id', woIds);
-          setWorkOrderFCCost((fcHours || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0));
-        }
-
-        // Sum tc_internal_cost for self-performing WOs
-        const tcIntCost = approvedWOs.reduce((sum, wo: any) => sum + (wo.tc_internal_cost || 0), 0);
-        setTcInternalCostTotal(tcIntCost);
-
-        // Total paid to FC from invoices
         const paidInvoices = allInvoices.filter(i => i.status === 'PAID');
         setTotalPaidToFC(paidInvoices.reduce((s, i) => s + (i.total_amount || 0), 0));
-
       }
 
       // FC participants
@@ -530,13 +471,12 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
 
   return {
     loading, viewerRole, contracts, upstreamContract, downstreamContract, userOrgIds,
-    billedToDate, workOrderTotal, approvedWOCount, workOrderFCCost, tcInternalCostTotal, fcWorkOrderEarnings, retainageAmount, outstanding,
+    billedToDate, retainageAmount, outstanding,
     materialEstimate, materialOrdered, totalPaidToFC,
     materialEstimateTotal, approvedEstimateSum, isTCMaterialResponsible, isGCMaterialResponsible,
     isDesignatedSupplier, isTCSelfPerforming,
     totalPaid, materialDelivered, materialOrderedPending, actualLaborCost, laborBudget,
     ownerContractValue, materialMarkupType, materialMarkupValue,
-    woLaborTotal, woMaterialTotal, woEquipmentTotal,
     supplierOrderValue, supplierInvoiced, supplierPaid,
     receivablesInvoiced, receivablesCollected, receivablesRetainage, payablesInvoiced, payablesPaid, payablesRetainage,
     recentInvoices, fcParticipants,

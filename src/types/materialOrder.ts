@@ -20,7 +20,6 @@ export interface WorkItem {
 
 export interface MaterialOrder {
   id: string;
-  work_item_id: string;
   supplier_id?: string | null;
   order_number?: string | null;
   status: string; // Using string to match DB response

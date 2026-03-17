@@ -56,8 +56,6 @@ interface FinancialSummary {
   totalRevenue: number;
   totalCosts: number;
   profitMargin: number;
-  totalWorkOrders: number;
-  totalWorkOrderValue: number;
   totalBilled: number;
   outstandingBilling: number;
   potentialProfit: number;
@@ -121,8 +119,6 @@ export function useDashboardData(): DashboardData {
     totalRevenue: 0,
     totalCosts: 0,
     profitMargin: 0,
-    totalWorkOrders: 0,
-    totalWorkOrderValue: 0,
     totalBilled: 0,
     outstandingBilling: 0,
     potentialProfit: 0,
@@ -211,14 +207,7 @@ export function useDashboardData(): DashboardData {
               .select('project_id, to_role, from_role, contract_sum, from_org_id, to_org_id, trade, owner_contract_value')
               .in('project_id', projectIds)
           : Promise.resolve({ data: [] }),
-        projectIds.length > 0
-          ? supabase
-              .from('work_items')
-              .select('id, project_id, title')
-              .in('project_id', projectIds)
-              .eq('item_type', 'CHANGE_WORK')
-              .eq('state', 'PRICED')
-          : Promise.resolve({ data: [] }),
+        Promise.resolve({ data: [] }),
         projectIds.length > 0
           ? supabase
               .from('invoices')
@@ -422,15 +411,7 @@ export function useDashboardData(): DashboardData {
               .select('status, total_amount, created_at, contract_id')
               .in('project_id', projectIds)
           : Promise.resolve({ data: [] }),
-        projectIds.length > 0
-          ? supabase
-              .from('work_items')
-              .select('id', { count: 'exact', head: true })
-              .in('project_id', projectIds)
-              .eq('item_type', 'CHANGE_WORK')
-              .gte('created_at', monthStart)
-              .lte('created_at', monthEnd)
-          : Promise.resolve({ count: 0 }),
+        Promise.resolve({ count: 0 }),
         user?.id
           ? supabase
               .from('reminders')
@@ -456,15 +437,8 @@ export function useDashboardData(): DashboardData {
               .order('created_at', { ascending: false })
               .limit(20)
           : Promise.resolve({ data: [] }),
-        // Recent change orders for docs card
-        projectIds.length > 0
-          ? supabase
-              .from('change_order_projects')
-              .select('id, title, status, final_price, created_at, project_id')
-              .in('project_id', projectIds)
-              .order('created_at', { ascending: false })
-              .limit(20)
-          : Promise.resolve({ data: [] }),
+        // Recent change orders removed (tables dropped)
+        Promise.resolve({ data: [] }),
       ]);
 
       const allInvoices = (allInvoicesResult.data || []) as { status: string; total_amount: number; created_at: string; contract_id: string | null }[];
@@ -585,8 +559,6 @@ export function useDashboardData(): DashboardData {
 
       let totalRevenue = 0;
       let totalCosts = 0;
-      let totalWorkOrders = 0;
-      let totalWorkOrderValue = 0;
       let totalBilled = 0;
 
       if (orgType === 'TC') {
@@ -604,33 +576,6 @@ export function useDashboardData(): DashboardData {
             totalCosts += c.contract_sum || 0;
           }
         });
-
-        if (projectIds.length > 0) {
-          const { data: workOrders } = await supabase
-            .from('change_order_projects')
-            .select('id, project_id, final_price, status, tc_internal_cost')
-            .in('project_id', projectIds)
-            .in('status', ['approved', 'contracted']);
-
-          const woList = workOrders || [];
-          totalWorkOrders = woList.length;
-          totalWorkOrderValue = woList
-            .reduce((sum, wo) => sum + (wo.final_price || 0), 0);
-          totalRevenue += totalWorkOrderValue;
-
-          if (woList.length > 0) {
-            const woIds = woList.map(wo => wo.id);
-            const { data: fcHours } = await supabase
-              .from('change_order_fc_hours')
-              .select('labor_total')
-              .in('change_order_id', woIds);
-            const fcLaborCost = (fcHours || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0);
-            totalCosts += fcLaborCost;
-
-            const tcInternalCost = woList.reduce((sum, wo) => sum + ((wo as any).tc_internal_cost || 0), 0);
-            totalCosts += tcInternalCost;
-          }
-        }
 
         const billedInvoices = allInvoices.filter(i => {
           if (i.status === 'DRAFT' || !i.contract_id) return false;
@@ -659,18 +604,6 @@ export function useDashboardData(): DashboardData {
           totalRevenue = totalCosts; // fallback: show contract obligations
         }
 
-        if (projectIds.length > 0) {
-          const { data: workOrders } = await supabase
-            .from('change_order_projects')
-            .select('id, final_price, status')
-            .in('project_id', projectIds)
-            .in('status', ['approved', 'contracted']);
-
-          const woList = workOrders || [];
-          totalWorkOrders = woList.length;
-          totalWorkOrderValue = woList.reduce((sum, wo) => sum + (wo.final_price || 0), 0);
-          totalCosts += totalWorkOrderValue;
-        }
 
         // GC billed = invoices received (where GC is to_org)
         const receivedInvoices = allInvoices.filter(i => {
@@ -693,27 +626,6 @@ export function useDashboardData(): DashboardData {
           totalCosts += (c as any).labor_budget || 0;
         });
 
-        if (projectIds.length > 0) {
-          const { data: workOrders } = await supabase
-            .from('change_order_projects')
-            .select('id, status')
-            .in('project_id', projectIds)
-            .in('status', ['approved', 'contracted']);
-
-          const woList = workOrders || [];
-          totalWorkOrders = woList.length;
-
-          if (woList.length > 0) {
-            const woIds = woList.map(wo => wo.id);
-            const { data: fcHours } = await supabase
-              .from('change_order_fc_hours')
-              .select('labor_total')
-              .in('change_order_id', woIds);
-            const fcEarnings = (fcHours || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0);
-            totalWorkOrderValue = fcEarnings;
-            totalRevenue += fcEarnings;
-          }
-        }
 
         // FC billed = invoices sent (where FC is from_org)
         const sentInvoices = allInvoices.filter(i => {
@@ -735,8 +647,6 @@ export function useDashboardData(): DashboardData {
         totalRevenue,
         totalCosts,
         profitMargin,
-        totalWorkOrders,
-        totalWorkOrderValue,
         totalBilled,
         outstandingBilling,
         potentialProfit,

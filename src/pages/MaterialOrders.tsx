@@ -48,7 +48,6 @@ export default function MaterialOrders() {
       .from('material_orders')
       .select(`
         *,
-        work_item:work_items(id, title, item_type, location_ref),
         supplier:suppliers(id, name, supplier_code)
       `)
       .order('created_at', { ascending: false });
@@ -57,20 +56,12 @@ export default function MaterialOrders() {
       console.error('Error fetching orders:', error);
       return;
     }
-    setOrders(data || []);
+    setOrders((data || []).map((d: any) => ({ ...d, work_item: null })));
   };
 
   const fetchWorkItems = async () => {
-    const { data, error } = await supabase
-      .from('work_items')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching work items:', error);
-      return;
-    }
-    setWorkItems(data || []);
+    // work_items table removed
+    setWorkItems([]);
   };
 
   const fetchOrderDetails = async (orderId: string) => {

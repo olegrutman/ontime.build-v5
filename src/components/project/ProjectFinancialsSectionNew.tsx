@@ -614,88 +614,6 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
               </CardContent>
             </Card>
 
-            {/* Work Order Financials - TC Only */}
-            {workOrderTotal > 0 && (
-              <Card className="border-l-4 border-l-purple-500">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/20">
-                      <ClipboardList className="h-5 w-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Work Orders</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Revenue (TC → GC)</span>
-                      <span>{formatCurrency(workOrderTotal)}</span>
-                    </div>
-                    {workOrderFCCost > 0 && (
-                      <div className="flex justify-between text-orange-600">
-                        <span>Field Crew Cost</span>
-                        <span>-{formatCurrency(workOrderFCCost)}</span>
-                      </div>
-                    )}
-                    <Separator className="my-2" />
-                    {(() => {
-                      const woProfit = workOrderTotal - workOrderFCCost;
-                      const woMargin = workOrderTotal > 0 ? (woProfit / workOrderTotal) * 100 : 0;
-                      return (
-                        <div className="flex justify-between font-semibold">
-                          <span className="flex items-center gap-1">
-                            <TrendingUp className={`h-3.5 w-3.5 ${woProfit >= 0 ? 'text-green-600' : 'text-red-600'}`} />
-                            Work Order Profit
-                          </span>
-                          <div className="text-right">
-                            <span className={woProfit >= 0 ? 'text-green-600' : 'text-red-600'}>
-                              {formatCurrency(woProfit)}
-                            </span>
-                            <span className="text-xs text-muted-foreground ml-1">
-                              ({woMargin.toFixed(1)}%)
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Material Costs Summary - TC Only */}
-            {materialCosts.supplierCost > 0 && (
-              <Card className="border-l-4 border-l-teal-500">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-teal-100 dark:bg-teal-900/20">
-                      <Package className="h-5 w-5 text-teal-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">Material Costs</p>
-                      <p className="text-sm text-muted-foreground">From {materialCosts.workOrderCount} work order{materialCosts.workOrderCount > 1 ? 's' : ''}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Supplier Costs</span>
-                      <span>{formatCurrency(materialCosts.supplierCost)}</span>
-                    </div>
-                    <div className="flex justify-between text-green-600">
-                      <span>Markup ({materialCosts.avgMarkupPercent.toFixed(1)}%)</span>
-                      <span>+{formatCurrency(materialCosts.markupAmount)}</span>
-                    </div>
-                    <Separator className="my-2" />
-                    <div className="flex justify-between font-semibold">
-                      <span>Material Revenue</span>
-                      <span>{formatCurrency(materialCosts.revenueTotal)}</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
           </>
         )}
 
@@ -725,20 +643,6 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
               </Card>
             )}
 
-            {/* Work Orders Total for GC */}
-            <Card className="border-l-4 border-l-purple-500">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100 dark:bg-purple-900/20">
-                    <ClipboardList className="h-5 w-5 text-purple-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm text-muted-foreground">Work Orders Total</p>
-                    <p className="text-2xl font-bold">{formatCurrency(workOrderTotal)}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </>
         )}
 

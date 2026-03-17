@@ -26,7 +26,6 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
 
   const {
     loading, viewerRole, upstreamContract, downstreamContract, userOrgIds,
-    workOrderTotal, approvedWOCount, workOrderFCCost,
     materialDelivered, materialOrderedPending, isTCMaterialResponsible,
     materialEstimate, approvedEstimateSum,
     supplierOrderValue, supplierInvoiced, supplierPaid,
@@ -149,21 +148,12 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
         <div className="flex items-center gap-2 mb-4">
           <p className="font-heading text-[1.9rem] md:text-3xl font-black tabular-nums text-foreground">{fcContract ? fmt(fcValue) : '—'}</p>
         </div>
-        <div className="border-t pt-4">
-          <div className="flex items-center justify-between">
-            <span className="text-[0.65rem] md:text-xs text-muted-foreground">Earned (Approved WOs)</span>
-            <span className="font-heading text-[1.2rem] md:text-sm font-bold tabular-nums">{fmt(workOrderTotal)}</span>
-          </div>
-          {approvedWOCount > 0 && (
-            <span className="text-[10px] text-muted-foreground">{approvedWOCount} WOs</span>
-          )}
-        </div>
       </div>
     );
   }
 
   // GC / TC hero
-  const currentTotal = gcContractValue + workOrderTotal;
+  const currentTotal = gcContractValue;
 
   return (
     <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 md:p-6">
@@ -186,14 +176,6 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
           </div>
         </div>
 
-        {/* Approved Work Orders */}
-        <div>
-          <p className="text-xs text-muted-foreground mb-0.5">+ Approved Work Orders</p>
-          <span className="text-lg font-semibold tabular-nums text-primary">{fmt(workOrderTotal)}</span>
-          {approvedWOCount > 0 && (
-            <span className="text-[10px] text-muted-foreground ml-1.5">{approvedWOCount} WOs</span>
-          )}
-        </div>
       </div>
 
       {/* TC: Outgoing FC contract */}
@@ -225,8 +207,7 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
       {/* TC: Live Position */}
       {isTC && (() => {
         const materialCosts = isTCMaterialResponsible ? (materialEstimate || approvedEstimateSum || 0) : 0;
-        const woProfit = workOrderTotal - workOrderFCCost - materialCosts;
-        const livePosition = gcContractValue - fcContractValue + woProfit;
+        const livePosition = gcContractValue - fcContractValue - materialCosts;
         return (
           <div className="mt-4 flex items-center justify-between py-2.5 px-3 rounded-xl bg-accent/30">
             <div className="flex items-center gap-1.5">

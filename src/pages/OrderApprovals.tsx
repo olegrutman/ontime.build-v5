@@ -53,7 +53,6 @@ export default function OrderApprovals() {
       .from('material_orders')
       .select(`
         *,
-        work_item:work_items(id, title, item_type, location_ref, project_id),
         supplier:suppliers(id, name, supplier_code)
       `)
       .in('status', ['SUBMITTED', 'APPROVED', 'FULFILLED', 'CANCELLED'])
@@ -64,7 +63,7 @@ export default function OrderApprovals() {
       setLoading(false);
       return;
     }
-    setOrders(data || []);
+    setOrders((data || []).map((d: any) => ({ ...d, work_item: null })));
     setLoading(false);
   };
 
