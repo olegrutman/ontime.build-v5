@@ -128,7 +128,7 @@ export function useDashboardData(): DashboardData {
     outstandingToCollect: 0,
     profit: 0,
   });
-  const [thisMonth, setThisMonth] = useState({ invoices: 0, changeOrders: 0 });
+  const [thisMonth, setThisMonth] = useState({ invoices: 0 });
   const [loading, setLoading] = useState(true);
 
   const currentOrg = userOrgRoles[0]?.organization;
