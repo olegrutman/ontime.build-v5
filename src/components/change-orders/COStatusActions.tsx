@@ -98,6 +98,7 @@ export function COStatusActions({
     try {
       await approveCO.mutateAsync(co.id);
       toast.success('CO approved');
+      await logActivity('approved');
       setApproveOpen(false);
       onRefresh();
     } catch (err: any) {
