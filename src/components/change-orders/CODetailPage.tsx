@@ -65,6 +65,13 @@ export function CODetailPage() {
     queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
   }
 
+  const canEdit =
+    co?.status === 'draft' ||
+    co?.status === 'shared' ||
+    co?.status === 'combined' ||
+    co?.pricing_type === 'tm' ||
+    co?.pricing_type === 'nte';
+
   if (isLoading) {
     return (
       <SidebarProvider defaultOpen={defaultOpen}>
