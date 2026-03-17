@@ -78,7 +78,6 @@ function CollapsibleOperations({ projectId, projectType, financials, onNavigate 
   onNavigate: (tab: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const woCount = financials.recentWorkOrders.length;
   const invCount = financials.recentInvoices.length;
 
   return (
