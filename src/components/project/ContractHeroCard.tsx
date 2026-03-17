@@ -26,7 +26,6 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
 
   const {
     loading, viewerRole, upstreamContract, downstreamContract, userOrgIds,
-    workOrderTotal, approvedWOCount, workOrderFCCost,
     materialDelivered, materialOrderedPending, isTCMaterialResponsible,
     materialEstimate, approvedEstimateSum,
     supplierOrderValue, supplierInvoiced, supplierPaid,

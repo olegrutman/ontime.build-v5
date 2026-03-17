@@ -75,7 +75,7 @@ export default function PlatformProjects() {
         supabase.from('invoices').select('project_id').in('project_id', projectIds),
       ]);
 
-      (woRes.data || []).forEach((r: any) => countMaps.wo.set(r.project_id, (countMaps.wo.get(r.project_id) || 0) + 1));
+      // WO counts removed
       (poRes.data || []).forEach((r: any) => countMaps.po.set(r.project_id, (countMaps.po.get(r.project_id) || 0) + 1));
       (invRes.data || []).forEach((r: any) => countMaps.inv.set(r.project_id, (countMaps.inv.get(r.project_id) || 0) + 1));
     }

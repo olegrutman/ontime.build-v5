@@ -137,10 +137,9 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
 
   // FC Profit
   if (viewerRole === 'Field Crew') {
-    const { fcWorkOrderEarnings } = financials;
     const fcValue = downstreamContract?.contract_sum || 0;
     const hasLaborBudget = laborBudget != null && laborBudget > 0;
-    const fcContractTotal = fcValue + fcWorkOrderEarnings;
+    const fcContractTotal = fcValue;
     const hasActualCost = totalActualCost > 0;
     const fcProfit = hasActualCost
       ? fcContractTotal - totalActualCost

@@ -92,17 +92,17 @@ export default function PurchaseOrders() {
   };
 
   const fetchWorkItems = async () => {
-    const { data } = await supabase.from('work_items').select('id, title, item_type, project_id').order('created_at', { ascending: false });
-    setWorkItems(data || []);
+    // work_items table removed
+    setWorkItems([]);
   };
 
   const fetchMaterialOrders = async () => {
     const { data } = await supabase
       .from('material_orders')
-      .select('id, ordering_mode, work_item:work_items(title)')
+      .select('id, ordering_mode')
       .eq('status', 'APPROVED')
       .order('created_at', { ascending: false });
-    setMaterialOrders(data || []);
+    setMaterialOrders((data || []).map((d: any) => ({ ...d, work_item: null })));
   };
 
   const fetchPODetails = async (poId: string) => {
