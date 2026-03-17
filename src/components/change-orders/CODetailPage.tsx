@@ -225,6 +225,7 @@ export function CODetailPage() {
                   <COMaterialsPanel
                     coId={co.id}
                     orgId={co.org_id}
+                    projectId={projectId!}
                     materials={materials}
                     isTC={isTC}
                     isGC={isGC}

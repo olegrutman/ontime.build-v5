@@ -1,53 +1,110 @@
+# Interactive Project Scheduling Module — IMPLEMENTED
 
+## Design Philosophy
+Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-# Wire PO Product Picker into CO Materials Panel
+## Features Built
+
+### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
+- Dependency graph walking with BFS
+- Cascade date computation with buffer days support
+- Critical path calculation (longest dependency chain)
+- Conflict detection (tasks starting before predecessors end)
+- `findDownstreamTasks()` for cascade confirmation
+
+### 2. Desktop Gantt Chart (≥768px)
+- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
+- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
+- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
+- **Dependency arrows**: Bezier curves with arrow markers
+- **Critical path toggle**: Highlights longest dependency chain in amber/gold
+- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
+- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
+- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
+- **Undo**: 5-second undo button after any drag action
+
+### 3. Mobile Card View (<768px)
+- **Sticky top bar**: Project start/end dates + days remaining
+- **Phase grouping**: Collapsible sections with total duration
+- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
+- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
+- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
+
+### 4. Shared Logic
+- One unified `items` array drives both views
+- `handleScheduleChange()` checks downstream tasks before applying
+- Optimistic undo with snapshot restoration
+- Auto-estimate dates still available for unscheduled items
+
+---
+
+# Field Capture Mode — IMPLEMENTED
 
 ## Overview
-Replace the manual text-input "Add row" flow in `COMaterialsPanel` with the existing `ProductPickerContent` from the PO wizard. When a TC clicks "Add material", a sheet/dialog opens with the full catalog browser (category → secondary → filter → product → quantity), and the selected product is converted into a `co_material_items` row.
+Mobile-first feature enabling Field Crew to instantly capture jobsite issues (photo, voice note, location, reason category) in under 10 seconds.
 
-## Key challenge
-`ProductPickerContent` requires a `supplierId` (from the `suppliers` table). The CO detail page doesn't currently know this. We need to look up the project's designated supplier via `project_designated_suppliers` → find the supplier org → find the `suppliers.id`.
+## Database
+- `field_captures` table with RLS (project participants SELECT, creator INSERT/UPDATE)
+- `field-captures` storage bucket (public read, authenticated upload)
+- Realtime enabled via `supabase_realtime` publication
 
-## Changes
+## Frontend Components
+| File | Purpose |
+|------|---------|
+| `src/hooks/useFieldCaptures.ts` | React Query hook with realtime, create/update mutations, media upload |
+| `src/components/field-capture/FieldCaptureSheet.tsx` | Full-screen capture UI (photo, voice, text, reason chips) |
+| `src/components/field-capture/CapturePhotoInput.tsx` | Camera-first photo capture with large touch target |
+| `src/components/field-capture/CaptureVoiceInput.tsx` | Hold-to-record voice note (MediaRecorder API) |
+| `src/components/field-capture/CaptureReasonChips.tsx` | Tap-to-select reason category chips |
+| `src/components/field-capture/FieldCaptureList.tsx` | List of captures with "+ Capture" button |
+| `src/components/field-capture/FieldCaptureCard.tsx` | Individual capture card with "Convert to Task" button |
 
-### 1. `COMaterialsPanel.tsx` — Major rework
-- Add `projectId` prop (already available in CODetailPage)
-- Add state: `pickerOpen` boolean, `supplierId` string | null
-- On mount (if `isTC`), fetch the supplier for this project:
-  ```
-  project_designated_suppliers(project_id) → user_id → profiles(user_id) → org_id
-  → suppliers(organization_id) → suppliers.id
-  ```
-  Or simpler: query `project_participants` where role='Supplier' to get org_id, then look up `suppliers.organization_id`.
-- Replace the "Add row" / "Add material" buttons to open a Sheet containing `ProductPickerContent`
-- When ProductPicker calls `onAddItem(POWizardV2LineItem)`, convert the PO line item to a CO material insert:
-  - `description` = item.name
-  - `supplier_sku` = item.supplier_sku
-  - `quantity` = item.quantity
-  - `uom` = item.uom
-  - `unit_cost` = item.unit_price (if available)
-  - Insert directly into `co_material_items`, then close picker and refresh
-- Keep the existing manual "Add row" as a fallback button ("Add custom item") for cases where the item isn't in the catalog
-- Keep existing saved-rows display table and delete functionality unchanged
+## Entry Points
+1. **BottomNav FAB** — Amber "Capture" button on project pages (mobile)
+2. **Daily Log tab** — Field Captures section for the active date
 
-### 2. `CODetailPage.tsx` — Pass projectId
-- Add `projectId={projectId!}` to the `<COMaterialsPanel>` props
+## Feature Gate
+- `field_capture` added to `FeatureKey` type and labels
 
-### 3. No new files needed
-Reuse `ProductPickerContent`, `CategoryGrid`, `SecondaryCategoryList`, `StepByStepFilter`, `ProductList`, `QuantityPanel` as-is.
+## Auto-captured Data
+- Timestamp, user ID, org ID, GPS coordinates, device info (userAgent)
 
-## Supplier lookup approach
-Query chain in COMaterialsPanel on mount:
-1. `project_participants` where `project_id` and `role = 'Supplier'` → get `organization_id`
-2. `suppliers` where `organization_id` matches → get `suppliers.id`
-3. Pass to `ProductPickerContent` as `supplierId`
+## Files Created/Modified
+| File | Action |
+|------|--------|
+| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
+| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
+| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
+| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
+| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
+| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
+| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
+| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
+| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
+| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
 
-If no supplier found, the picker button is hidden and only manual entry remains.
+---
 
-## UI flow for TC
-1. TC clicks "Add from catalog" button → Sheet opens with ProductPickerContent
-2. TC browses categories → filters → selects product → sets quantity
-3. On "Add to PO" (button text will say "Add to CO" — we can customize via the QuantityPanel or just convert on callback)
-4. Item is inserted into `co_material_items` and sheet closes
-5. Manual "Add custom row" button remains for items not in catalog
+# Multi-Item Work Order — IMPLEMENTED
 
+## Overview
+Transforms Work Orders from single-task entities into **package containers** holding multiple task line items, mirroring how POs hold multiple material lines.
+
+## Database
+- `work_order_tasks` table with RLS (project participants CRUD) linked to `change_order_projects` header via `work_order_id`
+- Status validation trigger (`pending`, `in_progress`, `complete`, `skipped`)
+- Realtime enabled via `supabase_realtime` publication
+
+## Frontend Components
+| File | Purpose |
+|------|---------|
+| `src/types/workOrderTask.ts` | TypeScript types for work order tasks |
+| `src/hooks/useWorkOrderTasks.ts` | React Query hook with realtime, CRUD mutations |
+| `src/components/work-order-tasks/WorkOrderTaskList.tsx` | Task list with completion counter |
+| `src/components/work-order-tasks/WorkOrderTaskCard.tsx` | Individual task card with status, location, menu |
+| `src/components/work-order-tasks/AddTaskSheet.tsx` | Mobile-first bottom sheet for adding/editing tasks |
+| `src/components/work-order-tasks/TaskQuickAdd.tsx` | Inline quick-add input for FC users |
+
+## Integration Points
+- `ChangeOrderDetailPage.tsx` — Tasks section after header card, FC quick-add below
+- `useChangeOrderRealtime.ts` — Subscribes to `work_order_tasks` changes
