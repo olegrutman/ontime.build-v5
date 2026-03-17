@@ -564,7 +564,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     woLaborTotal, woMaterialTotal, woEquipmentTotal,
     supplierOrderValue, supplierInvoiced, supplierPaid,
     receivablesInvoiced, receivablesCollected, receivablesRetainage, payablesInvoiced, payablesPaid, payablesRetainage,
-    recentWorkOrders, recentInvoices, monthlyWOData, fcParticipants,
+    recentInvoices, fcParticipants,
     refetch: fetchData, updateContract, createFcContract, updateMaterialEstimate, updateLaborBudget,
     updateOwnerContract, updateMaterialMarkup,
   };

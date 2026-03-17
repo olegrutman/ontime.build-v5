@@ -128,36 +128,6 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {/* Recent Work Orders */}
-      <div className="border bg-card p-3">
-        <div className="flex items-center justify-between mb-2">
-          <button onClick={() => onNavigate('work-orders')} className="flex items-center gap-1.5 hover:text-primary transition-colors">
-            <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Recent Work Orders</span>
-          </button>
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => onNavigate('work-orders')}>View All</Button>
-        </div>
-        {recentWorkOrders.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-2">No work orders yet</p>
-        ) : (
-          <div className="space-y-1">
-            {recentWorkOrders.map(wo => (
-              <button
-                key={wo.id}
-                onClick={() => navigate(`/work-orders/${wo.id}`)}
-                className="w-full flex items-center justify-between py-1.5 px-1 hover:bg-accent/50 rounded text-left transition-colors"
-              >
-                <span className="text-sm truncate flex-1 mr-2">{wo.title}</span>
-                <div className="flex items-center gap-2 shrink-0">
-                  <StatusBadge status={wo.status} />
-                  <span className="text-[10px] text-muted-foreground">{format(new Date(wo.created_at), 'MMM d')}</span>
-                </div>
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Recent Invoices */}
       <div className="border bg-card p-3">
         <div className="flex items-center justify-between mb-2">
