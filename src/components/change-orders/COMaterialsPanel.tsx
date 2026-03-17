@@ -1,7 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -9,18 +8,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Trash2, Loader2, Package, Lock } from 'lucide-react';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { Plus, Trash2, Loader2, Package, ShoppingCart, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
 import type { COMaterialItem } from '@/types/changeOrder';
+import type { POWizardV2LineItem } from '@/types/poWizardV2';
+import { ProductPickerContent, ProductPickerHandle } from '@/components/po-wizard-v2/ProductPicker';
 
 const UOM_OPTIONS = ['ea', 'LF', 'SF', 'SQ', 'bag', 'box', 'sheet', 'roll', 'gal', 'lb', 'ton', 'hr'];
 
 interface COMaterialsPanelProps {
   coId:            string;
   orgId:           string;
+  projectId:       string;
   materials:       COMaterialItem[];
   isTC:            boolean;
   isGC:            boolean;
@@ -61,6 +68,7 @@ function newDraftRow(): DraftRow {
 export function COMaterialsPanel({
   coId,
   orgId,
+  projectId,
   materials,
   isTC,
   isGC,
@@ -74,8 +82,63 @@ export function COMaterialsPanel({
   const [saving, setSaving]       = useState(false);
   const [deleting, setDeleting]   = useState<string | null>(null);
 
+  // Picker state
+  const [pickerOpen, setPickerOpen]     = useState(false);
+  const [supplierId, setSupplierId]     = useState<string | null>(null);
+  const [supplierLoading, setSupplierLoading] = useState(false);
+  const pickerRef = useRef<ProductPickerHandle>(null);
+
   const totalCost   = materials.reduce((s, m) => s + (m.line_cost ?? 0), 0);
   const totalBilled = materials.reduce((s, m) => s + (m.billed_amount ?? 0), 0);
+
+  // Resolve supplier for this project
+  useEffect(() => {
+    if (!isTC || !projectId) return;
+    let cancelled = false;
+    const resolve = async () => {
+      setSupplierLoading(true);
+      try {
+        // Get supplier org from project_team
+        const { data: teamData } = await supabase
+          .from('project_team')
+          .select('org_id')
+          .eq('project_id', projectId)
+          .eq('role', 'Supplier');
+
+        const orgIds = (teamData || []).map(t => t.org_id);
+        let sid: string | null = null;
+
+        if (orgIds.length > 0) {
+          const { data: supplierData } = await supabase
+            .from('suppliers')
+            .select('id')
+            .in('organization_id', orgIds)
+            .limit(1)
+            .maybeSingle();
+          sid = supplierData?.id ?? null;
+        }
+
+        // Fallback to system supplier
+        if (!sid) {
+          const { data: sys } = await supabase
+            .from('suppliers')
+            .select('id')
+            .eq('is_system', true)
+            .limit(1)
+            .maybeSingle();
+          sid = sys?.id ?? null;
+        }
+
+        if (!cancelled) setSupplierId(sid);
+      } catch (err) {
+        console.error('Failed to resolve supplier for CO picker', err);
+      } finally {
+        if (!cancelled) setSupplierLoading(false);
+      }
+    };
+    resolve();
+    return () => { cancelled = true; };
+  }, [isTC, projectId]);
 
   function addRow() {
     setDraftRows(r => [...r, newDraftRow()]);
@@ -138,6 +201,33 @@ export function COMaterialsPanel({
     }
   }
 
+  // Handle item added from ProductPicker
+  const handlePickerAdd = useCallback(async (item: POWizardV2LineItem) => {
+    try {
+      const { error } = await supabase.from('co_material_items').insert({
+        co_id:          coId,
+        org_id:         orgId,
+        added_by_role:  'TC',
+        line_number:    materials.length + 1,
+        description:    item.name,
+        supplier_sku:   item.supplier_sku || null,
+        quantity:       item.quantity,
+        uom:            item.uom || 'ea',
+        unit_cost:      item.unit_price ?? null,
+        markup_percent: 0,
+        is_on_site:     materialsOnSite,
+      });
+      if (error) throw error;
+      toast.success('Material added from catalog');
+      onRefresh();
+      setPickerOpen(false);
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to add material');
+    }
+  }, [coId, orgId, materials.length, materialsOnSite, onRefresh]);
+
+  const pickerTitle = pickerRef.current?.getTitle() ?? 'Add Material';
+
   return (
     <div className="rounded-lg border border-border bg-card">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
@@ -151,10 +241,18 @@ export function COMaterialsPanel({
           )}
         </div>
         {canEdit && isTC && (
-          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={addRow}>
-            <Plus className="h-3 w-3" />
-            Add row
-          </Button>
+          <div className="flex items-center gap-1">
+            {supplierId && (
+              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => setPickerOpen(true)}>
+                <ShoppingCart className="h-3 w-3" />
+                Catalog
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={addRow}>
+              <Plus className="h-3 w-3" />
+              Custom
+            </Button>
+          </div>
         )}
       </div>
 
@@ -162,10 +260,18 @@ export function COMaterialsPanel({
         <div className="px-4 py-8 text-center">
           <p className="text-sm text-muted-foreground">No materials added yet</p>
           {canEdit && isTC && (
-            <Button variant="outline" size="sm" className="mt-3 text-xs gap-1" onClick={addRow}>
-              <Plus className="h-3 w-3" />
-              Add material
-            </Button>
+            <div className="flex justify-center gap-2 mt-3">
+              {supplierId && (
+                <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => setPickerOpen(true)}>
+                  <ShoppingCart className="h-3 w-3" />
+                  Add from catalog
+                </Button>
+              )}
+              <Button variant="outline" size="sm" className="text-xs gap-1" onClick={addRow}>
+                <Plus className="h-3 w-3" />
+                Add custom item
+              </Button>
+            </div>
           )}
         </div>
       ) : (
@@ -351,6 +457,49 @@ export function COMaterialsPanel({
           )}
         </>
       )}
+
+      {/* Product Picker Sheet */}
+      <Sheet open={pickerOpen} onOpenChange={setPickerOpen}>
+        <SheetContent side="bottom" className="h-[85vh] flex flex-col p-0 rounded-t-2xl">
+          <SheetHeader className="flex-row items-center gap-2 px-4 py-3 border-b border-border space-y-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={() => {
+                if (pickerRef.current) {
+                  const step = pickerRef.current.getStep();
+                  if (step === 'category' || step === 'source') {
+                    setPickerOpen(false);
+                  } else {
+                    pickerRef.current.goBack();
+                  }
+                } else {
+                  setPickerOpen(false);
+                }
+              }}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <SheetTitle className="text-base font-semibold">{pickerTitle}</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {supplierId && (
+              <ProductPickerContent
+                ref={pickerRef}
+                supplierId={supplierId}
+                projectId={projectId}
+                onAddItem={handlePickerAdd}
+                editingItem={null}
+                onClearEdit={() => {}}
+                hidePricing={false}
+                onClose={() => setPickerOpen(false)}
+                onExitPicker={() => setPickerOpen(false)}
+              />
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
