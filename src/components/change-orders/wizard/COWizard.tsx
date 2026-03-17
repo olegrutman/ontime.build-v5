@@ -72,11 +72,13 @@ interface COWizardProps {
 }
 
 export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
-  const { currentRole } = useAuth();
+  const { currentRole, user, userOrgRoles } = useAuth();
   const isMobile = useIsMobile();
   const [step, setStep]   = useState(0);
   const [data, setData]   = useState<COWizardData>(INITIAL_DATA);
   const [submitting, setSubmitting] = useState(false);
+  const { createCO } = useChangeOrders(projectId);
+  const orgId = userOrgRoles?.[0]?.organization_id ?? null;
 
   const role: COCreatedByRole =
     currentRole === 'GC_PM' ? 'GC' :
