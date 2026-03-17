@@ -548,12 +548,13 @@ export default function PlatformProjectDetail() {
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead>Created</TableHead>
+                {platformRole === 'PLATFORM_OWNER' && <TableHead className="w-[60px]" />}
               </TableRow>
             </TableHeader>
             <TableBody>
               {pos.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">No purchase orders</TableCell>
+                  <TableCell colSpan={platformRole === 'PLATFORM_OWNER' ? 6 : 5} className="text-center py-4 text-muted-foreground">No purchase orders</TableCell>
                 </TableRow>
               ) : (
                 pos.map((po) => (
@@ -567,6 +568,18 @@ export default function PlatformProjectDetail() {
                     <TableCell className="text-sm text-muted-foreground">
                       {format(new Date(po.created_at), 'MMM d, yyyy')}
                     </TableCell>
+                    {platformRole === 'PLATFORM_OWNER' && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => { setDeletePOTarget(po); setDeletePOOpen(true); }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
