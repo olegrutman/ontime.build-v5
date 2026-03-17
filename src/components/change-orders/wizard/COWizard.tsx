@@ -6,9 +6,13 @@ import { Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import type { COCreatedByRole, COReasonCode, COPricingType, WorkOrderCatalogItem } from '@/types/changeOrder';
+import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { StepCatalog } from './StepCatalog';
 import { StepLocation } from './StepLocation';
+import { StepReason } from './StepReason';
+import { StepConfig } from './StepConfig';
 
 export interface COWizardData {
   selectedItems:        WorkOrderCatalogItem[];
