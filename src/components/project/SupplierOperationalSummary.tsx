@@ -74,12 +74,10 @@ export function SupplierOperationalSummary({ projectId, supplierOrgId, onNavigat
   const { userOrgRoles } = useAuth();
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
-  const [workOrders, setWorkOrders] = useState<WorkOrderRow[]>([]);
   const [openRfiCount, setOpenRfiCount] = useState(0);
   const [scope, setScope] = useState<{ scope_description: string | null } | null>(null);
   const [loadingTeam, setLoadingTeam] = useState(true);
   const [loadingInvoices, setLoadingInvoices] = useState(true);
-  const [loadingWOs, setLoadingWOs] = useState(true);
   const [loadingRfis, setLoadingRfis] = useState(true);
   const [loadingScope, setLoadingScope] = useState(true);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
