@@ -1,39 +1,110 @@
+# Interactive Project Scheduling Module — IMPLEMENTED
 
+## Design Philosophy
+Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-# NTE Increase Flow, Real-time, Activity Feed
+## Features Built
 
-## Files to create
+### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
+- Dependency graph walking with BFS
+- Cascade date computation with buffer days support
+- Critical path calculation (longest dependency chain)
+- Conflict detection (tasks starting before predecessors end)
+- `findDownstreamTasks()` for cascade confirmation
 
-1. **`src/components/change-orders/CONTEPanel.tsx`** — Full NTE management panel replacing the static gauge. Shows cap/used/remaining with progress bar, warning banners at 80%/95%, TC/FC can request increase (AlertDialog), GC sees pending request with approve/decline actions, plus history of past requests.
+### 2. Desktop Gantt Chart (≥768px)
+- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
+- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
+- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
+- **Dependency arrows**: Bezier curves with arrow markers
+- **Critical path toggle**: Highlights longest dependency chain in amber/gold
+- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
+- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
+- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
+- **Undo**: 5-second undo button after any drag action
 
-2. **`src/hooks/useCORealtime.ts`** — Supabase realtime hook subscribing to `co_labor_entries`, `co_material_items`, `co_equipment_items`, `co_nte_log`, `change_orders`, and `co_activity` tables filtered by `co_id`. Invalidates corresponding query keys on changes.
+### 3. Mobile Card View (<768px)
+- **Sticky top bar**: Project start/end dates + days remaining
+- **Phase grouping**: Collapsible sections with total duration
+- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
+- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
+- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
 
-3. **`src/components/change-orders/COActivityFeed.tsx`** — Activity timeline component showing role-colored badges, action labels, amounts, details, and relative timestamps.
+### 4. Shared Logic
+- One unified `items` array drives both views
+- `handleScheduleChange()` checks downstream tasks before applying
+- Optimistic undo with snapshot restoration
+- Auto-estimate dates still available for unscheduled items
 
-## Files to modify
+---
 
-4. **`src/components/change-orders/CODetailPage.tsx`**:
-   - Add imports: `CONTEPanel`, `COActivityFeed`, `useCORealtime`
-   - Add `useCORealtime(coId ?? null)` after `useChangeOrderDetail`
-   - Destructure `nteLog` and `activity` from `useChangeOrderDetail`
-   - Replace static NTE card (lines 332-374) with `<CONTEPanel>`
-   - Add `<COActivityFeed activity={activity} />` after equipment panel in main column
+# Field Capture Mode — IMPLEMENTED
 
-5. **`src/components/change-orders/wizard/COWizard.tsx`**:
-   - After line 171 (line items inserted) and before line 174 (share check), insert activity log for 'created' action
+## Overview
+Mobile-first feature enabling Field Crew to instantly capture jobsite issues (photo, voice note, location, reason category) in under 10 seconds.
 
-6. **`src/components/change-orders/COStatusActions.tsx`**:
-   - Add `supabase` and `useAuth` imports
-   - Add `user` and `actorRole` variables
-   - Add `logActivity` helper function
-   - Add `await logActivity(...)` calls after each successful action (share, submit, approve, reject, recall)
+## Database
+- `field_captures` table with RLS (project participants SELECT, creator INSERT/UPDATE)
+- `field-captures` storage bucket (public read, authenticated upload)
+- Realtime enabled via `supabase_realtime` publication
 
-7. **`src/components/change-orders/index.ts`** — Add exports for `CONTEPanel` and `COActivityFeed`
+## Frontend Components
+| File | Purpose |
+|------|---------|
+| `src/hooks/useFieldCaptures.ts` | React Query hook with realtime, create/update mutations, media upload |
+| `src/components/field-capture/FieldCaptureSheet.tsx` | Full-screen capture UI (photo, voice, text, reason chips) |
+| `src/components/field-capture/CapturePhotoInput.tsx` | Camera-first photo capture with large touch target |
+| `src/components/field-capture/CaptureVoiceInput.tsx` | Hold-to-record voice note (MediaRecorder API) |
+| `src/components/field-capture/CaptureReasonChips.tsx` | Tap-to-select reason category chips |
+| `src/components/field-capture/FieldCaptureList.tsx` | List of captures with "+ Capture" button |
+| `src/components/field-capture/FieldCaptureCard.tsx` | Individual capture card with "Convert to Task" button |
 
-## Key implementation notes
+## Entry Points
+1. **BottomNav FAB** — Amber "Capture" button on project pages (mobile)
+2. **Daily Log tab** — Field Captures section for the active date
 
-- `useChangeOrderDetail` already returns `nteLog` and `activity` — just need to destructure them in `CODetailPage`
-- `useChangeOrderDetail` already exposes `requestNTEIncrease`, `approveNTEIncrease`, `rejectNTEIncrease` mutations
-- Realtime hook uses separate `.on()` calls per table with `co_id` filter, invalidates granular query keys like `['co-detail', coId, 'labor']`
-- Activity logging is fire-and-forget (no await needed for UX, but we'll await for consistency)
+## Feature Gate
+- `field_capture` added to `FeatureKey` type and labels
 
+## Auto-captured Data
+- Timestamp, user ID, org ID, GPS coordinates, device info (userAgent)
+
+## Files Created/Modified
+| File | Action |
+|------|--------|
+| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
+| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
+| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
+| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
+| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
+| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
+| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
+| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
+| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
+| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+
+---
+
+# Multi-Item Work Order — IMPLEMENTED
+
+## Overview
+Transforms Work Orders from single-task entities into **package containers** holding multiple task line items, mirroring how POs hold multiple material lines.
+
+## Database
+- `work_order_tasks` table with RLS (project participants CRUD) linked to `change_order_projects` header via `work_order_id`
+- Status validation trigger (`pending`, `in_progress`, `complete`, `skipped`)
+- Realtime enabled via `supabase_realtime` publication
+
+## Frontend Components
+| File | Purpose |
+|------|---------|
+| `src/types/workOrderTask.ts` | TypeScript types for work order tasks |
+| `src/hooks/useWorkOrderTasks.ts` | React Query hook with realtime, CRUD mutations |
+| `src/components/work-order-tasks/WorkOrderTaskList.tsx` | Task list with completion counter |
+| `src/components/work-order-tasks/WorkOrderTaskCard.tsx` | Individual task card with status, location, menu |
+| `src/components/work-order-tasks/AddTaskSheet.tsx` | Mobile-first bottom sheet for adding/editing tasks |
+| `src/components/work-order-tasks/TaskQuickAdd.tsx` | Inline quick-add input for FC users |
+
+## Integration Points
+- `ChangeOrderDetailPage.tsx` — Tasks section after header card, FC quick-add below
+- `useChangeOrderRealtime.ts` — Subscribes to `work_order_tasks` changes

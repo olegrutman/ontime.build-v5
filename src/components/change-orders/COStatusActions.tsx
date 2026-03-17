@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { ChangeOrder, COStatus } from '@/types/changeOrder';
 import { cn } from '@/lib/utils';
@@ -40,6 +42,8 @@ export function COStatusActions({
 }: COStatusActionsProps) {
   const { submitCO, approveCO, rejectCO } = useChangeOrderDetail(co.id);
   const { shareCO, updateCO }             = useChangeOrders(projectId);
+  const { user } = useAuth();
+  const actorRole = isGC ? 'GC' : isTC ? 'TC' : 'FC';
 
   const [acting, setActing]           = useState(false);
   const [rejectOpen, setRejectOpen]   = useState(false);
@@ -48,11 +52,25 @@ export function COStatusActions({
 
   const status = co.status as COStatus;
 
+  async function logActivity(action: string, detail?: string, amount?: number) {
+    if (!user) return;
+    await supabase.from('co_activity').insert({
+      co_id:         co.id,
+      project_id:    projectId,
+      actor_user_id: user.id,
+      actor_role:    actorRole,
+      action,
+      detail:        detail ?? null,
+      amount:        amount ?? null,
+    });
+  }
+
   async function doShare() {
     setActing(true);
     try {
       await shareCO.mutateAsync(co.id);
       toast.success('CO shared');
+      await logActivity('shared');
       onRefresh();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to share');
@@ -66,6 +84,7 @@ export function COStatusActions({
     try {
       await submitCO.mutateAsync(co.id);
       toast.success('CO submitted for approval');
+      await logActivity('submitted');
       onRefresh();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to submit');
@@ -79,6 +98,7 @@ export function COStatusActions({
     try {
       await approveCO.mutateAsync(co.id);
       toast.success('CO approved');
+      await logActivity('approved');
       setApproveOpen(false);
       onRefresh();
     } catch (err: any) {
@@ -94,6 +114,7 @@ export function COStatusActions({
     try {
       await rejectCO.mutateAsync({ coId: co.id, note: rejectNote.trim() });
       toast.success('CO rejected');
+      await logActivity('rejected', rejectNote.trim());
       setRejectOpen(false);
       setRejectNote('');
       onRefresh();
@@ -112,6 +133,7 @@ export function COStatusActions({
         updates: { status: 'draft', submitted_at: null },
       });
       toast.success('CO recalled');
+      await logActivity('recalled');
       onRefresh();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to recall');

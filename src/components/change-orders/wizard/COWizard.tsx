@@ -171,6 +171,19 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
         if (lineError) throw lineError;
       }
 
+      // Log creation activity
+      await (await import('@/integrations/supabase/client')).supabase
+        .from('co_activity')
+        .insert({
+          co_id:         newCO.id,
+          project_id:    projectId,
+          actor_user_id: user.id,
+          actor_role:    role,
+          action:        'created',
+          detail:        title ?? null,
+          amount:        null,
+        });
+
       // Share immediately if requested
       if (data.shareDraftNow) {
         await shareCO.mutateAsync(newCO.id);

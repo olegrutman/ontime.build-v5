@@ -4,6 +4,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { useQueryClient } from '@tanstack/react-query';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
+import { CONTEPanel } from './CONTEPanel';
+import { COActivityFeed } from './COActivityFeed';
+import { useCORealtime } from '@/hooks/useCORealtime';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -51,9 +54,13 @@ export function CODetailPage() {
     laborEntries,
     materials,
     equipment,
+    nteLog,
+    activity,
     financials,
     isLoading,
   } = useChangeOrderDetail(coId ?? null);
+
+  useCORealtime(coId ?? null);
 
   const isGC = currentRole === 'GC_PM';
   const isTC = currentRole === 'TC_PM';
@@ -240,6 +247,9 @@ export function CODetailPage() {
                     onRefresh={refreshDetail}
                   />
                 )}
+
+                {/* Activity feed */}
+                <COActivityFeed activity={activity} />
               </div>
 
               {/* Sidebar column */}
@@ -329,48 +339,17 @@ export function CODetailPage() {
                   </div>
                 </div>
 
-                {/* NTE gauge */}
+                {/* NTE panel */}
                 {co.pricing_type === 'nte' && co.nte_cap && (
-                  <div className="rounded-lg border border-border bg-card">
-                    <div className="px-4 py-3 border-b border-border">
-                      <h3 className="text-sm font-semibold text-foreground">Not-to-exceed</h3>
-                    </div>
-                    <div className="px-4 py-3 space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Cap</span>
-                        <span className="font-medium text-foreground">
-                          ${co.nte_cap.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Used</span>
-                        <span className="font-medium text-foreground">
-                          ${financials.laborTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                      {financials.nteUsedPercent !== null && (
-                        <>
-                          <div className="h-2 rounded-full bg-muted overflow-hidden">
-                            <div
-                              className={cn(
-                                'h-full rounded-full transition-all',
-                                financials.nteUsedPercent >= 95 ? 'bg-red-500' :
-                                financials.nteUsedPercent >= 80 ? 'bg-amber-500' : 'bg-green-500'
-                              )}
-                              style={{ width: `${Math.min(financials.nteUsedPercent, 100)}%` }}
-                            />
-                          </div>
-                          <p className={cn(
-                            'text-xs text-right',
-                            financials.nteUsedPercent >= 95 ? 'text-red-600' :
-                            financials.nteUsedPercent >= 80 ? 'text-amber-600' : 'text-muted-foreground'
-                          )}>
-                            {financials.nteUsedPercent.toFixed(1)}% used
-                          </p>
-                        </>
-                      )}
-                    </div>
-                  </div>
+                  <CONTEPanel
+                    co={co}
+                    nteLog={nteLog}
+                    usedAmount={financials.laborTotal}
+                    isGC={isGC}
+                    isTC={isTC}
+                    isFC={isFC}
+                    onRefresh={refreshDetail}
+                  />
                 )}
 
                 {/* Details */}
