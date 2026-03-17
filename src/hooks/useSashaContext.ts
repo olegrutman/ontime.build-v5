@@ -28,7 +28,7 @@ export function useSashaContext(): string {
   if (path.startsWith('/projects/') && path.endsWith('/scope')) return context + 'Edit Project Scope page — Shows: structures and levels defined for the project. Users can add, remove, or rename structures (e.g. Building A, Building B) and levels (e.g. Level 1, Level 2).';
 
   if (path.startsWith('/project/')) {
-    if (tab === 'work-orders') return context + 'Project Work Orders tab — Shows: list of Work Orders with status badges (Draft, In Progress, Complete, Approved), each card shows title, location, pricing mode (Fixed or T&M), and completion progress. Users can create new Work Orders with the + button or click into any existing one for full details.';
+    if (tab === 'work-orders') return context + 'Project Work Orders tab — Currently being rebuilt. No work orders UI available yet.';
     if (tab === 'purchase-orders') return context + 'Project Purchase Orders tab — Shows: PO cards with PO number, supplier name, status badge, and total amount. Users can create new POs, filter by status, and click into any PO to see line-item details and pricing.';
     if (tab === 'invoices') return context + 'Project Invoices tab — Shows: invoice cards with invoice number, billing period, status (Draft, Submitted, Approved, Paid), subtotal, retainage, and total amount. Users can create new invoices from the Schedule of Values or from a PO.';
     if (tab === 'sov') return context + 'Project Schedule of Values (SOV) tab — Shows: SOV line items with scheduled values, billed-to-date amounts, and remaining balances. A progress bar shows overall billing progress. Users can edit SOV items and create invoices from them.';
@@ -38,9 +38,7 @@ export function useSashaContext(): string {
     return context + 'Project Overview — Shows: attention banner (items needing action), financial signal cards (contract value, billed, retainage), metric strip, operational summary (Work Orders, POs, Invoices counts), team members list, contracts section, readiness checklist, and project scope summary.';
   }
 
-  if (path.startsWith('/change-order/')) return context + 'Work Order detail page — Shows: Work Order title, status, location, scope description, pricing mode, completion checklist (location, scope, TC pricing, materials, FC hours), materials list, equipment, labor entries, and approval controls.';
-  if (path.startsWith('/work-item/')) return context + 'Work Item detail page — Shows: work item details, pricing entries, labor entries, material entries, T&M periods (if applicable), participants, and progress tracking.';
-  if (path === '/change-orders') return context + 'All Work Orders list — Shows: all Work Orders across all projects with status filters, search, and sorting. Each card shows title, project name, status, and pricing mode.';
+  if (path === '/purchase-orders') return context + 'All Purchase Orders list — Shows: all POs across all projects with status filters and search. Each card shows PO number, supplier, project, status, and total amount.';
   if (path === '/purchase-orders') return context + 'All Purchase Orders list — Shows: all POs across all projects with status filters and search. Each card shows PO number, supplier, project, status, and total amount.';
   if (path === '/orders') return context + 'Material Orders list — Shows: material orders linked to Work Items, with order number, supplier, status, and item count. Users can track order progress from draft through delivery.';
   if (path === '/estimates') return context + 'Supplier Estimates list — Shows: estimates from suppliers with line items, pack groupings, and catalog matching status. Users can review and approve supplier estimates.';

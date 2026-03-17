@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useDemo } from '@/contexts/DemoContext';
 import { getDemoProjectById } from '@/data/demoData';
-import { DemoProjectOverview, DemoWorkOrdersTab, DemoPurchaseOrdersTab, DemoInvoicesTab, DemoSOVTab, DemoRFIsTab } from '@/components/demo';
+import { DemoProjectOverview, DemoPurchaseOrdersTab, DemoInvoicesTab, DemoSOVTab, DemoRFIsTab } from '@/components/demo';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
@@ -20,7 +20,6 @@ import { BottomNav } from '@/components/layout/BottomNav';
 import { 
   ProjectTopBar,
   MobileProjectHeader,
-  WorkOrdersTab,
   PurchaseOrdersTab,
   AttentionBanner,
   SupplierEstimatesSection,
@@ -30,7 +29,6 @@ import {
   MaterialsBudgetStatusCard,
   ProfitCard,
   MaterialMarkupEditor,
-  WorkOrderSummaryCard,
   CriticalScheduleCard,
 } from '@/components/project';
 import { ContractHeroCard } from '@/components/project/ContractHeroCard';
@@ -350,7 +348,7 @@ export default function ProjectHome() {
                             <ProfitCard financials={financials} projectId={id!} />
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <WorkOrderSummaryCard projectId={id!} />
+                            <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
                             <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
                           </div>
                           {projectSupplierOrgId && (
@@ -393,14 +391,6 @@ export default function ProjectHome() {
               {activeTab === 'sov' && !isSupplier && (
                 <FeatureGate feature="sov_contracts">
                   {isInDemoMode ? <DemoSOVTab /> : <ContractSOVEditor projectId={id!} />}
-                </FeatureGate>
-              )}
-              {activeTab === 'work-orders' && !isSupplier && (
-                <FeatureGate feature="change_orders">
-                  {isInDemoMode
-                    ? <DemoWorkOrdersTab projectId={id!} projectName={project.name} />
-                    : <WorkOrdersTab projectId={id!} projectName={project.name} projectStatus={projectStatus} />
-                  }
                 </FeatureGate>
               )}
               {activeTab === 'rfis' && (

@@ -1,7 +1,8 @@
 // Unified Work Order Wizard Types
 
 import type { CatalogItem } from './quickLog';
-import type { LocationData, CostResponsibility } from './changeOrderProject';
+import type { LocationData } from './location';
+export type CostResponsibility = 'GC' | 'TC';
 
 // ─── Enums ───────────────────────────────────────────────────────
 

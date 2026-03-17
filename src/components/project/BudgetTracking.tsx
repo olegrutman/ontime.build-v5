@@ -6,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import { cn, formatCurrency as fmt } from '@/lib/utils';
 import { useActualCosts } from '@/hooks/useActualCosts';
-import { ActualCostPopup } from '@/components/change-order-detail/ActualCostPopup';
+import { ActualCostPopup } from './ActualCostPopup';
 
 interface BudgetTrackingProps {
   financials: ProjectFinancials;

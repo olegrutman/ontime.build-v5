@@ -5,8 +5,6 @@ export { ProjectContractsSection } from './ProjectContractsSection';
 export { ProjectActivitySection } from './ProjectActivitySection';
 export { ProjectFinancialsSectionNew } from './ProjectFinancialsSectionNew';
 export { ProjectTopBar } from './ProjectTopBar';
-export { WorkOrderSummaryCard } from './WorkOrderSummaryCard';
-export { WorkOrdersTab } from './WorkOrdersTab';
 export { PurchaseOrdersTab } from './PurchaseOrdersTab';
 export { MetricStrip } from './MetricStrip';
 export { AttentionBanner } from './AttentionBanner';

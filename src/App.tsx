@@ -66,15 +66,6 @@ const PlatformProjectDetail = lazy(() => import("./pages/platform/PlatformProjec
 const PlatformLogs = lazy(() => import("./pages/platform/PlatformLogs"));
 const PlatformPlans = lazy(() => import("./pages/platform/PlatformPlans"));
 
-// Lazy-loaded components
-const WorkItemPage = lazy(() =>
-  import("@/components/work-item").then((m) => ({ default: m.WorkItemPage }))
-);
-const ChangeOrderDetailPage = lazy(() =>
-  import("@/components/change-order-detail").then((m) => ({
-    default: m.ChangeOrderDetailPage,
-  }))
-);
 
 // 4. Route protection wrapper
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -185,8 +176,6 @@ function AppRoutes() {
             <Route path="/orders" element={<RequireAuth><MaterialOrders /></RequireAuth>} />
             <Route path="/purchase-orders" element={<RequireAuth><PurchaseOrders /></RequireAuth>} />
             <Route path="/reminders" element={<RequireAuth><Reminders /></RequireAuth>} />
-            <Route path="/change-order/:id" element={<RequireAuth><ChangeOrderDetailPage /></RequireAuth>} />
-            <Route path="/work-item/:id" element={<RequireAuth><WorkItemPage /></RequireAuth>} />
             
             <Route path="/supplier/inventory" element={<RequireAuth><SupplierInventory /></RequireAuth>} />
             <Route path="/supplier/estimates" element={<RequireAuth><SupplierProjectEstimates /></RequireAuth>} />
