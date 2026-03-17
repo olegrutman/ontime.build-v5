@@ -228,7 +228,7 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
     const isYou = changeOrder.created_by === user?.id;
 
     return (
-      <Card key={changeOrder.id} className="group cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/change-order/${changeOrder.id}`)}>
+      <Card key={changeOrder.id} className="group cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(route)}>
         <CardContent className="p-4">
           <div className="flex items-start justify-between mb-2 gap-2">
             <div className="flex items-center gap-2 flex-1 min-w-0">
