@@ -61,12 +61,7 @@ export function useFinancialTrends() {
         .in('project_id', projectIds)
         .gte('created_at', sixMonthsAgo);
 
-      // Fetch work orders for completion trend
-      const { data: workOrders } = await supabase
-        .from('change_order_projects')
-        .select('status, created_at, updated_at')
-        .in('project_id', projectIds)
-        .gte('created_at', sixMonthsAgo);
+      // Work orders removed
 
       // Build 6-month buckets
       const months: string[] = [];
