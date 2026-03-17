@@ -577,33 +577,6 @@ export function useDashboardData(): DashboardData {
           }
         });
 
-        if (projectIds.length > 0) {
-          const { data: workOrders } = await supabase
-            .from('change_order_projects')
-            .select('id, project_id, final_price, status, tc_internal_cost')
-            .in('project_id', projectIds)
-            .in('status', ['approved', 'contracted']);
-
-          const woList = workOrders || [];
-          totalWorkOrders = woList.length;
-          totalWorkOrderValue = woList
-            .reduce((sum, wo) => sum + (wo.final_price || 0), 0);
-          totalRevenue += totalWorkOrderValue;
-
-          if (woList.length > 0) {
-            const woIds = woList.map(wo => wo.id);
-            const { data: fcHours } = await supabase
-              .from('change_order_fc_hours')
-              .select('labor_total')
-              .in('change_order_id', woIds);
-            const fcLaborCost = (fcHours || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0);
-            totalCosts += fcLaborCost;
-
-            const tcInternalCost = woList.reduce((sum, wo) => sum + ((wo as any).tc_internal_cost || 0), 0);
-            totalCosts += tcInternalCost;
-          }
-        }
-
         const billedInvoices = allInvoices.filter(i => {
           if (i.status === 'DRAFT' || !i.contract_id) return false;
           const contract = contractDetailMap.get(i.contract_id);
