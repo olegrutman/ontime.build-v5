@@ -133,6 +133,7 @@ export function COStatusActions({
         updates: { status: 'draft', submitted_at: null },
       });
       toast.success('CO recalled');
+      await logActivity('recalled');
       onRefresh();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to recall');

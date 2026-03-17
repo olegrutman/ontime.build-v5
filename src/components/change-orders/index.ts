@@ -5,3 +5,5 @@ export { CombineDrawer }     from './CombineDrawer';
 export { COMaterialsPanel }  from './COMaterialsPanel';
 export { COEquipmentPanel }  from './COEquipmentPanel';
 export { COStatusActions }   from './COStatusActions';
+export { CONTEPanel }        from './CONTEPanel';
+export { COActivityFeed }    from './COActivityFeed';
