@@ -21,7 +21,6 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
   const { userOrgRoles } = useAuth();
   const {
     loading, viewerRole, upstreamContract, downstreamContract,
-    workOrderTotal, workOrderFCCost, tcInternalCostTotal,
     ownerContractValue, materialMarkupType, materialMarkupValue,
     materialDelivered, laborBudget,
     isTCMaterialResponsible, isTCSelfPerforming, updateOwnerContract,
