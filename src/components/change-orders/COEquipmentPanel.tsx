@@ -187,7 +187,7 @@ export function COEquipmentPanel({
                   )}
                 </div>
                 <div className="text-right text-sm shrink-0">
-                  {!isGC && (
+                  {isTC && (
                     <div className="text-xs text-muted-foreground">
                       Cost: ${fmt(item.cost ?? 0)}
                     </div>
@@ -197,9 +197,11 @@ export function COEquipmentPanel({
                       +{item.markup_percent}% markup
                     </div>
                   )}
-                  <div className="font-medium text-foreground">
-                    ${fmt(item.billed_amount ?? 0)}
-                  </div>
+                  {!isFC && (
+                    <div className="font-medium text-foreground">
+                      ${fmt(item.billed_amount ?? 0)}
+                    </div>
+                  )}
                 </div>
                 {canEdit && isTC && (
                   <button
