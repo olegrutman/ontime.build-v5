@@ -66,15 +66,6 @@ const PlatformProjectDetail = lazy(() => import("./pages/platform/PlatformProjec
 const PlatformLogs = lazy(() => import("./pages/platform/PlatformLogs"));
 const PlatformPlans = lazy(() => import("./pages/platform/PlatformPlans"));
 
-// Lazy-loaded components
-const WorkItemPage = lazy(() =>
-  import("@/components/work-item").then((m) => ({ default: m.WorkItemPage }))
-);
-const ChangeOrderDetailPage = lazy(() =>
-  import("@/components/change-order-detail").then((m) => ({
-    default: m.ChangeOrderDetailPage,
-  }))
-);
 
 // 4. Route protection wrapper
 function RequireAuth({ children }: { children: ReactNode }) {
