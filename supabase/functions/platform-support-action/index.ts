@@ -28,6 +28,9 @@ const ACTION_MIN_ROLE: Record<string, string> = {
   EDIT_USER_PROFILE: "PLATFORM_OWNER",
   EDIT_MEMBER_PERMISSIONS: "PLATFORM_OWNER",
   DELETE_PROJECT: "PLATFORM_OWNER",
+  DELETE_INVOICE: "PLATFORM_OWNER",
+  DELETE_PURCHASE_ORDER: "PLATFORM_OWNER",
+  DELETE_WORK_ORDER: "PLATFORM_OWNER",
 };
 
 function hasPermission(callerRole: string, requiredRole: string): boolean {
