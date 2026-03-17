@@ -58,17 +58,7 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
   const [newContractRetainage, setNewContractRetainage] = useState<number>(0);
   const [selectedFcOrgId, setSelectedFcOrgId] = useState<string>('');
   
-  // Work order FC cost state (TC view)
-  const [workOrderFCCost, setWorkOrderFCCost] = useState(0);
-  
-  // Material costs state (TC view)
-  const [materialCosts, setMaterialCosts] = useState<{
-    supplierCost: number;
-    markupAmount: number;
-    revenueTotal: number;
-    avgMarkupPercent: number;
-    workOrderCount: number;
-  }>({ supplierCost: 0, markupAmount: 0, revenueTotal: 0, avgMarkupPercent: 0, workOrderCount: 0 });
+  const [viewerRole, setViewerRole] = useState<string>('Trade Contractor');
 
   const fetchData = async () => {
     setLoading(true);
