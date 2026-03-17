@@ -294,20 +294,6 @@ export function useDashboardData(): DashboardData {
 
       // Build attention items
       const attentionList: AttentionItem[] = [];
-      
-      if (orgType === 'GC') {
-        pendingCOs.forEach(co => {
-          if (!co.project_id) return;
-          const proj = allProjects.find(p => p.id === co.project_id);
-          attentionList.push({
-            id: co.id,
-            type: 'change_order',
-            title: co.title || 'Change Order',
-            projectName: proj?.name || 'Unknown Project',
-            projectId: co.project_id,
-          });
-        });
-      }
 
       pendingInvoices.forEach(inv => {
         const proj = allProjects.find(p => p.id === inv.project_id);
