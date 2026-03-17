@@ -119,8 +119,6 @@ export function useDashboardData(): DashboardData {
     totalRevenue: 0,
     totalCosts: 0,
     profitMargin: 0,
-    totalWorkOrders: 0,
-    totalWorkOrderValue: 0,
     totalBilled: 0,
     outstandingBilling: 0,
     potentialProfit: 0,
