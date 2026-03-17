@@ -190,9 +190,17 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
               </div>
             )}
 
-            <div className="text-sm text-muted-foreground py-8 text-center">
-              Step content for "{currentStep.label}" goes here.
-            </div>
+            {currentStep.key === 'catalog' && (
+              <StepCatalog data={data} onChange={update} />
+            )}
+            {currentStep.key === 'location' && (
+              <StepLocation data={data} onChange={update} projectId={projectId} />
+            )}
+            {(currentStep.key === 'reason' || currentStep.key === 'config') && (
+              <div className="text-sm text-muted-foreground py-8 text-center">
+                Step content for "{currentStep.label}" coming in next prompt.
+              </div>
+            )}
           </div>
 
           {/* Footer */}
