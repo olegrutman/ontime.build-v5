@@ -374,43 +374,10 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       setMaterialMarkupType((primaryC as any)?.material_markup_type ?? null);
       setMaterialMarkupValue((primaryC as any)?.material_markup_value ?? null);
 
-      // WO breakdowns (labor, material, equipment) from approved WOs
-      const woLabor = approvedWOs.reduce((sum, wo: any) => sum + (wo.labor_total || 0), 0);
-      const woMaterial = approvedWOs.reduce((sum, wo: any) => sum + (wo.material_total || 0), 0);
-      const woEquipment = approvedWOs.reduce((sum, wo: any) => sum + (wo.equipment_total || 0), 0);
-      setWoLaborTotal(woLabor);
-      setWoMaterialTotal(woMaterial);
-      setWoEquipmentTotal(woEquipment);
-
-      // FC-specific WO earnings (Bug 1/7: FC needs their own hours, not full WO price)
-      if (detectedRole === 'Field Crew') {
-        const approvedWOIds = approvedWOs.map(wo => wo.id);
-        if (approvedWOIds.length > 0) {
-          const { data: fcHoursData } = await supabase
-            .from('change_order_fc_hours')
-            .select('labor_total')
-            .in('change_order_id', approvedWOIds);
-          const fcEarnings = (fcHoursData || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0);
-          setFcWorkOrderEarnings(fcEarnings);
-        }
-      }
-
-      // FC costs (TC view)
+      // Total paid to FC from invoices (TC view)
       if (detectedRole === 'Trade Contractor') {
-        const woIds = wos.map(wo => wo.id);
-        if (woIds.length > 0) {
-          const { data: fcHours } = await supabase.from('change_order_fc_hours').select('labor_total').in('change_order_id', woIds);
-          setWorkOrderFCCost((fcHours || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0));
-        }
-
-        // Sum tc_internal_cost for self-performing WOs
-        const tcIntCost = approvedWOs.reduce((sum, wo: any) => sum + (wo.tc_internal_cost || 0), 0);
-        setTcInternalCostTotal(tcIntCost);
-
-        // Total paid to FC from invoices
         const paidInvoices = allInvoices.filter(i => i.status === 'PAID');
         setTotalPaidToFC(paidInvoices.reduce((s, i) => s + (i.total_amount || 0), 0));
-
       }
 
       // FC participants
