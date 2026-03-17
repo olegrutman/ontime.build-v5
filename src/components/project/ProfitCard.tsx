@@ -67,7 +67,7 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
 
   const gcContractValue = upstreamContract?.contract_sum || 0;
   const fcContractValue = downstreamContract?.contract_sum || 0;
-  const currentTotal = gcContractValue + workOrderTotal;
+  const currentTotal = gcContractValue;
 
   const handleSaveOwnerContract = async () => {
     if (!upstreamContract) return;
