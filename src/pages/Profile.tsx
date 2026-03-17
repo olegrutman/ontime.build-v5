@@ -307,6 +307,9 @@ export default function Profile() {
           </CardContent>
         </Card>
 
+        {/* Personal Hourly Rate */}
+        <HourlyRateSetting />
+
         {/* Section 2: Organization Information */}
         <Card>
           <CardHeader>
