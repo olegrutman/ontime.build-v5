@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useSupportAction } from '@/hooks/useSupportAction';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { CheckCircle, DollarSign, FileText, ClipboardList, ShoppingCart, Package, Trash2 } from 'lucide-react';
+import { CheckCircle, DollarSign, FileText, ClipboardList, ShoppingCart, Package, Trash2, Wrench } from 'lucide-react';
 
 interface ProjectData {
   id: string;
@@ -89,6 +89,14 @@ interface StatusCounts {
   [key: string]: number;
 }
 
+interface WorkOrderRow {
+  id: string;
+  title: string;
+  status: string;
+  final_price: number | null;
+  created_at: string;
+}
+
 function formatCurrency(val: number | null | undefined) {
   if (val == null) return '$0';
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
@@ -129,6 +137,7 @@ export default function PlatformProjectDetail() {
   const [invCounts, setInvCounts] = useState<StatusCounts>({});
   const [financials, setFinancials] = useState({ invoiced: 0, paid: 0, retainage: 0, poTotal: 0 });
   const [estimates, setEstimates] = useState<SupplierEstimateRow[]>([]);
+  const [workOrders, setWorkOrders] = useState<WorkOrderRow[]>([]);
 
   const { execute, loading: actionLoading } = useSupportAction();
   const { platformRole } = useAuth();
@@ -136,6 +145,14 @@ export default function PlatformProjectDetail() {
   const [forceAcceptTeamId, setForceAcceptTeamId] = useState<string | null>(null);
   const [forceAcceptOrgName, setForceAcceptOrgName] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  // Delete entity state
+  const [deleteInvoiceOpen, setDeleteInvoiceOpen] = useState(false);
+  const [deleteInvoiceTarget, setDeleteInvoiceTarget] = useState<InvoiceRow | null>(null);
+  const [deletePOOpen, setDeletePOOpen] = useState(false);
+  const [deletePOTarget, setDeletePOTarget] = useState<PORow | null>(null);
+  const [deleteWOOpen, setDeleteWOOpen] = useState(false);
+  const [deleteWOTarget, setDeleteWOTarget] = useState<WorkOrderRow | null>(null);
 
   const fetchData = async () => {
     if (!projectId) return;
@@ -212,6 +229,15 @@ export default function PlatformProjectDetail() {
       .select('id, name, status, total_amount, created_at, supplier_org:organizations!supplier_estimates_supplier_org_id_fkey(name)')
       .eq('project_id', projectId);
     setEstimates((estData || []) as unknown as SupplierEstimateRow[]);
+
+    // Fetch work orders
+    const { data: woData } = await supabase
+      .from('change_order_projects')
+      .select('id, title, status, final_price, created_at')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    setWorkOrders((woData || []) as unknown as WorkOrderRow[]);
 
     setLoading(false);
   };
@@ -464,12 +490,13 @@ export default function PlatformProjectDetail() {
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead>Billing Period</TableHead>
                 <TableHead>Created</TableHead>
+                {platformRole === 'PLATFORM_OWNER' && <TableHead className="w-[60px]" />}
               </TableRow>
             </TableHeader>
             <TableBody>
               {invoices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">No invoices</TableCell>
+                  <TableCell colSpan={platformRole === 'PLATFORM_OWNER' ? 6 : 5} className="text-center py-4 text-muted-foreground">No invoices</TableCell>
                 </TableRow>
               ) : (
                 invoices.map((inv) => (
@@ -485,6 +512,18 @@ export default function PlatformProjectDetail() {
                     <TableCell className="text-sm text-muted-foreground">
                       {format(new Date(inv.created_at), 'MMM d, yyyy')}
                     </TableCell>
+                    {platformRole === 'PLATFORM_OWNER' && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => { setDeleteInvoiceTarget(inv); setDeleteInvoiceOpen(true); }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
@@ -509,12 +548,13 @@ export default function PlatformProjectDetail() {
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead>Created</TableHead>
+                {platformRole === 'PLATFORM_OWNER' && <TableHead className="w-[60px]" />}
               </TableRow>
             </TableHeader>
             <TableBody>
               {pos.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">No purchase orders</TableCell>
+                  <TableCell colSpan={platformRole === 'PLATFORM_OWNER' ? 6 : 5} className="text-center py-4 text-muted-foreground">No purchase orders</TableCell>
                 </TableRow>
               ) : (
                 pos.map((po) => (
@@ -528,6 +568,18 @@ export default function PlatformProjectDetail() {
                     <TableCell className="text-sm text-muted-foreground">
                       {format(new Date(po.created_at), 'MMM d, yyyy')}
                     </TableCell>
+                    {platformRole === 'PLATFORM_OWNER' && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => { setDeletePOTarget(po); setDeletePOOpen(true); }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
@@ -536,7 +588,60 @@ export default function PlatformProjectDetail() {
         </CardContent>
       </Card>
 
-      {/* Team */}
+      {/* Work Orders */}
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Wrench className="h-4 w-4" /> Work Orders
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Title</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Price</TableHead>
+                <TableHead>Created</TableHead>
+                {platformRole === 'PLATFORM_OWNER' && <TableHead className="w-[60px]" />}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {workOrders.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={platformRole === 'PLATFORM_OWNER' ? 5 : 4} className="text-center py-4 text-muted-foreground">No work orders</TableCell>
+                </TableRow>
+              ) : (
+                workOrders.map((wo) => (
+                  <TableRow key={wo.id}>
+                    <TableCell className="font-medium">{wo.title}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs capitalize">{wo.status.toLowerCase().replace('_', ' ')}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">{formatCurrency(wo.final_price)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {format(new Date(wo.created_at), 'MMM d, yyyy')}
+                    </TableCell>
+                    {platformRole === 'PLATFORM_OWNER' && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => { setDeleteWOTarget(wo); setDeleteWOOpen(true); }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-base">Team / Participants</CardTitle>
@@ -673,6 +778,72 @@ export default function PlatformProjectDetail() {
           if (ok) {
             setDeleteOpen(false);
             navigate('/platform/projects');
+          }
+        }}
+        loading={actionLoading}
+      />
+
+      {/* Delete Invoice Dialog */}
+      <SupportActionDialog
+        open={deleteInvoiceOpen}
+        onOpenChange={setDeleteInvoiceOpen}
+        title="Delete Invoice"
+        description={`Permanently delete invoice "${deleteInvoiceTarget?.invoice_number}" (${deleteInvoiceTarget?.status}, ${formatCurrency(deleteInvoiceTarget?.total_amount)}). This removes the invoice and all its line items. This action cannot be undone.`}
+        onConfirm={async (reason) => {
+          if (!deleteInvoiceTarget) return;
+          const ok = await execute({
+            action_type: 'DELETE_INVOICE',
+            reason,
+            invoice_id: deleteInvoiceTarget.id,
+          });
+          if (ok) {
+            setDeleteInvoiceOpen(false);
+            setDeleteInvoiceTarget(null);
+            fetchData();
+          }
+        }}
+        loading={actionLoading}
+      />
+
+      {/* Delete PO Dialog */}
+      <SupportActionDialog
+        open={deletePOOpen}
+        onOpenChange={setDeletePOOpen}
+        title="Delete Purchase Order"
+        description={`Permanently delete PO "${deletePOTarget?.po_number}" (${deletePOTarget?.status}, ${formatCurrency(deletePOTarget?.po_total)}). This removes the PO and all its line items. Linked invoices will be unlinked. This action cannot be undone.`}
+        onConfirm={async (reason) => {
+          if (!deletePOTarget) return;
+          const ok = await execute({
+            action_type: 'DELETE_PURCHASE_ORDER',
+            reason,
+            po_id: deletePOTarget.id,
+          });
+          if (ok) {
+            setDeletePOOpen(false);
+            setDeletePOTarget(null);
+            fetchData();
+          }
+        }}
+        loading={actionLoading}
+      />
+
+      {/* Delete Work Order Dialog */}
+      <SupportActionDialog
+        open={deleteWOOpen}
+        onOpenChange={setDeleteWOOpen}
+        title="Delete Work Order"
+        description={`Permanently delete work order "${deleteWOTarget?.title}" (${deleteWOTarget?.status}). This removes the work order and all associated data including participants, tasks, materials, equipment, and labor entries. This action cannot be undone.`}
+        onConfirm={async (reason) => {
+          if (!deleteWOTarget) return;
+          const ok = await execute({
+            action_type: 'DELETE_WORK_ORDER',
+            reason,
+            work_order_id: deleteWOTarget.id,
+          });
+          if (ok) {
+            setDeleteWOOpen(false);
+            setDeleteWOTarget(null);
+            fetchData();
           }
         }}
         loading={actionLoading}

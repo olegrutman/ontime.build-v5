@@ -28,6 +28,9 @@ const ACTION_MIN_ROLE: Record<string, string> = {
   EDIT_USER_PROFILE: "PLATFORM_OWNER",
   EDIT_MEMBER_PERMISSIONS: "PLATFORM_OWNER",
   DELETE_PROJECT: "PLATFORM_OWNER",
+  DELETE_INVOICE: "PLATFORM_OWNER",
+  DELETE_PURCHASE_ORDER: "PLATFORM_OWNER",
+  DELETE_WORK_ORDER: "PLATFORM_OWNER",
 };
 
 function hasPermission(callerRole: string, requiredRole: string): boolean {
@@ -767,6 +770,130 @@ Deno.serve(async (req) => {
 
         logMeta = { p_target_project_id: project_id, p_target_project_name: projData.name, p_action_summary: `Deleted project "${projData.name}"` };
         result = { success: true, message: "Project deleted" };
+        break;
+      }
+
+      case "DELETE_INVOICE": {
+        const { invoice_id } = params;
+        if (!invoice_id) {
+          return new Response(JSON.stringify({ error: "invoice_id is required" }), {
+            status: 400, headers: corsHeaders,
+          });
+        }
+        targetId = invoice_id;
+
+        const { data: invData } = await adminClient
+          .from("invoices")
+          .select("invoice_number, status, total_amount, project_id")
+          .eq("id", invoice_id)
+          .single();
+        if (!invData) {
+          return new Response(JSON.stringify({ error: "Invoice not found" }), {
+            status: 404, headers: corsHeaders,
+          });
+        }
+        snapshotBefore = invData;
+
+        // Delete invoice — invoice_line_items cascade
+        const { error: delInvErr } = await adminClient
+          .from("invoices")
+          .delete()
+          .eq("id", invoice_id);
+        if (delInvErr) {
+          return new Response(JSON.stringify({ error: delInvErr.message }), {
+            status: 500, headers: corsHeaders,
+          });
+        }
+
+        logMeta = { p_target_project_id: invData.project_id, p_action_summary: `Deleted invoice "${invData.invoice_number}" (${invData.status}, ${invData.total_amount})` };
+        result = { success: true, message: "Invoice deleted" };
+        break;
+      }
+
+      case "DELETE_PURCHASE_ORDER": {
+        const { po_id } = params;
+        if (!po_id) {
+          return new Response(JSON.stringify({ error: "po_id is required" }), {
+            status: 400, headers: corsHeaders,
+          });
+        }
+        targetId = po_id;
+
+        const { data: poData } = await adminClient
+          .from("purchase_orders")
+          .select("po_number, po_name, status, po_total, project_id")
+          .eq("id", po_id)
+          .single();
+        if (!poData) {
+          return new Response(JSON.stringify({ error: "Purchase order not found" }), {
+            status: 404, headers: corsHeaders,
+          });
+        }
+        snapshotBefore = poData;
+
+        // Nullify FK references that are NO ACTION
+        await adminClient.from("invoices").update({ po_id: null }).eq("po_id", po_id);
+        await adminClient.from("change_order_projects").update({ linked_po_id: null }).eq("linked_po_id", po_id);
+        await adminClient.from("daily_log_deliveries").update({ po_id: null }).eq("po_id", po_id);
+
+        // Delete PO — po_line_items cascade
+        const { error: delPoErr } = await adminClient
+          .from("purchase_orders")
+          .delete()
+          .eq("id", po_id);
+        if (delPoErr) {
+          return new Response(JSON.stringify({ error: delPoErr.message }), {
+            status: 500, headers: corsHeaders,
+          });
+        }
+
+        logMeta = { p_target_project_id: poData.project_id, p_action_summary: `Deleted PO "${poData.po_number}" (${poData.status}, ${poData.po_total})` };
+        result = { success: true, message: "Purchase order deleted" };
+        break;
+      }
+
+      case "DELETE_WORK_ORDER": {
+        const { work_order_id } = params;
+        if (!work_order_id) {
+          return new Response(JSON.stringify({ error: "work_order_id is required" }), {
+            status: 400, headers: corsHeaders,
+          });
+        }
+        targetId = work_order_id;
+
+        const { data: woData } = await adminClient
+          .from("change_order_projects")
+          .select("title, status, final_price, project_id")
+          .eq("id", work_order_id)
+          .single();
+        if (!woData) {
+          return new Response(JSON.stringify({ error: "Work order not found" }), {
+            status: 404, headers: corsHeaders,
+          });
+        }
+        snapshotBefore = woData;
+
+        // Nullify FK references with SET NULL or NO ACTION
+        await adminClient.from("work_order_line_items").update({ change_order_id: null }).eq("change_order_id", work_order_id);
+        await adminClient.from("supplier_estimates").update({ work_order_id: null }).eq("work_order_id", work_order_id);
+        await adminClient.from("field_captures").update({ converted_work_order_id: null }).eq("converted_work_order_id", work_order_id);
+
+        // Clean up notifications
+        await adminClient.from("notifications").delete().eq("entity_type", "work_order").eq("entity_id", work_order_id);
+
+        // Delete WO — cascades participants, tasks, checklist, tc_labor, fc_hours, materials, equipment, time_cards, actual_cost_entries
+        const { error: delWoErr } = await adminClient
+          .from("change_order_projects")
+          .delete()
+          .eq("id", work_order_id);
+        if (delWoErr) {
+          return new Response(JSON.stringify({ error: delWoErr.message }), {
+            status: 500, headers: corsHeaders,
+          });
+        }
+
+        logMeta = { p_target_project_id: woData.project_id, p_action_summary: `Deleted work order "${woData.title}" (${woData.status})` };
+        result = { success: true, message: "Work order deleted" };
         break;
       }
 
