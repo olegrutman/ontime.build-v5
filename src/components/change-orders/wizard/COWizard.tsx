@@ -7,6 +7,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import type { COCreatedByRole, COReasonCode, COPricingType, WorkOrderCatalogItem } from '@/types/changeOrder';
+import { StepCatalog } from './StepCatalog';
+import { StepLocation } from './StepLocation';
 
 export interface COWizardData {
   selectedItems:        WorkOrderCatalogItem[];
