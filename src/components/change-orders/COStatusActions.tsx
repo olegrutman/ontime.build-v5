@@ -114,6 +114,7 @@ export function COStatusActions({
     try {
       await rejectCO.mutateAsync({ coId: co.id, note: rejectNote.trim() });
       toast.success('CO rejected');
+      await logActivity('rejected', rejectNote.trim());
       setRejectOpen(false);
       setRejectNote('');
       onRefresh();
