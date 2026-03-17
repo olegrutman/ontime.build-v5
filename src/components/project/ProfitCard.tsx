@@ -325,7 +325,7 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
             {hasActualCost ? 'Actual Cost' : 'Internal Cost'}
           </span>
           <span className="text-sm font-semibold tabular-nums">
-            {fmt(hasActualCost ? totalActualCost : tcInternalCostTotal)}
+            {fmt(hasActualCost ? totalActualCost : 0)}
           </span>
         </button>
 

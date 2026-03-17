@@ -207,8 +207,7 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
       {/* TC: Live Position */}
       {isTC && (() => {
         const materialCosts = isTCMaterialResponsible ? (materialEstimate || approvedEstimateSum || 0) : 0;
-        const woProfit = workOrderTotal - workOrderFCCost - materialCosts;
-        const livePosition = gcContractValue - fcContractValue + woProfit;
+        const livePosition = gcContractValue - fcContractValue - materialCosts;
         return (
           <div className="mt-4 flex items-center justify-between py-2.5 px-3 rounded-xl bg-accent/30">
             <div className="flex items-center gap-1.5">
