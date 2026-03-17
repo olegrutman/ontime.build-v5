@@ -84,6 +84,7 @@ export function COStatusActions({
     try {
       await submitCO.mutateAsync(co.id);
       toast.success('CO submitted for approval');
+      await logActivity('submitted');
       onRefresh();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to submit');
