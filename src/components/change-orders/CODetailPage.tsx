@@ -154,15 +154,21 @@ export function CODetailPage() {
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div className="min-w-0">
+             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-semibold text-foreground">{title}</h1>
+                {isCombinedParent && <GitMerge className="h-4 w-4 text-purple-600 shrink-0" />}
+                <h1 className="text-xl font-semibold text-foreground">{displayTitle}</h1>
                 <Badge variant="outline" className={cn('text-[11px]', STATUS_BADGE[co.status as COStatus])}>
                   {CO_STATUS_LABELS[co.status as COStatus]}
                 </Badge>
                 {co.pricing_type && (
                   <Badge variant="secondary" className="text-[11px]">
                     {PRICING_LABEL[co.pricing_type] ?? co.pricing_type}
+                  </Badge>
+                )}
+                {isCombinedParent && (
+                  <Badge variant="secondary" className="text-[11px]">
+                    {memberCOs.length} scopes
                   </Badge>
                 )}
               </div>
