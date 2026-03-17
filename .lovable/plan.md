@@ -1,110 +1,60 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-## Features Built
+# Field Capture → Work Order: Bug Analysis and Fix Plan
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
+## Current Flow (What Happens Now)
 
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
+1. User opens Field Capture from WorkOrdersTab wizard
+2. User takes photo / writes note / records voice → taps "Save Capture"
+3. `FieldCaptureSheet` saves capture to `field_captures` table, then calls `onCaptureComplete` with the capture ID and data
+4. `WorkOrdersTab.onCaptureComplete` creates a draft WO via `saveDraft()`, links the capture (`converted_work_order_id`), and navigates to `/field-capture-draft/{draftId}`
+5. User lands on `FieldCaptureDraftPage` showing "0 tasks" and "1 capture"
 
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
+## Bugs Found
 
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
+### Bug 1: First capture never becomes a task
+In `WorkOrdersTab.tsx` lines 411-426, after creating the draft WO and linking the capture, the code **never creates a `work_order_task`** from the first capture's data. It just navigates away. The user arrives at the draft page seeing "No tasks yet" despite having just captured an issue.
 
----
+Compare this with `FieldCaptureDraftPage.handleCaptureComplete` (line 58-81) which correctly calls `addTask.mutateAsync()` for subsequent captures. The initial capture is missing this step.
 
-# Field Capture Mode — IMPLEMENTED
+### Bug 2: Draft page not accessible from Work Orders list
+There is no way to return to a field-capture draft from the Work Orders tab. Draft WOs with `wo_mode = 'quick_capture'` appear in the regular WO list but clicking them navigates to `/change-order/:id` (the full detail page), not `/field-capture-draft/:id`.
 
-## Overview
-Mobile-first feature enabling Field Crew to instantly capture jobsite issues (photo, voice note, location, reason category) in under 10 seconds.
+## Fix Plan
 
-## Database
-- `field_captures` table with RLS (project participants SELECT, creator INSERT/UPDATE)
-- `field-captures` storage bucket (public read, authenticated upload)
-- Realtime enabled via `supabase_realtime` publication
+### 1. `WorkOrdersTab.tsx` — Create task from first capture
+After `saveDraft()` and linking the capture, also insert a `work_order_task` row with the capture's description, photo_url, voice_note_url, and reason. This mirrors exactly what `FieldCaptureDraftPage.handleCaptureComplete` does.
 
-## Frontend Components
-| File | Purpose |
-|------|---------|
-| `src/hooks/useFieldCaptures.ts` | React Query hook with realtime, create/update mutations, media upload |
-| `src/components/field-capture/FieldCaptureSheet.tsx` | Full-screen capture UI (photo, voice, text, reason chips) |
-| `src/components/field-capture/CapturePhotoInput.tsx` | Camera-first photo capture with large touch target |
-| `src/components/field-capture/CaptureVoiceInput.tsx` | Hold-to-record voice note (MediaRecorder API) |
-| `src/components/field-capture/CaptureReasonChips.tsx` | Tap-to-select reason category chips |
-| `src/components/field-capture/FieldCaptureList.tsx` | List of captures with "+ Capture" button |
-| `src/components/field-capture/FieldCaptureCard.tsx` | Individual capture card with "Convert to Task" button |
+```
+// After linking capture to WO, also create a task:
+await supabase.from('work_order_tasks').insert({
+  work_order_id: draftId,
+  sort_order: 0,
+  title: captureData.description || 'Field Capture',
+  description: captureData.description || null,
+  photo_url: captureData.photo_url || null,
+  voice_note_url: captureData.voice_note_url || null,
+  reason: captureData.reason_category || null,
+  field_capture_id: captureId,
+  created_by: user?.id || null,
+});
+```
 
-## Entry Points
-1. **BottomNav FAB** — Amber "Capture" button on project pages (mobile)
-2. **Daily Log tab** — Field Captures section for the active date
+### 2. `WorkOrdersTab.tsx` — Route quick-capture drafts to the draft page
+In the work order list row click handler, check if the WO has `wo_mode = 'quick_capture'` and `status = 'draft'`. If so, navigate to `/field-capture-draft/:id` instead of `/change-order/:id`.
 
-## Feature Gate
-- `field_capture` added to `FeatureKey` type and labels
+### Files to Change
 
-## Auto-captured Data
-- Timestamp, user ID, org ID, GPS coordinates, device info (userAgent)
+| File | Change |
+|---|---|
+| `src/components/project/WorkOrdersTab.tsx` | Add `work_order_tasks` insert in `onCaptureComplete`; route quick-capture drafts to `/field-capture-draft/:id` |
 
-## Files Created/Modified
-| File | Action |
-|------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+## Intended Flow After Fix
 
----
+1. User opens Field Capture → takes photo → saves
+2. Draft WO is created, capture is linked, **task is created from capture data**
+3. User lands on `/field-capture-draft/{id}` seeing **1 capture, 1 task**
+4. User can tap "+ Add Capture" to add more (each creates another task)
+5. User can come back later — clicking a quick-capture draft from the WO list routes to the draft page
+6. When ready, user taps "Submit for Approval" → WO status becomes `ready_for_approval` → navigates to full detail page
 
-# Multi-Item Work Order — IMPLEMENTED
-
-## Overview
-Transforms Work Orders from single-task entities into **package containers** holding multiple task line items, mirroring how POs hold multiple material lines.
-
-## Database
-- `work_order_tasks` table with RLS (project participants CRUD) linked to `change_order_projects` header via `work_order_id`
-- Status validation trigger (`pending`, `in_progress`, `complete`, `skipped`)
-- Realtime enabled via `supabase_realtime` publication
-
-## Frontend Components
-| File | Purpose |
-|------|---------|
-| `src/types/workOrderTask.ts` | TypeScript types for work order tasks |
-| `src/hooks/useWorkOrderTasks.ts` | React Query hook with realtime, CRUD mutations |
-| `src/components/work-order-tasks/WorkOrderTaskList.tsx` | Task list with completion counter |
-| `src/components/work-order-tasks/WorkOrderTaskCard.tsx` | Individual task card with status, location, menu |
-| `src/components/work-order-tasks/AddTaskSheet.tsx` | Mobile-first bottom sheet for adding/editing tasks |
-| `src/components/work-order-tasks/TaskQuickAdd.tsx` | Inline quick-add input for FC users |
-
-## Integration Points
-- `ChangeOrderDetailPage.tsx` — Tasks section after header card, FC quick-add below
-- `useChangeOrderRealtime.ts` — Subscribes to `work_order_tasks` changes
