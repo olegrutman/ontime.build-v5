@@ -13,8 +13,9 @@ interface CONotificationPayload {
 
 export async function sendCONotification(payload: CONotificationPayload) {
   try {
-    const { error } = await supabase.from('notifications').insert({
+    const { error } = await supabase.from('notifications').insert([{
       recipient_user_id: payload.recipient_user_id,
+      recipient_org_id: payload.recipient_org_id,
       type: payload.type as any,
       title: payload.title,
       body: payload.body,
@@ -22,7 +23,7 @@ export async function sendCONotification(payload: CONotificationPayload) {
       entity_id: payload.co_id,
       action_url: `/projects/${payload.project_id}/co/${payload.co_id}`,
       is_read: false,
-    });
+    }]);
 
     if (error) {
       console.warn('Notification insert failed (non-critical):', error.message);
