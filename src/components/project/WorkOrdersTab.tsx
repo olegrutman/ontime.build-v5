@@ -418,6 +418,18 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
               await supabase.from('field_captures')
                 .update({ converted_work_order_id: draftId, status: 'converted' } as never)
                 .eq('id', captureId);
+              // Create a work_order_task from the first capture
+              await supabase.from('work_order_tasks').insert({
+                work_order_id: draftId,
+                sort_order: 0,
+                title: captureData.description || 'Field Capture',
+                description: captureData.description || null,
+                photo_url: (captureData as any).photo_url || null,
+                voice_note_url: (captureData as any).voice_note_url || null,
+                reason: (captureData as any).reason_category || null,
+                field_capture_id: captureId,
+                created_by: user?.id || null,
+              } as any);
               setShowFieldCapture(false);
               navigate(`/field-capture-draft/${draftId}`);
             } catch (err: any) {
