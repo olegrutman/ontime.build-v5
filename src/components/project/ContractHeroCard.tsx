@@ -153,7 +153,7 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
   }
 
   // GC / TC hero
-  const currentTotal = gcContractValue + workOrderTotal;
+  const currentTotal = gcContractValue;
 
   return (
     <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 md:p-6">
