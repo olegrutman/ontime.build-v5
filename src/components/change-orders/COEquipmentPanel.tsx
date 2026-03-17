@@ -306,9 +306,9 @@ export function COEquipmentPanel({
             </div>
           )}
 
-          {equipment.length > 0 && (
+          {equipment.length > 0 && !isFC && (
             <div className="px-4 py-3 border-t border-border space-y-1">
-              {!isGC && totalCost > 0 && (
+              {isTC && totalCost > 0 && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Cost</span>
                   <span className="text-muted-foreground">${fmt(totalCost)}</span>

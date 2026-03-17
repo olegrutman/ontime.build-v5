@@ -299,6 +299,7 @@ export function CODetailPage() {
                     equipment={equipment}
                     isTC={isTC}
                     isGC={isGC}
+                    isFC={isFC}
                     canEdit={canEdit}
                     onRefresh={refreshDetail}
                   />
