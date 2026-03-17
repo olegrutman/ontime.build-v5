@@ -55,6 +55,12 @@ export function CODetailPage() {
   const isGC = currentRole === 'GC_PM';
   const isTC = currentRole === 'TC_PM';
   const isFC = currentRole === 'FC_PM' || currentRole === 'FS';
+  const role: COCreatedByRole = isGC ? 'GC' : isTC ? 'TC' : 'FC';
+
+  const queryClient = useQueryClient();
+  function refreshDetail() {
+    queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
+  }
 
   if (isLoading) {
     return (
