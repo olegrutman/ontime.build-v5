@@ -1,7 +1,13 @@
+type StepDef = string | { title: string; description?: string };
+
 interface WizardProgressProps {
   currentStep: number;
   totalSteps: number;
-  steps: string[];
+  steps: StepDef[];
+}
+
+function getStepLabel(step: StepDef): string {
+  return typeof step === 'string' ? step : step.title;
 }
 
 export function WizardProgress({ currentStep, totalSteps, steps }: WizardProgressProps) {
@@ -26,7 +32,7 @@ export function WizardProgress({ currentStep, totalSteps, steps }: WizardProgres
                 i <= currentStep ? 'text-foreground font-medium' : 'text-muted-foreground'
               }`}
             >
-              {step}
+              {getStepLabel(step)}
             </span>
             {i < steps.length - 1 && (
               <div className={`w-8 h-0.5 ${i < currentStep ? 'bg-primary' : 'bg-muted'}`} />

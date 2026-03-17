@@ -2,55 +2,37 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useChangeOrderProject } from '@/hooks/useChangeOrderProject';
-import { useWorkOrderDraft } from '@/hooks/useWorkOrderDraft';
-import { useToast } from '@/hooks/use-toast';
 import { AppLayout } from '@/components/layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { WorkOrderWizard } from '@/components/work-order-wizard';
 import { Plus, FileEdit, Building2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { ChangeOrderStatus } from '@/types/changeOrderProject';
-import type { WorkOrderWizardData } from '@/types/workOrderWizard';
 
 interface Project { id: string; name: string; }
 
 const ChangeOrders = () => {
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { user, userOrgRoles, permissions } = useAuth();
-  const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const { user, userOrgRoles } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
-  const [showWizard, setShowWizard] = useState(false);
-  const [wizardSubmitting, setWizardSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<ChangeOrderStatus | 'ALL'>('ALL');
 
-  const selectedProject = projects.find((p) => p.id === selectedProjectId);
   const { changeOrders, isLoading } = useChangeOrderProject(selectedProjectId || undefined);
-  const { saveDraft } = useWorkOrderDraft(selectedProjectId || '');
-  const canCreate = permissions?.canCreateWorkOrders ?? false;
   const validStatuses: ChangeOrderStatus[] = ['draft', 'fc_input', 'tc_pricing', 'ready_for_approval', 'approved', 'rejected', 'contracted'];
 
   useEffect(() => {
     const projectParam = searchParams.get('project');
     const statusParam = searchParams.get('status');
-    const newParam = searchParams.get('new');
     if (statusParam && validStatuses.includes(statusParam as ChangeOrderStatus)) setActiveTab(statusParam as ChangeOrderStatus);
     if (projectParam && projects.length > 0) {
       const matchingProject = projects.find(p => p.id === projectParam);
-      if (matchingProject) {
-        setSelectedProjectId(projectParam);
-        if (newParam === 'true') {
-          setShowWizard(true);
-          searchParams.delete('new');
-          setSearchParams(searchParams, { replace: true });
-        }
-      }
+      if (matchingProject) setSelectedProjectId(projectParam);
     }
-  }, [searchParams, projects, setSearchParams]);
+  }, [searchParams, projects]);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -74,47 +56,6 @@ const ChangeOrders = () => {
     };
     fetchProjects();
   }, [user, userOrgRoles]);
-
-  const handleWizardComplete = async (data: WorkOrderWizardData & { project_id: string }) => {
-    setWizardSubmitting(true);
-    try {
-      const draftId = await saveDraft({
-        title: data.title || data.selectedCatalogItems.map(i => i.item_name).join(', ') || 'Work Order',
-        description: data.description || undefined,
-        wo_mode: 'full_scope',
-        location_tag: data.location_tags.join(', ') || undefined,
-        pricing_mode: 'fixed',
-      });
-
-      const orgId = userOrgRoles[0]?.organization?.id;
-      if (!orgId || !user) throw new Error('Missing org or user');
-
-      for (const item of data.selectedCatalogItems) {
-        const { error } = await supabase.from('work_order_line_items').insert({
-          project_id: data.project_id,
-          change_order_id: draftId,
-          org_id: orgId,
-          created_by_user_id: user.id,
-          catalog_item_id: item.id,
-          item_name: item.item_name,
-          division: item.division || null,
-          category_name: item.category_name || null,
-          group_label: item.group_label || null,
-          unit: item.unit,
-          unit_rate: 0,
-          location_tag: data.location_tags.join(', ') || null,
-        } as never);
-        if (error) throw error;
-      }
-
-      toast({ title: 'Work order created successfully' });
-    } catch (err: any) {
-      toast({ variant: 'destructive', title: 'Failed to create work order', description: err.message });
-      throw err;
-    } finally {
-      setWizardSubmitting(false);
-    }
-  };
 
   const filteredChangeOrders = activeTab === 'ALL' ? changeOrders : changeOrders.filter((co) => co.status === activeTab);
 
@@ -155,20 +96,15 @@ const ChangeOrders = () => {
   }
 
   return (
-    <AppLayout title="Work Orders" subtitle="Manage change work orders" showNewButton={canCreate && !!selectedProjectId} onNewClick={() => setShowWizard(true)} newButtonLabel="New Work Order">
+    <AppLayout title="Work Orders" subtitle="Manage change work orders">
       <div className="space-y-4 sm:space-y-6">
         <Card>
           <CardContent className="py-4">
             <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-              <div className="flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-muted-foreground" />
-                <span className="font-medium">Project:</span>
-              </div>
+              <div className="flex items-center gap-2"><Building2 className="h-5 w-5 text-muted-foreground" /><span className="font-medium">Project:</span></div>
               <Select value={selectedProjectId || ''} onValueChange={(value) => setSelectedProjectId(value)}>
                 <SelectTrigger className="w-full sm:w-[300px]"><SelectValue placeholder="Select a project" /></SelectTrigger>
-                <SelectContent>
-                  {projects.map((project) => <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>)}
-                </SelectContent>
+                <SelectContent>{projects.map((project) => <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           </CardContent>
@@ -189,15 +125,10 @@ const ChangeOrders = () => {
             {isLoading ? (
               <div className="space-y-4">{[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 w-full" />)}</div>
             ) : filteredChangeOrders.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <FileEdit className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-                  <p className="text-muted-foreground">{activeTab === 'ALL' ? 'No work orders yet for this project' : `No ${getStatusLabel(activeTab).toLowerCase()} work orders`}</p>
-                  {canCreate && activeTab === 'ALL' && (
-                    <Button variant="outline" className="mt-4" onClick={() => setShowWizard(true)}><Plus className="w-4 h-4 mr-2" />Create your first work order</Button>
-                  )}
-                </CardContent>
-              </Card>
+              <Card><CardContent className="py-12 text-center">
+                <FileEdit className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+                <p className="text-muted-foreground">{activeTab === 'ALL' ? 'No work orders yet for this project' : `No ${getStatusLabel(activeTab).toLowerCase()} work orders`}</p>
+              </CardContent></Card>
             ) : (
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                 {filteredChangeOrders.map((changeOrder) => (
@@ -216,24 +147,11 @@ const ChangeOrders = () => {
         )}
 
         {!selectedProjectId && projects.length === 0 && !isLoading && (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <Building2 className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-              <p className="text-muted-foreground">No projects found. Create a project first to add work orders.</p>
-              <Button variant="outline" className="mt-4" onClick={() => navigate('/create-project')}><Plus className="w-4 h-4 mr-2" />Create Project</Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {selectedProject && (
-          <WorkOrderWizard
-            open={showWizard}
-            onOpenChange={setShowWizard}
-            projectId={selectedProject.id}
-            projectName={selectedProject.name}
-            onComplete={handleWizardComplete}
-            isSubmitting={wizardSubmitting}
-          />
+          <Card><CardContent className="py-12 text-center">
+            <Building2 className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
+            <p className="text-muted-foreground">No projects found. Create a project first to add work orders.</p>
+            <Button variant="outline" className="mt-4" onClick={() => navigate('/create-project')}><Plus className="w-4 h-4 mr-2" />Create Project</Button>
+          </CardContent></Card>
         )}
       </div>
     </AppLayout>
