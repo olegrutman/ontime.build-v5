@@ -39,15 +39,12 @@ export function UrgentTasksCard({ projectId, onNavigate, isSupplier, supplierOrg
             }
           }
         } else {
-          const [woRes, invRes, poRes] = await Promise.all([
-            supabase.from('change_order_projects').select('status').eq('project_id', projectId).not('status', 'in', '("draft","approved","contracted")'),
+          const [invRes, poRes] = await Promise.all([
             supabase.from('invoices').select('status').eq('project_id', projectId).eq('status', 'SUBMITTED'),
             supabase.from('purchase_orders').select('status').eq('project_id', projectId).eq('status', 'SUBMITTED'),
           ]);
-          const pendingWOs = (woRes.data || []).length;
           const pendingInvoices = (invRes.data || []).length;
           const pendingPOs = (poRes.data || []).length;
-          if (pendingWOs > 0) attentionItems.push({ icon: <ClipboardList className="h-4 w-4" />, label: `${pendingWOs} WO${pendingWOs > 1 ? 's' : ''} need approval`, count: pendingWOs, tab: 'work-orders' });
           if (pendingInvoices > 0) attentionItems.push({ icon: <Receipt className="h-4 w-4" />, label: `${pendingInvoices} Invoice${pendingInvoices > 1 ? 's' : ''} to review`, count: pendingInvoices, tab: 'invoices' });
           if (pendingPOs > 0) attentionItems.push({ icon: <Package className="h-4 w-4" />, label: `${pendingPOs} PO${pendingPOs > 1 ? 's' : ''} awaiting pricing`, count: pendingPOs, tab: 'purchase-orders' });
         }

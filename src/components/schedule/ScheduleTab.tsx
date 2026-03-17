@@ -79,18 +79,7 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
 
   const criticalPathIds = criticalPathEnabled ? findCriticalPath(items) : new Set<string>();
 
-  const { data: workOrders = [] } = useQuery({
-    queryKey: ['schedule-work-orders', projectId],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('change_order_projects')
-        .select('id, title, status')
-        .eq('project_id', projectId)
-        .in('status', ['approved', 'contracted']);
-      return data || [];
-    },
-    enabled: !!projectId,
-  });
+  // Work orders removed — no longer tracked
 
   const overallProgress = items.length > 0
     ? Math.round(items.reduce((sum, i) => sum + i.progress, 0) / items.length)

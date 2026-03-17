@@ -54,12 +54,7 @@ export function AttentionBanner({ projectId, onNavigate, isSupplier, supplierOrg
             }
           }
         } else {
-          const [woRes, invRes, poRes] = await Promise.all([
-            supabase
-              .from('change_order_projects')
-              .select('status')
-              .eq('project_id', projectId)
-              .not('status', 'in', '("draft","approved","contracted")'),
+          const [invRes, poRes] = await Promise.all([
             supabase
               .from('invoices')
               .select('status')
@@ -72,18 +67,8 @@ export function AttentionBanner({ projectId, onNavigate, isSupplier, supplierOrg
               .eq('status', 'SUBMITTED'),
           ]);
 
-          const pendingWOs = (woRes.data || []).length;
           const pendingInvoices = (invRes.data || []).length;
           const pendingPOs = (poRes.data || []).length;
-
-          if (pendingWOs > 0) {
-            attentionItems.push({
-              icon: <ClipboardList className="h-4 w-4" />,
-              label: `${pendingWOs} Work Order${pendingWOs > 1 ? 's' : ''} need approval`,
-              count: pendingWOs,
-              tab: 'work-orders',
-            });
-          }
 
           if (pendingInvoices > 0) {
             attentionItems.push({

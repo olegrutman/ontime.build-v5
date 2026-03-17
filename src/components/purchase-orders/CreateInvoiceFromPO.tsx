@@ -150,22 +150,7 @@ export function CreateInvoiceFromPO({
         setSelectedContractId(mapped[0].id);
       }
 
-      // Try to pre-fill markup from linked Change Order
-      const { data: coData } = await supabase
-        .from('change_order_projects')
-        .select('material_markup_type, material_markup_percent, material_markup_amount')
-        .eq('linked_po_id', po.id)
-        .maybeSingle();
-
-      if (coData) {
-        if (coData.material_markup_type === 'percent' && coData.material_markup_percent) {
-          setMarkupType('percent');
-          setMarkupPercent(coData.material_markup_percent);
-        } else if (coData.material_markup_type === 'flat' && coData.material_markup_amount) {
-          setMarkupType('flat');
-          setMarkupAmount(coData.material_markup_amount);
-        }
-      }
+      // Markup defaults to 0 (no CO pre-fill)
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load contract data');
