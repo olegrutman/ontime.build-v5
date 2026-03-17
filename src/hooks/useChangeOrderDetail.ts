@@ -39,14 +39,43 @@ export function useChangeOrderDetail(coId: string | null) {
     },
   });
 
+  // For combined parent COs, fetch member CO records
+  const isCombinedParent = !!co && co.status === 'combined' && !co.combined_co_id;
+
+  const { data: memberCOs = [] } = useQuery({
+    queryKey: ['co-detail', coId, 'members'],
+    enabled: !!coId && isCombinedParent,
+    queryFn: async () => {
+      const { data: members, error: mErr } = await supabase
+        .from('co_combined_members')
+        .select('member_co_id')
+        .eq('combined_co_id', coId!);
+      if (mErr) throw mErr;
+      if (!members || members.length === 0) return [];
+
+      const memberIds = members.map(m => m.member_co_id);
+      const { data: cos, error: cErr } = await supabase
+        .from('change_orders')
+        .select('*')
+        .in('id', memberIds);
+      if (cErr) throw cErr;
+      return cos as ChangeOrder[];
+    },
+  });
+
+  // Determine which CO IDs to fetch data for (parent + members for combined, or just the CO)
+  const allCoIds = isCombinedParent && memberCOs.length > 0
+    ? memberCOs.map(c => c.id)
+    : coId ? [coId] : [];
+
   const { data: lineItems = [] } = useQuery({
-    queryKey: ['co-detail', coId, 'line-items'],
-    enabled: !!coId,
+    queryKey: ['co-detail', coId, 'line-items', allCoIds],
+    enabled: allCoIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('co_line_items')
         .select('*')
-        .eq('co_id', coId!)
+        .in('co_id', allCoIds)
         .order('sort_order');
       if (error) throw error;
       return data as COLineItem[];
@@ -54,13 +83,13 @@ export function useChangeOrderDetail(coId: string | null) {
   });
 
   const { data: laborEntries = [] } = useQuery({
-    queryKey: ['co-detail', coId, 'labor'],
-    enabled: !!coId,
+    queryKey: ['co-detail', coId, 'labor', allCoIds],
+    enabled: allCoIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('co_labor_entries')
         .select('*')
-        .eq('co_id', coId!)
+        .in('co_id', allCoIds)
         .order('entry_date', { ascending: false });
       if (error) throw error;
       return data as COLaborEntry[];
@@ -68,13 +97,13 @@ export function useChangeOrderDetail(coId: string | null) {
   });
 
   const { data: materials = [] } = useQuery({
-    queryKey: ['co-detail', coId, 'materials'],
-    enabled: !!coId,
+    queryKey: ['co-detail', coId, 'materials', allCoIds],
+    enabled: allCoIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('co_material_items')
         .select('*')
-        .eq('co_id', coId!)
+        .in('co_id', allCoIds)
         .order('line_number');
       if (error) throw error;
       return data as COMaterialItem[];
@@ -82,13 +111,13 @@ export function useChangeOrderDetail(coId: string | null) {
   });
 
   const { data: equipment = [] } = useQuery({
-    queryKey: ['co-detail', coId, 'equipment'],
-    enabled: !!coId,
+    queryKey: ['co-detail', coId, 'equipment', allCoIds],
+    enabled: allCoIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('co_equipment_items')
         .select('*')
-        .eq('co_id', coId!)
+        .in('co_id', allCoIds)
         .order('created_at');
       if (error) throw error;
       return data as COEquipmentItem[];
@@ -452,6 +481,7 @@ export function useChangeOrderDetail(coId: string | null) {
 
   return {
     co,
+    memberCOs,
     lineItems,
     laborEntries,
     materials,

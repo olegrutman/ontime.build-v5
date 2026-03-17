@@ -11,7 +11,7 @@ import { BottomNav } from '@/components/layout/BottomNav';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, MapPin, Calendar, Loader2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, Loader2, GitMerge, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
 import {
@@ -19,12 +19,13 @@ import {
   CO_REASON_LABELS,
   CO_REASON_COLORS,
 } from '@/types/changeOrder';
-import type { COStatus, COReasonCode, COCreatedByRole } from '@/types/changeOrder';
+import type { COStatus, COReasonCode, COCreatedByRole, ChangeOrder } from '@/types/changeOrder';
 import { cn } from '@/lib/utils';
 import { COLineItemRow } from './COLineItemRow';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COStatusActions } from './COStatusActions';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const STATUS_BADGE: Record<COStatus, string> = {
   draft:      'bg-gray-100 text-gray-700 border-gray-200',
@@ -50,6 +51,7 @@ export function CODetailPage() {
 
   const {
     co,
+    memberCOs,
     lineItems,
     laborEntries,
     materials,
@@ -116,12 +118,26 @@ export function CODetailPage() {
     );
   }
 
-  const title        = co.title ?? co.co_number ?? 'Change Order';
-  const reasonColors = co.reason ? CO_REASON_COLORS[co.reason as COReasonCode] : null;
+  const isCombinedParent = memberCOs.length > 0;
+  const displayTitle     = co.title ?? co.co_number ?? (isCombinedParent ? 'Combined Change Order' : 'Change Order');
+  const reasonColors     = co.reason ? CO_REASON_COLORS[co.reason as COReasonCode] : null;
 
   const billableEntries = laborEntries.filter(e => !e.is_actual_cost);
   const fcEntries       = billableEntries.filter(e => e.entered_by_role === 'FC');
   const tcEntries       = billableEntries.filter(e => e.entered_by_role === 'TC');
+
+  // Group line items by member CO for combined parents
+  const scopeSections: { memberCO: ChangeOrder | null; items: typeof lineItems }[] = [];
+  if (isCombinedParent) {
+    for (const mco of memberCOs) {
+      const items = lineItems.filter(li => li.co_id === mco.id);
+      if (items.length > 0 || true) { // show section even if empty for visibility
+        scopeSections.push({ memberCO: mco, items });
+      }
+    }
+  } else {
+    scopeSections.push({ memberCO: null, items: lineItems });
+  }
 
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
@@ -138,15 +154,21 @@ export function CODetailPage() {
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
-            <div className="min-w-0">
+             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-semibold text-foreground">{title}</h1>
+                {isCombinedParent && <GitMerge className="h-4 w-4 text-purple-600 shrink-0" />}
+                <h1 className="text-xl font-semibold text-foreground">{displayTitle}</h1>
                 <Badge variant="outline" className={cn('text-[11px]', STATUS_BADGE[co.status as COStatus])}>
                   {CO_STATUS_LABELS[co.status as COStatus]}
                 </Badge>
                 {co.pricing_type && (
                   <Badge variant="secondary" className="text-[11px]">
                     {PRICING_LABEL[co.pricing_type] ?? co.pricing_type}
+                  </Badge>
+                )}
+                {isCombinedParent && (
+                  <Badge variant="secondary" className="text-[11px]">
+                    {memberCOs.length} scopes
                   </Badge>
                 )}
               </div>
@@ -178,47 +200,79 @@ export function CODetailPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Main column */}
               <div className="lg:col-span-2 space-y-6">
-                {/* Scope */}
-                <div className="rounded-lg border border-border bg-card">
-                  <div className="px-4 py-3 border-b border-border">
-                    <h3 className="text-sm font-semibold text-foreground">Scope & labor</h3>
-                    {lineItems.length > 0 && (
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        {lineItems.length} item{lineItems.length !== 1 ? 's' : ''} · tap to expand
-                      </p>
-                    )}
-                  </div>
-                  {lineItems.length === 0 ? (
-                    <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                      No scope items
-                    </div>
-                  ) : (
-                    lineItems.map(item => (
-                      <COLineItemRow
-                        key={item.id}
-                        item={item}
-                        laborEntries={laborEntries.filter(e => e.co_line_item_id === item.id)}
-                        role={role}
-                        isGC={isGC}
-                        isTC={isTC}
-                        isFC={isFC}
-                        coId={co.id}
-                        orgId={co.org_id}
-                        pricingType={co.pricing_type as 'fixed' | 'tm' | 'nte'}
-                        nteCap={co.nte_cap}
-                        nteUsed={financials.laborTotal}
-                        canAddLabor={!isGC && (
-                          co.status === 'draft' ||
-                          co.status === 'shared' ||
-                          co.status === 'combined' ||
-                          co.pricing_type === 'tm' ||
-                          co.pricing_type === 'nte'
+                {/* Scope sections */}
+                {scopeSections.map((section, idx) => {
+                  const sectionTitle = section.memberCO
+                    ? (section.memberCO.title ?? section.memberCO.co_number ?? `Scope ${idx + 1}`)
+                    : 'Scope & labor';
+                  const sectionReason = section.memberCO?.reason
+                    ? CO_REASON_COLORS[section.memberCO.reason as COReasonCode]
+                    : null;
+
+                  return (
+                    <div key={section.memberCO?.id ?? 'single'} className="rounded-lg border border-border bg-card">
+                      <div className="px-4 py-3 border-b border-border">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {isCombinedParent && (
+                            <span className="text-xs font-medium text-muted-foreground">
+                              Scope {idx + 1} of {scopeSections.length}
+                            </span>
+                          )}
+                          <h3 className="text-sm font-semibold text-foreground">{sectionTitle}</h3>
+                          {section.memberCO?.reason && sectionReason && (
+                            <span
+                              className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+                              style={{ backgroundColor: sectionReason.bg, color: sectionReason.text }}
+                            >
+                              {CO_REASON_LABELS[section.memberCO.reason as COReasonCode]}
+                            </span>
+                          )}
+                          {section.memberCO?.location_tag && (
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <MapPin className="h-3 w-3" />
+                              {section.memberCO.location_tag}
+                            </span>
+                          )}
+                        </div>
+                        {section.items.length > 0 && (
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {section.items.length} item{section.items.length !== 1 ? 's' : ''} · tap to expand
+                          </p>
                         )}
-                        onRefresh={refreshDetail}
-                      />
-                    ))
-                  )}
-                </div>
+                      </div>
+                      {section.items.length === 0 ? (
+                        <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                          No scope items
+                        </div>
+                      ) : (
+                        section.items.map(item => (
+                          <COLineItemRow
+                            key={item.id}
+                            item={item}
+                            laborEntries={laborEntries.filter(e => e.co_line_item_id === item.id)}
+                            role={role}
+                            isGC={isGC}
+                            isTC={isTC}
+                            isFC={isFC}
+                            coId={co.id}
+                            orgId={co.org_id}
+                            pricingType={co.pricing_type as 'fixed' | 'tm' | 'nte'}
+                            nteCap={co.nte_cap}
+                            nteUsed={financials.laborTotal}
+                            canAddLabor={!isGC && (
+                              co.status === 'draft' ||
+                              co.status === 'shared' ||
+                              co.status === 'combined' ||
+                              co.pricing_type === 'tm' ||
+                              co.pricing_type === 'nte'
+                            )}
+                            onRefresh={refreshDetail}
+                          />
+                        ))
+                      )}
+                    </div>
+                  );
+                })}
 
                 {/* Materials */}
                 {co.materials_needed && (

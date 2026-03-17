@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useChangeOrders } from '@/hooks/useChangeOrders';
+import { useChangeOrders, type ChangeOrderWithMembers } from '@/hooks/useChangeOrders';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, ChevronRight, GitMerge, Loader2 } from 'lucide-react';
 import { COWizard } from './wizard/COWizard';
 import { CombineDrawer } from './CombineDrawer';
-import type { ChangeOrder, COStatus, COReasonCode } from '@/types/changeOrder';
+import type { COStatus, COReasonCode } from '@/types/changeOrder';
 import { CO_STATUS_LABELS, CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
@@ -52,13 +52,14 @@ function CORow({
   onSelect,
   onClick,
 }: {
-  co:         ChangeOrder;
+  co:         ChangeOrderWithMembers;
   selectable: boolean;
   selected:   boolean;
   onSelect:   (id: string, checked: boolean) => void;
   onClick:    (id: string) => void;
 }) {
-  const title = co.title ?? co.co_number ?? 'Untitled CO';
+  const isCombinedParent = !!co.memberPreviews && co.memberPreviews.length > 0;
+  const title = co.title ?? co.co_number ?? (isCombinedParent ? 'Combined CO' : 'Untitled CO');
   const age   = formatDistanceToNow(new Date(co.created_at), { addSuffix: true });
 
   return (
@@ -77,6 +78,7 @@ function CORow({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
+          {isCombinedParent && <GitMerge className="h-3.5 w-3.5 text-purple-600 shrink-0" />}
           <span className="font-medium text-foreground truncate">{title}</span>
           <Badge variant="outline" className={cn('text-[11px] shrink-0', STATUS_BADGE_STYLES[co.status as COStatus])}>
             {CO_STATUS_LABELS[co.status as COStatus]}
@@ -86,7 +88,23 @@ function CORow({
               {PRICING_BADGE[co.pricing_type] ?? co.pricing_type}
             </Badge>
           )}
+          {isCombinedParent && (
+            <Badge variant="secondary" className="text-[11px] shrink-0">
+              {co.memberPreviews!.length} scopes
+            </Badge>
+          )}
         </div>
+
+        {isCombinedParent && (
+          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+            {co.memberPreviews!.map((m, i) => (
+              <span key={m.id} className="text-xs text-muted-foreground">
+                {i > 0 && <span className="mr-1.5">+</span>}
+                {m.title ?? 'Untitled'}
+              </span>
+            ))}
+          </div>
+        )}
 
         <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
           {co.reason && <ReasonChip reason={co.reason as COReasonCode} />}
@@ -127,7 +145,7 @@ export function COListPage({ projectId }: COListPageProps) {
   const [combineOpen,  setCombineOpen]  = useState(false);
 
   const mine = grouped.mine;
-  const allMine: ChangeOrder[] = [
+  const allMine: ChangeOrderWithMembers[] = [
     ...mine.draft,
     ...mine.shared,
     ...mine.combined,

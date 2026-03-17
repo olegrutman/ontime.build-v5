@@ -3,17 +3,28 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { ChangeOrder, COStatus } from '@/types/changeOrder';
 
+export interface COMemberPreview {
+  id: string;
+  title: string | null;
+  location_tag: string | null;
+  reason: string | null;
+}
+
+export interface ChangeOrderWithMembers extends ChangeOrder {
+  memberPreviews?: COMemberPreview[];
+}
+
 export interface GroupedChangeOrders {
   mine: {
-    draft:      ChangeOrder[];
-    shared:     ChangeOrder[];
-    combined:   ChangeOrder[];
-    submitted:  ChangeOrder[];
-    approved:   ChangeOrder[];
-    rejected:   ChangeOrder[];
-    contracted: ChangeOrder[];
+    draft:      ChangeOrderWithMembers[];
+    shared:     ChangeOrderWithMembers[];
+    combined:   ChangeOrderWithMembers[];
+    submitted:  ChangeOrderWithMembers[];
+    approved:   ChangeOrderWithMembers[];
+    rejected:   ChangeOrderWithMembers[];
+    contracted: ChangeOrderWithMembers[];
   };
-  sharedWithMe: ChangeOrder[];
+  sharedWithMe: ChangeOrderWithMembers[];
 }
 
 export function useChangeOrders(projectId: string | null) {
@@ -32,7 +43,47 @@ export function useChangeOrders(projectId: string | null) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data as ChangeOrder[];
+      const allCOs = data as ChangeOrder[];
+
+      // Find parent combined COs (status=combined, no combined_co_id)
+      const parentCOs = allCOs.filter(c => c.status === 'combined' && !c.combined_co_id);
+      const parentIds = parentCOs.map(c => c.id);
+
+      // Fetch member mappings for all parents
+      let memberMap: Record<string, COMemberPreview[]> = {};
+      if (parentIds.length > 0) {
+        const { data: members } = await supabase
+          .from('co_combined_members')
+          .select('combined_co_id, member_co_id')
+          .in('combined_co_id', parentIds);
+
+        if (members && members.length > 0) {
+          const memberCoIds = members.map(m => m.member_co_id);
+          const memberCOMap = new Map<string, ChangeOrder>();
+          allCOs.forEach(c => { if (memberCoIds.includes(c.id)) memberCOMap.set(c.id, c); });
+
+          for (const m of members) {
+            if (!memberMap[m.combined_co_id]) memberMap[m.combined_co_id] = [];
+            const mc = memberCOMap.get(m.member_co_id);
+            memberMap[m.combined_co_id].push({
+              id: m.member_co_id,
+              title: mc?.title ?? mc?.co_number ?? null,
+              location_tag: mc?.location_tag ?? null,
+              reason: mc?.reason ?? null,
+            });
+          }
+        }
+      }
+
+      // Filter out child COs (absorbed into a parent)
+      const childIds = new Set(Object.values(memberMap).flat().map(m => m.id));
+      const filtered = allCOs.filter(c => !childIds.has(c.id));
+
+      // Attach member previews to parents
+      return filtered.map(c => ({
+        ...c,
+        memberPreviews: memberMap[c.id] ?? undefined,
+      })) as ChangeOrderWithMembers[];
     },
   });
 
