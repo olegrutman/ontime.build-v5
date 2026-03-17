@@ -137,6 +137,7 @@ export default function PlatformProjectDetail() {
   const [invCounts, setInvCounts] = useState<StatusCounts>({});
   const [financials, setFinancials] = useState({ invoiced: 0, paid: 0, retainage: 0, poTotal: 0 });
   const [estimates, setEstimates] = useState<SupplierEstimateRow[]>([]);
+  const [workOrders, setWorkOrders] = useState<WorkOrderRow[]>([]);
 
   const { execute, loading: actionLoading } = useSupportAction();
   const { platformRole } = useAuth();
@@ -144,6 +145,14 @@ export default function PlatformProjectDetail() {
   const [forceAcceptTeamId, setForceAcceptTeamId] = useState<string | null>(null);
   const [forceAcceptOrgName, setForceAcceptOrgName] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  // Delete entity state
+  const [deleteInvoiceOpen, setDeleteInvoiceOpen] = useState(false);
+  const [deleteInvoiceTarget, setDeleteInvoiceTarget] = useState<InvoiceRow | null>(null);
+  const [deletePOOpen, setDeletePOOpen] = useState(false);
+  const [deletePOTarget, setDeletePOTarget] = useState<PORow | null>(null);
+  const [deleteWOOpen, setDeleteWOOpen] = useState(false);
+  const [deleteWOTarget, setDeleteWOTarget] = useState<WorkOrderRow | null>(null);
 
   const fetchData = async () => {
     if (!projectId) return;
