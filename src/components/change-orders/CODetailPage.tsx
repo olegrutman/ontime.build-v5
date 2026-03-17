@@ -47,7 +47,7 @@ export function CODetailPage() {
   const { projectId, coId } = useParams<{ projectId: string; coId: string }>();
   const navigate            = useNavigate();
   const defaultOpen         = useDefaultSidebarOpen();
-  const { currentRole }     = useAuth();
+  const { currentRole, userOrgRoles } = useAuth();
 
   const {
     co,
@@ -68,6 +68,7 @@ export function CODetailPage() {
   const isTC = currentRole === 'TC_PM';
   const isFC = currentRole === 'FC_PM' || currentRole === 'FS';
   const role: COCreatedByRole = isGC ? 'GC' : isTC ? 'TC' : 'FC';
+  const myOrgId = userOrgRoles[0]?.organization_id ?? co?.org_id ?? '';
 
   const queryClient = useQueryClient();
   function refreshDetail() {
@@ -255,7 +256,7 @@ export function CODetailPage() {
                             isTC={isTC}
                             isFC={isFC}
                             coId={co.id}
-                            orgId={co.org_id}
+                            orgId={myOrgId}
                             pricingType={co.pricing_type as 'fixed' | 'tm' | 'nte'}
                             nteCap={co.nte_cap}
                             nteUsed={financials.laborTotal}
@@ -298,6 +299,7 @@ export function CODetailPage() {
                     equipment={equipment}
                     isTC={isTC}
                     isGC={isGC}
+                    isFC={isFC}
                     canEdit={canEdit}
                     onRefresh={refreshDetail}
                   />

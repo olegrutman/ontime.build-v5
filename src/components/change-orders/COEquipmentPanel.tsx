@@ -13,6 +13,7 @@ interface COEquipmentPanelProps {
   equipment: COEquipmentItem[];
   isTC:      boolean;
   isGC:      boolean;
+  isFC:      boolean;
   canEdit:   boolean;
   onRefresh: () => void;
 }
@@ -54,6 +55,7 @@ export function COEquipmentPanel({
   equipment,
   isTC,
   isGC,
+  isFC,
   canEdit,
   onRefresh,
 }: COEquipmentPanelProps) {
@@ -185,7 +187,7 @@ export function COEquipmentPanel({
                   )}
                 </div>
                 <div className="text-right text-sm shrink-0">
-                  {!isGC && (
+                  {isTC && (
                     <div className="text-xs text-muted-foreground">
                       Cost: ${fmt(item.cost ?? 0)}
                     </div>
@@ -195,9 +197,11 @@ export function COEquipmentPanel({
                       +{item.markup_percent}% markup
                     </div>
                   )}
-                  <div className="font-medium text-foreground">
-                    ${fmt(item.billed_amount ?? 0)}
-                  </div>
+                  {!isFC && (
+                    <div className="font-medium text-foreground">
+                      ${fmt(item.billed_amount ?? 0)}
+                    </div>
+                  )}
                 </div>
                 {canEdit && isTC && (
                   <button
@@ -302,9 +306,9 @@ export function COEquipmentPanel({
             </div>
           )}
 
-          {equipment.length > 0 && (
+          {equipment.length > 0 && !isFC && (
             <div className="px-4 py-3 border-t border-border space-y-1">
-              {!isGC && totalCost > 0 && (
+              {isTC && totalCost > 0 && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Cost</span>
                   <span className="text-muted-foreground">${fmt(totalCost)}</span>
