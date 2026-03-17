@@ -437,31 +437,6 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         const paidInvoices = allInvoices.filter(i => i.status === 'PAID');
         setTotalPaidToFC(paidInvoices.reduce((s, i) => s + (i.total_amount || 0), 0));
 
-        // Monthly margin trend (approved WOs by month)
-        const approvedWOsForTrend = wos.filter(wo => ['approved', 'contracted'].includes(wo.status));
-        const byMonth = new Map<string, { revenue: number; cost: number }>();
-        for (const wo of approvedWOsForTrend) {
-          const month = wo.created_at.slice(0, 7); // YYYY-MM
-          const prev = byMonth.get(month) || { revenue: 0, cost: 0 };
-          prev.revenue += wo.final_price || 0;
-          byMonth.set(month, prev);
-        }
-        // Add FC costs per month if available
-        if (approvedWOsForTrend.length > 0) {
-          const approvedIds = approvedWOsForTrend.map(w => w.id);
-          const { data: fcEntries } = await supabase.from('change_order_fc_hours').select('change_order_id, labor_total').in('change_order_id', approvedIds);
-          const woCostMap = new Map<string, number>();
-          for (const fc of fcEntries || []) {
-            woCostMap.set(fc.change_order_id, (woCostMap.get(fc.change_order_id) || 0) + (fc.labor_total || 0));
-          }
-          for (const wo of approvedWOsForTrend) {
-            const month = wo.created_at.slice(0, 7);
-            const prev = byMonth.get(month)!;
-            prev.cost += woCostMap.get(wo.id) || 0;
-          }
-        }
-        const sorted = [...byMonth.entries()].sort(([a], [b]) => a.localeCompare(b));
-        let cumMargin = 0;
       }
 
       // FC participants
