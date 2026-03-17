@@ -143,6 +143,7 @@ export function CONTEPanel({
         requestedIncrease: pendingRequest.requested_increase,
       });
       toast.success(`NTE cap increased to $${fmt(cap + pendingRequest.requested_increase)}`);
+      await notifyCreator('NTE_APPROVED', pendingRequest.requested_increase);
       setApproveId(null);
       onRefresh();
     } catch (err: any) {
