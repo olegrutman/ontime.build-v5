@@ -89,6 +89,14 @@ interface StatusCounts {
   [key: string]: number;
 }
 
+interface WorkOrderRow {
+  id: string;
+  title: string;
+  status: string;
+  final_price: number | null;
+  created_at: string;
+}
+
 function formatCurrency(val: number | null | undefined) {
   if (val == null) return '$0';
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
