@@ -6,22 +6,12 @@ import { formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import type { RecentDoc } from '@/hooks/useDashboardData';
 
-type DocFilter = 'all' | 'invoices' | 'change_orders';
-
-const filters: { key: DocFilter; label: string }[] = [
-  { key: 'all', label: 'All' },
-  { key: 'invoices', label: 'Invoices' },
-  { key: 'change_orders', label: 'Change Orders' },
-];
-
 const typeLabels: Record<string, string> = {
   invoice: 'Invoice',
-  change_order: 'Change Order',
 };
 
 const typeBadgeStyles: Record<string, string> = {
   invoice: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  change_order: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
 };
 
 const statusBadgeStyles: Record<string, string> = {
