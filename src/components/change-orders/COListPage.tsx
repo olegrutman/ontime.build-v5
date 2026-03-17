@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useChangeOrders } from '@/hooks/useChangeOrders';
+import { useChangeOrders, type ChangeOrderWithMembers } from '@/hooks/useChangeOrders';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, ChevronRight, GitMerge, Loader2 } from 'lucide-react';
 import { COWizard } from './wizard/COWizard';
 import { CombineDrawer } from './CombineDrawer';
-import type { ChangeOrder, COStatus, COReasonCode } from '@/types/changeOrder';
+import type { COStatus, COReasonCode } from '@/types/changeOrder';
 import { CO_STATUS_LABELS, CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
