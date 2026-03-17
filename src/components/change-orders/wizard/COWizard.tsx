@@ -134,7 +134,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
         created_by_user_id:    user.id,
         created_by_role:       role,
         title,
-        status:                data.shareDraftNow ? 'shared' : 'draft',
+        status:                'draft',
         pricing_type:          data.pricingType,
         nte_cap:               data.pricingType === 'nte' && data.nteCap ? parseFloat(data.nteCap) : null,
         reason:                data.reason,
@@ -148,12 +148,9 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
         materials_responsible: data.materialsResponsible,
         equipment_responsible: data.equipmentResponsible,
         draft_shared_with_next: data.shareDraftNow,
-        shared_at:             data.shareDraftNow ? new Date().toISOString() : null,
         combined_co_id:        null,
         parent_co_id:          null,
-        rejected_at:           null,
         rejection_note:        null,
-        contracted_at:         null,
       });
 
       if (data.selectedItems.length > 0) {
