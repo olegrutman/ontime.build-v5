@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useAuth } from '@/hooks/useAuth';
+import { useQueryClient } from '@tanstack/react-query';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { BottomNav } from '@/components/layout/BottomNav';
@@ -15,8 +16,9 @@ import {
   CO_REASON_LABELS,
   CO_REASON_COLORS,
 } from '@/types/changeOrder';
-import type { COStatus, COReasonCode } from '@/types/changeOrder';
+import type { COStatus, COReasonCode, COCreatedByRole } from '@/types/changeOrder';
 import { cn } from '@/lib/utils';
+import { COLineItemRow } from './COLineItemRow';
 
 const STATUS_BADGE: Record<COStatus, string> = {
   draft:      'bg-gray-100 text-gray-700 border-gray-200',
@@ -53,6 +55,12 @@ export function CODetailPage() {
   const isGC = currentRole === 'GC_PM';
   const isTC = currentRole === 'TC_PM';
   const isFC = currentRole === 'FC_PM' || currentRole === 'FS';
+  const role: COCreatedByRole = isGC ? 'GC' : isTC ? 'TC' : 'FC';
+
+  const queryClient = useQueryClient();
+  function refreshDetail() {
+    queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
+  }
 
   if (isLoading) {
     return (
@@ -156,81 +164,42 @@ export function CODetailPage() {
                 {/* Scope */}
                 <div className="rounded-lg border border-border bg-card">
                   <div className="px-4 py-3 border-b border-border">
-                    <h3 className="text-sm font-semibold text-foreground">Scope</h3>
+                    <h3 className="text-sm font-semibold text-foreground">Scope & labor</h3>
+                    {lineItems.length > 0 && (
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {lineItems.length} item{lineItems.length !== 1 ? 's' : ''} · tap to expand
+                      </p>
+                    )}
                   </div>
                   {lineItems.length === 0 ? (
                     <div className="px-4 py-8 text-center text-sm text-muted-foreground">
                       No scope items
                     </div>
                   ) : (
-                    <div className="divide-y divide-border">
-                      {lineItems.map(item => {
-                        const itemBillable = billableEntries.filter(e => e.co_line_item_id === item.id);
-                        const itemFC = itemBillable.filter(e => e.entered_by_role === 'FC');
-                        const itemTC = itemBillable.filter(e => e.entered_by_role === 'TC');
-                        const itemFCTotal = itemFC.reduce((s, e) => s + (e.line_total ?? 0), 0);
-                        const itemTCTotal = itemTC.reduce((s, e) => s + (e.line_total ?? 0), 0);
-
-                        return (
-                          <div key={item.id}>
-                            <div className="flex items-center justify-between px-4 py-3">
-                              <div>
-                                <div className="text-sm font-medium text-foreground">{item.item_name}</div>
-                                <div className="text-xs text-muted-foreground">
-                                  {item.category_name} · {item.unit}
-                                </div>
-                              </div>
-                              <div className="text-right text-sm space-y-0.5">
-                                {!isGC && itemFCTotal > 0 && (
-                                  <div className="text-muted-foreground">
-                                    FC: ${itemFCTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                  </div>
-                                )}
-                                {(isTC || isGC) && itemTCTotal > 0 && (
-                                  <div className="font-medium text-foreground">
-                                    ${itemTCTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                  </div>
-                                )}
-                                {isFC && itemFCTotal > 0 && (
-                                  <div className="font-medium text-foreground">
-                                    ${itemFCTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            {itemBillable.length > 0 && (
-                              <div className="bg-muted/30 px-4 py-2 space-y-1">
-                                {itemBillable
-                                  .filter(e => {
-                                    if (isGC)  return e.entered_by_role === 'TC';
-                                    if (isFC)  return e.entered_by_role === 'FC';
-                                    return true;
-                                  })
-                                  .map(entry => (
-                                    <div key={entry.id} className="flex items-center justify-between text-xs text-muted-foreground">
-                                      <span>
-                                        {entry.entered_by_role} ·{' '}
-                                        {entry.pricing_mode === 'lump_sum'
-                                          ? 'Lump sum'
-                                          : `${entry.hours ?? 0} hrs${
-                                              !isGC && entry.hourly_rate
-                                                ? ` @ $${entry.hourly_rate}/hr`
-                                                : ''
-                                            }`}
-                                        {entry.description ? ` · ${entry.description}` : ''}
-                                      </span>
-                                      <span className="font-medium">
-                                        ${(entry.line_total ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                      </span>
-                                    </div>
-                                  ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
+                    lineItems.map(item => (
+                      <COLineItemRow
+                        key={item.id}
+                        item={item}
+                        laborEntries={laborEntries.filter(e => e.co_line_item_id === item.id)}
+                        role={role}
+                        isGC={isGC}
+                        isTC={isTC}
+                        isFC={isFC}
+                        coId={co.id}
+                        orgId={co.org_id}
+                        pricingType={co.pricing_type as 'fixed' | 'tm' | 'nte'}
+                        nteCap={co.nte_cap}
+                        nteUsed={financials.laborTotal}
+                        canAddLabor={!isGC && (
+                          co.status === 'draft' ||
+                          co.status === 'shared' ||
+                          co.status === 'combined' ||
+                          co.pricing_type === 'tm' ||
+                          co.pricing_type === 'nte'
+                        )}
+                        onRefresh={refreshDetail}
+                      />
+                    ))
                   )}
                 </div>
 
