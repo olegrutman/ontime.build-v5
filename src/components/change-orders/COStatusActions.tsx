@@ -68,7 +68,36 @@ export function COStatusActions({
     });
   }
 
-  async function doShare() {
+  async function notifyAssignedParty(type: string, amount?: number) {
+    if (!co.assigned_to_org_id) return;
+    try {
+      const { data: members } = await supabase
+        .from('user_org_roles')
+        .select('user_id')
+        .eq('organization_id', co.assigned_to_org_id)
+        .limit(10);
+      if (!members || members.length === 0) return;
+
+      const { title, body } = buildCONotification(type, co.title, amount);
+      await Promise.allSettled(
+        members.map(m =>
+          sendCONotification({
+            recipient_user_id: m.user_id,
+            recipient_org_id: co.assigned_to_org_id!,
+            co_id: co.id,
+            project_id: projectId,
+            type,
+            title,
+            body,
+            amount,
+          })
+        )
+      );
+    } catch (err) {
+      console.warn('Failed to notify party:', err);
+    }
+  }
+
     setActing(true);
     try {
       await shareCO.mutateAsync(co.id);
