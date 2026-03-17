@@ -48,6 +48,7 @@ import { DailyLogPanel } from '@/components/daily-log/DailyLogPanel';
 import { useToast } from '@/hooks/use-toast';
 import { FeatureGate, TAB_FEATURE_MAP } from '@/components/auth/FeatureGate';
 import { useProjectFinancials } from '@/hooks/useProjectFinancials';
+import { COListPage } from '@/components/change-orders';
 import { useProjectReadiness } from '@/hooks/useProjectReadiness';
 import { useProjectEstimateRows } from '@/hooks/useProjectEstimateRows';
 import { SupplierEstimateCatalog } from '@/components/dashboard/supplier/SupplierEstimateCatalog';
