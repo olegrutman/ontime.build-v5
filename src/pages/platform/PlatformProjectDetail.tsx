@@ -490,12 +490,13 @@ export default function PlatformProjectDetail() {
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead>Billing Period</TableHead>
                 <TableHead>Created</TableHead>
+                {platformRole === 'PLATFORM_OWNER' && <TableHead className="w-[60px]" />}
               </TableRow>
             </TableHeader>
             <TableBody>
               {invoices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">No invoices</TableCell>
+                  <TableCell colSpan={platformRole === 'PLATFORM_OWNER' ? 6 : 5} className="text-center py-4 text-muted-foreground">No invoices</TableCell>
                 </TableRow>
               ) : (
                 invoices.map((inv) => (
@@ -511,6 +512,18 @@ export default function PlatformProjectDetail() {
                     <TableCell className="text-sm text-muted-foreground">
                       {format(new Date(inv.created_at), 'MMM d, yyyy')}
                     </TableCell>
+                    {platformRole === 'PLATFORM_OWNER' && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => { setDeleteInvoiceTarget(inv); setDeleteInvoiceOpen(true); }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
