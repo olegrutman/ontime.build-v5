@@ -18,6 +18,7 @@ interface FieldCaptureSheetProps {
   onOpenChange: (open: boolean) => void;
   projectId: string;
   organizationId: string;
+  onCaptureComplete?: (captureId: string, captureData: { description?: string; photo_url?: string | null; voice_note_url?: string | null; reason_category?: string | null }) => void;
 }
 
 export function FieldCaptureSheet({ open, onOpenChange, projectId, organizationId }: FieldCaptureSheetProps) {
