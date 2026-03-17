@@ -119,9 +119,66 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
   }
 
   async function handleSubmit() {
+    if (!orgId || !user) {
+      toast.error('Not authenticated');
+      return;
+    }
     setSubmitting(true);
     try {
-      console.log('CO wizard submit — data:', data, 'role:', role, 'project:', projectId);
+      const title = data.title.trim() ||
+        (data.selectedItems.length > 0 ? data.selectedItems[0].item_name : null);
+
+      const newCO = await createCO.mutateAsync({
+        org_id:                orgId,
+        project_id:            projectId,
+        created_by_user_id:    user.id,
+        created_by_role:       role,
+        title,
+        status:                data.shareDraftNow ? 'shared' : 'draft',
+        pricing_type:          data.pricingType,
+        nte_cap:               data.pricingType === 'nte' && data.nteCap ? parseFloat(data.nteCap) : null,
+        reason:                data.reason,
+        reason_note:           data.reasonNote || null,
+        location_tag:          data.locationTag || null,
+        assigned_to_org_id:    data.assignedToOrgId || null,
+        fc_input_needed:       data.fcInputNeeded,
+        materials_needed:      data.materialsNeeded,
+        materials_on_site:     data.materialsOnSite,
+        equipment_needed:      data.equipmentNeeded,
+        materials_responsible: data.materialsResponsible,
+        equipment_responsible: data.equipmentResponsible,
+        draft_shared_with_next: data.shareDraftNow,
+        shared_at:             data.shareDraftNow ? new Date().toISOString() : null,
+        combined_co_id:        null,
+        parent_co_id:          null,
+        rejected_at:           null,
+        rejection_note:        null,
+        contracted_at:         null,
+      });
+
+      if (data.selectedItems.length > 0) {
+        const lineItemRows = data.selectedItems.map((item, idx) => ({
+          co_id:           newCO.id,
+          org_id:          orgId,
+          created_by_role: role,
+          catalog_item_id: item.id,
+          item_name:       item.item_name,
+          division:        item.division,
+          category_name:   item.category_name,
+          unit:            item.unit,
+          sort_order:      idx,
+        }));
+        const { error: lineError } = await (await import('@/integrations/supabase/client')).supabase
+          .from('co_line_items')
+          .insert(lineItemRows);
+        if (lineError) throw lineError;
+      }
+
+      toast.success('Change order created');
+      handleClose();
+    } catch (err: any) {
+      console.error('Failed to create CO:', err);
+      toast.error(err?.message ?? 'Failed to create change order');
     } finally {
       setSubmitting(false);
     }
