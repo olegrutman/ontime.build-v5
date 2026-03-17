@@ -256,7 +256,7 @@ export function CODetailPage() {
                             isTC={isTC}
                             isFC={isFC}
                             coId={co.id}
-                            orgId={co.org_id}
+                            orgId={myOrgId}
                             pricingType={co.pricing_type as 'fixed' | 'tm' | 'nte'}
                             nteCap={co.nte_cap}
                             nteUsed={financials.laborTotal}
