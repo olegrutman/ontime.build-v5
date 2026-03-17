@@ -782,6 +782,72 @@ export default function PlatformProjectDetail() {
         }}
         loading={actionLoading}
       />
+
+      {/* Delete Invoice Dialog */}
+      <SupportActionDialog
+        open={deleteInvoiceOpen}
+        onOpenChange={setDeleteInvoiceOpen}
+        title="Delete Invoice"
+        description={`Permanently delete invoice "${deleteInvoiceTarget?.invoice_number}" (${deleteInvoiceTarget?.status}, ${formatCurrency(deleteInvoiceTarget?.total_amount)}). This removes the invoice and all its line items. This action cannot be undone.`}
+        onConfirm={async (reason) => {
+          if (!deleteInvoiceTarget) return;
+          const ok = await execute({
+            action_type: 'DELETE_INVOICE',
+            reason,
+            invoice_id: deleteInvoiceTarget.id,
+          });
+          if (ok) {
+            setDeleteInvoiceOpen(false);
+            setDeleteInvoiceTarget(null);
+            fetchData();
+          }
+        }}
+        loading={actionLoading}
+      />
+
+      {/* Delete PO Dialog */}
+      <SupportActionDialog
+        open={deletePOOpen}
+        onOpenChange={setDeletePOOpen}
+        title="Delete Purchase Order"
+        description={`Permanently delete PO "${deletePOTarget?.po_number}" (${deletePOTarget?.status}, ${formatCurrency(deletePOTarget?.po_total)}). This removes the PO and all its line items. Linked invoices will be unlinked. This action cannot be undone.`}
+        onConfirm={async (reason) => {
+          if (!deletePOTarget) return;
+          const ok = await execute({
+            action_type: 'DELETE_PURCHASE_ORDER',
+            reason,
+            po_id: deletePOTarget.id,
+          });
+          if (ok) {
+            setDeletePOOpen(false);
+            setDeletePOTarget(null);
+            fetchData();
+          }
+        }}
+        loading={actionLoading}
+      />
+
+      {/* Delete Work Order Dialog */}
+      <SupportActionDialog
+        open={deleteWOOpen}
+        onOpenChange={setDeleteWOOpen}
+        title="Delete Work Order"
+        description={`Permanently delete work order "${deleteWOTarget?.title}" (${deleteWOTarget?.status}). This removes the work order and all associated data including participants, tasks, materials, equipment, and labor entries. This action cannot be undone.`}
+        onConfirm={async (reason) => {
+          if (!deleteWOTarget) return;
+          const ok = await execute({
+            action_type: 'DELETE_WORK_ORDER',
+            reason,
+            work_order_id: deleteWOTarget.id,
+          });
+          if (ok) {
+            setDeleteWOOpen(false);
+            setDeleteWOTarget(null);
+            fetchData();
+          }
+        }}
+        loading={actionLoading}
+      />
     </PlatformLayout>
   );
 }
