@@ -19,6 +19,9 @@ import {
 import type { COStatus, COReasonCode, COCreatedByRole } from '@/types/changeOrder';
 import { cn } from '@/lib/utils';
 import { COLineItemRow } from './COLineItemRow';
+import { COMaterialsPanel } from './COMaterialsPanel';
+import { COEquipmentPanel } from './COEquipmentPanel';
+import { COStatusActions } from './COStatusActions';
 
 const STATUS_BADGE: Record<COStatus, string> = {
   draft:      'bg-gray-100 text-gray-700 border-gray-200',
@@ -61,6 +64,13 @@ export function CODetailPage() {
   function refreshDetail() {
     queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
   }
+
+  const canEdit =
+    co?.status === 'draft' ||
+    co?.status === 'shared' ||
+    co?.status === 'combined' ||
+    co?.pricing_type === 'tm' ||
+    co?.pricing_type === 'nte';
 
   if (isLoading) {
     return (
@@ -204,96 +214,46 @@ export function CODetailPage() {
                 </div>
 
                 {/* Materials */}
-                {co.materials_needed && materials.length > 0 && (
-                  <div className="rounded-lg border border-border bg-card">
-                    <div className="px-4 py-3 border-b border-border">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-semibold text-foreground">Materials</h3>
-                        {co.materials_on_site && (
-                          <Badge variant="secondary" className="text-[10px]">
-                            On site — pricing reference only
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <div className="divide-y divide-border">
-                      {materials.map(m => (
-                        <div key={m.id} className="flex items-center justify-between px-4 py-3">
-                          <div>
-                            <p className="text-sm font-medium text-foreground">{m.description}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {m.quantity} {m.uom}
-                              {!isGC && m.unit_cost ? ` @ $${m.unit_cost}` : ''}
-                            </p>
-                          </div>
-                          <div className="text-right text-sm">
-                            {isGC ? (
-                              <div className="font-medium text-foreground">
-                                ${(m.billed_amount ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                              </div>
-                            ) : (
-                              <>
-                                <div className="text-muted-foreground">
-                                  Cost: ${(m.line_cost ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                </div>
-                                {m.markup_percent > 0 && (
-                                  <div className="text-xs text-muted-foreground">+{m.markup_percent}% markup</div>
-                                )}
-                                <div className="font-medium text-foreground">
-                                  ${(m.billed_amount ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                {co.materials_needed && (
+                  <COMaterialsPanel
+                    coId={co.id}
+                    orgId={co.org_id}
+                    materials={materials}
+                    isTC={isTC}
+                    isGC={isGC}
+                    isFC={isFC}
+                    materialsOnSite={co.materials_on_site}
+                    canEdit={canEdit}
+                    onRefresh={refreshDetail}
+                  />
                 )}
 
                 {/* Equipment */}
-                {co.equipment_needed && equipment.length > 0 && (
-                  <div className="rounded-lg border border-border bg-card">
-                    <div className="px-4 py-3 border-b border-border">
-                      <h3 className="text-sm font-semibold text-foreground">Equipment</h3>
-                    </div>
-                    <div className="divide-y divide-border">
-                      {equipment.map(e => (
-                        <div key={e.id} className="flex items-center justify-between px-4 py-3">
-                          <div>
-                            <p className="text-sm font-medium text-foreground">{e.description}</p>
-                            {e.duration_note && (
-                              <p className="text-xs text-muted-foreground">{e.duration_note}</p>
-                            )}
-                          </div>
-                          <div className="text-right text-sm">
-                            {isGC ? (
-                              <div className="font-medium text-foreground">
-                                ${(e.billed_amount ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                              </div>
-                            ) : (
-                              <>
-                                <div className="text-muted-foreground">
-                                  Cost: ${(e.cost ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                </div>
-                                {e.markup_percent > 0 && (
-                                  <div className="text-xs text-muted-foreground">+{e.markup_percent}% markup</div>
-                                )}
-                                <div className="font-medium text-foreground">
-                                  ${(e.billed_amount ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                {co.equipment_needed && (
+                  <COEquipmentPanel
+                    coId={co.id}
+                    orgId={co.org_id}
+                    equipment={equipment}
+                    isTC={isTC}
+                    isGC={isGC}
+                    canEdit={canEdit}
+                    onRefresh={refreshDetail}
+                  />
                 )}
               </div>
 
               {/* Sidebar column */}
               <div className="space-y-6">
+                {/* Status actions */}
+                <COStatusActions
+                  co={co}
+                  isGC={isGC}
+                  isTC={isTC}
+                  isFC={isFC}
+                  projectId={projectId ?? ''}
+                  onRefresh={refreshDetail}
+                />
+
                 {/* Financials */}
                 <div className="rounded-lg border border-border bg-card">
                   <div className="px-4 py-3 border-b border-border">
