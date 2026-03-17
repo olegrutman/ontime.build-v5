@@ -28,11 +28,6 @@ export interface ProjectFinancials {
 
   // Aggregated metrics
   billedToDate: number;
-  workOrderTotal: number;
-  approvedWOCount: number;
-  workOrderFCCost: number;
-  tcInternalCostTotal: number;
-  fcWorkOrderEarnings: number;
   retainageAmount: number;
   outstanding: number;
   materialEstimate: number;
