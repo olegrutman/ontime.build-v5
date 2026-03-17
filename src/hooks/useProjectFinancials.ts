@@ -325,7 +325,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           : true)
       );
       const contractMatEst = materialContract ? (materialContract as any).material_estimate_total : null;
-      setMaterialEstimate(contractMatEst != null ? contractMatEst : (estSum > 0 ? estSum : matEstimate));
+      setMaterialEstimate(contractMatEst != null ? contractMatEst : estSum);
 
       const { data: orderedPOs } = await supabase
         .from('purchase_orders')
