@@ -113,7 +113,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [materialOrderedPending, setMaterialOrderedPending] = useState(0);
   const [actualLaborCost, setActualLaborCost] = useState(0);
   const [laborBudget, setLaborBudget] = useState<number | null>(null);
-  const [approvedWOCount, setApprovedWOCount] = useState(0);
+  
   const [ownerContractValue, setOwnerContractValue] = useState<number | null>(null);
   const [materialMarkupType, setMaterialMarkupType] = useState<string | null>(null);
   const [materialMarkupValue, setMaterialMarkupValue] = useState<number | null>(null);
