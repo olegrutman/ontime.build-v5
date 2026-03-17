@@ -43,8 +43,6 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [billedToDate, setBilledToDate] = useState(0);
-  const [viewerRole, setViewerRole] = useState<string>('Trade Contractor');
-  const [workOrderTotal, setWorkOrderTotal] = useState(0);
   const [userOrgIds, setUserOrgIds] = useState<string[]>([]);
   const [fcParticipants, setFcParticipants] = useState<{ org_id: string; org_name: string }[]>([]);
   
