@@ -480,7 +480,6 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
                   <TableBody>
                     {items.map(item => {
                       const badge = TYPE_BADGE[item.item_type] || TYPE_BADGE.task;
-                      const wo = workOrders.find(w => w.id === item.work_order_id);
                       return (
                         <TableRow
                           key={item.id}
@@ -490,7 +489,6 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
                           <TableCell>
                             <div className="flex flex-col">
                               <span className="font-medium text-sm">{item.title}</span>
-                              {wo && <span className="text-[10px] text-muted-foreground">WO: {wo.title}</span>}
                               {item.sov_item && <span className="text-[10px] text-muted-foreground">SOV: {item.sov_item.item_name}</span>}
                             </div>
                           </TableCell>
