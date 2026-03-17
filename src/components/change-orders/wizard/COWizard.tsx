@@ -94,7 +94,15 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
     if (s.key === 'location') return data.locationTag.trim().length > 0;
     if (s.key === 'reason')   return !!data.reason && (data.reason !== 'other' || data.reasonNote.trim().length > 0);
     if (s.key === 'config') {
-      if (role === 'GC') return !!data.assignedToOrgId;
+      if (role === 'GC') {
+        if (!data.assignedToOrgId) return false;
+        if (data.pricingType === 'nte' && (!data.nteCap || parseFloat(data.nteCap) <= 0)) return false;
+        if (data.materialsNeeded && !data.materialsResponsible) return false;
+        if (data.equipmentNeeded && !data.equipmentResponsible) return false;
+      }
+      if (role === 'TC') {
+        if (data.pricingType === 'nte' && (!data.nteCap || parseFloat(data.nteCap) <= 0)) return false;
+      }
       return true;
     }
     return true;
