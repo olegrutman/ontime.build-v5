@@ -176,8 +176,6 @@ function AppRoutes() {
             <Route path="/orders" element={<RequireAuth><MaterialOrders /></RequireAuth>} />
             <Route path="/purchase-orders" element={<RequireAuth><PurchaseOrders /></RequireAuth>} />
             <Route path="/reminders" element={<RequireAuth><Reminders /></RequireAuth>} />
-            <Route path="/change-order/:id" element={<RequireAuth><ChangeOrderDetailPage /></RequireAuth>} />
-            <Route path="/work-item/:id" element={<RequireAuth><WorkItemPage /></RequireAuth>} />
             
             <Route path="/supplier/inventory" element={<RequireAuth><SupplierInventory /></RequireAuth>} />
             <Route path="/supplier/estimates" element={<RequireAuth><SupplierProjectEstimates /></RequireAuth>} />

@@ -1,4 +1,4 @@
-import { LocationData } from './changeOrderProject';
+import { LocationData } from './location';
 
 export type RFIStatus = 'OPEN' | 'ANSWERED' | 'CLOSED';
 export type RFIPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
