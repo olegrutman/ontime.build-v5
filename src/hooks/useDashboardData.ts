@@ -207,14 +207,7 @@ export function useDashboardData(): DashboardData {
               .select('project_id, to_role, from_role, contract_sum, from_org_id, to_org_id, trade, owner_contract_value')
               .in('project_id', projectIds)
           : Promise.resolve({ data: [] }),
-        projectIds.length > 0
-          ? supabase
-              .from('work_items')
-              .select('id, project_id, title')
-              .in('project_id', projectIds)
-              .eq('item_type', 'CHANGE_WORK')
-              .eq('state', 'PRICED')
-          : Promise.resolve({ data: [] }),
+        Promise.resolve({ data: [] }),
         projectIds.length > 0
           ? supabase
               .from('invoices')
