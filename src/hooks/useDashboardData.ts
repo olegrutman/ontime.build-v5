@@ -82,7 +82,6 @@ interface DashboardData {
     archived: number;
   };
   needsAttention: {
-    changeOrders: number;
     invoices: number;
     pendingInvites: number;
   };
