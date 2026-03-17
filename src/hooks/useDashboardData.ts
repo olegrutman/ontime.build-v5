@@ -359,9 +359,8 @@ export function useDashboardData(): DashboardData {
             : null;
         }
 
-        const projectPendingCOs = pendingCOs.filter(co => co.project_id === project.id).length;
         const projectPendingInvoices = pendingInvoices.filter(inv => inv.project_id === project.id).length;
-        const pendingActions = (orgType === 'GC' || orgType === 'TC') ? projectPendingCOs + projectPendingInvoices : 0;
+        const pendingActions = (orgType === 'GC' || orgType === 'TC') ? projectPendingInvoices : 0;
 
         return {
           ...project,
