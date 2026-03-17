@@ -97,11 +97,8 @@ export function useProjectQuickStats(
           .select('id, status, due_date')
           .eq('project_id', projectId)
           .eq('status', 'OPEN'),
-        // Work orders
-        supabase
-          .from('work_items')
-          .select('id, state, organization_id')
-          .eq('project_id', projectId),
+        // Work orders removed
+        Promise.resolve({ data: [] }),
         // Purchase orders
         supabase
           .from('purchase_orders')

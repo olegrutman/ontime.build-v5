@@ -647,8 +647,6 @@ export function useDashboardData(): DashboardData {
         totalRevenue,
         totalCosts,
         profitMargin,
-        totalWorkOrders,
-        totalWorkOrderValue,
         totalBilled,
         outstandingBilling,
         potentialProfit,
