@@ -348,7 +348,7 @@ export default function ProjectHome() {
                             <ProfitCard financials={financials} projectId={id!} />
                           </div>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <WorkOrderSummaryCard projectId={id!} />
+                            <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
                             <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
                           </div>
                           {projectSupplierOrgId && (
