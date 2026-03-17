@@ -82,6 +82,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
     setData(prev => ({ ...prev, ...patch }));
   }
 
+  function canAdvance(): boolean {
     const s = ALL_STEPS[step];
     if (s.key === 'catalog')  return data.selectedItems.length > 0;
     if (s.key === 'location') return data.locationTag.trim().length > 0;
