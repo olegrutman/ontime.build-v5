@@ -338,9 +338,6 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       const woTotal = approvedWOs.reduce((sum: number, wo: any) => sum + (wo.final_price || 0), 0);
       setWorkOrderTotal(woTotal);
       setApprovedWOCount(approvedWOs.length);
-      setRecentWorkOrders(wos.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5).map(wo => ({
-        id: wo.id, title: wo.title, status: wo.status, created_at: wo.created_at, final_price: wo.final_price,
-      })));
 
       // Material estimates vs ordered
       const matEstimate = wos.reduce((sum, wo) => sum + (wo.material_total || 0), 0);
