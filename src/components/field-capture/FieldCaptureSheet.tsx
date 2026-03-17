@@ -75,7 +75,7 @@ export function FieldCaptureSheet({ open, onOpenChange, projectId, organizationI
   const handleSave = async () => {
     setSaving(true);
     try {
-      await createCapture.mutateAsync({
+      const result = await createCapture.mutateAsync({
         project_id: projectId,
         organization_id: organizationId,
         description: description || undefined,
@@ -87,7 +87,16 @@ export function FieldCaptureSheet({ open, onOpenChange, projectId, organizationI
         device_info: { userAgent: navigator.userAgent },
       });
       toast({ title: 'Issue captured ✓' });
-      onOpenChange(false);
+      if (onCaptureComplete && result) {
+        onCaptureComplete(result.id, {
+          description: description || undefined,
+          photo_url: result.photo_url,
+          voice_note_url: result.voice_note_url,
+          reason_category: reason,
+        });
+      } else {
+        onOpenChange(false);
+      }
     } catch (err: any) {
       toast({ title: 'Failed to save capture', description: err.message, variant: 'destructive' });
     } finally {
