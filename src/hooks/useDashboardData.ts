@@ -433,7 +433,6 @@ export function useDashboardData(): DashboardData {
       // Build recent docs
       const recentDocsList: RecentDoc[] = [];
       const recentInvoices = (recentInvoicesResult.data || []) as any[];
-      const recentCOs = (recentCOsResult.data || []) as any[];
 
       recentInvoices.forEach((inv: any) => {
         const proj = allProjects.find(p => p.id === inv.project_id);
@@ -446,20 +445,6 @@ export function useDashboardData(): DashboardData {
           created_at: inv.created_at,
           projectName: proj?.name || 'Unknown',
           projectId: inv.project_id,
-        });
-      });
-
-      recentCOs.forEach((co: any) => {
-        const proj = allProjects.find(p => p.id === co.project_id);
-        recentDocsList.push({
-          id: co.id,
-          type: 'change_order',
-          title: co.title || 'Change Order',
-          status: co.status,
-          amount: co.final_price,
-          created_at: co.created_at,
-          projectName: proj?.name || 'Unknown',
-          projectId: co.project_id,
         });
       });
 
