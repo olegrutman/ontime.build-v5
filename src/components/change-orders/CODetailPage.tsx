@@ -19,6 +19,9 @@ import {
 import type { COStatus, COReasonCode, COCreatedByRole } from '@/types/changeOrder';
 import { cn } from '@/lib/utils';
 import { COLineItemRow } from './COLineItemRow';
+import { COMaterialsPanel } from './COMaterialsPanel';
+import { COEquipmentPanel } from './COEquipmentPanel';
+import { COStatusActions } from './COStatusActions';
 
 const STATUS_BADGE: Record<COStatus, string> = {
   draft:      'bg-gray-100 text-gray-700 border-gray-200',
