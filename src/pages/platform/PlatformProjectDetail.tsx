@@ -588,7 +588,60 @@ export default function PlatformProjectDetail() {
         </CardContent>
       </Card>
 
-      {/* Team */}
+      {/* Work Orders */}
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Wrench className="h-4 w-4" /> Work Orders
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Title</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Price</TableHead>
+                <TableHead>Created</TableHead>
+                {platformRole === 'PLATFORM_OWNER' && <TableHead className="w-[60px]" />}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {workOrders.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={platformRole === 'PLATFORM_OWNER' ? 5 : 4} className="text-center py-4 text-muted-foreground">No work orders</TableCell>
+                </TableRow>
+              ) : (
+                workOrders.map((wo) => (
+                  <TableRow key={wo.id}>
+                    <TableCell className="font-medium">{wo.title}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs capitalize">{wo.status.toLowerCase().replace('_', ' ')}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">{formatCurrency(wo.final_price)}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {format(new Date(wo.created_at), 'MMM d, yyyy')}
+                    </TableCell>
+                    {platformRole === 'PLATFORM_OWNER' && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => { setDeleteWOTarget(wo); setDeleteWOOpen(true); }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-base">Team / Participants</CardTitle>
