@@ -481,6 +481,7 @@ export function useChangeOrderDetail(coId: string | null) {
 
   return {
     co,
+    memberCOs,
     lineItems,
     laborEntries,
     materials,

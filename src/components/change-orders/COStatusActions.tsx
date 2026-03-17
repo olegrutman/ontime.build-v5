@@ -180,9 +180,10 @@ export function COStatusActions({
     }
   }
 
-  const isCreator  = co.created_by_role === (isGC ? 'GC' : isTC ? 'TC' : 'FC');
-  const canShare   = isCreator && status === 'draft' && !co.draft_shared_with_next;
-  const canSubmit  = (isTC || isFC) && (status === 'draft' || status === 'shared' || status === 'combined');
+  const isCreator       = co.created_by_role === (isGC ? 'GC' : isTC ? 'TC' : 'FC');
+  const isCombinedParent = status === 'combined' && !co.combined_co_id;
+  const canShare   = isCreator && (status === 'draft' || isCombinedParent) && !co.draft_shared_with_next;
+  const canSubmit  = (isTC || isFC) && (status === 'draft' || status === 'shared' || isCombinedParent);
   const canRecall  = (isTC || isFC) && status === 'submitted';
   const canApprove = (isGC && status === 'submitted') || (isTC && status === 'submitted' && co.created_by_role === 'FC');
   const canReject  = canApprove;
