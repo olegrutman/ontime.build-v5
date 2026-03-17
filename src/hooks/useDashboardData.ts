@@ -245,7 +245,6 @@ export function useDashboardData(): DashboardData {
       ]);
 
       const contracts = contractsResult.data || [];
-      const pendingCOs = (pendingCOsResult.data || []) as { id: string; project_id: string | null; title: string | null }[];
       const pendingInvoices = ((pendingInvoicesResult.data || []) as any[]).map((inv: any) => ({
         id: inv.id,
         project_id: inv.project_id,
