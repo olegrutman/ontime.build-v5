@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Search, X, ChevronRight } from 'lucide-react';
 import type { CatalogItem } from '@/types/quickLog';
 import { DIVISION_LABELS } from '@/types/quickLog';
-import type { useWorkOrderCatalog } from '@/hooks/useWorkOrderCatalog';
+// CatalogBrowser expects a catalog prop with divisions, search method
 
 type DrillLevel = 'division' | 'category' | 'group' | 'item';
 
