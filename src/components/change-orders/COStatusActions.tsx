@@ -19,17 +19,19 @@ import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { sendCONotification, buildCONotification } from '@/lib/coNotifications';
 import { toast } from 'sonner';
 import type { ChangeOrder, COStatus } from '@/types/changeOrder';
 import { cn } from '@/lib/utils';
 
 interface COStatusActionsProps {
-  co:        ChangeOrder;
-  isGC:      boolean;
-  isTC:      boolean;
-  isFC:      boolean;
-  projectId: string;
-  onRefresh: () => void;
+  co:         ChangeOrder;
+  isGC:       boolean;
+  isTC:       boolean;
+  isFC:       boolean;
+  projectId:  string;
+  financials?: { grandTotal: number } | null;
+  onRefresh:  () => void;
 }
 
 export function COStatusActions({
@@ -38,6 +40,7 @@ export function COStatusActions({
   isTC,
   isFC,
   projectId,
+  financials,
   onRefresh,
 }: COStatusActionsProps) {
   const { submitCO, approveCO, rejectCO } = useChangeOrderDetail(co.id);
@@ -65,12 +68,43 @@ export function COStatusActions({
     });
   }
 
+  async function notifyAssignedParty(type: string, amount?: number) {
+    if (!co.assigned_to_org_id) return;
+    try {
+      const { data: members } = await supabase
+        .from('user_org_roles')
+        .select('user_id')
+        .eq('organization_id', co.assigned_to_org_id)
+        .limit(10);
+      if (!members || members.length === 0) return;
+
+      const { title, body } = buildCONotification(type, co.title, amount);
+      await Promise.allSettled(
+        members.map(m =>
+          sendCONotification({
+            recipient_user_id: m.user_id,
+            recipient_org_id: co.assigned_to_org_id!,
+            co_id: co.id,
+            project_id: projectId,
+            type,
+            title,
+            body,
+            amount,
+          })
+        )
+      );
+    } catch (err) {
+      console.warn('Failed to notify party:', err);
+    }
+  }
+
   async function doShare() {
     setActing(true);
     try {
       await shareCO.mutateAsync(co.id);
       toast.success('CO shared');
       await logActivity('shared');
+      await notifyAssignedParty('CO_SHARED');
       onRefresh();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to share');
@@ -85,6 +119,7 @@ export function COStatusActions({
       await submitCO.mutateAsync(co.id);
       toast.success('CO submitted for approval');
       await logActivity('submitted');
+      await notifyAssignedParty('CHANGE_SUBMITTED', financials?.grandTotal);
       onRefresh();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to submit');
@@ -99,6 +134,7 @@ export function COStatusActions({
       await approveCO.mutateAsync(co.id);
       toast.success('CO approved');
       await logActivity('approved');
+      await notifyAssignedParty('CHANGE_APPROVED');
       setApproveOpen(false);
       onRefresh();
     } catch (err: any) {
@@ -115,6 +151,7 @@ export function COStatusActions({
       await rejectCO.mutateAsync({ coId: co.id, note: rejectNote.trim() });
       toast.success('CO rejected');
       await logActivity('rejected', rejectNote.trim());
+      await notifyAssignedParty('CHANGE_REJECTED');
       setRejectOpen(false);
       setRejectNote('');
       onRefresh();
@@ -134,6 +171,7 @@ export function COStatusActions({
       });
       toast.success('CO recalled');
       await logActivity('recalled');
+      await notifyAssignedParty('CO_RECALLED');
       onRefresh();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to recall');

@@ -261,6 +261,7 @@ export function CODetailPage() {
                   isTC={isTC}
                   isFC={isFC}
                   projectId={projectId ?? ''}
+                  financials={financials}
                   onRefresh={refreshDetail}
                 />
 

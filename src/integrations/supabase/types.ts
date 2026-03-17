@@ -4906,6 +4906,11 @@ export type Database = {
         | "RFI_ANSWERED"
         | "JOIN_REQUEST"
         | "NUDGE"
+        | "NTE_REQUESTED"
+        | "NTE_APPROVED"
+        | "NTE_REJECTED"
+        | "CO_SHARED"
+        | "CO_RECALLED"
       order_status:
         | "DRAFT"
         | "SUBMITTED"
@@ -5094,6 +5099,11 @@ export const Constants = {
         "RFI_ANSWERED",
         "JOIN_REQUEST",
         "NUDGE",
+        "NTE_REQUESTED",
+        "NTE_APPROVED",
+        "NTE_REJECTED",
+        "CO_SHARED",
+        "CO_RECALLED",
       ],
       order_status: [
         "DRAFT",

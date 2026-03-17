@@ -15,6 +15,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Loader2, AlertTriangle, Check, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { sendCONotification, buildCONotification } from '@/lib/coNotifications';
+import { supabase } from '@/integrations/supabase/client';
 import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { toast } from 'sonner';
 import type { ChangeOrder, CONTELogEntry } from '@/types/changeOrder';
@@ -63,6 +65,53 @@ export function CONTEPanel({
   const pendingRequest = nteLog.find(e => !e.approved_at && !e.rejected_at);
   const hasPending = !!pendingRequest;
 
+  async function notifyCreator(type: string, amount?: number) {
+    try {
+      const { data: creator } = await supabase
+        .from('change_orders')
+        .select('created_by_user_id, title, project_id, org_id')
+        .eq('id', co.id)
+        .single();
+      if (!creator) return;
+      const { title, body } = buildCONotification(type, creator.title, amount);
+      await sendCONotification({
+        recipient_user_id: creator.created_by_user_id,
+        recipient_org_id: creator.org_id,
+        co_id: co.id,
+        project_id: creator.project_id,
+        type, title, body, amount,
+      });
+    } catch (err) {
+      console.warn('NTE notification failed:', err);
+    }
+  }
+
+  async function notifyGC(type: string, amount?: number) {
+    if (!co.assigned_to_org_id) return;
+    try {
+      const { data: members } = await supabase
+        .from('user_org_roles')
+        .select('user_id')
+        .eq('organization_id', co.assigned_to_org_id)
+        .limit(5);
+      if (!members || members.length === 0) return;
+      const { title, body } = buildCONotification(type, co.title, amount);
+      await Promise.allSettled(
+        members.map(m =>
+          sendCONotification({
+            recipient_user_id: m.user_id,
+            recipient_org_id: co.assigned_to_org_id!,
+            co_id: co.id,
+            project_id: co.project_id,
+            type, title, body, amount,
+          })
+        )
+      );
+    } catch (err) {
+      console.warn('NTE GC notification failed:', err);
+    }
+  }
+
   async function doRequest() {
     const amount = parseFloat(increaseAmt);
     if (!amount || amount <= 0) return;
@@ -73,6 +122,7 @@ export function CONTEPanel({
         runningTotal: usedAmount,
       });
       toast.success('Increase request sent to GC');
+      await notifyGC('NTE_REQUESTED', amount);
       setRequestOpen(false);
       setIncreaseAmt('');
       setIncreaseNote('');
@@ -93,6 +143,7 @@ export function CONTEPanel({
         requestedIncrease: pendingRequest.requested_increase,
       });
       toast.success(`NTE cap increased to $${fmt(cap + pendingRequest.requested_increase)}`);
+      await notifyCreator('NTE_APPROVED', pendingRequest.requested_increase);
       setApproveId(null);
       onRefresh();
     } catch (err: any) {
@@ -111,6 +162,7 @@ export function CONTEPanel({
         note: rejectNote.trim(),
       });
       toast.success('Increase request declined');
+      await notifyCreator('NTE_REJECTED');
       setRejectId(null);
       setRejectNote('');
       onRefresh();
