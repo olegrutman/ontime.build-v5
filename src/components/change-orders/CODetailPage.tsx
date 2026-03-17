@@ -247,6 +247,9 @@ export function CODetailPage() {
                     onRefresh={refreshDetail}
                   />
                 )}
+
+                {/* Activity feed */}
+                <COActivityFeed activity={activity} />
               </div>
 
               {/* Sidebar column */}
