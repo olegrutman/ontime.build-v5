@@ -38,6 +38,12 @@ const typeConfig: Record<string, { emoji: string; borderColor: string; badge: st
     badge: 'Respond',
     badgeStyle: 'bg-blue-50 text-blue-700',
   },
+  sent_invite: {
+    emoji: '📤',
+    borderColor: 'border-l-amber-500',
+    badge: 'Awaiting',
+    badgeStyle: 'bg-amber-50 text-amber-700',
+  },
 };
 
 export function DashboardNeedsAttentionCard({ attentionItems, pendingInvites, onRefresh }: Props) {
