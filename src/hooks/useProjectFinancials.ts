@@ -349,9 +349,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       setMaterialDelivered(calcPOTotal(deliveredPOs));
       setMaterialOrderedPending(calcPOTotal(pendingPOs));
 
-      // Actual labor cost from approved/contracted work orders (reuse already-filtered list)
-      const laborCost = approvedWOs.reduce((sum, wo: any) => sum + (wo.labor_total || 0), 0);
-      setActualLaborCost(laborCost);
+      setActualLaborCost(0);
 
       // Labor budget from primary contract
       const primaryC = contractsWithNames.find(c =>
