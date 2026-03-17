@@ -20,7 +20,6 @@ import { BottomNav } from '@/components/layout/BottomNav';
 import { 
   ProjectTopBar,
   MobileProjectHeader,
-  WorkOrdersTab,
   PurchaseOrdersTab,
   AttentionBanner,
   SupplierEstimatesSection,
@@ -30,7 +29,6 @@ import {
   MaterialsBudgetStatusCard,
   ProfitCard,
   MaterialMarkupEditor,
-  WorkOrderSummaryCard,
   CriticalScheduleCard,
 } from '@/components/project';
 import { ContractHeroCard } from '@/components/project/ContractHeroCard';
