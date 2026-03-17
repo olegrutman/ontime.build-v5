@@ -1,110 +1,34 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-## Features Built
+# Analysis: "Needs Attention" Card Bugs
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
+## Bug 1: Stale fallback to deleted `change_order` config (line 100)
 
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
+```typescript
+const config = typeConfig[item.type] || typeConfig.change_order;
+```
 
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
+The fallback `typeConfig.change_order` was removed in the last cleanup, so this evaluates to `undefined`. If an unknown type somehow appeared, the component would crash trying to read `.borderColor` from `undefined`. The fallback should be `typeConfig.invoice` or simply removed since the types are now constrained to `'invoice' | 'invite'`.
 
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
+**Fix**: Change line 100 to `const config = typeConfig[item.type];` — the union type guarantees a match.
 
----
+## Bug 2: Duplicate invites shown
 
-# Field Capture Mode — IMPLEMENTED
+Pending invites are passed to the card in **two** separate props: `attentionItems` (which includes items with `type: 'invite'` from sent invites at lines 309-319 of the hook) and `pendingInvites` (incoming invites at line 293). The card merges both arrays (lines 62-78), so invites appear in both lists if the same project invite exists in both queries. However, these are actually different things — `attentionItems` invites are **outgoing** invites the user sent, while `pendingInvites` are **incoming** invites to respond to. The naming is confusing but not a data duplication bug.
 
-## Overview
-Mobile-first feature enabling Field Crew to instantly capture jobsite issues (photo, voice note, location, reason category) in under 10 seconds.
+**No code change needed**, but the outgoing invite items should perhaps have a different label than "invite" to distinguish them. Low priority.
 
-## Database
-- `field_captures` table with RLS (project participants SELECT, creator INSERT/UPDATE)
-- `field-captures` storage bucket (public read, authenticated upload)
-- Realtime enabled via `supabase_realtime` publication
+## Bug 3: Badge count includes both `attentionItems` and `pendingInvites` but only 5 items rendered
 
-## Frontend Components
-| File | Purpose |
-|------|---------|
-| `src/hooks/useFieldCaptures.ts` | React Query hook with realtime, create/update mutations, media upload |
-| `src/components/field-capture/FieldCaptureSheet.tsx` | Full-screen capture UI (photo, voice, text, reason chips) |
-| `src/components/field-capture/CapturePhotoInput.tsx` | Camera-first photo capture with large touch target |
-| `src/components/field-capture/CaptureVoiceInput.tsx` | Hold-to-record voice note (MediaRecorder API) |
-| `src/components/field-capture/CaptureReasonChips.tsx` | Tap-to-select reason category chips |
-| `src/components/field-capture/FieldCaptureList.tsx` | List of captures with "+ Capture" button |
-| `src/components/field-capture/FieldCaptureCard.tsx` | Individual capture card with "Convert to Task" button |
+The badge at line 87 shows `allItems.length` (total count), but line 99 renders `allItems.slice(0, 5)`. If there are more than 5 items, the badge implies more exist but there's no "View all" link or indication of truncation.
 
-## Entry Points
-1. **BottomNav FAB** — Amber "Capture" button on project pages (mobile)
-2. **Daily Log tab** — Field Captures section for the active date
+**Fix**: Add a "View all" link or "+N more" indicator when `allItems.length > 5`.
 
-## Feature Gate
-- `field_capture` added to `FeatureKey` type and labels
+## Summary of Fixes
 
-## Auto-captured Data
-- Timestamp, user ID, org ID, GPS coordinates, device info (userAgent)
+### `src/components/dashboard/DashboardNeedsAttentionCard.tsx`
+1. **Line 100**: Remove stale `typeConfig.change_order` fallback → `const config = typeConfig[item.type];`
+2. **After the `.slice(0,5).map()` block**: Add a "+N more" indicator when items exceed 5
 
-## Files Created/Modified
-| File | Action |
-|------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+Both are small, safe changes.
 
----
-
-# Multi-Item Work Order — IMPLEMENTED
-
-## Overview
-Transforms Work Orders from single-task entities into **package containers** holding multiple task line items, mirroring how POs hold multiple material lines.
-
-## Database
-- `work_order_tasks` table with RLS (project participants CRUD) linked to `change_order_projects` header via `work_order_id`
-- Status validation trigger (`pending`, `in_progress`, `complete`, `skipped`)
-- Realtime enabled via `supabase_realtime` publication
-
-## Frontend Components
-| File | Purpose |
-|------|---------|
-| `src/types/workOrderTask.ts` | TypeScript types for work order tasks |
-| `src/hooks/useWorkOrderTasks.ts` | React Query hook with realtime, CRUD mutations |
-| `src/components/work-order-tasks/WorkOrderTaskList.tsx` | Task list with completion counter |
-| `src/components/work-order-tasks/WorkOrderTaskCard.tsx` | Individual task card with status, location, menu |
-| `src/components/work-order-tasks/AddTaskSheet.tsx` | Mobile-first bottom sheet for adding/editing tasks |
-| `src/components/work-order-tasks/TaskQuickAdd.tsx` | Inline quick-add input for FC users |
-
-## Integration Points
-- `ChangeOrderDetailPage.tsx` — Tasks section after header card, FC quick-add below
-- `useChangeOrderRealtime.ts` — Subscribes to `work_order_tasks` changes
