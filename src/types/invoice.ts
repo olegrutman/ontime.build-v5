@@ -30,7 +30,7 @@ export interface Invoice {
 export interface InvoiceLineItem {
   id: string;
   invoice_id: string;
-  work_item_id: string | null;
+  sov_item_id?: string | null;
   description: string;
   scheduled_value: number;
   previous_billed: number;

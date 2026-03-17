@@ -61,12 +61,7 @@ export function useFinancialTrends() {
         .in('project_id', projectIds)
         .gte('created_at', sixMonthsAgo);
 
-      // Fetch work orders for completion trend
-      const { data: workOrders } = await supabase
-        .from('change_order_projects')
-        .select('status, created_at, updated_at')
-        .in('project_id', projectIds)
-        .gte('created_at', sixMonthsAgo);
+      // Work orders removed
 
       // Build 6-month buckets
       const months: string[] = [];
@@ -89,21 +84,11 @@ export function useFinancialTrends() {
         };
       });
 
-      const woByMonth: MonthlyWorkOrders[] = months.map(m => {
-        const created = (workOrders || []).filter(
-          wo => format(new Date(wo.created_at), 'yyyy-MM') === m
-        ).length;
-        const approved = (workOrders || []).filter(
-          wo =>
-            ['approved', 'contracted'].includes(wo.status) &&
-            format(new Date(wo.updated_at), 'yyyy-MM') === m
-        ).length;
-        return {
-          month: format(new Date(m + '-01'), 'MMM'),
-          created,
-          approved,
-        };
-      });
+      const woByMonth: MonthlyWorkOrders[] = months.map(m => ({
+        month: format(new Date(m + '-01'), 'MMM'),
+        created: 0,
+        approved: 0,
+      }));
 
       setSpendTrend(spendByMonth);
       setWoTrend(woByMonth);

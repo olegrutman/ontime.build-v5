@@ -19,20 +19,7 @@ export function useProjectRealtime(projectId: string | undefined) {
 
     const channel = supabase
       .channel(`project-realtime-${projectId}`)
-      // Work orders
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'change_order_projects',
-          filter: `project_id=eq.${projectId}`,
-        },
-        () => {
-          queryClient.invalidateQueries({ queryKey: ['change-order-projects'] });
-          bump();
-        }
-      )
+      
       // Purchase orders
       .on(
         'postgres_changes',

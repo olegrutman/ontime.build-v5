@@ -81,8 +81,7 @@ const handler = async (req: Request): Promise<Response> => {
         *,
         organization:organizations!purchase_orders_organization_id_fkey(name, org_code),
         supplier:suppliers(name, supplier_code),
-        project:projects(name),
-        work_item:work_items(title)
+        project:projects(name)
       `)
       .eq("id", po_id)
       .single();
@@ -118,7 +117,7 @@ const handler = async (req: Request): Promise<Response> => {
       </tr>
     `).join("");
 
-    const projectName = po.project?.name || po.work_item?.title || "N/A";
+    const projectName = po.project?.name || "N/A";
     const totalItems = lineItems?.length || 0;
 
     // Send email via Resend

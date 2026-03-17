@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { AddTeamMemberDialog } from '@/components/project/AddTeamMemberDialog';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList } from 'lucide-react';
 
 interface SupplierOperationalSummaryProps {
   projectId: string;
@@ -30,12 +29,6 @@ interface InvoiceRow {
   total_amount: number;
 }
 
-interface WorkOrderRow {
-  id: string;
-  title: string;
-  status: string;
-  created_at: string;
-}
 
 const roleDotColors: Record<string, string> = {
   'General Contractor': 'bg-blue-500',
@@ -81,12 +74,10 @@ export function SupplierOperationalSummary({ projectId, supplierOrgId, onNavigat
   const { userOrgRoles } = useAuth();
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
-  const [workOrders, setWorkOrders] = useState<WorkOrderRow[]>([]);
   const [openRfiCount, setOpenRfiCount] = useState(0);
   const [scope, setScope] = useState<{ scope_description: string | null } | null>(null);
   const [loadingTeam, setLoadingTeam] = useState(true);
   const [loadingInvoices, setLoadingInvoices] = useState(true);
-  const [loadingWOs, setLoadingWOs] = useState(true);
   const [loadingRfis, setLoadingRfis] = useState(true);
   const [loadingScope, setLoadingScope] = useState(true);
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
@@ -138,28 +129,7 @@ export function SupplierOperationalSummary({ projectId, supplierOrgId, onNavigat
     };
     fetchInvoices();
 
-    // Fetch work orders where supplier is a participant
-    const fetchWorkOrders = async () => {
-      const { data: participantRows } = await supabase
-        .from('change_order_participants')
-        .select('change_order_id')
-        .eq('organization_id', supplierOrgId)
-        .eq('is_active', true);
-
-      if (participantRows && participantRows.length > 0) {
-        const coIds = participantRows.map(r => r.change_order_id);
-        const { data: woData } = await supabase
-          .from('change_order_projects')
-          .select('id, title, status, created_at')
-          .eq('project_id', projectId)
-          .in('id', coIds)
-          .order('created_at', { ascending: false })
-          .limit(5);
-        setWorkOrders(woData || []);
-      }
-      setLoadingWOs(false);
-    };
-    fetchWorkOrders();
+    // Work orders removed — no longer tracked
 
     // Fetch open RFIs assigned to this supplier
     const fetchRfiCount = async () => {
@@ -195,35 +165,6 @@ export function SupplierOperationalSummary({ projectId, supplierOrgId, onNavigat
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      {/* Work Orders (supplier is involved in) */}
-      <div className="border bg-card p-3">
-        <div className="flex items-center justify-between mb-2">
-          <button onClick={() => onNavigate('work-orders')} className="flex items-center gap-1.5 hover:text-primary transition-colors">
-            <ClipboardList className="h-3.5 w-3.5 text-muted-foreground" />
-            <span className="text-[11px] uppercase tracking-wide text-muted-foreground font-medium">Work Orders</span>
-          </button>
-          <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px]" onClick={() => onNavigate('work-orders')}>View All</Button>
-        </div>
-        {loadingWOs ? (
-          <Skeleton className="h-12" />
-        ) : workOrders.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-2">No work orders</p>
-        ) : (
-          <div className="space-y-1">
-            {workOrders.map(wo => (
-              <button
-                key={wo.id}
-                onClick={() => navigate(`/work-orders/${wo.id}`)}
-                className="w-full flex items-center justify-between py-1.5 px-1 hover:bg-accent/50 rounded text-left transition-colors"
-              >
-                <span className="text-sm truncate flex-1 mr-2">{wo.title}</span>
-                <StatusBadge status={wo.status} />
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
       {/* Recent Invoices */}
       <div className="border bg-card p-3">
         <div className="flex items-center justify-between mb-2">

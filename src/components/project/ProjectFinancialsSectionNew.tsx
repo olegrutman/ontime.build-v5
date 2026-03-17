@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { DollarSign, TrendingUp, Receipt, Percent, BarChart3, AlertCircle, Plus, Pencil, Check, X, ClipboardList, Package } from 'lucide-react';
+import { DollarSign, TrendingUp, Receipt, Percent, BarChart3, AlertCircle, Plus, Pencil, Check, X, Package } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,8 +43,6 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [loading, setLoading] = useState(true);
   const [billedToDate, setBilledToDate] = useState(0);
-  const [viewerRole, setViewerRole] = useState<string>('Trade Contractor');
-  const [workOrderTotal, setWorkOrderTotal] = useState(0);
   const [userOrgIds, setUserOrgIds] = useState<string[]>([]);
   const [fcParticipants, setFcParticipants] = useState<{ org_id: string; org_name: string }[]>([]);
   
@@ -60,17 +58,7 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
   const [newContractRetainage, setNewContractRetainage] = useState<number>(0);
   const [selectedFcOrgId, setSelectedFcOrgId] = useState<string>('');
   
-  // Work order FC cost state (TC view)
-  const [workOrderFCCost, setWorkOrderFCCost] = useState(0);
-  
-  // Material costs state (TC view)
-  const [materialCosts, setMaterialCosts] = useState<{
-    supplierCost: number;
-    markupAmount: number;
-    revenueTotal: number;
-    avgMarkupPercent: number;
-    workOrderCount: number;
-  }>({ supplierCost: 0, markupAmount: 0, revenueTotal: 0, avgMarkupPercent: 0, workOrderCount: 0 });
+  const [viewerRole, setViewerRole] = useState<string>('Trade Contractor');
 
   const fetchData = async () => {
     setLoading(true);
@@ -128,28 +116,6 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
     const totalBilled = (invoiceData || []).reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
     setBilledToDate(totalBilled);
     
-    // Fetch work order totals
-    const { data: workOrders } = await supabase
-      .from('change_order_projects')
-      .select('id, final_price')
-      .eq('project_id', projectId);
-    
-    const woTotal = (workOrders || []).reduce((sum, wo) => sum + (wo.final_price || 0), 0);
-    setWorkOrderTotal(woTotal);
-    
-    // Fetch FC labor costs for work orders (TC profit calculation)
-    if (viewerRole === 'Trade Contractor') {
-      const woIds = (workOrders || []).map(wo => wo.id);
-      if (woIds.length > 0) {
-        const { data: fcHours } = await supabase
-          .from('change_order_fc_hours')
-          .select('labor_total')
-          .in('change_order_id', woIds);
-        const fcTotal = (fcHours || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0);
-        setWorkOrderFCCost(fcTotal);
-      }
-    }
-    
     // Fetch FC participants for TC to create contracts
     const { data: fcData } = await supabase
       .from('project_participants')
@@ -163,57 +129,6 @@ export function ProjectFinancialsSectionNew({ projectId }: ProjectFinancialsSect
       org_name: p.organizations?.name || 'Unknown',
     }));
     setFcParticipants(fcList);
-    
-    // Fetch material costs from work orders with linked POs
-    const { data: workOrdersWithPO } = await supabase
-      .from('change_order_projects')
-      .select('id, linked_po_id, material_markup_type, material_markup_percent, material_markup_amount, material_total')
-      .eq('project_id', projectId)
-      .not('linked_po_id', 'is', null);
-
-    if (workOrdersWithPO && workOrdersWithPO.length > 0) {
-      const poIds = workOrdersWithPO.map(wo => wo.linked_po_id).filter(Boolean) as string[];
-      
-      // Fetch PO line item totals
-      const { data: poItems } = await supabase
-        .from('po_line_items')
-        .select('po_id, line_total')
-        .in('po_id', poIds);
-      
-      // Sum by PO
-      const poSubtotals = new Map<string, number>();
-      (poItems || []).forEach(item => {
-        const current = poSubtotals.get(item.po_id) || 0;
-        poSubtotals.set(item.po_id, current + (item.line_total || 0));
-      });
-      
-      // Calculate totals
-      let supplierCost = 0;
-      let markupAmount = 0;
-      let revenueTotal = 0;
-      
-      workOrdersWithPO.forEach(wo => {
-        const baseCost = poSubtotals.get(wo.linked_po_id!) || 0;
-        supplierCost += baseCost;
-        
-        const markup = wo.material_markup_type === 'percent'
-          ? baseCost * ((wo.material_markup_percent || 0) / 100)
-          : (wo.material_markup_amount || 0);
-        
-        markupAmount += markup;
-        revenueTotal += baseCost + markup;
-      });
-      
-      const avgMarkupPercent = supplierCost > 0 ? (markupAmount / supplierCost) * 100 : 0;
-      
-      setMaterialCosts({ 
-        supplierCost, 
-        markupAmount, 
-        revenueTotal, 
-        avgMarkupPercent,
-        workOrderCount: workOrdersWithPO.length
-      });
-    }
     
     setLoading(false);
   };
