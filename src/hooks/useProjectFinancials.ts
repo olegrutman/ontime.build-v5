@@ -471,7 +471,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
 
   return {
     loading, viewerRole, contracts, upstreamContract, downstreamContract, userOrgIds,
-    billedToDate, workOrderTotal, approvedWOCount, workOrderFCCost, tcInternalCostTotal, fcWorkOrderEarnings, retainageAmount, outstanding,
+    billedToDate, retainageAmount, outstanding,
     materialEstimate, materialOrdered, totalPaidToFC,
     materialEstimateTotal, approvedEstimateSum, isTCMaterialResponsible, isGCMaterialResponsible,
     isDesignatedSupplier, isTCSelfPerforming,
