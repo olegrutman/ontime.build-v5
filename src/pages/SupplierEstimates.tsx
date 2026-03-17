@@ -630,6 +630,6 @@ export default function SupplierEstimates() {
           </DialogContent>
         </Dialog>
       </main>
-    </div>
+    </AppLayout>
   );
 }
