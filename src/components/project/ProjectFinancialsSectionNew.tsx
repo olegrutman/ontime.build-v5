@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { DollarSign, TrendingUp, Receipt, Percent, BarChart3, AlertCircle, Plus, Pencil, Check, X, ClipboardList, Package } from 'lucide-react';
+import { DollarSign, TrendingUp, Receipt, Percent, BarChart3, AlertCircle, Plus, Pencil, Check, X, Package } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
