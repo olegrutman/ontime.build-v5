@@ -11,7 +11,7 @@ import { BottomNav } from '@/components/layout/BottomNav';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, MapPin, Calendar, Loader2 } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, Loader2, GitMerge, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
 import {
@@ -19,12 +19,13 @@ import {
   CO_REASON_LABELS,
   CO_REASON_COLORS,
 } from '@/types/changeOrder';
-import type { COStatus, COReasonCode, COCreatedByRole } from '@/types/changeOrder';
+import type { COStatus, COReasonCode, COCreatedByRole, ChangeOrder } from '@/types/changeOrder';
 import { cn } from '@/lib/utils';
 import { COLineItemRow } from './COLineItemRow';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COStatusActions } from './COStatusActions';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 const STATUS_BADGE: Record<COStatus, string> = {
   draft:      'bg-gray-100 text-gray-700 border-gray-200',
