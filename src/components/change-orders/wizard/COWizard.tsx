@@ -7,6 +7,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import type { COCreatedByRole, COReasonCode, COPricingType, WorkOrderCatalogItem } from '@/types/changeOrder';
+import { StepCatalog } from './StepCatalog';
+import { StepLocation } from './StepLocation';
 
 export interface COWizardData {
   selectedItems:        WorkOrderCatalogItem[];
@@ -75,6 +77,10 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
   const role: COCreatedByRole =
     currentRole === 'GC_PM' ? 'GC' :
     currentRole === 'TC_PM' ? 'TC' : 'FC';
+
+  function update(patch: Partial<COWizardData>) {
+    setData(prev => ({ ...prev, ...patch }));
+  }
 
   function canAdvance(): boolean {
     const s = ALL_STEPS[step];
@@ -188,9 +194,17 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
               </div>
             )}
 
-            <div className="text-sm text-muted-foreground py-8 text-center">
-              Step content for "{currentStep.label}" goes here.
-            </div>
+            {currentStep.key === 'catalog' && (
+              <StepCatalog data={data} onChange={update} />
+            )}
+            {currentStep.key === 'location' && (
+              <StepLocation data={data} onChange={update} projectId={projectId} />
+            )}
+            {(currentStep.key === 'reason' || currentStep.key === 'config') && (
+              <div className="text-sm text-muted-foreground py-8 text-center">
+                Step content for "{currentStep.label}" coming in next prompt.
+              </div>
+            )}
           </div>
 
           {/* Footer */}
