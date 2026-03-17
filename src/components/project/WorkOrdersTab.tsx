@@ -212,17 +212,23 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
 
+  const getWORoute = (co: any) => {
+    if (co.wo_mode === 'quick_capture' && co.status === 'draft') return `/field-capture-draft/${co.id}`;
+    return `/change-order/${co.id}`;
+  };
+
   const renderWorkOrderCard = (changeOrder: any) => {
+    const route = getWORoute(changeOrder);
     const hoverActions: HoverAction[] = [
-      { icon: <Eye className="h-4 w-4" />, label: 'View', onClick: () => navigate(`/change-order/${changeOrder.id}`) },
-      { icon: <Edit className="h-4 w-4" />, label: 'Edit', onClick: () => navigate(`/change-order/${changeOrder.id}`) },
+      { icon: <Eye className="h-4 w-4" />, label: 'View', onClick: () => navigate(route) },
+      { icon: <Edit className="h-4 w-4" />, label: 'Edit', onClick: () => navigate(route) },
     ];
     const isContracted = changeOrder.status === 'contracted';
     const creatorLabel = getCreatorLabel(changeOrder);
     const isYou = changeOrder.created_by === user?.id;
 
     return (
-      <Card key={changeOrder.id} className="group cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/change-order/${changeOrder.id}`)}>
+      <Card key={changeOrder.id} className="group cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(route)}>
         <CardContent className="p-4">
           <div className="flex items-start justify-between mb-2 gap-2">
             <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -418,6 +424,18 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
               await supabase.from('field_captures')
                 .update({ converted_work_order_id: draftId, status: 'converted' } as never)
                 .eq('id', captureId);
+              // Create a work_order_task from the first capture
+              await supabase.from('work_order_tasks').insert({
+                work_order_id: draftId,
+                sort_order: 0,
+                title: captureData.description || 'Field Capture',
+                description: captureData.description || null,
+                photo_url: (captureData as any).photo_url || null,
+                voice_note_url: (captureData as any).voice_note_url || null,
+                reason: (captureData as any).reason_category || null,
+                field_capture_id: captureId,
+                created_by: user?.id || null,
+              } as any);
               setShowFieldCapture(false);
               navigate(`/field-capture-draft/${draftId}`);
             } catch (err: any) {
