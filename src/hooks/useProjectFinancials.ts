@@ -462,10 +462,6 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         }
         const sorted = [...byMonth.entries()].sort(([a], [b]) => a.localeCompare(b));
         let cumMargin = 0;
-        setMonthlyWOData(sorted.map(([month, d]) => {
-          cumMargin += d.revenue - d.cost;
-          return { month, revenue: d.revenue, cost: d.cost, margin: cumMargin };
-        }));
       }
 
       // FC participants
