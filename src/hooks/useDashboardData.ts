@@ -419,7 +419,6 @@ export function useDashboardData(): DashboardData {
       ]);
 
       const allInvoices = (allInvoicesResult.data || []) as { status: string; total_amount: number; created_at: string; contract_id: string | null }[];
-      const thisMonthCOs = (thisMonthCOsResult as any).count || 0;
 
       // Process reminders
       const remindersList: Reminder[] = ((remindersResult.data || []) as any[]).map((r: any) => ({
