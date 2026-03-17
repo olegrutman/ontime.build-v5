@@ -104,7 +104,7 @@ export function DashboardNeedsAttentionCard({ attentionItems, pendingInvites, on
         ) : (
           allItems.slice(0, 5).map(item => {
             const config = typeConfig[item.type];
-            const isInvite = item.type === 'invite';
+            const isIncomingInvite = item.type === 'invite';
             const isProcessing = processingId === item.id;
 
             if (isInvite) {
