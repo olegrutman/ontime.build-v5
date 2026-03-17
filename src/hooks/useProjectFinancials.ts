@@ -317,15 +317,6 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         setPayablesRetainage(payableInvs.reduce((s, i: any) => s + (i.retainage_amount || 0), 0));
       }
 
-      // Work orders — only sum approved/contracted for contract total
-      const wos = workOrdersRes.data || [];
-      const approvedWOs = wos.filter(wo => ['approved', 'contracted'].includes(wo.status));
-      const woTotal = approvedWOs.reduce((sum: number, wo: any) => sum + (wo.final_price || 0), 0);
-      setWorkOrderTotal(woTotal);
-      setApprovedWOCount(approvedWOs.length);
-
-      // Material estimates vs ordered
-      const matEstimate = wos.reduce((sum, wo) => sum + (wo.material_total || 0), 0);
       // Use material_estimate_total from the material-responsible contract (GC or TC) if set
       const materialContract = (contractsRes.data || []).find((c: any) =>
         c.material_responsibility != null && c.material_estimate_total != null &&
