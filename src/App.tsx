@@ -54,6 +54,7 @@ const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Install = lazy(() => import("./pages/Install"));
+const CODetailPage = lazy(() => import("./pages/CODetail"));
 
 // Platform Admin pages
 const PlatformDashboard = lazy(() => import("./pages/platform/PlatformDashboard"));
@@ -168,6 +169,7 @@ function AppRoutes() {
             <Route path="/project/:id" element={<RequireAuth><ProjectHome /></RequireAuth>} />
             <Route path="/project/:id/edit" element={<RequireAuth><EditProject /></RequireAuth>} />
             <Route path="/projects/:id/scope" element={<RequireAuth><EditProjectScope /></RequireAuth>} />
+            <Route path="/projects/:projectId/change-orders/:coId" element={<RequireAuth><CODetailPage /></RequireAuth>} />
             <Route path="/partners" element={<RequireAuth><PartnerDirectory /></RequireAuth>} />
             
             <Route path="/org/team" element={<RequireAuth><OrgTeam /></RequireAuth>} />
