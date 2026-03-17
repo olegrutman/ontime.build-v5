@@ -70,6 +70,7 @@ export function COStatusActions({
     try {
       await shareCO.mutateAsync(co.id);
       toast.success('CO shared');
+      await logActivity('shared');
       onRefresh();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to share');
