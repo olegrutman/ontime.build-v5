@@ -559,8 +559,6 @@ export function useDashboardData(): DashboardData {
 
       let totalRevenue = 0;
       let totalCosts = 0;
-      let totalWorkOrders = 0;
-      let totalWorkOrderValue = 0;
       let totalBilled = 0;
 
       if (orgType === 'TC') {
