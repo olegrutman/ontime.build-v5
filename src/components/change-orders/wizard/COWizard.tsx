@@ -323,12 +323,13 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl p-0 gap-0 overflow-hidden max-h-[85vh]">
+      <DialogContent className="max-w-3xl p-0 gap-0 overflow-hidden max-h-[85vh] flex flex-col">
+        <DialogTitle className="sr-only">New Change Order</DialogTitle>
         <DialogDescription className="sr-only">
           Create a new change order
         </DialogDescription>
         {/* Desktop header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
+        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
           <div>
             <h2 className="text-lg font-semibold">New Change Order</h2>
             <p className="text-xs text-muted-foreground">
