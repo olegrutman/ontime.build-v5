@@ -408,6 +408,22 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
           onOpenChange={setShowFieldCapture}
           projectId={projectId}
           organizationId={userOrgId}
+          onCaptureComplete={async (captureId, captureData) => {
+            try {
+              const draftId = await saveDraft({
+                title: captureData.description || 'Field Capture',
+                wo_mode: 'quick_capture',
+                pricing_mode: 'fixed',
+              });
+              await supabase.from('field_captures')
+                .update({ converted_work_order_id: draftId, status: 'converted' } as never)
+                .eq('id', captureId);
+              setShowFieldCapture(false);
+              navigate(`/change-order/${draftId}`);
+            } catch (err: any) {
+              toast({ variant: 'destructive', title: 'Failed to create work order', description: err.message });
+            }
+          }}
         />
       )}
     </div>
