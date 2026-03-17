@@ -349,10 +349,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
           </div>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 min-h-0 overflow-hidden">
-          {body}
-        </div>
+        {body}
       </DialogContent>
     </Dialog>
   );
