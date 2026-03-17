@@ -1,110 +1,46 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-## Features Built
+# Profile Hourly Rate and In-App Notifications
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
+## Context from exploration
 
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
+- **Profile page** (`src/pages/Profile.tsx`) already has a "Pricing Defaults" section (line 481-571) with `default_hourly_rate` at the **org settings** level. The `profiles` table already has a personal `hourly_rate` column.
+- **LaborEntryForm** already loads rate from `profiles.hourly_rate` (line 51-64) — this is working.
+- **Notifications table** already exists but uses different columns than the prompt assumes: `recipient_user_id` (not `user_id`), `is_read` (not `read`), `entity_type`, `entity_id`, `action_url`, and a `notification_type` enum (not free text `type`). Available enum values include `CHANGE_SUBMITTED`, `CHANGE_APPROVED`, `CHANGE_REJECTED` but not NTE-specific types.
 
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
+## Files to create
 
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
+1. **`src/components/change-orders/HourlyRateSetting.tsx`** — Inline personal hourly rate editor. Loads from `profiles.hourly_rate`, saves back. Shows current rate with edit toggle. This is the **personal** rate (vs org default).
 
----
+2. **`src/lib/coNotifications.ts`** — Notification helper adapted to the **existing** notifications table schema. Uses `recipient_user_id`, `is_read`, `entity_type: 'change_order'`, `entity_id: co.id`, `action_url` for deep link. Maps CO event types to the existing `notification_type` enum values where available (`CHANGE_SUBMITTED`, `CHANGE_APPROVED`, `CHANGE_REJECTED`), and uses `CHANGE_SUBMITTED` as fallback for NTE events since we can't add new enum values without a migration.
 
-# Field Capture Mode — IMPLEMENTED
+## Files to modify
 
-## Overview
-Mobile-first feature enabling Field Crew to instantly capture jobsite issues (photo, voice note, location, reason category) in under 10 seconds.
+3. **`src/pages/Profile.tsx`** — Add a personal hourly rate field inside the Personal Information card (after phone/contact fields, before save button). Add `hourly_rate` to `personalForm` state, sync from profile, include in `handleSavePersonal`. No need for a separate `HourlyRateSetting` component since the profile page already has form state management — but the prompt requests the component, so we'll add it as a standalone card between Personal Info and Organization sections.
 
-## Database
-- `field_captures` table with RLS (project participants SELECT, creator INSERT/UPDATE)
-- `field-captures` storage bucket (public read, authenticated upload)
-- Realtime enabled via `supabase_realtime` publication
+4. **`src/components/change-orders/COStatusActions.tsx`** — Add `financials` prop, import `sendCONotification`/`buildCONotification`, add `notifyAssignedParty` helper. Call after each `logActivity`: `doShare` → `co_shared`, `doSubmit` → `co_submitted` with amount, `doApprove` → `co_approved`, `doReject` → `co_rejected`, `doRecall` → `co_recalled`.
 
-## Frontend Components
-| File | Purpose |
-|------|---------|
-| `src/hooks/useFieldCaptures.ts` | React Query hook with realtime, create/update mutations, media upload |
-| `src/components/field-capture/FieldCaptureSheet.tsx` | Full-screen capture UI (photo, voice, text, reason chips) |
-| `src/components/field-capture/CapturePhotoInput.tsx` | Camera-first photo capture with large touch target |
-| `src/components/field-capture/CaptureVoiceInput.tsx` | Hold-to-record voice note (MediaRecorder API) |
-| `src/components/field-capture/CaptureReasonChips.tsx` | Tap-to-select reason category chips |
-| `src/components/field-capture/FieldCaptureList.tsx` | List of captures with "+ Capture" button |
-| `src/components/field-capture/FieldCaptureCard.tsx` | Individual capture card with "Convert to Task" button |
+5. **`src/components/change-orders/CONTEPanel.tsx`** — Import notification helpers, add `notifyCreator` and `notifyGC` helpers. Wire into `doRequest` → `nte_requested`, `doApprove` → `nte_approved`, `doReject` → `nte_rejected`.
 
-## Entry Points
-1. **BottomNav FAB** — Amber "Capture" button on project pages (mobile)
-2. **Daily Log tab** — Field Captures section for the active date
+6. **`src/components/change-orders/CODetailPage.tsx`** — Pass `financials` prop to `<COStatusActions>`.
 
-## Feature Gate
-- `field_capture` added to `FeatureKey` type and labels
+7. **`src/components/change-orders/index.ts`** — Add `HourlyRateSetting` export.
 
-## Auto-captured Data
-- Timestamp, user ID, org ID, GPS coordinates, device info (userAgent)
+## DB migration needed
 
-## Files Created/Modified
-| File | Action |
-|------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+Add new enum values to `notification_type` for NTE events, or use a simpler approach: since adding enum values requires a migration, we'll add `NTE_REQUESTED`, `NTE_APPROVED`, `NTE_REJECTED` to the `notification_type` enum.
 
----
+```sql
+ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'NTE_REQUESTED';
+ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'NTE_APPROVED';
+ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'NTE_REJECTED';
+ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'CO_SHARED';
+ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'CO_RECALLED';
+```
 
-# Multi-Item Work Order — IMPLEMENTED
+## Key adaptation details
 
-## Overview
-Transforms Work Orders from single-task entities into **package containers** holding multiple task line items, mirroring how POs hold multiple material lines.
+- `coNotifications.ts` inserts with: `recipient_user_id`, `type` (enum), `title`, `body`, `entity_type: 'change_order'`, `entity_id: co.id`, `action_url: '/co/{id}'`, `is_read: false`
+- All notification sends are fire-and-forget with try/catch
+- `HourlyRateSetting` reads/writes `profiles.hourly_rate` for the current user — this is what `LaborEntryForm` already reads
 
-## Database
-- `work_order_tasks` table with RLS (project participants CRUD) linked to `change_order_projects` header via `work_order_id`
-- Status validation trigger (`pending`, `in_progress`, `complete`, `skipped`)
-- Realtime enabled via `supabase_realtime` publication
-
-## Frontend Components
-| File | Purpose |
-|------|---------|
-| `src/types/workOrderTask.ts` | TypeScript types for work order tasks |
-| `src/hooks/useWorkOrderTasks.ts` | React Query hook with realtime, CRUD mutations |
-| `src/components/work-order-tasks/WorkOrderTaskList.tsx` | Task list with completion counter |
-| `src/components/work-order-tasks/WorkOrderTaskCard.tsx` | Individual task card with status, location, menu |
-| `src/components/work-order-tasks/AddTaskSheet.tsx` | Mobile-first bottom sheet for adding/editing tasks |
-| `src/components/work-order-tasks/TaskQuickAdd.tsx` | Inline quick-add input for FC users |
-
-## Integration Points
-- `ChangeOrderDetailPage.tsx` — Tasks section after header card, FC quick-add below
-- `useChangeOrderRealtime.ts` — Subscribes to `work_order_tasks` changes
