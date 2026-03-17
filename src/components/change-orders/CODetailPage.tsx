@@ -51,6 +51,7 @@ export function CODetailPage() {
 
   const {
     co,
+    memberCOs,
     lineItems,
     laborEntries,
     materials,

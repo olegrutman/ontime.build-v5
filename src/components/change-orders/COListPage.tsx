@@ -145,7 +145,7 @@ export function COListPage({ projectId }: COListPageProps) {
   const [combineOpen,  setCombineOpen]  = useState(false);
 
   const mine = grouped.mine;
-  const allMine: ChangeOrder[] = [
+  const allMine: ChangeOrderWithMembers[] = [
     ...mine.draft,
     ...mine.shared,
     ...mine.combined,
