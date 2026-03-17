@@ -47,17 +47,15 @@ export function useActualCosts({ changeOrderId, projectId }: UseActualCostsOptio
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey,
-    enabled: !!(changeOrderId || projectId) && !!orgId,
+    enabled: !!projectId && !!orgId,
     queryFn: async () => {
       let query = supabase
         .from('actual_cost_entries')
         .select('*')
         .order('entry_date', { ascending: false });
 
-      if (changeOrderId) {
-        query = query.eq('change_order_id', changeOrderId);
-      } else if (projectId) {
-        query = query.eq('project_id', projectId).is('change_order_id', null);
+      if (projectId) {
+        query = query.eq('project_id', projectId);
       }
 
       const { data, error } = await query;
