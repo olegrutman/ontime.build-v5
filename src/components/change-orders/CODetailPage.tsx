@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useAuth } from '@/hooks/useAuth';
+import { useQueryClient } from '@tanstack/react-query';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { BottomNav } from '@/components/layout/BottomNav';
@@ -15,8 +16,9 @@ import {
   CO_REASON_LABELS,
   CO_REASON_COLORS,
 } from '@/types/changeOrder';
-import type { COStatus, COReasonCode } from '@/types/changeOrder';
+import type { COStatus, COReasonCode, COCreatedByRole } from '@/types/changeOrder';
 import { cn } from '@/lib/utils';
+import { COLineItemRow } from './COLineItemRow';
 
 const STATUS_BADGE: Record<COStatus, string> = {
   draft:      'bg-gray-100 text-gray-700 border-gray-200',
