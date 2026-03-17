@@ -200,47 +200,79 @@ export function CODetailPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Main column */}
               <div className="lg:col-span-2 space-y-6">
-                {/* Scope */}
-                <div className="rounded-lg border border-border bg-card">
-                  <div className="px-4 py-3 border-b border-border">
-                    <h3 className="text-sm font-semibold text-foreground">Scope & labor</h3>
-                    {lineItems.length > 0 && (
-                      <p className="text-[11px] text-muted-foreground mt-0.5">
-                        {lineItems.length} item{lineItems.length !== 1 ? 's' : ''} · tap to expand
-                      </p>
-                    )}
-                  </div>
-                  {lineItems.length === 0 ? (
-                    <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                      No scope items
-                    </div>
-                  ) : (
-                    lineItems.map(item => (
-                      <COLineItemRow
-                        key={item.id}
-                        item={item}
-                        laborEntries={laborEntries.filter(e => e.co_line_item_id === item.id)}
-                        role={role}
-                        isGC={isGC}
-                        isTC={isTC}
-                        isFC={isFC}
-                        coId={co.id}
-                        orgId={co.org_id}
-                        pricingType={co.pricing_type as 'fixed' | 'tm' | 'nte'}
-                        nteCap={co.nte_cap}
-                        nteUsed={financials.laborTotal}
-                        canAddLabor={!isGC && (
-                          co.status === 'draft' ||
-                          co.status === 'shared' ||
-                          co.status === 'combined' ||
-                          co.pricing_type === 'tm' ||
-                          co.pricing_type === 'nte'
+                {/* Scope sections */}
+                {scopeSections.map((section, idx) => {
+                  const sectionTitle = section.memberCO
+                    ? (section.memberCO.title ?? section.memberCO.co_number ?? `Scope ${idx + 1}`)
+                    : 'Scope & labor';
+                  const sectionReason = section.memberCO?.reason
+                    ? CO_REASON_COLORS[section.memberCO.reason as COReasonCode]
+                    : null;
+
+                  return (
+                    <div key={section.memberCO?.id ?? 'single'} className="rounded-lg border border-border bg-card">
+                      <div className="px-4 py-3 border-b border-border">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {isCombinedParent && (
+                            <span className="text-xs font-medium text-muted-foreground">
+                              Scope {idx + 1} of {scopeSections.length}
+                            </span>
+                          )}
+                          <h3 className="text-sm font-semibold text-foreground">{sectionTitle}</h3>
+                          {section.memberCO?.reason && sectionReason && (
+                            <span
+                              className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+                              style={{ backgroundColor: sectionReason.bg, color: sectionReason.text }}
+                            >
+                              {CO_REASON_LABELS[section.memberCO.reason as COReasonCode]}
+                            </span>
+                          )}
+                          {section.memberCO?.location_tag && (
+                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <MapPin className="h-3 w-3" />
+                              {section.memberCO.location_tag}
+                            </span>
+                          )}
+                        </div>
+                        {section.items.length > 0 && (
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            {section.items.length} item{section.items.length !== 1 ? 's' : ''} · tap to expand
+                          </p>
                         )}
-                        onRefresh={refreshDetail}
-                      />
-                    ))
-                  )}
-                </div>
+                      </div>
+                      {section.items.length === 0 ? (
+                        <div className="px-4 py-8 text-center text-sm text-muted-foreground">
+                          No scope items
+                        </div>
+                      ) : (
+                        section.items.map(item => (
+                          <COLineItemRow
+                            key={item.id}
+                            item={item}
+                            laborEntries={laborEntries.filter(e => e.co_line_item_id === item.id)}
+                            role={role}
+                            isGC={isGC}
+                            isTC={isTC}
+                            isFC={isFC}
+                            coId={co.id}
+                            orgId={co.org_id}
+                            pricingType={co.pricing_type as 'fixed' | 'tm' | 'nte'}
+                            nteCap={co.nte_cap}
+                            nteUsed={financials.laborTotal}
+                            canAddLabor={!isGC && (
+                              co.status === 'draft' ||
+                              co.status === 'shared' ||
+                              co.status === 'combined' ||
+                              co.pricing_type === 'tm' ||
+                              co.pricing_type === 'nte'
+                            )}
+                            onRefresh={refreshDetail}
+                          />
+                        ))
+                      )}
+                    </div>
+                  );
+                })}
 
                 {/* Materials */}
                 {co.materials_needed && (
