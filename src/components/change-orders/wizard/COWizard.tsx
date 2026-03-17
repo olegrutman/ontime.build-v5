@@ -196,7 +196,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
   const isLastStep  = step === ALL_STEPS.length - 1;
 
   const body = (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Mobile progress bar */}
       {isMobile && (
         <div className="px-4 pt-4 pb-3 border-b">
