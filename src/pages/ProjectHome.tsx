@@ -78,7 +78,6 @@ function CollapsibleOperations({ projectId, projectType, financials, onNavigate 
   onNavigate: (tab: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const woCount = financials.recentWorkOrders.length;
   const invCount = financials.recentInvoices.length;
 
   return (
@@ -91,7 +90,7 @@ function CollapsibleOperations({ projectId, projectType, financials, onNavigate 
               Activity & Operations
             </span>
             <span className="text-[10px] text-muted-foreground">
-              {woCount} WOs · {invCount} Invoices
+              {invCount} Invoices
             </span>
           </div>
           <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />

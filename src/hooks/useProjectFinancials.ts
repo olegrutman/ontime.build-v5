@@ -69,12 +69,8 @@ export interface ProjectFinancials {
   payablesPaid: number;
   payablesRetainage: number;
 
-  // Work orders & invoices for charts/lists
-  recentWorkOrders: { id: string; title: string; status: string; created_at: string; final_price: number | null }[];
+  // Invoices for charts/lists
   recentInvoices: { id: string; invoice_number: string; status: string; total_amount: number; created_at: string }[];
-
-  // Chart data
-  monthlyWOData: { month: string; revenue: number; cost: number; margin: number }[];
 
   // FC participants (for contract creation)
   fcParticipants: { org_id: string; org_name: string }[];
@@ -116,9 +112,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [supplierOrderValue, setSupplierOrderValue] = useState(0);
   const [supplierInvoiced, setSupplierInvoiced] = useState(0);
   const [supplierPaid, setSupplierPaid] = useState(0);
-  const [recentWorkOrders, setRecentWorkOrders] = useState<ProjectFinancials['recentWorkOrders']>([]);
   const [recentInvoices, setRecentInvoices] = useState<ProjectFinancials['recentInvoices']>([]);
-  const [monthlyWOData, setMonthlyWOData] = useState<ProjectFinancials['monthlyWOData']>([]);
   const [fcParticipants, setFcParticipants] = useState<{ org_id: string; org_name: string }[]>([]);
   const [materialEstimateTotal, setMaterialEstimateTotal] = useState<number | null>(null);
   const [isTCMaterialResponsible, setIsTCMaterialResponsible] = useState(false);
@@ -344,9 +338,6 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       const woTotal = approvedWOs.reduce((sum: number, wo: any) => sum + (wo.final_price || 0), 0);
       setWorkOrderTotal(woTotal);
       setApprovedWOCount(approvedWOs.length);
-      setRecentWorkOrders(wos.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5).map(wo => ({
-        id: wo.id, title: wo.title, status: wo.status, created_at: wo.created_at, final_price: wo.final_price,
-      })));
 
       // Material estimates vs ordered
       const matEstimate = wos.reduce((sum, wo) => sum + (wo.material_total || 0), 0);
@@ -446,35 +437,6 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
         const paidInvoices = allInvoices.filter(i => i.status === 'PAID');
         setTotalPaidToFC(paidInvoices.reduce((s, i) => s + (i.total_amount || 0), 0));
 
-        // Monthly margin trend (approved WOs by month)
-        const approvedWOsForTrend = wos.filter(wo => ['approved', 'contracted'].includes(wo.status));
-        const byMonth = new Map<string, { revenue: number; cost: number }>();
-        for (const wo of approvedWOsForTrend) {
-          const month = wo.created_at.slice(0, 7); // YYYY-MM
-          const prev = byMonth.get(month) || { revenue: 0, cost: 0 };
-          prev.revenue += wo.final_price || 0;
-          byMonth.set(month, prev);
-        }
-        // Add FC costs per month if available
-        if (approvedWOsForTrend.length > 0) {
-          const approvedIds = approvedWOsForTrend.map(w => w.id);
-          const { data: fcEntries } = await supabase.from('change_order_fc_hours').select('change_order_id, labor_total').in('change_order_id', approvedIds);
-          const woCostMap = new Map<string, number>();
-          for (const fc of fcEntries || []) {
-            woCostMap.set(fc.change_order_id, (woCostMap.get(fc.change_order_id) || 0) + (fc.labor_total || 0));
-          }
-          for (const wo of approvedWOsForTrend) {
-            const month = wo.created_at.slice(0, 7);
-            const prev = byMonth.get(month)!;
-            prev.cost += woCostMap.get(wo.id) || 0;
-          }
-        }
-        const sorted = [...byMonth.entries()].sort(([a], [b]) => a.localeCompare(b));
-        let cumMargin = 0;
-        setMonthlyWOData(sorted.map(([month, d]) => {
-          cumMargin += d.revenue - d.cost;
-          return { month, revenue: d.revenue, cost: d.cost, margin: cumMargin };
-        }));
       }
 
       // FC participants
@@ -577,7 +539,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
     woLaborTotal, woMaterialTotal, woEquipmentTotal,
     supplierOrderValue, supplierInvoiced, supplierPaid,
     receivablesInvoiced, receivablesCollected, receivablesRetainage, payablesInvoiced, payablesPaid, payablesRetainage,
-    recentWorkOrders, recentInvoices, monthlyWOData, fcParticipants,
+    recentInvoices, fcParticipants,
     refetch: fetchData, updateContract, createFcContract, updateMaterialEstimate, updateLaborBudget,
     updateOwnerContract, updateMaterialMarkup,
   };
