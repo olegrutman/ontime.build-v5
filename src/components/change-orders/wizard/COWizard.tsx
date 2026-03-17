@@ -6,9 +6,13 @@ import { Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 import type { COCreatedByRole, COReasonCode, COPricingType, WorkOrderCatalogItem } from '@/types/changeOrder';
+import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { StepCatalog } from './StepCatalog';
 import { StepLocation } from './StepLocation';
+import { StepReason } from './StepReason';
+import { StepConfig } from './StepConfig';
 
 export interface COWizardData {
   selectedItems:        WorkOrderCatalogItem[];
@@ -68,11 +72,13 @@ interface COWizardProps {
 }
 
 export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
-  const { currentRole } = useAuth();
+  const { currentRole, user, userOrgRoles } = useAuth();
   const isMobile = useIsMobile();
   const [step, setStep]   = useState(0);
   const [data, setData]   = useState<COWizardData>(INITIAL_DATA);
   const [submitting, setSubmitting] = useState(false);
+  const { createCO, shareCO } = useChangeOrders(projectId);
+  const orgId = userOrgRoles?.[0]?.organization_id ?? null;
 
   const role: COCreatedByRole =
     currentRole === 'GC_PM' ? 'GC' :
@@ -88,7 +94,15 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
     if (s.key === 'location') return data.locationTag.trim().length > 0;
     if (s.key === 'reason')   return !!data.reason && (data.reason !== 'other' || data.reasonNote.trim().length > 0);
     if (s.key === 'config') {
-      if (role === 'GC') return !!data.assignedToOrgId;
+      if (role === 'GC') {
+        if (!data.assignedToOrgId) return false;
+        if (data.pricingType === 'nte' && (!data.nteCap || parseFloat(data.nteCap) <= 0)) return false;
+        if (data.materialsNeeded && !data.materialsResponsible) return false;
+        if (data.equipmentNeeded && !data.equipmentResponsible) return false;
+      }
+      if (role === 'TC') {
+        if (data.pricingType === 'nte' && (!data.nteCap || parseFloat(data.nteCap) <= 0)) return false;
+      }
       return true;
     }
     return true;
@@ -105,9 +119,68 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
   }
 
   async function handleSubmit() {
+    if (!orgId || !user) {
+      toast.error('Not authenticated');
+      return;
+    }
     setSubmitting(true);
     try {
-      console.log('CO wizard submit — data:', data, 'role:', role, 'project:', projectId);
+      const title = data.title.trim() ||
+        (data.selectedItems.length > 0 ? data.selectedItems[0].item_name : null);
+
+      const newCO = await createCO.mutateAsync({
+        org_id:                orgId,
+        project_id:            projectId,
+        created_by_user_id:    user.id,
+        created_by_role:       role,
+        title,
+        status:                'draft',
+        pricing_type:          data.pricingType,
+        nte_cap:               data.pricingType === 'nte' && data.nteCap ? parseFloat(data.nteCap) : null,
+        reason:                data.reason,
+        reason_note:           data.reasonNote || null,
+        location_tag:          data.locationTag || null,
+        assigned_to_org_id:    data.assignedToOrgId || null,
+        fc_input_needed:       data.fcInputNeeded,
+        materials_needed:      data.materialsNeeded,
+        materials_on_site:     data.materialsOnSite,
+        equipment_needed:      data.equipmentNeeded,
+        materials_responsible: data.materialsResponsible,
+        equipment_responsible: data.equipmentResponsible,
+        draft_shared_with_next: data.shareDraftNow,
+        combined_co_id:        null,
+        parent_co_id:          null,
+        rejection_note:        null,
+      });
+
+      if (data.selectedItems.length > 0) {
+        const lineItemRows = data.selectedItems.map((item, idx) => ({
+          co_id:           newCO.id,
+          org_id:          orgId,
+          created_by_role: role,
+          catalog_item_id: item.id,
+          item_name:       item.item_name,
+          division:        item.division,
+          category_name:   item.category_name,
+          unit:            item.unit,
+          sort_order:      idx,
+        }));
+        const { error: lineError } = await (await import('@/integrations/supabase/client')).supabase
+          .from('co_line_items')
+          .insert(lineItemRows);
+        if (lineError) throw lineError;
+      }
+
+      // Share immediately if requested
+      if (data.shareDraftNow) {
+        await shareCO.mutateAsync(newCO.id);
+      }
+
+      toast.success('Change order created');
+      handleClose();
+    } catch (err: any) {
+      console.error('Failed to create CO:', err);
+      toast.error(err?.message ?? 'Failed to create change order');
     } finally {
       setSubmitting(false);
     }
@@ -200,10 +273,11 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
             {currentStep.key === 'location' && (
               <StepLocation data={data} onChange={update} projectId={projectId} />
             )}
-            {(currentStep.key === 'reason' || currentStep.key === 'config') && (
-              <div className="text-sm text-muted-foreground py-8 text-center">
-                Step content for "{currentStep.label}" coming in next prompt.
-              </div>
+            {currentStep.key === 'reason' && (
+              <StepReason data={data} onChange={update} />
+            )}
+            {currentStep.key === 'config' && (
+              <StepConfig data={data} onChange={update} role={role} projectId={projectId} />
             )}
           </div>
 
