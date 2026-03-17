@@ -1,110 +1,62 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-## Features Built
+# Full Work Order Feature Cleanup — What's Still Left
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
+The previous cleanup only removed the wizard, tasks, line items, and draft flow. The core WO infrastructure is still fully intact. Here's what still needs to be deleted.
 
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
+## Files to Delete
 
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
+### `src/components/change-order-detail/` (entire directory — 24 files)
+All WO detail page components: `ChangeOrderDetailPage.tsx`, `WorkOrderTopBar.tsx`, `WorkOrderProgressBar.tsx`, `TCPricingPanel.tsx`, `TCPricingSummary.tsx`, `FieldCrewHoursPanel.tsx`, `EquipmentPanel.tsx`, `ApprovalPanel.tsx`, `TCApprovalPanel.tsx`, `ParticipantActivationPanel.tsx`, `GCLaborReviewPanel.tsx`, `ContractedPricingCard.tsx`, `MaterialResourceToggle.tsx`, `WorkOrderMaterialsPanel.tsx`, `MaterialsPanel.tsx`, `MaterialMarkupEditor.tsx`, `ChangeOrderChecklist.tsx`, `ChangeOrderStatusBadge.tsx`, `TMTimeCardsPanel.tsx`, `TimeCardForm.tsx`, `TCInternalCostEditor.tsx`, `LinkedPOCard.tsx`, `ActualCostPopup.tsx`, `index.ts`
 
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
+### `src/components/work-item/` (entire directory)
+`WorkItemPage.tsx`, `WorkItemHeader.tsx`, `WorkItemProgress.tsx`, `WorkItemDetails.tsx`, `WorkItemActions.tsx`, `index.ts`
 
----
+### `src/components/project/` (WO-specific files)
+- `WorkOrdersTab.tsx`
+- `WorkOrdersBoard.tsx`
+- `WorkOrderSummaryCard.tsx`
 
-# Field Capture Mode — IMPLEMENTED
+### `src/pages/ChangeOrders.tsx`
+Standalone WO list page
 
-## Overview
-Mobile-first feature enabling Field Crew to instantly capture jobsite issues (photo, voice note, location, reason category) in under 10 seconds.
+### Hooks
+- `src/hooks/useChangeOrderProject.ts` — main WO CRUD hook
+- `src/hooks/useChangeOrderRealtime.ts` — realtime subscriptions for WO
+- `src/hooks/useSOVReadiness.ts` — SOV readiness check used by WorkOrdersTab
 
-## Database
-- `field_captures` table with RLS (project participants SELECT, creator INSERT/UPDATE)
-- `field-captures` storage bucket (public read, authenticated upload)
-- Realtime enabled via `supabase_realtime` publication
+### Types
+- `src/types/changeOrderProject.ts` — WO status types, labels, etc.
 
-## Frontend Components
-| File | Purpose |
-|------|---------|
-| `src/hooks/useFieldCaptures.ts` | React Query hook with realtime, create/update mutations, media upload |
-| `src/components/field-capture/FieldCaptureSheet.tsx` | Full-screen capture UI (photo, voice, text, reason chips) |
-| `src/components/field-capture/CapturePhotoInput.tsx` | Camera-first photo capture with large touch target |
-| `src/components/field-capture/CaptureVoiceInput.tsx` | Hold-to-record voice note (MediaRecorder API) |
-| `src/components/field-capture/CaptureReasonChips.tsx` | Tap-to-select reason category chips |
-| `src/components/field-capture/FieldCaptureList.tsx` | List of captures with "+ Capture" button |
-| `src/components/field-capture/FieldCaptureCard.tsx` | Individual capture card with "Convert to Task" button |
+## Files to Edit
 
-## Entry Points
-1. **BottomNav FAB** — Amber "Capture" button on project pages (mobile)
-2. **Daily Log tab** — Field Captures section for the active date
+### `src/App.tsx`
+- Remove `ChangeOrderDetailPage` lazy import + route (`/change-order/:id`)
+- Remove `WorkItemPage` lazy import + route (`/work-item/:id`)
 
-## Feature Gate
-- `field_capture` added to `FeatureKey` type and labels
+### `src/pages/ProjectHome.tsx`
+- Remove `WorkOrdersTab` import and usage (the "Work Orders" tab in project view)
+- Remove `WorkOrderSummaryCard` import and usage from overview
+- Remove the FeatureGate block wrapping the work orders tab
 
-## Auto-captured Data
-- Timestamp, user ID, org ID, GPS coordinates, device info (userAgent)
+### `src/components/project/index.ts`
+- Remove `WorkOrderSummaryCard` and `WorkOrdersTab` exports
 
-## Files Created/Modified
-| File | Action |
-|------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+### `src/hooks/useProjectFinancials.ts`
+- Remove any remaining references to change order totals if present
 
----
+### `src/hooks/useSashaContext.ts`
+- Remove WO-related context strings for `/change-order/` and `/work-item/` routes
 
-# Multi-Item Work Order — IMPLEMENTED
+### `src/components/demo/DemoWorkOrdersTab.tsx` and demo references
+- Delete `DemoWorkOrdersTab.tsx` and remove from `src/components/demo/index.ts`
 
-## Overview
-Transforms Work Orders from single-task entities into **package containers** holding multiple task line items, mirroring how POs hold multiple material lines.
+## What Stays Untouched
+- Field capture primitives (`src/components/field-capture/`)
+- `src/hooks/useFieldCaptures.ts`
+- Database tables (no schema changes)
+- All other project tabs (POs, invoices, SOV, RFIs)
 
-## Database
-- `work_order_tasks` table with RLS (project participants CRUD) linked to `change_order_projects` header via `work_order_id`
-- Status validation trigger (`pending`, `in_progress`, `complete`, `skipped`)
-- Realtime enabled via `supabase_realtime` publication
+## Result
+Complete removal of all Work Order UI. The "Work Orders" tab disappears from project view. The `/change-order/:id`, `/work-item/:id`, and `/change-orders` routes are gone. Clean slate for rebuild.
 
-## Frontend Components
-| File | Purpose |
-|------|---------|
-| `src/types/workOrderTask.ts` | TypeScript types for work order tasks |
-| `src/hooks/useWorkOrderTasks.ts` | React Query hook with realtime, CRUD mutations |
-| `src/components/work-order-tasks/WorkOrderTaskList.tsx` | Task list with completion counter |
-| `src/components/work-order-tasks/WorkOrderTaskCard.tsx` | Individual task card with status, location, menu |
-| `src/components/work-order-tasks/AddTaskSheet.tsx` | Mobile-first bottom sheet for adding/editing tasks |
-| `src/components/work-order-tasks/TaskQuickAdd.tsx` | Inline quick-add input for FC users |
-
-## Integration Points
-- `ChangeOrderDetailPage.tsx` — Tasks section after header card, FC quick-add below
-- `useChangeOrderRealtime.ts` — Subscribes to `work_order_tasks` changes
