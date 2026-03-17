@@ -230,6 +230,15 @@ export default function PlatformProjectDetail() {
       .eq('project_id', projectId);
     setEstimates((estData || []) as unknown as SupplierEstimateRow[]);
 
+    // Fetch work orders
+    const { data: woData } = await supabase
+      .from('change_order_projects')
+      .select('id, title, status, final_price, created_at')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    setWorkOrders((woData || []) as unknown as WorkOrderRow[]);
+
     setLoading(false);
   };
 
