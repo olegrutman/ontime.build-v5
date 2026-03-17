@@ -212,10 +212,16 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
 
+  const getWORoute = (co: any) => {
+    if (co.wo_mode === 'quick_capture' && co.status === 'draft') return `/field-capture-draft/${co.id}`;
+    return `/change-order/${co.id}`;
+  };
+
   const renderWorkOrderCard = (changeOrder: any) => {
+    const route = getWORoute(changeOrder);
     const hoverActions: HoverAction[] = [
-      { icon: <Eye className="h-4 w-4" />, label: 'View', onClick: () => navigate(`/change-order/${changeOrder.id}`) },
-      { icon: <Edit className="h-4 w-4" />, label: 'Edit', onClick: () => navigate(`/change-order/${changeOrder.id}`) },
+      { icon: <Eye className="h-4 w-4" />, label: 'View', onClick: () => navigate(route) },
+      { icon: <Edit className="h-4 w-4" />, label: 'Edit', onClick: () => navigate(route) },
     ];
     const isContracted = changeOrder.status === 'contracted';
     const creatorLabel = getCreatorLabel(changeOrder);
