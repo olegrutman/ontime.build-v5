@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useDemo } from '@/contexts/DemoContext';
 import { getDemoProjectById } from '@/data/demoData';
-import { DemoProjectOverview, DemoWorkOrdersTab, DemoPurchaseOrdersTab, DemoInvoicesTab, DemoSOVTab, DemoRFIsTab } from '@/components/demo';
+import { DemoProjectOverview, DemoPurchaseOrdersTab, DemoInvoicesTab, DemoSOVTab, DemoRFIsTab } from '@/components/demo';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
