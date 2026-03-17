@@ -244,6 +244,16 @@ export function CODetailPage() {
 
               {/* Sidebar column */}
               <div className="space-y-6">
+                {/* Status actions */}
+                <COStatusActions
+                  co={co}
+                  isGC={isGC}
+                  isTC={isTC}
+                  isFC={isFC}
+                  projectId={projectId ?? ''}
+                  onRefresh={refreshDetail}
+                />
+
                 {/* Financials */}
                 <div className="rounded-lg border border-border bg-card">
                   <div className="px-4 py-3 border-b border-border">
