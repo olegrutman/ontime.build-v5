@@ -540,7 +540,7 @@ export function ScheduleTab({ projectId }: ScheduleTabProps) {
         onClose={() => setFormOpen(false)}
         onSave={handleSave}
         item={editingItem}
-        workOrders={workOrders}
+        workOrders={[]}
         existingItems={items}
         projectId={projectId}
       />

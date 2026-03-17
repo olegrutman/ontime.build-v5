@@ -84,21 +84,11 @@ export function useFinancialTrends() {
         };
       });
 
-      const woByMonth: MonthlyWorkOrders[] = months.map(m => {
-        const created = (workOrders || []).filter(
-          wo => format(new Date(wo.created_at), 'yyyy-MM') === m
-        ).length;
-        const approved = (workOrders || []).filter(
-          wo =>
-            ['approved', 'contracted'].includes(wo.status) &&
-            format(new Date(wo.updated_at), 'yyyy-MM') === m
-        ).length;
-        return {
-          month: format(new Date(m + '-01'), 'MMM'),
-          created,
-          approved,
-        };
-      });
+      const woByMonth: MonthlyWorkOrders[] = months.map(m => ({
+        month: format(new Date(m + '-01'), 'MMM'),
+        created: 0,
+        approved: 0,
+      }));
 
       setSpendTrend(spendByMonth);
       setWoTrend(woByMonth);

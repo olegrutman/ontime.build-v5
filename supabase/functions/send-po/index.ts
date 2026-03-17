@@ -117,7 +117,7 @@ const handler = async (req: Request): Promise<Response> => {
       </tr>
     `).join("");
 
-    const projectName = po.project?.name || po.work_item?.title || "N/A";
+    const projectName = po.project?.name || "N/A";
     const totalItems = lineItems?.length || 0;
 
     // Send email via Resend
