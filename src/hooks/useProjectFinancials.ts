@@ -112,9 +112,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   const [supplierOrderValue, setSupplierOrderValue] = useState(0);
   const [supplierInvoiced, setSupplierInvoiced] = useState(0);
   const [supplierPaid, setSupplierPaid] = useState(0);
-  const [recentWorkOrders, setRecentWorkOrders] = useState<ProjectFinancials['recentWorkOrders']>([]);
   const [recentInvoices, setRecentInvoices] = useState<ProjectFinancials['recentInvoices']>([]);
-  const [monthlyWOData, setMonthlyWOData] = useState<ProjectFinancials['monthlyWOData']>([]);
   const [fcParticipants, setFcParticipants] = useState<{ org_id: string; org_name: string }[]>([]);
   const [materialEstimateTotal, setMaterialEstimateTotal] = useState<number | null>(null);
   const [isTCMaterialResponsible, setIsTCMaterialResponsible] = useState(false);
