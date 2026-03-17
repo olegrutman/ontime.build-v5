@@ -134,6 +134,7 @@ export function COStatusActions({
       await approveCO.mutateAsync(co.id);
       toast.success('CO approved');
       await logActivity('approved');
+      await notifyAssignedParty('CHANGE_APPROVED');
       setApproveOpen(false);
       onRefresh();
     } catch (err: any) {
