@@ -69,12 +69,8 @@ export interface ProjectFinancials {
   payablesPaid: number;
   payablesRetainage: number;
 
-  // Work orders & invoices for charts/lists
-  recentWorkOrders: { id: string; title: string; status: string; created_at: string; final_price: number | null }[];
+  // Invoices for charts/lists
   recentInvoices: { id: string; invoice_number: string; status: string; total_amount: number; created_at: string }[];
-
-  // Chart data
-  monthlyWOData: { month: string; revenue: number; cost: number; margin: number }[];
 
   // FC participants (for contract creation)
   fcParticipants: { org_id: string; org_name: string }[];
