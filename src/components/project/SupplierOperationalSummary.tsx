@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { AddTeamMemberDialog } from '@/components/project/AddTeamMemberDialog';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList } from 'lucide-react';
 
 interface SupplierOperationalSummaryProps {
   projectId: string;
