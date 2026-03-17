@@ -83,7 +83,7 @@ export function OperationalSummary({ projectId, projectType, financials, onNavig
     fetchRfiCount();
   }, [projectId]);
 
-  const { recentWorkOrders, recentInvoices } = financials;
+  const { recentInvoices } = financials;
 
   const isSingleFamily = ['Single Family Home', 'Townhomes', 'Duplex', 'residential'].includes(projectType);
   const isMultiFamily = ['Apartments/Condos', 'Hotels', 'commercial', 'mixed_use'].includes(projectType);
