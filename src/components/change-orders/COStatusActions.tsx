@@ -151,6 +151,7 @@ export function COStatusActions({
       await rejectCO.mutateAsync({ coId: co.id, note: rejectNote.trim() });
       toast.success('CO rejected');
       await logActivity('rejected', rejectNote.trim());
+      await notifyAssignedParty('CHANGE_REJECTED');
       setRejectOpen(false);
       setRejectNote('');
       onRefresh();
