@@ -75,11 +75,6 @@ const ChangeOrderDetailPage = lazy(() =>
     default: m.ChangeOrderDetailPage,
   }))
 );
-const FieldCaptureDraftPage = lazy(() =>
-  import("@/components/field-capture-draft").then((m) => ({
-    default: m.FieldCaptureDraftPage,
-  }))
-);
 
 // 4. Route protection wrapper
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -192,7 +187,7 @@ function AppRoutes() {
             <Route path="/reminders" element={<RequireAuth><Reminders /></RequireAuth>} />
             <Route path="/change-order/:id" element={<RequireAuth><ChangeOrderDetailPage /></RequireAuth>} />
             <Route path="/work-item/:id" element={<RequireAuth><WorkItemPage /></RequireAuth>} />
-            <Route path="/field-capture-draft/:id" element={<RequireAuth><FieldCaptureDraftPage /></RequireAuth>} />
+            
             <Route path="/supplier/inventory" element={<RequireAuth><SupplierInventory /></RequireAuth>} />
             <Route path="/supplier/estimates" element={<RequireAuth><SupplierProjectEstimates /></RequireAuth>} />
             <Route path="/profile" element={<RequireAuth><Profile /></RequireAuth>} />

@@ -4,22 +4,15 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useChangeOrderProject } from '@/hooks/useChangeOrderProject';
 import { useSOVReadiness } from '@/hooks/useSOVReadiness';
-import { useWorkOrderDraft } from '@/hooks/useWorkOrderDraft';
-import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { WorkOrderWizard } from '@/components/work-order-wizard';
-import { FieldCaptureSheet } from '@/components/field-capture';
 import { Plus, FileEdit, Eye, Edit, AlertTriangle, ArrowRight, User, Filter, Clock, CheckCircle2, Wallet, DollarSign } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChangeOrderStatus, CHANGE_ORDER_STATUS_LABELS } from '@/types/changeOrderProject';
 import { StatusColumn, CHANGE_ORDER_STATUS_OPTIONS } from '@/components/ui/status-column';
 import { HoverActions, HoverAction } from '@/components/ui/hover-actions';
-import { enrichWorkOrderTotals } from '@/lib/computeWorkOrderTotal';
-import type { WorkOrderWizardData } from '@/types/workOrderWizard';
 
 const STATUS_PRIORITY: Record<ChangeOrderStatus, number> = {
   rejected: 0,
@@ -40,18 +33,9 @@ interface WorkOrdersTabProps {
 export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrdersTabProps) {
   const navigate = useNavigate();
   const { currentRole, user, permissions, userOrgRoles } = useAuth();
-  const { toast } = useToast();
-  const [showWizard, setShowWizard] = useState(false);
-  const [showFieldCapture, setShowFieldCapture] = useState(false);
   const [activeTab, setActiveTab] = useState<ChangeOrderStatus | 'ALL'>('ALL');
-  const [wizardSubmitting, setWizardSubmitting] = useState(false);
 
-  const {
-    changeOrders,
-    isLoading,
-  } = useChangeOrderProject(projectId);
-
-  const { saveDraft } = useWorkOrderDraft(projectId);
+  const { changeOrders, isLoading } = useChangeOrderProject(projectId);
 
   const userOrgId = userOrgRoles.length > 0 ? userOrgRoles[0].organization_id : undefined;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
@@ -66,98 +50,10 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
   }, [projectId, user]);
 
   const sovReadiness = useSOVReadiness(projectId, userOrgId, isProjectCreator);
-  const [enrichedTotals, setEnrichedTotals] = useState<Map<string, number>>(new Map());
-
   useEffect(() => { sovReadiness.refetch(); }, [projectId]);
-
-  useEffect(() => {
-    if (changeOrders.length === 0) return;
-    const ordersWithPO = changeOrders.filter((co: any) => co.linked_po_id);
-    if (ordersWithPO.length === 0) return;
-    enrichWorkOrderTotals(
-      changeOrders.map((co: any) => ({
-        id: co.id,
-        labor_total: co.labor_total || 0,
-        material_total: co.material_total || 0,
-        equipment_total: co.equipment_total || 0,
-        final_price: co.final_price || 0,
-        linked_po_id: co.linked_po_id || null,
-        material_markup_type: co.material_markup_type || null,
-        material_markup_percent: co.material_markup_percent || null,
-        material_markup_amount: co.material_markup_amount || null,
-      }))
-    ).then(setEnrichedTotals);
-  }, [changeOrders]);
 
   const canCreate = permissions?.canCreateWorkOrders ?? false;
   const isBlocked = !isFC && !sovReadiness.isReady && !sovReadiness.loading;
-
-  const handleWizardComplete = async (data: WorkOrderWizardData & { project_id: string }) => {
-    setWizardSubmitting(true);
-    try {
-      const draftId = await saveDraft({
-        title: data.title || data.selectedCatalogItems.map(i => i.item_name).join(', ') || 'Work Order',
-        description: data.description || undefined,
-        wo_mode: 'full_scope',
-        location_tag: data.location_tags.join(', ') || undefined,
-        pricing_mode: 'fixed',
-      });
-
-      const orgId = userOrgRoles[0]?.organization?.id;
-      if (!orgId || !user) throw new Error('Missing org or user');
-
-      // Add line items from selected catalog items
-      for (const item of data.selectedCatalogItems) {
-        const { error } = await supabase
-          .from('work_order_line_items')
-          .insert({
-            project_id: projectId,
-            change_order_id: draftId,
-            org_id: orgId,
-            created_by_user_id: user.id,
-            catalog_item_id: item.id,
-            item_name: item.item_name,
-            division: item.division || null,
-            category_name: item.category_name || null,
-            group_label: item.group_label || null,
-            unit: item.unit,
-            unit_rate: 0,
-            location_tag: data.location_tags.join(', ') || null,
-          } as never)
-        if (error) throw error;
-      }
-
-      // Add participants
-      if (data.assigned_org_id) {
-        await supabase.from('change_order_participants').insert({
-          change_order_id: draftId,
-          organization_id: data.assigned_org_id,
-          role: 'Trade Contractor',
-        } as never);
-      }
-      if (data.selected_fc_org_id) {
-        await supabase.from('change_order_participants').insert({
-          change_order_id: draftId,
-          organization_id: data.selected_fc_org_id,
-          role: 'Field Crew',
-        } as never);
-      }
-      for (const pOrgId of data.participant_org_ids) {
-        await supabase.from('change_order_participants').insert({
-          change_order_id: draftId,
-          organization_id: pOrgId,
-          role: 'Participant',
-        } as never);
-      }
-
-      toast({ title: 'Work order created successfully' });
-    } catch (err: any) {
-      toast({ variant: 'destructive', title: 'Failed to create work order', description: err.message });
-      throw err;
-    } finally {
-      setWizardSubmitting(false);
-    }
-  };
 
   const statusCounts = useMemo(() => ({
     ALL: changeOrders.length,
@@ -209,21 +105,12 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
     return 'Unknown';
   };
 
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(amount);
-
-  const getWORoute = (co: any) => {
-    if (co.wo_mode === 'quick_capture' && co.status === 'draft') return `/field-capture-draft/${co.id}`;
-    return `/change-order/${co.id}`;
-  };
-
   const renderWorkOrderCard = (changeOrder: any) => {
-    const route = getWORoute(changeOrder);
+    const route = `/change-order/${changeOrder.id}`;
     const hoverActions: HoverAction[] = [
       { icon: <Eye className="h-4 w-4" />, label: 'View', onClick: () => navigate(route) },
       { icon: <Edit className="h-4 w-4" />, label: 'Edit', onClick: () => navigate(route) },
     ];
-    const isContracted = changeOrder.status === 'contracted';
     const creatorLabel = getCreatorLabel(changeOrder);
     const isYou = changeOrder.created_by === user?.id;
 
@@ -248,12 +135,6 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
               <span className="text-xs bg-muted px-2 py-0.5 rounded">📍 {changeOrder.location_tag}</span>
             )}
           </div>
-          {isContracted && !isFC && (() => {
-            const displayTotal = enrichedTotals.get(changeOrder.id) || changeOrder.final_price;
-            return displayTotal != null ? (
-              <p className="text-sm font-medium mt-2 text-foreground">Contract: {formatCurrency(displayTotal)}</p>
-            ) : null;
-          })()}
           <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
             <User className="h-3 w-3" />
             <span>Created by <span className={isYou ? 'font-medium text-foreground' : ''}>{creatorLabel}</span></span>
@@ -324,7 +205,7 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
         ))}
       </div>
 
-      {/* Header with filter + New button */}
+      {/* Header with filter */}
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">
           {statusCounts.ALL} work order{statusCounts.ALL !== 1 ? 's' : ''}
@@ -346,23 +227,6 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
               )}
             </SelectContent>
           </Select>
-          {canCreate && !isProjectNotActive && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span>
-                    <Button onClick={() => setShowWizard(true)} disabled={isBlocked}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      New Work Order
-                    </Button>
-                  </span>
-                </TooltipTrigger>
-                {isBlocked && (
-                  <TooltipContent><p>Create SOVs for all contracts first</p></TooltipContent>
-                )}
-              </Tooltip>
-            </TooltipProvider>
-          )}
         </div>
       </div>
 
@@ -380,12 +244,6 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
                 ? 'No work orders yet for this project'
                 : `No ${getStatusTabLabel(activeTab).toLowerCase()} work orders`}
             </p>
-            {canCreate && activeTab === 'ALL' && (
-              <Button variant="outline" className="mt-4" onClick={() => setShowWizard(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create your first work order
-              </Button>
-            )}
           </CardContent>
         </Card>
       ) : (
@@ -393,56 +251,6 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
           {renderOrderSection('Fixed Price', fixedOrders)}
           {renderOrderSection('Time & Material', tmOrders)}
         </div>
-      )}
-
-      {/* Work Order Wizard */}
-      <WorkOrderWizard
-        open={showWizard}
-        onOpenChange={setShowWizard}
-        projectId={projectId}
-        projectName={projectName}
-        organizationId={userOrgId}
-        onComplete={handleWizardComplete}
-        onFieldCapture={() => setShowFieldCapture(true)}
-        isSubmitting={wizardSubmitting}
-      />
-
-      {/* Field Capture Sheet (opened from wizard path choice) */}
-      {userOrgId && (
-        <FieldCaptureSheet
-          open={showFieldCapture}
-          onOpenChange={setShowFieldCapture}
-          projectId={projectId}
-          organizationId={userOrgId}
-          onCaptureComplete={async (captureId, captureData) => {
-            try {
-              const draftId = await saveDraft({
-                title: captureData.description || 'Field Capture',
-                wo_mode: 'quick_capture',
-                pricing_mode: 'fixed',
-              });
-              await supabase.from('field_captures')
-                .update({ converted_work_order_id: draftId, status: 'converted' } as never)
-                .eq('id', captureId);
-              // Create a work_order_task from the first capture
-              await supabase.from('work_order_tasks').insert({
-                work_order_id: draftId,
-                sort_order: 0,
-                title: captureData.description || 'Field Capture',
-                description: captureData.description || null,
-                photo_url: (captureData as any).photo_url || null,
-                voice_note_url: (captureData as any).voice_note_url || null,
-                reason: (captureData as any).reason_category || null,
-                field_capture_id: captureId,
-                created_by: user?.id || null,
-              } as any);
-              setShowFieldCapture(false);
-              navigate(`/field-capture-draft/${draftId}`);
-            } catch (err: any) {
-              toast({ variant: 'destructive', title: 'Failed to create work order', description: err.message });
-            }
-          }}
-        />
       )}
     </div>
   );

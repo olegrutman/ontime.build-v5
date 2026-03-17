@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Search, ArrowLeft, AlertTriangle } from 'lucide-react';
-import { WizardProgress } from '@/components/work-order-wizard/WizardProgress';
+import { WizardProgress } from '@/components/ui/wizard-progress';
 import { VIRTUAL_CATEGORIES, CategoryCount } from '@/types/poWizardV2';
 import {
   ReturnReason,

@@ -6,7 +6,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Upload, FileText } from 'lucide-react';
 import { toast } from 'sonner';
-import { WizardProgress } from '@/components/work-order-wizard/WizardProgress';
+import { WizardProgress } from '@/components/ui/wizard-progress';
 import { parseEstimateCSV, ParsedPack, ParseResult } from '@/lib/parseEstimateCSV';
 import { PackReviewStep } from './PackReviewStep';
 import { PdfUploadStep } from './PdfUploadStep';
