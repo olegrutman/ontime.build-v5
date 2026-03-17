@@ -626,27 +626,6 @@ export function useDashboardData(): DashboardData {
           totalCosts += (c as any).labor_budget || 0;
         });
 
-        if (projectIds.length > 0) {
-          const { data: workOrders } = await supabase
-            .from('change_order_projects')
-            .select('id, status')
-            .in('project_id', projectIds)
-            .in('status', ['approved', 'contracted']);
-
-          const woList = workOrders || [];
-          totalWorkOrders = woList.length;
-
-          if (woList.length > 0) {
-            const woIds = woList.map(wo => wo.id);
-            const { data: fcHours } = await supabase
-              .from('change_order_fc_hours')
-              .select('labor_total')
-              .in('change_order_id', woIds);
-            const fcEarnings = (fcHours || []).reduce((sum, fc) => sum + (fc.labor_total || 0), 0);
-            totalWorkOrderValue = fcEarnings;
-            totalRevenue += fcEarnings;
-          }
-        }
 
         // FC billed = invoices sent (where FC is from_org)
         const sentInvoices = allInvoices.filter(i => {
