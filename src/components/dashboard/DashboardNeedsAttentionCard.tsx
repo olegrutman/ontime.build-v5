@@ -5,7 +5,7 @@ import { useProjectInvite } from '@/hooks/useProjectInvite';
 
 interface AttentionItem {
   id: string;
-  type: 'invoice' | 'invite';
+  type: 'invoice' | 'invite' | 'sent_invite';
   title: string;
   projectName: string;
   projectId: string;
