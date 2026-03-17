@@ -34,20 +34,12 @@ interface Props {
 }
 
 export function DashboardRecentDocs({ docs }: Props) {
-  const [filter, setFilter] = useState<DocFilter>('all');
   const isMobile = useIsMobile();
   const navigate = useNavigate();
 
   const handleRowClick = (doc: RecentDoc) => {
-    const tab = doc.type === 'invoice' ? 'invoices' : 'work-orders';
-    navigate(`/project/${doc.projectId}?tab=${tab}`);
+    navigate(`/project/${doc.projectId}?tab=invoices`);
   };
-
-  const filtered = filter === 'all'
-    ? docs
-    : filter === 'invoices'
-    ? docs.filter(d => d.type === 'invoice')
-    : docs.filter(d => d.type === 'change_order');
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
