@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ClipboardList, Receipt, Edit, FileText, Sparkles, Loader2, RefreshCw, MessageSquareMore } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Receipt, Edit, FileText, Sparkles, Loader2, RefreshCw, MessageSquareMore } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
