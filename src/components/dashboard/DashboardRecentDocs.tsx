@@ -51,7 +51,7 @@ export function DashboardRecentDocs({ docs }: Props) {
       {docs.length === 0 ? (
         <div className="px-4 py-8 text-center">
           <span className="text-[1.8rem]">📄</span>
-          <p className="text-[0.82rem] text-muted-foreground mt-1">No recent documents</p>
+          <p className="text-[0.82rem] text-muted-foreground mt-1">No recent invoices</p>
         </div>
       ) : isMobile ? (
         <div className="divide-y divide-border">
