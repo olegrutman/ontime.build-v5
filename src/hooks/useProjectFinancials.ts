@@ -198,7 +198,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
           to_org:organizations!project_contracts_to_org_id_fkey(name)
         `).eq('project_id', projectId),
         supabase.from('invoices').select('id, invoice_number, status, subtotal, total_amount, created_at, paid_at, contract_id, po_id, retainage_amount').eq('project_id', projectId),
-        supabase.from('change_order_projects').select('id, title, status, created_at, final_price, material_total, labor_total, equipment_total, linked_po_id, tc_internal_cost').eq('project_id', projectId),
+        Promise.resolve({ data: [] }),
         supabase.from('project_participants').select('organization_id, organizations:organization_id(name)').eq('project_id', projectId).eq('role', 'FC').eq('invite_status', 'ACCEPTED'),
       ]);
 
