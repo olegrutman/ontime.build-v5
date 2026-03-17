@@ -228,7 +228,7 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
           {!isTCSelfPerforming && (
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">FC Labor Cost</span>
-              <span className="text-sm font-semibold tabular-nums text-orange-600 dark:text-orange-400">-{fmt(fcContractValue + workOrderFCCost)}</span>
+              <span className="text-sm font-semibold tabular-nums text-orange-600 dark:text-orange-400">-{fmt(fcContractValue)}</span>
             </div>
           )}
 
