@@ -516,7 +516,6 @@ export function useDashboardData(): DashboardData {
 
       setThisMonth({
         invoices: thisMonthInvoices,
-        changeOrders: thisMonthCOs,
       });
 
       // 7. Calculate financial summary
