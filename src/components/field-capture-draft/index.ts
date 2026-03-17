@@ -1,0 +1,1 @@
+export { FieldCaptureDraftPage } from './FieldCaptureDraftPage';

@@ -419,7 +419,7 @@ export function WorkOrdersTab({ projectId, projectName, projectStatus }: WorkOrd
                 .update({ converted_work_order_id: draftId, status: 'converted' } as never)
                 .eq('id', captureId);
               setShowFieldCapture(false);
-              navigate(`/change-order/${draftId}`);
+              navigate(`/field-capture-draft/${draftId}`);
             } catch (err: any) {
               toast({ variant: 'destructive', title: 'Failed to create work order', description: err.message });
             }
