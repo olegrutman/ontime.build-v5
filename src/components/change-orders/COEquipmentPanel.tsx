@@ -13,6 +13,7 @@ interface COEquipmentPanelProps {
   equipment: COEquipmentItem[];
   isTC:      boolean;
   isGC:      boolean;
+  isFC:      boolean;
   canEdit:   boolean;
   onRefresh: () => void;
 }
