@@ -581,7 +581,7 @@ export function useDashboardData(): DashboardData {
         });
         totalBilled = receivedInvoices.reduce((sum, i) => sum + (i.total_amount || 0), 0);
       } else if (orgType === 'FC') {
-        // FC Revenue = contracts where FC is from_org + FC hours from WOs
+        // FC Revenue = contracts where FC is from_org
         contracts.forEach(c => {
           if (c.from_org_id === currentOrg.id) {
             totalRevenue += c.contract_sum || 0;
