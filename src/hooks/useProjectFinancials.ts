@@ -189,7 +189,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       }
 
       // 3. Non-supplier: fetch all in parallel
-      const [contractsRes, invoicesRes, workOrdersRes, fcParticipantsRes] = await Promise.all([
+      const [contractsRes, invoicesRes, _woRemoved, fcParticipantsRes] = await Promise.all([
         supabase.from('project_contracts').select(`
           id, from_role, to_role, contract_sum, retainage_percent, trade, from_org_id, to_org_id,
           material_responsibility, material_estimate_total, labor_budget,
