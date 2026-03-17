@@ -162,6 +162,7 @@ export function CONTEPanel({
         note: rejectNote.trim(),
       });
       toast.success('Increase request declined');
+      await notifyCreator('NTE_REJECTED');
       setRejectId(null);
       setRejectNote('');
       onRefresh();
