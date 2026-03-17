@@ -54,9 +54,13 @@ export function CODetailPage() {
     laborEntries,
     materials,
     equipment,
+    nteLog,
+    activity,
     financials,
     isLoading,
   } = useChangeOrderDetail(coId ?? null);
+
+  useCORealtime(coId ?? null);
 
   const isGC = currentRole === 'GC_PM';
   const isTC = currentRole === 'TC_PM';
