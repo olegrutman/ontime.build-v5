@@ -671,20 +671,6 @@ export function ChangeOrderDetailPage() {
             </div>
           </main>
 
-          {/* Add Task Sheet */}
-          <AddTaskSheet
-            open={showAddTaskSheet}
-            onOpenChange={setShowAddTaskSheet}
-            onSubmit={async (taskData) => {
-              if (editingTask) {
-                await updateTask.mutateAsync({ taskId: editingTask.id, updates: taskData as any });
-              } else {
-                await addTask.mutateAsync(taskData);
-              }
-            }}
-            isSubmitting={addTask.isPending || updateTask.isPending}
-            editTask={editingTask}
-          />
         </SidebarInset>
         <BottomNav />
       </div>

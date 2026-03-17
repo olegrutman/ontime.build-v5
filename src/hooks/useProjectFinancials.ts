@@ -341,9 +341,7 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       // Work orders — only sum approved/contracted for contract total
       const wos = workOrdersRes.data || [];
       const approvedWOs = wos.filter(wo => ['approved', 'contracted'].includes(wo.status));
-      // Use enrichWorkOrderTotals to include linked PO materials + markup
-      const enrichedTotals = await enrichWorkOrderTotals(approvedWOs as any);
-      const woTotal = Array.from(enrichedTotals.values()).reduce((sum, v) => sum + v, 0);
+      const woTotal = approvedWOs.reduce((sum: number, wo: any) => sum + (wo.final_price || 0), 0);
       setWorkOrderTotal(woTotal);
       setApprovedWOCount(approvedWOs.length);
       setRecentWorkOrders(wos.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5).map(wo => ({

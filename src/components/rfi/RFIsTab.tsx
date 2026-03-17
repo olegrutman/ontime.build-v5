@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Plus, MessageSquareMore } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,14 +6,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { RFICard } from './RFICard';
 import { CreateRFIDialog } from './CreateRFIDialog';
 import { RFIDetailDialog } from './RFIDetailDialog';
-import { WorkOrderWizard } from '@/components/work-order-wizard';
 import { useProjectRFIs } from '@/hooks/useProjectRFIs';
 import { useAuth } from '@/hooks/useAuth';
-import { useWorkOrderDraft } from '@/hooks/useWorkOrderDraft';
-import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import type { WorkOrderWizardData } from '@/types/workOrderWizard';
 import type { ProjectRFI, RFIStatus } from '@/types/rfi';
+import { useEffect } from 'react';
 
 interface RFIsTabProps {
   projectId: string;
@@ -27,27 +24,14 @@ interface TeamOrg {
 export function RFIsTab({ projectId }: RFIsTabProps) {
   const { user, userOrgRoles, permissions } = useAuth();
   const { rfis, isLoading, createRFI, answerRFI, closeRFI } = useProjectRFIs(projectId);
-  const { saveDraft } = useWorkOrderDraft(projectId);
-  const { toast } = useToast();
   const [statusFilter, setStatusFilter] = useState<'ALL' | RFIStatus>('ALL');
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedRFI, setSelectedRFI] = useState<ProjectRFI | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [teamOrgs, setTeamOrgs] = useState<TeamOrg[]>([]);
-  const [woWizardOpen, setWoWizardOpen] = useState(false);
-  const [wizardSubmitting, setWizardSubmitting] = useState(false);
-  const [projectName, setProjectName] = useState('');
 
   const currentOrgId = userOrgRoles[0]?.organization?.id;
   const canCreate = permissions?.canCreateRFIs ?? false;
-  const canCreateWorkOrders = permissions?.canCreateWorkOrders ?? false;
-
-  useEffect(() => {
-    if (!projectId) return;
-    supabase.from('projects').select('name').eq('id', projectId).single().then(({ data }) => {
-      if (data) setProjectName(data.name);
-    });
-  }, [projectId]);
 
   useEffect(() => {
     if (!projectId) return;
@@ -65,52 +49,6 @@ export function RFIsTab({ projectId }: RFIsTabProps) {
   const handleCardClick = (rfi: ProjectRFI) => {
     setSelectedRFI(rfi);
     setDetailOpen(true);
-  };
-
-  const handleConvertToWO = (_rfi: ProjectRFI) => {
-    setDetailOpen(false);
-    setWoWizardOpen(true);
-  };
-
-  const handleWizardComplete = async (data: WorkOrderWizardData & { project_id: string }) => {
-    setWizardSubmitting(true);
-    try {
-      const draftId = await saveDraft({
-        title: data.title || data.selectedCatalogItems.map(i => i.item_name).join(', ') || 'Work Order',
-        description: data.description || undefined,
-        wo_mode: 'full_scope',
-        location_tag: data.location_tags.join(', ') || undefined,
-        pricing_mode: 'fixed',
-      });
-
-      const orgId = userOrgRoles[0]?.organization?.id;
-      if (!orgId || !user) throw new Error('Missing org or user');
-
-      for (const item of data.selectedCatalogItems) {
-        const { error } = await supabase.from('work_order_line_items').insert({
-          project_id: projectId,
-          change_order_id: draftId,
-          org_id: orgId,
-          created_by_user_id: user.id,
-          catalog_item_id: item.id,
-          item_name: item.item_name,
-          division: item.division || null,
-          category_name: item.category_name || null,
-          group_label: item.group_label || null,
-          unit: item.unit,
-          unit_rate: 0,
-          location_tag: data.location_tags.join(', ') || null,
-        } as never);
-        if (error) throw error;
-      }
-
-      toast({ title: 'Work order created from RFI' });
-    } catch (err: any) {
-      toast({ variant: 'destructive', title: 'Failed to create work order', description: err.message });
-      throw err;
-    } finally {
-      setWizardSubmitting(false);
-    }
   };
 
   if (isLoading) {
@@ -154,10 +92,7 @@ export function RFIsTab({ projectId }: RFIsTabProps) {
       <RFIDetailDialog rfi={selectedRFI} open={detailOpen} onOpenChange={setDetailOpen} currentOrgId={currentOrgId} currentUserId={user?.id}
         onAnswer={async (id, ans, uid) => { await answerRFI.mutateAsync({ id, answer: ans, answeredByUserId: uid }); }}
         onClose={async (id) => { await closeRFI.mutateAsync(id); }}
-        onConvertToWorkOrder={handleConvertToWO} canCreateWorkOrders={canCreateWorkOrders} />
-
-      <WorkOrderWizard open={woWizardOpen} onOpenChange={setWoWizardOpen} projectId={projectId} projectName={projectName}
-        onComplete={handleWizardComplete} isSubmitting={wizardSubmitting} />
+      />
     </div>
   );
 }

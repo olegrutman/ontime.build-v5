@@ -9,7 +9,7 @@ import { DIVISION_LABELS } from '@/types/quickLog';
 type DrillLevel = 'division' | 'category' | 'group' | 'item';
 
 interface CatalogBrowserProps {
-  catalog: ReturnType<typeof useWorkOrderCatalog>;
+  catalog: any;
   selectedItemId: string | null;
   onSelect: (item: CatalogItem | null) => void;
   compact?: boolean;

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { useWorkOrderCatalog } from '@/hooks/useWorkOrderCatalog';
-import { useWorkOrderLog } from '@/hooks/useWorkOrderLog';
+// QuickLogView — catalog and log hooks removed during WO cleanup
+// TODO: re-implement with new architecture
 import { QuickLogKPIStrip } from './QuickLogKPIStrip';
 import { QuickLogAlertBanner } from './QuickLogAlertBanner';
 import { CatalogBrowser } from './CatalogBrowser';
