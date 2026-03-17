@@ -78,7 +78,10 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
     currentRole === 'GC_PM' ? 'GC' :
     currentRole === 'TC_PM' ? 'TC' : 'FC';
 
-  function canAdvance(): boolean {
+  function update(patch: Partial<COWizardData>) {
+    setData(prev => ({ ...prev, ...patch }));
+  }
+
     const s = ALL_STEPS[step];
     if (s.key === 'catalog')  return data.selectedItems.length > 0;
     if (s.key === 'location') return data.locationTag.trim().length > 0;
