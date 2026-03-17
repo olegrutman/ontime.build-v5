@@ -391,7 +391,6 @@ export function useDashboardData(): DashboardData {
               .select('status, total_amount, created_at, contract_id')
               .in('project_id', projectIds)
           : Promise.resolve({ data: [] }),
-        Promise.resolve({ count: 0 }),
         user?.id
           ? supabase
               .from('reminders')
