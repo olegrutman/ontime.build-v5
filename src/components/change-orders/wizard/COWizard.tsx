@@ -77,7 +77,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
   const [step, setStep]   = useState(0);
   const [data, setData]   = useState<COWizardData>(INITIAL_DATA);
   const [submitting, setSubmitting] = useState(false);
-  const { createCO } = useChangeOrders(projectId);
+  const { createCO, shareCO } = useChangeOrders(projectId);
   const orgId = userOrgRoles?.[0]?.organization_id ?? null;
 
   const role: COCreatedByRole =
