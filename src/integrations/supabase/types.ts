@@ -387,7 +387,7 @@ export type Database = {
             columns: ["actor_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "co_activity_co_id_fkey"
@@ -768,7 +768,7 @@ export type Database = {
             columns: ["approved_by_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "co_nte_log_co_id_fkey"
@@ -782,7 +782,7 @@ export type Database = {
             columns: ["requested_by_user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedColumns: ["user_id"]
           },
         ]
       }
