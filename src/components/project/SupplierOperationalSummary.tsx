@@ -129,28 +129,7 @@ export function SupplierOperationalSummary({ projectId, supplierOrgId, onNavigat
     };
     fetchInvoices();
 
-    // Fetch work orders where supplier is a participant
-    const fetchWorkOrders = async () => {
-      const { data: participantRows } = await supabase
-        .from('change_order_participants')
-        .select('change_order_id')
-        .eq('organization_id', supplierOrgId)
-        .eq('is_active', true);
-
-      if (participantRows && participantRows.length > 0) {
-        const coIds = participantRows.map(r => r.change_order_id);
-        const { data: woData } = await supabase
-          .from('change_order_projects')
-          .select('id, title, status, created_at')
-          .eq('project_id', projectId)
-          .in('id', coIds)
-          .order('created_at', { ascending: false })
-          .limit(5);
-        setWorkOrders(woData || []);
-      }
-      setLoadingWOs(false);
-    };
-    fetchWorkOrders();
+    // Work orders removed — no longer tracked
 
     // Fetch open RFIs assigned to this supplier
     const fetchRfiCount = async () => {
