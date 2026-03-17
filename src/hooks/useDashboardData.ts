@@ -311,7 +311,7 @@ export function useDashboardData(): DashboardData {
         const proj = allProjects.find(p => p.id === inv.project_id);
         attentionList.push({
           id: inv.id,
-          type: 'invite',
+          type: 'sent_invite',
           title: inv.invited_org_name || 'Pending Invite',
           projectName: proj?.name || 'Unknown Project',
           projectId: inv.project_id,

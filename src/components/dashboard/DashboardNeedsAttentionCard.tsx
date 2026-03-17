@@ -107,7 +107,7 @@ export function DashboardNeedsAttentionCard({ attentionItems, pendingInvites, on
             const isIncomingInvite = item.type === 'invite';
             const isProcessing = processingId === item.id;
 
-            if (isInvite) {
+            if (isIncomingInvite) {
               return (
                 <div
                   key={item.id}
