@@ -382,10 +382,8 @@ export function useDashboardData(): DashboardData {
 
       const [
         allInvoicesResult,
-        thisMonthCOsResult,
         remindersResult,
         recentInvoicesResult,
-        recentCOsResult,
       ] = await Promise.all([
         projectIds.length > 0
           ? supabase
