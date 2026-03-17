@@ -5,7 +5,7 @@ import { useProjectInvite } from '@/hooks/useProjectInvite';
 
 interface AttentionItem {
   id: string;
-  type: 'invoice' | 'invite';
+  type: 'invoice' | 'invite' | 'sent_invite';
   title: string;
   projectName: string;
   projectId: string;
@@ -37,6 +37,12 @@ const typeConfig: Record<string, { emoji: string; borderColor: string; badge: st
     borderColor: 'border-l-blue-500',
     badge: 'Respond',
     badgeStyle: 'bg-blue-50 text-blue-700',
+  },
+  sent_invite: {
+    emoji: '📤',
+    borderColor: 'border-l-amber-500',
+    badge: 'Awaiting',
+    badgeStyle: 'bg-amber-50 text-amber-700',
   },
 };
 
@@ -98,10 +104,10 @@ export function DashboardNeedsAttentionCard({ attentionItems, pendingInvites, on
         ) : (
           allItems.slice(0, 5).map(item => {
             const config = typeConfig[item.type];
-            const isInvite = item.type === 'invite';
+            const isIncomingInvite = item.type === 'invite';
             const isProcessing = processingId === item.id;
 
-            if (isInvite) {
+            if (isIncomingInvite) {
               return (
                 <div
                   key={item.id}
