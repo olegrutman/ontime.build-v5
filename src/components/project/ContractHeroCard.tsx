@@ -176,14 +176,6 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
           </div>
         </div>
 
-        {/* Approved Work Orders */}
-        <div>
-          <p className="text-xs text-muted-foreground mb-0.5">+ Approved Work Orders</p>
-          <span className="text-lg font-semibold tabular-nums text-primary">{fmt(workOrderTotal)}</span>
-          {approvedWOCount > 0 && (
-            <span className="text-[10px] text-muted-foreground ml-1.5">{approvedWOCount} WOs</span>
-          )}
-        </div>
       </div>
 
       {/* TC: Outgoing FC contract */}
