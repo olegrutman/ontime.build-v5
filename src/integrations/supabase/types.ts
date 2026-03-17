@@ -193,6 +193,599 @@ export type Database = {
           },
         ]
       }
+      change_orders: {
+        Row: {
+          approved_at: string | null
+          assigned_to_org_id: string | null
+          co_number: string | null
+          combined_at: string | null
+          combined_co_id: string | null
+          contracted_at: string | null
+          created_at: string | null
+          created_by_role: string
+          created_by_user_id: string
+          draft_shared_with_next: boolean
+          equipment_needed: boolean
+          equipment_responsible: string | null
+          fc_input_needed: boolean
+          id: string
+          location_tag: string | null
+          materials_needed: boolean
+          materials_on_site: boolean
+          materials_responsible: string | null
+          nte_cap: number | null
+          nte_increase_approved: boolean | null
+          nte_increase_requested: number | null
+          org_id: string
+          parent_co_id: string | null
+          pricing_type: string
+          project_id: string
+          reason: string | null
+          reason_note: string | null
+          rejected_at: string | null
+          rejection_note: string | null
+          shared_at: string | null
+          status: string
+          submitted_at: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          assigned_to_org_id?: string | null
+          co_number?: string | null
+          combined_at?: string | null
+          combined_co_id?: string | null
+          contracted_at?: string | null
+          created_at?: string | null
+          created_by_role: string
+          created_by_user_id: string
+          draft_shared_with_next?: boolean
+          equipment_needed?: boolean
+          equipment_responsible?: string | null
+          fc_input_needed?: boolean
+          id?: string
+          location_tag?: string | null
+          materials_needed?: boolean
+          materials_on_site?: boolean
+          materials_responsible?: string | null
+          nte_cap?: number | null
+          nte_increase_approved?: boolean | null
+          nte_increase_requested?: number | null
+          org_id: string
+          parent_co_id?: string | null
+          pricing_type?: string
+          project_id: string
+          reason?: string | null
+          reason_note?: string | null
+          rejected_at?: string | null
+          rejection_note?: string | null
+          shared_at?: string | null
+          status?: string
+          submitted_at?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          assigned_to_org_id?: string | null
+          co_number?: string | null
+          combined_at?: string | null
+          combined_co_id?: string | null
+          contracted_at?: string | null
+          created_at?: string | null
+          created_by_role?: string
+          created_by_user_id?: string
+          draft_shared_with_next?: boolean
+          equipment_needed?: boolean
+          equipment_responsible?: string | null
+          fc_input_needed?: boolean
+          id?: string
+          location_tag?: string | null
+          materials_needed?: boolean
+          materials_on_site?: boolean
+          materials_responsible?: string | null
+          nte_cap?: number | null
+          nte_increase_approved?: boolean | null
+          nte_increase_requested?: number | null
+          org_id?: string
+          parent_co_id?: string | null
+          pricing_type?: string
+          project_id?: string
+          reason?: string | null
+          reason_note?: string | null
+          rejected_at?: string | null
+          rejection_note?: string | null
+          shared_at?: string | null
+          status?: string
+          submitted_at?: string | null
+          title?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_orders_assigned_to_org_id_fkey"
+            columns: ["assigned_to_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_combined_co_id_fkey"
+            columns: ["combined_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_created_by_user_id_fkey"
+            columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_parent_co_id_fkey"
+            columns: ["parent_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_orders_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      co_activity: {
+        Row: {
+          action: string
+          actor_role: string
+          actor_user_id: string
+          amount: number | null
+          co_id: string
+          created_at: string | null
+          detail: string | null
+          id: string
+          project_id: string
+        }
+        Insert: {
+          action: string
+          actor_role: string
+          actor_user_id: string
+          amount?: number | null
+          co_id: string
+          created_at?: string | null
+          detail?: string | null
+          id?: string
+          project_id: string
+        }
+        Update: {
+          action?: string
+          actor_role?: string
+          actor_user_id?: string
+          amount?: number | null
+          co_id?: string
+          created_at?: string | null
+          detail?: string | null
+          id?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_activity_actor_user_id_fkey"
+            columns: ["actor_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_activity_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_activity_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      co_combined_members: {
+        Row: {
+          added_at: string | null
+          combined_co_id: string
+          id: string
+          member_co_id: string
+        }
+        Insert: {
+          added_at?: string | null
+          combined_co_id: string
+          id?: string
+          member_co_id: string
+        }
+        Update: {
+          added_at?: string | null
+          combined_co_id?: string
+          id?: string
+          member_co_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_combined_members_combined_co_id_fkey"
+            columns: ["combined_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_combined_members_member_co_id_fkey"
+            columns: ["member_co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      co_equipment_items: {
+        Row: {
+          added_by_role: string
+          billed_amount: number | null
+          co_id: string
+          cost: number
+          created_at: string | null
+          description: string
+          duration_note: string | null
+          id: string
+          markup_amount: number | null
+          markup_percent: number
+          notes: string | null
+          org_id: string
+        }
+        Insert: {
+          added_by_role: string
+          billed_amount?: number | null
+          co_id: string
+          cost?: number
+          created_at?: string | null
+          description: string
+          duration_note?: string | null
+          id?: string
+          markup_amount?: number | null
+          markup_percent?: number
+          notes?: string | null
+          org_id: string
+        }
+        Update: {
+          added_by_role?: string
+          billed_amount?: number | null
+          co_id?: string
+          cost?: number
+          created_at?: string | null
+          description?: string
+          duration_note?: string | null
+          id?: string
+          markup_amount?: number | null
+          markup_percent?: number
+          notes?: string | null
+          org_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_equipment_items_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_equipment_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      co_labor_entries: {
+        Row: {
+          actual_cost_note: string | null
+          co_id: string
+          co_line_item_id: string
+          created_at: string | null
+          description: string | null
+          entered_by_role: string
+          entry_date: string
+          hourly_rate: number | null
+          hours: number | null
+          id: string
+          is_actual_cost: boolean
+          line_total: number | null
+          lump_sum: number | null
+          org_id: string
+          pricing_mode: string
+        }
+        Insert: {
+          actual_cost_note?: string | null
+          co_id: string
+          co_line_item_id: string
+          created_at?: string | null
+          description?: string | null
+          entered_by_role: string
+          entry_date?: string
+          hourly_rate?: number | null
+          hours?: number | null
+          id?: string
+          is_actual_cost?: boolean
+          line_total?: number | null
+          lump_sum?: number | null
+          org_id: string
+          pricing_mode?: string
+        }
+        Update: {
+          actual_cost_note?: string | null
+          co_id?: string
+          co_line_item_id?: string
+          created_at?: string | null
+          description?: string | null
+          entered_by_role?: string
+          entry_date?: string
+          hourly_rate?: number | null
+          hours?: number | null
+          id?: string
+          is_actual_cost?: boolean
+          line_total?: number | null
+          lump_sum?: number | null
+          org_id?: string
+          pricing_mode?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_labor_entries_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_labor_entries_co_line_item_id_fkey"
+            columns: ["co_line_item_id"]
+            isOneToOne: false
+            referencedRelation: "co_line_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_labor_entries_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      co_line_items: {
+        Row: {
+          catalog_item_id: string | null
+          category_name: string | null
+          co_id: string
+          created_at: string | null
+          created_by_role: string
+          division: string | null
+          id: string
+          item_name: string
+          org_id: string
+          qty: number | null
+          sort_order: number | null
+          unit: string
+        }
+        Insert: {
+          catalog_item_id?: string | null
+          category_name?: string | null
+          co_id: string
+          created_at?: string | null
+          created_by_role: string
+          division?: string | null
+          id?: string
+          item_name: string
+          org_id: string
+          qty?: number | null
+          sort_order?: number | null
+          unit: string
+        }
+        Update: {
+          catalog_item_id?: string | null
+          category_name?: string | null
+          co_id?: string
+          created_at?: string | null
+          created_by_role?: string
+          division?: string | null
+          id?: string
+          item_name?: string
+          org_id?: string
+          qty?: number | null
+          sort_order?: number | null
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_line_items_catalog_item_id_fkey"
+            columns: ["catalog_item_id"]
+            isOneToOne: false
+            referencedRelation: "work_order_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_line_items_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_line_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      co_material_items: {
+        Row: {
+          added_by_role: string
+          billed_amount: number | null
+          co_id: string
+          created_at: string | null
+          description: string
+          id: string
+          is_on_site: boolean
+          line_cost: number | null
+          line_number: number
+          markup_amount: number | null
+          markup_percent: number
+          notes: string | null
+          org_id: string
+          quantity: number
+          supplier_sku: string | null
+          unit_cost: number | null
+          uom: string
+        }
+        Insert: {
+          added_by_role: string
+          billed_amount?: number | null
+          co_id: string
+          created_at?: string | null
+          description: string
+          id?: string
+          is_on_site?: boolean
+          line_cost?: number | null
+          line_number?: number
+          markup_amount?: number | null
+          markup_percent?: number
+          notes?: string | null
+          org_id: string
+          quantity?: number
+          supplier_sku?: string | null
+          unit_cost?: number | null
+          uom?: string
+        }
+        Update: {
+          added_by_role?: string
+          billed_amount?: number | null
+          co_id?: string
+          created_at?: string | null
+          description?: string
+          id?: string
+          is_on_site?: boolean
+          line_cost?: number | null
+          line_number?: number
+          markup_amount?: number | null
+          markup_percent?: number
+          notes?: string | null
+          org_id?: string
+          quantity?: number
+          supplier_sku?: string | null
+          unit_cost?: number | null
+          uom?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_material_items_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_material_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      co_nte_log: {
+        Row: {
+          approved_at: string | null
+          approved_by_user_id: string | null
+          co_id: string
+          created_at: string | null
+          current_cap_at_request: number
+          id: string
+          new_cap_after_approval: number | null
+          rejected_at: string | null
+          rejection_note: string | null
+          requested_by_user_id: string
+          requested_increase: number
+          running_total_at_request: number
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by_user_id?: string | null
+          co_id: string
+          created_at?: string | null
+          current_cap_at_request: number
+          id?: string
+          new_cap_after_approval?: number | null
+          rejected_at?: string | null
+          rejection_note?: string | null
+          requested_by_user_id: string
+          requested_increase: number
+          running_total_at_request: number
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by_user_id?: string | null
+          co_id?: string
+          created_at?: string | null
+          current_cap_at_request?: number
+          id?: string
+          new_cap_after_approval?: number | null
+          rejected_at?: string | null
+          rejection_note?: string | null
+          requested_by_user_id?: string
+          requested_increase?: number
+          running_total_at_request?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_nte_log_approved_by_user_id_fkey"
+            columns: ["approved_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_nte_log_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_nte_log_requested_by_user_id_fkey"
+            columns: ["requested_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_log_delays: {
         Row: {
           cause: string
@@ -1596,6 +2189,7 @@ export type Database = {
           email: string
           first_name: string | null
           full_name: string | null
+          hourly_rate: number | null
           id: string
           job_title: string | null
           language: string | null
@@ -1613,6 +2207,7 @@ export type Database = {
           email: string
           first_name?: string | null
           full_name?: string | null
+          hourly_rate?: number | null
           id?: string
           job_title?: string | null
           language?: string | null
@@ -1630,6 +2225,7 @@ export type Database = {
           email?: string
           first_name?: string | null
           full_name?: string | null
+          hourly_rate?: number | null
           id?: string
           job_title?: string | null
           language?: string | null
@@ -3769,6 +4365,65 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      work_order_catalog: {
+        Row: {
+          category_bg: string
+          category_color: string
+          category_icon: string
+          category_id: string
+          category_name: string
+          created_at: string | null
+          division: string
+          group_id: string
+          group_label: string
+          id: string
+          item_name: string
+          org_id: string | null
+          sort_order: number | null
+          unit: string
+        }
+        Insert: {
+          category_bg?: string
+          category_color?: string
+          category_icon?: string
+          category_id: string
+          category_name: string
+          created_at?: string | null
+          division: string
+          group_id: string
+          group_label: string
+          id?: string
+          item_name: string
+          org_id?: string | null
+          sort_order?: number | null
+          unit: string
+        }
+        Update: {
+          category_bg?: string
+          category_color?: string
+          category_icon?: string
+          category_id?: string
+          category_name?: string
+          created_at?: string | null
+          division?: string
+          group_id?: string
+          group_label?: string
+          id?: string
+          item_name?: string
+          org_id?: string | null
+          sort_order?: number | null
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "work_order_catalog_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
