@@ -169,6 +169,7 @@ function AppRoutes() {
             <Route path="/project/:id" element={<RequireAuth><ProjectHome /></RequireAuth>} />
             <Route path="/project/:id/edit" element={<RequireAuth><EditProject /></RequireAuth>} />
             <Route path="/projects/:id/scope" element={<RequireAuth><EditProjectScope /></RequireAuth>} />
+            <Route path="/projects/:projectId/change-orders/:coId" element={<RequireAuth><CODetailPage /></RequireAuth>} />
             <Route path="/partners" element={<RequireAuth><PartnerDirectory /></RequireAuth>} />
             
             <Route path="/org/team" element={<RequireAuth><OrgTeam /></RequireAuth>} />
