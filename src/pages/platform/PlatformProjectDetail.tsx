@@ -178,7 +178,7 @@ export default function PlatformProjectDetail() {
         .eq('project_id', projectId)
         .order('created_at', { ascending: false })
         .limit(10),
-      supabase.from('work_items').select('state').eq('project_id', projectId),
+      Promise.resolve({ data: [] }),
       supabase.from('purchase_orders').select('status').eq('project_id', projectId),
       supabase.from('invoices').select('status, total_amount, retainage_amount, paid_at').eq('project_id', projectId),
       supabase.from('purchase_orders').select('po_total').eq('project_id', projectId),
