@@ -68,6 +68,7 @@ export function CODetailPage() {
   const isTC = currentRole === 'TC_PM';
   const isFC = currentRole === 'FC_PM' || currentRole === 'FS';
   const role: COCreatedByRole = isGC ? 'GC' : isTC ? 'TC' : 'FC';
+  const myOrgId = userOrgRoles[0]?.organization_id ?? co?.org_id ?? '';
 
   const queryClient = useQueryClient();
   function refreshDetail() {
