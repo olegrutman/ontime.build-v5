@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import { WizardProgress } from '@/components/work-order-wizard/WizardProgress';
+import { WizardProgress } from '@/components/ui/wizard-progress';
 import { useProjectScope } from '@/hooks/useProjectScope';
 import { useToast } from '@/hooks/use-toast';
 import {
