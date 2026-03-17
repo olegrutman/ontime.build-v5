@@ -130,4 +130,7 @@ export const ACTION_TYPE_LABELS: Record<SupportActionType, string> = {
   REBUILD_PERMISSIONS: 'Permissions Rebuilt',
   MANUAL_VERIFY_SUPPLIER: 'Supplier Manually Verified',
   DELETE_PROJECT: 'Project Deleted',
+  DELETE_INVOICE: 'Invoice Deleted',
+  DELETE_PURCHASE_ORDER: 'Purchase Order Deleted',
+  DELETE_WORK_ORDER: 'Work Order Deleted',
 };
