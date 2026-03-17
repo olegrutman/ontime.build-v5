@@ -412,29 +412,6 @@ export function ChangeOrderDetailPage() {
                     </div>
                   </Card>
 
-                  {/* Work Order Line Items (new wizard) */}
-                  <WorkOrderLineItemsList lineItems={lineItems} isLoading={isLoadingLineItems} />
-
-                  {/* Legacy Work Order Tasks (backwards compat) */}
-                  {(tasks.length > 0 || (lineItems.length === 0 && !isLoadingLineItems)) && (
-                    <WorkOrderTaskList
-                      tasks={tasks}
-                      isLoading={isLoadingTasks}
-                      isEditable={isEditable || isFC}
-                      onAddTask={() => { setEditingTask(null); setShowAddTaskSheet(true); }}
-                      onEditTask={(task) => { setEditingTask(task); setShowAddTaskSheet(true); }}
-                      onStatusChange={(taskId, status) => updateTaskStatus.mutate({ taskId, status })}
-                      onDeleteTask={(taskId) => deleteTask.mutate(taskId)}
-                    />
-                  )}
-
-                  {/* Quick Add for FC */}
-                  {isFC && (
-                    <TaskQuickAdd
-                      onSubmit={async (t) => { await addTask.mutateAsync(t); }}
-                      isSubmitting={addTask.isPending}
-                    />
-                  )}
 
                   {/* GC Labor Review (fixed price only) - collapsible */}
                   {(changeOrder as any).pricing_mode !== 'tm' && isGC && (tcLabor.length > 0 || (changeOrder.labor_total ?? 0) > 0) && (
