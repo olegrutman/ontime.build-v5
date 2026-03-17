@@ -97,7 +97,7 @@ export function DashboardNeedsAttentionCard({ attentionItems, pendingInvites, on
           </div>
         ) : (
           allItems.slice(0, 5).map(item => {
-            const config = typeConfig[item.type] || typeConfig.change_order;
+            const config = typeConfig[item.type];
             const isInvite = item.type === 'invite';
             const isProcessing = processingId === item.id;
 
@@ -152,6 +152,11 @@ export function DashboardNeedsAttentionCard({ attentionItems, pendingInvites, on
               </button>
             );
           })
+        )}
+        {allItems.length > 5 && (
+          <p className="text-[0.72rem] text-muted-foreground text-center pt-1">
+            +{allItems.length - 5} more
+          </p>
         )}
       </div>
     </div>
