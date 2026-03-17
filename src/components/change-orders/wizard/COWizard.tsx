@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
@@ -196,7 +196,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
   const isLastStep  = step === ALL_STEPS.length - 1;
 
   const body = (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Mobile progress bar */}
       {isMobile && (
         <div className="px-4 pt-4 pb-3 border-b">
@@ -323,12 +323,13 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl p-0 gap-0 overflow-hidden max-h-[85vh]">
+      <DialogContent className="max-w-3xl p-0 gap-0 overflow-hidden max-h-[85vh] flex flex-col">
+        <DialogTitle className="sr-only">New Change Order</DialogTitle>
         <DialogDescription className="sr-only">
           Create a new change order
         </DialogDescription>
         {/* Desktop header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b">
+        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
           <div>
             <h2 className="text-lg font-semibold">New Change Order</h2>
             <p className="text-xs text-muted-foreground">
@@ -348,10 +349,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
           </div>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 min-h-0 overflow-hidden">
-          {body}
-        </div>
+        {body}
       </DialogContent>
     </Dialog>
   );
