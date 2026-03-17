@@ -38,9 +38,7 @@ export function useSashaContext(): string {
     return context + 'Project Overview — Shows: attention banner (items needing action), financial signal cards (contract value, billed, retainage), metric strip, operational summary (Work Orders, POs, Invoices counts), team members list, contracts section, readiness checklist, and project scope summary.';
   }
 
-  if (path.startsWith('/change-order/')) return context + 'Work Order detail page — Shows: Work Order title, status, location, scope description, pricing mode, completion checklist (location, scope, TC pricing, materials, FC hours), materials list, equipment, labor entries, and approval controls.';
-  if (path.startsWith('/work-item/')) return context + 'Work Item detail page — Shows: work item details, pricing entries, labor entries, material entries, T&M periods (if applicable), participants, and progress tracking.';
-  if (path === '/change-orders') return context + 'All Work Orders list — Shows: all Work Orders across all projects with status filters, search, and sorting. Each card shows title, project name, status, and pricing mode.';
+  if (path === '/purchase-orders') return context + 'All Purchase Orders list — Shows: all POs across all projects with status filters and search. Each card shows PO number, supplier, project, status, and total amount.';
   if (path === '/purchase-orders') return context + 'All Purchase Orders list — Shows: all POs across all projects with status filters and search. Each card shows PO number, supplier, project, status, and total amount.';
   if (path === '/orders') return context + 'Material Orders list — Shows: material orders linked to Work Items, with order number, supplier, status, and item count. Users can track order progress from draft through delivery.';
   if (path === '/estimates') return context + 'Supplier Estimates list — Shows: estimates from suppliers with line items, pack groupings, and catalog matching status. Users can review and approve supplier estimates.';
