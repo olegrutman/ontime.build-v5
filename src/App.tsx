@@ -75,11 +75,6 @@ const ChangeOrderDetailPage = lazy(() =>
     default: m.ChangeOrderDetailPage,
   }))
 );
-const FieldCaptureDraftPage = lazy(() =>
-  import("@/components/field-capture-draft").then((m) => ({
-    default: m.FieldCaptureDraftPage,
-  }))
-);
 
 // 4. Route protection wrapper
 function RequireAuth({ children }: { children: ReactNode }) {
