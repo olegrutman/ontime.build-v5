@@ -100,7 +100,6 @@ interface DashboardData {
   recentDocs: RecentDoc[];
   thisMonth: {
     invoices: number;
-    changeOrders: number;
   };
   loading: boolean;
   refetch: () => Promise<void>;
