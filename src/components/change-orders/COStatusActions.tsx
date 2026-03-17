@@ -19,17 +19,19 @@ import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { sendCONotification, buildCONotification } from '@/lib/coNotifications';
 import { toast } from 'sonner';
 import type { ChangeOrder, COStatus } from '@/types/changeOrder';
 import { cn } from '@/lib/utils';
 
 interface COStatusActionsProps {
-  co:        ChangeOrder;
-  isGC:      boolean;
-  isTC:      boolean;
-  isFC:      boolean;
-  projectId: string;
-  onRefresh: () => void;
+  co:         ChangeOrder;
+  isGC:       boolean;
+  isTC:       boolean;
+  isFC:       boolean;
+  projectId:  string;
+  financials?: { grandTotal: number } | null;
+  onRefresh:  () => void;
 }
 
 export function COStatusActions({
