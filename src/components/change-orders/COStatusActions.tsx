@@ -40,6 +40,7 @@ export function COStatusActions({
   isTC,
   isFC,
   projectId,
+  financials,
   onRefresh,
 }: COStatusActionsProps) {
   const { submitCO, approveCO, rejectCO } = useChangeOrderDetail(co.id);
