@@ -47,9 +47,6 @@ export interface ProjectFinancials {
   ownerContractValue: number | null;
   materialMarkupType: string | null;
   materialMarkupValue: number | null;
-  woLaborTotal: number;
-  woMaterialTotal: number;
-  woEquipmentTotal: number;
 
   // Supplier-specific
   supplierOrderValue: number;
