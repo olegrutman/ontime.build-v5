@@ -159,6 +159,9 @@ export function CODetailPage() {
 
   const isCombinedParent = memberCOs.length > 0;
   const displayTitle = co.title ?? co.co_number ?? (isCombinedParent ? 'Combined change order' : 'Change order');
+  const pricingType: ValidPricing = VALID_PRICING.includes(co.pricing_type as ValidPricing)
+    ? (co.pricing_type as ValidPricing)
+    : 'fixed';
 
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
