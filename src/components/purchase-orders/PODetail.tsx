@@ -221,8 +221,9 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
       fetchPO();
       onUpdate();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to update PO';
-      console.error('Error updating PO:', error);
+      const typedError = (error && typeof error === 'object') ? error as { code?: string; message?: string } : null;
+      const message = getPOActionErrorMessage(typedError, 'Failed to update PO');
+      console.error('Error updating PO:', { poId, newStatus, error });
       toast.error(message);
     } finally {
       setActionLoading(false);
