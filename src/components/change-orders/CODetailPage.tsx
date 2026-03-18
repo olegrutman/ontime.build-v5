@@ -203,8 +203,31 @@ export function CODetailPage() {
                   )}
                 </div>
 
+                <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5">
+                  <div className="co-light-kpi">
+                    <p className="co-light-kpi-label">Labor</p>
+                    <p className="co-light-kpi-value">{fmtCurrency(financials.laborTotal)}</p>
+                  </div>
+                  {co.materials_needed && (
+                    <div className="co-light-kpi">
+                      <p className="co-light-kpi-label">Materials</p>
+                      <p className="co-light-kpi-value">{fmtCurrency(financials.materialsTotal)}</p>
+                    </div>
+                  )}
+                  {co.equipment_needed && (
+                    <div className="co-light-kpi">
+                      <p className="co-light-kpi-label">Equipment</p>
+                      <p className="co-light-kpi-value">{fmtCurrency(financials.equipmentTotal)}</p>
+                    </div>
+                  )}
+                  <div className="co-light-kpi">
+                    <p className="co-light-kpi-label">Grand total</p>
+                    <p className="co-light-kpi-value">{fmtCurrency(financials.grandTotal)}</p>
+                  </div>
+                </div>
+
                 {showNTEWarning && (
-                  <div className="rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-foreground">
+                  <div className="co-light-warning rounded-xl px-3 py-2 text-xs">
                     Action required: NTE cap is nearing limit ({nteUsedPercent.toFixed(1)}% used).
                   </div>
                 )}
@@ -213,8 +236,8 @@ export function CODetailPage() {
 
             <div className="px-4 md:px-6 py-4 md:py-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-4 md:gap-5">
               <div className="space-y-4 md:space-y-5">
-                <section className="rounded-xl border border-border bg-card overflow-hidden">
-                  <div className="px-4 py-3 border-b border-border">
+                <section className="co-light-shell overflow-hidden">
+                  <div className="px-4 py-3 border-b border-border co-light-header">
                     <div className="flex items-center justify-between gap-2">
                       <h2 className="text-sm font-semibold text-foreground">Scope & labor</h2>
                       <span className="text-xs text-muted-foreground">Tap row to expand</span>
@@ -233,7 +256,9 @@ export function CODetailPage() {
                               <div className="flex items-center justify-between gap-3">
                                 <div className="min-w-0">
                                   <p className="text-sm font-medium truncate">{label}</p>
-                                  <p className="text-xs text-muted-foreground">{items.length} line item{items.length === 1 ? '' : 's'}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {items.length} line item{items.length === 1 ? '' : 's'}
+                                  </p>
                                 </div>
                                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
                               </div>
@@ -267,7 +292,9 @@ export function CODetailPage() {
                       }
 
                       return items.length === 0 ? (
-                        <p key="empty-scope" className="px-4 py-4 text-sm text-muted-foreground">No scope items added yet</p>
+                        <p key="empty-scope" className="px-4 py-4 text-sm text-muted-foreground">
+                          No scope items added yet
+                        </p>
                       ) : (
                         <div key="single-scope">
                           {items.map(item => (
@@ -326,12 +353,10 @@ export function CODetailPage() {
               </div>
 
               <aside className="space-y-4 md:space-y-5">
-                <div className="rounded-xl border border-border bg-card p-4 space-y-1">
+                <div className="co-light-shell p-4 space-y-1">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Current role</p>
                   <p className="text-sm font-semibold text-foreground">{role}</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {user?.email ?? 'Authenticated user'}
-                  </p>
+                  <p className="text-xs text-muted-foreground truncate">{user?.email ?? 'Authenticated user'}</p>
                 </div>
 
                 <COStatusActions
@@ -344,8 +369,8 @@ export function CODetailPage() {
                   onRefresh={refreshDetail}
                 />
 
-                <div className="rounded-xl border border-border bg-card">
-                  <div className="px-4 py-3 border-b border-border">
+                <div className="co-light-shell overflow-hidden">
+                  <div className="px-4 py-3 border-b border-border co-light-header">
                     <h3 className="text-sm font-semibold text-foreground">Financial</h3>
                   </div>
                   <div className="px-4 py-3 space-y-2">
@@ -405,8 +430,8 @@ export function CODetailPage() {
                   />
                 )}
 
-                <div className="rounded-xl border border-border bg-card">
-                  <div className="px-4 py-3 border-b border-border">
+                <div className="co-light-shell overflow-hidden">
+                  <div className="px-4 py-3 border-b border-border co-light-header">
                     <h3 className="text-sm font-semibold text-foreground">Details</h3>
                   </div>
                   <div className="px-4 py-3 space-y-2">
