@@ -278,3 +278,31 @@ export interface NewCOEquipmentItem {
   markup_percent?: number;
   notes?: string;
 }
+
+export type COCollaboratorType = 'FC';
+
+export type COCollaboratorStatus = 'active' | 'completed' | 'removed';
+
+export interface COCollaborator {
+  id: string;
+  co_id: string;
+  organization_id: string;
+  collaborator_type: COCollaboratorType;
+  status: COCollaboratorStatus;
+  invited_by_user_id: string;
+  completed_by_user_id: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  organization?: {
+    id: string;
+    name: string;
+    type: string;
+  } | null;
+}
+
+export interface COFCOrgOption {
+  id: string;
+  name: string;
+  type: 'FC';
+}

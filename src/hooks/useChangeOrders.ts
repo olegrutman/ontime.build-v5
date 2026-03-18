@@ -128,13 +128,15 @@ export function useChangeOrders(projectId: string | null) {
 
   for (const co of changeOrders) {
     const isMine = co.org_id === orgId;
+    const isCollaborator = co.collaboratorOrgId === orgId && co.collaboratorStatus === 'active';
+
     if (isMine) {
       const bucket = co.status as COStatus;
       if (bucket in grouped.mine) {
-        grouped.mine[bucket as keyof typeof grouped.mine].push(co); // ✓ verified
+        grouped.mine[bucket as keyof typeof grouped.mine].push(co);
       }
-    } else if (co.assigned_to_org_id === orgId && co.org_id !== orgId) {
-      grouped.sharedWithMe.push(co); // ✓ verified
+    } else if ((co.assigned_to_org_id === orgId && co.org_id !== orgId) || isCollaborator) {
+      grouped.sharedWithMe.push(co);
     }
   }
 
