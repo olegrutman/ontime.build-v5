@@ -31,6 +31,7 @@ interface COStatusActionsProps {
   currentOrgId: string;
   projectId: string;
   financials?: Pick<COFinancials, 'grandTotal' | 'fcLaborTotal'> | null;
+  collaborators?: COCollaborator[];
   onRefresh: () => void;
 }
 
