@@ -216,7 +216,7 @@ export function CONTEPanel({
               <span className={cn(
                 'text-xs',
                 isNearCap ? 'text-destructive' :
-                isWarning ? 'text-amber-600' : 'text-muted-foreground'
+                isWarning ? 'text-primary' : 'text-muted-foreground'
               )}>
                 {pct.toFixed(1)}% used
               </span>
