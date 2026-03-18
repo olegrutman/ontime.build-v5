@@ -478,6 +478,71 @@
   }
 }
 
+/* ── Change Orders Light System ── */
+@layer components {
+  .co-light-shell {
+    @apply rounded-2xl border border-border bg-card shadow-sm;
+  }
+
+  .co-light-header {
+    @apply border-b border-border bg-accent/40;
+  }
+
+  .co-light-kpi {
+    @apply rounded-xl border border-border bg-card px-4 py-3 shadow-sm;
+  }
+
+  .co-light-kpi-label {
+    @apply text-[11px] font-semibold uppercase tracking-wide text-muted-foreground;
+  }
+
+  .co-light-kpi-value {
+    font-family: 'Barlow Condensed', 'Barlow', sans-serif;
+    @apply text-2xl font-black text-foreground leading-none;
+  }
+
+  .co-light-toggle {
+    @apply inline-flex items-center rounded-xl border border-border bg-card p-1;
+  }
+
+  .co-light-toggle-btn {
+    @apply px-3 py-1.5 text-xs font-semibold rounded-lg text-muted-foreground transition-colors;
+  }
+
+  .co-light-toggle-btn--active {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .co-light-subtle {
+    @apply rounded-lg border border-border bg-muted/30;
+  }
+
+  .co-light-role-gc {
+    background-color: hsl(var(--org-gc) / 0.14);
+    color: hsl(var(--org-gc));
+  }
+
+  .co-light-role-tc {
+    background-color: hsl(var(--org-tc) / 0.14);
+    color: hsl(var(--org-tc));
+  }
+
+  .co-light-role-fc {
+    background-color: hsl(var(--org-fc) / 0.14);
+    color: hsl(var(--org-fc));
+  }
+
+  .co-light-success-text {
+    color: hsl(var(--state-approved));
+  }
+
+  .co-light-warning {
+    background-color: hsl(var(--primary) / 0.12);
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--primary) / 0.3);
+  }
+}
+
 /* ── Mobile-First Native App Styles ── */
 @media (max-width: 767px) {
   body {
