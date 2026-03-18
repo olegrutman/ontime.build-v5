@@ -166,13 +166,14 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
           unit: item.unit,
           sort_order: idx,
         }));
-        const { error: lineError } = await (await import('@/integrations/supabase/client')).supabase
-          .from('co_line_items')
-          .insert(lineItemRows);
-        if (lineError) throw lineError;
+        const { error: lineError } = await supabase.from('co_line_items').insert(lineItemRows);
+        if (lineError) {
+          await supabase.from('change_orders').delete().eq('id', newCO.id);
+          throw new Error(`Failed to save scope items: ${lineError.message}`);
+        }
       }
 
-      await (await import('@/integrations/supabase/client')).supabase
+      const { error: activityError } = await supabase
         .from('co_activity')
         .insert({
           co_id: newCO.id,
@@ -183,6 +184,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
           detail: title ?? null,
           amount: null,
         });
+      if (activityError) throw activityError;
 
       if (data.shareDraftNow) {
         await shareCO.mutateAsync(newCO.id);
