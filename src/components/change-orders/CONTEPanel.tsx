@@ -263,8 +263,8 @@ export function CONTEPanel({
           )}
 
           {hasPending && isGC && pendingRequest && (
-            <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3 space-y-2">
-              <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+            <div className="rounded-md border border-primary/30 bg-primary/10 p-3 space-y-2">
+              <p className="text-xs font-semibold text-foreground">
                 TC requesting NTE increase
               </p>
               <div className="space-y-1 text-xs">
