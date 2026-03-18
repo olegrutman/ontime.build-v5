@@ -33,12 +33,41 @@ interface CONTEPanelProps {
   rejectNTEIncrease: UseMutationResult<void, Error, { nteLogId: string; note: string }, unknown>;
   onRefresh: () => void;
 }
-...
+
+function fmt(n: number) {
+  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+export function CONTEPanel({
+  co,
+  nteLog,
+  usedAmount,
+  isGC,
+  isTC,
+  isFC,
   requestNTEIncrease,
   approveNTEIncrease,
   rejectNTEIncrease,
+  onRefresh,
 }: CONTEPanelProps) {
-...
+  const [requestOpen, setRequestOpen] = useState(false);
+  const [increaseAmt, setIncreaseAmt] = useState('');
+  const [increaseNote, setIncreaseNote] = useState('');
+  const [approveId, setApproveId] = useState<string | null>(null);
+  const [rejectId, setRejectId] = useState<string | null>(null);
+  const [rejectNote, setRejectNote] = useState('');
+  const [acting, setActing] = useState(false);
+
+  const cap = co.nte_cap ?? 0;
+  const remaining = cap - usedAmount;
+  const pct = cap > 0 ? (usedAmount / cap) * 100 : 0;
+  const isWarning = pct >= 80 && pct < 95;
+  const isNearCap = pct >= 95;
+  const isOver = pct >= 100;
+
+  const pendingRequest = nteLog.find(e => !e.approved_at && !e.rejected_at);
+  const hasPending = !!pendingRequest;
+
   async function notifyCreator(type: string, amount?: number) {
     if (!co.created_by_user_id) return;
 

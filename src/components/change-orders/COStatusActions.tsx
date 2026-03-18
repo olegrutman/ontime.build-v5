@@ -132,7 +132,59 @@ export function COStatusActions({
       setActing(false);
     }
   }
-...
+
+  async function doApprove() {
+    setActing(true);
+    try {
+      await approveCO.mutateAsync(co.id);
+      toast.success('CO approved');
+      await logActivity('approved');
+      await notifyAssignedParty('CHANGE_APPROVED');
+      setApproveOpen(false);
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to approve');
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function doReject() {
+    if (!rejectNote.trim()) return;
+    setActing(true);
+    try {
+      await rejectCO.mutateAsync({ coId: co.id, note: rejectNote.trim() });
+      toast.success('CO rejected');
+      await logActivity('rejected', rejectNote.trim());
+      await notifyAssignedParty('CHANGE_REJECTED');
+      setRejectOpen(false);
+      setRejectNote('');
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to reject');
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function doRecall() {
+    setActing(true);
+    try {
+      await updateCO.mutateAsync({
+        id: co.id,
+        updates: { status: 'draft', submitted_at: null },
+      });
+      toast.success('CO recalled');
+      await logActivity('recalled');
+      await notifyAssignedParty('CO_RECALLED');
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to recall');
+    } finally {
+      setActing(false);
+    }
+  }
+
   const isCreator = co.created_by_user_id === user?.id;
   const isCombinedParent = status === 'combined' && !co.combined_co_id;
   const canShare   = isCreator && (status === 'draft' || isCombinedParent) && !co.draft_shared_with_next;
