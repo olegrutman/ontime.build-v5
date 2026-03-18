@@ -82,40 +82,86 @@ export function CODetailPage() {
   function refreshDetail() {
     queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
   }
-...
-                {/* Materials */}
-                {co.materials_needed && (
-                  <COMaterialsPanel
-                    coId={co.id}
-                    orgId={myOrgId}
-                    projectId={projectId!}
-                    materials={materials}
-                    isTC={isTC}
-                    isGC={isGC}
-                    isFC={isFC}
-                    materialsOnSite={co.materials_on_site}
-                    canEdit={canEdit}
-                    onRefresh={refreshDetail}
-                  />
-                )}
 
-                {/* Equipment */}
-                {co.equipment_needed && (
-                  <COEquipmentPanel
-                    coId={co.id}
-                    orgId={myOrgId}
-                    equipment={equipment}
-                    isTC={isTC}
-                    isGC={isGC}
-                    isFC={isFC}
-                    canEdit={canEdit}
-                    onRefresh={refreshDetail}
-                  />
-                )}
+  const canEdit =
+    co?.status === 'draft' ||
+    co?.status === 'shared' ||
+    co?.status === 'combined' ||
+    co?.pricing_type === 'tm' ||
+    co?.pricing_type === 'nte';
 
-                {/* Activity feed */}
-                <COActivityFeed activity={activity} />
-              </div>
+  if (isLoading) {
+    return (
+      <SidebarProvider defaultOpen={defaultOpen}>
+        <div className="flex min-h-screen w-full">
+          <AppSidebar />
+          <SidebarInset>
+            <div className="p-6 space-y-4">
+              <Skeleton className="h-8 w-64" />
+              <Skeleton className="h-48 w-full" />
+              <Skeleton className="h-32 w-full" />
+            </div>
+          </SidebarInset>
+          <BottomNav />
+        </div>
+      </SidebarProvider>
+    );
+  }
+
+  if (!co) {
+    return (
+      <SidebarProvider defaultOpen={defaultOpen}>
+        <div className="flex min-h-screen w-full">
+          <AppSidebar />
+          <SidebarInset>
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <p className="text-lg font-medium text-foreground">Change order not found</p>
+              <Button variant="outline" onClick={() => navigate(-1)}>
+                Go back
+              </Button>
+            </div>
+          </SidebarInset>
+          <BottomNav />
+        </div>
+      </SidebarProvider>
+    );
+  }
+
+  const isCombinedParent = memberCOs.length > 0;
+  const displayTitle = co.title ?? co.co_number ?? (isCombinedParent ? 'Combined Change Order' : 'Change Order');
+  const reasonColors = co.reason ? CO_REASON_COLORS[co.reason as COReasonCode] : null;
+
+  const billableEntries = laborEntries.filter(e => !e.is_actual_cost);
+  const fcEntries = billableEntries.filter(e => e.entered_by_role === 'FC');
+  const tcEntries = billableEntries.filter(e => e.entered_by_role === 'TC');
+
+  const scopeSections: { memberCO: ChangeOrder | null; items: typeof lineItems }[] = [];
+  if (isCombinedParent) {
+    for (const mco of memberCOs) {
+      const items = lineItems.filter(li => li.co_id === mco.id);
+      if (items.length > 0 || true) {
+        scopeSections.push({ memberCO: mco, items });
+      }
+    }
+  } else {
+    scopeSections.push({ memberCO: null, items: lineItems });
+  }
+
+  return (
+    <SidebarProvider defaultOpen={defaultOpen}>
+      <div className="flex min-h-screen w-full">
+        <AppSidebar />
+        <SidebarInset>
+          <div className="flex items-start gap-3 p-4 md:p-6 border-b border-border">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(`/project/${projectId}?tab=change-orders`)}
+              className="shrink-0 mt-0.5"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div className="min-w-0">
 
               {/* Sidebar column */}
               <div className="space-y-6">
