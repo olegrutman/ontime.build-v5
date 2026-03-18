@@ -229,8 +229,8 @@ export function COMaterialsPanel({
   const pickerTitle = pickerRef.current?.getTitle() ?? 'Add Material';
 
   return (
-    <div className="rounded-lg border border-border bg-card">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+    <div className="co-light-shell">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border co-light-header">
         <div className="flex items-center gap-2">
           <Package className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold text-foreground">Materials</h3>
@@ -450,7 +450,7 @@ export function COMaterialsPanel({
               {isTC && totalBilled > totalCost && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Markup</span>
-                  <span className="text-amber-600">+${fmt(totalBilled - totalCost)}</span>
+                  <span className="co-light-success-text">+${fmt(totalBilled - totalCost)}</span>
                 </div>
               )}
               <div className="flex items-center justify-between text-sm font-semibold">

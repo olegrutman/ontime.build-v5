@@ -175,8 +175,8 @@ export function CONTEPanel({
 
   return (
     <>
-      <div className="rounded-lg border border-border bg-card">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+      <div className="co-light-shell">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border co-light-header">
           <div className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
             <h3 className="text-sm font-semibold text-foreground">Not-to-exceed</h3>
@@ -207,7 +207,7 @@ export function CONTEPanel({
                   'h-full rounded-full transition-all',
                   isOver ? 'bg-destructive' :
                   isNearCap ? 'bg-destructive' :
-                  isWarning ? 'bg-amber-500' : 'bg-green-500'
+                  isWarning ? 'bg-primary' : 'bg-secondary'
                 )}
                 style={{ width: `${Math.min(pct, 100)}%` }}
               />
@@ -216,7 +216,7 @@ export function CONTEPanel({
               <span className={cn(
                 'text-xs',
                 isNearCap ? 'text-destructive' :
-                isWarning ? 'text-amber-600' : 'text-muted-foreground'
+                isWarning ? 'text-primary' : 'text-muted-foreground'
               )}>
                 {pct.toFixed(1)}% used
               </span>
@@ -234,9 +234,9 @@ export function CONTEPanel({
           </div>
 
           {isWarning && !isNearCap && (
-            <div className="flex items-start gap-2 rounded-md bg-amber-50 dark:bg-amber-900/20 p-2.5">
-              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-700 dark:text-amber-400">
+            <div className="flex items-start gap-2 rounded-md bg-primary/10 p-2.5">
+              <AlertTriangle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+              <p className="text-xs text-foreground">
                 You are at {pct.toFixed(0)}% of the cap. Consider requesting an increase before work continues.
               </p>
             </div>
@@ -254,17 +254,17 @@ export function CONTEPanel({
           )}
 
           {hasPending && (isTC || isFC) && (
-            <div className="flex items-start gap-2 rounded-md bg-blue-50 dark:bg-blue-900/20 p-2.5">
-              <Loader2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5 animate-spin" />
-              <p className="text-xs text-blue-700 dark:text-blue-400">
+            <div className="flex items-start gap-2 rounded-md bg-accent p-2.5 border border-border">
+              <Loader2 className="h-4 w-4 text-primary shrink-0 mt-0.5 animate-spin" />
+              <p className="text-xs text-foreground">
                 Increase request of ${fmt(pendingRequest!.requested_increase)} pending GC approval
               </p>
             </div>
           )}
 
           {hasPending && isGC && pendingRequest && (
-            <div className="rounded-md border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3 space-y-2">
-              <p className="text-xs font-semibold text-amber-800 dark:text-amber-300">
+            <div className="rounded-md border border-primary/30 bg-primary/10 p-3 space-y-2">
+              <p className="text-xs font-semibold text-foreground">
                 TC requesting NTE increase
               </p>
               <div className="space-y-1 text-xs">
@@ -278,8 +278,8 @@ export function CONTEPanel({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Increase requested</span>
-                  <span className="font-semibold text-amber-700 dark:text-amber-400">
-                    +${fmt(pendingRequest.requested_increase)}
+                    <span className="font-semibold text-primary">
+                      +${fmt(pendingRequest.requested_increase)}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -300,7 +300,7 @@ export function CONTEPanel({
                   </Button>
                   <Button
                     size="sm"
-                    className="flex-1 h-7 text-xs bg-green-600 hover:bg-green-700"
+                    className="flex-1 h-7 text-xs"
                     onClick={() => setApproveId(pendingRequest.id)}
                     disabled={acting}
                   >
@@ -382,7 +382,7 @@ export function CONTEPanel({
             <AlertDialogAction
               onClick={doRequest}
               disabled={acting || !increaseAmt || parseFloat(increaseAmt) <= 0}
-              className="bg-amber-600 hover:bg-amber-700"
+              className=""
             >
               {acting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Send request
@@ -410,7 +410,7 @@ export function CONTEPanel({
             <AlertDialogAction
               onClick={doApprove}
               disabled={acting}
-              className="bg-green-600 hover:bg-green-700"
+              className=""
             >
               {acting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Approve increase

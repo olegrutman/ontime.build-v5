@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { ChevronRight, GitMerge, Loader2, Plus } from 'lucide-react';
+import { ChevronRight, GitMerge, LayoutGrid, List, Loader2, Plus } from 'lucide-react';
 import { useChangeOrders, type ChangeOrderWithMembers } from '@/hooks/useChangeOrders';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -17,6 +17,8 @@ import { CO_REASON_LABELS, CO_STATUS_LABELS } from '@/types/changeOrder';
 interface COListPageProps {
   projectId: string;
 }
+
+type COViewMode = 'card' | 'list';
 
 const STATUS_BADGE_STYLES: Record<COStatus, string> = {
   draft: 'bg-muted text-muted-foreground border-border',
@@ -64,7 +66,7 @@ function CORow({
   return (
     <div
       className={cn(
-        'rounded-xl border border-border bg-card cursor-pointer transition-colors hover:bg-accent/40',
+        'co-light-shell cursor-pointer transition-all hover:border-primary/40 hover:shadow-md',
         mobile ? 'px-3 py-3' : 'px-4 py-3',
       )}
       onClick={() => onClick(co.id)}
@@ -121,6 +123,69 @@ function CORow({
   );
 }
 
+function COCard({
+  co,
+  selectable,
+  selected,
+  onSelect,
+  onClick,
+}: {
+  co: ChangeOrderWithMembers;
+  selectable: boolean;
+  selected: boolean;
+  onSelect: (id: string, checked: boolean) => void;
+  onClick: (id: string) => void;
+}) {
+  const isCombinedParent = !!co.memberPreviews && co.memberPreviews.length > 0;
+  const title = co.title ?? co.co_number ?? (isCombinedParent ? 'Combined CO' : 'Untitled CO');
+  const age = formatDistanceToNow(new Date(co.created_at), { addSuffix: true });
+
+  return (
+    <article
+      className={cn(
+        'co-light-shell cursor-pointer transition-all hover:border-primary/40 hover:shadow-md p-4 space-y-3',
+        selected && 'border-primary ring-1 ring-primary/40',
+      )}
+      onClick={() => onClick(co.id)}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="space-y-1 min-w-0">
+          {co.co_number && <p className="text-[11px] font-medium text-muted-foreground">{co.co_number}</p>}
+          <h3 className="text-sm font-semibold text-foreground line-clamp-2">{title}</h3>
+        </div>
+        {selectable && (
+          <div onClick={e => e.stopPropagation()}>
+            <Checkbox checked={selected} onCheckedChange={v => onSelect(co.id, !!v)} />
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge variant="outline" className={cn('text-[11px]', STATUS_BADGE_STYLES[co.status as COStatus])}>
+          {CO_STATUS_LABELS[co.status as COStatus]}
+        </Badge>
+        {co.pricing_type && (
+          <Badge variant="secondary" className="text-[11px]">
+            {PRICING_BADGE[co.pricing_type] ?? co.pricing_type}
+          </Badge>
+        )}
+        {co.reason && <ReasonChip reason={co.reason as COReasonCode} />}
+      </div>
+
+      {isCombinedParent && (
+        <div className="co-light-subtle px-2.5 py-2 text-xs text-muted-foreground">
+          {co.memberPreviews!.length} merged scopes
+        </div>
+      )}
+
+      <div className="flex items-center justify-between text-xs text-muted-foreground">
+        <span className="truncate max-w-[60%]">{co.location_tag ?? 'No location'}</span>
+        <span>{age}</span>
+      </div>
+    </article>
+  );
+}
+
 function SectionHeader({ label, count }: { label: string; count: number }) {
   if (count === 0) return null;
   return (
@@ -134,12 +199,24 @@ function SectionHeader({ label, count }: { label: string; count: number }) {
 export function COListPage({ projectId }: COListPageProps) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { userOrgRoles } = useAuth();
+  const { user } = useAuth();
   const { grouped, isLoading } = useChangeOrders(projectId);
 
   const [wizardOpen, setWizardOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [combineOpen, setCombineOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<COViewMode>('card');
+
+  const storageKey = `co_view_mode_${user?.id ?? 'anon'}`;
+
+  useEffect(() => {
+    const stored = localStorage.getItem(storageKey);
+    if (stored === 'card' || stored === 'list') setViewMode(stored);
+  }, [storageKey]);
+
+  useEffect(() => {
+    localStorage.setItem(storageKey, viewMode);
+  }, [storageKey, viewMode]);
 
   const mine = grouped.mine;
   const allMine: ChangeOrderWithMembers[] = [
@@ -189,33 +266,75 @@ export function COListPage({ projectId }: COListPageProps) {
 
   return (
     <div className="space-y-4 md:space-y-5 pb-20 md:pb-0">
-      <div className="rounded-xl border border-border bg-card p-4 md:p-5 flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h2 className="text-xl font-semibold text-foreground">Change Orders</h2>
-          <p className="text-sm text-muted-foreground mt-1">{total === 0 ? 'No change orders yet' : `${total} total`}</p>
+      <div className="co-light-shell p-4 md:p-5 space-y-4">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h2 className="text-xl font-semibold text-foreground">Change Orders</h2>
+            <p className="text-sm text-muted-foreground mt-1">{total === 0 ? 'No change orders yet' : `${total} total`}</p>
+          </div>
+
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="co-light-toggle">
+              <button
+                type="button"
+                className={cn('co-light-toggle-btn inline-flex items-center gap-1.5', viewMode === 'card' && 'co-light-toggle-btn--active')}
+                onClick={() => setViewMode('card')}
+                aria-pressed={viewMode === 'card'}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                Card
+              </button>
+              <button
+                type="button"
+                className={cn('co-light-toggle-btn inline-flex items-center gap-1.5', viewMode === 'list' && 'co-light-toggle-btn--active')}
+                onClick={() => setViewMode('list')}
+                aria-pressed={viewMode === 'list'}
+              >
+                <List className="h-3.5 w-3.5" />
+                List
+              </button>
+            </div>
+
+            {canCombine && (
+              <Button
+                variant="outline"
+                size={isMobile ? 'default' : 'sm'}
+                onClick={() => setCombineOpen(true)}
+                className="gap-1.5 flex-1 md:flex-none"
+              >
+                <GitMerge className="h-4 w-4" />
+                Combine ({selectedIds.size})
+              </Button>
+            )}
+            <Button onClick={() => setWizardOpen(true)} className="gap-2 flex-1 md:flex-none">
+              <Plus className="h-4 w-4" />
+              New CO
+            </Button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full md:w-auto">
-          {canCombine && (
-            <Button
-              variant="outline"
-              size={isMobile ? 'default' : 'sm'}
-              onClick={() => setCombineOpen(true)}
-              className="gap-1.5 flex-1 md:flex-none"
-            >
-              <GitMerge className="h-4 w-4" />
-              Combine ({selectedIds.size})
-            </Button>
-          )}
-          <Button onClick={() => setWizardOpen(true)} className="gap-2 flex-1 md:flex-none">
-            <Plus className="h-4 w-4" />
-            New CO
-          </Button>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="co-light-kpi">
+            <p className="co-light-kpi-label">Draft + Shared</p>
+            <p className="co-light-kpi-value">{mine.draft.length + mine.shared.length}</p>
+          </div>
+          <div className="co-light-kpi">
+            <p className="co-light-kpi-label">Submitted</p>
+            <p className="co-light-kpi-value">{mine.submitted.length}</p>
+          </div>
+          <div className="co-light-kpi">
+            <p className="co-light-kpi-label">Approved</p>
+            <p className="co-light-kpi-value">{mine.approved.length + mine.contracted.length}</p>
+          </div>
+          <div className="co-light-kpi">
+            <p className="co-light-kpi-label">Shared With Me</p>
+            <p className="co-light-kpi-value">{sharedWithMe.length}</p>
+          </div>
         </div>
       </div>
 
       {total === 0 ? (
-        <div className="rounded-xl border border-border bg-card flex flex-col items-center justify-center py-16 text-center gap-3 px-4">
+        <div className="co-light-shell flex flex-col items-center justify-center py-16 text-center gap-3 px-4">
           <p className="text-lg font-medium text-foreground">No change orders yet</p>
           <p className="text-sm text-muted-foreground max-w-sm">Create a change order to track scope changes on this project.</p>
           <Button onClick={() => setWizardOpen(true)} className="gap-1.5 mt-2">
@@ -226,7 +345,7 @@ export function COListPage({ projectId }: COListPageProps) {
       ) : (
         <div className="space-y-4">
           {totalMine > 0 && (
-            <section className="rounded-xl border border-border bg-card p-3 md:p-4">
+            <section className="co-light-shell p-3 md:p-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold text-foreground">My change orders</span>
                 {selectableCOs.length > 0 && selectedIds.size === 0 && (
@@ -238,17 +357,32 @@ export function COListPage({ projectId }: COListPageProps) {
                 {statusGroups.map(group => (
                   <div key={group.status} className="space-y-2">
                     <SectionHeader label={CO_STATUS_LABELS[group.status]} count={group.items.length} />
-                    {group.items.map(co => (
-                      <CORow
-                        key={co.id}
-                        co={co}
-                        selectable={group.status === 'draft' || group.status === 'shared'}
-                        selected={selectedIds.has(co.id)}
-                        onSelect={toggleSelect}
-                        onClick={handleOpenCO}
-                        mobile={isMobile}
-                      />
-                    ))}
+                    {viewMode === 'card' ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
+                        {group.items.map(co => (
+                          <COCard
+                            key={co.id}
+                            co={co}
+                            selectable={group.status === 'draft' || group.status === 'shared'}
+                            selected={selectedIds.has(co.id)}
+                            onSelect={toggleSelect}
+                            onClick={handleOpenCO}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      group.items.map(co => (
+                        <CORow
+                          key={co.id}
+                          co={co}
+                          selectable={group.status === 'draft' || group.status === 'shared'}
+                          selected={selectedIds.has(co.id)}
+                          onSelect={toggleSelect}
+                          onClick={handleOpenCO}
+                          mobile={isMobile}
+                        />
+                      ))
+                    )}
                   </div>
                 ))}
               </div>
@@ -256,23 +390,39 @@ export function COListPage({ projectId }: COListPageProps) {
           )}
 
           {totalSharedWithMe > 0 && (
-            <section className="rounded-xl border border-border bg-card p-3 md:p-4">
+            <section className="co-light-shell p-3 md:p-4">
               <div className="pb-2">
                 <span className="text-sm font-semibold text-foreground">Shared with me</span>
               </div>
-              <div className="space-y-2">
-                {sharedWithMe.map(co => (
-                  <CORow
-                    key={co.id}
-                    co={co}
-                    selectable={false}
-                    selected={false}
-                    onSelect={() => {}}
-                    onClick={handleOpenCO}
-                    mobile={isMobile}
-                  />
-                ))}
-              </div>
+
+              {viewMode === 'card' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
+                  {sharedWithMe.map(co => (
+                    <COCard
+                      key={co.id}
+                      co={co}
+                      selectable={false}
+                      selected={false}
+                      onSelect={() => {}}
+                      onClick={handleOpenCO}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {sharedWithMe.map(co => (
+                    <CORow
+                      key={co.id}
+                      co={co}
+                      selectable={false}
+                      selected={false}
+                      onSelect={() => {}}
+                      onClick={handleOpenCO}
+                      mobile={isMobile}
+                    />
+                  ))}
+                </div>
+              )}
             </section>
           )}
         </div>

@@ -192,8 +192,8 @@ export function COStatusActions({
 
   if (isContracted || isApproved) {
     return (
-      <div className="rounded-lg border border-border bg-card px-4 py-3 flex items-center gap-2">
-        <Check className="h-4 w-4 text-green-600" />
+      <div className="co-light-shell px-4 py-3 flex items-center gap-2">
+        <Check className="h-4 w-4 co-light-success-text" />
         <span className="text-sm font-medium text-foreground">
           {isContracted ? 'Contracted — TC can now invoice' : 'Approved'}
         </span>
@@ -203,7 +203,7 @@ export function COStatusActions({
 
   if (status === 'rejected' && co.rejection_note) {
     return (
-      <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 space-y-2">
+      <div className="co-light-shell border-destructive/30 bg-destructive/5 px-4 py-3 space-y-2">
         <p className="text-sm font-semibold text-destructive">Rejected</p>
         <p className="text-xs text-muted-foreground">{co.rejection_note}</p>
         {canSubmit && (
@@ -222,8 +222,8 @@ export function COStatusActions({
 
   return (
     <>
-      <div className="rounded-lg border border-border bg-card">
-        <div className="px-4 py-3 border-b border-border">
+      <div className="co-light-shell overflow-hidden">
+        <div className="px-4 py-3 border-b border-border co-light-header">
           <h3 className="text-sm font-semibold text-foreground">Actions</h3>
         </div>
         <div className="px-4 py-3 space-y-2">
@@ -246,7 +246,7 @@ export function COStatusActions({
             </Button>
           )}
           {canApprove && (
-            <Button size="sm" className="w-full h-8 text-xs gap-1 bg-green-600 hover:bg-green-700" onClick={() => setApproveOpen(true)} disabled={acting}>
+            <Button size="sm" className="w-full h-8 text-xs gap-1" onClick={() => setApproveOpen(true)} disabled={acting}>
               <Check className="h-3 w-3" />
               Approve
             </Button>
@@ -275,7 +275,7 @@ export function COStatusActions({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={acting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={doApprove} disabled={acting} className="bg-green-600 hover:bg-green-700">
+            <AlertDialogAction onClick={doApprove} disabled={acting}>
               {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Approve
             </AlertDialogAction>
