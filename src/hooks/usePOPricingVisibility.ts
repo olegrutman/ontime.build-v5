@@ -44,10 +44,10 @@ export function usePOPricingVisibility(
     ? supplierOrgId === userOrgId 
     : (po.supplier as { organization_id?: string })?.organization_id === userOrgId;
   
-  // Supplier can only add/edit pricing when status is SUBMITTED
+  // Supplier can add/edit pricing while pricing is still in progress
   const canEditPricing = isSupplier && (po.status === 'SUBMITTED' || po.status === 'PRICED');
   
-  // Only pricing owner can finalize (not supplier), and only when status is PRICED
+  // Only pricing owner can finalize after supplier pricing is locked
   const canFinalize = isPricingOwner && po.status === 'PRICED';
   
   // Can view pricing if you're the pricing owner OR the supplier

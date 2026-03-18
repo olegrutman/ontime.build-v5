@@ -82,6 +82,14 @@ function getPOFetchErrorMessage(error: { code?: string; message?: string } | nul
   return error.message || 'Failed to load purchase order';
 }
 
+function getPOActionErrorMessage(error: { code?: string; message?: string } | null, fallback: string) {
+  if (!error) return fallback;
+  if (error.code === '42501') return 'You do not have permission to update this purchase order';
+  if (error.code === '42P01') return 'Purchase order save failed because a backend dependency is missing';
+  if (error.code === '57014') return 'Purchase order save timed out in backend access rules';
+  return error.message || fallback;
+}
+
 export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverride = false }: PODetailProps) {
   const { user, userOrgRoles, currentRole } = useAuth();
   const [po, setPO] = useState<PurchaseOrder | null>(null);
@@ -213,8 +221,9 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
       fetchPO();
       onUpdate();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to update PO';
-      console.error('Error updating PO:', error);
+      const typedError = (error && typeof error === 'object') ? error as { code?: string; message?: string } : null;
+      const message = getPOActionErrorMessage(typedError, 'Failed to update PO');
+      console.error('Error updating PO:', { poId, newStatus, error });
       toast.error(message);
     } finally {
       setActionLoading(false);
@@ -400,8 +409,9 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
       fetchPO();
       onUpdate();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to save pricing';
-      console.error('Error saving prices:', error);
+      const typedError = (error && typeof error === 'object') ? error as { code?: string; message?: string } : null;
+      const message = getPOActionErrorMessage(typedError, 'Failed to save pricing');
+      console.error('Error saving prices:', { poId, error, priceEdits });
       toast.error(message);
     } finally {
       setActionLoading(false);
