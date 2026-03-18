@@ -424,7 +424,7 @@ export function useChangeOrderDetail(coId: string | null) {
           requested_by_user_id: user.id,
           requested_increase: requestedIncrease,
           running_total_at_request: runningTotal,
-          current_cap_at_request: co.nte_cap, // ✓ verified
+          current_cap_at_request: co.nte_cap,
         })
         .select()
         .single();
@@ -437,6 +437,31 @@ export function useChangeOrderDetail(coId: string | null) {
         })
         .eq('id', coId);
       return data as CONTELogEntry;
+    },
+    onSuccess: invalidate,
+  });
+
+  const requestFCInput = useMutation({
+    mutationFn: async (fcOrgId: string) => {
+      if (!coId) throw new Error('Missing change order');
+      const { data, error } = await supabase.rpc('request_fc_change_order_input', {
+        _co_id: coId,
+        _fc_org_id: fcOrgId,
+      });
+      if (error) throw error;
+      return data as unknown as COCollaborator;
+    },
+    onSuccess: invalidate,
+  });
+
+  const completeFCInput = useMutation({
+    mutationFn: async () => {
+      if (!coId) throw new Error('Missing change order');
+      const { data, error } = await supabase.rpc('complete_fc_change_order_input', {
+        _co_id: coId,
+      });
+      if (error) throw error;
+      return data as unknown as COCollaborator;
     },
     onSuccess: invalidate,
   });
@@ -475,7 +500,7 @@ export function useChangeOrderDetail(coId: string | null) {
         .select()
         .single();
       if (coError) throw coError;
-      return data as ChangeOrder; // ✓ verified
+      return data as ChangeOrder;
     },
     onSuccess: invalidate,
   });
