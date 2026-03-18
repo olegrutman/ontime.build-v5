@@ -169,7 +169,9 @@ export function useChangeOrderDetail(coId: string | null) {
   const tcLaborTotal = billableLaborEntries
     .filter(entry => entry.entered_by_role === 'TC') // ✓ verified
     .reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
-  const laborTotal = fcLaborTotal + tcLaborTotal; // ✓ verified
+
+  // FC billable is a downstream cost to the TC and is not rolled into TC upstream pricing.
+  const laborTotal = tcLaborTotal; // ✓ verified
   const materialsCost = materials.reduce((sum, material) => sum + (material.line_cost ?? 0), 0);
   const materialsMarkup = materials.reduce((sum, material) => sum + (material.markup_amount ?? 0), 0);
   const materialsTotal = materials.reduce((sum, material) => sum + (material.billed_amount ?? 0), 0); // ✓ verified
