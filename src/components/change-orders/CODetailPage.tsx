@@ -1,8 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { ArrowLeft, Calendar, ChevronDown, GitMerge, Loader2, MapPin } from 'lucide-react';
+import { ArrowLeft, Calendar, ChevronDown, GitMerge, MapPin } from 'lucide-react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { BottomNav } from '@/components/layout/BottomNav';
@@ -20,9 +20,10 @@ import { COEquipmentPanel } from './COEquipmentPanel';
 import { COStatusActions } from './COStatusActions';
 import { CONTEPanel } from './CONTEPanel';
 import { COActivityFeed } from './COActivityFeed';
+import { FCInputRequestCard } from './FCInputRequestCard';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { CO_REASON_LABELS, CO_STATUS_LABELS } from '@/types/changeOrder';
-import type { COCreatedByRole, COReasonCode, COStatus, ChangeOrder } from '@/types/changeOrder';
+import type { COCreatedByRole, COFCOrgOption, COReasonCode, COStatus, ChangeOrder } from '@/types/changeOrder';
 
 const STATUS_BADGE: Record<COStatus, string> = {
   draft: 'bg-muted text-muted-foreground border-border',

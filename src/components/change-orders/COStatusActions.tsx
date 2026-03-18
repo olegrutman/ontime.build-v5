@@ -21,7 +21,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { sendCONotification, buildCONotification } from '@/lib/coNotifications';
 import { toast } from 'sonner';
-import type { ChangeOrder, COFinancials, COStatus } from '@/types/changeOrder';
+import type { ChangeOrder, COCollaborator, COFinancials, COStatus } from '@/types/changeOrder';
 
 interface COStatusActionsProps {
   co: ChangeOrder;
