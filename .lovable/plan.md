@@ -1,110 +1,52 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
+Fix the submit failure by aligning backend permissions with the CO workflow and by making the frontend show a real permission error instead of the generic PostgREST message.
 
-## Features Built
+What I found
+- The FC user is on a shared CO where:
+  - `org_id` = TC org
+  - `assigned_to_org_id` = FC org
+- The submit click sends:
+  ```text
+  PATCH change_orders ... { status: "submitted", submitted_at: ... }
+  ```
+- That request returns 0 rows, and the code calls `.single()`, which turns the real problem into:
+  ```text
+  Cannot coerce the result to a single JSON object
+  ```
+- Root cause: current RLS only allows updating `change_orders` when the user belongs to `org_id` (the owner org). FC belongs to `assigned_to_org_id`, so FC can read the CO but cannot update it.
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
+Implementation plan
+1. Update backend access rules for CO status transitions
+- Add a migration that replaces the overly narrow `change_orders` update policy with workflow-aware policies:
+  - owner org can update its own COs
+  - assigned org can update shared/rejected COs so FC/TC can submit upstream
+  - upstream org can approve/reject submitted COs
+- Keep this scoped to legitimate participants only, not public access.
 
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
+2. Make submit/approve/reject mutations resilient
+- In `src/hooks/useChangeOrderDetail.ts`, stop using `.single()` on status-change updates where 0 rows is possible under RLS.
+- Use a safer fetch pattern (`select().maybeSingle()` or check array length) and throw a clear app-level error like:
+  - “You don’t have permission to submit this change order”
+  - or “Change order was not found or is no longer editable”
 
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
+3. Keep the existing FC submit UI
+- `COStatusActions.tsx` already allows FC submission from `shared`.
+- No UX redesign needed; just wire it to the corrected backend permissions and clearer error handling.
 
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
+4. Verify adjacent workflow actions
+- Re-test these transitions because they rely on the same table/policy:
+  - FC submit from `shared`
+  - FC/TC resubmit from `rejected`
+  - TC recall if allowed
+  - GC or upstream approval/rejection from `submitted`
+- This avoids fixing submit while leaving approve/reject broken for the next role.
 
----
+Files likely involved
+- `supabase/migrations/...sql`
+- `src/hooks/useChangeOrderDetail.ts`
+- possibly `src/components/change-orders/COStatusActions.tsx` for friendlier toast text only
 
-# Field Capture Mode — IMPLEMENTED
-
-## Overview
-Mobile-first feature enabling Field Crew to instantly capture jobsite issues (photo, voice note, location, reason category) in under 10 seconds.
-
-## Database
-- `field_captures` table with RLS (project participants SELECT, creator INSERT/UPDATE)
-- `field-captures` storage bucket (public read, authenticated upload)
-- Realtime enabled via `supabase_realtime` publication
-
-## Frontend Components
-| File | Purpose |
-|------|---------|
-| `src/hooks/useFieldCaptures.ts` | React Query hook with realtime, create/update mutations, media upload |
-| `src/components/field-capture/FieldCaptureSheet.tsx` | Full-screen capture UI (photo, voice, text, reason chips) |
-| `src/components/field-capture/CapturePhotoInput.tsx` | Camera-first photo capture with large touch target |
-| `src/components/field-capture/CaptureVoiceInput.tsx` | Hold-to-record voice note (MediaRecorder API) |
-| `src/components/field-capture/CaptureReasonChips.tsx` | Tap-to-select reason category chips |
-| `src/components/field-capture/FieldCaptureList.tsx` | List of captures with "+ Capture" button |
-| `src/components/field-capture/FieldCaptureCard.tsx` | Individual capture card with "Convert to Task" button |
-
-## Entry Points
-1. **BottomNav FAB** — Amber "Capture" button on project pages (mobile)
-2. **Daily Log tab** — Field Captures section for the active date
-
-## Feature Gate
-- `field_capture` added to `FeatureKey` type and labels
-
-## Auto-captured Data
-- Timestamp, user ID, org ID, GPS coordinates, device info (userAgent)
-
-## Files Created/Modified
-| File | Action |
-|------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
-
----
-
-# Multi-Item Work Order — IMPLEMENTED
-
-## Overview
-Transforms Work Orders from single-task entities into **package containers** holding multiple task line items, mirroring how POs hold multiple material lines.
-
-## Database
-- `work_order_tasks` table with RLS (project participants CRUD) linked to `change_order_projects` header via `work_order_id`
-- Status validation trigger (`pending`, `in_progress`, `complete`, `skipped`)
-- Realtime enabled via `supabase_realtime` publication
-
-## Frontend Components
-| File | Purpose |
-|------|---------|
-| `src/types/workOrderTask.ts` | TypeScript types for work order tasks |
-| `src/hooks/useWorkOrderTasks.ts` | React Query hook with realtime, CRUD mutations |
-| `src/components/work-order-tasks/WorkOrderTaskList.tsx` | Task list with completion counter |
-| `src/components/work-order-tasks/WorkOrderTaskCard.tsx` | Individual task card with status, location, menu |
-| `src/components/work-order-tasks/AddTaskSheet.tsx` | Mobile-first bottom sheet for adding/editing tasks |
-| `src/components/work-order-tasks/TaskQuickAdd.tsx` | Inline quick-add input for FC users |
-
-## Integration Points
-- `ChangeOrderDetailPage.tsx` — Tasks section after header card, FC quick-add below
-- `useChangeOrderRealtime.ts` — Subscribes to `work_order_tasks` changes
+Expected outcome
+- FC can submit shared COs for approval successfully.
+- The error toast no longer shows the confusing “Cannot coerce...” message.
+- CO workflow permissions match the intended GC / TC / FC lifecycle instead of only the owner-org rule.
