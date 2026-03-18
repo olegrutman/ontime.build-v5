@@ -162,6 +162,7 @@ export default function ProjectHome() {
   const { data: estimateRows } = useProjectEstimateRows(id || '', projectSupplierOrgId ?? null);
 
   const activeTab = searchParams.get('tab') || 'overview';
+  const changeOrdersEnabled = useFeatureEnabled('change_orders');
 
   const handleTabChange = (tab: string) => {
     setSearchParams({ tab });
