@@ -177,17 +177,8 @@ export function CODetailPage() {
   const pricingType: ValidPricing = VALID_PRICING.includes(co.pricing_type as ValidPricing)
     ? (co.pricing_type as ValidPricing)
     : 'fixed';
-  const fcOrgOptions: COFCOrgOption[] = Array.from(
-    new Map(
-      userOrgRoles
-        .filter(roleEntry => roleEntry.organization?.type === 'FC')
-        .filter(roleEntry => !collaboratorOrgIds.has(roleEntry.organization_id) || roleEntry.organization_id === currentCollaborator?.organization_id)
-        .map(roleEntry => [roleEntry.organization_id, {
-          id: roleEntry.organization_id,
-          name: roleEntry.organization?.name ?? 'Field crew org',
-          type: 'FC' as const,
-        }])
-    ).values()
+  const fcOrgOptions: COFCOrgOption[] = projectFCOrgs.filter(
+    option => !collaboratorOrgIds.has(option.id) || option.id === currentCollaborator?.organization_id
   );
 
   async function handleRequestFCInput(orgId: string) {
