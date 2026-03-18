@@ -7,6 +7,7 @@ import {
   ListChecks,
   FileText,
   ShoppingCart,
+  ClipboardList,
   MessageSquareMore,
   MoreHorizontal,
   Bell,
