@@ -81,6 +81,27 @@ function getPOStatusLabel(status: string) {
   return PO_STATUS_LABELS[status as keyof typeof PO_STATUS_LABELS] ?? status;
 }
 
+function getLinkedRequestDescription(status: string, supplierName?: string | null) {
+  const supplierLabel = supplierName ?? 'Supplier';
+
+  switch (status) {
+    case 'ACTIVE':
+      return `${supplierLabel} pricing draft is ready to review in the PO workflow`;
+    case 'PENDING_APPROVAL':
+      return 'Pricing request is waiting for GC approval before it can be sent';
+    case 'SUBMITTED':
+      return `${supplierLabel} has received this pricing request`;
+    case 'PRICED':
+      return `${supplierLabel} submitted pricing on the linked PO`;
+    case 'ORDERED':
+      return 'Linked PO has been marked ordered';
+    case 'DELIVERED':
+      return 'Linked PO has been marked delivered';
+    default:
+      return `${supplierLabel} pricing request linked to this CO`;
+  }
+}
+
 export function COMaterialsPanel({
   coId,
   orgId,

@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AlertTriangle, Plus, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -39,6 +40,7 @@ interface PurchaseOrdersTabProps {
 
 export function PurchaseOrdersTab({ projectId, projectName, projectAddress, projectStatus }: PurchaseOrdersTabProps) {
   const { userOrgRoles, currentRole, user, permissions } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [invoicedPOIds, setInvoicedPOIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -61,6 +63,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const isGC = currentOrgType === 'GC';
   const isTC = currentOrgType === 'TC';
   const canCreatePO = permissions?.canCreatePOs ?? false;
+  const poParam = searchParams.get('po');
 
   // TC cannot see pricing when GC is material-responsible
   const hidePricing = isTC && materialResponsibility === 'GC';
@@ -68,9 +71,43 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   // Directional tabs: only show for GC and TC
   const showDirectionalTabs = isGC || isTC;
 
+  const updatePOSearchParam = useCallback((poId: string | null) => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('tab', 'purchase-orders');
+
+    if (poId) {
+      nextParams.set('po', poId);
+    } else {
+      nextParams.delete('po');
+    }
+
+    setSearchParams(nextParams, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  const openPO = useCallback((poId: string) => {
+    setSelectedPOId(poId);
+    updatePOSearchParam(poId);
+  }, [updatePOSearchParam]);
+
+  const closePO = useCallback(() => {
+    setSelectedPOId(null);
+    updatePOSearchParam(null);
+  }, [updatePOSearchParam]);
+
   useEffect(() => {
     fetchPurchaseOrders();
   }, [projectId, currentOrgId]);
+
+  useEffect(() => {
+    if (poParam && poParam !== selectedPOId) {
+      setSelectedPOId(poParam);
+      return;
+    }
+
+    if (!poParam && selectedPOId) {
+      setSelectedPOId(null);
+    }
+  }, [poParam, selectedPOId]);
 
   // Fetch material_responsibility and approval settings
   useEffect(() => {
@@ -210,698 +247,19 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
     }
     setLoading(false);
   };
-
-  const handleCreatePO = async (data: POWizardV2Data) => {
-    if (!currentOrgId) return;
-    
-    setIsSubmitting(true);
-    try {
-      let pricingOwnerOrgId: string | null = null;
-      
-      const { data: contracts } = await supabase
-        .from('project_contracts')
-        .select('material_responsibility, from_org_id, to_org_id')
-        .eq('project_id', data.project_id)
-        .not('material_responsibility', 'is', null);
-      
-      if (contracts && contracts.length > 0) {
-        const contractWithMR = contracts.find(c => c.material_responsibility);
-        if (contractWithMR) {
-          pricingOwnerOrgId = contractWithMR.material_responsibility === 'GC' 
-            ? contractWithMR.to_org_id 
-            : contractWithMR.from_org_id;
-        }
-      }
-      
-      if (!pricingOwnerOrgId) {
-        pricingOwnerOrgId = currentOrgId;
-      }
-
-      // Use tax from wizard data (already resolved from estimate or user-edited)
-      const estimateTaxPercent = data.sales_tax_percent ?? 0;
-      
-      const { data: poNumber } = await supabase.rpc('generate_po_number', {
-        org_id: currentOrgId,
-      });
-
-      const { data: newPO, error: poError } = await supabase
-        .from('purchase_orders')
-        .insert({
-          organization_id: currentOrgId,
-          po_number: poNumber,
-          po_name: `PO for ${data.project_name || 'Materials'}`,
-          supplier_id: data.supplier_id,
-          project_id: data.project_id,
-          notes: data.notes || null,
-          status: 'ACTIVE',
-          created_by_org_id: currentOrgId,
-          pricing_owner_org_id: pricingOwnerOrgId,
-          source_estimate_id: data.source_estimate_id || null,
-          source_pack_name: data.source_pack_name || null,
-          pack_modified: data.pack_modified || false,
-          sales_tax_percent: estimateTaxPercent,
-        })
-        .select()
-        .single();
-
-      if (poError) throw poError;
-
-      if (data.line_items.length > 0) {
-        let estSubtotal = 0;
-        let addSubtotal = 0;
-        
-        const lineItems = data.line_items.map((item, idx) => {
-          const lineTotal = item.unit_price != null ? item.quantity * item.unit_price : null;
-          if (item.source_estimate_item_id) {
-            estSubtotal += lineTotal ?? 0;
-          } else if (lineTotal != null) {
-            addSubtotal += lineTotal;
-          }
-          return {
-            po_id: newPO.id,
-            line_number: idx + 1,
-            supplier_sku: item.supplier_sku,
-            description: item.name,
-            quantity: item.quantity,
-            uom: item.uom,
-            pieces: item.unit_mode === 'BUNDLE' ? item.bundle_count : null,
-            length_ft: item.length_ft || null,
-            computed_lf: item.computed_lf || null,
-            notes: item.item_notes || null,
-            unit_price: item.unit_price ?? null,
-            line_total: lineTotal,
-            source_estimate_item_id: item.source_estimate_item_id || null,
-            source_pack_name: item.source_pack_name || null,
-            price_source: item.price_source || null,
-            original_unit_price: item.unit_price ?? null,
-          };
-        });
-
-        const { error: lineError } = await supabase.from('po_line_items').insert(lineItems);
-        if (lineError) throw lineError;
-
-        const poSubtotalTotal = estSubtotal + addSubtotal;
-        const taxAmount = poSubtotalTotal * (estimateTaxPercent / 100);
-        const poTotal = poSubtotalTotal + taxAmount;
-        await supabase.from('purchase_orders').update({
-          po_subtotal_estimate_items: estSubtotal,
-          po_subtotal_non_estimate_items: addSubtotal,
-          po_subtotal_total: poSubtotalTotal,
-          po_tax_total: taxAmount,
-          tax_percent_applied: estimateTaxPercent,
-          po_total: poTotal,
-        }).eq('id', newPO.id);
-      }
-
-      toast.success(`PO ${poNumber} created`);
-      setWizardOpen(false);
-      fetchPurchaseOrders();
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error creating PO:', error);
-      toast.error('Failed to create PO: ' + message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleSubmitToSupplier = async (po: PurchaseOrder) => {
-    // TC approval gate: if approval required and TC is creator, set to PENDING_APPROVAL
-    if (isTC && poRequiresApproval && po.created_by_org_id === currentOrgId) {
-      try {
-        const { error } = await supabase
-          .from('purchase_orders')
-          .update({ status: 'PENDING_APPROVAL' as any })
-          .eq('id', po.id);
-        if (error) throw error;
-        toast.success('PO sent to GC for approval');
-        fetchPurchaseOrders();
-      } catch (err: any) {
-        toast.error('Failed to submit for approval: ' + (err?.message || 'Unknown error'));
-      }
-      return;
-    }
-    // For GC/others, open detail view where they can submit with email
-    setSelectedPOId(po.id);
-  };
-
-  /** Create PO and immediately send to supplier (or route to approval for TC) */
-  const handleCreateAndSend = async (data: POWizardV2Data) => {
-    if (!currentOrgId || !user) return;
-
-    setIsSending(true);
-    try {
-      // 1. Create the PO (reuse same logic as handleCreatePO but return the new PO id)
-      let pricingOwnerOrgId: string | null = null;
-
-      const { data: contracts } = await supabase
-        .from('project_contracts')
-        .select('material_responsibility, from_org_id, to_org_id')
-        .eq('project_id', data.project_id)
-        .not('material_responsibility', 'is', null);
-
-      if (contracts && contracts.length > 0) {
-        const contractWithMR = contracts.find(c => c.material_responsibility);
-        if (contractWithMR) {
-          pricingOwnerOrgId = contractWithMR.material_responsibility === 'GC'
-            ? contractWithMR.to_org_id
-            : contractWithMR.from_org_id;
-        }
-      }
-
-      if (!pricingOwnerOrgId) pricingOwnerOrgId = currentOrgId;
-
-      const estimateTaxPercent = data.sales_tax_percent ?? 0;
-
-      const { data: poNumber } = await supabase.rpc('generate_po_number', {
-        org_id: currentOrgId,
-      });
-
-      const { data: newPO, error: poError } = await supabase
-        .from('purchase_orders')
-        .insert({
-          organization_id: currentOrgId,
-          po_number: poNumber,
-          po_name: `PO for ${data.project_name || 'Materials'}`,
-          supplier_id: data.supplier_id,
-          project_id: data.project_id,
-          notes: data.notes || null,
-          status: 'ACTIVE',
-          created_by_org_id: currentOrgId,
-          pricing_owner_org_id: pricingOwnerOrgId,
-          source_estimate_id: data.source_estimate_id || null,
-          source_pack_name: data.source_pack_name || null,
-          pack_modified: data.pack_modified || false,
-          sales_tax_percent: estimateTaxPercent,
-        })
-        .select()
-        .single();
-
-      if (poError) throw poError;
-
-      if (data.line_items.length > 0) {
-        let estSubtotal = 0;
-        let addSubtotal = 0;
-
-        const lineItems = data.line_items.map((item, idx) => {
-          const lineTotal = item.unit_price != null ? item.quantity * item.unit_price : null;
-          if (item.source_estimate_item_id) {
-            estSubtotal += lineTotal ?? 0;
-          } else if (lineTotal != null) {
-            addSubtotal += lineTotal;
-          }
-          return {
-            po_id: newPO.id,
-            line_number: idx + 1,
-            supplier_sku: item.supplier_sku,
-            description: item.name,
-            quantity: item.quantity,
-            uom: item.uom,
-            pieces: item.unit_mode === 'BUNDLE' ? item.bundle_count : null,
-            length_ft: item.length_ft || null,
-            computed_lf: item.computed_lf || null,
-            notes: item.item_notes || null,
-            unit_price: item.unit_price ?? null,
-            line_total: lineTotal,
-            source_estimate_item_id: item.source_estimate_item_id || null,
-            source_pack_name: item.source_pack_name || null,
-            price_source: item.price_source || null,
-            original_unit_price: item.unit_price ?? null,
-          };
-        });
-
-        const { error: lineError } = await supabase.from('po_line_items').insert(lineItems);
-        if (lineError) throw lineError;
-
-        const poSubtotalTotal = estSubtotal + addSubtotal;
-        const taxAmount = poSubtotalTotal * (estimateTaxPercent / 100);
-        const poTotal = poSubtotalTotal + taxAmount;
-        await supabase.from('purchase_orders').update({
-          po_subtotal_estimate_items: estSubtotal,
-          po_subtotal_non_estimate_items: addSubtotal,
-          po_subtotal_total: poSubtotalTotal,
-          po_tax_total: taxAmount,
-          tax_percent_applied: estimateTaxPercent,
-          po_total: poTotal,
-        }).eq('id', newPO.id);
-      }
-
-      // 2. TC with approval required → set PENDING_APPROVAL
-      if (isTC && poRequiresApproval) {
-        await supabase
-          .from('purchase_orders')
-          .update({ status: 'PENDING_APPROVAL' as any })
-          .eq('id', newPO.id);
-        toast.success(`PO ${poNumber} created and sent to GC for approval`);
-      } else {
-        // 3. GC/others → send email via edge function
-        let supplierEmail = '';
-        const { data: ds } = await supabase
-          .from('project_designated_suppliers')
-          .select('po_email')
-          .eq('project_id', data.project_id)
-          .neq('status', 'removed')
-          .maybeSingle();
-        if (ds?.po_email) supplierEmail = ds.po_email;
-
-        if (!supplierEmail) {
-          // Fallback: try supplier contact_info (may contain "email / phone")
-          if (data.supplier_id) {
-            const { data: sup } = await supabase
-              .from('suppliers')
-              .select('contact_info')
-              .eq('id', data.supplier_id)
-              .single();
-            const emailMatch = (sup?.contact_info || '').match(/[^\s@]+@[^\s@]+\.[^\s@]+/);
-            if (emailMatch) supplierEmail = emailMatch[0];
-          }
-        }
-
-        if (!supplierEmail) {
-          toast.warning(`PO ${poNumber} created as draft — no supplier email found to send.`);
-        } else {
-          try {
-            const { error: sendErr } = await supabase.functions.invoke('send-po', {
-              body: { po_id: newPO.id, supplier_email: supplierEmail },
-            });
-            if (sendErr) {
-              console.warn('Email send failed (PO still created):', sendErr);
-              toast.warning(`PO ${poNumber} created but email could not be sent.`);
-            } else {
-              toast.success(`PO ${poNumber} created and sent to supplier`);
-            }
-          } catch (emailErr) {
-            console.warn('Email send threw (PO still created):', emailErr);
-            toast.warning(`PO ${poNumber} created but email could not be sent.`);
-          }
-        }
-      }
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Unknown error';
-      console.error('Error creating & sending PO:', error);
-      toast.error('Failed to create & send PO: ' + message);
-    } finally {
-      setIsSending(false);
-      setWizardOpen(false);
-      fetchPurchaseOrders();
-    }
-  };
-
-  const handleApprovePO = async (po: PurchaseOrder) => {
-    if (!user) return;
-    try {
-      // Look up supplier email — prefer designated supplier, fallback to contact_info
-      let supplierEmail = '';
-      const contactEmailMatch = (po.supplier?.contact_info || '').match(/[^\s@]+@[^\s@]+\.[^\s@]+/);
-      if (contactEmailMatch) supplierEmail = contactEmailMatch[0];
-      if (po.project_id) {
-        const { data: ds } = await supabase
-          .from('project_designated_suppliers')
-          .select('po_email')
-          .eq('project_id', po.project_id)
-          .neq('status', 'removed')
-          .maybeSingle();
-        if (ds?.po_email) supplierEmail = ds.po_email;
-      }
-      
-      if (!supplierEmail) {
-        toast.error('No supplier email found. Please set up supplier contact.');
-        return;
-      }
-
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData?.session?.access_token;
-      if (!token) {
-        toast.error('Please log in to approve POs');
-        return;
-      }
-
-      // Update status to approved first
-      const { error: updateErr } = await supabase
-        .from('purchase_orders')
-        .update({
-          approved_by: user.id,
-          approved_at: new Date().toISOString(),
-        })
-        .eq('id', po.id);
-      if (updateErr) throw updateErr;
-
-      // Send via edge function
-      const { error: sendErr } = await supabase.functions.invoke('send-po', {
-        body: { po_id: po.id, supplier_email: supplierEmail },
-      });
-      if (sendErr) throw sendErr;
-
-      toast.success('PO approved and sent to supplier');
-      fetchPurchaseOrders();
-    } catch (err: any) {
-      toast.error('Failed to approve PO: ' + (err?.message || 'Unknown error'));
-    }
-  };
-
-  const handleRejectPO = async (po: PurchaseOrder) => {
-    try {
-      const { error } = await supabase
-        .from('purchase_orders')
-        .update({ status: 'ACTIVE' as any })
-        .eq('id', po.id);
-      if (error) throw error;
-      toast.success('PO returned to active');
-      fetchPurchaseOrders();
-    } catch (err: any) {
-      toast.error('Failed to reject PO: ' + (err?.message || 'Unknown error'));
-    }
-  };
-
-  const handleDownload = (po: PurchaseOrder) => {
-    if (!po.download_token) {
-      toast.error('Download not available');
-      return;
-    }
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/po-download?token=${po.download_token}&format=pdf`;
-    window.open(url, '_blank');
-  };
-
-  const handleEditPO = async (po: PurchaseOrder) => {
-    try {
-      const { data: lineItems, error } = await supabase
-        .from('po_line_items')
-        .select('*')
-        .eq('po_id', po.id)
-        .order('line_number');
-
-      if (error) throw error;
-
-      const wizardItems: POWizardV2LineItem[] = (lineItems || []).map((li: any) => ({
-        id: crypto.randomUUID(),
-        catalog_item_id: '',
-        supplier_sku: li.supplier_sku || '',
-        name: li.description,
-        specs: [li.dimension, li.length_ft ? `${li.length_ft}ft` : null].filter(Boolean).join(' | '),
-        quantity: li.quantity,
-        unit_mode: li.pieces ? 'BUNDLE' as const : 'EACH' as const,
-        bundle_count: li.pieces || undefined,
-        item_notes: li.notes || undefined,
-        uom: li.uom,
-        length_ft: li.length_ft || undefined,
-        computed_lf: li.computed_lf || undefined,
-        unit_price: li.unit_price ?? null,
-        line_total: li.line_total ?? null,
-        source_estimate_item_id: li.source_estimate_item_id || null,
-        source_pack_name: li.source_pack_name || null,
-        price_source: li.price_source || null,
-        original_unit_price: li.original_unit_price ?? null,
-        price_adjusted_by_supplier: li.price_adjusted_by_supplier || false,
-      }));
-
-      setEditingPO(po);
-      setEditInitialData({
-        project_id: projectId,
-        project_name: projectName || '',
-        delivery_address: projectAddress || '',
-        supplier_id: po.supplier_id,
-        supplier_name: po.supplier?.name,
-        notes: po.notes || '',
-        sales_tax_percent: po.sales_tax_percent ?? 0,
-        line_items: wizardItems,
-      });
-      setEditWizardOpen(true);
-    } catch (err) {
-      console.error('Error loading PO for edit:', err);
-      toast.error('Failed to load PO for editing');
-    }
-  };
-
-  const handleEditComplete = async (data: POWizardV2Data) => {
-    if (!editingPO) return;
-    setIsSubmitting(true);
-    try {
-      const { error: deleteErr } = await supabase
-        .from('po_line_items')
-        .delete()
-        .eq('po_id', editingPO.id);
-      if (deleteErr) throw deleteErr;
-
-      if (data.line_items.length > 0) {
-        let estSubtotal = 0;
-        let addSubtotal = 0;
-        
-        const lineItems = data.line_items.map((item, idx) => {
-          const lineTotal = item.unit_price != null ? item.quantity * item.unit_price : null;
-          if (item.source_estimate_item_id) {
-            estSubtotal += lineTotal ?? 0;
-          } else if (lineTotal != null) {
-            addSubtotal += lineTotal;
-          }
-          return {
-            po_id: editingPO.id,
-            line_number: idx + 1,
-            supplier_sku: item.supplier_sku,
-            description: item.name,
-            quantity: item.quantity,
-            uom: item.uom,
-            pieces: item.unit_mode === 'BUNDLE' ? item.bundle_count : null,
-            length_ft: item.length_ft || null,
-            computed_lf: item.computed_lf || null,
-            notes: item.item_notes || null,
-            unit_price: item.unit_price ?? null,
-            line_total: lineTotal,
-            source_estimate_item_id: item.source_estimate_item_id || null,
-            source_pack_name: item.source_pack_name || null,
-            price_source: item.price_source || null,
-            original_unit_price: item.original_unit_price ?? null,
-          };
-        });
-        const { error: insertErr } = await supabase.from('po_line_items').insert(lineItems);
-        if (insertErr) throw insertErr;
-
-        // Use tax from wizard data (already resolved or user-edited)
-        let editTaxPercent = data.sales_tax_percent ?? editingPO.sales_tax_percent ?? 0;
-
-        const poSubtotalTotal = estSubtotal + addSubtotal;
-        const taxAmount = poSubtotalTotal * (editTaxPercent / 100);
-        const poTotal = poSubtotalTotal + taxAmount;
-        await supabase.from('purchase_orders').update({
-          po_subtotal_estimate_items: estSubtotal,
-          po_subtotal_non_estimate_items: addSubtotal,
-          po_subtotal_total: poSubtotalTotal,
-          sales_tax_percent: editTaxPercent,
-          tax_percent_applied: editTaxPercent,
-          po_tax_total: taxAmount,
-          po_total: poTotal,
-        }).eq('id', editingPO.id);
-      }
-
-      const { error: updateErr } = await supabase
-        .from('purchase_orders')
-        .update({
-          notes: data.notes || null,
-          source_estimate_id: data.source_estimate_id || null,
-          source_pack_name: data.source_pack_name || null,
-          pack_modified: data.pack_modified || false,
-        })
-        .eq('id', editingPO.id);
-      if (updateErr) throw updateErr;
-
-      toast.success(`PO ${editingPO.po_number} updated`);
-      setEditWizardOpen(false);
-      setEditingPO(null);
-      setEditInitialData(null);
-      fetchPurchaseOrders();
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Unknown error';
-      console.error('Error updating PO:', err);
-      toast.error('Failed to update PO: ' + message);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // Split POs into directional buckets
-  const { myPOs, receivedPOs } = useMemo(() => {
-    if (!showDirectionalTabs) return { myPOs: purchaseOrders, receivedPOs: [] };
-    
-    const my = purchaseOrders.filter(po => po.created_by_org_id === currentOrgId);
-    const received = purchaseOrders.filter(po => po.created_by_org_id !== currentOrgId);
-    return { myPOs: my, receivedPOs: received };
-  }, [purchaseOrders, currentOrgId, showDirectionalTabs]);
-
-  const getCanViewPricing = (po: PurchaseOrder) => {
-    // TC cannot see pricing when GC is material-responsible
-    if (hidePricing) return false;
-    const isPricingOwner = po.pricing_owner_org_id === currentOrgId;
-    const isCreator = po.created_by_org_id === currentOrgId;
-    const isPoSupplier = (po.supplier as { organization_id?: string })?.organization_id === currentOrgId;
-    return isPricingOwner || isPoSupplier || isCreator;
-  };
-
-  const filterAndSort = (pos: PurchaseOrder[]) => {
-    let filtered = pos;
-    if (statusFilter === 'needs_action') {
-      const actionStatuses = isSupplier ? ['SUBMITTED'] : isGC ? ['ACTIVE', 'PENDING_APPROVAL'] : ['ACTIVE'];
-      filtered = pos.filter(po => actionStatuses.includes(po.status));
-    } else if (statusFilter !== 'all') {
-      filtered = pos.filter(po => po.status === statusFilter);
-    }
-    return filtered.sort((a, b) => {
-      const pa = STATUS_PRIORITY[a.status] ?? 99;
-      const pb = STATUS_PRIORITY[b.status] ?? 99;
-      if (pa !== pb) return pa - pb;
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    });
-  };
-
-  const renderPOList = (pos: PurchaseOrder[]) => {
-    const filtered = filterAndSort(pos);
-
-    if (filtered.length === 0) {
-      return (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Package className="h-12 w-12 text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-medium mb-2">No Purchase Orders</h3>
-            <p className="text-sm text-muted-foreground text-center max-w-sm">
-              {isSupplier
-                ? 'No purchase orders have been sent to you for this project yet.'
-                : statusFilter === 'needs_action'
-                  ? 'No POs need your attention right now.'
-                  : 'Create a purchase order to request materials from suppliers.'}
-            </p>
-          </CardContent>
-        </Card>
-      );
-    }
-
-    if (viewMode === 'table') {
-      return (
-        <POTableView
-          purchaseOrders={filtered}
-          onView={(po) => setSelectedPOId(po.id)}
-          onEdit={handleEditPO}
-          onSubmit={handleSubmitToSupplier}
-          canCreatePO={canCreatePO}
-          canViewPricing={getCanViewPricing}
-          isInvoiced={(id) => invoicedPOIds.has(id)}
-        />
-      );
-    }
-
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((po) => {
-          const packKey = po.source_estimate_id && po.source_pack_name
-            ? `${po.source_estimate_id}|${po.source_pack_name}`
-            : null;
-          const packData = packKey ? estimatePackTotals.get(packKey) : null;
-          return (
-            <POCard
-              key={po.id}
-              po={po}
-              onClick={() => setSelectedPOId(po.id)}
-              onEdit={() => handleEditPO(po)}
-              onDownload={handleDownload}
-              onSubmit={handleSubmitToSupplier}
-              onApprove={isGC ? handleApprovePO : undefined}
-              onReject={isGC ? handleRejectPO : undefined}
-              canEdit={canCreatePO}
-              canSubmit={canCreatePO}
-              canViewPricing={getCanViewPricing(po)}
-              isSupplier={isSupplier}
-              isGC={isGC}
-              isInvoiced={invoicedPOIds.has(po.id)}
-              estimatePackTotal={packData?.total ?? null}
-              estimatePackItemCount={packData?.itemCount ?? null}
-            />
-          );
-        })}
-      </div>
-    );
-  };
-
-  if (loading) {
-    return (
-      <div className="space-y-4">
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-24 w-full" />
-        ))}
-      </div>
-    );
-  }
-
+...
   if (selectedPOId) {
     return (
       <PODetail
         poId={selectedPOId}
         projectId={projectId}
-        onBack={() => setSelectedPOId(null)}
+        onBack={closePO}
         onUpdate={fetchPurchaseOrders}
         hidePricingOverride={hidePricing}
       />
     );
   }
-
-  const isProjectNotActive = projectStatus && projectStatus !== 'active' && !isSupplier;
-
-  const receivedTabLabel = isGC ? 'From Trade Contractors' : 'From GC';
-
-  return (
-    <>
-      <div className="space-y-6">
-        {/* Project not active blocking banner */}
-        {isProjectNotActive && (
-          <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
-            <AlertTitle className="text-amber-800 dark:text-amber-200">Project Setup Incomplete</AlertTitle>
-            <AlertDescription className="text-amber-700 dark:text-amber-300">
-              Project setup incomplete. Waiting for required parties.
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Action Bar */}
-        <POActionBar purchaseOrders={purchaseOrders} isSupplier={isSupplier} hidePricing={hidePricing} />
-
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-semibold">Purchase Orders</h2>
-            <p className="text-sm text-muted-foreground">
-              {purchaseOrders.length} PO{purchaseOrders.length !== 1 ? 's' : ''} on this project
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <ViewSwitcher
-              value={viewMode}
-              onChange={setViewMode}
-              availableModes={['list', 'table']}
-            />
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-44">
-                <SelectValue placeholder="Filter" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="needs_action">
-                  {isSupplier ? '⚡ Needs Pricing' : '⚡ Needs My Action'}
-                </SelectItem>
-                <SelectItem value="ACTIVE">Active</SelectItem>
-                <SelectItem value="PENDING_APPROVAL">Pending Approval</SelectItem>
-                <SelectItem value="SUBMITTED">Submitted</SelectItem>
-                <SelectItem value="PRICED">Priced</SelectItem>
-                <SelectItem value="ORDERED">Ordered</SelectItem>
-                <SelectItem value="DELIVERED">Delivered</SelectItem>
-              </SelectContent>
-            </Select>
-            {canCreatePO && !isProjectNotActive && (
-              <Button onClick={() => setWizardOpen(true)}>
-                <Plus className="h-4 w-4 mr-1" />
-                Create PO
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Content: Directional Tabs or Flat List */}
+...
         {showDirectionalTabs ? (
           <Tabs defaultValue="my" className="w-full">
             <TabsList>
