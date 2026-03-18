@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Check, Clock, DollarSign } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -63,22 +64,40 @@ export function LaborEntryForm({
     loadRate();
   }, [user]);
 
-  const computedTotal =
-    mode === 'lump_sum'
-      ? parseFloat(lumpSum) || 0
-      : (parseFloat(hours) || 0) * (parseFloat(rate) || 0);
+  const hoursValue = parseFloat(hours) || 0;
+  const rateValue = parseFloat(rate) || 0;
+  const lumpSumValue = parseFloat(lumpSum) || 0;
+  const computedTotal = mode === 'lump_sum' ? lumpSumValue : hoursValue * rateValue;
 
   const projectedUsed = nteUsed + computedTotal;
   const ntePercent = nteCap && nteCap > 0 ? (projectedUsed / nteCap) * 100 : null;
   const willExceed = ntePercent !== null && ntePercent >= 95;
 
-  const canSave =
-    entryDate &&
-    computedTotal > 0 &&
-    (mode === 'lump_sum' ? !!lumpSum : !!hours);
+  const validationMessage =
+    !entryDate
+      ? 'Select a date.'
+      : mode === 'lump_sum'
+        ? lumpSumValue <= 0
+          ? 'Enter a lump sum amount greater than zero.'
+          : null
+        : hoursValue <= 0
+          ? 'Enter hours greater than zero.'
+          : rateValue <= 0
+            ? 'Enter an hourly rate greater than zero.'
+            : null;
+
+  const canSave = !validationMessage;
 
   async function attemptSave() {
-    if (!canSave || !user) return;
+    if (!user) {
+      toast.error('You need to be signed in to save labor.');
+      return;
+    }
+
+    if (!canSave) {
+      toast.error(validationMessage ?? 'Complete the required fields.');
+      return;
+    }
 
     if (!isActualCost && willExceed && !showNTEWarn) {
       setShowNTEWarn(true);
@@ -94,16 +113,18 @@ export function LaborEntryForm({
         entered_by_role: enteredByRole,
         entry_date: entryDate,
         pricing_mode: mode,
-        hours: mode === 'hourly' ? parseFloat(hours) || null : null,
-        hourly_rate: mode === 'hourly' ? parseFloat(rate) || null : null,
-        lump_sum: mode === 'lump_sum' ? parseFloat(lumpSum) || null : null,
+        hours: mode === 'hourly' ? hoursValue : null,
+        hourly_rate: mode === 'hourly' ? rateValue : null,
+        lump_sum: mode === 'lump_sum' ? lumpSumValue : null,
         description: description.trim() || null,
         is_actual_cost: isActualCost,
       });
       if (error) throw error;
+      toast.success('Labor entry saved');
       onSaved();
     } catch (err: any) {
       console.error('Failed to save labor entry:', err);
+      toast.error(err?.message ?? 'Failed to save labor entry');
     } finally {
       setSaving(false);
       setShowNTEWarn(false);
@@ -188,6 +209,11 @@ export function LaborEntryForm({
                   className="h-8 text-sm pl-6"
                 />
               </div>
+              {mode === 'hourly' && rateValue <= 0 && (
+                <p className="mt-1 text-[10px] text-muted-foreground">
+                  Add an hourly rate to save this entry.
+                </p>
+              )}
             </div>
           </>
         ) : (
@@ -218,6 +244,12 @@ export function LaborEntryForm({
           className="text-sm resize-none"
         />
       </div>
+
+      {validationMessage && (
+        <div className="rounded border border-border bg-background px-2 py-1.5 text-[11px] text-muted-foreground">
+          {validationMessage}
+        </div>
+      )}
 
       {computedTotal > 0 && (
         <div className="flex items-center justify-between text-sm bg-muted/30 rounded px-2 py-1.5">
