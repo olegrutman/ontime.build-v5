@@ -25,6 +25,21 @@ export function useChangeOrderDetail(coId: string | null) {
     queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
   };
 
+  const assertUpdatedChangeOrder = (
+    data: ChangeOrder | null,
+    action: 'submit' | 'approve' | 'reject'
+  ) => {
+    if (data) return data;
+
+    const actionMessages = {
+      submit: 'You don’t have permission to submit this change order.',
+      approve: 'You don’t have permission to approve this change order.',
+      reject: 'You don’t have permission to reject this change order.',
+    } as const;
+
+    throw new Error(actionMessages[action]);
+  };
+
   const { data: co, isLoading: isLoadingCO } = useQuery({
     queryKey: ['co-detail', coId, 'co'],
     enabled: !!coId,
@@ -334,9 +349,9 @@ export function useChangeOrderDetail(coId: string | null) {
         })
         .eq('id', coId)
         .select()
-        .single();
+        .maybeSingle();
       if (error) throw error;
-      return data as ChangeOrder;
+      return assertUpdatedChangeOrder(data as ChangeOrder | null, 'submit');
     },
     onSuccess: invalidate,
   });
@@ -352,9 +367,9 @@ export function useChangeOrderDetail(coId: string | null) {
         })
         .eq('id', coId)
         .select()
-        .single();
+        .maybeSingle();
       if (error) throw error;
-      return data as ChangeOrder;
+      return assertUpdatedChangeOrder(data as ChangeOrder | null, 'approve');
     },
     onSuccess: invalidate,
   });
@@ -371,9 +386,9 @@ export function useChangeOrderDetail(coId: string | null) {
         })
         .eq('id', coId)
         .select()
-        .single();
+        .maybeSingle();
       if (error) throw error;
-      return data as ChangeOrder;
+      return assertUpdatedChangeOrder(data as ChangeOrder | null, 'reject');
     },
     onSuccess: invalidate,
   });
