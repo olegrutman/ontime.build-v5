@@ -15,67 +15,67 @@ import { StepReason } from './StepReason';
 import { StepConfig } from './StepConfig';
 
 export interface COWizardData {
-  selectedItems:        WorkOrderCatalogItem[];
-  scopeDescription:     string;
-  title:                string;
-  locationTag:          string;
-  reason:               COReasonCode | null;
-  reasonNote:           string;
-  pricingType:          COPricingType;
-  nteCap:               string;
-  assignedToOrgId:      string;
-  fcInputNeeded:        boolean;
-  materialsNeeded:      boolean;
-  materialsOnSite:      boolean;
-  equipmentNeeded:      boolean;
+  selectedItems: WorkOrderCatalogItem[];
+  scopeDescription: string;
+  title: string;
+  locationTag: string;
+  reason: COReasonCode | null;
+  reasonNote: string;
+  pricingType: COPricingType;
+  nteCap: string;
+  assignedToOrgId: string;
+  fcInputNeeded: boolean;
+  materialsNeeded: boolean;
+  materialsOnSite: boolean;
+  equipmentNeeded: boolean;
   materialsResponsible: 'GC' | 'TC' | null;
   equipmentResponsible: 'GC' | 'TC' | null;
-  shareDraftNow:        boolean;
+  shareDraftNow: boolean;
 }
 
 const INITIAL_DATA: COWizardData = {
-  selectedItems:        [],
-  scopeDescription:     '',
-  title:                '',
-  locationTag:          '',
-  reason:               null,
-  reasonNote:           '',
-  pricingType:          'fixed',
-  nteCap:               '',
-  assignedToOrgId:      '',
-  fcInputNeeded:        false,
-  materialsNeeded:      false,
-  materialsOnSite:      false,
-  equipmentNeeded:      false,
+  selectedItems: [],
+  scopeDescription: '',
+  title: '',
+  locationTag: '',
+  reason: null,
+  reasonNote: '',
+  pricingType: 'fixed',
+  nteCap: '',
+  assignedToOrgId: '',
+  fcInputNeeded: false,
+  materialsNeeded: false,
+  materialsOnSite: false,
+  equipmentNeeded: false,
   materialsResponsible: null,
   equipmentResponsible: null,
-  shareDraftNow:        false,
+  shareDraftNow: false,
 };
 
 interface WizardStep {
-  key:         string;
-  label:       string;
+  key: string;
+  label: string;
   description: string;
 }
 
 const ALL_STEPS: WizardStep[] = [
-  { key: 'catalog',  label: 'Scope',         description: 'Choose the work items'  },
-  { key: 'location', label: 'Location',      description: 'Where is the work'      },
-  { key: 'reason',   label: 'Reason',        description: 'Cause of this change'   },
-  { key: 'config',   label: 'Configuration', description: 'Pricing and assignment'  },
+  { key: 'catalog', label: 'Scope', description: 'Choose the work items' },
+  { key: 'location', label: 'Location', description: 'Where is the work' },
+  { key: 'reason', label: 'Reason', description: 'Cause of this change' },
+  { key: 'config', label: 'Configuration', description: 'Pricing and assignment' },
 ];
 
 interface COWizardProps {
-  open:         boolean;
+  open: boolean;
   onOpenChange: (open: boolean) => void;
-  projectId:    string;
+  projectId: string;
 }
 
 export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
   const { currentRole, user, userOrgRoles } = useAuth();
   const isMobile = useIsMobile();
-  const [step, setStep]   = useState(0);
-  const [data, setData]   = useState<COWizardData>(INITIAL_DATA);
+  const [step, setStep] = useState(0);
+  const [data, setData] = useState<COWizardData>(INITIAL_DATA);
   const [submitting, setSubmitting] = useState(false);
   const { createCO, shareCO } = useChangeOrders(projectId);
   const orgId = userOrgRoles?.[0]?.organization_id ?? null;
@@ -90,9 +90,9 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
 
   function canAdvance(): boolean {
     const s = ALL_STEPS[step];
-    if (s.key === 'catalog')  return data.selectedItems.length > 0;
+    if (s.key === 'catalog') return data.selectedItems.length > 0;
     if (s.key === 'location') return data.locationTag.trim().length > 0;
-    if (s.key === 'reason')   return !!data.reason && (data.reason !== 'other' || data.reasonNote.trim().length > 0);
+    if (s.key === 'reason') return !!data.reason && (data.reason !== 'other' || data.reasonNote.trim().length > 0);
     if (s.key === 'config') {
       if (role === 'GC') {
         if (!data.assignedToOrgId) return false;
@@ -129,41 +129,41 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
         (data.selectedItems.length > 0 ? data.selectedItems[0].item_name : null);
 
       const newCO = await createCO.mutateAsync({
-        org_id:                orgId,
-        project_id:            projectId,
-        created_by_user_id:    user.id,
-        created_by_role:       role,
+        org_id: orgId,
+        project_id: projectId,
+        created_by_user_id: user.id,
+        created_by_role: role,
         title,
-        status:                'draft',
-        pricing_type:          data.pricingType,
-        nte_cap:               data.pricingType === 'nte' && data.nteCap ? parseFloat(data.nteCap) : null,
-        reason:                data.reason,
-        reason_note:           data.reasonNote || null,
-        location_tag:          data.locationTag || null,
-        assigned_to_org_id:    data.assignedToOrgId || null,
-        fc_input_needed:       data.fcInputNeeded,
-        materials_needed:      data.materialsNeeded,
-        materials_on_site:     data.materialsOnSite,
-        equipment_needed:      data.equipmentNeeded,
+        status: 'draft',
+        pricing_type: data.pricingType,
+        nte_cap: data.pricingType === 'nte' && data.nteCap ? parseFloat(data.nteCap) : null,
+        reason: data.reason,
+        reason_note: data.reasonNote || null,
+        location_tag: data.locationTag || null,
+        assigned_to_org_id: data.assignedToOrgId || null,
+        fc_input_needed: data.fcInputNeeded,
+        materials_needed: data.materialsNeeded,
+        materials_on_site: data.materialsOnSite,
+        equipment_needed: data.equipmentNeeded,
         materials_responsible: data.materialsResponsible,
         equipment_responsible: data.equipmentResponsible,
         draft_shared_with_next: data.shareDraftNow,
-        combined_co_id:        null,
-        parent_co_id:          null,
-        rejection_note:        null,
+        combined_co_id: null,
+        parent_co_id: null,
+        rejection_note: null,
       });
 
       if (data.selectedItems.length > 0) {
         const lineItemRows = data.selectedItems.map((item, idx) => ({
-          co_id:           newCO.id,
-          org_id:          orgId,
+          co_id: newCO.id,
+          org_id: orgId,
           created_by_role: role,
           catalog_item_id: item.id,
-          item_name:       item.item_name,
-          division:        item.division,
-          category_name:   item.category_name,
-          unit:            item.unit,
-          sort_order:      idx,
+          item_name: item.item_name,
+          division: item.division,
+          category_name: item.category_name,
+          unit: item.unit,
+          sort_order: idx,
         }));
         const { error: lineError } = await (await import('@/integrations/supabase/client')).supabase
           .from('co_line_items')
@@ -171,20 +171,18 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
         if (lineError) throw lineError;
       }
 
-      // Log creation activity
       await (await import('@/integrations/supabase/client')).supabase
         .from('co_activity')
         .insert({
-          co_id:         newCO.id,
-          project_id:    projectId,
+          co_id: newCO.id,
+          project_id: projectId,
           actor_user_id: user.id,
-          actor_role:    role,
-          action:        'created',
-          detail:        title ?? null,
-          amount:        null,
+          actor_role: role,
+          action: 'created',
+          detail: title ?? null,
+          amount: null,
         });
 
-      // Share immediately if requested
       if (data.shareDraftNow) {
         await shareCO.mutateAsync(newCO.id);
       }
@@ -206,39 +204,36 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
   }
 
   const currentStep = ALL_STEPS[step];
-  const isLastStep  = step === ALL_STEPS.length - 1;
+  const isLastStep = step === ALL_STEPS.length - 1;
 
   const body = (
-    <div className="flex flex-col flex-1 min-h-0">
-      {/* Mobile progress bar */}
+    <div className="flex flex-col flex-1 min-h-0 bg-background">
       {isMobile && (
-        <div className="px-4 pt-4 pb-3 border-b">
-          <p className="text-xs text-muted-foreground mb-2">
-            Step {step + 1} of {ALL_STEPS.length}
-          </p>
+        <div className="px-4 pt-4 pb-3 border-b bg-card">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-muted-foreground">Step {step + 1} of {ALL_STEPS.length}</p>
+            <span className="text-[11px] font-medium text-primary">{currentStep.label}</span>
+          </div>
           <div className="flex gap-1.5">
             {ALL_STEPS.map((_, i) => (
               <div
                 key={i}
                 className={cn(
-                  'h-1 flex-1 rounded-full transition-colors',
+                  'h-1.5 flex-1 rounded-full transition-colors',
                   i <= step ? 'bg-primary' : 'bg-muted'
                 )}
               />
             ))}
           </div>
-          <h3 className="text-base font-semibold mt-3">{currentStep.label}</h3>
-          <p className="text-xs text-muted-foreground">{currentStep.description}</p>
+          <p className="text-xs text-muted-foreground mt-2">{currentStep.description}</p>
         </div>
       )}
 
-      {/* Body: sidebar + content */}
       <div className="flex flex-1 min-h-0">
-        {/* Desktop sidebar */}
         {!isMobile && (
-          <nav className="w-52 shrink-0 border-r p-3 space-y-1">
+          <nav className="w-56 shrink-0 border-r p-3 space-y-1 bg-card/70">
             {ALL_STEPS.map((s, i) => {
-              const done   = i < step;
+              const done = i < step;
               const active = i === step;
               const locked = i > step;
               return (
@@ -248,7 +243,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
                   className={cn(
                     'flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm transition-colors w-full',
                     active && 'bg-primary/10 text-foreground font-medium',
-                    done   && 'text-foreground hover:bg-muted/50 cursor-pointer',
+                    done && 'text-foreground hover:bg-muted/50 cursor-pointer',
                     locked && 'text-muted-foreground/40 cursor-not-allowed'
                   )}
                 >
@@ -260,9 +255,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
                   </span>
                   <div className="min-w-0">
                     <p className="truncate">{s.label}</p>
-                    <p className="text-[11px] text-muted-foreground truncate">
-                      {s.description}
-                    </p>
+                    <p className="text-[11px] text-muted-foreground truncate">{s.description}</p>
                   </div>
                 </button>
               );
@@ -270,7 +263,6 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
           </nav>
         )}
 
-        {/* Content area */}
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex-1 overflow-y-auto p-4 sm:p-6">
             {!isMobile && (
@@ -280,22 +272,15 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
               </div>
             )}
 
-            {currentStep.key === 'catalog' && (
-              <StepCatalog data={data} onChange={update} />
-            )}
-            {currentStep.key === 'location' && (
-              <StepLocation data={data} onChange={update} projectId={projectId} />
-            )}
-            {currentStep.key === 'reason' && (
-              <StepReason data={data} onChange={update} />
-            )}
-            {currentStep.key === 'config' && (
-              <StepConfig data={data} onChange={update} role={role} projectId={projectId} />
-            )}
+            <div className="rounded-xl border border-border bg-card p-4 sm:p-5">
+              {currentStep.key === 'catalog' && <StepCatalog data={data} onChange={update} />}
+              {currentStep.key === 'location' && <StepLocation data={data} onChange={update} projectId={projectId} />}
+              {currentStep.key === 'reason' && <StepReason data={data} onChange={update} />}
+              {currentStep.key === 'config' && <StepConfig data={data} onChange={update} role={role} projectId={projectId} />}
+            </div>
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-between border-t px-4 sm:px-6 py-3">
+          <div className="flex items-center justify-between border-t bg-card px-4 sm:px-6 py-3">
             <Button variant="ghost" size="sm" onClick={step === 0 ? handleClose : handleBack}>
               {step === 0 ? (
                 'Cancel'
@@ -327,7 +312,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={handleClose}>
-        <SheetContent side="bottom" className="h-[92vh] p-0 rounded-t-2xl">
+        <SheetContent side="bottom" className="h-[94vh] p-0 rounded-t-2xl overflow-hidden">
           {body}
         </SheetContent>
       </Sheet>
@@ -336,27 +321,19 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl p-0 gap-0 overflow-hidden max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-4xl p-0 gap-0 overflow-hidden max-h-[88vh] flex flex-col">
         <DialogTitle className="sr-only">New Change Order</DialogTitle>
-        <DialogDescription className="sr-only">
-          Create a new change order
-        </DialogDescription>
-        {/* Desktop header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0">
+        <DialogDescription className="sr-only">Create a new change order</DialogDescription>
+        <div className="flex items-center justify-between px-6 py-4 border-b shrink-0 bg-card">
           <div>
             <h2 className="text-lg font-semibold">New Change Order</h2>
-            <p className="text-xs text-muted-foreground">
-              {role} · Step {step + 1} of {ALL_STEPS.length}
-            </p>
+            <p className="text-xs text-muted-foreground">{role} · Step {step + 1} of {ALL_STEPS.length}</p>
           </div>
           <div className="flex gap-1.5">
             {ALL_STEPS.map((_, i) => (
               <div
                 key={i}
-                className={cn(
-                  'w-8 h-1 rounded-full transition-colors',
-                  i <= step ? 'bg-primary' : 'bg-muted'
-                )}
+                className={cn('w-9 h-1.5 rounded-full transition-colors', i <= step ? 'bg-primary' : 'bg-muted')}
               />
             ))}
           </div>
