@@ -405,13 +405,13 @@ export function CODetailPage() {
                         <FinRow label="TC labor" value={financials.tcLaborTotal} />
                         {co.materials_needed && (
                           <>
-                            <FinRow label="Materials cost" value={financials.materialsCost} muted />
+                            <FinRow label="Materials cost" value={financials.materialsCost ?? 0} muted />
                             <FinRow label="Materials billed" value={financials.materialsTotal} />
                           </>
                         )}
                         {co.equipment_needed && (
                           <>
-                            <FinRow label="Equipment cost" value={financials.equipmentCost} muted />
+                            <FinRow label="Equipment cost" value={financials.equipmentCost ?? 0} muted />
                             <FinRow label="Equipment billed" value={financials.equipmentTotal} />
                           </>
                         )}
