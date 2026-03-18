@@ -229,7 +229,7 @@ export function COMaterialsPanel({
   const pickerTitle = pickerRef.current?.getTitle() ?? 'Add Material';
 
   return (
-    <div className="rounded-lg border border-border bg-card">
+    <div className="co-light-shell">
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
         <div className="flex items-center gap-2">
           <Package className="h-4 w-4 text-muted-foreground" />

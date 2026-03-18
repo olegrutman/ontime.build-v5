@@ -175,8 +175,8 @@ export function CONTEPanel({
 
   return (
     <>
-      <div className="rounded-lg border border-border bg-card">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+      <div className="co-light-shell">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border co-light-header">
           <div className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
             <h3 className="text-sm font-semibold text-foreground">Not-to-exceed</h3>
