@@ -371,10 +371,7 @@ export function COMaterialsPanel({
         .eq('id', supplierId)
         .maybeSingle();
 
-      const emailMatch = (supplier?.contact_info || '').match(/[^
-\s@]+@[^
-\s@]+\.[^
-\s@]+/);
+      const emailMatch = (supplier?.contact_info || '').match(/[^\s@]+@[^\s@]+\.[^\s@]+/);
       if (emailMatch) supplierEmail = emailMatch[0];
     }
 
