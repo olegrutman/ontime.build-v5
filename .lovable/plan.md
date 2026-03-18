@@ -1,110 +1,109 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
+Problem:
+- The current CO model only supports one active outside party via `assigned_to_org_id`.
+- That works for GC → TC or FC → TC → GC, but it breaks the case “GC created the CO, TC wants FC help on the same CO.”
+- Today there is no TC action for this, and if we simply reassign the CO to FC, the TC loses access because the access model is based on `org_id` or `assigned_to_org_id`.
 
-## Features Built
+What I found in the current code:
+- `COStatusActions.tsx` only has a special TC action for FC-originated COs: “Approve & send to GC”.
+- `StepConfig.tsx` lets a TC choose FC only when the TC is creating a brand new CO.
+- `useChangeOrders.ts` and current RLS only treat a CO as visible if your org is the owner or assignee.
+- Existing `parent_co_id` is not used anywhere in the UI, so there is no current “linked FC sub-workflow” users can actually use.
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
+Recommended approach:
+- Add an “FC collaborator” workflow for the same CO instead of spawning a separate CO by default.
+- Keep the CO assigned to the TC, but let the TC invite one FC org to contribute labor/notes/material input on that CO.
+- This matches the user request better: FC gets involved on the same CO, and TC keeps control of upstream submission to GC.
 
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
+Implementation plan:
 
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
+1. Add a collaborator table in the backend
+- Create a new table like `change_order_collaborators` with:
+  - `id`
+  - `co_id`
+  - `organization_id`
+  - `collaborator_type` (`FC`)
+  - `invited_by_user_id`
+  - `status` (`active`, `completed`, `removed`)
+  - timestamps
+- Reuse `fc_input_needed` on `change_orders` as the top-level flag.
+- Add helper functions for access checks so policies stay fast and readable.
 
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
+2. Extend backend access rules
+- Update CO-related RLS so a collaborator org can read the CO and its children:
+  - `change_orders`
+  - `co_line_items`
+  - `co_labor_entries`
+  - `co_material_items`
+  - `co_equipment_items`
+  - `co_activity`
+- Keep write permissions scoped:
+  - FC collaborator can add/edit only their own labor/material/equipment rows
+  - TC still controls main CO status transitions back to GC
+- Use helper functions like `can_access_change_order()` / `is_change_order_collaborator()` to avoid repeating expensive joins.
 
----
+3. Add a TC action: “Request FC input”
+- In `COStatusActions.tsx`, show this only when:
+  - user is TC
+  - CO was originated upstream from GC (`co.created_by_role === 'GC'`)
+  - TC is the active assigned org
+  - CO is in a TC-working state (`shared` or `rejected`)
+- This opens a small dialog to pick an FC org already on the project team.
+- On confirm:
+  - create/update collaborator row
+  - set `fc_input_needed = true`
+  - write activity log
+  - notify the FC org
 
-# Field Capture Mode — IMPLEMENTED
+4. Show FC involvement clearly in the detail page
+- In `CODetailPage.tsx`, add a small panel like:
+  - “Field crew requested”
+  - FC org name
+  - status: invited / in progress / completed
+  - quick link/filter for FC-entered labor
+- This makes it obvious the CO is waiting on or includes FC contribution.
 
-## Overview
-Mobile-first feature enabling Field Crew to instantly capture jobsite issues (photo, voice note, location, reason category) in under 10 seconds.
+5. Make the CO show up for the FC user
+- Update `useChangeOrders.ts` to include COs where the current org is an active collaborator.
+- Add these to a visible bucket such as:
+  - “Shared with me”
+  - or a clearer section like “Needs FC input”
+- This is required so the FC can actually find the CO from their list, not just through a direct link.
 
-## Database
-- `field_captures` table with RLS (project participants SELECT, creator INSERT/UPDATE)
-- `field-captures` storage bucket (public read, authenticated upload)
-- Realtime enabled via `supabase_realtime` publication
+6. Allow FC contribution without changing CO ownership
+- Keep the existing line items as the shared scope source.
+- FC should be able to:
+  - log labor on those line items
+  - optionally add notes/material/equipment if allowed by the CO configuration
+- TC remains the party that reviews totals and submits upstream to GC.
+- This avoids the broken handoff that would happen if `assigned_to_org_id` were switched away from TC.
 
-## Frontend Components
-| File | Purpose |
-|------|---------|
-| `src/hooks/useFieldCaptures.ts` | React Query hook with realtime, create/update mutations, media upload |
-| `src/components/field-capture/FieldCaptureSheet.tsx` | Full-screen capture UI (photo, voice, text, reason chips) |
-| `src/components/field-capture/CapturePhotoInput.tsx` | Camera-first photo capture with large touch target |
-| `src/components/field-capture/CaptureVoiceInput.tsx` | Hold-to-record voice note (MediaRecorder API) |
-| `src/components/field-capture/CaptureReasonChips.tsx` | Tap-to-select reason category chips |
-| `src/components/field-capture/FieldCaptureList.tsx` | List of captures with "+ Capture" button |
-| `src/components/field-capture/FieldCaptureCard.tsx` | Individual capture card with "Convert to Task" button |
+7. Add an FC completion action
+- Add a simple FC button like “Mark FC input complete”.
+- This updates the collaborator row to `completed` and logs activity.
+- It does not submit the whole CO upstream; it just tells the TC the FC portion is done.
+- TC can then continue the normal approval/submission flow.
 
-## Entry Points
-1. **BottomNav FAB** — Amber "Capture" button on project pages (mobile)
-2. **Daily Log tab** — Field Captures section for the active date
+8. Keep existing FC-originated workflow intact
+- Do not remove the current `forward_change_order_to_upstream_gc` path.
+- That flow is still valid for FC-originated COs.
+- The new collaborator flow should be used only for GC-originated COs where TC needs FC help on the same record.
 
-## Feature Gate
-- `field_capture` added to `FeatureKey` type and labels
+Technical notes:
+- The real blocker is architectural: `assigned_to_org_id` is single-party, so the current model cannot represent “TC owns the response while FC contributes.”
+- A collaborator table is cleaner than overloading `assigned_to_org_id` or relying on `parent_co_id`, because it preserves one main CO while allowing multi-org participation.
+- If you want a stricter “separate FC sub-CO” model later, we can still build that on top, but for this request the collaborator approach is the best fit with the least workflow confusion.
 
-## Auto-captured Data
-- Timestamp, user ID, org ID, GPS coordinates, device info (userAgent)
+Files likely involved:
+- `supabase/migrations/...` for collaborator table, helper functions, and RLS
+- `src/hooks/useChangeOrders.ts`
+- `src/hooks/useChangeOrderDetail.ts`
+- `src/components/change-orders/COStatusActions.tsx`
+- `src/components/change-orders/CODetailPage.tsx`
+- likely a new dialog component for selecting the FC org
 
-## Files Created/Modified
-| File | Action |
-|------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
-
----
-
-# Multi-Item Work Order — IMPLEMENTED
-
-## Overview
-Transforms Work Orders from single-task entities into **package containers** holding multiple task line items, mirroring how POs hold multiple material lines.
-
-## Database
-- `work_order_tasks` table with RLS (project participants CRUD) linked to `change_order_projects` header via `work_order_id`
-- Status validation trigger (`pending`, `in_progress`, `complete`, `skipped`)
-- Realtime enabled via `supabase_realtime` publication
-
-## Frontend Components
-| File | Purpose |
-|------|---------|
-| `src/types/workOrderTask.ts` | TypeScript types for work order tasks |
-| `src/hooks/useWorkOrderTasks.ts` | React Query hook with realtime, CRUD mutations |
-| `src/components/work-order-tasks/WorkOrderTaskList.tsx` | Task list with completion counter |
-| `src/components/work-order-tasks/WorkOrderTaskCard.tsx` | Individual task card with status, location, menu |
-| `src/components/work-order-tasks/AddTaskSheet.tsx` | Mobile-first bottom sheet for adding/editing tasks |
-| `src/components/work-order-tasks/TaskQuickAdd.tsx` | Inline quick-add input for FC users |
-
-## Integration Points
-- `ChangeOrderDetailPage.tsx` — Tasks section after header card, FC quick-add below
-- `useChangeOrderRealtime.ts` — Subscribes to `work_order_tasks` changes
+Expected result:
+- A TC viewing a GC-originated CO will have a clear way to involve FC.
+- FC will be able to access and contribute to that same CO.
+- TC will not lose access or workflow control.
+- The GC-facing submission path stays intact and understandable.
