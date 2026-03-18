@@ -64,6 +64,9 @@ export function CODetailPage() {
     activity,
     financials,
     isLoading,
+    requestNTEIncrease,
+    approveNTEIncrease,
+    rejectNTEIncrease,
   } = useChangeOrderDetail(coId ?? null);
 
   useCORealtime(coId ?? null);
@@ -87,12 +90,17 @@ export function CODetailPage() {
     queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
   }
 
-  const canEdit =
+  const isActiveStatus =
     co?.status === 'draft' ||
     co?.status === 'shared' ||
     co?.status === 'combined' ||
+    co?.status === 'submitted';
+
+  const isRunningPricing =
     co?.pricing_type === 'tm' ||
     co?.pricing_type === 'nte';
+
+  const canEdit = isActiveStatus || (isRunningPricing && co?.status === 'submitted');
 
   const nteUsedPercent = financials.nteUsedPercent ?? 0;
   const showNTEWarning = co?.pricing_type === 'nte' && !!co?.nte_cap && nteUsedPercent >= 80;
