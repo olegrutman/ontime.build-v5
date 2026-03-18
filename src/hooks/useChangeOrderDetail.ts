@@ -154,10 +154,25 @@ export function useChangeOrderDetail(coId: string | null) {
       const { data, error } = await supabase
         .from('co_activity')
         .select('*')
-        .eq('co_id', coId!) // ✓ verified
+        .eq('co_id', coId!)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as COActivityEntry[];
+    },
+  });
+
+  const { data: collaborators = [] } = useQuery({
+    queryKey: ['co-detail', coId, 'collaborators'],
+    enabled: !!coId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('change_order_collaborators')
+        .select('*, organization:organizations(id, name, type)')
+        .eq('co_id', coId!)
+        .neq('status', 'removed')
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as COCollaborator[];
     },
   });
 
