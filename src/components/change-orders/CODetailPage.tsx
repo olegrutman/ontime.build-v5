@@ -92,12 +92,12 @@ export function CODetailPage() {
 
   const queryClient = useQueryClient();
   const [fcActionPending, setFCActionPending] = useState(false);
+  const { data: projectFCOrgs = [] } = useProjectFCOrgs(projectId ?? null);
   function refreshDetail() {
     queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
   }
 
   const collaboratorOrgIds = new Set(collaborators.map(collaborator => collaborator.organization_id));
-  const fcOrgOptions = useMemo(async () => [], []);
 
   const isActiveStatus =
     co?.status === 'draft' ||
