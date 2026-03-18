@@ -300,7 +300,7 @@ export function CONTEPanel({
                   </Button>
                   <Button
                     size="sm"
-                    className="flex-1 h-7 text-xs bg-green-600 hover:bg-green-700"
+                    className="flex-1 h-7 text-xs"
                     onClick={() => setApproveId(pendingRequest.id)}
                     disabled={acting}
                   >
