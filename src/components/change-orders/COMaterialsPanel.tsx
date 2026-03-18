@@ -1,6 +1,8 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -14,61 +16,76 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { Plus, Trash2, Loader2, Package, ShoppingCart, ArrowLeft } from 'lucide-react';
+import { Plus, Trash2, Loader2, Package, ShoppingCart, ArrowLeft, Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import type { COMaterialItem } from '@/types/changeOrder';
+import { PO_STATUS_LABELS } from '@/types/purchaseOrder';
 import type { POWizardV2LineItem } from '@/types/poWizardV2';
 import { ProductPickerContent, ProductPickerHandle } from '@/components/po-wizard-v2/ProductPicker';
 
 const UOM_OPTIONS = ['ea', 'LF', 'SF', 'SQ', 'bag', 'box', 'sheet', 'roll', 'gal', 'lb', 'ton', 'hr'];
 
 interface COMaterialsPanelProps {
-  coId:            string;
-  orgId:           string;
-  projectId:       string;
-  materials:       COMaterialItem[];
-  isTC:            boolean;
-  isGC:            boolean;
-  isFC:            boolean;
+  coId: string;
+  orgId: string;
+  projectId: string;
+  coTitle?: string;
+  materials: COMaterialItem[];
+  isTC: boolean;
+  isGC: boolean;
+  isFC: boolean;
   materialsOnSite: boolean;
-  canEdit:         boolean;
-  onRefresh:       () => void;
+  canEdit: boolean;
+  onRefresh: () => void;
+}
+
+interface DraftRow {
+  tempId: string;
+  description: string;
+  supplier_sku: string;
+  quantity: string;
+  uom: string;
+  unit_cost: string;
+  markup_percent: string;
+  notes: string;
+}
+
+interface LinkedPricingRequest {
+  id: string;
+  po_number: string;
+  status: string;
+  created_at: string;
+  supplier: { name: string } | null;
 }
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-interface DraftRow {
-  tempId:         string;
-  description:    string;
-  supplier_sku:   string;
-  quantity:       string;
-  uom:            string;
-  unit_cost:      string;
-  markup_percent: string;
-  notes:          string;
-}
-
 function newDraftRow(): DraftRow {
   return {
-    tempId:         crypto.randomUUID(),
-    description:    '',
-    supplier_sku:   '',
-    quantity:       '1',
-    uom:            'ea',
-    unit_cost:      '',
+    tempId: crypto.randomUUID(),
+    description: '',
+    supplier_sku: '',
+    quantity: '1',
+    uom: 'ea',
+    unit_cost: '',
     markup_percent: '0',
-    notes:          '',
+    notes: '',
   };
+}
+
+function getPOStatusLabel(status: string) {
+  return PO_STATUS_LABELS[status as keyof typeof PO_STATUS_LABELS] ?? status;
 }
 
 export function COMaterialsPanel({
   coId,
   orgId,
   projectId,
+  coTitle,
   materials,
   isTC,
   isGC,
@@ -77,36 +94,73 @@ export function COMaterialsPanel({
   canEdit,
   onRefresh,
 }: COMaterialsPanelProps) {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [draftRows, setDraftRows] = useState<DraftRow[]>([]);
-  const [saving, setSaving]       = useState(false);
-  const [deleting, setDeleting]   = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [pricingAction, setPricingAction] = useState<'draft' | 'send' | null>(null);
+  const [linkedRequests, setLinkedRequests] = useState<LinkedPricingRequest[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
 
-  // Picker state
-  const [pickerOpen, setPickerOpen]     = useState(false);
-  const [supplierId, setSupplierId]     = useState<string | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [supplierId, setSupplierId] = useState<string | null>(null);
   const [supplierLoading, setSupplierLoading] = useState(false);
+  const [poRequiresApproval, setPORequiresApproval] = useState(false);
   const pickerRef = useRef<ProductPickerHandle>(null);
 
-  const totalCost   = materials.reduce((s, m) => s + (m.line_cost ?? 0), 0);
+  const canManageMaterials = canEdit && (isTC || isGC);
+  const showPricingColumns = isTC || isGC;
+  const addedByRole = isGC ? 'GC' : 'TC';
+  const totalCost = materials.reduce((s, m) => s + (m.line_cost ?? 0), 0);
   const totalBilled = materials.reduce((s, m) => s + (m.billed_amount ?? 0), 0);
+  const activePricingRequest = useMemo(
+    () => linkedRequests.find(request => request.status !== 'DELIVERED') ?? linkedRequests[0] ?? null,
+    [linkedRequests]
+  );
+  const hasBlockingPricingRequest = !!activePricingRequest;
 
-  // Resolve supplier for this project
+  const fetchLinkedRequests = useCallback(async () => {
+    if (!coId) return;
+
+    setLoadingRequests(true);
+    try {
+      const { data, error } = await supabase
+        .from('purchase_orders')
+        .select('id, po_number, status, created_at, supplier:suppliers(name)')
+        .eq('source_change_order_id', coId)
+        .eq('source_change_order_material_request', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setLinkedRequests((data ?? []) as LinkedPricingRequest[]);
+    } catch (err) {
+      console.error('Failed to load linked CO pricing requests', err);
+    } finally {
+      setLoadingRequests(false);
+    }
+  }, [coId]);
+
   useEffect(() => {
-    if (!isTC || !projectId) return;
+    fetchLinkedRequests();
+  }, [fetchLinkedRequests]);
+
+  useEffect(() => {
+    if (!canManageMaterials || !projectId) return;
+
     let cancelled = false;
-    const resolve = async () => {
+
+    const resolveSupplier = async () => {
       setSupplierLoading(true);
       try {
-        // Get supplier org from project_team
         const { data: teamData } = await supabase
           .from('project_team')
           .select('org_id')
           .eq('project_id', projectId)
           .eq('role', 'Supplier');
 
-        const orgIds = (teamData || []).map(t => t.org_id);
-        let sid: string | null = null;
+        const orgIds = (teamData || []).map(team => team.org_id);
+        let resolvedSupplierId: string | null = null;
 
         if (orgIds.length > 0) {
           const { data: supplierData } = await supabase
@@ -115,64 +169,107 @@ export function COMaterialsPanel({
             .in('organization_id', orgIds)
             .limit(1)
             .maybeSingle();
-          sid = supplierData?.id ?? null;
+
+          resolvedSupplierId = supplierData?.id ?? null;
         }
 
-        // Fallback to system supplier
-        if (!sid) {
-          const { data: sys } = await supabase
+        if (!resolvedSupplierId) {
+          const { data: systemSupplier } = await supabase
             .from('suppliers')
             .select('id')
             .eq('is_system', true)
             .limit(1)
             .maybeSingle();
-          sid = sys?.id ?? null;
+
+          resolvedSupplierId = systemSupplier?.id ?? null;
         }
 
-        if (!cancelled) setSupplierId(sid);
+        if (!cancelled) setSupplierId(resolvedSupplierId);
       } catch (err) {
         console.error('Failed to resolve supplier for CO picker', err);
       } finally {
         if (!cancelled) setSupplierLoading(false);
       }
     };
-    resolve();
-    return () => { cancelled = true; };
-  }, [isTC, projectId]);
+
+    resolveSupplier();
+    return () => {
+      cancelled = true;
+    };
+  }, [canManageMaterials, projectId]);
+
+  useEffect(() => {
+    if (!isTC || !projectId || !orgId) return;
+
+    let cancelled = false;
+
+    const loadApprovalGate = async () => {
+      try {
+        const { data: participant } = await supabase
+          .from('project_participants')
+          .select('id')
+          .eq('project_id', projectId)
+          .eq('organization_id', orgId)
+          .limit(1)
+          .maybeSingle();
+
+        if (!participant?.id) {
+          if (!cancelled) setPORequiresApproval(false);
+          return;
+        }
+
+        const { data: relationship } = await supabase
+          .from('project_relationships')
+          .select('po_requires_upstream_approval')
+          .eq('project_id', projectId)
+          .eq('downstream_participant_id', participant.id)
+          .limit(1)
+          .maybeSingle();
+
+        if (!cancelled) {
+          setPORequiresApproval(relationship?.po_requires_upstream_approval ?? false);
+        }
+      } catch (err) {
+        console.error('Failed to load PO approval gate for CO pricing flow', err);
+      }
+    };
+
+    loadApprovalGate();
+    return () => {
+      cancelled = true;
+    };
+  }, [isTC, projectId, orgId]);
 
   function addRow() {
-    setDraftRows(r => [...r, newDraftRow()]);
+    setDraftRows(rows => [...rows, newDraftRow()]);
   }
 
   function updateRow(tempId: string, field: keyof DraftRow, value: string) {
-    setDraftRows(rows =>
-      rows.map(r => (r.tempId === tempId ? { ...r, [field]: value } : r))
-    );
+    setDraftRows(rows => rows.map(row => (row.tempId === tempId ? { ...row, [field]: value } : row)));
   }
 
   function removeRow(tempId: string) {
-    setDraftRows(rows => rows.filter(r => r.tempId !== tempId));
+    setDraftRows(rows => rows.filter(row => row.tempId !== tempId));
   }
 
   async function saveRows() {
-    const valid = draftRows.filter(r => r.description.trim() && parseFloat(r.quantity) > 0);
+    const valid = draftRows.filter(row => row.description.trim() && parseFloat(row.quantity) > 0);
     if (valid.length === 0) return;
 
     setSaving(true);
     try {
-      const rows = valid.map((r, idx) => ({
-        co_id:          coId,
-        org_id:         orgId,
-        added_by_role:  'TC',
-        line_number:    materials.length + idx + 1,
-        description:    r.description.trim(),
-        supplier_sku:   r.supplier_sku.trim() || null,
-        quantity:       parseFloat(r.quantity) || 1,
-        uom:            r.uom,
-        unit_cost:      parseFloat(r.unit_cost) || null,
-        markup_percent: parseFloat(r.markup_percent) || 0,
-        notes:          r.notes.trim() || null,
-        is_on_site:     materialsOnSite,
+      const rows = valid.map(row => ({
+        co_id: coId,
+        org_id: orgId,
+        added_by_role: addedByRole,
+        description: row.description.trim(),
+        supplier_sku: row.supplier_sku.trim() || null,
+        quantity: parseFloat(row.quantity) || 1,
+        uom: row.uom,
+        unit_cost: parseFloat(row.unit_cost) || null,
+        markup_percent: parseFloat(row.markup_percent) || 0,
+        notes: row.notes.trim() || null,
+        is_on_site: materialsOnSite,
       }));
 
       const { error } = await supabase.from('co_material_items').insert(rows);
@@ -201,29 +298,215 @@ export function COMaterialsPanel({
     }
   }
 
-  // Handle item added from ProductPicker
   const handlePickerAdd = useCallback(async (item: POWizardV2LineItem) => {
     try {
       const { error } = await supabase.from('co_material_items').insert({
-        co_id:          coId,
-        org_id:         orgId,
-        added_by_role:  'TC',
-        description:    item.name,
-        supplier_sku:   item.supplier_sku || null,
-        quantity:       item.quantity,
-        uom:            item.uom || 'ea',
-        unit_cost:      item.unit_price ?? null,
+        co_id: coId,
+        org_id: orgId,
+        added_by_role: addedByRole,
+        description: item.name,
+        supplier_sku: item.supplier_sku || null,
+        quantity: item.quantity,
+        uom: item.uom || 'ea',
+        unit_cost: item.unit_price ?? null,
         markup_percent: 0,
-        is_on_site:     materialsOnSite,
+        is_on_site: materialsOnSite,
       });
+
       if (error) throw error;
-      toast.success('Material added from catalog');
+      toast.success('Material added');
       onRefresh();
       setPickerOpen(false);
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to add material');
     }
-  }, [coId, orgId, materialsOnSite, onRefresh]);
+  }, [addedByRole, coId, materialsOnSite, onRefresh, orgId]);
+
+  async function resolvePricingOwnerOrgId() {
+    const { data: contracts, error } = await supabase
+      .from('project_contracts')
+      .select('material_responsibility, from_org_id, to_org_id')
+      .eq('project_id', projectId)
+      .not('material_responsibility', 'is', null);
+
+    if (error) throw error;
+
+    const contractWithResponsibility = (contracts ?? []).find(contract => contract.material_responsibility);
+    if (!contractWithResponsibility) return orgId;
+
+    return contractWithResponsibility.material_responsibility === 'GC'
+      ? (contractWithResponsibility.to_org_id ?? orgId)
+      : (contractWithResponsibility.from_org_id ?? orgId);
+  }
+
+  async function resolveSupplierEmail() {
+    let supplierEmail = '';
+
+    const { data: designatedSupplier } = await supabase
+      .from('project_designated_suppliers')
+      .select('po_email')
+      .eq('project_id', projectId)
+      .neq('status', 'removed')
+      .maybeSingle();
+
+    if (designatedSupplier?.po_email) {
+      supplierEmail = designatedSupplier.po_email;
+    }
+
+    if (!supplierEmail && supplierId) {
+      const { data: supplier } = await supabase
+        .from('suppliers')
+        .select('contact_info')
+        .eq('id', supplierId)
+        .maybeSingle();
+
+      const emailMatch = (supplier?.contact_info || '').match(/[^\s@]+@[^\s@]+\.[^\s@]+/);
+      if (emailMatch) supplierEmail = emailMatch[0];
+    }
+
+    return supplierEmail;
+  }
+
+  async function createPricingRequest(sendNow: boolean) {
+    if (!user) {
+      toast.error('Please log in to create pricing requests');
+      return;
+    }
+
+    if (materials.length === 0) {
+      toast.error('Add at least one material before requesting supplier pricing');
+      return;
+    }
+
+    if (!supplierId) {
+      toast.error('No supplier is configured for this project');
+      return;
+    }
+
+    if (draftRows.length > 0) {
+      toast.error('Save your draft material rows before creating a pricing request');
+      return;
+    }
+
+    if (hasBlockingPricingRequest) {
+      toast.error('A pricing request already exists for this change order');
+      return;
+    }
+
+    setPricingAction(sendNow ? 'send' : 'draft');
+    try {
+      const pricingOwnerOrgId = await resolvePricingOwnerOrgId();
+      const { data: poNumber, error: numberError } = await supabase.rpc('generate_po_number', {
+        org_id: orgId,
+      });
+
+      if (numberError) throw numberError;
+      if (!poNumber) throw new Error('Could not generate a PO number');
+
+      const { data: newPO, error: poError } = await supabase
+        .from('purchase_orders')
+        .insert({
+          organization_id: orgId,
+          po_number: poNumber,
+          po_name: `CO pricing request · ${coTitle ?? 'Materials'}`,
+          supplier_id: supplierId,
+          project_id: projectId,
+          notes: `Generated from change order materials (${coId}).`,
+          status: 'ACTIVE',
+          created_by_org_id: orgId,
+          pricing_owner_org_id: pricingOwnerOrgId,
+          source_change_order_id: coId,
+          source_change_order_material_request: true,
+        })
+        .select('id')
+        .single();
+
+      if (poError) throw poError;
+
+      let nonEstimateSubtotal = 0;
+      const lineItems = materials.map((material, index) => {
+        const unitPrice = material.unit_cost ?? null;
+        const lineTotal = unitPrice != null ? material.quantity * unitPrice : null;
+        nonEstimateSubtotal += lineTotal ?? 0;
+
+        return {
+          po_id: newPO.id,
+          line_number: index + 1,
+          supplier_sku: material.supplier_sku ?? null,
+          description: material.description,
+          quantity: material.quantity,
+          uom: material.uom,
+          notes: material.notes ?? null,
+          unit_price: unitPrice,
+          line_total: lineTotal,
+          original_unit_price: unitPrice,
+          source_co_material_item_id: material.id,
+        };
+      });
+
+      const { error: lineError } = await supabase.from('po_line_items').insert(lineItems);
+      if (lineError) {
+        await supabase.from('purchase_orders').delete().eq('id', newPO.id);
+        throw lineError;
+      }
+
+      const { error: totalsError } = await supabase
+        .from('purchase_orders')
+        .update({
+          po_subtotal_estimate_items: 0,
+          po_subtotal_non_estimate_items: nonEstimateSubtotal,
+          po_subtotal_total: nonEstimateSubtotal,
+          po_tax_total: 0,
+          tax_percent_applied: 0,
+          po_total: nonEstimateSubtotal,
+        })
+        .eq('id', newPO.id);
+
+      if (totalsError) throw totalsError;
+
+      if (!sendNow) {
+        toast.success(`Pricing draft ${poNumber} created`);
+        await fetchLinkedRequests();
+        return;
+      }
+
+      if (isTC && poRequiresApproval) {
+        const { error: approvalError } = await supabase
+          .from('purchase_orders')
+          .update({ status: 'PENDING_APPROVAL' as any })
+          .eq('id', newPO.id);
+
+        if (approvalError) throw approvalError;
+        toast.success(`Pricing request ${poNumber} sent to GC for approval`);
+        await fetchLinkedRequests();
+        return;
+      }
+
+      const supplierEmail = await resolveSupplierEmail();
+      if (!supplierEmail) {
+        toast.warning(`Pricing draft ${poNumber} created — no supplier email found to send.`);
+        await fetchLinkedRequests();
+        return;
+      }
+
+      const { error: sendError } = await supabase.functions.invoke('send-po', {
+        body: { po_id: newPO.id, supplier_email: supplierEmail },
+      });
+
+      if (sendError) {
+        console.warn('CO pricing request email failed (draft preserved):', sendError);
+        toast.warning(`Pricing draft ${poNumber} created but email could not be sent.`);
+      } else {
+        toast.success(`Pricing request ${poNumber} sent to supplier`);
+      }
+
+      await fetchLinkedRequests();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to create pricing request');
+    } finally {
+      setPricingAction(null);
+    }
+  }
 
   const pickerTitle = pickerRef.current?.getTitle() ?? 'Add Material';
 
@@ -239,10 +522,16 @@ export function COMaterialsPanel({
             </span>
           )}
         </div>
-        {canEdit && isTC && (
+        {canManageMaterials && (
           <div className="flex items-center gap-1">
             {supplierId && (
-              <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={() => setPickerOpen(true)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs gap-1"
+                onClick={() => setPickerOpen(true)}
+                disabled={supplierLoading}
+              >
                 <ShoppingCart className="h-3 w-3" />
                 Catalog
               </Button>
@@ -258,12 +547,12 @@ export function COMaterialsPanel({
       {materials.length === 0 && draftRows.length === 0 ? (
         <div className="px-4 py-8 text-center">
           <p className="text-sm text-muted-foreground">No materials added yet</p>
-          {canEdit && isTC && (
+          {canManageMaterials && (
             <div className="flex justify-center gap-2 mt-3">
               {supplierId && (
                 <Button variant="outline" size="sm" className="text-xs gap-1" onClick={() => setPickerOpen(true)}>
                   <ShoppingCart className="h-3 w-3" />
-                  Add from catalog
+                  Add from catalog / estimate
                 </Button>
               )}
               <Button variant="outline" size="sm" className="text-xs gap-1" onClick={addRow}>
@@ -282,46 +571,46 @@ export function COMaterialsPanel({
                   <th className="text-left px-4 py-2 font-medium">Description</th>
                   <th className="text-right px-2 py-2 font-medium">Qty</th>
                   <th className="text-left px-2 py-2 font-medium">UOM</th>
-                  {isTC && <th className="text-right px-2 py-2 font-medium">Unit cost</th>}
-                  {isTC && <th className="text-right px-2 py-2 font-medium">Markup %</th>}
-                  {!isFC && <th className="text-right px-4 py-2 font-medium">{isGC ? 'Amount' : 'Billed'}</th>}
-                  {canEdit && isTC && <th className="w-8" />}
+                  {showPricingColumns && <th className="text-right px-2 py-2 font-medium">Unit cost</th>}
+                  {showPricingColumns && <th className="text-right px-2 py-2 font-medium">Markup %</th>}
+                  {!isFC && <th className="text-right px-4 py-2 font-medium">Amount</th>}
+                  {canManageMaterials && <th className="w-8" />}
                 </tr>
               </thead>
               <tbody>
-                {materials.map(m => (
-                  <tr key={m.id} className="border-b border-border last:border-0">
+                {materials.map(material => (
+                  <tr key={material.id} className="border-b border-border last:border-0">
                     <td className="px-4 py-2.5">
-                      <p className="font-medium text-foreground">{m.description}</p>
-                      {m.supplier_sku && (
-                        <p className="text-[10px] text-muted-foreground">SKU: {m.supplier_sku}</p>
+                      <p className="font-medium text-foreground">{material.description}</p>
+                      {material.supplier_sku && (
+                        <p className="text-[10px] text-muted-foreground">SKU: {material.supplier_sku}</p>
                       )}
                     </td>
-                    <td className="text-right px-2 py-2.5 text-foreground">{m.quantity}</td>
-                    <td className="px-2 py-2.5 text-muted-foreground">{m.uom}</td>
-                    {isTC && (
+                    <td className="text-right px-2 py-2.5 text-foreground">{material.quantity}</td>
+                    <td className="px-2 py-2.5 text-muted-foreground">{material.uom}</td>
+                    {showPricingColumns && (
                       <td className="text-right px-2 py-2.5 text-muted-foreground">
-                        {m.unit_cost != null ? `$${fmt(m.unit_cost)}` : '—'}
+                        {material.unit_cost != null ? `$${fmt(material.unit_cost)}` : '—'}
                       </td>
                     )}
-                    {isTC && (
+                    {showPricingColumns && (
                       <td className="text-right px-2 py-2.5 text-muted-foreground">
-                        {m.markup_percent > 0 ? `${m.markup_percent}%` : '—'}
+                        {material.markup_percent > 0 ? `${material.markup_percent}%` : '—'}
                       </td>
                     )}
                     {!isFC && (
                       <td className="text-right px-4 py-2.5 font-medium text-foreground">
-                        ${fmt(m.billed_amount ?? 0)}
+                        ${fmt(material.billed_amount ?? 0)}
                       </td>
                     )}
-                    {canEdit && isTC && (
+                    {canManageMaterials && (
                       <td className="px-2 py-2.5">
                         <button
-                          onClick={() => deleteRow(m.id)}
-                          disabled={deleting === m.id}
+                          onClick={() => deleteRow(material.id)}
+                          disabled={deleting === material.id}
                           className="text-muted-foreground hover:text-destructive transition-colors p-0.5"
                         >
-                          {deleting === m.id ? (
+                          {deleting === material.id ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
                           ) : (
                             <Trash2 className="h-3.5 w-3.5" />
@@ -332,7 +621,7 @@ export function COMaterialsPanel({
                   </tr>
                 ))}
 
-                {draftRows.map((row) => {
+                {draftRows.map(row => {
                   const qty = parseFloat(row.quantity) || 0;
                   const cost = parseFloat(row.unit_cost) || 0;
                   const markup = parseFloat(row.markup_percent) || 0;
@@ -363,18 +652,18 @@ export function COMaterialsPanel({
                         />
                       </td>
                       <td className="px-2 py-2">
-                        <Select value={row.uom} onValueChange={v => updateRow(row.tempId, 'uom', v)}>
+                        <Select value={row.uom} onValueChange={value => updateRow(row.tempId, 'uom', value)}>
                           <SelectTrigger className="h-7 text-xs w-20">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {UOM_OPTIONS.map(u => (
-                              <SelectItem key={u} value={u}>{u}</SelectItem>
+                            {UOM_OPTIONS.map(uom => (
+                              <SelectItem key={uom} value={uom}>{uom}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </td>
-                      {isTC && (
+                      {showPricingColumns && (
                         <td className="px-2 py-2">
                           <div className="relative">
                             <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
@@ -388,7 +677,7 @@ export function COMaterialsPanel({
                           </div>
                         </td>
                       )}
-                      {isTC && (
+                      {showPricingColumns && (
                         <td className="px-2 py-2">
                           <div className="relative">
                             <Input
@@ -430,23 +719,23 @@ export function COMaterialsPanel({
                 size="sm"
                 className="text-xs h-7 gap-1"
                 onClick={saveRows}
-                disabled={saving || draftRows.every(r => !r.description.trim())}
+                disabled={saving || draftRows.every(row => !row.description.trim())}
               >
                 {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
-                Save {draftRows.filter(r => r.description.trim()).length} row{draftRows.filter(r => r.description.trim()).length !== 1 ? 's' : ''}
+                Save {draftRows.filter(row => row.description.trim()).length} row{draftRows.filter(row => row.description.trim()).length !== 1 ? 's' : ''}
               </Button>
             </div>
           )}
 
           {materials.length > 0 && !isFC && (
             <div className="px-4 py-3 border-t border-border space-y-1">
-              {isTC && totalCost > 0 && (
+              {showPricingColumns && totalCost > 0 && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Cost</span>
                   <span className="text-muted-foreground">${fmt(totalCost)}</span>
                 </div>
               )}
-              {isTC && totalBilled > totalCost && (
+              {showPricingColumns && totalBilled > totalCost && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Markup</span>
                   <span className="co-light-success-text">+${fmt(totalBilled - totalCost)}</span>
@@ -458,10 +747,72 @@ export function COMaterialsPanel({
               </div>
             </div>
           )}
+
+          {materials.length > 0 && canManageMaterials && (
+            <div className="px-4 py-3 border-t border-border space-y-3">
+              <div className="flex items-start justify-between gap-3 flex-wrap">
+                <div className="space-y-1">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Supplier pricing</p>
+                  {loadingRequests ? (
+                    <p className="text-sm text-muted-foreground">Loading pricing requests…</p>
+                  ) : activePricingRequest ? (
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-medium text-foreground">{activePricingRequest.po_number}</p>
+                        <Badge variant="outline">{getPOStatusLabel(activePricingRequest.status)}</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {activePricingRequest.supplier?.name ?? 'Supplier'} pricing request linked to this CO
+                        {linkedRequests.length > 1 ? ` · ${linkedRequests.length} total requests` : ''}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Create a draft PO or send this material list to the supplier for pricing.
+                    </p>
+                  )}
+                </div>
+
+                {activePricingRequest && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => navigate(`/project/${projectId}?tab=purchase-orders`)}
+                  >
+                    Open PO workflow
+                  </Button>
+                )}
+              </div>
+
+              {!activePricingRequest && (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs gap-1"
+                    onClick={() => createPricingRequest(false)}
+                    disabled={pricingAction !== null || supplierLoading || !supplierId}
+                  >
+                    {pricingAction === 'draft' ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShoppingCart className="h-3 w-3" />}
+                    Create pricing draft
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="h-8 text-xs gap-1"
+                    onClick={() => createPricingRequest(true)}
+                    disabled={pricingAction !== null || supplierLoading || !supplierId}
+                  >
+                    {pricingAction === 'send' ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+                    {isTC && poRequiresApproval ? 'Send to GC for approval' : 'Send to supplier for pricing'}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
 
-      {/* Product Picker Sheet */}
       <Sheet open={pickerOpen} onOpenChange={setPickerOpen}>
         <SheetContent side="bottom" className="h-[85vh] flex flex-col p-0 rounded-t-2xl">
           <SheetHeader className="flex-row items-center gap-2 px-4 py-3 border-b border-border space-y-0">

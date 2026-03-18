@@ -2108,6 +2108,7 @@ export type Database = {
           price_adjusted_by_supplier: boolean
           price_source: string | null
           quantity: number
+          source_co_material_item_id: string | null
           source_estimate_item_id: string | null
           source_pack_name: string | null
           supplier_notes: string | null
@@ -2133,6 +2134,7 @@ export type Database = {
           price_adjusted_by_supplier?: boolean
           price_source?: string | null
           quantity: number
+          source_co_material_item_id?: string | null
           source_estimate_item_id?: string | null
           source_pack_name?: string | null
           supplier_notes?: string | null
@@ -2158,6 +2160,7 @@ export type Database = {
           price_adjusted_by_supplier?: boolean
           price_source?: string | null
           quantity?: number
+          source_co_material_item_id?: string | null
           source_estimate_item_id?: string | null
           source_pack_name?: string | null
           supplier_notes?: string | null
@@ -2171,6 +2174,13 @@ export type Database = {
             columns: ["po_id"]
             isOneToOne: false
             referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "po_line_items_source_co_material_item_id_fkey"
+            columns: ["source_co_material_item_id"]
+            isOneToOne: false
+            referencedRelation: "co_material_items"
             referencedColumns: ["id"]
           },
           {
@@ -3356,6 +3366,8 @@ export type Database = {
           sales_tax_percent: number | null
           sent_at: string | null
           sent_by: string | null
+          source_change_order_id: string | null
+          source_change_order_material_request: boolean
           source_estimate_id: string | null
           source_pack_name: string | null
           status: Database["public"]["Enums"]["po_status"]
@@ -3395,6 +3407,8 @@ export type Database = {
           sales_tax_percent?: number | null
           sent_at?: string | null
           sent_by?: string | null
+          source_change_order_id?: string | null
+          source_change_order_material_request?: boolean
           source_estimate_id?: string | null
           source_pack_name?: string | null
           status?: Database["public"]["Enums"]["po_status"]
@@ -3434,6 +3448,8 @@ export type Database = {
           sales_tax_percent?: number | null
           sent_at?: string | null
           sent_by?: string | null
+          source_change_order_id?: string | null
+          source_change_order_material_request?: boolean
           source_estimate_id?: string | null
           source_pack_name?: string | null
           status?: Database["public"]["Enums"]["po_status"]
@@ -3477,6 +3493,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_source_change_order_id_fkey"
+            columns: ["source_change_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
             referencedColumns: ["id"]
           },
           {
@@ -4581,6 +4604,51 @@ export type Database = {
           p_user_id: string
         }
         Returns: undefined
+      }
+      forward_change_order_to_upstream_gc: {
+        Args: { _co_id: string }
+        Returns: {
+          approved_at: string | null
+          assigned_to_org_id: string | null
+          co_number: string | null
+          combined_at: string | null
+          combined_co_id: string | null
+          contracted_at: string | null
+          created_at: string | null
+          created_by_role: string
+          created_by_user_id: string
+          draft_shared_with_next: boolean
+          equipment_needed: boolean
+          equipment_responsible: string | null
+          fc_input_needed: boolean
+          id: string
+          location_tag: string | null
+          materials_needed: boolean
+          materials_on_site: boolean
+          materials_responsible: string | null
+          nte_cap: number | null
+          nte_increase_approved: boolean | null
+          nte_increase_requested: number | null
+          org_id: string
+          parent_co_id: string | null
+          pricing_type: string
+          project_id: string
+          reason: string | null
+          reason_note: string | null
+          rejected_at: string | null
+          rejection_note: string | null
+          shared_at: string | null
+          status: string
+          submitted_at: string | null
+          title: string | null
+          updated_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "change_orders"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       generate_po_number: { Args: { org_id: string }; Returns: string }
       get_actor_info: { Args: never; Returns: Record<string, unknown> }

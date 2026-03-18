@@ -1,88 +1,110 @@
+# Interactive Project Scheduling Module — IMPLEMENTED
 
-Goal
-- Fix the CO workflow so a TC reviewing an FC-originated CO uses one action that approves the FC portion and immediately forwards the CO to GC.
-- Let both GC and TC add CO materials from project estimates/catalog, then send that material list to the supplier for pricing using the existing PO workflow.
-- Keep FC pricing separate from TC pricing: FC amounts are TC cost, not merged into TC-entered CO pricing.
+## Design Philosophy
+Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
 
-What I found
-- Current FC → TC review is only partially implemented: `COStatusActions` lets a TC “Approve” an FC-created submitted CO, but the mutation marks the whole CO `approved`, which skips the GC stage.
-- `COMaterialsPanel` already reuses the PO picker stack (`ProductPickerContent`, estimate packs, PSM browser), but editing is hard-coded to TC only.
-- PO logic already supports the exact supplier-pricing lifecycle you want: draft PO, approval gate, send to supplier, supplier pricing, pricing-owner visibility.
-- CO financials currently aggregate FC + TC billable labor into one `laborTotal`, so FC pricing is being mixed into TC pricing instead of treated as TC cost/pass-through.
+## Features Built
 
-Implementation plan
-1. Fix FC → TC → GC workflow
-- Add a dedicated “Approve & send to GC” path for TCs reviewing FC-originated COs.
-- Change the TC approval branch so it does not finalize the CO as `approved`.
-- On TC approval:
-  - resolve the upstream GC org for the project,
-  - switch `assigned_to_org_id` from FC to GC,
-  - keep the CO in the GC review lane (`submitted`),
-  - log distinct activity entries for TC approval and GC forwarding,
-  - notify GC instead of treating it as final approval.
-- Update action labels/text in `COStatusActions` so the TC sees the correct intent.
+### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
+- Dependency graph walking with BFS
+- Cascade date computation with buffer days support
+- Critical path calculation (longest dependency chain)
+- Conflict detection (tasks starting before predecessors end)
+- `findDownstreamTasks()` for cascade confirmation
 
-2. Reuse PO logic for supplier pricing from CO materials
-- Expand `COMaterialsPanel` permissions so GC and TC can both:
-  - add materials manually,
-  - add from approved estimate packs/materials,
-  - open the catalog picker.
-- Add a new materials action such as “Send to supplier for pricing”.
-- That action should create a draft PO from the current CO materials using the same rules already used in `PurchaseOrdersTab`:
-  - supplier resolution,
-  - pricing owner resolution,
-  - PO approval gate for TC when required,
-  - supplier send flow via existing PO mechanics.
-- Keep supplier pricing inside the standard PO detail flow instead of inventing a separate CO-specific pricing UI.
+### 2. Desktop Gantt Chart (≥768px)
+- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
+- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
+- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
+- **Dependency arrows**: Bezier curves with arrow markers
+- **Critical path toggle**: Highlights longest dependency chain in amber/gold
+- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
+- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
+- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
+- **Undo**: 5-second undo button after any drag action
 
-3. Add CO ↔ PO linkage so the flow is trackable
-- The current schema has no durable link from a PO back to a CO/material row.
-- Add minimal nullable link fields so CO material requests can be traced and refreshed safely:
-  - purchase order → source CO,
-  - PO line item → source CO material item.
-- Use those links to:
-  - prevent duplicate pricing requests,
-  - show “draft / sent / priced” status back on the CO,
-  - hydrate priced supplier values back into the CO materials view when needed.
+### 3. Mobile Card View (<768px)
+- **Sticky top bar**: Project start/end dates + days remaining
+- **Phase grouping**: Collapsible sections with total duration
+- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
+- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
+- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
 
-4. Separate FC cost from TC pricing
-- Refactor CO derived financials in `useChangeOrderDetail` so FC billable labor is not blended into TC-entered pricing totals.
-- Introduce separate derived buckets for:
-  - FC labor cost to TC,
-  - TC direct labor pricing,
-  - actual costs,
-  - GC-facing reviewed total.
-- Update `COLineItemRow` and `CODetailPage` so:
-  - FC still sees only its own entries/private actuals,
-  - TC sees FC amounts as cost/pass-through,
-  - GC sees the reviewed upstream total, not raw combined FC+TC labor math.
-- Keep actual-cost privacy rules unchanged.
+### 4. Shared Logic
+- One unified `items` array drives both views
+- `handleScheduleChange()` checks downstream tasks before applying
+- Optimistic undo with snapshot restoration
+- Auto-estimate dates still available for unscheduled items
 
-5. Keep PO pricing visibility rules intact
-- Reuse existing PO visibility logic (`pricing_owner_org_id`, supplier visibility, FC hidden pricing).
-- Ensure supplier-priced material requests created from COs inherit the same privacy behavior as normal POs.
-- TC should not see GC-owned pricing, and FC should never see supplier pricing.
+---
 
-6. Testing/verification pass
-- Validate these flows after implementation:
-  - FC submits CO → TC sees “Approve & send to GC” → GC then sees normal approve/reject.
-  - GC and TC can both add CO materials from estimate/catalog.
-  - “Send to supplier for pricing” creates a draft PO from CO materials and follows approval/send logic.
-  - Supplier pricing updates are visible through PO flow and reflected back on the CO.
-  - FC labor remains separate from TC pricing totals in all views.
+# Field Capture Mode — IMPLEMENTED
 
-Primary files likely involved
-- `src/components/change-orders/COStatusActions.tsx`
-- `src/hooks/useChangeOrderDetail.ts`
-- `src/components/change-orders/CODetailPage.tsx`
-- `src/components/change-orders/COLineItemRow.tsx`
-- `src/components/change-orders/COMaterialsPanel.tsx`
-- `src/components/project/PurchaseOrdersTab.tsx`
-- `src/components/purchase-orders/PODetail.tsx`
-- `src/hooks/usePOPricingVisibility.ts`
-- `src/integrations/supabase/types.ts` (read-only generated reference only; schema changes would be done through backend migration, not manual edits)
+## Overview
+Mobile-first feature enabling Field Crew to instantly capture jobsite issues (photo, voice note, location, reason category) in under 10 seconds.
 
-Technical notes
-- This is not just a button tweak; the FC→TC→GC handoff needs a distinct workflow branch because current `approveCO` is terminal.
-- The material pricing feature should piggyback on PO records, not supplier estimates, because you chose the PO-style tracked workflow.
-- To make that robust, backend link fields are the cleanest solution; otherwise the app would have to rely on fragile note text matching.
+## Database
+- `field_captures` table with RLS (project participants SELECT, creator INSERT/UPDATE)
+- `field-captures` storage bucket (public read, authenticated upload)
+- Realtime enabled via `supabase_realtime` publication
+
+## Frontend Components
+| File | Purpose |
+|------|---------|
+| `src/hooks/useFieldCaptures.ts` | React Query hook with realtime, create/update mutations, media upload |
+| `src/components/field-capture/FieldCaptureSheet.tsx` | Full-screen capture UI (photo, voice, text, reason chips) |
+| `src/components/field-capture/CapturePhotoInput.tsx` | Camera-first photo capture with large touch target |
+| `src/components/field-capture/CaptureVoiceInput.tsx` | Hold-to-record voice note (MediaRecorder API) |
+| `src/components/field-capture/CaptureReasonChips.tsx` | Tap-to-select reason category chips |
+| `src/components/field-capture/FieldCaptureList.tsx` | List of captures with "+ Capture" button |
+| `src/components/field-capture/FieldCaptureCard.tsx` | Individual capture card with "Convert to Task" button |
+
+## Entry Points
+1. **BottomNav FAB** — Amber "Capture" button on project pages (mobile)
+2. **Daily Log tab** — Field Captures section for the active date
+
+## Feature Gate
+- `field_capture` added to `FeatureKey` type and labels
+
+## Auto-captured Data
+- Timestamp, user ID, org ID, GPS coordinates, device info (userAgent)
+
+## Files Created/Modified
+| File | Action |
+|------|--------|
+| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
+| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
+| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
+| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
+| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
+| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
+| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
+| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
+| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
+| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
+
+---
+
+# Multi-Item Work Order — IMPLEMENTED
+
+## Overview
+Transforms Work Orders from single-task entities into **package containers** holding multiple task line items, mirroring how POs hold multiple material lines.
+
+## Database
+- `work_order_tasks` table with RLS (project participants CRUD) linked to `change_order_projects` header via `work_order_id`
+- Status validation trigger (`pending`, `in_progress`, `complete`, `skipped`)
+- Realtime enabled via `supabase_realtime` publication
+
+## Frontend Components
+| File | Purpose |
+|------|---------|
+| `src/types/workOrderTask.ts` | TypeScript types for work order tasks |
+| `src/hooks/useWorkOrderTasks.ts` | React Query hook with realtime, CRUD mutations |
+| `src/components/work-order-tasks/WorkOrderTaskList.tsx` | Task list with completion counter |
+| `src/components/work-order-tasks/WorkOrderTaskCard.tsx` | Individual task card with status, location, menu |
+| `src/components/work-order-tasks/AddTaskSheet.tsx` | Mobile-first bottom sheet for adding/editing tasks |
+| `src/components/work-order-tasks/TaskQuickAdd.tsx` | Inline quick-add input for FC users |
+
+## Integration Points
+- `ChangeOrderDetailPage.tsx` — Tasks section after header card, FC quick-add below
+- `useChangeOrderRealtime.ts` — Subscribes to `work_order_tasks` changes

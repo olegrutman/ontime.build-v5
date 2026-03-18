@@ -219,9 +219,15 @@ export function CODetailPage() {
 
                 <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5">
                   <div className="co-light-kpi">
-                    <p className="co-light-kpi-label">Labor</p>
+                    <p className="co-light-kpi-label">{isTC ? 'TC labor' : 'Labor'}</p>
                     <p className="co-light-kpi-value">{fmtCurrency(financials.laborTotal)}</p>
                   </div>
+                  {isTC && financials.fcLaborTotal > 0 && (
+                    <div className="co-light-kpi">
+                      <p className="co-light-kpi-label">FC cost to TC</p>
+                      <p className="co-light-kpi-value">{fmtCurrency(financials.fcLaborTotal)}</p>
+                    </div>
+                  )}
                   {co.materials_needed && (
                     <div className="co-light-kpi">
                       <p className="co-light-kpi-label">Materials</p>
@@ -340,6 +346,7 @@ export function CODetailPage() {
                     coId={co.id}
                     orgId={myOrgId}
                     projectId={projectId ?? ''}
+                    coTitle={displayTitle}
                     materials={materials}
                     isTC={isTC}
                     isGC={isGC}
@@ -378,6 +385,7 @@ export function CODetailPage() {
                   isGC={isGC}
                   isTC={isTC}
                   isFC={isFC}
+                  currentOrgId={myOrgId}
                   projectId={projectId ?? ''}
                   financials={financials}
                   onRefresh={refreshDetail}
@@ -401,7 +409,7 @@ export function CODetailPage() {
 
                     {isTC && (
                       <>
-                        {financials.fcLaborTotal > 0 && <FinRow label="FC labor" value={financials.fcLaborTotal} muted />}
+                        {financials.fcLaborTotal > 0 && <FinRow label="FC cost to TC" value={financials.fcLaborTotal} muted />}
                         <FinRow label="TC labor" value={financials.tcLaborTotal} />
                         {co.materials_needed && (
                           <>
@@ -416,7 +424,7 @@ export function CODetailPage() {
                           </>
                         )}
                         <div className="border-t border-border pt-2 mt-2">
-                          <FinRow label="Grand total" value={financials.grandTotal} bold />
+                          <FinRow label="Reviewed total" value={financials.grandTotal} bold />
                         </div>
                       </>
                     )}

@@ -54,9 +54,10 @@ export function COLineItemRow({
   const tcTotal = tcBillable.reduce((s, e) => s + (e.line_total ?? 0), 0);
   const actualTotal = actualCosts.reduce((s, e) => s + (e.line_total ?? 0), 0);
 
-  const visibleBillable = isGC ? tcBillable : isFC ? fcBillable : billable;
-  const totalForRole = isGC ? tcTotal : isFC ? fcTotal : tcTotal + fcTotal;
-  const hasEntries = visibleBillable.length > 0;
+  const visibleBillable = isGC ? tcBillable : isFC ? fcBillable : tcBillable;
+  const tcDownstreamCosts = isTC ? fcBillable : [];
+  const totalForRole = isGC ? tcTotal : isFC ? fcTotal : tcTotal;
+  const hasEntries = visibleBillable.length > 0 || tcDownstreamCosts.length > 0;
 
   const enteredByRole = isFC ? 'FC' as const : 'TC' as const;
 
@@ -76,7 +77,7 @@ export function COLineItemRow({
           </p>
           {!expanded && hasEntries && (
             <p className="text-[10px] text-muted-foreground mt-0.5">
-              {visibleBillable.length} entr{visibleBillable.length === 1 ? 'y' : 'ies'}
+              {visibleBillable.length + tcDownstreamCosts.length} entr{visibleBillable.length + tcDownstreamCosts.length === 1 ? 'y' : 'ies'}
             </p>
           )}
         </div>
@@ -95,7 +96,7 @@ export function COLineItemRow({
 
       {expanded && (
         <div className="px-4 pb-3 space-y-2">
-          {visibleBillable.length === 0 && !showLaborForm && (
+          {visibleBillable.length === 0 && tcDownstreamCosts.length === 0 && !showLaborForm && !showActualForm && (
             <p className="text-xs text-muted-foreground py-1">No labor entries yet</p>
           )}
 
@@ -122,6 +123,34 @@ export function COLineItemRow({
               </span>
             </div>
           ))}
+
+          {isTC && tcDownstreamCosts.length > 0 && (
+            <div className="mt-2 space-y-1 border-t border-border pt-2">
+              <div className="flex items-center justify-between text-xs font-medium px-2.5">
+                <span className="text-muted-foreground">FC cost to TC</span>
+                <span className="text-muted-foreground">${fmt(fcTotal)}</span>
+              </div>
+              {tcDownstreamCosts.map(entry => (
+                <div key={entry.id} className="flex items-center justify-between text-xs bg-muted/10 rounded px-2.5 py-1.5">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="inline-flex items-center rounded px-1 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground">
+                      {entry.entered_by_role}
+                    </span>
+                    <span className="text-muted-foreground truncate">
+                      {entry.entry_date} ·{' '}
+                      {entry.pricing_mode === 'lump_sum'
+                        ? 'lump sum'
+                        : `${entry.hours ?? 0} hrs${entry.hourly_rate ? ` @ $${entry.hourly_rate}/hr` : ''}`}
+                      {entry.description ? ` · ${entry.description}` : ''}
+                    </span>
+                  </div>
+                  <span className="font-medium text-muted-foreground shrink-0 ml-2">
+                    ${fmt(entry.line_total ?? 0)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
 
           {isFC && actualCosts.length > 0 && (
             <div className="mt-2 space-y-1 border-t border-border pt-2">
