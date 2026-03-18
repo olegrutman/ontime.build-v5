@@ -292,7 +292,7 @@ export function CODetailPage() {
                                     isFC={isFC}
                                     coId={co.id}
                                     orgId={myOrgId}
-                                    pricingType={co.pricing_type as 'fixed' | 'tm' | 'nte'}
+                                    pricingType={pricingType}
                                     nteCap={co.nte_cap}
                                     nteUsed={financials.laborTotal}
                                     canAddLabor={canEdit && (isTC || isFC)}
