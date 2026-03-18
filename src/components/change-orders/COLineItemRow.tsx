@@ -148,7 +148,7 @@ export function COLineItemRow({
                   <span className="text-muted-foreground">Margin</span>
                   <span className={cn(
                     'font-medium',
-                    fcTotal - actualTotal > 0 ? 'text-green-600' : 'text-destructive'
+                    fcTotal - actualTotal > 0 ? 'co-light-success-text' : 'text-destructive'
                   )}>
                     ${fmt(fcTotal - actualTotal)}{' '}
                     ({fcTotal > 0

@@ -450,7 +450,7 @@ export function COMaterialsPanel({
               {isTC && totalBilled > totalCost && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Markup</span>
-                  <span className="text-amber-600">+${fmt(totalBilled - totalCost)}</span>
+                  <span className="co-light-success-text">+${fmt(totalBilled - totalCost)}</span>
                 </div>
               )}
               <div className="flex items-center justify-between text-sm font-semibold">

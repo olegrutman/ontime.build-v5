@@ -275,7 +275,7 @@ export function COStatusActions({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={acting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={doApprove} disabled={acting} className="bg-green-600 hover:bg-green-700">
+            <AlertDialogAction onClick={doApprove} disabled={acting}>
               {acting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
               Approve
             </AlertDialogAction>
