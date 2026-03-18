@@ -193,6 +193,74 @@ export type Database = {
           },
         ]
       }
+      change_order_collaborators: {
+        Row: {
+          co_id: string
+          collaborator_type: string
+          completed_at: string | null
+          completed_by_user_id: string | null
+          created_at: string
+          id: string
+          invited_by_user_id: string
+          organization_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          co_id: string
+          collaborator_type?: string
+          completed_at?: string | null
+          completed_by_user_id?: string | null
+          created_at?: string
+          id?: string
+          invited_by_user_id: string
+          organization_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          co_id?: string
+          collaborator_type?: string
+          completed_at?: string | null
+          completed_by_user_id?: string | null
+          created_at?: string
+          id?: string
+          invited_by_user_id?: string
+          organization_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "change_order_collaborators_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "change_order_collaborators_completed_by_user_id_fkey"
+            columns: ["completed_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "change_order_collaborators_invited_by_user_id_fkey"
+            columns: ["invited_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "change_order_collaborators_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       change_orders: {
         Row: {
           approved_at: string | null
@@ -4525,6 +4593,14 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      can_access_change_order: {
+        Args: { _co_id: string; _user_id?: string }
+        Returns: boolean
+      }
+      can_request_fc_change_order_input: {
+        Args: { _co_id: string; _fc_org_id: string; _user_id?: string }
+        Returns: boolean
+      }
       can_see_financials: { Args: { _user_id: string }; Returns: boolean }
       can_see_margins: { Args: { _user_id: string }; Returns: boolean }
       can_supplier_edit_po_pricing: {
@@ -4537,6 +4613,27 @@ export type Database = {
         Returns: undefined
       }
       check_org_setup_needed: { Args: never; Returns: Json }
+      complete_fc_change_order_input: {
+        Args: { _co_id: string }
+        Returns: {
+          co_id: string
+          collaborator_type: string
+          completed_at: string | null
+          completed_by_user_id: string | null
+          created_at: string
+          id: string
+          invited_by_user_id: string
+          organization_id: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "change_order_collaborators"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       complete_signup:
         | {
             Args: {
@@ -4787,6 +4884,27 @@ export type Database = {
       remove_org_member: {
         Args: { _target_role_id: string }
         Returns: undefined
+      }
+      request_fc_change_order_input: {
+        Args: { _co_id: string; _fc_org_id: string }
+        Returns: {
+          co_id: string
+          collaborator_type: string
+          completed_at: string | null
+          completed_by_user_id: string | null
+          created_at: string
+          id: string
+          invited_by_user_id: string
+          organization_id: string
+          status: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "change_order_collaborators"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       search_catalog: {
         Args: {
