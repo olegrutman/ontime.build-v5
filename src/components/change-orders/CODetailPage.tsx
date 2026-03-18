@@ -90,9 +90,13 @@ export function CODetailPage() {
   const myOrgId = activeMembership?.organization_id ?? co?.assigned_to_org_id ?? co?.org_id ?? '';
 
   const queryClient = useQueryClient();
+  const [fcActionPending, setFCActionPending] = useState(false);
   function refreshDetail() {
     queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
   }
+
+  const collaboratorOrgIds = new Set(collaborators.map(collaborator => collaborator.organization_id));
+  const fcOrgOptions = useMemo(async () => [], []);
 
   const isActiveStatus =
     co?.status === 'draft' ||
@@ -104,7 +108,13 @@ export function CODetailPage() {
     co?.pricing_type === 'tm' ||
     co?.pricing_type === 'nte';
 
-  const canEdit = isActiveStatus || (isRunningPricing && co?.status === 'submitted');
+  const currentCollaborator = collaborators.find(collaborator => collaborator.status === 'active') ?? null;
+  const isCollaboratorOrg = collaborators.some(
+    collaborator => collaborator.organization_id === myOrgId && collaborator.status === 'active'
+  );
+  const canRequestFCInput = !!co && isTC && co.created_by_role === 'GC' && co.assigned_to_org_id === myOrgId && (co.status === 'shared' || co.status === 'rejected');
+  const canCompleteFCInput = !!co && isFC && isCollaboratorOrg;
+  const canEdit = (isActiveStatus || (isRunningPricing && co?.status === 'submitted')) && (isTC || !currentCollaborator || isCollaboratorOrg);
 
   const nteUsedPercent = financials.nteUsedPercent ?? 0;
   const showNTEWarning = co?.pricing_type === 'nte' && !!co?.nte_cap && nteUsedPercent >= 80;
