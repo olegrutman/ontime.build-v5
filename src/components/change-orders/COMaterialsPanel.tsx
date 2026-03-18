@@ -283,9 +283,9 @@ export function COMaterialsPanel({
                   <th className="text-left px-4 py-2 font-medium">Description</th>
                   <th className="text-right px-2 py-2 font-medium">Qty</th>
                   <th className="text-left px-2 py-2 font-medium">UOM</th>
-                  {!isGC && <th className="text-right px-2 py-2 font-medium">Unit cost</th>}
+                  {isTC && <th className="text-right px-2 py-2 font-medium">Unit cost</th>}
                   {isTC && <th className="text-right px-2 py-2 font-medium">Markup %</th>}
-                  <th className="text-right px-4 py-2 font-medium">{isGC ? 'Amount' : 'Billed'}</th>
+                  {!isFC && <th className="text-right px-4 py-2 font-medium">{isGC ? 'Amount' : 'Billed'}</th>}
                   {canEdit && isTC && <th className="w-8" />}
                 </tr>
               </thead>
@@ -300,7 +300,7 @@ export function COMaterialsPanel({
                     </td>
                     <td className="text-right px-2 py-2.5 text-foreground">{m.quantity}</td>
                     <td className="px-2 py-2.5 text-muted-foreground">{m.uom}</td>
-                    {!isGC && (
+                    {isTC && (
                       <td className="text-right px-2 py-2.5 text-muted-foreground">
                         {m.unit_cost != null ? `$${fmt(m.unit_cost)}` : '—'}
                       </td>
@@ -310,9 +310,11 @@ export function COMaterialsPanel({
                         {m.markup_percent > 0 ? `${m.markup_percent}%` : '—'}
                       </td>
                     )}
-                    <td className="text-right px-4 py-2.5 font-medium text-foreground">
-                      ${fmt(m.billed_amount ?? 0)}
-                    </td>
+                    {!isFC && (
+                      <td className="text-right px-4 py-2.5 font-medium text-foreground">
+                        ${fmt(m.billed_amount ?? 0)}
+                      </td>
+                    )}
                     {canEdit && isTC && (
                       <td className="px-2 py-2.5">
                         <button
@@ -332,8 +334,8 @@ export function COMaterialsPanel({
                 ))}
 
                 {draftRows.map((row) => {
-                  const qty    = parseFloat(row.quantity) || 0;
-                  const cost   = parseFloat(row.unit_cost) || 0;
+                  const qty = parseFloat(row.quantity) || 0;
+                  const cost = parseFloat(row.unit_cost) || 0;
                   const markup = parseFloat(row.markup_percent) || 0;
                   const billed = qty * cost * (1 + markup / 100);
 
@@ -373,7 +375,7 @@ export function COMaterialsPanel({
                           </SelectContent>
                         </Select>
                       </td>
-                      {!isGC && (
+                      {isTC && (
                         <td className="px-2 py-2">
                           <div className="relative">
                             <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
@@ -400,9 +402,11 @@ export function COMaterialsPanel({
                           </div>
                         </td>
                       )}
-                      <td className="text-right px-4 py-2 text-xs text-muted-foreground">
-                        {billed > 0 ? `$${fmt(billed)}` : '—'}
-                      </td>
+                      {!isFC && (
+                        <td className="text-right px-4 py-2 text-xs text-muted-foreground">
+                          {billed > 0 ? `$${fmt(billed)}` : '—'}
+                        </td>
+                      )}
                       <td className="px-2 py-2">
                         <button
                           onClick={() => removeRow(row.tempId)}
@@ -435,9 +439,9 @@ export function COMaterialsPanel({
             </div>
           )}
 
-          {materials.length > 0 && (
+          {materials.length > 0 && !isFC && (
             <div className="px-4 py-3 border-t border-border space-y-1">
-              {!isGC && totalCost > 0 && (
+              {isTC && totalCost > 0 && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Cost</span>
                   <span className="text-muted-foreground">${fmt(totalCost)}</span>

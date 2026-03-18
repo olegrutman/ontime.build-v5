@@ -45,8 +45,8 @@ const PRICING_LABEL: Record<string, string> = {
 
 export function CODetailPage() {
   const { projectId, coId } = useParams<{ projectId: string; coId: string }>();
-  const navigate            = useNavigate();
-  const defaultOpen         = useDefaultSidebarOpen();
+  const navigate = useNavigate();
+  const defaultOpen = useDefaultSidebarOpen();
   const { currentRole, userOrgRoles } = useAuth();
 
   const {
@@ -64,222 +64,30 @@ export function CODetailPage() {
 
   useCORealtime(coId ?? null);
 
-  const isGC = currentRole === 'GC_PM';
-  const isTC = currentRole === 'TC_PM';
-  const isFC = currentRole === 'FC_PM' || currentRole === 'FS';
+  const activeMembership =
+    userOrgRoles.find(({ organization_id }) => organization_id === co?.assigned_to_org_id) ??
+    userOrgRoles.find(({ organization_id }) => organization_id === co?.org_id) ??
+    userOrgRoles[0];
+
+  const activeRole = activeMembership?.role ?? currentRole;
+  const activeOrgType = activeMembership?.organization?.type;
+
+  const isFC = activeOrgType === 'FC' || activeRole === 'FC_PM';
+  const isGC = activeOrgType === 'GC' || activeRole === 'GC_PM';
+  const isTC = !isGC && !isFC && (activeOrgType === 'TC' || activeRole === 'TC_PM' || activeRole === 'FS');
   const role: COCreatedByRole = isGC ? 'GC' : isTC ? 'TC' : 'FC';
-  const myOrgId = userOrgRoles[0]?.organization_id ?? co?.org_id ?? '';
+  const myOrgId = activeMembership?.organization_id ?? co?.assigned_to_org_id ?? co?.org_id ?? '';
 
   const queryClient = useQueryClient();
   function refreshDetail() {
     queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
   }
-
-  const canEdit =
-    co?.status === 'draft' ||
-    co?.status === 'shared' ||
-    co?.status === 'combined' ||
-    co?.pricing_type === 'tm' ||
-    co?.pricing_type === 'nte';
-
-  if (isLoading) {
-    return (
-      <SidebarProvider defaultOpen={defaultOpen}>
-        <div className="flex min-h-screen w-full">
-          <AppSidebar />
-          <SidebarInset>
-            <div className="p-6 space-y-4">
-              <Skeleton className="h-8 w-64" />
-              <Skeleton className="h-48 w-full" />
-              <Skeleton className="h-32 w-full" />
-            </div>
-          </SidebarInset>
-          <BottomNav />
-        </div>
-      </SidebarProvider>
-    );
-  }
-
-  if (!co) {
-    return (
-      <SidebarProvider defaultOpen={defaultOpen}>
-        <div className="flex min-h-screen w-full">
-          <AppSidebar />
-          <SidebarInset>
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
-              <p className="text-lg font-medium text-foreground">Change order not found</p>
-              <Button variant="outline" onClick={() => navigate(-1)}>
-                Go back
-              </Button>
-            </div>
-          </SidebarInset>
-          <BottomNav />
-        </div>
-      </SidebarProvider>
-    );
-  }
-
-  const isCombinedParent = memberCOs.length > 0;
-  const displayTitle     = co.title ?? co.co_number ?? (isCombinedParent ? 'Combined Change Order' : 'Change Order');
-  const reasonColors     = co.reason ? CO_REASON_COLORS[co.reason as COReasonCode] : null;
-
-  const billableEntries = laborEntries.filter(e => !e.is_actual_cost);
-  const fcEntries       = billableEntries.filter(e => e.entered_by_role === 'FC');
-  const tcEntries       = billableEntries.filter(e => e.entered_by_role === 'TC');
-
-  // Group line items by member CO for combined parents
-  const scopeSections: { memberCO: ChangeOrder | null; items: typeof lineItems }[] = [];
-  if (isCombinedParent) {
-    for (const mco of memberCOs) {
-      const items = lineItems.filter(li => li.co_id === mco.id);
-      if (items.length > 0 || true) { // show section even if empty for visibility
-        scopeSections.push({ memberCO: mco, items });
-      }
-    }
-  } else {
-    scopeSections.push({ memberCO: null, items: lineItems });
-  }
-
-  return (
-    <SidebarProvider defaultOpen={defaultOpen}>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset>
-          {/* Header */}
-          <div className="flex items-start gap-3 p-4 md:p-6 border-b border-border">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(`/project/${projectId}?tab=change-orders`)}
-              className="shrink-0 mt-0.5"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-             <div className="min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                {isCombinedParent && <GitMerge className="h-4 w-4 text-purple-600 shrink-0" />}
-                <h1 className="text-xl font-semibold text-foreground">{displayTitle}</h1>
-                <Badge variant="outline" className={cn('text-[11px]', STATUS_BADGE[co.status as COStatus])}>
-                  {CO_STATUS_LABELS[co.status as COStatus]}
-                </Badge>
-                {co.pricing_type && (
-                  <Badge variant="secondary" className="text-[11px]">
-                    {PRICING_LABEL[co.pricing_type] ?? co.pricing_type}
-                  </Badge>
-                )}
-                {isCombinedParent && (
-                  <Badge variant="secondary" className="text-[11px]">
-                    {memberCOs.length} scopes
-                  </Badge>
-                )}
-              </div>
-              <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground flex-wrap">
-                {co.reason && reasonColors && (
-                  <span
-                    className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-                    style={{ backgroundColor: reasonColors.bg, color: reasonColors.text }}
-                  >
-                    {CO_REASON_LABELS[co.reason as COReasonCode]}
-                  </span>
-                )}
-                {co.location_tag && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    {co.location_tag}
-                  </span>
-                )}
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-3 w-3" />
-                  {format(new Date(co.created_at), 'MMM d, yyyy')}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Body */}
-          <div className="p-4 md:p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Main column */}
-              <div className="lg:col-span-2 space-y-6">
-                {/* Scope sections */}
-                {scopeSections.map((section, idx) => {
-                  const sectionTitle = section.memberCO
-                    ? (section.memberCO.title ?? section.memberCO.co_number ?? `Scope ${idx + 1}`)
-                    : 'Scope & labor';
-                  const sectionReason = section.memberCO?.reason
-                    ? CO_REASON_COLORS[section.memberCO.reason as COReasonCode]
-                    : null;
-
-                  return (
-                    <div key={section.memberCO?.id ?? 'single'} className="rounded-lg border border-border bg-card">
-                      <div className="px-4 py-3 border-b border-border">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {isCombinedParent && (
-                            <span className="text-xs font-medium text-muted-foreground">
-                              Scope {idx + 1} of {scopeSections.length}
-                            </span>
-                          )}
-                          <h3 className="text-sm font-semibold text-foreground">{sectionTitle}</h3>
-                          {section.memberCO?.reason && sectionReason && (
-                            <span
-                              className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
-                              style={{ backgroundColor: sectionReason.bg, color: sectionReason.text }}
-                            >
-                              {CO_REASON_LABELS[section.memberCO.reason as COReasonCode]}
-                            </span>
-                          )}
-                          {section.memberCO?.location_tag && (
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <MapPin className="h-3 w-3" />
-                              {section.memberCO.location_tag}
-                            </span>
-                          )}
-                        </div>
-                        {section.items.length > 0 && (
-                          <p className="text-[11px] text-muted-foreground mt-0.5">
-                            {section.items.length} item{section.items.length !== 1 ? 's' : ''} · tap to expand
-                          </p>
-                        )}
-                      </div>
-                      {section.items.length === 0 ? (
-                        <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-                          No scope items
-                        </div>
-                      ) : (
-                        section.items.map(item => (
-                          <COLineItemRow
-                            key={item.id}
-                            item={item}
-                            laborEntries={laborEntries.filter(e => e.co_line_item_id === item.id)}
-                            role={role}
-                            isGC={isGC}
-                            isTC={isTC}
-                            isFC={isFC}
-                            coId={co.id}
-                            orgId={myOrgId}
-                            pricingType={co.pricing_type as 'fixed' | 'tm' | 'nte'}
-                            nteCap={co.nte_cap}
-                            nteUsed={financials.laborTotal}
-                            canAddLabor={!isGC && (
-                              co.status === 'draft' ||
-                              co.status === 'shared' ||
-                              co.status === 'combined' ||
-                              co.pricing_type === 'tm' ||
-                              co.pricing_type === 'nte'
-                            )}
-                            onRefresh={refreshDetail}
-                          />
-                        ))
-                      )}
-                    </div>
-                  );
-                })}
-
+...
                 {/* Materials */}
                 {co.materials_needed && (
                   <COMaterialsPanel
                     coId={co.id}
-                    orgId={co.org_id}
+                    orgId={myOrgId}
                     projectId={projectId!}
                     materials={materials}
                     isTC={isTC}
@@ -295,7 +103,7 @@ export function CODetailPage() {
                 {co.equipment_needed && (
                   <COEquipmentPanel
                     coId={co.id}
-                    orgId={co.org_id}
+                    orgId={myOrgId}
                     equipment={equipment}
                     isTC={isTC}
                     isGC={isGC}
