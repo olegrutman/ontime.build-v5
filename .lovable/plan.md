@@ -1,110 +1,83 @@
-# Interactive Project Scheduling Module — IMPLEMENTED
 
-## Design Philosophy
-Full-featured interactive scheduling with distinct desktop (Gantt) and mobile (Card) views, unified data layer.
+Issue confirmed:
+- I traced the PO card click flow and found the main bug causing the blank detail state with “Purchase Order not found”.
+- This is not a permissions issue first; it is a broken detail query.
 
-## Features Built
+What is happening now
+1. In `PurchaseOrdersTab.tsx`, clicking a PO card correctly sets `selectedPOId`.
+2. That renders `PODetail` with the selected PO id.
+3. Inside `PODetail.tsx`, `fetchPO()` runs this query:
+   - `purchase_orders`
+   - joins `supplier`, `project`, and `work_item:work_items(id, title)`
+4. The backend returns HTTP 400 because there is no foreign-key relationship between `purchase_orders` and `work_items`.
+5. Since the query fails, `po` never loads, and the screen falls into the “Purchase Order not found” state.
 
-### 1. Cascade Utility — `src/utils/cascadeSchedule.ts`
-- Dependency graph walking with BFS
-- Cascade date computation with buffer days support
-- Critical path calculation (longest dependency chain)
-- Conflict detection (tasks starting before predecessors end)
-- `findDownstreamTasks()` for cascade confirmation
+Evidence I verified
+- Network request for PO detail failed with:
+  - `PGRST200`
+  - “Could not find a relationship between 'purchase_orders' and 'work_items' in the schema cache”
+- Database schema confirms `purchase_orders` does not currently have a `work_item_id` column.
+- The list view works because the list query does not request the broken `work_item` relation.
 
-### 2. Desktop Gantt Chart (≥768px)
-- **Zoom levels**: Day / Week / Month toggle via `GanttToolbar`
-- **Drag interactions**: Move (grab center), resize-left, resize-right with real-time tooltip showing dates + duration
-- **Duration source badges**: "A" badge for auto (SOV-linked), pencil for manual
-- **Dependency arrows**: Bezier curves with arrow markers
-- **Critical path toggle**: Highlights longest dependency chain in amber/gold
-- **Cascade confirmation**: Modal dialog with [Cascade All] [Keep Others] [Cancel]
-- **Conflict highlighting**: Red bars with ⚠️ icon when "Keep Others" chosen
-- **Task detail drawer**: Right-side Sheet with dates, progress slider, dependencies list, SOV info
-- **Undo**: 5-second undo button after any drag action
+Secondary bugs I found
+- In `COMaterialsPanel.tsx`, “Open PO workflow” only navigates to:
+  - `/project/:id?tab=purchase-orders`
+  - It does not open the specific linked PO.
+- Linked CO pricing requests are stored correctly, but the PO tab has no URL-driven deep-link support yet, so even after navigation the intended PO is not automatically selected.
+- The supplier-pricing section can make a request look “sent/opened” operationally while the linked PO record is still `ACTIVE`, which is confusing.
 
-### 3. Mobile Card View (<768px)
-- **Sticky top bar**: Project start/end dates + days remaining
-- **Phase grouping**: Collapsible sections with total duration
-- **Task cards**: Color-coded border, status pills, mini timeline proportional bar
-- **Tap actions**: [−1 day] [+1 day] buttons + calendar date picker
-- **Cascade bottom sheet**: Full-screen vaul Drawer for cascade confirmation
+Plan to fix
+1. Fix the broken PO detail fetch
+- Remove the invalid `work_item:work_items(...)` join from `PODetail.tsx`.
+- Keep only relations that are actually valid (`supplier`, `project`).
+- If work-order context is needed, load it separately only when a real FK/column exists.
 
-### 4. Shared Logic
-- One unified `items` array drives both views
-- `handleScheduleChange()` checks downstream tasks before applying
-- Optimistic undo with snapshot restoration
-- Auto-estimate dates still available for unscheduled items
+2. Make PO detail robust on errors
+- Add explicit error handling in `fetchPO()` so query failures show a real error message instead of a misleading “not found”.
+- Distinguish:
+  - invalid query / backend error
+  - record missing
+  - access denied
 
----
+3. Add deep-link support for opening a specific PO
+- Update `PurchaseOrdersTab.tsx` to read a query param like `po=<id>` from the URL.
+- When present, initialize `selectedPOId` from that param.
+- Keep the URL in sync when opening/closing a PO detail.
 
-# Field Capture Mode — IMPLEMENTED
+4. Fix CO → PO navigation
+- Update `COMaterialsPanel.tsx` so “Open PO workflow” navigates to:
+  - `/project/${projectId}?tab=purchase-orders&po=${activePricingRequest.id}`
+- That will open the exact linked PO instead of only switching tabs.
 
-## Overview
-Mobile-first feature enabling Field Crew to instantly capture jobsite issues (photo, voice note, location, reason category) in under 10 seconds.
+5. Tighten linked-request status messaging
+- Show the real lifecycle label from the actual PO status:
+  - `ACTIVE` = pricing draft
+  - `PENDING_APPROVAL` = awaiting GC approval
+  - `SUBMITTED` = sent to supplier
+- Avoid wording that implies “sent” when the PO is still only a draft.
 
-## Database
-- `field_captures` table with RLS (project participants SELECT, creator INSERT/UPDATE)
-- `field-captures` storage bucket (public read, authenticated upload)
-- Realtime enabled via `supabase_realtime` publication
+6. Verify both GC and TC flows after fix
+- Test standard PO cards on the Purchase Orders tab.
+- Test CO-linked pricing request cards opened from Change Orders.
+- Verify for both GC and TC users that:
+  - card click opens detail
+  - browser refresh on a deep-linked PO still opens the correct detail
+  - back action returns to the PO list cleanly
 
-## Frontend Components
-| File | Purpose |
-|------|---------|
-| `src/hooks/useFieldCaptures.ts` | React Query hook with realtime, create/update mutations, media upload |
-| `src/components/field-capture/FieldCaptureSheet.tsx` | Full-screen capture UI (photo, voice, text, reason chips) |
-| `src/components/field-capture/CapturePhotoInput.tsx` | Camera-first photo capture with large touch target |
-| `src/components/field-capture/CaptureVoiceInput.tsx` | Hold-to-record voice note (MediaRecorder API) |
-| `src/components/field-capture/CaptureReasonChips.tsx` | Tap-to-select reason category chips |
-| `src/components/field-capture/FieldCaptureList.tsx` | List of captures with "+ Capture" button |
-| `src/components/field-capture/FieldCaptureCard.tsx` | Individual capture card with "Convert to Task" button |
+Expected result
+- TC and GC can click any visible PO card and actually open the detail view.
+- CO-linked POs open directly from the Change Order materials panel.
+- The UI will no longer say “Purchase Order not found” for valid records.
+- Status labels will match the true PO state, reducing “shown as sent but can’t be viewed” confusion.
 
-## Entry Points
-1. **BottomNav FAB** — Amber "Capture" button on project pages (mobile)
-2. **Daily Log tab** — Field Captures section for the active date
+Technical note
+- The root cause is the invalid `work_item` join in `PODetail.tsx`, not the PO data itself.
+- The deep-link/navigation issue is a second bug that affects CO-linked POs specifically.
 
-## Feature Gate
-- `field_capture` added to `FeatureKey` type and labels
-
-## Auto-captured Data
-- Timestamp, user ID, org ID, GPS coordinates, device info (userAgent)
-
-## Files Created/Modified
-| File | Action |
-|------|--------|
-| `src/utils/cascadeSchedule.ts` | NEW — cascade + critical path utilities |
-| `src/components/schedule/GanttToolbar.tsx` | NEW — zoom + critical path toggles |
-| `src/components/schedule/TaskDetailDrawer.tsx` | NEW — right-side drawer |
-| `src/components/schedule/CascadeConfirmDialog.tsx` | NEW — desktop cascade modal |
-| `src/components/schedule/MobileScheduleView.tsx` | NEW — mobile orchestrator |
-| `src/components/schedule/PhaseCardGroup.tsx` | NEW — collapsible phase section |
-| `src/components/schedule/TaskCard.tsx` | NEW — mobile task card |
-| `src/components/schedule/CascadeBottomSheet.tsx` | NEW — mobile cascade sheet |
-| `src/components/schedule/GanttChart.tsx` | REWRITE — zoom, badges, cascade, critical path |
-| `src/components/schedule/ScheduleTab.tsx` | UPDATE — mobile/desktop split, shared state |
-
----
-
-# Multi-Item Work Order — IMPLEMENTED
-
-## Overview
-Transforms Work Orders from single-task entities into **package containers** holding multiple task line items, mirroring how POs hold multiple material lines.
-
-## Database
-- `work_order_tasks` table with RLS (project participants CRUD) linked to `change_order_projects` header via `work_order_id`
-- Status validation trigger (`pending`, `in_progress`, `complete`, `skipped`)
-- Realtime enabled via `supabase_realtime` publication
-
-## Frontend Components
-| File | Purpose |
-|------|---------|
-| `src/types/workOrderTask.ts` | TypeScript types for work order tasks |
-| `src/hooks/useWorkOrderTasks.ts` | React Query hook with realtime, CRUD mutations |
-| `src/components/work-order-tasks/WorkOrderTaskList.tsx` | Task list with completion counter |
-| `src/components/work-order-tasks/WorkOrderTaskCard.tsx` | Individual task card with status, location, menu |
-| `src/components/work-order-tasks/AddTaskSheet.tsx` | Mobile-first bottom sheet for adding/editing tasks |
-| `src/components/work-order-tasks/TaskQuickAdd.tsx` | Inline quick-add input for FC users |
-
-## Integration Points
-- `ChangeOrderDetailPage.tsx` — Tasks section after header card, FC quick-add below
-- `useChangeOrderRealtime.ts` — Subscribes to `work_order_tasks` changes
+<lov-actions>
+<lov-suggestion message="Test the PO flow end-to-end for both GC and TC after the detail query and deep-link fixes.">Verify that it works</lov-suggestion>
+<lov-suggestion message="Fix the Purchase Order detail fetch by removing the invalid work_item relation and adding proper error handling.">Fix PO detail loading</lov-suggestion>
+<lov-suggestion message="Add URL deep-link support so a specific PO can open directly from /project/:id?tab=purchase-orders&po=...">Add PO deep-linking</lov-suggestion>
+<lov-suggestion message="Update the Change Order materials panel so 'Open PO workflow' opens the exact linked PO instead of only switching tabs.">Fix CO to PO navigation</lov-suggestion>
+<lov-suggestion message="Clean up PO status messaging so pricing requests clearly show Draft, Awaiting Approval, or Sent to Supplier based on the actual PO status.">Improve PO status labels</lov-suggestion>
+</lov-actions>
