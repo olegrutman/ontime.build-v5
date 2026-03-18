@@ -169,6 +169,15 @@ export default function ProjectHome() {
     setTabResetKey(prev => prev + 1);
   };
 
+  useEffect(() => {
+    if (activeTab !== 'work-orders') return;
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('tab', changeOrdersEnabled ? 'change-orders' : 'overview');
+    setSearchParams(nextParams, { replace: true });
+    setTabResetKey(prev => prev + 1);
+  }, [activeTab, changeOrdersEnabled, searchParams, setSearchParams]);
+
   const handleStatusChange = async (newStatus: string) => {
     if (!project) return;
     if (newStatus === 'active') {

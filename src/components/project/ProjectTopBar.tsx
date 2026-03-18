@@ -163,16 +163,6 @@ export function ProjectTopBar({
                   SOV
                 </TabsTrigger>
               )}
-              {!isSupplier && changeOrdersEnabled && (
-              <TabsTrigger
-                value="work-orders"
-                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
-                onClick={() => onTabChange('work-orders')}
-              >
-                <span className="lg:hidden">WOs</span>
-                <span className="hidden lg:inline">Work Orders</span>
-              </TabsTrigger>
-              )}
               {changeOrdersEnabled && (
               <TabsTrigger
                 value="change-orders"
