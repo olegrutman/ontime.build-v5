@@ -2108,6 +2108,7 @@ export type Database = {
           price_adjusted_by_supplier: boolean
           price_source: string | null
           quantity: number
+          source_co_material_item_id: string | null
           source_estimate_item_id: string | null
           source_pack_name: string | null
           supplier_notes: string | null
@@ -2133,6 +2134,7 @@ export type Database = {
           price_adjusted_by_supplier?: boolean
           price_source?: string | null
           quantity: number
+          source_co_material_item_id?: string | null
           source_estimate_item_id?: string | null
           source_pack_name?: string | null
           supplier_notes?: string | null
@@ -2158,6 +2160,7 @@ export type Database = {
           price_adjusted_by_supplier?: boolean
           price_source?: string | null
           quantity?: number
+          source_co_material_item_id?: string | null
           source_estimate_item_id?: string | null
           source_pack_name?: string | null
           supplier_notes?: string | null
@@ -2171,6 +2174,13 @@ export type Database = {
             columns: ["po_id"]
             isOneToOne: false
             referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "po_line_items_source_co_material_item_id_fkey"
+            columns: ["source_co_material_item_id"]
+            isOneToOne: false
+            referencedRelation: "co_material_items"
             referencedColumns: ["id"]
           },
           {
@@ -3356,6 +3366,8 @@ export type Database = {
           sales_tax_percent: number | null
           sent_at: string | null
           sent_by: string | null
+          source_change_order_id: string | null
+          source_change_order_material_request: boolean
           source_estimate_id: string | null
           source_pack_name: string | null
           status: Database["public"]["Enums"]["po_status"]
@@ -3395,6 +3407,8 @@ export type Database = {
           sales_tax_percent?: number | null
           sent_at?: string | null
           sent_by?: string | null
+          source_change_order_id?: string | null
+          source_change_order_material_request?: boolean
           source_estimate_id?: string | null
           source_pack_name?: string | null
           status?: Database["public"]["Enums"]["po_status"]
@@ -3434,6 +3448,8 @@ export type Database = {
           sales_tax_percent?: number | null
           sent_at?: string | null
           sent_by?: string | null
+          source_change_order_id?: string | null
+          source_change_order_material_request?: boolean
           source_estimate_id?: string | null
           source_pack_name?: string | null
           status?: Database["public"]["Enums"]["po_status"]
@@ -3477,6 +3493,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_source_change_order_id_fkey"
+            columns: ["source_change_order_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
             referencedColumns: ["id"]
           },
           {
