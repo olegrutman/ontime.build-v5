@@ -207,7 +207,7 @@ export function CONTEPanel({
                   'h-full rounded-full transition-all',
                   isOver ? 'bg-destructive' :
                   isNearCap ? 'bg-destructive' :
-                  isWarning ? 'bg-amber-500' : 'bg-green-500'
+                  isWarning ? 'bg-primary' : 'bg-secondary'
                 )}
                 style={{ width: `${Math.min(pct, 100)}%` }}
               />
