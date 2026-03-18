@@ -40,6 +40,9 @@ const PRICING_LABEL: Record<string, string> = {
   nte: 'Not to exceed',
 };
 
+const VALID_PRICING = ['fixed', 'tm', 'nte'] as const;
+type ValidPricing = typeof VALID_PRICING[number];
+
 function fmtCurrency(value: number) {
   return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
