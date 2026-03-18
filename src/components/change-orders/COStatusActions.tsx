@@ -114,6 +114,11 @@ export function COStatusActions({
   }
 
   async function doSubmit() {
+    if (!co.assigned_to_org_id) {
+      toast.error('This CO has no assigned party. Assign a TC or GC before submitting.');
+      return;
+    }
+
     setActing(true);
     try {
       await submitCO.mutateAsync(co.id);
@@ -180,7 +185,7 @@ export function COStatusActions({
     }
   }
 
-  const isCreator       = co.created_by_role === (isGC ? 'GC' : isTC ? 'TC' : 'FC');
+  const isCreator = co.created_by_user_id === user?.id;
   const isCombinedParent = status === 'combined' && !co.combined_co_id;
   const canShare   = isCreator && (status === 'draft' || isCombinedParent) && !co.draft_shared_with_next;
   const canSubmit  = (isTC || isFC) && (status === 'draft' || status === 'shared' || isCombinedParent);

@@ -20,6 +20,16 @@ interface COListPageProps {
 
 type COViewMode = 'card' | 'list';
 
+const STATUS_ORDER: COStatus[] = [
+  'draft',
+  'shared',
+  'combined',
+  'submitted',
+  'approved',
+  'rejected',
+  'contracted',
+];
+
 const STATUS_BADGE_STYLES: Record<COStatus, string> = {
   draft: 'bg-muted text-muted-foreground border-border',
   shared: 'bg-accent text-accent-foreground border-border',
@@ -61,7 +71,9 @@ function CORow({
 }) {
   const isCombinedParent = !!co.memberPreviews && co.memberPreviews.length > 0;
   const title = co.title ?? co.co_number ?? (isCombinedParent ? 'Combined CO' : 'Untitled CO');
-  const age = formatDistanceToNow(new Date(co.created_at), { addSuffix: true });
+  const age = co.created_at
+    ? formatDistanceToNow(new Date(co.created_at), { addSuffix: true })
+    : 'just now';
 
   return (
     <div
@@ -138,7 +150,9 @@ function COCard({
 }) {
   const isCombinedParent = !!co.memberPreviews && co.memberPreviews.length > 0;
   const title = co.title ?? co.co_number ?? (isCombinedParent ? 'Combined CO' : 'Untitled CO');
-  const age = formatDistanceToNow(new Date(co.created_at), { addSuffix: true });
+  const age = co.created_at
+    ? formatDistanceToNow(new Date(co.created_at), { addSuffix: true })
+    : 'just now';
 
   return (
     <article
@@ -237,10 +251,8 @@ export function COListPage({ projectId }: COListPageProps) {
   const totalSharedWithMe = sharedWithMe.length;
   const total = totalMine + totalSharedWithMe;
 
-  const statusOrder: COStatus[] = ['draft', 'shared', 'combined', 'submitted', 'approved', 'rejected', 'contracted'];
-
   const statusGroups = useMemo(
-    () => statusOrder.map(status => ({ status, items: mine[status] })).filter(group => group.items.length > 0),
+    () => STATUS_ORDER.map(status => ({ status, items: mine[status] })).filter(group => group.items.length > 0),
     [mine],
   );
 

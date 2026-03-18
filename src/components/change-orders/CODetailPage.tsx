@@ -40,6 +40,9 @@ const PRICING_LABEL: Record<string, string> = {
   nte: 'Not to exceed',
 };
 
+const VALID_PRICING = ['fixed', 'tm', 'nte'] as const;
+type ValidPricing = typeof VALID_PRICING[number];
+
 function fmtCurrency(value: number) {
   return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -61,6 +64,9 @@ export function CODetailPage() {
     activity,
     financials,
     isLoading,
+    requestNTEIncrease,
+    approveNTEIncrease,
+    rejectNTEIncrease,
   } = useChangeOrderDetail(coId ?? null);
 
   useCORealtime(coId ?? null);
@@ -84,12 +90,17 @@ export function CODetailPage() {
     queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
   }
 
-  const canEdit =
+  const isActiveStatus =
     co?.status === 'draft' ||
     co?.status === 'shared' ||
     co?.status === 'combined' ||
+    co?.status === 'submitted';
+
+  const isRunningPricing =
     co?.pricing_type === 'tm' ||
     co?.pricing_type === 'nte';
+
+  const canEdit = isActiveStatus || (isRunningPricing && co?.status === 'submitted');
 
   const nteUsedPercent = financials.nteUsedPercent ?? 0;
   const showNTEWarning = co?.pricing_type === 'nte' && !!co?.nte_cap && nteUsedPercent >= 80;
@@ -148,6 +159,9 @@ export function CODetailPage() {
 
   const isCombinedParent = memberCOs.length > 0;
   const displayTitle = co.title ?? co.co_number ?? (isCombinedParent ? 'Combined change order' : 'Change order');
+  const pricingType: ValidPricing = VALID_PRICING.includes(co.pricing_type as ValidPricing)
+    ? (co.pricing_type as ValidPricing)
+    : 'fixed';
 
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
@@ -278,7 +292,7 @@ export function CODetailPage() {
                                     isFC={isFC}
                                     coId={co.id}
                                     orgId={myOrgId}
-                                    pricingType={co.pricing_type as 'fixed' | 'tm' | 'nte'}
+                                    pricingType={pricingType}
                                     nteCap={co.nte_cap}
                                     nteUsed={financials.laborTotal}
                                     canAddLabor={canEdit && (isTC || isFC)}
@@ -308,7 +322,7 @@ export function CODetailPage() {
                               isFC={isFC}
                               coId={co.id}
                               orgId={myOrgId}
-                              pricingType={co.pricing_type as 'fixed' | 'tm' | 'nte'}
+                              pricingType={pricingType}
                               nteCap={co.nte_cap}
                               nteUsed={financials.laborTotal}
                               canAddLabor={canEdit && (isTC || isFC)}
@@ -391,13 +405,13 @@ export function CODetailPage() {
                         <FinRow label="TC labor" value={financials.tcLaborTotal} />
                         {co.materials_needed && (
                           <>
-                            <FinRow label="Materials cost" value={financials.materialsCost} muted />
+                            <FinRow label="Materials cost" value={financials.materialsCost ?? 0} muted />
                             <FinRow label="Materials billed" value={financials.materialsTotal} />
                           </>
                         )}
                         {co.equipment_needed && (
                           <>
-                            <FinRow label="Equipment cost" value={financials.equipmentCost} muted />
+                            <FinRow label="Equipment cost" value={financials.equipmentCost ?? 0} muted />
                             <FinRow label="Equipment billed" value={financials.equipmentTotal} />
                           </>
                         )}
@@ -426,6 +440,9 @@ export function CODetailPage() {
                     isGC={isGC}
                     isTC={isTC}
                     isFC={isFC}
+                    requestNTEIncrease={requestNTEIncrease}
+                    approveNTEIncrease={approveNTEIncrease}
+                    rejectNTEIncrease={rejectNTEIncrease}
                     onRefresh={refreshDetail}
                   />
                 )}

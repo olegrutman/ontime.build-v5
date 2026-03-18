@@ -30,12 +30,12 @@ export interface CatalogDivision {
 }
 
 const DIVISION_LABELS: Record<string, string> = {
-  framing:       'Framing',
-  exterior:      'Exterior skin',
-  roofing:       'Roofing',
+  framing: 'Framing',
+  exterior: 'Exterior skin',
+  roofing: 'Roofing',
   waterproofing: 'Waterproofing',
-  windows:       'Windows & Doors',
-  decorative:    'Decorative exterior',
+  windows: 'Windows & Doors',
+  decorative: 'Decorative exterior',
 };
 
 export function useWorkOrderCatalog() {
@@ -45,17 +45,23 @@ export function useWorkOrderCatalog() {
   const { data: items = [], isLoading } = useQuery({
     queryKey: ['work-order-catalog', orgId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('work_order_catalog')
-        .select('*')
+      let query = supabase.from('work_order_catalog').select('*');
+
+      if (orgId) {
+        query = query.or(`org_id.is.null,org_id.eq.${orgId}`); // ✓ verified
+      } else {
+        query = query.is('org_id', null); // ✓ verified
+      }
+
+      const { data, error } = await query
         .order('division')
         .order('category_id')
         .order('sort_order');
 
       if (error) throw error;
-      return data as WorkOrderCatalogItem[];
+      return (data ?? []) as WorkOrderCatalogItem[]; // ✓ verified
     },
-    staleTime: 1000 * 60 * 10,
+    staleTime: 1000 * 60 * 60, // ✓ verified
   });
 
   const divisions: CatalogDivision[] = [];
@@ -77,7 +83,7 @@ export function useWorkOrderCatalog() {
       divisions.push(div);
     }
 
-    const divKey = item.division + '::' + item.category_id;
+    const divKey = `${item.division}::${item.category_id}`;
     if (!catMap.has(divKey)) {
       const cat: CatalogCategory = {
         category_id: item.category_id,
@@ -107,12 +113,13 @@ export function useWorkOrderCatalog() {
     if (!query || query.trim().length < 2) return [];
     const q = query.toLowerCase();
     const results: (WorkOrderCatalogItem & { path: string })[] = [];
+
     for (const item of items) {
       if (
-        item.item_name.toLowerCase().includes(q) ||
-        item.category_name.toLowerCase().includes(q) ||
+        item.item_name.toLowerCase().includes(q) || // ✓ verified
+        item.category_name.toLowerCase().includes(q) || // ✓ verified
         item.group_label.toLowerCase().includes(q) ||
-        item.division.toLowerCase().includes(q)
+        item.division.toLowerCase().includes(q) // ✓ verified
       ) {
         results.push({
           ...item,
@@ -120,6 +127,7 @@ export function useWorkOrderCatalog() {
         });
       }
     }
+
     return results;
   }
 

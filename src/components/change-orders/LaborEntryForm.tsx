@@ -50,6 +50,8 @@ export function LaborEntryForm({
   const [showNTEWarn, setShowNTEWarn] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadRate() {
       if (!user) return;
       const { data } = await supabase
@@ -57,11 +59,15 @@ export function LaborEntryForm({
         .select('hourly_rate')
         .eq('user_id', user.id)
         .single();
-      if (data?.hourly_rate) {
+      if (!cancelled && data?.hourly_rate) {
         setRate(String(data.hourly_rate));
       }
     }
+
     loadRate();
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   const hoursValue = parseFloat(hours) || 0;

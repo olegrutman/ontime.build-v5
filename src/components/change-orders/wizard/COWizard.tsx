@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import type { COCreatedByRole, COReasonCode, COPricingType, WorkOrderCatalogItem } from '@/types/changeOrder';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { StepCatalog } from './StepCatalog';
@@ -165,13 +166,14 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
           unit: item.unit,
           sort_order: idx,
         }));
-        const { error: lineError } = await (await import('@/integrations/supabase/client')).supabase
-          .from('co_line_items')
-          .insert(lineItemRows);
-        if (lineError) throw lineError;
+        const { error: lineError } = await supabase.from('co_line_items').insert(lineItemRows);
+        if (lineError) {
+          await supabase.from('change_orders').delete().eq('id', newCO.id);
+          throw new Error(`Failed to save scope items: ${lineError.message}`);
+        }
       }
 
-      await (await import('@/integrations/supabase/client')).supabase
+      const { error: activityError } = await supabase
         .from('co_activity')
         .insert({
           co_id: newCO.id,
@@ -182,6 +184,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
           detail: title ?? null,
           amount: null,
         });
+      if (activityError) throw activityError;
 
       if (data.shareDraftNow) {
         await shareCO.mutateAsync(newCO.id);
@@ -280,7 +283,12 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
           </div>
 
           <div className="flex items-center justify-between border-t bg-card px-4 sm:px-6 py-3">
-            <Button variant="ghost" size="sm" onClick={step === 0 ? handleClose : handleBack}>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={submitting}
+              onClick={step === 0 ? handleClose : handleBack}
+            >
               {step === 0 ? (
                 'Cancel'
               ) : (
