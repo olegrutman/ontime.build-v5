@@ -440,6 +440,9 @@ export function CODetailPage() {
                     isGC={isGC}
                     isTC={isTC}
                     isFC={isFC}
+                    requestNTEIncrease={requestNTEIncrease}
+                    approveNTEIncrease={approveNTEIncrease}
+                    rejectNTEIncrease={rejectNTEIncrease}
                     onRefresh={refreshDetail}
                   />
                 )}
