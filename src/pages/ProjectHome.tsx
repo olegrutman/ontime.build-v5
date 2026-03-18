@@ -46,7 +46,7 @@ import { RFIsTab } from '@/components/rfi';
 import { ScheduleTab } from '@/components/schedule/ScheduleTab';
 import { DailyLogPanel } from '@/components/daily-log/DailyLogPanel';
 import { useToast } from '@/hooks/use-toast';
-import { FeatureGate, TAB_FEATURE_MAP } from '@/components/auth/FeatureGate';
+import { FeatureGate, useFeatureEnabled } from '@/components/auth/FeatureGate';
 import { useProjectFinancials } from '@/hooks/useProjectFinancials';
 import { COListPage } from '@/components/change-orders';
 import { useProjectReadiness } from '@/hooks/useProjectReadiness';
@@ -162,11 +162,21 @@ export default function ProjectHome() {
   const { data: estimateRows } = useProjectEstimateRows(id || '', projectSupplierOrgId ?? null);
 
   const activeTab = searchParams.get('tab') || 'overview';
+  const changeOrdersEnabled = useFeatureEnabled('change_orders');
 
   const handleTabChange = (tab: string) => {
     setSearchParams({ tab });
     setTabResetKey(prev => prev + 1);
   };
+
+  useEffect(() => {
+    if (activeTab !== 'work-orders') return;
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('tab', changeOrdersEnabled ? 'change-orders' : 'overview');
+    setSearchParams(nextParams, { replace: true });
+    setTabResetKey(prev => prev + 1);
+  }, [activeTab, changeOrdersEnabled, searchParams, setSearchParams]);
 
   const handleStatusChange = async (newStatus: string) => {
     if (!project) return;
