@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { UseMutationResult } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,69 +18,41 @@ import { Loader2, AlertTriangle, Check, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { sendCONotification, buildCONotification } from '@/lib/coNotifications';
 import { supabase } from '@/integrations/supabase/client';
-import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { toast } from 'sonner';
 import type { ChangeOrder, CONTELogEntry } from '@/types/changeOrder';
 
 interface CONTEPanelProps {
-  co:         ChangeOrder;
-  nteLog:     CONTELogEntry[];
+  co: ChangeOrder;
+  nteLog: CONTELogEntry[];
   usedAmount: number;
-  isGC:       boolean;
-  isTC:       boolean;
-  isFC:       boolean;
-  onRefresh:  () => void;
+  isGC: boolean;
+  isTC: boolean;
+  isFC: boolean;
+  requestNTEIncrease: UseMutationResult<CONTELogEntry, Error, { requestedIncrease: number; runningTotal: number }, unknown>;
+  approveNTEIncrease: UseMutationResult<ChangeOrder, Error, { nteLogId: string; requestedIncrease: number }, unknown>;
+  rejectNTEIncrease: UseMutationResult<void, Error, { nteLogId: string; note: string }, unknown>;
+  onRefresh: () => void;
 }
-
-function fmt(n: number) {
-  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-export function CONTEPanel({
-  co,
-  nteLog,
-  usedAmount,
-  isGC,
-  isTC,
-  isFC,
-  onRefresh,
+...
+  requestNTEIncrease,
+  approveNTEIncrease,
+  rejectNTEIncrease,
 }: CONTEPanelProps) {
-  const { requestNTEIncrease, approveNTEIncrease, rejectNTEIncrease } =
-    useChangeOrderDetail(co.id);
-
-  const [requestOpen, setRequestOpen] = useState(false);
-  const [increaseAmt, setIncreaseAmt] = useState('');
-  const [increaseNote, setIncreaseNote] = useState('');
-  const [approveId, setApproveId] = useState<string | null>(null);
-  const [rejectId, setRejectId] = useState<string | null>(null);
-  const [rejectNote, setRejectNote] = useState('');
-  const [acting, setActing] = useState(false);
-
-  const cap = co.nte_cap ?? 0;
-  const remaining = cap - usedAmount;
-  const pct = cap > 0 ? (usedAmount / cap) * 100 : 0;
-  const isWarning = pct >= 80 && pct < 95;
-  const isNearCap = pct >= 95;
-  const isOver = pct >= 100;
-
-  const pendingRequest = nteLog.find(e => !e.approved_at && !e.rejected_at);
-  const hasPending = !!pendingRequest;
-
+...
   async function notifyCreator(type: string, amount?: number) {
+    if (!co.created_by_user_id) return;
+
     try {
-      const { data: creator } = await supabase
-        .from('change_orders')
-        .select('created_by_user_id, title, project_id, org_id')
-        .eq('id', co.id)
-        .single();
-      if (!creator) return;
-      const { title, body } = buildCONotification(type, creator.title, amount);
+      const { title, body } = buildCONotification(type, co.title, amount);
       await sendCONotification({
-        recipient_user_id: creator.created_by_user_id,
-        recipient_org_id: creator.org_id,
+        recipient_user_id: co.created_by_user_id,
+        recipient_org_id: co.org_id,
         co_id: co.id,
-        project_id: creator.project_id,
-        type, title, body, amount,
+        project_id: co.project_id,
+        type,
+        title,
+        body,
+        amount,
       });
     } catch (err) {
       console.warn('NTE notification failed:', err);

@@ -208,7 +208,6 @@ export function COMaterialsPanel({
         co_id:          coId,
         org_id:         orgId,
         added_by_role:  'TC',
-        line_number:    materials.length + 1,
         description:    item.name,
         supplier_sku:   item.supplier_sku || null,
         quantity:       item.quantity,
@@ -224,7 +223,7 @@ export function COMaterialsPanel({
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to add material');
     }
-  }, [coId, orgId, materials.length, materialsOnSite, onRefresh]);
+  }, [coId, orgId, materialsOnSite, onRefresh]);
 
   const pickerTitle = pickerRef.current?.getTitle() ?? 'Add Material';
 

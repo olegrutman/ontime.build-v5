@@ -20,6 +20,16 @@ interface COListPageProps {
 
 type COViewMode = 'card' | 'list';
 
+const STATUS_ORDER: COStatus[] = [
+  'draft',
+  'shared',
+  'combined',
+  'submitted',
+  'approved',
+  'rejected',
+  'contracted',
+];
+
 const STATUS_BADGE_STYLES: Record<COStatus, string> = {
   draft: 'bg-muted text-muted-foreground border-border',
   shared: 'bg-accent text-accent-foreground border-border',
@@ -29,218 +39,21 @@ const STATUS_BADGE_STYLES: Record<COStatus, string> = {
   rejected: 'bg-destructive/10 text-destructive border-destructive/30',
   contracted: 'bg-secondary text-secondary-foreground border-secondary',
 };
-
-const PRICING_BADGE: Record<string, string> = {
-  fixed: 'Fixed',
-  tm: 'T&M',
-  nte: 'NTE',
-};
-
-function ReasonChip({ reason }: { reason: COReasonCode }) {
-  return (
-    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground">
-      {CO_REASON_LABELS[reason]}
-    </span>
-  );
-}
-
-function CORow({
-  co,
-  selectable,
-  selected,
-  onSelect,
-  onClick,
-  mobile,
-}: {
-  co: ChangeOrderWithMembers;
-  selectable: boolean;
-  selected: boolean;
-  onSelect: (id: string, checked: boolean) => void;
-  onClick: (id: string) => void;
-  mobile: boolean;
-}) {
+...
   const isCombinedParent = !!co.memberPreviews && co.memberPreviews.length > 0;
   const title = co.title ?? co.co_number ?? (isCombinedParent ? 'Combined CO' : 'Untitled CO');
-  const age = formatDistanceToNow(new Date(co.created_at), { addSuffix: true });
-
-  return (
-    <div
-      className={cn(
-        'co-light-shell cursor-pointer transition-all hover:border-primary/40 hover:shadow-md',
-        mobile ? 'px-3 py-3' : 'px-4 py-3',
-      )}
-      onClick={() => onClick(co.id)}
-    >
-      <div className="flex items-start gap-3">
-        {selectable && (
-          <div onClick={e => e.stopPropagation()} className="pt-0.5">
-            <Checkbox checked={selected} onCheckedChange={v => onSelect(co.id, !!v)} />
-          </div>
-        )}
-
-        <div className="flex-1 min-w-0 space-y-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            {isCombinedParent && <GitMerge className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
-            <span className="font-medium text-foreground truncate">{title}</span>
-            <Badge variant="outline" className={cn('text-[11px] shrink-0', STATUS_BADGE_STYLES[co.status as COStatus])}>
-              {CO_STATUS_LABELS[co.status as COStatus]}
-            </Badge>
-            {co.pricing_type && (
-              <Badge variant="secondary" className="text-[11px] shrink-0">
-                {PRICING_BADGE[co.pricing_type] ?? co.pricing_type}
-              </Badge>
-            )}
-            {isCombinedParent && (
-              <Badge variant="secondary" className="text-[11px] shrink-0">
-                {co.memberPreviews!.length} scopes
-              </Badge>
-            )}
-          </div>
-
-          {isCombinedParent && (
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {co.memberPreviews!.map((m, i) => (
-                <span key={m.id} className="text-xs text-muted-foreground">
-                  {i > 0 && <span className="mr-1.5">+</span>}
-                  {m.title ?? 'Untitled'}
-                </span>
-              ))}
-            </div>
-          )}
-
-          <div className="flex items-center justify-between gap-3 flex-wrap text-xs text-muted-foreground">
-            <div className="flex items-center gap-2 flex-wrap">
-              {co.reason && <ReasonChip reason={co.reason as COReasonCode} />}
-              {co.location_tag && <span className="truncate max-w-[180px]">{co.location_tag}</span>}
-            </div>
-            <span>{age}</span>
-          </div>
-        </div>
-
-        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-      </div>
-    </div>
-  );
-}
-
-function COCard({
-  co,
-  selectable,
-  selected,
-  onSelect,
-  onClick,
-}: {
-  co: ChangeOrderWithMembers;
-  selectable: boolean;
-  selected: boolean;
-  onSelect: (id: string, checked: boolean) => void;
-  onClick: (id: string) => void;
-}) {
+  const age = co.created_at
+    ? formatDistanceToNow(new Date(co.created_at), { addSuffix: true })
+    : 'just now';
+...
   const isCombinedParent = !!co.memberPreviews && co.memberPreviews.length > 0;
   const title = co.title ?? co.co_number ?? (isCombinedParent ? 'Combined CO' : 'Untitled CO');
-  const age = formatDistanceToNow(new Date(co.created_at), { addSuffix: true });
-
-  return (
-    <article
-      className={cn(
-        'co-light-shell cursor-pointer transition-all hover:border-primary/40 hover:shadow-md p-4 space-y-3',
-        selected && 'border-primary ring-1 ring-primary/40',
-      )}
-      onClick={() => onClick(co.id)}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1 min-w-0">
-          {co.co_number && <p className="text-[11px] font-medium text-muted-foreground">{co.co_number}</p>}
-          <h3 className="text-sm font-semibold text-foreground line-clamp-2">{title}</h3>
-        </div>
-        {selectable && (
-          <div onClick={e => e.stopPropagation()}>
-            <Checkbox checked={selected} onCheckedChange={v => onSelect(co.id, !!v)} />
-          </div>
-        )}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="outline" className={cn('text-[11px]', STATUS_BADGE_STYLES[co.status as COStatus])}>
-          {CO_STATUS_LABELS[co.status as COStatus]}
-        </Badge>
-        {co.pricing_type && (
-          <Badge variant="secondary" className="text-[11px]">
-            {PRICING_BADGE[co.pricing_type] ?? co.pricing_type}
-          </Badge>
-        )}
-        {co.reason && <ReasonChip reason={co.reason as COReasonCode} />}
-      </div>
-
-      {isCombinedParent && (
-        <div className="co-light-subtle px-2.5 py-2 text-xs text-muted-foreground">
-          {co.memberPreviews!.length} merged scopes
-        </div>
-      )}
-
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span className="truncate max-w-[60%]">{co.location_tag ?? 'No location'}</span>
-        <span>{age}</span>
-      </div>
-    </article>
-  );
-}
-
-function SectionHeader({ label, count }: { label: string; count: number }) {
-  if (count === 0) return null;
-  return (
-    <div className="flex items-center gap-2 pt-3 pb-1">
-      <span className="text-sm font-semibold text-foreground">{label}</span>
-      <span className="text-xs text-muted-foreground">({count})</span>
-    </div>
-  );
-}
-
-export function COListPage({ projectId }: COListPageProps) {
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const { user } = useAuth();
-  const { grouped, isLoading } = useChangeOrders(projectId);
-
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [combineOpen, setCombineOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<COViewMode>('card');
-
-  const storageKey = `co_view_mode_${user?.id ?? 'anon'}`;
-
-  useEffect(() => {
-    const stored = localStorage.getItem(storageKey);
-    if (stored === 'card' || stored === 'list') setViewMode(stored);
-  }, [storageKey]);
-
-  useEffect(() => {
-    localStorage.setItem(storageKey, viewMode);
-  }, [storageKey, viewMode]);
-
-  const mine = grouped.mine;
-  const allMine: ChangeOrderWithMembers[] = [
-    ...mine.draft,
-    ...mine.shared,
-    ...mine.combined,
-    ...mine.submitted,
-    ...mine.approved,
-    ...mine.rejected,
-    ...mine.contracted,
-  ];
-  const sharedWithMe = grouped.sharedWithMe;
-
-  const selectableCOs = [...mine.draft, ...mine.shared];
-  const canCombine = selectedIds.size >= 2;
-
-  const totalMine = allMine.length;
-  const totalSharedWithMe = sharedWithMe.length;
-  const total = totalMine + totalSharedWithMe;
-
-  const statusOrder: COStatus[] = ['draft', 'shared', 'combined', 'submitted', 'approved', 'rejected', 'contracted'];
-
+  const age = co.created_at
+    ? formatDistanceToNow(new Date(co.created_at), { addSuffix: true })
+    : 'just now';
+...
   const statusGroups = useMemo(
-    () => statusOrder.map(status => ({ status, items: mine[status] })).filter(group => group.items.length > 0),
+    () => STATUS_ORDER.map(status => ({ status, items: mine[status] })).filter(group => group.items.length > 0),
     [mine],
   );
 
