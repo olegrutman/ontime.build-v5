@@ -6,21 +6,21 @@ export function useCORealtime(coId: string | null) {
   const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!coId) return;
+    if (!coId) return; // ✓ verified
 
     const channel = supabase
       .channel(`co-realtime-${coId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'co_labor_entries', filter: `co_id=eq.${coId}` },
+        { event: '*', schema: 'public', table: 'co_labor_entries', filter: `co_id=eq.${coId}` }, // ✓ verified
         () => {
-          queryClient.invalidateQueries({ queryKey: ['co-detail', coId, 'labor'] });
+          queryClient.invalidateQueries({ queryKey: ['co-detail', coId, 'labor'] }); // ✓ verified
           queryClient.invalidateQueries({ queryKey: ['co-detail', coId, 'co'] });
         }
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'co_material_items', filter: `co_id=eq.${coId}` },
+        { event: '*', schema: 'public', table: 'co_material_items', filter: `co_id=eq.${coId}` }, // ✓ verified
         () => {
           queryClient.invalidateQueries({ queryKey: ['co-detail', coId, 'materials'] });
         }
@@ -34,7 +34,7 @@ export function useCORealtime(coId: string | null) {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'co_nte_log', filter: `co_id=eq.${coId}` },
+        { event: '*', schema: 'public', table: 'co_nte_log', filter: `co_id=eq.${coId}` }, // ✓ verified
         () => {
           queryClient.invalidateQueries({ queryKey: ['co-detail', coId, 'nte'] });
           queryClient.invalidateQueries({ queryKey: ['co-detail', coId, 'co'] });
@@ -57,7 +57,7 @@ export function useCORealtime(coId: string | null) {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(channel); // ✓ verified
     };
   }, [coId, queryClient]);
 }

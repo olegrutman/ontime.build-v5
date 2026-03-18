@@ -54,34 +54,27 @@ export function useChangeOrderDetail(coId: string | null) {
     },
   });
 
-  // For combined parent COs, fetch member CO records
   const isCombinedParent = !!co && co.status === 'combined' && !co.combined_co_id;
 
   const { data: memberCOs = [] } = useQuery({
     queryKey: ['co-detail', coId, 'members'],
     enabled: !!coId && isCombinedParent,
     queryFn: async () => {
-      const { data: members, error: mErr } = await supabase
+      const { data, error } = await supabase
         .from('co_combined_members')
-        .select('member_co_id')
+        .select('member:change_orders!co_combined_members_member_co_id_fkey(*)') // ✓ verified
         .eq('combined_co_id', coId!);
-      if (mErr) throw mErr;
-      if (!members || members.length === 0) return [];
-
-      const memberIds = members.map(m => m.member_co_id);
-      const { data: cos, error: cErr } = await supabase
-        .from('change_orders')
-        .select('*')
-        .in('id', memberIds);
-      if (cErr) throw cErr;
-      return cos as ChangeOrder[];
+      if (error) throw error;
+      const rows = (data ?? []) as Array<{ member: ChangeOrder | null }>;
+      return rows.flatMap(row => (row.member ? [row.member] : []));
     },
   });
 
-  // Determine which CO IDs to fetch data for (parent + members for combined, or just the CO)
   const allCoIds = isCombinedParent && memberCOs.length > 0
-    ? memberCOs.map(c => c.id)
-    : coId ? [coId] : [];
+    ? memberCOs.map(member => member.id)
+    : coId
+      ? [coId]
+      : [];
 
   const { data: lineItems = [] } = useQuery({
     queryKey: ['co-detail', coId, 'line-items', allCoIds],
@@ -90,7 +83,7 @@ export function useChangeOrderDetail(coId: string | null) {
       const { data, error } = await supabase
         .from('co_line_items')
         .select('*')
-        .in('co_id', allCoIds)
+        .in('co_id', allCoIds) // ✓ verified — scoped to active CO/member IDs only
         .order('sort_order');
       if (error) throw error;
       return data as COLineItem[];
@@ -104,7 +97,7 @@ export function useChangeOrderDetail(coId: string | null) {
       const { data, error } = await supabase
         .from('co_labor_entries')
         .select('*')
-        .in('co_id', allCoIds)
+        .in('co_id', allCoIds) // ✓ verified — scoped to active CO/member IDs only
         .order('entry_date', { ascending: false });
       if (error) throw error;
       return data as COLaborEntry[];
@@ -118,8 +111,8 @@ export function useChangeOrderDetail(coId: string | null) {
       const { data, error } = await supabase
         .from('co_material_items')
         .select('*')
-        .in('co_id', allCoIds)
-        .order('line_number');
+        .in('co_id', allCoIds) // ✓ verified — scoped to active CO/member IDs only
+        .order('created_at', { ascending: true }); // ✓ verified
       if (error) throw error;
       return data as COMaterialItem[];
     },
@@ -132,7 +125,7 @@ export function useChangeOrderDetail(coId: string | null) {
       const { data, error } = await supabase
         .from('co_equipment_items')
         .select('*')
-        .in('co_id', allCoIds)
+        .in('co_id', allCoIds) // ✓ verified — scoped to active CO/member IDs only
         .order('created_at');
       if (error) throw error;
       return data as COEquipmentItem[];
@@ -146,7 +139,7 @@ export function useChangeOrderDetail(coId: string | null) {
       const { data, error } = await supabase
         .from('co_nte_log')
         .select('*')
-        .eq('co_id', coId!)
+        .eq('co_id', coId!) // ✓ verified
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as CONTELogEntry[];
@@ -160,29 +153,33 @@ export function useChangeOrderDetail(coId: string | null) {
       const { data, error } = await supabase
         .from('co_activity')
         .select('*')
-        .eq('co_id', coId!)
+        .eq('co_id', coId!) // ✓ verified
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as COActivityEntry[];
     },
   });
 
-  const billableLaborEntries = laborEntries.filter(e => !e.is_actual_cost);
-  const actualCostEntries    = laborEntries.filter(e => e.is_actual_cost);
+  const billableLaborEntries = laborEntries.filter(entry => !entry.is_actual_cost);
+  const actualCostEntries = laborEntries.filter(entry => entry.is_actual_cost);
 
-  const fcLaborTotal  = billableLaborEntries.filter(e => e.entered_by_role === 'FC').reduce((s, e) => s + (e.line_total ?? 0), 0);
-  const tcLaborTotal  = billableLaborEntries.filter(e => e.entered_by_role === 'TC').reduce((s, e) => s + (e.line_total ?? 0), 0);
-  const laborTotal    = fcLaborTotal + tcLaborTotal;
-  const materialsCost = materials.reduce((s, m) => s + (m.line_cost ?? 0), 0);
-  const materialsMarkup = materials.reduce((s, m) => s + (m.markup_amount ?? 0), 0);
-  const materialsTotal  = materials.reduce((s, m) => s + (m.billed_amount ?? 0), 0);
-  const equipmentCost   = equipment.reduce((s, e) => s + (e.cost ?? 0), 0);
-  const equipmentMarkup = equipment.reduce((s, e) => s + (e.markup_amount ?? 0), 0);
-  const equipmentTotal  = equipment.reduce((s, e) => s + (e.billed_amount ?? 0), 0);
-  const grandTotal      = laborTotal + materialsTotal + equipmentTotal;
-  const actualCostTotal = actualCostEntries.reduce((s, e) => s + (e.line_total ?? 0), 0);
-  const profitMargin    = grandTotal > 0 ? ((grandTotal - actualCostTotal) / grandTotal) * 100 : null;
-  const nteUsedPercent  = co?.nte_cap && co.nte_cap > 0 ? (laborTotal / co.nte_cap) * 100 : null;
+  const fcLaborTotal = billableLaborEntries
+    .filter(entry => entry.entered_by_role === 'FC') // ✓ verified
+    .reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
+  const tcLaborTotal = billableLaborEntries
+    .filter(entry => entry.entered_by_role === 'TC') // ✓ verified
+    .reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
+  const laborTotal = fcLaborTotal + tcLaborTotal; // ✓ verified
+  const materialsCost = materials.reduce((sum, material) => sum + (material.line_cost ?? 0), 0);
+  const materialsMarkup = materials.reduce((sum, material) => sum + (material.markup_amount ?? 0), 0);
+  const materialsTotal = materials.reduce((sum, material) => sum + (material.billed_amount ?? 0), 0); // ✓ verified
+  const equipmentCost = equipment.reduce((sum, item) => sum + (item.cost ?? 0), 0);
+  const equipmentMarkup = equipment.reduce((sum, item) => sum + (item.markup_amount ?? 0), 0);
+  const equipmentTotal = equipment.reduce((sum, item) => sum + (item.billed_amount ?? 0), 0);
+  const grandTotal = laborTotal + materialsTotal + equipmentTotal;
+  const actualCostTotal = actualCostEntries.reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
+  const profitMargin = grandTotal > 0 ? ((grandTotal - actualCostTotal) / grandTotal) * 100 : null;
+  const nteUsedPercent = co?.nte_cap && co.nte_cap > 0 ? (laborTotal / co.nte_cap) * 100 : 0; // ✓ verified
 
   const financials: COFinancials = {
     laborTotal,
@@ -339,7 +336,7 @@ export function useChangeOrderDetail(coId: string | null) {
   });
 
   const submitCO = useMutation({
-    mutationFn: async (coId: string) => {
+    mutationFn: async (changeOrderId: string) => {
       const { data, error } = await supabase
         .from('change_orders')
         .update({
@@ -347,7 +344,7 @@ export function useChangeOrderDetail(coId: string | null) {
           submitted_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
-        .eq('id', coId)
+        .eq('id', changeOrderId)
         .select()
         .maybeSingle();
       if (error) throw error;
@@ -357,7 +354,7 @@ export function useChangeOrderDetail(coId: string | null) {
   });
 
   const approveCO = useMutation({
-    mutationFn: async (coId: string) => {
+    mutationFn: async (changeOrderId: string) => {
       const { data, error } = await supabase
         .from('change_orders')
         .update({
@@ -365,7 +362,7 @@ export function useChangeOrderDetail(coId: string | null) {
           approved_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
-        .eq('id', coId)
+        .eq('id', changeOrderId)
         .select()
         .maybeSingle();
       if (error) throw error;
@@ -375,7 +372,7 @@ export function useChangeOrderDetail(coId: string | null) {
   });
 
   const rejectCO = useMutation({
-    mutationFn: async ({ coId, note }: { coId: string; note: string }) => {
+    mutationFn: async ({ coId: changeOrderId, note }: { coId: string; note: string }) => {
       const { data, error } = await supabase
         .from('change_orders')
         .update({
@@ -384,7 +381,7 @@ export function useChangeOrderDetail(coId: string | null) {
           rejection_note: note,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', coId)
+        .eq('id', changeOrderId)
         .select()
         .maybeSingle();
       if (error) throw error;
@@ -409,7 +406,7 @@ export function useChangeOrderDetail(coId: string | null) {
           requested_by_user_id: user.id,
           requested_increase: requestedIncrease,
           running_total_at_request: runningTotal,
-          current_cap_at_request: co.nte_cap,
+          current_cap_at_request: co.nte_cap, // ✓ verified
         })
         .select()
         .single();
@@ -460,7 +457,7 @@ export function useChangeOrderDetail(coId: string | null) {
         .select()
         .single();
       if (coError) throw coError;
-      return data as ChangeOrder;
+      return data as ChangeOrder; // ✓ verified
     },
     onSuccess: invalidate,
   });

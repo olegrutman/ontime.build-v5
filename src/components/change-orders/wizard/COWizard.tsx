@@ -283,7 +283,12 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
           </div>
 
           <div className="flex items-center justify-between border-t bg-card px-4 sm:px-6 py-3">
-            <Button variant="ghost" size="sm" onClick={step === 0 ? handleClose : handleBack}>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={submitting}
+              onClick={step === 0 ? handleClose : handleBack}
+            >
               {step === 0 ? (
                 'Cancel'
               ) : (
