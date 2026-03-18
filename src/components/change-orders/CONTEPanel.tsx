@@ -278,8 +278,8 @@ export function CONTEPanel({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Increase requested</span>
-                  <span className="font-semibold text-amber-700 dark:text-amber-400">
-                    +${fmt(pendingRequest.requested_increase)}
+                    <span className="font-semibold text-primary">
+                      +${fmt(pendingRequest.requested_increase)}
                   </span>
                 </div>
                 <div className="flex justify-between">
