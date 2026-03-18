@@ -495,7 +495,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
   if (!po) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">Purchase Order not found</p>
+        <p className="text-muted-foreground">{detailError || 'Purchase Order not found'}</p>
         <Button variant="outline" onClick={onBack} className="mt-4">
           Go Back
         </Button>

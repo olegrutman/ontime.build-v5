@@ -783,7 +783,7 @@ export function COMaterialsPanel({
                         <Badge variant="outline">{getPOStatusLabel(activePricingRequest.status)}</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {activePricingRequest.supplier?.name ?? 'Supplier'} pricing request linked to this CO
+                        {getLinkedRequestDescription(activePricingRequest.status, activePricingRequest.supplier?.name)}
                         {linkedRequests.length > 1 ? ` · ${linkedRequests.length} total requests` : ''}
                       </p>
                     </div>
@@ -799,9 +799,9 @@ export function COMaterialsPanel({
                     variant="outline"
                     size="sm"
                     className="h-8 text-xs"
-                    onClick={() => navigate(`/project/${projectId}?tab=purchase-orders`)}
+                    onClick={() => navigate(`/project/${projectId}?tab=purchase-orders&po=${activePricingRequest.id}`)}
                   >
-                    Open PO workflow
+                    Open linked PO
                   </Button>
                 )}
               </div>
