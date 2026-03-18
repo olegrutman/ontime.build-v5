@@ -254,9 +254,9 @@ export function CONTEPanel({
           )}
 
           {hasPending && (isTC || isFC) && (
-            <div className="flex items-start gap-2 rounded-md bg-blue-50 dark:bg-blue-900/20 p-2.5">
-              <Loader2 className="h-4 w-4 text-blue-600 shrink-0 mt-0.5 animate-spin" />
-              <p className="text-xs text-blue-700 dark:text-blue-400">
+            <div className="flex items-start gap-2 rounded-md bg-accent p-2.5 border border-border">
+              <Loader2 className="h-4 w-4 text-primary shrink-0 mt-0.5 animate-spin" />
+              <p className="text-xs text-foreground">
                 Increase request of ${fmt(pendingRequest!.requested_increase)} pending GC approval
               </p>
             </div>
