@@ -408,8 +408,9 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
       fetchPO();
       onUpdate();
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : 'Failed to save pricing';
-      console.error('Error saving prices:', error);
+      const typedError = (error && typeof error === 'object') ? error as { code?: string; message?: string } : null;
+      const message = getPOActionErrorMessage(typedError, 'Failed to save pricing');
+      console.error('Error saving prices:', { poId, error, priceEdits });
       toast.error(message);
     } finally {
       setActionLoading(false);
