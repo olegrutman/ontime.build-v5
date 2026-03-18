@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type {
   ChangeOrder,
+  COCollaborator,
   COLineItem,
   COLaborEntry,
   COMaterialItem,
