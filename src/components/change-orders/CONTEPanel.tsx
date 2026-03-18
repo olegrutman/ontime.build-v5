@@ -382,7 +382,7 @@ export function CONTEPanel({
             <AlertDialogAction
               onClick={doRequest}
               disabled={acting || !increaseAmt || parseFloat(increaseAmt) <= 0}
-              className="bg-amber-600 hover:bg-amber-700"
+              className=""
             >
               {acting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Send request
