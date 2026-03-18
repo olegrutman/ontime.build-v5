@@ -174,17 +174,6 @@ export function COMaterialsPanel({
         }
 
         if (!resolvedSupplierId) {
-          const { data: designatedSupplier } = await supabase
-            .from('project_designated_suppliers')
-            .select('supplier_id')
-            .eq('project_id', projectId)
-            .neq('status', 'removed')
-            .maybeSingle();
-
-          resolvedSupplierId = designatedSupplier?.supplier_id ?? null;
-        }
-
-        if (!resolvedSupplierId) {
           const { data: systemSupplier } = await supabase
             .from('suppliers')
             .select('id')
