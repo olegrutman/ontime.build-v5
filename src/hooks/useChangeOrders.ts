@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import type { ChangeOrder, COStatus } from '@/types/changeOrder';
+import type { ChangeOrder, COCollaboratorStatus, COStatus } from '@/types/changeOrder';
 
 export interface COMemberPreview {
   id: string;
@@ -12,6 +12,8 @@ export interface COMemberPreview {
 
 export interface ChangeOrderWithMembers extends ChangeOrder {
   memberPreviews?: COMemberPreview[];
+  collaboratorStatus?: COCollaboratorStatus;
+  collaboratorOrgId?: string;
 }
 
 export interface GroupedChangeOrders {
