@@ -57,6 +57,7 @@ export function CODetailPage() {
   const {
     co,
     memberCOs,
+    collaborators,
     lineItems,
     laborEntries,
     materials,
@@ -65,6 +66,8 @@ export function CODetailPage() {
     activity,
     financials,
     isLoading,
+    requestFCInput,
+    completeFCInput,
     requestNTEIncrease,
     approveNTEIncrease,
     rejectNTEIncrease,
