@@ -84,10 +84,17 @@ const handler = async (req: Request): Promise<Response> => {
         project:projects(name)
       `)
       .eq("id", po_id)
-      .single();
+      .maybeSingle();
 
-    if (poError || !po) {
+    if (poError) {
       console.error("PO fetch error:", poError);
+      return new Response(JSON.stringify({ error: "Failed to load purchase order", details: poError.message }), {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    if (!po) {
       return new Response(JSON.stringify({ error: "Purchase order not found" }), {
         status: 404,
         headers: { "Content-Type": "application/json", ...corsHeaders },
