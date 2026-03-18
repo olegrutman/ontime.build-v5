@@ -434,7 +434,18 @@ export function CODetailPage() {
                   currentOrgId={myOrgId}
                   projectId={projectId ?? ''}
                   financials={financials}
+                  collaborators={collaborators}
                   onRefresh={refreshDetail}
+                />
+
+                <FCInputRequestCard
+                  canRequest={canRequestFCInput}
+                  canComplete={canCompleteFCInput}
+                  options={fcOrgOptions}
+                  collaborators={collaborators}
+                  acting={fcActionPending}
+                  onRequest={handleRequestFCInput}
+                  onComplete={handleCompleteFCInput}
                 />
 
                 <div className="co-light-shell overflow-hidden">
