@@ -234,9 +234,9 @@ export function CONTEPanel({
           </div>
 
           {isWarning && !isNearCap && (
-            <div className="flex items-start gap-2 rounded-md bg-amber-50 dark:bg-amber-900/20 p-2.5">
-              <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-700 dark:text-amber-400">
+            <div className="flex items-start gap-2 rounded-md bg-primary/10 p-2.5">
+              <AlertTriangle className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+              <p className="text-xs text-foreground">
                 You are at {pct.toFixed(0)}% of the cap. Consider requesting an increase before work continues.
               </p>
             </div>
