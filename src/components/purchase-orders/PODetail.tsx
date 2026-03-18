@@ -75,11 +75,19 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
+function getPOFetchErrorMessage(error: { code?: string; message?: string } | null) {
+  if (!error) return 'Purchase Order not found';
+  if (error.code === 'PGRST116') return 'Purchase Order not found';
+  if (error.code === '42501') return 'You do not have access to this purchase order';
+  return error.message || 'Failed to load purchase order';
+}
+
 export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverride = false }: PODetailProps) {
   const { user, userOrgRoles, currentRole } = useAuth();
   const [po, setPO] = useState<PurchaseOrder | null>(null);
   const [lineItems, setLineItems] = useState<POLineItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [detailError, setDetailError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [lockConfirmOpen, setLockConfirmOpen] = useState(false);
@@ -140,17 +148,18 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
 
   const fetchPO = async () => {
     setLoading(true);
+    setDetailError(null);
+
     const [poRes, lineItemsRes] = await Promise.all([
       supabase
         .from('purchase_orders')
         .select(`
           *,
           supplier:suppliers(id, name, supplier_code, contact_info, organization_id),
-          project:projects(id, name),
-          work_item:work_items(id, title)
+          project:projects(id, name)
         `)
         .eq('id', poId)
-        .single(),
+        .maybeSingle(),
       supabase
         .from('po_line_items')
         .select('*')
@@ -158,10 +167,30 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
         .order('line_number'),
     ]);
 
-    if (poRes.data) {
-      setPO(poRes.data as unknown as PurchaseOrder);
+    if (poRes.error) {
+      console.error('Error loading PO detail:', poRes.error);
+      setPO(null);
+      setLineItems([]);
+      setDetailError(getPOFetchErrorMessage(poRes.error));
+      setLoading(false);
+      return;
     }
-    if (lineItemsRes.data) setLineItems(lineItemsRes.data as POLineItem[]);
+
+    if (lineItemsRes.error) {
+      console.error('Error loading PO line items:', lineItemsRes.error);
+      setDetailError(lineItemsRes.error.message || 'Failed to load purchase order line items');
+    }
+
+    if (!poRes.data) {
+      setPO(null);
+      setLineItems([]);
+      setDetailError('Purchase Order not found');
+      setLoading(false);
+      return;
+    }
+
+    setPO(poRes.data as unknown as PurchaseOrder);
+    setLineItems((lineItemsRes.data || []) as POLineItem[]);
     setLoading(false);
   };
 
@@ -466,7 +495,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
   if (!po) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">Purchase Order not found</p>
+        <p className="text-muted-foreground">{detailError || 'Purchase Order not found'}</p>
         <Button variant="outline" onClick={onBack} className="mt-4">
           Go Back
         </Button>
