@@ -67,6 +67,14 @@ export function buildCONotification(
       title: 'Change order recalled',
       body: `${label} has been recalled for revision`,
     },
+    FC_INPUT_REQUESTED: {
+      title: 'Field crew input requested',
+      body: `${label} needs field crew labor or field input`,
+    },
+    FC_INPUT_COMPLETED: {
+      title: 'Field crew input complete',
+      body: `${label} has FC input ready for TC review`,
+    },
     NTE_REQUESTED: {
       title: 'NTE increase requested',
       body:

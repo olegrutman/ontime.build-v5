@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import type { ChangeOrder, COStatus } from '@/types/changeOrder';
+import type { ChangeOrder, COCollaboratorStatus, COStatus } from '@/types/changeOrder';
 
 export interface COMemberPreview {
   id: string;
@@ -12,6 +12,8 @@ export interface COMemberPreview {
 
 export interface ChangeOrderWithMembers extends ChangeOrder {
   memberPreviews?: COMemberPreview[];
+  collaboratorStatus?: COCollaboratorStatus;
+  collaboratorOrgId?: string;
 }
 
 export interface GroupedChangeOrders {
@@ -49,6 +51,24 @@ export function useChangeOrders(projectId: string | null) {
       if (error) throw error;
       const allCOs = data as ChangeOrder[];
 
+      const collaboratorMap = new Map<string, { status: COCollaboratorStatus; organization_id: string }>();
+      if (allCOs.length > 0) {
+        const { data: collaborators, error: collaboratorError } = await supabase
+          .from('change_order_collaborators')
+          .select('co_id, status, organization_id')
+          .eq('organization_id', orgId!)
+          .in('co_id', allCOs.map(co => co.id));
+
+        if (collaboratorError) throw collaboratorError;
+
+        for (const collaborator of collaborators ?? []) {
+          collaboratorMap.set(collaborator.co_id, {
+            status: collaborator.status as COCollaboratorStatus,
+            organization_id: collaborator.organization_id,
+          });
+        }
+      }
+
       const parentCOs = allCOs.filter(c => c.status === 'combined' && !c.combined_co_id);
       const parentIds = parentCOs.map(c => c.id);
 
@@ -62,10 +82,10 @@ export function useChangeOrders(projectId: string | null) {
         if (memberError) throw memberError;
 
         if (members && members.length > 0) {
-          const memberCoIds = members.map(m => m.member_co_id);
+          const memberCoIds = new Set(members.map(m => m.member_co_id));
           const memberCOMap = new Map<string, ChangeOrder>();
           allCOs.forEach(c => {
-            if (memberCoIds.includes(c.id)) memberCOMap.set(c.id, c);
+            if (memberCoIds.has(c.id)) memberCOMap.set(c.id, c);
           });
 
           for (const member of members) {
@@ -87,6 +107,8 @@ export function useChangeOrders(projectId: string | null) {
       return filtered.map(c => ({
         ...c,
         memberPreviews: memberMap[c.id] ?? undefined,
+        collaboratorStatus: collaboratorMap.get(c.id)?.status,
+        collaboratorOrgId: collaboratorMap.get(c.id)?.organization_id,
       })) as ChangeOrderWithMembers[];
     },
   });
@@ -106,13 +128,15 @@ export function useChangeOrders(projectId: string | null) {
 
   for (const co of changeOrders) {
     const isMine = co.org_id === orgId;
+    const isCollaborator = co.collaboratorOrgId === orgId && co.collaboratorStatus === 'active';
+
     if (isMine) {
       const bucket = co.status as COStatus;
       if (bucket in grouped.mine) {
-        grouped.mine[bucket as keyof typeof grouped.mine].push(co); // ✓ verified
+        grouped.mine[bucket as keyof typeof grouped.mine].push(co);
       }
-    } else if (co.assigned_to_org_id === orgId && co.org_id !== orgId) {
-      grouped.sharedWithMe.push(co); // ✓ verified
+    } else if ((co.assigned_to_org_id === orgId && co.org_id !== orgId) || isCollaborator) {
+      grouped.sharedWithMe.push(co);
     }
   }
 

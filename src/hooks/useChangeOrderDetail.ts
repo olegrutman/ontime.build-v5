@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type {
   ChangeOrder,
+  COCollaborator,
   COLineItem,
   COLaborEntry,
   COMaterialItem,
@@ -153,10 +154,25 @@ export function useChangeOrderDetail(coId: string | null) {
       const { data, error } = await supabase
         .from('co_activity')
         .select('*')
-        .eq('co_id', coId!) // ✓ verified
+        .eq('co_id', coId!)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as COActivityEntry[];
+    },
+  });
+
+  const { data: collaborators = [] } = useQuery({
+    queryKey: ['co-detail', coId, 'collaborators'],
+    enabled: !!coId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('change_order_collaborators')
+        .select('*, organization:organizations(id, name, type)')
+        .eq('co_id', coId!)
+        .neq('status', 'removed')
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as COCollaborator[];
     },
   });
 
@@ -408,7 +424,7 @@ export function useChangeOrderDetail(coId: string | null) {
           requested_by_user_id: user.id,
           requested_increase: requestedIncrease,
           running_total_at_request: runningTotal,
-          current_cap_at_request: co.nte_cap, // ✓ verified
+          current_cap_at_request: co.nte_cap,
         })
         .select()
         .single();
@@ -421,6 +437,31 @@ export function useChangeOrderDetail(coId: string | null) {
         })
         .eq('id', coId);
       return data as CONTELogEntry;
+    },
+    onSuccess: invalidate,
+  });
+
+  const requestFCInput = useMutation({
+    mutationFn: async (fcOrgId: string) => {
+      if (!coId) throw new Error('Missing change order');
+      const { data, error } = await supabase.rpc('request_fc_change_order_input', {
+        _co_id: coId,
+        _fc_org_id: fcOrgId,
+      });
+      if (error) throw error;
+      return data as unknown as COCollaborator;
+    },
+    onSuccess: invalidate,
+  });
+
+  const completeFCInput = useMutation({
+    mutationFn: async () => {
+      if (!coId) throw new Error('Missing change order');
+      const { data, error } = await supabase.rpc('complete_fc_change_order_input', {
+        _co_id: coId,
+      });
+      if (error) throw error;
+      return data as unknown as COCollaborator;
     },
     onSuccess: invalidate,
   });
@@ -459,7 +500,7 @@ export function useChangeOrderDetail(coId: string | null) {
         .select()
         .single();
       if (coError) throw coError;
-      return data as ChangeOrder; // ✓ verified
+      return data as ChangeOrder;
     },
     onSuccess: invalidate,
   });
@@ -496,6 +537,7 @@ export function useChangeOrderDetail(coId: string | null) {
   return {
     co,
     memberCOs,
+    collaborators,
     lineItems,
     laborEntries,
     materials,
@@ -518,6 +560,8 @@ export function useChangeOrderDetail(coId: string | null) {
     submitCO,
     approveCO,
     rejectCO,
+    requestFCInput,
+    completeFCInput,
     requestNTEIncrease,
     approveNTEIncrease,
     rejectNTEIncrease,

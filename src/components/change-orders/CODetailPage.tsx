@@ -1,8 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { ArrowLeft, Calendar, ChevronDown, GitMerge, Loader2, MapPin } from 'lucide-react';
+import { ArrowLeft, Calendar, ChevronDown, GitMerge, MapPin } from 'lucide-react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { BottomNav } from '@/components/layout/BottomNav';
@@ -14,15 +14,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
 import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useCORealtime } from '@/hooks/useCORealtime';
+import { useProjectFCOrgs } from '@/hooks/useProjectFCOrgs';
 import { COLineItemRow } from './COLineItemRow';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COStatusActions } from './COStatusActions';
 import { CONTEPanel } from './CONTEPanel';
 import { COActivityFeed } from './COActivityFeed';
+import { FCInputRequestCard } from './FCInputRequestCard';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { CO_REASON_LABELS, CO_STATUS_LABELS } from '@/types/changeOrder';
-import type { COCreatedByRole, COReasonCode, COStatus, ChangeOrder } from '@/types/changeOrder';
+import type { COCreatedByRole, COFCOrgOption, COReasonCode, COStatus, ChangeOrder } from '@/types/changeOrder';
 
 const STATUS_BADGE: Record<COStatus, string> = {
   draft: 'bg-muted text-muted-foreground border-border',
@@ -56,6 +58,7 @@ export function CODetailPage() {
   const {
     co,
     memberCOs,
+    collaborators,
     lineItems,
     laborEntries,
     materials,
@@ -64,6 +67,8 @@ export function CODetailPage() {
     activity,
     financials,
     isLoading,
+    requestFCInput,
+    completeFCInput,
     requestNTEIncrease,
     approveNTEIncrease,
     rejectNTEIncrease,
@@ -86,9 +91,13 @@ export function CODetailPage() {
   const myOrgId = activeMembership?.organization_id ?? co?.assigned_to_org_id ?? co?.org_id ?? '';
 
   const queryClient = useQueryClient();
+  const [fcActionPending, setFCActionPending] = useState(false);
+  const { data: projectFCOrgs = [] } = useProjectFCOrgs(projectId ?? null);
   function refreshDetail() {
     queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
   }
+
+  const collaboratorOrgIds = new Set(collaborators.map(collaborator => collaborator.organization_id));
 
   const isActiveStatus =
     co?.status === 'draft' ||
@@ -100,7 +109,13 @@ export function CODetailPage() {
     co?.pricing_type === 'tm' ||
     co?.pricing_type === 'nte';
 
-  const canEdit = isActiveStatus || (isRunningPricing && co?.status === 'submitted');
+  const currentCollaborator = collaborators.find(collaborator => collaborator.status === 'active') ?? null;
+  const isCollaboratorOrg = collaborators.some(
+    collaborator => collaborator.organization_id === myOrgId && collaborator.status === 'active'
+  );
+  const canRequestFCInput = !!co && isTC && co.created_by_role === 'GC' && co.assigned_to_org_id === myOrgId && (co.status === 'shared' || co.status === 'rejected');
+  const canCompleteFCInput = !!co && isFC && isCollaboratorOrg;
+  const canEdit = (isActiveStatus || (isRunningPricing && co?.status === 'submitted')) && (isTC || !currentCollaborator || isCollaboratorOrg);
 
   const nteUsedPercent = financials.nteUsedPercent ?? 0;
   const showNTEWarning = co?.pricing_type === 'nte' && !!co?.nte_cap && nteUsedPercent >= 80;
@@ -162,6 +177,29 @@ export function CODetailPage() {
   const pricingType: ValidPricing = VALID_PRICING.includes(co.pricing_type as ValidPricing)
     ? (co.pricing_type as ValidPricing)
     : 'fixed';
+  const fcOrgOptions: COFCOrgOption[] = projectFCOrgs.filter(
+    option => !collaboratorOrgIds.has(option.id) || option.id === currentCollaborator?.organization_id
+  );
+
+  async function handleRequestFCInput(orgId: string) {
+    try {
+      setFCActionPending(true);
+      await requestFCInput.mutateAsync(orgId);
+      refreshDetail();
+    } finally {
+      setFCActionPending(false);
+    }
+  }
+
+  async function handleCompleteFCInput() {
+    try {
+      setFCActionPending(true);
+      await completeFCInput.mutateAsync();
+      refreshDetail();
+    } finally {
+      setFCActionPending(false);
+    }
+  }
 
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
@@ -388,7 +426,18 @@ export function CODetailPage() {
                   currentOrgId={myOrgId}
                   projectId={projectId ?? ''}
                   financials={financials}
+                  collaborators={collaborators}
                   onRefresh={refreshDetail}
+                />
+
+                <FCInputRequestCard
+                  canRequest={canRequestFCInput}
+                  canComplete={canCompleteFCInput}
+                  options={fcOrgOptions}
+                  collaborators={collaborators}
+                  acting={fcActionPending}
+                  onRequest={handleRequestFCInput}
+                  onComplete={handleCompleteFCInput}
                 />
 
                 <div className="co-light-shell overflow-hidden">
