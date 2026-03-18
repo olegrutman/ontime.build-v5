@@ -176,6 +176,38 @@ export function CODetailPage() {
   const pricingType: ValidPricing = VALID_PRICING.includes(co.pricing_type as ValidPricing)
     ? (co.pricing_type as ValidPricing)
     : 'fixed';
+  const fcOrgOptions: COFCOrgOption[] = Array.from(
+    new Map(
+      userOrgRoles
+        .filter(roleEntry => roleEntry.organization?.type === 'FC')
+        .filter(roleEntry => !collaboratorOrgIds.has(roleEntry.organization_id) || roleEntry.organization_id === currentCollaborator?.organization_id)
+        .map(roleEntry => [roleEntry.organization_id, {
+          id: roleEntry.organization_id,
+          name: roleEntry.organization?.name ?? 'Field crew org',
+          type: 'FC' as const,
+        }])
+    ).values()
+  );
+
+  async function handleRequestFCInput(orgId: string) {
+    try {
+      setFCActionPending(true);
+      await requestFCInput.mutateAsync(orgId);
+      refreshDetail();
+    } finally {
+      setFCActionPending(false);
+    }
+  }
+
+  async function handleCompleteFCInput() {
+    try {
+      setFCActionPending(true);
+      await completeFCInput.mutateAsync();
+      refreshDetail();
+    } finally {
+      setFCActionPending(false);
+    }
+  }
 
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
