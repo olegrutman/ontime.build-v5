@@ -82,6 +82,14 @@ function getPOFetchErrorMessage(error: { code?: string; message?: string } | nul
   return error.message || 'Failed to load purchase order';
 }
 
+function getPOActionErrorMessage(error: { code?: string; message?: string } | null, fallback: string) {
+  if (!error) return fallback;
+  if (error.code === '42501') return 'You do not have permission to update this purchase order';
+  if (error.code === '42P01') return 'Purchase order save failed because a backend dependency is missing';
+  if (error.code === '57014') return 'Purchase order save timed out in backend access rules';
+  return error.message || fallback;
+}
+
 export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverride = false }: PODetailProps) {
   const { user, userOrgRoles, currentRole } = useAuth();
   const [po, setPO] = useState<PurchaseOrder | null>(null);
