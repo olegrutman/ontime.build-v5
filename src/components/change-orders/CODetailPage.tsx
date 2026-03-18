@@ -1,53 +1,54 @@
+import { useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
-import { useAuth } from '@/hooks/useAuth';
 import { useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { ArrowLeft, Calendar, ChevronDown, GitMerge, Loader2, MapPin } from 'lucide-react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
-import { CONTEPanel } from './CONTEPanel';
-import { COActivityFeed } from './COActivityFeed';
-import { useCORealtime } from '@/hooks/useCORealtime';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, MapPin, Calendar, Loader2, GitMerge, ChevronDown } from 'lucide-react';
-import { format } from 'date-fns';
-import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
-import {
-  CO_STATUS_LABELS,
-  CO_REASON_LABELS,
-  CO_REASON_COLORS,
-} from '@/types/changeOrder';
-import type { COStatus, COReasonCode, COCreatedByRole, ChangeOrder } from '@/types/changeOrder';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
+import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
+import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
+import { useCORealtime } from '@/hooks/useCORealtime';
 import { COLineItemRow } from './COLineItemRow';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COStatusActions } from './COStatusActions';
+import { CONTEPanel } from './CONTEPanel';
+import { COActivityFeed } from './COActivityFeed';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { CO_REASON_LABELS, CO_STATUS_LABELS } from '@/types/changeOrder';
+import type { COCreatedByRole, COReasonCode, COStatus, ChangeOrder } from '@/types/changeOrder';
 
 const STATUS_BADGE: Record<COStatus, string> = {
-  draft:      'bg-gray-100 text-gray-700 border-gray-200',
-  shared:     'bg-blue-100 text-blue-700 border-blue-200',
-  combined:   'bg-purple-100 text-purple-700 border-purple-200',
-  submitted:  'bg-amber-100 text-amber-700 border-amber-200',
-  approved:   'bg-green-100 text-green-700 border-green-200',
-  rejected:   'bg-red-100 text-red-700 border-red-200',
-  contracted: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  draft: 'bg-muted text-muted-foreground border-border',
+  shared: 'bg-accent text-accent-foreground border-border',
+  combined: 'bg-secondary/15 text-secondary border-secondary/25',
+  submitted: 'bg-primary/15 text-primary border-primary/25',
+  approved: 'bg-primary text-primary-foreground border-primary',
+  rejected: 'bg-destructive/10 text-destructive border-destructive/30',
+  contracted: 'bg-secondary text-secondary-foreground border-secondary',
 };
 
 const PRICING_LABEL: Record<string, string> = {
   fixed: 'Fixed price',
-  tm:    'Time & material',
-  nte:   'Not to exceed',
+  tm: 'Time & material',
+  nte: 'Not to exceed',
 };
+
+function fmtCurrency(value: number) {
+  return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
 
 export function CODetailPage() {
   const { projectId, coId } = useParams<{ projectId: string; coId: string }>();
   const navigate = useNavigate();
   const defaultOpen = useDefaultSidebarOpen();
-  const { currentRole, userOrgRoles } = useAuth();
+  const { currentRole, user, userOrgRoles } = useAuth();
 
   const {
     co,
@@ -90,6 +91,24 @@ export function CODetailPage() {
     co?.pricing_type === 'tm' ||
     co?.pricing_type === 'nte';
 
+  const nteUsedPercent = financials.nteUsedPercent ?? 0;
+  const showNTEWarning = co?.pricing_type === 'nte' && !!co?.nte_cap && nteUsedPercent >= 80;
+
+  const scopeSections = useMemo(() => {
+    const isCombinedParent = memberCOs.length > 0;
+    const sections: { memberCO: ChangeOrder | null; items: typeof lineItems }[] = [];
+
+    if (isCombinedParent) {
+      for (const mco of memberCOs) {
+        const items = lineItems.filter(li => li.co_id === mco.id);
+        sections.push({ memberCO: mco, items });
+      }
+      return sections;
+    }
+
+    return [{ memberCO: null, items: lineItems }];
+  }, [memberCOs, lineItems]);
+
   if (isLoading) {
     return (
       <SidebarProvider defaultOpen={defaultOpen}>
@@ -97,9 +116,9 @@ export function CODetailPage() {
           <AppSidebar />
           <SidebarInset>
             <div className="p-6 space-y-4">
-              <Skeleton className="h-8 w-64" />
+              <Skeleton className="h-8 w-72" />
               <Skeleton className="h-48 w-full" />
-              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-40 w-full" />
             </div>
           </SidebarInset>
           <BottomNav />
@@ -128,44 +147,193 @@ export function CODetailPage() {
   }
 
   const isCombinedParent = memberCOs.length > 0;
-  const displayTitle = co.title ?? co.co_number ?? (isCombinedParent ? 'Combined Change Order' : 'Change Order');
-  const reasonColors = co.reason ? CO_REASON_COLORS[co.reason as COReasonCode] : null;
-
-  const billableEntries = laborEntries.filter(e => !e.is_actual_cost);
-  const fcEntries = billableEntries.filter(e => e.entered_by_role === 'FC');
-  const tcEntries = billableEntries.filter(e => e.entered_by_role === 'TC');
-
-  const scopeSections: { memberCO: ChangeOrder | null; items: typeof lineItems }[] = [];
-  if (isCombinedParent) {
-    for (const mco of memberCOs) {
-      const items = lineItems.filter(li => li.co_id === mco.id);
-      if (items.length > 0 || true) {
-        scopeSections.push({ memberCO: mco, items });
-      }
-    }
-  } else {
-    scopeSections.push({ memberCO: null, items: lineItems });
-  }
+  const displayTitle = co.title ?? co.co_number ?? (isCombinedParent ? 'Combined change order' : 'Change order');
 
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
       <div className="flex min-h-screen w-full">
         <AppSidebar />
         <SidebarInset>
-          <div className="flex items-start gap-3 p-4 md:p-6 border-b border-border">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(`/project/${projectId}?tab=change-orders`)}
-              className="shrink-0 mt-0.5"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div className="min-w-0">
+          <div className="pb-20 md:pb-6">
+            <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
+              <div className="px-4 md:px-6 py-4 space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-2 min-w-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => navigate(`/project/${projectId}?tab=change-orders`)}
+                      className="shrink-0"
+                    >
+                      <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {isCombinedParent && <GitMerge className="h-4 w-4 text-muted-foreground" />}
+                        <h1 className="text-lg md:text-xl font-semibold truncate">{displayTitle}</h1>
+                        <Badge variant="outline" className={cn('text-[11px]', STATUS_BADGE[co.status as COStatus])}>
+                          {CO_STATUS_LABELS[co.status as COStatus]}
+                        </Badge>
+                        <Badge variant="secondary" className="text-[11px]">
+                          {PRICING_LABEL[co.pricing_type] ?? co.pricing_type}
+                        </Badge>
+                      </div>
 
-              {/* Sidebar column */}
-              <div className="space-y-6">
-                {/* Status actions */}
+                      <div className="mt-1 flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
+                        {co.co_number && <span>{co.co_number}</span>}
+                        {co.location_tag && (
+                          <span className="inline-flex items-center gap-1">
+                            <MapPin className="h-3 w-3" />
+                            {co.location_tag}
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {co.created_at ? format(new Date(co.created_at), 'MMM d, yyyy') : '—'}
+                        </span>
+                        <span>{role} view</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {showNTEWarning && (
+                    <Badge variant="outline" className="shrink-0 border-primary/40 bg-primary/10 text-primary">
+                      NTE {nteUsedPercent.toFixed(0)}% used
+                    </Badge>
+                  )}
+                </div>
+
+                {showNTEWarning && (
+                  <div className="rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-foreground">
+                    Action required: NTE cap is nearing limit ({nteUsedPercent.toFixed(1)}% used).
+                  </div>
+                )}
+              </div>
+            </header>
+
+            <div className="px-4 md:px-6 py-4 md:py-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-4 md:gap-5">
+              <div className="space-y-4 md:space-y-5">
+                <section className="rounded-xl border border-border bg-card overflow-hidden">
+                  <div className="px-4 py-3 border-b border-border">
+                    <div className="flex items-center justify-between gap-2">
+                      <h2 className="text-sm font-semibold text-foreground">Scope & labor</h2>
+                      <span className="text-xs text-muted-foreground">Tap row to expand</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    {scopeSections.map(({ memberCO, items }) => {
+                      const label = memberCO?.title ?? memberCO?.co_number ?? 'Scope section';
+                      const sectionLabor = laborEntries.filter(e => e.co_id === (memberCO?.id ?? co.id));
+
+                      if (memberCO) {
+                        return (
+                          <Collapsible key={memberCO.id} defaultOpen>
+                            <CollapsibleTrigger className="w-full px-4 py-3 border-b border-border bg-muted/20 hover:bg-muted/30 transition-colors text-left">
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium truncate">{label}</p>
+                                  <p className="text-xs text-muted-foreground">{items.length} line item{items.length === 1 ? '' : 's'}</p>
+                                </div>
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                              {items.length === 0 ? (
+                                <p className="px-4 py-4 text-sm text-muted-foreground">No scope items in this section</p>
+                              ) : (
+                                items.map(item => (
+                                  <COLineItemRow
+                                    key={item.id}
+                                    item={item}
+                                    laborEntries={sectionLabor.filter(e => e.co_line_item_id === item.id)}
+                                    role={role}
+                                    isGC={isGC}
+                                    isTC={isTC}
+                                    isFC={isFC}
+                                    coId={co.id}
+                                    orgId={myOrgId}
+                                    pricingType={co.pricing_type as 'fixed' | 'tm' | 'nte'}
+                                    nteCap={co.nte_cap}
+                                    nteUsed={financials.laborTotal}
+                                    canAddLabor={canEdit && (isTC || isFC)}
+                                    onRefresh={refreshDetail}
+                                  />
+                                ))
+                              )}
+                            </CollapsibleContent>
+                          </Collapsible>
+                        );
+                      }
+
+                      return items.length === 0 ? (
+                        <p key="empty-scope" className="px-4 py-4 text-sm text-muted-foreground">No scope items added yet</p>
+                      ) : (
+                        <div key="single-scope">
+                          {items.map(item => (
+                            <COLineItemRow
+                              key={item.id}
+                              item={item}
+                              laborEntries={sectionLabor.filter(e => e.co_line_item_id === item.id)}
+                              role={role}
+                              isGC={isGC}
+                              isTC={isTC}
+                              isFC={isFC}
+                              coId={co.id}
+                              orgId={myOrgId}
+                              pricingType={co.pricing_type as 'fixed' | 'tm' | 'nte'}
+                              nteCap={co.nte_cap}
+                              nteUsed={financials.laborTotal}
+                              canAddLabor={canEdit && (isTC || isFC)}
+                              onRefresh={refreshDetail}
+                            />
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                {co.materials_needed && (
+                  <COMaterialsPanel
+                    coId={co.id}
+                    orgId={myOrgId}
+                    projectId={projectId ?? ''}
+                    materials={materials}
+                    isTC={isTC}
+                    isGC={isGC}
+                    isFC={isFC}
+                    materialsOnSite={co.materials_on_site}
+                    canEdit={canEdit}
+                    onRefresh={refreshDetail}
+                  />
+                )}
+
+                {co.equipment_needed && (
+                  <COEquipmentPanel
+                    coId={co.id}
+                    orgId={myOrgId}
+                    equipment={equipment}
+                    isTC={isTC}
+                    isGC={isGC}
+                    isFC={isFC}
+                    canEdit={canEdit}
+                    onRefresh={refreshDetail}
+                  />
+                )}
+
+                <COActivityFeed activity={activity} />
+              </div>
+
+              <aside className="space-y-4 md:space-y-5">
+                <div className="rounded-xl border border-border bg-card p-4 space-y-1">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Current role</p>
+                  <p className="text-sm font-semibold text-foreground">{role}</p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {user?.email ?? 'Authenticated user'}
+                  </p>
+                </div>
+
                 <COStatusActions
                   co={co}
                   isGC={isGC}
@@ -176,10 +344,9 @@ export function CODetailPage() {
                   onRefresh={refreshDetail}
                 />
 
-                {/* Financials */}
-                <div className="rounded-lg border border-border bg-card">
+                <div className="rounded-xl border border-border bg-card">
                   <div className="px-4 py-3 border-b border-border">
-                    <h3 className="text-sm font-semibold text-foreground">Financial summary</h3>
+                    <h3 className="text-sm font-semibold text-foreground">Financial</h3>
                   </div>
                   <div className="px-4 py-3 space-y-2">
                     {isGC && (
@@ -188,50 +355,30 @@ export function CODetailPage() {
                         {co.materials_needed && <FinRow label="Materials" value={financials.materialsTotal} />}
                         {co.equipment_needed && <FinRow label="Equipment" value={financials.equipmentTotal} />}
                         <div className="border-t border-border pt-2 mt-2">
-                          <FinRow label="Total" value={financials.grandTotal} bold />
+                          <FinRow label="Total billed" value={financials.grandTotal} bold />
                         </div>
                       </>
                     )}
 
                     {isTC && (
                       <>
-                        {financials.fcLaborTotal > 0 && (
-                          <FinRow label="FC labor" value={financials.fcLaborTotal} muted />
-                        )}
+                        {financials.fcLaborTotal > 0 && <FinRow label="FC labor" value={financials.fcLaborTotal} muted />}
                         <FinRow label="TC labor" value={financials.tcLaborTotal} />
                         {co.materials_needed && (
                           <>
                             <FinRow label="Materials cost" value={financials.materialsCost} muted />
-                            {financials.materialsMarkup > 0 && (
-                              <FinRow label="Materials markup" value={financials.materialsMarkup} amber />
-                            )}
                             <FinRow label="Materials billed" value={financials.materialsTotal} />
                           </>
                         )}
                         {co.equipment_needed && (
                           <>
                             <FinRow label="Equipment cost" value={financials.equipmentCost} muted />
-                            {financials.equipmentMarkup > 0 && (
-                              <FinRow label="Equipment markup" value={financials.equipmentMarkup} amber />
-                            )}
                             <FinRow label="Equipment billed" value={financials.equipmentTotal} />
                           </>
                         )}
                         <div className="border-t border-border pt-2 mt-2">
                           <FinRow label="Grand total" value={financials.grandTotal} bold />
                         </div>
-                        {financials.profitMargin !== null && (
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-muted-foreground">Running margin</span>
-                            <span className={cn(
-                              'font-semibold',
-                              financials.profitMargin > 0  ? 'text-green-600' :
-                              financials.profitMargin < 0  ? 'text-red-600'   : 'text-amber-600'
-                            )}>
-                              {financials.profitMargin.toFixed(1)}%
-                            </span>
-                          </div>
-                        )}
                       </>
                     )}
 
@@ -243,15 +390,9 @@ export function CODetailPage() {
                         </div>
                       </>
                     )}
-
-                    {/* Fallback if no role matched */}
-                    {!isGC && !isTC && !isFC && (
-                      <FinRow label="Total" value={financials.grandTotal} bold />
-                    )}
                   </div>
                 </div>
 
-                {/* NTE panel */}
                 {co.pricing_type === 'nte' && co.nte_cap && (
                   <CONTEPanel
                     co={co}
@@ -264,29 +405,20 @@ export function CODetailPage() {
                   />
                 )}
 
-                {/* Details */}
-                <div className="rounded-lg border border-border bg-card">
+                <div className="rounded-xl border border-border bg-card">
                   <div className="px-4 py-3 border-b border-border">
                     <h3 className="text-sm font-semibold text-foreground">Details</h3>
                   </div>
                   <div className="px-4 py-3 space-y-2">
                     <DetailRow label="Status" value={CO_STATUS_LABELS[co.status as COStatus]} />
                     <DetailRow label="Pricing" value={PRICING_LABEL[co.pricing_type] ?? co.pricing_type} />
-                    {co.reason && (
-                      <DetailRow label="Reason" value={CO_REASON_LABELS[co.reason as COReasonCode]} />
-                    )}
-                    {co.location_tag && (
-                      <DetailRow label="Location" value={co.location_tag} />
-                    )}
-                    {co.materials_needed && (
-                      <DetailRow label="Materials" value={co.materials_on_site ? 'On site' : 'Needed'} />
-                    )}
-                    {co.equipment_needed && (
-                      <DetailRow label="Equipment" value="Needed" />
-                    )}
+                    {co.reason && <DetailRow label="Reason" value={CO_REASON_LABELS[co.reason as COReasonCode]} />}
+                    {co.location_tag && <DetailRow label="Location" value={co.location_tag} />}
+                    <DetailRow label="Created by" value={co.created_by_role} />
+                    <DetailRow label="Created" value={co.created_at ? format(new Date(co.created_at), 'MMM d, yyyy') : '—'} />
                   </div>
                 </div>
-              </div>
+              </aside>
             </div>
           </div>
         </SidebarInset>
@@ -301,25 +433,17 @@ function FinRow({
   value,
   bold,
   muted,
-  amber,
 }: {
   label: string;
   value: number;
-  bold?:  boolean;
+  bold?: boolean;
   muted?: boolean;
-  amber?: boolean;
 }) {
   return (
     <div className="flex items-center justify-between text-sm">
-      <span className={cn(muted ? 'text-muted-foreground' : 'text-foreground', bold && 'font-semibold')}>
-        {label}
-      </span>
-      <span className={cn(
-        bold ? 'font-semibold text-foreground' :
-        amber ? 'text-amber-600' :
-        muted ? 'text-muted-foreground' : 'font-medium text-foreground'
-      )}>
-        ${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      <span className={cn(muted ? 'text-muted-foreground' : 'text-foreground', bold && 'font-semibold')}>{label}</span>
+      <span className={cn(bold ? 'font-semibold text-foreground' : muted ? 'text-muted-foreground' : 'font-medium text-foreground')}>
+        {fmtCurrency(value)}
       </span>
     </div>
   );
@@ -327,9 +451,9 @@ function FinRow({
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between text-sm">
+    <div className="flex items-center justify-between text-sm gap-2">
       <span className="text-muted-foreground">{label}</span>
-      <span className="font-medium text-foreground">{value}</span>
+      <span className="font-medium text-foreground text-right">{value}</span>
     </div>
   );
 }
