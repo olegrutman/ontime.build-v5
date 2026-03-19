@@ -367,6 +367,7 @@ export function COMaterialsPanel({
     }
   }
 
+  async function saveRows() {
     const valid = draftRows.filter(row => row.description.trim() && parseFloat(row.quantity) > 0);
     if (valid.length === 0) return;
 
