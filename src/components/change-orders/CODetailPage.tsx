@@ -113,7 +113,7 @@ export function CODetailPage() {
   const isCollaboratorOrg = collaborators.some(
     collaborator => collaborator.organization_id === myOrgId && collaborator.status === 'active'
   );
-  const canRequestFCInput = !!co && isTC && co.created_by_role === 'GC' && co.assigned_to_org_id === myOrgId && (co.status === 'shared' || co.status === 'rejected');
+  const canRequestFCInput = !!co && isTC && co.assigned_to_org_id === myOrgId && (co.status === 'shared' || co.status === 'rejected' || co.status === 'combined');
   const canCompleteFCInput = !!co && isFC && isCollaboratorOrg;
   const canEdit = (isActiveStatus || (isRunningPricing && co?.status === 'submitted')) && (isTC || !currentCollaborator || isCollaboratorOrg);
 
