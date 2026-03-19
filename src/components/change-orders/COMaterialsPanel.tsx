@@ -833,6 +833,12 @@ export function COMaterialsPanel({
 
           {materials.length > 0 && !isFC && (
             <div className="px-4 py-3 border-t border-border space-y-1">
+              {hasSupplierPricing && (
+                <div className="flex items-center gap-1.5 mb-1">
+                  <CheckCircle2 className="h-3 w-3 text-primary" />
+                  <span className="text-[10px] font-medium text-primary uppercase tracking-wide">Supplier priced</span>
+                </div>
+              )}
               {showPricingColumns && totalCost > 0 && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Cost</span>
