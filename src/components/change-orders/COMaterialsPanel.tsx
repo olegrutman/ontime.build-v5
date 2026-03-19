@@ -1010,6 +1010,7 @@ export function COMaterialsPanel({
                 ref={pickerRef}
                 supplierId={supplierId}
                 projectId={projectId}
+                hasApprovedEstimate={hasApprovedEstimate}
                 onAddItem={handlePickerAdd}
                 editingItem={null}
                 onClearEdit={() => {}}
