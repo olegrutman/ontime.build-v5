@@ -123,7 +123,10 @@ function CORow({
           <div className="flex items-center justify-between gap-3 flex-wrap text-xs text-muted-foreground">
             <div className="flex items-center gap-2 flex-wrap">
               {co.reason && <ReasonChip reason={co.reason as COReasonCode} />}
-              {co.location_tag && <span className="truncate max-w-[180px]">{co.location_tag}</span>}
+              {co.location_tag && (() => {
+                const locs = co.location_tag.split(' | ');
+                return <span className="truncate max-w-[180px]">{locs[0]}{locs.length > 1 ? ` +${locs.length - 1} more` : ''}</span>;
+              })()}
             </div>
             <span>{age}</span>
           </div>
