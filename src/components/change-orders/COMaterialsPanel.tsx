@@ -192,6 +192,45 @@ export function COMaterialsPanel({
     fetchLinkedRequests();
   }, [fetchLinkedRequests]);
 
+  // Fetch supplier pricing from PO line items when PO is priced
+  useEffect(() => {
+    if (!hasPricedPO || !activePricingRequest) {
+      setSupplierPriceMap(new Map());
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchSupplierPricing = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('po_line_items')
+          .select('source_co_material_item_id, unit_price, line_total')
+          .eq('po_id', activePricingRequest.id)
+          .not('source_co_material_item_id', 'is', null);
+
+        if (error) throw error;
+        if (cancelled) return;
+
+        const map = new Map<string, SupplierPriceEntry>();
+        for (const row of data ?? []) {
+          if (row.source_co_material_item_id) {
+            map.set(row.source_co_material_item_id, {
+              unit_price: row.unit_price,
+              line_total: row.line_total,
+            });
+          }
+        }
+        setSupplierPriceMap(map);
+      } catch (err) {
+        console.error('Failed to fetch supplier pricing from PO line items', err);
+      }
+    };
+
+    fetchSupplierPricing();
+    return () => { cancelled = true; };
+  }, [hasPricedPO, activePricingRequest]);
+
   useEffect(() => {
     if (!canManageMaterials || !projectId) return;
 
