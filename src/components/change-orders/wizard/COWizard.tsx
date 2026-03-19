@@ -93,12 +93,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
     const s = ALL_STEPS[step];
     if (s.key === 'catalog') return data.selectedItems.length > 0;
     if (s.key === 'location') {
-      const tag = data.locationTag.trim();
-      if (!tag) return false;
-      // Must have inside/outside selected plus at least one sub-field
-      const hasInside = tag.startsWith('Inside') && tag.includes(' → ');
-      const hasOutside = tag.startsWith('Outside') && tag.includes(' → ');
-      return hasInside || hasOutside;
+      return data.locationTags.length > 0;
     }
     if (s.key === 'reason') return !!data.reason && (data.reason !== 'other' || data.reasonNote.trim().length > 0);
     if (s.key === 'config') {
