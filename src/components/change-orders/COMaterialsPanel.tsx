@@ -136,17 +136,36 @@ export function COMaterialsPanel({
   const [supplierLoading, setSupplierLoading] = useState(false);
   const [poRequiresApproval, setPORequiresApproval] = useState(false);
   const pickerRef = useRef<ProductPickerHandle>(null);
+  const [supplierPriceMap, setSupplierPriceMap] = useState<Map<string, SupplierPriceEntry>>(new Map());
+  const [applyingPricing, setApplyingPricing] = useState(false);
 
   const canManageMaterials = canEdit && (isTC || isGC);
   const showPricingColumns = isTC || isGC;
   const addedByRole = isGC ? 'GC' : 'TC';
-  const totalCost = materials.reduce((s, m) => s + (m.line_cost ?? 0), 0);
-  const totalBilled = materials.reduce((s, m) => s + (m.billed_amount ?? 0), 0);
+
   const activePricingRequest = useMemo(
     () => linkedRequests.find(request => request.status !== 'DELIVERED') ?? linkedRequests[0] ?? null,
     [linkedRequests]
   );
   const hasBlockingPricingRequest = !!activePricingRequest;
+  const hasPricedPO = !!activePricingRequest && PRICED_STATUSES.includes(activePricingRequest.status);
+  const hasSupplierPricing = supplierPriceMap.size > 0;
+
+  // Compute totals — override with supplier pricing when available
+  const totalCost = materials.reduce((s, m) => {
+    const sp = supplierPriceMap.get(m.id);
+    if (sp?.line_total != null) return s + sp.line_total;
+    return s + (m.line_cost ?? 0);
+  }, 0);
+
+  const totalBilled = materials.reduce((s, m) => {
+    const sp = supplierPriceMap.get(m.id);
+    if (sp?.unit_price != null) {
+      const cost = m.quantity * sp.unit_price;
+      return s + cost * (1 + (m.markup_percent ?? 0) / 100);
+    }
+    return s + (m.billed_amount ?? 0);
+  }, 0);
 
   const fetchLinkedRequests = useCallback(async () => {
     if (!coId) return;
