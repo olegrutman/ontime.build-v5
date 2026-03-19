@@ -16,7 +16,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { Plus, Trash2, Loader2, Package, ShoppingCart, ArrowLeft, Send } from 'lucide-react';
+import { Plus, Trash2, Loader2, Package, ShoppingCart, ArrowLeft, Send, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
