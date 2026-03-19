@@ -19,7 +19,7 @@ export interface COWizardData {
   selectedItems: WorkOrderCatalogItem[];
   scopeDescription: string;
   title: string;
-  locationTag: string;
+  locationTags: string[];
   reason: COReasonCode | null;
   reasonNote: string;
   pricingType: COPricingType;
@@ -38,7 +38,7 @@ const INITIAL_DATA: COWizardData = {
   selectedItems: [],
   scopeDescription: '',
   title: '',
-  locationTag: '',
+  locationTags: [],
   reason: null,
   reasonNote: '',
   pricingType: 'fixed',
@@ -93,12 +93,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
     const s = ALL_STEPS[step];
     if (s.key === 'catalog') return data.selectedItems.length > 0;
     if (s.key === 'location') {
-      const tag = data.locationTag.trim();
-      if (!tag) return false;
-      // Must have inside/outside selected plus at least one sub-field
-      const hasInside = tag.startsWith('Inside') && tag.includes(' → ');
-      const hasOutside = tag.startsWith('Outside') && tag.includes(' → ');
-      return hasInside || hasOutside;
+      return data.locationTags.length > 0;
     }
     if (s.key === 'reason') return !!data.reason && (data.reason !== 'other' || data.reasonNote.trim().length > 0);
     if (s.key === 'config') {
@@ -147,7 +142,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
         nte_cap: data.pricingType === 'nte' && data.nteCap ? parseFloat(data.nteCap) : null,
         reason: data.reason,
         reason_note: data.reasonNote || null,
-        location_tag: data.locationTag || null,
+        location_tag: data.locationTags.length > 0 ? data.locationTags.join(' | ') : null,
         assigned_to_org_id: data.assignedToOrgId || null,
         fc_input_needed: data.fcInputNeeded,
         materials_needed: data.materialsNeeded,
