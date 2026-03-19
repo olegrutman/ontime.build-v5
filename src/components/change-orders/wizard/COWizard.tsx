@@ -19,7 +19,7 @@ export interface COWizardData {
   selectedItems: WorkOrderCatalogItem[];
   scopeDescription: string;
   title: string;
-  locationTag: string;
+  locationTags: string[];
   reason: COReasonCode | null;
   reasonNote: string;
   pricingType: COPricingType;
