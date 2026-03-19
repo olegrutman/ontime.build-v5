@@ -338,7 +338,35 @@ export function COMaterialsPanel({
     setDraftRows(rows => rows.filter(row => row.tempId !== tempId));
   }
 
-  async function saveRows() {
+  async function applySupplierPricing() {
+    if (supplierPriceMap.size === 0) return;
+    setApplyingPricing(true);
+    try {
+      const updates = materials
+        .filter(m => supplierPriceMap.has(m.id) && supplierPriceMap.get(m.id)!.unit_price != null)
+        .map(m => ({
+          id: m.id,
+          unit_cost: supplierPriceMap.get(m.id)!.unit_price!,
+        }));
+
+      for (const { id, unit_cost } of updates) {
+        const { error } = await supabase
+          .from('co_material_items')
+          .update({ unit_cost })
+          .eq('id', id);
+        if (error) throw error;
+      }
+
+      toast.success(`Applied supplier pricing to ${updates.length} item${updates.length !== 1 ? 's' : ''}`);
+      setSupplierPriceMap(new Map());
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to apply supplier pricing');
+    } finally {
+      setApplyingPricing(false);
+    }
+  }
+
     const valid = draftRows.filter(row => row.description.trim() && parseFloat(row.quantity) > 0);
     if (valid.length === 0) return;
 
