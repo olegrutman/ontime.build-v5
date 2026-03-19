@@ -16,7 +16,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import { Plus, Trash2, Loader2, Package, ShoppingCart, ArrowLeft, Send } from 'lucide-react';
+import { Plus, Trash2, Loader2, Package, ShoppingCart, ArrowLeft, Send, CheckCircle2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -59,6 +59,13 @@ interface LinkedPricingRequest {
   created_at: string;
   supplier: { name: string } | null;
 }
+
+interface SupplierPriceEntry {
+  unit_price: number | null;
+  line_total: number | null;
+}
+
+const PRICED_STATUSES = ['PRICED', 'ORDERED', 'DELIVERED'];
 
 function fmt(n: number) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -129,17 +136,36 @@ export function COMaterialsPanel({
   const [supplierLoading, setSupplierLoading] = useState(false);
   const [poRequiresApproval, setPORequiresApproval] = useState(false);
   const pickerRef = useRef<ProductPickerHandle>(null);
+  const [supplierPriceMap, setSupplierPriceMap] = useState<Map<string, SupplierPriceEntry>>(new Map());
+  const [applyingPricing, setApplyingPricing] = useState(false);
 
   const canManageMaterials = canEdit && (isTC || isGC);
   const showPricingColumns = isTC || isGC;
   const addedByRole = isGC ? 'GC' : 'TC';
-  const totalCost = materials.reduce((s, m) => s + (m.line_cost ?? 0), 0);
-  const totalBilled = materials.reduce((s, m) => s + (m.billed_amount ?? 0), 0);
+
   const activePricingRequest = useMemo(
     () => linkedRequests.find(request => request.status !== 'DELIVERED') ?? linkedRequests[0] ?? null,
     [linkedRequests]
   );
   const hasBlockingPricingRequest = !!activePricingRequest;
+  const hasPricedPO = !!activePricingRequest && PRICED_STATUSES.includes(activePricingRequest.status);
+  const hasSupplierPricing = supplierPriceMap.size > 0;
+
+  // Compute totals — override with supplier pricing when available
+  const totalCost = materials.reduce((s, m) => {
+    const sp = supplierPriceMap.get(m.id);
+    if (sp?.line_total != null) return s + sp.line_total;
+    return s + (m.line_cost ?? 0);
+  }, 0);
+
+  const totalBilled = materials.reduce((s, m) => {
+    const sp = supplierPriceMap.get(m.id);
+    if (sp?.unit_price != null) {
+      const cost = m.quantity * sp.unit_price;
+      return s + cost * (1 + (m.markup_percent ?? 0) / 100);
+    }
+    return s + (m.billed_amount ?? 0);
+  }, 0);
 
   const fetchLinkedRequests = useCallback(async () => {
     if (!coId) return;
@@ -165,6 +191,45 @@ export function COMaterialsPanel({
   useEffect(() => {
     fetchLinkedRequests();
   }, [fetchLinkedRequests]);
+
+  // Fetch supplier pricing from PO line items when PO is priced
+  useEffect(() => {
+    if (!hasPricedPO || !activePricingRequest) {
+      setSupplierPriceMap(new Map());
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchSupplierPricing = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('po_line_items')
+          .select('source_co_material_item_id, unit_price, line_total')
+          .eq('po_id', activePricingRequest.id)
+          .not('source_co_material_item_id', 'is', null);
+
+        if (error) throw error;
+        if (cancelled) return;
+
+        const map = new Map<string, SupplierPriceEntry>();
+        for (const row of data ?? []) {
+          if (row.source_co_material_item_id) {
+            map.set(row.source_co_material_item_id, {
+              unit_price: row.unit_price,
+              line_total: row.line_total,
+            });
+          }
+        }
+        setSupplierPriceMap(map);
+      } catch (err) {
+        console.error('Failed to fetch supplier pricing from PO line items', err);
+      }
+    };
+
+    fetchSupplierPricing();
+    return () => { cancelled = true; };
+  }, [hasPricedPO, activePricingRequest]);
 
   useEffect(() => {
     if (!canManageMaterials || !projectId) return;
@@ -271,6 +336,35 @@ export function COMaterialsPanel({
 
   function removeRow(tempId: string) {
     setDraftRows(rows => rows.filter(row => row.tempId !== tempId));
+  }
+
+  async function applySupplierPricing() {
+    if (supplierPriceMap.size === 0) return;
+    setApplyingPricing(true);
+    try {
+      const updates = materials
+        .filter(m => supplierPriceMap.has(m.id) && supplierPriceMap.get(m.id)!.unit_price != null)
+        .map(m => ({
+          id: m.id,
+          unit_cost: supplierPriceMap.get(m.id)!.unit_price!,
+        }));
+
+      for (const { id, unit_cost } of updates) {
+        const { error } = await supabase
+          .from('co_material_items')
+          .update({ unit_cost })
+          .eq('id', id);
+        if (error) throw error;
+      }
+
+      toast.success(`Applied supplier pricing to ${updates.length} item${updates.length !== 1 ? 's' : ''}`);
+      setSupplierPriceMap(new Map());
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to apply supplier pricing');
+    } finally {
+      setApplyingPricing(false);
+    }
   }
 
   async function saveRows() {
@@ -599,48 +693,66 @@ export function COMaterialsPanel({
                 </tr>
               </thead>
               <tbody>
-                {materials.map(material => (
-                  <tr key={material.id} className="border-b border-border last:border-0">
-                    <td className="px-4 py-2.5">
-                      <p className="font-medium text-foreground">{material.description}</p>
-                      {material.supplier_sku && (
-                        <p className="text-[10px] text-muted-foreground">SKU: {material.supplier_sku}</p>
-                      )}
-                    </td>
-                    <td className="text-right px-2 py-2.5 text-foreground">{material.quantity}</td>
-                    <td className="px-2 py-2.5 text-muted-foreground">{material.uom}</td>
-                    {showPricingColumns && (
-                      <td className="text-right px-2 py-2.5 text-muted-foreground">
-                        {material.unit_cost != null ? `$${fmt(material.unit_cost)}` : '—'}
+                {materials.map(material => {
+                  const sp = supplierPriceMap.get(material.id);
+                  const hasSupplierPrice = sp?.unit_price != null;
+                  const displayUnitCost = hasSupplierPrice ? sp!.unit_price! : material.unit_cost;
+                  const displayAmount = hasSupplierPrice
+                    ? material.quantity * sp!.unit_price! * (1 + (material.markup_percent ?? 0) / 100)
+                    : (material.billed_amount ?? 0);
+
+                  return (
+                    <tr key={material.id} className="border-b border-border last:border-0">
+                      <td className="px-4 py-2.5">
+                        <p className="font-medium text-foreground">{material.description}</p>
+                        {material.supplier_sku && (
+                          <p className="text-[10px] text-muted-foreground">SKU: {material.supplier_sku}</p>
+                        )}
                       </td>
-                    )}
-                    {showPricingColumns && (
-                      <td className="text-right px-2 py-2.5 text-muted-foreground">
-                        {material.markup_percent > 0 ? `${material.markup_percent}%` : '—'}
-                      </td>
-                    )}
-                    {!isFC && (
-                      <td className="text-right px-4 py-2.5 font-medium text-foreground">
-                        ${fmt(material.billed_amount ?? 0)}
-                      </td>
-                    )}
-                    {canManageMaterials && (
-                      <td className="px-2 py-2.5">
-                        <button
-                          onClick={() => deleteRow(material.id)}
-                          disabled={deleting === material.id}
-                          className="text-muted-foreground hover:text-destructive transition-colors p-0.5"
-                        >
-                          {deleting === material.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <Trash2 className="h-3.5 w-3.5" />
+                      <td className="text-right px-2 py-2.5 text-foreground">{material.quantity}</td>
+                      <td className="px-2 py-2.5 text-muted-foreground">{material.uom}</td>
+                      {showPricingColumns && (
+                        <td className="text-right px-2 py-2.5">
+                          {displayUnitCost != null ? (
+                            <span className={hasSupplierPrice ? 'text-primary font-medium' : 'text-muted-foreground'}>
+                              ${fmt(displayUnitCost)}
+                            </span>
+                          ) : '—'}
+                          {hasSupplierPrice && material.unit_cost != null && material.unit_cost !== sp!.unit_price && (
+                            <span className="block text-[10px] text-muted-foreground line-through">
+                              ${fmt(material.unit_cost)}
+                            </span>
                           )}
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
+                        </td>
+                      )}
+                      {showPricingColumns && (
+                        <td className="text-right px-2 py-2.5 text-muted-foreground">
+                          {material.markup_percent > 0 ? `${material.markup_percent}%` : '—'}
+                        </td>
+                      )}
+                      {!isFC && (
+                        <td className="text-right px-4 py-2.5 font-medium text-foreground">
+                          ${fmt(displayAmount)}
+                        </td>
+                      )}
+                      {canManageMaterials && (
+                        <td className="px-2 py-2.5">
+                          <button
+                            onClick={() => deleteRow(material.id)}
+                            disabled={deleting === material.id}
+                            className="text-muted-foreground hover:text-destructive transition-colors p-0.5"
+                          >
+                            {deleting === material.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-3.5 w-3.5" />
+                            )}
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
 
                 {draftRows.map(row => {
                   const qty = parseFloat(row.quantity) || 0;
@@ -750,6 +862,12 @@ export function COMaterialsPanel({
 
           {materials.length > 0 && !isFC && (
             <div className="px-4 py-3 border-t border-border space-y-1">
+              {hasSupplierPricing && (
+                <div className="flex items-center gap-1.5 mb-1">
+                  <CheckCircle2 className="h-3 w-3 text-primary" />
+                  <span className="text-[10px] font-medium text-primary uppercase tracking-wide">Supplier priced</span>
+                </div>
+              )}
               {showPricingColumns && totalCost > 0 && (
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted-foreground">Cost</span>
@@ -795,14 +913,28 @@ export function COMaterialsPanel({
                 </div>
 
                 {activePricingRequest && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs"
-                    onClick={() => navigate(`/project/${projectId}?tab=purchase-orders&po=${activePricingRequest.id}`)}
-                  >
-                    Open linked PO
-                  </Button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {hasSupplierPricing && canManageMaterials && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="h-8 text-xs gap-1"
+                        onClick={applySupplierPricing}
+                        disabled={applyingPricing}
+                      >
+                        {applyingPricing ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                        Apply supplier pricing
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs"
+                      onClick={() => navigate(`/project/${projectId}?tab=purchase-orders&po=${activePricingRequest.id}`)}
+                    >
+                      Open linked PO
+                    </Button>
+                  </div>
                 )}
               </div>
 
