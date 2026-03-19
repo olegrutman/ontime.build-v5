@@ -138,6 +138,7 @@ export function COMaterialsPanel({
   const pickerRef = useRef<ProductPickerHandle>(null);
   const [supplierPriceMap, setSupplierPriceMap] = useState<Map<string, SupplierPriceEntry>>(new Map());
   const [applyingPricing, setApplyingPricing] = useState(false);
+  const [hasApprovedEstimate, setHasApprovedEstimate] = useState(false);
 
   const canManageMaterials = canEdit && (isTC || isGC);
   const showPricingColumns = isTC || isGC;
@@ -270,7 +271,20 @@ export function COMaterialsPanel({
           resolvedSupplierId = systemSupplier?.id ?? null;
         }
 
-        if (!cancelled) setSupplierId(resolvedSupplierId);
+        if (!cancelled) {
+          setSupplierId(resolvedSupplierId);
+
+          // Check for approved supplier estimates
+          if (orgIds.length > 0) {
+            const { count } = await supabase
+              .from('supplier_estimates')
+              .select('id', { count: 'exact', head: true })
+              .eq('project_id', projectId)
+              .in('supplier_org_id', orgIds)
+              .eq('status', 'APPROVED');
+            if (!cancelled) setHasApprovedEstimate((count ?? 0) > 0);
+          }
+        }
       } catch (err) {
         console.error('Failed to resolve supplier for CO picker', err);
       } finally {
@@ -996,6 +1010,7 @@ export function COMaterialsPanel({
                 ref={pickerRef}
                 supplierId={supplierId}
                 projectId={projectId}
+                hasApprovedEstimate={hasApprovedEstimate}
                 onAddItem={handlePickerAdd}
                 editingItem={null}
                 onClearEdit={() => {}}
