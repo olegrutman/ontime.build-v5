@@ -884,14 +884,28 @@ export function COMaterialsPanel({
                 </div>
 
                 {activePricingRequest && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs"
-                    onClick={() => navigate(`/project/${projectId}?tab=purchase-orders&po=${activePricingRequest.id}`)}
-                  >
-                    Open linked PO
-                  </Button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {hasSupplierPricing && canManageMaterials && (
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="h-8 text-xs gap-1"
+                        onClick={applySupplierPricing}
+                        disabled={applyingPricing}
+                      >
+                        {applyingPricing ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+                        Apply supplier pricing
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs"
+                      onClick={() => navigate(`/project/${projectId}?tab=purchase-orders&po=${activePricingRequest.id}`)}
+                    >
+                      Open linked PO
+                    </Button>
+                  </div>
                 )}
               </div>
 
