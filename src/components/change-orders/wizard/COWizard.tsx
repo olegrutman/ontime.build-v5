@@ -38,7 +38,7 @@ const INITIAL_DATA: COWizardData = {
   selectedItems: [],
   scopeDescription: '',
   title: '',
-  locationTag: '',
+  locationTags: [],
   reason: null,
   reasonNote: '',
   pricingType: 'fixed',
