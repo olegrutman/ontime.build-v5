@@ -233,12 +233,12 @@ export function CODetailPage() {
 
                       <div className="mt-1 flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
                         {co.co_number && <span>{co.co_number}</span>}
-                        {co.location_tag && (
-                          <span className="inline-flex items-center gap-1">
+                        {co.location_tag && co.location_tag.split(' | ').map((loc, i) => (
+                          <span key={i} className="inline-flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
-                            {co.location_tag}
+                            {loc}
                           </span>
-                        )}
+                        ))}
                         <span className="inline-flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
                           {co.created_at ? format(new Date(co.created_at), 'MMM d, yyyy') : '—'}

@@ -344,12 +344,16 @@ export function StepConfig({ data, onChange, role, projectId }: StepConfigProps)
         </div>
       </div>
 
-      {data.locationTag && (
+      {data.locationTags.length > 0 && (
         <div className="space-y-1">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Location
+            Location{data.locationTags.length > 1 ? 's' : ''}
           </p>
-          <p className="text-sm text-foreground">{data.locationTag}</p>
+          <div className="space-y-0.5">
+            {data.locationTags.map((tag, i) => (
+              <p key={i} className="text-sm text-foreground">{tag}</p>
+            ))}
+          </div>
         </div>
       )}
 

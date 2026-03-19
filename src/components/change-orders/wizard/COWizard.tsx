@@ -142,7 +142,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
         nte_cap: data.pricingType === 'nte' && data.nteCap ? parseFloat(data.nteCap) : null,
         reason: data.reason,
         reason_note: data.reasonNote || null,
-        location_tag: data.locationTag || null,
+        location_tag: data.locationTags.length > 0 ? data.locationTags.join(' | ') : null,
         assigned_to_org_id: data.assignedToOrgId || null,
         fc_input_needed: data.fcInputNeeded,
         materials_needed: data.materialsNeeded,

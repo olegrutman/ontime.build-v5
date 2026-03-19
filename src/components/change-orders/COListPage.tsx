@@ -196,7 +196,10 @@ function COCard({
       )}
 
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span className="truncate max-w-[60%]">{co.location_tag ?? 'No location'}</span>
+        <span className="truncate max-w-[60%]">{co.location_tag ? (() => {
+          const locs = co.location_tag.split(' | ');
+          return locs[0] + (locs.length > 1 ? ` +${locs.length - 1} more` : '');
+        })() : 'No location'}</span>
         <span>{age}</span>
       </div>
     </article>
