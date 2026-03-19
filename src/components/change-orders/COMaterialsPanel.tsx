@@ -138,6 +138,7 @@ export function COMaterialsPanel({
   const pickerRef = useRef<ProductPickerHandle>(null);
   const [supplierPriceMap, setSupplierPriceMap] = useState<Map<string, SupplierPriceEntry>>(new Map());
   const [applyingPricing, setApplyingPricing] = useState(false);
+  const [hasApprovedEstimate, setHasApprovedEstimate] = useState(false);
 
   const canManageMaterials = canEdit && (isTC || isGC);
   const showPricingColumns = isTC || isGC;
