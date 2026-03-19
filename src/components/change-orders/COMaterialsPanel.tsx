@@ -60,6 +60,13 @@ interface LinkedPricingRequest {
   supplier: { name: string } | null;
 }
 
+interface SupplierPriceEntry {
+  unit_price: number | null;
+  line_total: number | null;
+}
+
+const PRICED_STATUSES = ['PRICED', 'ORDERED', 'DELIVERED'];
+
 function fmt(n: number) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
