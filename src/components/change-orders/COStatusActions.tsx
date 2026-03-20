@@ -313,7 +313,7 @@ export function COStatusActions({
       });
       toast.success('CO marked as completed');
       await logActivity('marked_completed');
-      await notifyOrg(co.assigned_to_org_id ?? co.org_id, 'CO_COMPLETED');
+      await notifyOrg(co.org_id, 'CO_COMPLETED');
       onRefresh();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed');
