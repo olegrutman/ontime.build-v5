@@ -66,10 +66,10 @@ export function UrgentTasksCard({ projectId, onNavigate, isSupplier, supplierOrg
   }
 
   return (
-    <div data-sasha-card="Urgent Tasks" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5">
+    <div data-sasha-card="Urgent Tasks" className="bg-card rounded-lg border shadow-sm p-5">
       <div className="flex items-center gap-2 mb-3">
         <AlertTriangle className="h-4 w-4 text-amber-500" />
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Urgent Tasks</p>
+        <p className="kpi-label">Urgent Tasks</p>
       </div>
       <div className="space-y-2">
         {items.slice(0, 5).map((item, i) => (
