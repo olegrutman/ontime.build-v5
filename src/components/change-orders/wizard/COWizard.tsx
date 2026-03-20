@@ -66,6 +66,7 @@ const ALL_STEPS: WizardStep[] = [
   { key: 'config', label: 'Configuration', description: 'Pricing and assignment' },
   { key: 'location', label: 'Location', description: 'Where is the work' },
   { key: 'catalog', label: 'Scope', description: 'Choose the work items' },
+  { key: 'review', label: 'Review', description: 'Confirm before creating' },
 ];
 
 interface COWizardProps {
