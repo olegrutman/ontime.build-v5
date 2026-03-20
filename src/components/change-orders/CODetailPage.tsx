@@ -668,23 +668,17 @@ function FCPricingToggleCard({
   });
 
   const isOn = co.use_fc_pricing_base ?? false;
-  const fcTotal = financials.fcLaborTotal;
   const rate = orgSettings?.default_hourly_rate ?? 0;
   const markup = orgSettings?.labor_markup_percent ?? 0;
 
-  // Determine FC hours from labor entries (hourly mode)
-  // For now, use fcTotal as the lump sum base and compute hourly from rate
-  const fcHasSubmitted = fcTotal > 0;
-
-  // Hourly calc: we need FC total hours — approximate from fcTotal / assumed FC rate
-  // Actually, for the preview we show both scenarios
-  const hourlyPrice = fcHasSubmitted && rate > 0 ? fcTotal * (rate / (rate || 1)) : 0;
-  // Lump sum calc: FC total × (1 + markup%)
-  const lumpSumPrice = fcTotal * (1 + markup / 100);
-
-  // Simple: if pricing_type is 'fixed', use lump sum calc; otherwise hourly
   const isHourly = co.pricing_type === 'tm' || co.pricing_type === 'nte';
-  const calculatedPrice = isHourly ? (fcTotal > 0 ? fcTotal : 0) : lumpSumPrice;
+  const fcHours = financials.fcTotalHours;
+  const fcLumpSum = financials.fcLumpSumTotal;
+  const fcHasSubmitted = isHourly ? fcHours > 0 : fcLumpSum > 0;
+
+  const calculatedPrice = isHourly
+    ? fcHours * rate
+    : fcLumpSum * (1 + markup / 100);
 
   async function handleToggle(checked: boolean) {
     setToggling(true);
@@ -719,20 +713,28 @@ function FCPricingToggleCard({
 
         {isOn && fcHasSubmitted && (
           <div className="space-y-1.5 pt-1">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">FC submitted total</span>
-              <span className="font-medium text-foreground">{fmtCurrency(fcTotal)}</span>
-            </div>
             {isHourly ? (
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Your rate</span>
-                <span className="font-medium text-foreground">${rate.toFixed(2)}/hr</span>
-              </div>
+              <>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">FC hours</span>
+                  <span className="font-medium text-foreground">{fcHours} hrs</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Your rate</span>
+                  <span className="font-medium text-foreground">${rate.toFixed(2)}/hr</span>
+                </div>
+              </>
             ) : (
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Your markup</span>
-                <span className="font-medium text-foreground">{markup}%</span>
-              </div>
+              <>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">FC lump sum</span>
+                  <span className="font-medium text-foreground">{fmtCurrency(fcLumpSum)}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Your markup</span>
+                  <span className="font-medium text-foreground">{markup}%</span>
+                </div>
+              </>
             )}
             <div className="border-t border-border pt-1.5 mt-1.5">
               <div className="flex items-center justify-between text-xs">

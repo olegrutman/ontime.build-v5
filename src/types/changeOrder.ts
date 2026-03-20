@@ -200,6 +200,8 @@ export interface COActivityEntry {
 export interface COFinancials {
   laborTotal: number;
   fcLaborTotal: number;
+  fcTotalHours: number;
+  fcLumpSumTotal: number;
   tcLaborTotal: number;
   materialsTotal: number;
   materialsCost: number;
