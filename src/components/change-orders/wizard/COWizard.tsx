@@ -166,7 +166,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
 
       if (data.selectedItems.length > 0) {
         const lineItemRows = data.selectedItems.map((item, idx) => ({
-          co_id: newCO.id,
+          co_id: newCOId,
           org_id: orgId,
           created_by_role: role,
           catalog_item_id: item.id,
@@ -178,7 +178,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
         }));
         const { error: lineError } = await supabase.from('co_line_items').insert(lineItemRows);
         if (lineError) {
-          await supabase.from('change_orders').delete().eq('id', newCO.id);
+          await supabase.from('change_orders').delete().eq('id', newCOId);
           throw new Error(`Failed to save scope items: ${lineError.message}`);
         }
       }
@@ -186,7 +186,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
       const { error: activityError } = await supabase
         .from('co_activity')
         .insert({
-          co_id: newCO.id,
+          co_id: newCOId,
           project_id: projectId,
           actor_user_id: user.id,
           actor_role: role,
@@ -197,7 +197,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
       if (activityError) throw activityError;
 
       if (data.shareDraftNow) {
-        await shareCO.mutateAsync(newCO.id);
+        await shareCO.mutateAsync(newCOId);
       }
 
       toast.success('Change order created');
