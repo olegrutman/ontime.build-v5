@@ -1,52 +1,37 @@
 
 
-# Move Reason to Per-Item Description
+# Fix: FC Pricing Toggle Calculation
 
-## What changes
+## Problems
 
-Currently "Reason" is a separate wizard step that sets one reason for the entire CO. Instead, each CO line item should carry its own reason and description — making the reason part of the item, not the CO header.
+1. **Hourly calculation is wrong** — line 681 computes `fcTotal * (rate / rate)` = `fcTotal`, which just returns FC's dollar amount unchanged. The spec says: TC price = FC's **hours** × TC's rate. But `fcLaborTotal` is FC's **dollar total**, not hours.
 
-## Database migration
+2. **No FC hours tracked in financials** — `COFinancials` has `fcLaborTotal` (dollars) but no `fcTotalHours`. The component needs access to FC's actual hours to do hourly pricing.
 
-Add two columns to `co_line_items`:
-- `reason TEXT` — stores the reason code (e.g. `'addition'`, `'rework'`)
-- `description TEXT` — free-text description explaining why this item is on the CO
+3. **`laborEntries` not passed to `FCPricingToggleCard`** — the component only receives `financials`, so it can't compute FC hours from raw entries.
 
-## Wizard changes
+## Fix
 
-### Remove Reason step
-- **`COWizard.tsx`**: Remove `{ key: 'reason' }` from `ALL_STEPS` (goes from 4 steps to 3: Configuration → Scope → Review). Remove `reason`/`reasonNote` from `COWizardData` and `INITIAL_DATA`. Remove `StepReason` import. Update `canAdvance()` to remove reason validation.
+### 1. Add `fcTotalHours` to `COFinancials` (in `useChangeOrderDetail.ts`)
+Compute total FC hours from billable labor entries where `entered_by_role === 'FC'` and `pricing_mode === 'hourly'`:
+```
+fcTotalHours = sum of entry.hours for FC hourly entries
+fcLumpSumTotal = sum of entry.line_total for FC lump_sum entries
+```
+Add both to the `COFinancials` interface in `changeOrder.ts`.
 
-### Add reason + description to per-item flow in StepCatalog
-- **`StepCatalog.tsx`**: After location picker and before "Add item" confirm button, add:
-  1. A reason selector (same chip-style buttons from current `StepReason`) 
-  2. A description textarea ("Describe why this item is needed")
-  - Both stored in the pending-item state, then saved into `SelectedScopeItem`
+### 2. Fix `FCPricingToggleCard` calculation (in `CODetailPage.tsx`)
+- **Hourly mode** (`tm`/`nte`): `calculatedPrice = fcTotalHours × rate`
+- **Lump sum mode** (`fixed`): `calculatedPrice = fcLumpSumTotal × (1 + markup/100)`
+- Show the correct breakdown: "X hrs × $Y/hr" for hourly, "FC total × (1 + Z%)" for lump sum
 
-### Update SelectedScopeItem type
-- **`COWizard.tsx`**: Extend `SelectedScopeItem` to include `reason: COReasonCode` and `description: string`
-
-### Update submission
-- **`COWizard.tsx`** `handleSubmit`: Write `reason` and `description` per line item to `co_line_items` insert. Remove `reason`/`reason_note` from the `change_orders` insert (keep columns in DB but set to null — no destructive migration).
-
-### Update "Add item" on detail page
-- **`CODetailPage.tsx`**: The `AddScopeItemButton` dialog uses `StepCatalog` — it will automatically get the new reason+description fields since it reuses the same component.
-
-### Update display
-- **`COLineItemRow.tsx`**: Show reason badge + description text under each item name
-- **`StepReview.tsx`**: Show per-item reason + description in the review summary
-
-## Files changed
+### Files changed
 
 | File | Change |
 |------|--------|
-| **Migration** | Add `reason TEXT`, `description TEXT` to `co_line_items` |
-| `COWizard.tsx` | Remove reason step, extend `SelectedScopeItem`, update submit |
-| `StepCatalog.tsx` | Add reason chips + description textarea to per-item flow |
-| `StepReview.tsx` | Show per-item reason and description |
-| `CODetailPage.tsx` | No direct changes (inherits from StepCatalog) |
-| `COLineItemRow.tsx` | Display reason badge + description |
-| `changeOrder.ts` | Add `reason` and `description` to `COLineItem` interface |
+| `src/types/changeOrder.ts` | Add `fcTotalHours` and `fcLumpSumTotal` to `COFinancials` |
+| `src/hooks/useChangeOrderDetail.ts` | Compute `fcTotalHours` and `fcLumpSumTotal` from FC labor entries |
+| `src/components/change-orders/CODetailPage.tsx` | Fix `FCPricingToggleCard` to use correct hourly/lump sum formulas |
 
-`StepReason.tsx` is kept in the codebase (not deleted) in case it's reused elsewhere, but no longer imported by the wizard.
+No database changes needed.
 
