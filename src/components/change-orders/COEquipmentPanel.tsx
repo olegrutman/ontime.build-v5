@@ -189,17 +189,17 @@ export function COEquipmentPanel({
                   )}
                 </div>
                 <div className="text-right text-sm shrink-0">
-                  {isTC && (
+                  {isTC && equipmentResponsible === 'TC' && (
                     <div className="text-xs text-muted-foreground">
                       Cost: ${fmt(item.cost ?? 0)}
                     </div>
                   )}
-                  {isTC && item.markup_percent > 0 && (
+                  {isTC && equipmentResponsible === 'TC' && item.markup_percent > 0 && (
                     <div className="text-[10px] text-muted-foreground">
                       +{item.markup_percent}% markup
                     </div>
                   )}
-                  {!isFC && (
+                  {!isFC && (isGC || (isTC && equipmentResponsible === 'TC')) && (
                     <div className="font-medium text-foreground">
                       ${fmt(item.billed_amount ?? 0)}
                     </div>
