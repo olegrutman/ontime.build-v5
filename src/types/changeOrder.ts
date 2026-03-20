@@ -111,6 +111,7 @@ export interface COLineItem {
   unit: string;
   qty: number | null;
   sort_order: number;
+  location_tag: string | null;
   created_at: string;
 }
 

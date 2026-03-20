@@ -172,7 +172,7 @@ export function CODetailPage() {
     );
   }
 
-  const displayTitle = co.title ?? co.co_number ?? 'Change order';
+  const displayTitle = co.co_number ? `${co.co_number} · ${co.created_at ? format(new Date(co.created_at), 'MMM d, yyyy') : ''}` : (co.title ?? 'Change order');
   const fcOrgOptions: COFCOrgOption[] = projectFCOrgs.filter(
     option => !collaboratorOrgIds.has(option.id) || option.id === currentCollaborator?.organization_id
   );
