@@ -1,92 +1,142 @@
 
 
-# Remove CO Combining, Add CO-to-Invoice Billing
+# CO Flow — My Understanding Back to You
 
-## Summary
+Before any code is written, here is exactly how I understood your entire specification, step by step. Please confirm or correct.
 
-Remove the "combine COs" workflow entirely. Instead, once COs are **approved**, downstream parties can select multiple approved COs and generate a single invoice with detailed line items pulled from each CO's labor, materials, and equipment data.
+---
 
-## What Gets Removed
+## FLOW 1 — GC Creates a CO (Standard or NTE)
 
-### Frontend (delete/edit)
-1. **Delete `src/components/change-orders/CombineDrawer.tsx`** — entire file
-2. **Edit `src/components/change-orders/index.ts`** — remove `CombineDrawer` export
-3. **Edit `src/components/change-orders/COListPage.tsx`**:
-   - Remove `CombineDrawer` import and `<CombineDrawer>` usage
-   - Remove `selectedIds` state, `combineOpen` state, `toggleSelect` function
-   - Remove `selectableCOs`, `canCombine` variables
-   - Remove checkbox selectable props from `CORow`/`COCard`
-   - Remove "Combine" button from header
-   - Remove `GitMerge` icon import (unless used elsewhere)
-   - Remove `'combined'` from `STATUS_ORDER` and `STATUS_BADGE_STYLES`
-   - Remove "Select drafts/shared to combine" hint text
+1. **GC opens the wizard** → selects project, CO type (T&M or NTE), description, initial line items. Saves as **draft**.
+2. **GC submits** → CO status moves to a "Work in Progress" state. It **automatically appears on TC's dashboard** — no accept/decline step. TC is the assigned party.
+3. **TC can invite FC(s)** at any time. FC sees only their own scope. FC never sees TC's pricing or GC's numbers.
+4. **GC can add new line items or update scope at any time** throughout the CO lifecycle. Every addition triggers a notification to TC (and to any FC on the CO).
+5. **GC clicks "Close CO for Final Pricing"** → this is a new explicit action (not currently in the system). It sends a notification to TC and any FC.
+6. **TC submits final pricing. FC submits final pricing independently.** Both submit against their own scope.
+7. **Once all parties have submitted** (TC always, FC if invited), the CO moves to **Final Approval** with GC.
+8. **GC reviews and approves.**
+9. **After approval** → TC can invoice GC against the CO. FC can invoice TC against the CO.
 
-4. **Edit `src/types/changeOrder.ts`**:
-   - Remove `'combined'` from `COStatus` union
-   - Remove `combined` from `CO_STATUS_LABELS`
-   - Remove `combined_at`, `combined_co_id`, `parent_co_id` from `ChangeOrder` interface
-   - Remove `COCombinedMember` interface
+### NTE additions:
+- NTE cap set at creation.
+- Running totals tracked in real time.
+- **At 80%**: automated warning notification to all parties.
+- **At 100%**: system **blocks** further additions. Alert sent to GC, TC, FC. GC must either increase the NTE or close the CO at current value.
 
-5. **Edit `src/hooks/useChangeOrders.ts`**:
-   - Remove `COMemberPreview` interface and `memberPreviews` field from `ChangeOrderWithMembers`
-   - Remove `combineCOs` mutation entirely
-   - Remove `co_combined_members` query logic
-   - Remove child-filtering logic (the `childIds` Set)
-   - Remove `grouped.mine.combined` bucket
+---
 
-6. **Edit `src/hooks/useChangeOrderDetail.ts`**:
-   - Remove `isCombinedParent` check and `memberCOs` query against `co_combined_members`
-   - Remove `allCoIds` logic (always just `[coId]`)
-   - Remove `memberCOs` from return value
+## FLOW 2 — TC Creates a CO (Fixed Price)
 
-7. **Edit `src/components/change-orders/CODetailPage.tsx`**:
-   - Remove `memberCOs` usage, `scopeSections` combined logic
-   - Remove `isCombinedParent` checks, `GitMerge` icon for combined
-   - Remove `'combined'` from `STATUS_BADGE` and `isActiveStatus`
-   - Simplify scope rendering to always show flat line items
+1. **TC creates CO** with description, fixed price (lump sum or hours x rate), optional duration.
+2. **TC submits to GC** for approval.
+3. **GC approves or rejects.**
+   - Rejected: returns to TC with comments. TC revises and resubmits.
+   - Approved: CO is locked at the approved price.
+4. **TC executes work.** When done, TC marks CO as **"Completed."** (This is a new status — not currently in the system.)
+5. **GC receives notification** of completion. GC must **acknowledge** completion before TC can invoice. (This is a new gating step.)
+6. **After GC acknowledges** → TC can invoice. FC (if involved) can invoice TC.
 
-8. **Edit `src/components/change-orders/COStatusActions.tsx`**:
-   - Remove `isCombinedParent` check and combined-specific share logic
+---
 
-### Database Migration
-- Remove `'combined'` from the `can_request_fc_change_order_input` function's status list
-- Note: Keep `co_combined_members` table and `combined_co_id` column in DB for now (no destructive schema changes on existing data), but they'll be unused
+## TC Account Settings — Pricing Defaults
 
-## What Gets Added
+The `org_settings` table already has `default_hourly_rate` and `labor_markup_percent`. What's **new**:
 
-### New: "Create Invoice from COs" Flow
+- **A new boolean column** (e.g. `use_fc_input_as_base`) on `org_settings` — the account-level default toggle.
+  - If **ON**: every new CO that TC opens with FC involvement starts with the per-CO toggle pre-set to ON.
+  - If **OFF**: every new CO starts with the toggle OFF; TC prices manually.
 
-**Concept**: On the Invoices tab, TC/FC users can click "New Invoice" and choose between SOV-based billing (existing) or CO-based billing (new). In CO-based mode, they select multiple approved COs and the system generates an invoice with precise line items.
+---
 
-#### Database Migration
-- Add `co_ids` column (text array, nullable) to `invoices` table — stores the list of CO IDs that were billed in this invoice
-- No new tables needed — invoice line items use the existing `invoice_line_items` table with detailed `description` text
+## Per-CO Toggle — "Use FC Input as My Pricing Base"
 
-#### New Component: `src/components/invoices/CreateInvoiceFromCOs.tsx`
-A wizard/dialog with 3 steps:
-1. **Select COs** — shows all `approved` COs on the project that haven't been billed yet (not in any existing invoice's `co_ids`). Multi-select with checkboxes. Each CO shows title, location, reason, grand total.
-2. **Review Line Items** — auto-generated from selected COs:
-   - **Labor entries**: `"[Item Name] – [Hours] hrs × $[Rate]/hr"` with amount `$[line_total]`
-   - **Lump sum labor**: `"[Item Name] – Lump sum"` with amount
-   - **Materials**: `"[Description] – [Qty] [UOM] × $[Unit Cost] + [Markup%] markup"` with `billed_amount`
-   - **Equipment**: `"[Description] – [Duration Note]"` with `billed_amount`
-   - User can edit descriptions before submitting
-   - Shows subtotal, retainage, total
-3. **Submit** — creates the invoice + line items, marks it as SUBMITTED
+A **new boolean column** on `change_orders` (e.g. `use_fc_pricing_base`). Appears in TC's view whenever FC has been invited and has submitted input. Overrides account default for that specific CO only.
 
-#### Edit: `src/components/invoices/InvoicesTab.tsx`
-- Add a source picker when clicking "New Invoice": "From SOV" or "From Change Orders"
-- When "From Change Orders" is selected, open the new `CreateInvoiceFromCOs` dialog
+### IF TOGGLE ON — HOURLY:
+- TC's price to GC = FC's submitted hours × TC's `default_hourly_rate` (from org_settings at time of calculation).
+- Example: FC submits 10 hrs. TC's rate is $95/hr. → TC bills GC **$950**.
+- FC's own rate and what TC actually pays FC is tracked separately, never shown to GC or FC.
 
-#### Edit: `src/components/invoices/InvoiceDetail.tsx`
-- If invoice has `co_ids`, show a "Change Orders" section listing the linked COs with links to their detail pages
+### IF TOGGLE ON — LUMP SUM:
+- TC's price to GC = FC's submitted lump sum × (1 + TC's `labor_markup_percent`).
+- Example: FC submits $1,000. TC margin is 25%. → TC bills GC **$1,250**.
+- Margin % never visible to FC or GC.
 
-#### Edit: `src/types/invoice.ts`
-- Add `co_ids: string[] | null` to `Invoice` interface
+### IF TOGGLE OFF:
+- TC enters pricing manually. FC's numbers are visible to TC as cost reference only.
 
-### Files Changed (total ~12)
-- **Deleted**: `CombineDrawer.tsx`
-- **New**: `CreateInvoiceFromCOs.tsx`
-- **Edited**: `COListPage.tsx`, `CODetailPage.tsx`, `COStatusActions.tsx`, `useChangeOrders.ts`, `useChangeOrderDetail.ts`, `changeOrder.ts` (types), `change-orders/index.ts`, `InvoicesTab.tsx`, `InvoiceDetail.tsx`, `invoice.ts` (types)
-- **Migration**: 1 SQL file (add `co_ids` column + RLS update)
+### Retroactivity:
+- Changes to TC's rate or margin in account settings **do not** retroactively change already-submitted or approved COs. They only affect new COs going forward. This means the calculated price is **snapshotted** at the time TC submits/generates pricing, not dynamically recalculated.
+
+---
+
+## Visibility Rules (What Each Role Sees)
+
+| Data | GC sees | TC sees | FC sees |
+|------|---------|---------|---------|
+| TC's final price to GC | Yes | Yes | No |
+| FC's hours/lump sum | No | Yes (as cost) | Yes (own) |
+| TC's hourly rate | No | Yes (own) | No |
+| TC's margin % | No | Yes (own) | No |
+| Material pricing | Yes if responsible; otherwise only if GC is responsible | Yes if TC is responsible; No if GC is responsible | Never |
+| Equipment pricing | Same as materials | Same as materials | Never |
+
+---
+
+## Materials & Equipment Visibility
+- Any party can **add** materials/equipment to a CO.
+- FC can add but **cannot see pricing**.
+- Responsibility is set **per line item** at entry time.
+- If TC is responsible → TC sees pricing, FC doesn't.
+- If TC is NOT responsible → only GC sees pricing. TC doesn't see it either.
+- Same rules for equipment.
+
+**My assumption**: The current `materials_responsible` / `equipment_responsible` field is per-CO, not per-line-item. Your spec says "per line item at entry time." This means I need to add a `responsible_party` column to `co_material_items` and `co_equipment_items` tables, and visibility logic checks that column per row.
+
+---
+
+## Invoicing Chain
+- FC invoices TC. TC invoices GC. FC **never** invoices GC.
+- No party can invoice until: (a) CO is **Final Approved**, and (b) the **completion acknowledgment** step is satisfied (for Flow 2).
+
+---
+
+## What's New vs. What Exists
+
+| Feature | Current state | Needed |
+|---------|--------------|--------|
+| CO statuses | draft, shared, submitted, approved, rejected, contracted | Add: **work_in_progress**, **closed_for_pricing**, **completed**, **completion_acknowledged** |
+| "Close CO for Final Pricing" action | Does not exist | New GC action |
+| "Mark Completed" action | Does not exist | New TC action |
+| "Acknowledge Completion" action | Does not exist | New GC action |
+| Per-CO toggle `use_fc_pricing_base` | Does not exist | New column on `change_orders` |
+| Account default `use_fc_input_as_base` | Does not exist | New column on `org_settings` |
+| TC auto-pricing from FC input | Does not exist | New calculation logic in TC's pricing view |
+| NTE 80% warning notification | Partially exists (UI banner at 80%) | Need automated notification trigger |
+| NTE 100% hard block | Partially exists (UI warning at 95%) | Need hard block at 100% + notification |
+| Material/equipment responsibility per line item | Per-CO only | Need per-line-item column |
+| GC can add scope to live CO | Not restricted but no notification | Need notification on scope additions |
+
+---
+
+## Ambiguities / Assumptions I Need You to Confirm
+
+1. **"Work in Progress" status**: You described that when GC submits, it "automatically appears on TC's dashboard as Work in Progress." Is this a distinct DB status (`work_in_progress`), or is the current `shared` status sufficient with a UI label change?
+
+2. **"Close CO for Final Pricing"**: Is this a new status (e.g. `closed_for_pricing`) or an action that sets a flag while the CO remains in `submitted` status?
+
+3. **"Completed" and "Acknowledged"**: Are these two new statuses in the lifecycle, or flags on the existing `approved` status?
+
+4. **NTE 100% block**: Should this be a hard DB-level block (trigger that prevents INSERT on labor entries when total >= cap), or a UI-level block that the frontend enforces?
+
+5. **TC auto-pricing snapshot**: When the toggle is ON, at what moment is TC's price to GC calculated and locked? At TC's submission time? Or is it a live calculation that only locks when the CO is approved?
+
+6. **Material responsibility per line item vs per CO**: You said "per line item at entry time." The current schema has it per CO. Confirming you want a `responsible_party` column on each material/equipment row.
+
+7. **FC can create COs?**: Your flows only mention GC-created (Flow 1) and TC-created (Flow 2). The current system allows FC to create COs. Should FC creation be removed, or is it an implicit third flow?
+
+---
+
+I will not write any code until you confirm my understanding is correct and clarify the ambiguities above.
 
