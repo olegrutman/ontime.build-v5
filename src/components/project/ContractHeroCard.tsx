@@ -182,7 +182,7 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
       {isTC && (
         <div className="border-t mt-4 pt-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Outgoing ({getContractCounterpartyName(downstreamContract, userOrgIds)})</span>
+            <span className="text-[0.68rem] text-muted-foreground">Outgoing ({getContractCounterpartyName(downstreamContract, userOrgIds)})</span>
             <div className="group flex items-center gap-1.5">
               <span className="text-sm font-semibold tabular-nums">{downstreamContract ? fmt(fcContractValue) : '—'}</span>
               {(downstreamContract || fcParticipants.length > 0) && (
