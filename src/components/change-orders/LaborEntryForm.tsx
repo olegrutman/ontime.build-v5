@@ -126,6 +126,84 @@ export function LaborEntryForm({
         is_actual_cost: isActualCost,
       });
       if (error) throw error;
+
+      // NTE threshold notifications
+      if (nteCap && nteCap > 0 && !isActualCost) {
+        const newUsed = nteUsed + computedTotal;
+        const pct = (newUsed / nteCap) * 100;
+        const prevPct = (nteUsed / nteCap) * 100;
+
+        if (pct >= 100 && prevPct < 100) {
+          // Crossed 100% — send block notification
+          try {
+            const { sendCONotification, buildCONotification } = await import('@/lib/coNotifications');
+            const { data: coData } = await supabase
+              .from('change_orders')
+              .select('title, project_id, org_id, assigned_to_org_id')
+              .eq('id', coId)
+              .single();
+            if (coData) {
+              const orgs = [coData.org_id, coData.assigned_to_org_id].filter(Boolean) as string[];
+              for (const oid of orgs) {
+                const { data: members } = await supabase
+                  .from('user_org_roles')
+                  .select('user_id')
+                  .eq('organization_id', oid)
+                  .limit(10);
+                if (members) {
+                  const { title, body } = buildCONotification('NTE_BLOCKED_100', coData.title);
+                  for (const m of members) {
+                    sendCONotification({
+                      recipient_user_id: m.user_id,
+                      recipient_org_id: oid,
+                      co_id: coId,
+                      project_id: coData.project_id,
+                      type: 'NTE_BLOCKED_100',
+                      title,
+                      body,
+                    });
+                  }
+                }
+              }
+            }
+          } catch { /* non-critical */ }
+        } else if (pct >= 80 && prevPct < 80) {
+          // Crossed 80% — send warning notification
+          try {
+            const { sendCONotification, buildCONotification } = await import('@/lib/coNotifications');
+            const { data: coData } = await supabase
+              .from('change_orders')
+              .select('title, project_id, org_id, assigned_to_org_id')
+              .eq('id', coId)
+              .single();
+            if (coData) {
+              const orgs = [coData.org_id, coData.assigned_to_org_id].filter(Boolean) as string[];
+              for (const oid of orgs) {
+                const { data: members } = await supabase
+                  .from('user_org_roles')
+                  .select('user_id')
+                  .eq('organization_id', oid)
+                  .limit(10);
+                if (members) {
+                  const { title, body } = buildCONotification('NTE_WARNING_80', coData.title);
+                  for (const m of members) {
+                    sendCONotification({
+                      recipient_user_id: m.user_id,
+                      recipient_org_id: oid,
+                      co_id: coId,
+                      project_id: coData.project_id,
+                      type: 'NTE_WARNING_80',
+                      title,
+                      body,
+                    });
+                  }
+                }
+              }
+            }
+          } catch { /* non-critical */ }
+        }
+      }
+
       toast.success('Labor entry saved');
       onSaved();
     } catch (err: any) {
