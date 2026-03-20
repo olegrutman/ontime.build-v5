@@ -134,4 +134,5 @@ export const ACTION_TYPE_LABELS: Record<SupportActionType, string> = {
   DELETE_INVOICE: 'Invoice Deleted',
   DELETE_PURCHASE_ORDER: 'Purchase Order Deleted',
   DELETE_WORK_ORDER: 'Work Order Deleted',
+  DELETE_CHANGE_ORDER: 'Change Order Deleted',
 };

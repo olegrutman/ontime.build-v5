@@ -898,6 +898,65 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "DELETE_CHANGE_ORDER": {
+        const { co_id } = params;
+        if (!co_id) {
+          return new Response(JSON.stringify({ error: "co_id is required" }), {
+            status: 400, headers: corsHeaders,
+          });
+        }
+        targetId = co_id;
+
+        const { data: coData } = await adminClient
+          .from("change_orders")
+          .select("co_number, status, pricing_type, project_id")
+          .eq("id", co_id)
+          .single();
+        if (!coData) {
+          return new Response(JSON.stringify({ error: "Change order not found" }), {
+            status: 404, headers: corsHeaders,
+          });
+        }
+        snapshotBefore = coData;
+
+        // Nullify self-referencing FKs (NO ACTION)
+        await adminClient.from("change_orders").update({ combined_co_id: null }).eq("combined_co_id", co_id);
+        await adminClient.from("change_orders").update({ parent_co_id: null }).eq("parent_co_id", co_id);
+
+        // Nullify PO FK reference
+        await adminClient.from("purchase_orders").update({ source_change_order_id: null }).eq("source_change_order_id", co_id);
+
+        // Remove CO id from invoices.co_ids array
+        const { data: linkedInvoices } = await adminClient
+          .from("invoices")
+          .select("id, co_ids")
+          .contains("co_ids", [co_id]);
+        if (linkedInvoices && linkedInvoices.length > 0) {
+          for (const inv of linkedInvoices) {
+            const updatedIds = (inv.co_ids || []).filter((id: string) => id !== co_id);
+            await adminClient.from("invoices").update({ co_ids: updatedIds }).eq("id", inv.id);
+          }
+        }
+
+        // Clean up notifications
+        await adminClient.from("notifications").delete().eq("entity_type", "change_order").eq("entity_id", co_id);
+
+        // Delete CO — child tables cascade
+        const { error: delCoErr } = await adminClient
+          .from("change_orders")
+          .delete()
+          .eq("id", co_id);
+        if (delCoErr) {
+          return new Response(JSON.stringify({ error: delCoErr.message }), {
+            status: 500, headers: corsHeaders,
+          });
+        }
+
+        logMeta = { p_target_project_id: coData.project_id, p_action_summary: `Deleted change order "${coData.co_number}" (${coData.status}, ${coData.pricing_type})` };
+        result = { success: true, message: "Change order deleted" };
+        break;
+      }
+
       default:
         return new Response(JSON.stringify({ error: "Not implemented" }), {
           status: 400,
