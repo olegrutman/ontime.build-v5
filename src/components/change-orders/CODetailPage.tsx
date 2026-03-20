@@ -276,7 +276,7 @@ export function CODetailPage() {
                   )}
                   <div className="co-light-kpi">
                     <p className="co-light-kpi-label">Grand total</p>
-                    <p className="co-light-kpi-value">{fmtCurrency(financials.grandTotal)}</p>
+                    <p className="co-light-kpi-value">{fmtCurrency(isGC ? (financials.tcLaborTotal + financials.materialsTotal + financials.equipmentTotal) : isFC ? financials.fcLaborTotal : financials.grandTotal)}</p>
                   </div>
                 </div>
 
