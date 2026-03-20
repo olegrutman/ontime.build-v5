@@ -536,7 +536,7 @@ function AddScopeItemButton({ coId, orgId, projectId, role, co, collaborators, o
         co_id: coId,
         org_id: orgId,
         item_name: item.item_name,
-        unit: item.default_unit,
+        unit: item.unit,
         catalog_item_id: item.id,
         division: item.division,
         category_name: item.category_name,
