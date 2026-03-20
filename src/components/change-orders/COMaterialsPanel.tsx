@@ -120,6 +120,7 @@ export function COMaterialsPanel({
   isGC,
   isFC,
   materialsOnSite,
+  materialsResponsible,
   canEdit,
   onRefresh,
 }: COMaterialsPanelProps) {
