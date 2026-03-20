@@ -21,7 +21,7 @@ export async function sendCONotification(payload: CONotificationPayload) {
       body: payload.body,
       entity_type: 'change_order',
       entity_id: payload.co_id,
-      action_url: `/projects/${payload.project_id}/co/${payload.co_id}`,
+      action_url: `/projects/${payload.project_id}/change-orders/${payload.co_id}`,
       is_read: false,
     }]);
 

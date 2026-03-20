@@ -487,7 +487,7 @@ export function CODetailPage() {
                   <div className="px-4 py-3 space-y-2">
                     <DetailRow label="Status" value={CO_STATUS_LABELS[co.status as COStatus]} />
                     <DetailRow label="Pricing" value={PRICING_LABEL[co.pricing_type] ?? co.pricing_type} />
-                    {co.reason && <DetailRow label="Reason" value={CO_REASON_LABELS[co.reason as COReasonCode]} />}
+                    {/* co.reason is now per-item on co_line_items — removed dead field (m3) */}
                     {co.location_tag && <DetailRow label="Location" value={co.location_tag} />}
                     <DetailRow label="Created by" value={co.created_by_role} />
                     <DetailRow label="Created" value={co.created_at ? format(new Date(co.created_at), 'MMM d, yyyy') : '—'} />
