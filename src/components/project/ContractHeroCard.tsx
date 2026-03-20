@@ -156,9 +156,9 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
   const currentTotal = gcContractValue;
 
   return (
-    <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 md:p-6">
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Current Contract Total</p>
-      <p className="font-heading text-[1.9rem] md:text-3xl font-black tabular-nums text-foreground mb-4">{fmt(currentTotal)}</p>
+    <div data-sasha-card="Contract" className="bg-card rounded-lg border shadow-sm p-5 md:p-6">
+      <p className="kpi-label mb-1">Current Contract Total</p>
+      <p className="kpi-value mb-4">{fmt(currentTotal)}</p>
 
       <div className="border-t pt-4 grid grid-cols-2 gap-4">
         {/* Original Contract */}
