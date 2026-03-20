@@ -8,6 +8,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 import type { COCreatedByRole, COReasonCode, COPricingType, WorkOrderCatalogItem } from '@/types/changeOrder';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { StepCatalog } from './StepCatalog';
@@ -78,7 +79,8 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
   const [step, setStep] = useState(0);
   const [data, setData] = useState<COWizardData>(INITIAL_DATA);
   const [submitting, setSubmitting] = useState(false);
-  const { createCO, shareCO } = useChangeOrders(projectId);
+  const { shareCO } = useChangeOrders(projectId);
+  const queryClient = useQueryClient();
   const orgId = userOrgRoles?.[0]?.organization_id ?? null;
 
   const role: COCreatedByRole =
@@ -131,34 +133,42 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
       const title = data.title.trim() ||
         (data.selectedItems.length > 0 ? data.selectedItems[0].item_name : null);
 
-      const newCO = await createCO.mutateAsync({
-        org_id: orgId,
-        project_id: projectId,
-        created_by_user_id: user.id,
-        created_by_role: role,
-        title,
-        status: 'draft',
-        pricing_type: data.pricingType,
-        nte_cap: data.pricingType === 'nte' && data.nteCap ? parseFloat(data.nteCap) : null,
-        reason: data.reason,
-        reason_note: data.reasonNote || null,
-        location_tag: data.locationTags.length > 0 ? data.locationTags.join(' | ') : null,
-        assigned_to_org_id: data.assignedToOrgId || null,
-        fc_input_needed: data.fcInputNeeded,
-        materials_needed: data.materialsNeeded,
-        materials_on_site: data.materialsOnSite,
-        equipment_needed: data.equipmentNeeded,
-        materials_responsible: data.materialsResponsible,
-        equipment_responsible: data.equipmentResponsible,
-        draft_shared_with_next: data.shareDraftNow,
-        combined_co_id: null,
-        parent_co_id: null,
-        rejection_note: null,
-      });
+      const preGeneratedId = crypto.randomUUID();
+
+      const { error: insertError } = await supabase
+        .from('change_orders')
+        .insert({
+          id: preGeneratedId,
+          org_id: orgId,
+          project_id: projectId,
+          created_by_user_id: user.id,
+          created_by_role: role,
+          title,
+          status: 'draft',
+          pricing_type: data.pricingType,
+          nte_cap: data.pricingType === 'nte' && data.nteCap ? parseFloat(data.nteCap) : null,
+          reason: data.reason,
+          reason_note: data.reasonNote || null,
+          location_tag: data.locationTags.length > 0 ? data.locationTags.join(' | ') : null,
+          assigned_to_org_id: data.assignedToOrgId || null,
+          fc_input_needed: data.fcInputNeeded,
+          materials_needed: data.materialsNeeded,
+          materials_on_site: data.materialsOnSite,
+          equipment_needed: data.equipmentNeeded,
+          materials_responsible: data.materialsResponsible,
+          equipment_responsible: data.equipmentResponsible,
+          draft_shared_with_next: data.shareDraftNow,
+          combined_co_id: null,
+          parent_co_id: null,
+          rejection_note: null,
+        });
+      if (insertError) throw insertError;
+
+      const newCOId = preGeneratedId;
 
       if (data.selectedItems.length > 0) {
         const lineItemRows = data.selectedItems.map((item, idx) => ({
-          co_id: newCO.id,
+          co_id: newCOId,
           org_id: orgId,
           created_by_role: role,
           catalog_item_id: item.id,
@@ -170,7 +180,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
         }));
         const { error: lineError } = await supabase.from('co_line_items').insert(lineItemRows);
         if (lineError) {
-          await supabase.from('change_orders').delete().eq('id', newCO.id);
+          await supabase.from('change_orders').delete().eq('id', newCOId);
           throw new Error(`Failed to save scope items: ${lineError.message}`);
         }
       }
@@ -178,7 +188,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
       const { error: activityError } = await supabase
         .from('co_activity')
         .insert({
-          co_id: newCO.id,
+          co_id: newCOId,
           project_id: projectId,
           actor_user_id: user.id,
           actor_role: role,
@@ -189,9 +199,10 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
       if (activityError) throw activityError;
 
       if (data.shareDraftNow) {
-        await shareCO.mutateAsync(newCO.id);
+        await shareCO.mutateAsync(newCOId);
       }
 
+      queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
       toast.success('Change order created');
       handleClose();
     } catch (err: any) {
