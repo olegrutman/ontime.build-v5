@@ -297,7 +297,6 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
 
             <div className="co-light-shell p-4 sm:p-5">
               {currentStep.key === 'catalog' && <StepCatalog data={data} onChange={update} projectId={projectId} />}
-              {currentStep.key === 'reason' && <StepReason data={data} onChange={update} />}
               {currentStep.key === 'config' && <StepConfig data={data} onChange={update} role={role} projectId={projectId} />}
               {currentStep.key === 'review' && <StepReview data={data} projectId={projectId} />}
             </div>
