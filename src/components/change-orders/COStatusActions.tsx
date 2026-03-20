@@ -389,7 +389,7 @@ export function COStatusActions({
       <div className="co-light-shell border-destructive/30 bg-destructive/5 px-4 py-3 space-y-2">
         <p className="text-sm font-semibold text-destructive">Rejected</p>
         <p className="text-xs text-muted-foreground">{co.rejection_note}</p>
-        {canSubmit && (
+        {(canSubmit || canSubmitFCPricing) && (
           <Button size="sm" className="w-full h-8 text-xs gap-1" onClick={doSubmit} disabled={acting}>
             {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
             Resubmit
