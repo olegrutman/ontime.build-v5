@@ -99,9 +99,9 @@ function Section({ icon: Icon, title, children }: { icon: React.ElementType; tit
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex gap-2 text-sm">
+    <div className="flex gap-2 text-[0.82rem]">
       <span className="text-muted-foreground w-24 shrink-0">{label}</span>
-      <span className="text-foreground">{value}</span>
+      <span className="text-foreground font-medium">{value}</span>
     </div>
   );
 }

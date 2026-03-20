@@ -85,7 +85,7 @@ export function RemindersTile({ reminders, onComplete, onAdd }: RemindersTilePro
             })}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
