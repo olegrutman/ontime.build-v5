@@ -135,7 +135,7 @@ export function COEquipmentPanel({
           <Wrench className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold text-foreground">Equipment</h3>
         </div>
-        {canEdit && isTC && (
+        {canEdit && (isTC || isGC || isFC) && (
           <div className="flex gap-1">
             <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowPicker(p => !p)}>
               Pick from list
