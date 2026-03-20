@@ -344,14 +344,14 @@ export function StepConfig({ data, onChange, role, projectId }: StepConfigProps)
         </div>
       </div>
 
-      {data.locationTags.length > 0 && (
+      {data.selectedItems.some(i => i.locationTag) && (
         <div className="space-y-1">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-            Location{data.locationTags.length > 1 ? 's' : ''}
+            Item locations
           </p>
           <div className="space-y-0.5">
-            {data.locationTags.map((tag, i) => (
-              <p key={i} className="text-sm text-foreground">{tag}</p>
+            {data.selectedItems.filter(i => i.locationTag).map((item, i) => (
+              <p key={i} className="text-sm text-foreground">{item.item_name}: {item.locationTag}</p>
             ))}
           </div>
         </div>

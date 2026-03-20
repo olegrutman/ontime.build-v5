@@ -172,7 +172,7 @@ export function CODetailPage() {
     );
   }
 
-  const displayTitle = co.title ?? co.co_number ?? 'Change order';
+  const displayTitle = co.co_number ? `${co.co_number} · ${co.created_at ? format(new Date(co.created_at), 'MMM d, yyyy') : ''}` : (co.title ?? 'Change order');
   const fcOrgOptions: COFCOrgOption[] = projectFCOrgs.filter(
     option => !collaboratorOrgIds.has(option.id) || option.id === currentCollaborator?.organization_id
   );
@@ -500,7 +500,7 @@ export function CODetailPage() {
   );
 }
 
-/* ── Add Scope Item Button + Dialog ── */
+/* ── Add Scope Item Button + Dialog with Location ── */
 
 interface AddScopeItemButtonProps {
   coId: string;
@@ -517,95 +517,71 @@ function AddScopeItemButton({ coId, orgId, projectId, role, co, collaborators, o
   const [query, setQuery] = useState('');
   const [drillDivision, setDrillDivision] = useState<string | null>(null);
   const [drillCategory, setDrillCategory] = useState<string | null>(null);
-  const { divisions, search, isLoading } = useWorkOrderCatalog();
+  const { divisions, search } = useWorkOrderCatalog();
+
+  const [pendingItem, setPendingItem] = useState<WorkOrderCatalogItem | null>(null);
+  const [locFields, setLocFields] = useState({ inside_outside: '' as '' | 'inside' | 'outside', level: '', room_area: '', exterior_feature: '' });
 
   const searchResults = useMemo(() => search(query), [query, search]);
 
+  const SEP = ' → ';
+  function buildTag() {
+    const f = locFields;
+    if (f.inside_outside === 'inside') {
+      const parts = ['Inside'];
+      if (f.level) parts.push(f.level);
+      if (f.room_area) parts.push(f.room_area);
+      return parts.join(SEP);
+    }
+    if (f.inside_outside === 'outside') {
+      const parts = ['Outside'];
+      if (f.exterior_feature) parts.push(f.exterior_feature);
+      return parts.join(SEP);
+    }
+    return '';
+  }
+  const locationTag = buildTag();
+  const canConfirm = locationTag.includes(SEP);
+
   const addItemMutation = useMutation({
-    mutationFn: async (item: WorkOrderCatalogItem) => {
-      const maxSort = await supabase
-        .from('co_line_items')
-        .select('sort_order')
-        .eq('co_id', coId)
-        .order('sort_order', { ascending: false })
-        .limit(1)
-        .single();
+    mutationFn: async ({ item, locTag }: { item: WorkOrderCatalogItem; locTag: string }) => {
+      const maxSort = await supabase.from('co_line_items').select('sort_order').eq('co_id', coId).order('sort_order', { ascending: false }).limit(1).single();
       const nextSort = (maxSort.data?.sort_order ?? 0) + 1;
 
       const { error } = await supabase.from('co_line_items').insert({
-        co_id: coId,
-        org_id: orgId,
-        item_name: item.item_name,
-        unit: item.unit,
-        catalog_item_id: item.id,
-        division: item.division,
-        category_name: item.category_name,
-        created_by_role: role,
-        sort_order: nextSort,
+        co_id: coId, org_id: orgId, item_name: item.item_name, unit: item.unit,
+        catalog_item_id: item.id, division: item.division, category_name: item.category_name,
+        created_by_role: role, sort_order: nextSort, location_tag: locTag || null,
       });
       if (error) throw error;
 
-      // Log activity
       await supabase.from('co_activity').insert({
-        co_id: coId,
-        project_id: projectId,
+        co_id: coId, project_id: projectId,
         actor_user_id: (await supabase.auth.getUser()).data.user!.id,
-        actor_role: role,
-        action: 'scope_added',
-        detail: `Added: ${item.item_name}`,
+        actor_role: role, action: 'scope_added', detail: `Added: ${item.item_name}`,
       });
 
-      // Notify other parties
       const orgIds = new Set<string>();
       if (co.org_id) orgIds.add(co.org_id);
       if (co.assigned_to_org_id) orgIds.add(co.assigned_to_org_id);
-      for (const c of collaborators) {
-        if (c.status === 'active') orgIds.add(c.organization_id);
-      }
+      for (const c of collaborators) { if (c.status === 'active') orgIds.add(c.organization_id); }
       orgIds.delete(orgId);
-
       const { title: nTitle, body: nBody } = buildCONotification('CO_SCOPE_ADDED', co.title);
-
-      for (const targetOrgId of orgIds) {
-        const { data: members } = await supabase
-          .from('user_org_roles')
-          .select('user_id')
-          .eq('organization_id', targetOrgId);
-        if (members) {
-          await Promise.allSettled(
-            members.map(m =>
-              sendCONotification({
-                recipient_user_id: m.user_id,
-                recipient_org_id: targetOrgId,
-                co_id: coId,
-                project_id: projectId,
-                type: 'CO_SCOPE_ADDED',
-                title: nTitle,
-                body: nBody,
-              })
-            )
-          );
-        }
+      for (const tid of orgIds) {
+        const { data: members } = await supabase.from('user_org_roles').select('user_id').eq('organization_id', tid);
+        if (members) await Promise.allSettled(members.map(m => sendCONotification({ recipient_user_id: m.user_id, recipient_org_id: tid, co_id: coId, project_id: projectId, type: 'CO_SCOPE_ADDED', title: nTitle, body: nBody })));
       }
     },
-    onSuccess: () => {
-      toast.success('Scope item added');
-      onAdded();
-    },
-    onError: (err: any) => {
-      toast.error(err?.message ?? 'Failed to add item');
-    },
+    onSuccess: () => { toast.success('Scope item added'); setPendingItem(null); setOpen(false); onAdded(); },
+    onError: (err: any) => { toast.error(err?.message ?? 'Failed to add item'); },
   });
 
-  function handleSelect(item: WorkOrderCatalogItem) {
-    addItemMutation.mutate(item);
+  function handleSelectFromCatalog(item: WorkOrderCatalogItem) {
+    setPendingItem(item);
+    setLocFields({ inside_outside: '', level: '', room_area: '', exterior_feature: '' });
   }
 
-  function resetDrill() {
-    setDrillDivision(null);
-    setDrillCategory(null);
-    setQuery('');
-  }
+  function resetDrill() { setDrillDivision(null); setDrillCategory(null); setQuery(''); setPendingItem(null); }
 
   const activeDivision = divisions.find(d => d.division === drillDivision);
   const activeCategory = activeDivision?.categories.find(c => c.category_id === drillCategory);
@@ -613,119 +589,104 @@ function AddScopeItemButton({ coId, orgId, projectId, role, co, collaborators, o
   return (
     <>
       <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => { resetDrill(); setOpen(true); }}>
-        <Plus className="h-3.5 w-3.5" />
-        Add item
+        <Plus className="h-3.5 w-3.5" /> Add item
       </Button>
-
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
           <DialogHeader>
-            <DialogTitle className="text-base font-semibold">Add scope item</DialogTitle>
+            <DialogTitle className="text-base font-semibold">{pendingItem ? 'Set location' : 'Add scope item'}</DialogTitle>
           </DialogHeader>
-
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search catalog..."
-              value={query}
-              onChange={e => { setQuery(e.target.value); if (e.target.value) resetDrill(); }}
-              className="pl-10"
-              autoFocus
-            />
-            {query && (
-              <button onClick={() => setQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2">
-                <X className="h-4 w-4 text-muted-foreground" />
-              </button>
-            )}
-          </div>
-
-          <div className="flex-1 overflow-y-auto min-h-0 -mx-2">
-            {/* Search results */}
-            {query.length >= 2 && (
-              <div className="space-y-0.5 px-2">
-                {searchResults.length === 0 && (
-                  <p className="text-sm text-muted-foreground py-4 text-center">No items found</p>
-                )}
-                {searchResults.map(item => (
-                  <button
-                    key={item.id}
-                    onClick={() => handleSelect(item)}
-                    disabled={addItemMutation.isPending}
-                    className="w-full text-left px-3 py-2.5 rounded-md hover:bg-accent/50 transition-colors"
-                  >
-                    <p className="text-sm font-medium text-foreground">{item.item_name}</p>
-                    <p className="text-[11px] text-muted-foreground">{item.path}</p>
-                  </button>
-                ))}
+          {pendingItem ? (
+            <div className="space-y-4 overflow-y-auto">
+              <div className="bg-muted/30 rounded-lg px-3 py-2">
+                <p className="text-sm font-medium">{pendingItem.item_name}</p>
+                <p className="text-xs text-muted-foreground">{pendingItem.category_name} · {pendingItem.unit}</p>
               </div>
-            )}
-
-            {/* Browse: divisions */}
-            {!query && !drillDivision && (
-              <div className="space-y-0.5 px-2">
-                {divisions.map(div => (
-                  <button
-                    key={div.division}
-                    onClick={() => setDrillDivision(div.division)}
-                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-md hover:bg-accent/50 transition-colors"
-                  >
-                    <span className="text-sm font-medium text-foreground">{div.label}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">{div.itemCount}</span>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </button>
-                ))}
+              <div className="flex gap-3">
+                <button type="button" onClick={() => setLocFields(f => ({ ...f, inside_outside: 'inside', exterior_feature: '' }))}
+                  className={cn('flex-1 py-3 rounded-lg border-2 font-medium transition-all text-center', locFields.inside_outside === 'inside' ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:border-primary/50')}>Inside</button>
+                <button type="button" onClick={() => setLocFields(f => ({ ...f, inside_outside: 'outside', level: '', room_area: '' }))}
+                  className={cn('flex-1 py-3 rounded-lg border-2 font-medium transition-all text-center', locFields.inside_outside === 'outside' ? 'bg-primary text-primary-foreground border-primary' : 'border-border hover:border-primary/50')}>Outside</button>
               </div>
-            )}
-
-            {/* Browse: categories */}
-            {!query && drillDivision && !drillCategory && activeDivision && (
-              <div className="space-y-0.5 px-2">
-                <button onClick={() => setDrillDivision(null)} className="text-xs text-muted-foreground hover:text-foreground mb-1 px-3">
-                  ← Back
-                </button>
-                {activeDivision.categories.map(cat => (
-                  <button
-                    key={cat.category_id}
-                    onClick={() => setDrillCategory(cat.category_id)}
-                    className="w-full flex items-center justify-between px-3 py-2.5 rounded-md hover:bg-accent/50 transition-colors"
-                  >
-                    <span className="text-sm font-medium text-foreground">{cat.category_name}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">{cat.itemCount}</span>
-                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                  </button>
-                ))}
+              {locFields.inside_outside === 'inside' && (
+                <div className="space-y-3">
+                  <Input placeholder="Level (e.g. Floor 1)" value={locFields.level} onChange={e => setLocFields(f => ({ ...f, level: e.target.value }))} />
+                  <Input placeholder="Room / Area" value={locFields.room_area} onChange={e => setLocFields(f => ({ ...f, room_area: e.target.value }))} />
+                </div>
+              )}
+              {locFields.inside_outside === 'outside' && (
+                <Input placeholder="Exterior feature (e.g. Parking Lot)" value={locFields.exterior_feature} onChange={e => setLocFields(f => ({ ...f, exterior_feature: e.target.value }))} />
+              )}
+              {locationTag && (
+                <div className="border-l-2 border-primary/50 pl-3 py-1.5 bg-muted/30 rounded-r-lg">
+                  <p className="text-xs text-muted-foreground">Preview</p>
+                  <p className="text-sm font-medium">{locationTag}</p>
+                </div>
+              )}
+              <div className="flex gap-2 pt-2">
+                <Button variant="ghost" size="sm" onClick={() => setPendingItem(null)}>Back</Button>
+                <Button size="sm" onClick={() => { if (pendingItem) addItemMutation.mutate({ item: pendingItem, locTag: locationTag }); }} disabled={!canConfirm || addItemMutation.isPending} className="flex-1">Add to scope</Button>
               </div>
-            )}
-
-            {/* Browse: items in category */}
-            {!query && drillCategory && activeCategory && (
-              <div className="space-y-0.5 px-2">
-                <button onClick={() => setDrillCategory(null)} className="text-xs text-muted-foreground hover:text-foreground mb-1 px-3">
-                  ← Back
-                </button>
-                {activeCategory.groups.map(group => (
-                  <div key={group.group_id}>
-                    <p className="text-[11px] uppercase tracking-wide text-muted-foreground px-3 pt-3 pb-1">{group.group_label}</p>
-                    {group.items.map(item => (
-                      <button
-                        key={item.id}
-                        onClick={() => handleSelect(item)}
-                        disabled={addItemMutation.isPending}
-                        className="w-full text-left px-3 py-2.5 rounded-md hover:bg-accent/50 transition-colors"
-                      >
+            </div>
+          ) : (
+            <>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search catalog..." value={query} onChange={e => { setQuery(e.target.value); if (e.target.value) { setDrillDivision(null); setDrillCategory(null); } }} className="pl-10" autoFocus />
+                {query && <button onClick={() => setQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2"><X className="h-4 w-4 text-muted-foreground" /></button>}
+              </div>
+              <div className="flex-1 overflow-y-auto min-h-0 -mx-2">
+                {query.length >= 2 && (
+                  <div className="space-y-0.5 px-2">
+                    {searchResults.length === 0 && <p className="text-sm text-muted-foreground py-4 text-center">No items found</p>}
+                    {searchResults.map(item => (
+                      <button key={item.id} onClick={() => handleSelectFromCatalog(item)} className="w-full text-left px-3 py-2.5 rounded-md hover:bg-accent/50 transition-colors">
                         <p className="text-sm font-medium text-foreground">{item.item_name}</p>
-                        <p className="text-[11px] text-muted-foreground">{item.unit}</p>
+                        <p className="text-[11px] text-muted-foreground">{item.path}</p>
                       </button>
                     ))}
                   </div>
-                ))}
+                )}
+                {!query && !drillDivision && (
+                  <div className="space-y-0.5 px-2">
+                    {divisions.map(div => (
+                      <button key={div.division} onClick={() => setDrillDivision(div.division)} className="w-full flex items-center justify-between px-3 py-2.5 rounded-md hover:bg-accent/50 transition-colors">
+                        <span className="text-sm font-medium text-foreground">{div.label}</span>
+                        <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">{div.itemCount}</span><ChevronRight className="h-4 w-4 text-muted-foreground" /></div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {!query && drillDivision && !drillCategory && activeDivision && (
+                  <div className="space-y-0.5 px-2">
+                    <button onClick={() => setDrillDivision(null)} className="text-xs text-muted-foreground hover:text-foreground mb-1 px-3">← Back</button>
+                    {activeDivision.categories.map(cat => (
+                      <button key={cat.category_id} onClick={() => setDrillCategory(cat.category_id)} className="w-full flex items-center justify-between px-3 py-2.5 rounded-md hover:bg-accent/50 transition-colors">
+                        <span className="text-sm font-medium text-foreground">{cat.category_name}</span>
+                        <div className="flex items-center gap-2"><span className="text-xs text-muted-foreground">{cat.itemCount}</span><ChevronRight className="h-4 w-4 text-muted-foreground" /></div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {!query && drillCategory && activeCategory && (
+                  <div className="space-y-0.5 px-2">
+                    <button onClick={() => setDrillCategory(null)} className="text-xs text-muted-foreground hover:text-foreground mb-1 px-3">← Back</button>
+                    {activeCategory.groups.map(group => (
+                      <div key={group.group_id}>
+                        <p className="text-[11px] uppercase tracking-wide text-muted-foreground px-3 pt-3 pb-1">{group.group_label}</p>
+                        {group.items.map(item => (
+                          <button key={item.id} onClick={() => handleSelectFromCatalog(item)} disabled={addItemMutation.isPending} className="w-full text-left px-3 py-2.5 rounded-md hover:bg-accent/50 transition-colors">
+                            <p className="text-sm font-medium text-foreground">{item.item_name}</p>
+                            <p className="text-[11px] text-muted-foreground">{item.unit}</p>
+                          </button>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </>

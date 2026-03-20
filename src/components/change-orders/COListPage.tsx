@@ -63,7 +63,7 @@ function CORow({
   onClick: (id: string) => void;
   mobile: boolean;
 }) {
-  const title = co.title ?? co.co_number ?? 'Untitled CO';
+  const title = co.co_number ? `${co.co_number} · ${co.created_at ? new Date(co.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}` : (co.title ?? 'Untitled CO');
   const age = co.created_at
     ? formatDistanceToNow(new Date(co.created_at), { addSuffix: true })
     : 'just now';
@@ -115,7 +115,7 @@ function COCard({
   co: ChangeOrderWithMembers;
   onClick: (id: string) => void;
 }) {
-  const title = co.title ?? co.co_number ?? 'Untitled CO';
+  const title = co.co_number ? `${co.co_number} · ${co.created_at ? new Date(co.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}` : (co.title ?? 'Untitled CO');
   const age = co.created_at
     ? formatDistanceToNow(new Date(co.created_at), { addSuffix: true })
     : 'just now';
