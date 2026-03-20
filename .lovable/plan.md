@@ -1,53 +1,52 @@
 
 
-# Add Per-Item Location & Auto-Number COs
+# Move Reason to Per-Item Description
 
-## Two changes requested
+## What changes
 
-### 1. CO title = auto-generated number + date (not a description)
+Currently "Reason" is a separate wizard step that sets one reason for the entire CO. Instead, each CO line item should carry its own reason and description — making the reason part of the item, not the CO header.
 
-Currently the wizard sets `title` from the first item name or a manual field. Instead:
-- Auto-generate title as `"CO-{sequential_number} · {MMM DD, YYYY}"` (e.g. `CO-003 · Mar 20, 2026`)
-- Sequential number = count of existing COs on this project + 1 (query at creation time)
-- Remove the manual title input from the wizard
-- Also populate `co_number` column with the sequential number string (e.g. `CO-003`)
-- Display this in list and detail pages as the CO identifier
+## Database migration
 
-**Files**: `COWizard.tsx` (remove title from data, auto-generate at submit), `COWizardData` type (remove `title` field), `StepReview.tsx` (show auto-number preview), `COListPage.tsx` and `CODetailPage.tsx` (display `co_number` prominently instead of title)
+Add two columns to `co_line_items`:
+- `reason TEXT` — stores the reason code (e.g. `'addition'`, `'rework'`)
+- `description TEXT` — free-text description explaining why this item is on the CO
 
-### 2. Each scope item gets its own location (mini-wizard for adding items)
+## Wizard changes
 
-Currently `location_tag` lives on the CO header. Each line item should have its own location instead.
+### Remove Reason step
+- **`COWizard.tsx`**: Remove `{ key: 'reason' }` from `ALL_STEPS` (goes from 4 steps to 3: Configuration → Scope → Review). Remove `reason`/`reasonNote` from `COWizardData` and `INITIAL_DATA`. Remove `StepReason` import. Update `canAdvance()` to remove reason validation.
 
-**Database migration**: Add `location_tag TEXT` column to `co_line_items`.
+### Add reason + description to per-item flow in StepCatalog
+- **`StepCatalog.tsx`**: After location picker and before "Add item" confirm button, add:
+  1. A reason selector (same chip-style buttons from current `StepReason`) 
+  2. A description textarea ("Describe why this item is needed")
+  - Both stored in the pending-item state, then saved into `SelectedScopeItem`
 
-**New "Add Scope Item" flow** — replace the current simple catalog dialog with a 2-step mini-wizard:
-1. **Step 1 — Pick item** from catalog (same catalog browser: search + drill Division → Category → Item)
-2. **Step 2 — Pick location** for that item (reuse the same location picker from `StepLocation.tsx`, but for a single location, not multi-select)
-3. Insert into `co_line_items` with the `location_tag` value
+### Update SelectedScopeItem type
+- **`COWizard.tsx`**: Extend `SelectedScopeItem` to include `reason: COReasonCode` and `description: string`
 
-**CO creation wizard** — same change: in the Scope step, each selected item gets a location. The flow becomes: pick item → pick location → item added to list. Repeat. Location step (step 3) becomes optional or removed since location is per-item now.
+### Update submission
+- **`COWizard.tsx`** `handleSubmit`: Write `reason` and `description` per line item to `co_line_items` insert. Remove `reason`/`reason_note` from the `change_orders` insert (keep columns in DB but set to null — no destructive migration).
 
-**Display**: In `COLineItemRow`, show a small `MapPin` badge with the location tag for each line item. In the CO header, remove or keep `location_tag` as a summary (join unique item locations).
+### Update "Add item" on detail page
+- **`CODetailPage.tsx`**: The `AddScopeItemButton` dialog uses `StepCatalog` — it will automatically get the new reason+description fields since it reuses the same component.
 
-### Files to change
+### Update display
+- **`COLineItemRow.tsx`**: Show reason badge + description text under each item name
+- **`StepReview.tsx`**: Show per-item reason + description in the review summary
+
+## Files changed
 
 | File | Change |
 |------|--------|
-| **Migration** | Add `location_tag TEXT` to `co_line_items` |
-| `changeOrder.ts` | Add `location_tag` to `COLineItem` interface; remove `title` from `COWizardData` |
-| `COWizard.tsx` | Remove manual title; auto-generate `co_number` + title at submit; update Scope step to collect location per item; consider removing the standalone Location step |
-| `StepCatalog.tsx` | Refactor to support per-item location: after selecting a catalog item, show location picker before confirming |
-| `StepReview.tsx` | Show auto-generated CO number; show each item with its location |
-| `CODetailPage.tsx` | Replace `AddScopeItemButton` with mini-wizard (catalog pick → location pick); display `co_number` as heading; show per-item location in line item rows |
-| `COLineItemRow.tsx` | Show `location_tag` badge per item |
-| `COListPage.tsx` | Display `co_number` as the primary identifier instead of title |
+| **Migration** | Add `reason TEXT`, `description TEXT` to `co_line_items` |
+| `COWizard.tsx` | Remove reason step, extend `SelectedScopeItem`, update submit |
+| `StepCatalog.tsx` | Add reason chips + description textarea to per-item flow |
+| `StepReview.tsx` | Show per-item reason and description |
+| `CODetailPage.tsx` | No direct changes (inherits from StepCatalog) |
+| `COLineItemRow.tsx` | Display reason badge + description |
+| `changeOrder.ts` | Add `reason` and `description` to `COLineItem` interface |
 
-### Wizard step order after change
-1. **Reason** — cause of change
-2. **Configuration** — pricing, assignment
-3. **Scope** — pick items, each with its own location (catalog browse → location picker per item)
-4. **Review** — summary with auto-generated CO number
-
-Location step is removed as a standalone step since location is now per-item in the Scope step.
+`StepReason.tsx` is kept in the codebase (not deleted) in case it's reused elsewhere, but no longer imported by the wizard.
 
