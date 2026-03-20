@@ -314,7 +314,7 @@ export function CODetailPage() {
                           pricingType={pricingType}
                           nteCap={co.nte_cap}
                           nteUsed={financials.laborTotal}
-                          canAddLabor={canEdit && (isTC || isFC)}
+                          canAddLabor={canEdit && (isTC || isFC) && !nteBlocked}
                           onRefresh={refreshDetail}
                         />
                       ))
