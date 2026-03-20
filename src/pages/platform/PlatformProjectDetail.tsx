@@ -915,6 +915,28 @@ export default function PlatformProjectDetail() {
         }}
         loading={actionLoading}
       />
+
+      {/* Delete Change Order Dialog */}
+      <SupportActionDialog
+        open={deleteCOOpen}
+        onOpenChange={setDeleteCOOpen}
+        title="Delete Change Order"
+        description={`Permanently delete change order "${deleteCOTarget?.co_number || deleteCOTarget?.id?.slice(0, 8)}" (${deleteCOTarget?.status}, ${deleteCOTarget?.pricing_type}). This removes the CO and all associated line items, labor entries, materials, equipment, and activity. Linked invoices will be unlinked. This action cannot be undone.`}
+        onConfirm={async (reason) => {
+          if (!deleteCOTarget) return;
+          const ok = await execute({
+            action_type: 'DELETE_CHANGE_ORDER',
+            reason,
+            co_id: deleteCOTarget.id,
+          });
+          if (ok) {
+            setDeleteCOOpen(false);
+            setDeleteCOTarget(null);
+            fetchData();
+          }
+        }}
+        loading={actionLoading}
+      />
     </PlatformLayout>
   );
 }
