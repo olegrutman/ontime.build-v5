@@ -1,40 +1,34 @@
 
 
-## Support multiple locations on a Change Order
+## Fix: CO creation fails with RLS violation
 
-**Problem**: A change order can affect several locations (e.g. water damage in Kitchen Floor 2 AND Bathroom Floor 3), but the wizard only captures one.
+**Root cause**: The INSERT policy on `change_orders` uses a raw subquery:
+```sql
+org_id IN (SELECT organization_id FROM user_org_roles WHERE user_id = auth.uid())
+```
+The `user_org_roles` table has its own RLS with a SELECT policy using `user_in_org(auth.uid(), organization_id)`. When Postgres evaluates the INSERT policy's subquery, it applies `user_org_roles` RLS, which calls `user_in_org`, which itself queries `user_org_roles` — creating a recursive RLS evaluation that silently returns no rows.
 
-### Approach
+**Fix**: Replace the INSERT policy to use the existing `user_in_org()` security-definer function (which bypasses RLS):
 
-Keep the existing `location_tag` DB column (text). Store multiple locations joined by `" | "` delimiter. The wizard lets users build a location, add it to a list, then build another.
+### Database migration
 
-### Changes
+Drop and recreate the INSERT policy on `change_orders`:
 
-**`src/components/change-orders/wizard/COWizard.tsx`**
-- Change `locationTag: string` → `locationTags: string[]` in `COWizardData` and `INITIAL_DATA`
-- Update `canAdvance` for location step: `data.locationTags.length > 0`
-- On submit, join tags: `location_tag: data.locationTags.join(' | ') || null`
+```sql
+DROP POLICY "Users can insert change orders for their org" ON public.change_orders;
 
-**`src/components/change-orders/wizard/StepLocation.tsx`**
-- Switch from editing `data.locationTag` to managing `data.locationTags` array
-- Add internal state for the "current location being built" (the existing structured fields)
-- Add an "Add Location" button that appends the built tag to `data.locationTags` and resets the form
-- Show the list of added locations as removable chips/cards below the form
-- Each chip shows the tag string with an X button to remove it
+CREATE POLICY "Users can insert change orders for their org"
+ON public.change_orders
+FOR INSERT
+TO authenticated
+WITH CHECK (user_in_org(auth.uid(), org_id));
+```
 
-**`src/components/change-orders/wizard/StepConfig.tsx`**
-- Update the location preview from `data.locationTag` to `data.locationTags` (show as list)
+This uses the `user_in_org` SECURITY DEFINER function which bypasses RLS on `user_org_roles`, avoiding the recursive check.
 
-**`src/components/change-orders/CODetailPage.tsx`**
-- Split `co.location_tag` on `" | "` and render each as a separate badge/line instead of a single string
-
-**`src/components/change-orders/COListPage.tsx`**
-- Split on `" | "` and show first location + "+N more" if multiple
+### No code changes needed
+The wizard code is correct — only the RLS policy needs fixing.
 
 ### Files to change
-- `src/components/change-orders/wizard/COWizard.tsx`
-- `src/components/change-orders/wizard/StepLocation.tsx`
-- `src/components/change-orders/wizard/StepConfig.tsx`
-- `src/components/change-orders/CODetailPage.tsx`
-- `src/components/change-orders/COListPage.tsx`
+- Database migration only (one SQL statement)
 
