@@ -423,11 +423,11 @@ export function CODetailPage() {
                   <div className="px-4 py-3 space-y-2">
                     {isGC && (
                       <>
-                        <FinRow label="Labor" value={financials.laborTotal} />
+                        <FinRow label="Labor" value={financials.tcLaborTotal} />
                         {co.materials_needed && <FinRow label="Materials" value={financials.materialsTotal} />}
                         {co.equipment_needed && <FinRow label="Equipment" value={financials.equipmentTotal} />}
                         <div className="border-t border-border pt-2 mt-2">
-                          <FinRow label="Total billed" value={financials.grandTotal} bold />
+                          <FinRow label="Total billed" value={financials.tcLaborTotal + financials.materialsTotal + financials.equipmentTotal} bold />
                         </div>
                       </>
                     )}
