@@ -25,8 +25,6 @@ export interface SelectedScopeItem extends WorkOrderCatalogItem {
 export interface COWizardData {
   selectedItems: SelectedScopeItem[];
   scopeDescription: string;
-  reason: COReasonCode | null;
-  reasonNote: string;
   pricingType: COPricingType;
   nteCap: string;
   assignedToOrgId: string;
@@ -42,8 +40,6 @@ export interface COWizardData {
 const INITIAL_DATA: COWizardData = {
   selectedItems: [],
   scopeDescription: '',
-  reason: null,
-  reasonNote: '',
   pricingType: 'fixed',
   nteCap: '',
   assignedToOrgId: '',
