@@ -2,13 +2,15 @@ import { useState, useMemo, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, X, ChevronRight, MapPin, Home, Building2, Layers, DoorOpen, Plus, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWorkOrderCatalog } from '@/hooks/useWorkOrderCatalog';
 import { useProjectScope, getLevelOptions, getExteriorOptions } from '@/hooks/useProjectScope';
 import { ROOM_AREA_OPTIONS } from '@/types/location';
-import type { WorkOrderCatalogItem } from '@/types/changeOrder';
+import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
+import type { WorkOrderCatalogItem, COReasonCode } from '@/types/changeOrder';
 import type { COWizardData, SelectedScopeItem } from './COWizard';
 
 interface StepCatalogProps {
