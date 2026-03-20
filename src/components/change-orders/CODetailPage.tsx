@@ -547,6 +547,7 @@ function AddScopeItemButton({ coId, orgId, projectId, role, co, collaborators, o
         co_id: coId, org_id: orgId, item_name: item.item_name, unit: item.unit,
         catalog_item_id: item.id, division: item.division, category_name: item.category_name,
         created_by_role: role, sort_order: nextSort + idx, location_tag: item.locationTag || null,
+        reason: item.reason || null, description: item.reasonDescription || null,
       }));
 
       const { error } = await supabase.from('co_line_items').insert(rows);
