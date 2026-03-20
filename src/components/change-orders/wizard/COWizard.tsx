@@ -183,6 +183,8 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
           unit: item.unit,
           sort_order: idx,
           location_tag: item.locationTag || null,
+          reason: item.reason || null,
+          description: item.reasonDescription || null,
         }));
         const { error: lineError } = await supabase.from('co_line_items').insert(lineItemRows);
         if (lineError) {
