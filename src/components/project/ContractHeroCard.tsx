@@ -124,8 +124,8 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
             <p className="font-heading text-[1.2rem] font-bold tabular-nums">{fmt(supplierInvoiced)}</p>
           </div>
           <div>
-            <p className="text-[0.65rem] md:text-xs text-muted-foreground mb-0.5">Paid</p>
-            <p className="font-heading text-[1.2rem] md:text-sm font-bold tabular-nums text-green-600 dark:text-green-400">{fmt(supplierPaid)}</p>
+            <p className="text-[0.68rem] text-muted-foreground mb-0.5">Paid</p>
+            <p className="font-heading text-[1.2rem] font-bold tabular-nums text-green-600 dark:text-green-400">{fmt(supplierPaid)}</p>
           </div>
           <div>
             <p className="text-[0.65rem] md:text-xs text-muted-foreground mb-0.5">Outstanding</p>
