@@ -34,19 +34,17 @@ export function RemindersTile({ reminders, onComplete, onAdd }: RemindersTilePro
     .slice(0, 5);
   
   return (
-    <Card data-sasha-card="Reminders">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center justify-between text-base">
-          <div className="flex items-center gap-2">
-            <Bell className="h-5 w-5 text-blue-600" />
-            Reminders
-          </div>
-          <Button variant="ghost" size="sm" className="h-10 w-10 p-0" onClick={onAdd}>
-            <Plus className="h-5 w-5" />
-          </Button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div data-sasha-card="Reminders" className="bg-card border border-border rounded-lg shadow-sm">
+      <div className="card-header-row border-b">
+        <div className="flex items-center gap-2">
+          <Bell className="h-4 w-4 text-blue-600" />
+          <span className="card-section-title">Reminders</span>
+        </div>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={onAdd}>
+          <Plus className="h-4 w-4" />
+        </Button>
+      </div>
+      <div className="p-4">
         {upcomingReminders.length === 0 ? (
           <div className="text-center py-4">
             <p className="text-sm text-muted-foreground mb-3">
