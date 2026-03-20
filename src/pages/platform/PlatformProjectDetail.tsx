@@ -146,7 +146,7 @@ export default function PlatformProjectDetail() {
   const [financials, setFinancials] = useState({ invoiced: 0, paid: 0, retainage: 0, poTotal: 0 });
   const [estimates, setEstimates] = useState<SupplierEstimateRow[]>([]);
   const [workOrders, setWorkOrders] = useState<WorkOrderRow[]>([]);
-
+  const [changeOrders, setChangeOrders] = useState<CORow[]>([]);
   const { execute, loading: actionLoading } = useSupportAction();
   const { platformRole } = useAuth();
   const [forceAcceptOpen, setForceAcceptOpen] = useState(false);
