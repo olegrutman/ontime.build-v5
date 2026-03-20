@@ -57,6 +57,7 @@ export function COEquipmentPanel({
   isTC,
   isGC,
   isFC,
+  equipmentResponsible,
   canEdit,
   onRefresh,
 }: COEquipmentPanelProps) {
