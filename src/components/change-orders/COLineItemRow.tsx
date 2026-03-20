@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, Plus, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LaborEntryForm } from './LaborEntryForm';
-import type { COLineItem, COLaborEntry, COCreatedByRole } from '@/types/changeOrder';
+import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
+import type { COLineItem, COLaborEntry, COCreatedByRole, COReasonCode } from '@/types/changeOrder';
 
 interface COLineItemRowProps {
   item: COLineItem;
