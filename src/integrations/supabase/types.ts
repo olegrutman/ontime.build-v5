@@ -265,9 +265,12 @@ export type Database = {
         Row: {
           approved_at: string | null
           assigned_to_org_id: string | null
+          closed_for_pricing_at: string | null
           co_number: string | null
           combined_at: string | null
           combined_co_id: string | null
+          completed_at: string | null
+          completion_acknowledged_at: string | null
           contracted_at: string | null
           created_at: string | null
           created_by_role: string
@@ -276,6 +279,7 @@ export type Database = {
           equipment_needed: boolean
           equipment_responsible: string | null
           fc_input_needed: boolean
+          fc_pricing_submitted_at: string | null
           id: string
           location_tag: string | null
           materials_needed: boolean
@@ -295,15 +299,22 @@ export type Database = {
           shared_at: string | null
           status: string
           submitted_at: string | null
+          tc_snapshot_hourly_rate: number | null
+          tc_snapshot_markup_percent: number | null
+          tc_submitted_price: number | null
           title: string | null
           updated_at: string | null
+          use_fc_pricing_base: boolean | null
         }
         Insert: {
           approved_at?: string | null
           assigned_to_org_id?: string | null
+          closed_for_pricing_at?: string | null
           co_number?: string | null
           combined_at?: string | null
           combined_co_id?: string | null
+          completed_at?: string | null
+          completion_acknowledged_at?: string | null
           contracted_at?: string | null
           created_at?: string | null
           created_by_role: string
@@ -312,6 +323,7 @@ export type Database = {
           equipment_needed?: boolean
           equipment_responsible?: string | null
           fc_input_needed?: boolean
+          fc_pricing_submitted_at?: string | null
           id?: string
           location_tag?: string | null
           materials_needed?: boolean
@@ -331,15 +343,22 @@ export type Database = {
           shared_at?: string | null
           status?: string
           submitted_at?: string | null
+          tc_snapshot_hourly_rate?: number | null
+          tc_snapshot_markup_percent?: number | null
+          tc_submitted_price?: number | null
           title?: string | null
           updated_at?: string | null
+          use_fc_pricing_base?: boolean | null
         }
         Update: {
           approved_at?: string | null
           assigned_to_org_id?: string | null
+          closed_for_pricing_at?: string | null
           co_number?: string | null
           combined_at?: string | null
           combined_co_id?: string | null
+          completed_at?: string | null
+          completion_acknowledged_at?: string | null
           contracted_at?: string | null
           created_at?: string | null
           created_by_role?: string
@@ -348,6 +367,7 @@ export type Database = {
           equipment_needed?: boolean
           equipment_responsible?: string | null
           fc_input_needed?: boolean
+          fc_pricing_submitted_at?: string | null
           id?: string
           location_tag?: string | null
           materials_needed?: boolean
@@ -367,8 +387,12 @@ export type Database = {
           shared_at?: string | null
           status?: string
           submitted_at?: string | null
+          tc_snapshot_hourly_rate?: number | null
+          tc_snapshot_markup_percent?: number | null
+          tc_submitted_price?: number | null
           title?: string | null
           updated_at?: string | null
+          use_fc_pricing_base?: boolean | null
         }
         Relationships: [
           {
@@ -1940,6 +1964,7 @@ export type Database = {
           minimum_service_charge: number | null
           organization_id: string
           updated_at: string
+          use_fc_input_as_base: boolean | null
         }
         Insert: {
           created_at?: string
@@ -1951,6 +1976,7 @@ export type Database = {
           minimum_service_charge?: number | null
           organization_id: string
           updated_at?: string
+          use_fc_input_as_base?: boolean | null
         }
         Update: {
           created_at?: string
@@ -1962,6 +1988,7 @@ export type Database = {
           minimum_service_charge?: number | null
           organization_id?: string
           updated_at?: string
+          use_fc_input_as_base?: boolean | null
         }
         Relationships: [
           {
@@ -4714,9 +4741,12 @@ export type Database = {
         Returns: {
           approved_at: string | null
           assigned_to_org_id: string | null
+          closed_for_pricing_at: string | null
           co_number: string | null
           combined_at: string | null
           combined_co_id: string | null
+          completed_at: string | null
+          completion_acknowledged_at: string | null
           contracted_at: string | null
           created_at: string | null
           created_by_role: string
@@ -4725,6 +4755,7 @@ export type Database = {
           equipment_needed: boolean
           equipment_responsible: string | null
           fc_input_needed: boolean
+          fc_pricing_submitted_at: string | null
           id: string
           location_tag: string | null
           materials_needed: boolean
@@ -4744,8 +4775,12 @@ export type Database = {
           shared_at: string | null
           status: string
           submitted_at: string | null
+          tc_snapshot_hourly_rate: number | null
+          tc_snapshot_markup_percent: number | null
+          tc_submitted_price: number | null
           title: string | null
           updated_at: string | null
+          use_fc_pricing_base: boolean | null
         }
         SetofOptions: {
           from: "*"
@@ -5108,6 +5143,13 @@ export type Database = {
         | "NTE_REJECTED"
         | "CO_SHARED"
         | "CO_RECALLED"
+        | "CO_CLOSED_FOR_PRICING"
+        | "CO_COMPLETED"
+        | "CO_ACKNOWLEDGED"
+        | "CO_SCOPE_ADDED"
+        | "NTE_WARNING_80"
+        | "NTE_BLOCKED_100"
+        | "FC_PRICING_SUBMITTED"
       order_status:
         | "DRAFT"
         | "SUBMITTED"
@@ -5301,6 +5343,13 @@ export const Constants = {
         "NTE_REJECTED",
         "CO_SHARED",
         "CO_RECALLED",
+        "CO_CLOSED_FOR_PRICING",
+        "CO_COMPLETED",
+        "CO_ACKNOWLEDGED",
+        "CO_SCOPE_ADDED",
+        "NTE_WARNING_80",
+        "NTE_BLOCKED_100",
+        "FC_PRICING_SUBMITTED",
       ],
       order_status: [
         "DRAFT",
