@@ -82,8 +82,8 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
   if (viewerRole === 'General Contractor') {
     if (editing) {
       return (
-        <div className="bg-card rounded-2xl shadow-sm p-5 space-y-3">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Set Owner Contract Value</p>
+        <div className="bg-card rounded-lg border shadow-sm p-5 space-y-3">
+          <p className="kpi-label">Set Owner Contract Value</p>
           <div className="flex gap-2 items-end flex-wrap">
             <div className="relative flex-1 min-w-[100px]">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
