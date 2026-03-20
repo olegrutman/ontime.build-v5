@@ -141,12 +141,12 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
     const fcContract = downstreamContract;
     const fcValue = fcContract?.contract_sum || 0;
     return (
-      <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 md:p-6">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+      <div data-sasha-card="Contract" className="bg-card rounded-lg border shadow-sm p-5 md:p-6">
+        <p className="kpi-label mb-1">
           Contract with {getContractCounterpartyName(fcContract, userOrgIds)}
         </p>
         <div className="flex items-center gap-2 mb-4">
-          <p className="font-heading text-[1.9rem] md:text-3xl font-black tabular-nums text-foreground">{fcContract ? fmt(fcValue) : '—'}</p>
+          <p className="kpi-value">{fcContract ? fmt(fcValue) : '—'}</p>
         </div>
       </div>
     );
