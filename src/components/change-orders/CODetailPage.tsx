@@ -355,6 +355,7 @@ export function CODetailPage() {
                     isGC={isGC}
                     isFC={isFC}
                     materialsOnSite={co.materials_on_site}
+                    materialsResponsible={co.materials_responsible}
                     canEdit={canEdit}
                     onRefresh={refreshDetail}
                   />

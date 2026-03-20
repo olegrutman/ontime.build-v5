@@ -37,6 +37,7 @@ interface COMaterialsPanelProps {
   isGC: boolean;
   isFC: boolean;
   materialsOnSite: boolean;
+  materialsResponsible?: string | null;
   canEdit: boolean;
   onRefresh: () => void;
 }
