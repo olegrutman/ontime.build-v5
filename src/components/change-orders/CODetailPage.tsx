@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ArrowLeft, Calendar, MapPin } from 'lucide-react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
