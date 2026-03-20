@@ -88,21 +88,23 @@ export function COEquipmentPanel({
   }
 
   async function saveDrafts() {
-    const valid = drafts.filter(d => d.description.trim() && parseFloat(d.cost) > 0);
+    const valid = drafts.filter(d => d.description.trim() && (isFC || parseFloat(d.cost) > 0));
     if (valid.length === 0) return;
 
     setSaving(true);
     try {
-      const rows = valid.map(d => ({
+      const rows = valid.map(d => {
+        const costVal = isFC ? 0 : (parseFloat(d.cost) || 0);
+        return {
         co_id:          coId,
         org_id:         orgId,
         added_by_role:  isGC ? 'GC' : isFC ? 'FC' : 'TC',
         description:    d.description.trim(),
         duration_note:  d.duration_note.trim() || null,
-        cost:           parseFloat(d.cost) || 0,
-        markup_percent: parseFloat(d.markup_percent) || 0,
+        cost:           costVal,
+        markup_percent: isFC ? 0 : (parseFloat(d.markup_percent) || 0),
         notes:          d.notes.trim() || null,
-      }));
+      }});
 
       const { error } = await supabase.from('co_equipment_items').insert(rows);
       if (error) throw error;
@@ -243,7 +245,7 @@ export function COEquipmentPanel({
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className={cn("grid gap-2", isFC ? "grid-cols-1" : "grid-cols-3")}>
                     <div>
                       <p className="text-[10px] text-muted-foreground mb-1">Duration</p>
                       <Input
@@ -253,31 +255,35 @@ export function COEquipmentPanel({
                         className="h-7 text-xs"
                       />
                     </div>
-                    <div>
-                      <p className="text-[10px] text-muted-foreground mb-1">Cost $</p>
-                      <div className="relative">
-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
-                        <Input
-                          type="number"
-                          value={draft.cost}
-                          onChange={e => updateDraft(draft.tempId, 'cost', e.target.value)}
-                          placeholder="0.00"
-                          className="h-7 text-xs pl-5"
-                        />
+                    {!isFC && (
+                      <div>
+                        <p className="text-[10px] text-muted-foreground mb-1">Cost $</p>
+                        <div className="relative">
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                          <Input
+                            type="number"
+                            value={draft.cost}
+                            onChange={e => updateDraft(draft.tempId, 'cost', e.target.value)}
+                            placeholder="0.00"
+                            className="h-7 text-xs pl-5"
+                          />
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-muted-foreground mb-1">Markup %</p>
-                      <div className="relative">
-                        <Input
-                          type="number"
-                          value={draft.markup_percent}
-                          onChange={e => updateDraft(draft.tempId, 'markup_percent', e.target.value)}
-                          className="h-7 text-xs pr-5"
-                        />
-                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                    )}
+                    {!isFC && (
+                      <div>
+                        <p className="text-[10px] text-muted-foreground mb-1">Markup %</p>
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            value={draft.markup_percent}
+                            onChange={e => updateDraft(draft.tempId, 'markup_percent', e.target.value)}
+                            className="h-7 text-xs pr-5"
+                          />
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   {billed > 0 && (

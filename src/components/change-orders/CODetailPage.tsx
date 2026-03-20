@@ -125,7 +125,7 @@ export function CODetailPage() {
   const canRequestFCInput = !!co && isTC && co.assigned_to_org_id === myOrgId &&
     (co.status === 'shared' || co.status === 'rejected' || co.status === 'work_in_progress' || co.status === 'closed_for_pricing');
   const canCompleteFCInput = !!co && isFC && isCollaboratorOrg;
-  const canEdit = (isActiveStatus || (isRunningPricing && co?.status === 'submitted')) && (isGC || isTC || !currentCollaborator || isCollaboratorOrg);
+  const canEdit = (isActiveStatus || (isRunningPricing && co?.status === 'submitted')) && (isGC || isTC || isFC);
 
   /* NTE blocking at 100% */
   const nteUsedPercent = financials.nteUsedPercent ?? 0;
@@ -211,7 +211,7 @@ export function CODetailPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => navigate(`/project/${projectId}?tab=change-orders`)}
+                      onClick={() => navigate(`/projects/${projectId}?tab=change-orders`)}
                       className="shrink-0"
                     >
                       <ArrowLeft className="h-4 w-4" />
@@ -228,7 +228,7 @@ export function CODetailPage() {
                       </div>
 
                       <div className="mt-1 flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
-                        {co.co_number && <span>{co.co_number}</span>}
+                        {/* co_number already in displayTitle — removed duplicate (m1) */}
                         {co.location_tag && co.location_tag.split(' | ').map((loc, i) => (
                           <span key={i} className="inline-flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
@@ -253,8 +253,8 @@ export function CODetailPage() {
 
                 <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5">
                   <div className="co-light-kpi">
-                    <p className="co-light-kpi-label">{isTC ? 'TC labor' : 'Labor'}</p>
-                    <p className="co-light-kpi-value">{fmtCurrency(financials.laborTotal)}</p>
+                    <p className="co-light-kpi-label">{isTC ? 'TC labor' : isFC ? 'My labor' : 'Labor'}</p>
+                    <p className="co-light-kpi-value">{fmtCurrency(isGC ? financials.tcLaborTotal : isFC ? financials.fcLaborTotal : financials.laborTotal)}</p>
                   </div>
                   {isTC && financials.fcLaborTotal > 0 && (
                     <div className="co-light-kpi">
@@ -276,7 +276,7 @@ export function CODetailPage() {
                   )}
                   <div className="co-light-kpi">
                     <p className="co-light-kpi-label">Grand total</p>
-                    <p className="co-light-kpi-value">{fmtCurrency(financials.grandTotal)}</p>
+                    <p className="co-light-kpi-value">{fmtCurrency(isGC ? (financials.tcLaborTotal + financials.materialsTotal + financials.equipmentTotal) : isFC ? financials.fcLaborTotal : financials.grandTotal)}</p>
                   </div>
                 </div>
 
@@ -423,11 +423,11 @@ export function CODetailPage() {
                   <div className="px-4 py-3 space-y-2">
                     {isGC && (
                       <>
-                        <FinRow label="Labor" value={financials.laborTotal} />
+                        <FinRow label="Labor" value={financials.tcLaborTotal} />
                         {co.materials_needed && <FinRow label="Materials" value={financials.materialsTotal} />}
                         {co.equipment_needed && <FinRow label="Equipment" value={financials.equipmentTotal} />}
                         <div className="border-t border-border pt-2 mt-2">
-                          <FinRow label="Total billed" value={financials.grandTotal} bold />
+                          <FinRow label="Total billed" value={financials.tcLaborTotal + financials.materialsTotal + financials.equipmentTotal} bold />
                         </div>
                       </>
                     )}
@@ -487,7 +487,7 @@ export function CODetailPage() {
                   <div className="px-4 py-3 space-y-2">
                     <DetailRow label="Status" value={CO_STATUS_LABELS[co.status as COStatus]} />
                     <DetailRow label="Pricing" value={PRICING_LABEL[co.pricing_type] ?? co.pricing_type} />
-                    {co.reason && <DetailRow label="Reason" value={CO_REASON_LABELS[co.reason as COReasonCode]} />}
+                    {/* co.reason is now per-item on co_line_items — removed dead field (m3) */}
                     {co.location_tag && <DetailRow label="Location" value={co.location_tag} />}
                     <DetailRow label="Created by" value={co.created_by_role} />
                     <DetailRow label="Created" value={co.created_at ? format(new Date(co.created_at), 'MMM d, yyyy') : '—'} />

@@ -389,16 +389,17 @@ export function COMaterialsPanel({
 
     setSaving(true);
     try {
-      const rows = valid.map(row => ({
+      const rows = valid.map((row, idx) => ({
         co_id: coId,
         org_id: orgId,
         added_by_role: addedByRole,
+        line_number: materials.length + idx + 1,
         description: row.description.trim(),
         supplier_sku: row.supplier_sku.trim() || null,
         quantity: parseFloat(row.quantity) || 1,
         uom: row.uom,
-        unit_cost: parseFloat(row.unit_cost) || null,
-        markup_percent: parseFloat(row.markup_percent) || 0,
+        unit_cost: isFC ? null : (parseFloat(row.unit_cost) || null),
+        markup_percent: isFC ? 0 : (parseFloat(row.markup_percent) || 0),
         notes: row.notes.trim() || null,
         is_on_site: materialsOnSite,
       }));

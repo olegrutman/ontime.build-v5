@@ -105,6 +105,12 @@ export function LaborEntryForm({
       return;
     }
 
+    // Hard block at 100% NTE — no escape hatch (M7)
+    if (!isActualCost && ntePercent !== null && ntePercent >= 100) {
+      toast.error('NTE cap reached (100%). GC must increase the cap before you can log more.');
+      return;
+    }
+
     if (!isActualCost && willExceed && !showNTEWarn) {
       setShowNTEWarn(true);
       return;
