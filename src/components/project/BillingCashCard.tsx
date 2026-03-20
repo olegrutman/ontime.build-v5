@@ -46,8 +46,8 @@ export function BillingCashCard({ financials }: BillingCashCardProps) {
     const netCash = receivablesInvoiced - payablesInvoiced;
 
     return (
-      <div data-sasha-card="Billing & Cash" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Billing & Cash Position</p>
+      <div data-sasha-card="Billing & Cash" className="bg-card rounded-lg border shadow-sm p-5">
+        <p className="kpi-label mb-3">Billing & Cash Position</p>
 
         {/* Receivables */}
         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Receivables (from GC)</p>
