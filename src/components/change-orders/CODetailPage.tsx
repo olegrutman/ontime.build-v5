@@ -298,7 +298,20 @@ export function CODetailPage() {
                   <div className="px-4 py-3 border-b border-border co-light-header">
                     <div className="flex items-center justify-between gap-2">
                       <h2 className="text-sm font-semibold text-foreground">Scope & labor</h2>
-                      <span className="text-xs text-muted-foreground">Tap row to expand</span>
+                      <div className="flex items-center gap-2">
+                        {canEdit && !nteBlocked && (
+                          <AddScopeItemButton
+                            coId={co.id}
+                            orgId={myOrgId}
+                            projectId={projectId ?? ''}
+                            role={role}
+                            co={co}
+                            collaborators={collaborators}
+                            onAdded={refreshDetail}
+                          />
+                        )}
+                        <span className="text-xs text-muted-foreground">Tap row to expand</span>
+                      </div>
                     </div>
                   </div>
 
