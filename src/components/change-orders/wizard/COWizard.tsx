@@ -92,7 +92,6 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
     const s = ALL_STEPS[step];
     if (s.key === 'review') return true;
     if (s.key === 'catalog') return data.selectedItems.length > 0;
-    if (s.key === 'reason') return !!data.reason && (data.reason !== 'other' || data.reasonNote.trim().length > 0);
     if (s.key === 'config') {
       if (role === 'GC') {
         if (!data.assignedToOrgId) return false;
