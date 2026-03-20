@@ -6,7 +6,7 @@ export interface Invoice {
   contract_id: string | null;
   sov_id: string | null;
   po_id: string | null;
-  co_ids: string[] | null;
+  co_ids?: string[] | null;
   invoice_number: string;
   billing_period_start: string;
   billing_period_end: string;
