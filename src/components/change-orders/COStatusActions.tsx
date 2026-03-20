@@ -189,6 +189,38 @@ export function COStatusActions({
 
     setActing(true);
     try {
+      // Snapshot TC rates if toggle is ON
+      if (isTC && co.use_fc_pricing_base) {
+        const { data: settings } = await supabase
+          .from('org_settings')
+          .select('default_hourly_rate, labor_markup_percent')
+          .eq('organization_id', currentOrgId)
+          .maybeSingle();
+
+        const rate = settings?.default_hourly_rate ?? 0;
+        const markup = settings?.labor_markup_percent ?? 0;
+        const fcTotal = financials?.fcLaborTotal ?? 0;
+        const isHourly = co.pricing_type === 'tm' || co.pricing_type === 'nte';
+        const calcPrice = isHourly ? fcTotal : fcTotal * (1 + markup / 100);
+
+        await supabase
+          .from('change_orders')
+          .update({
+            tc_snapshot_hourly_rate: rate,
+            tc_snapshot_markup_percent: markup,
+            tc_submitted_price: calcPrice,
+          })
+          .eq('id', co.id);
+      } else if (isTC) {
+        // Toggle OFF — snapshot manual total
+        await supabase
+          .from('change_orders')
+          .update({
+            tc_submitted_price: financials?.grandTotal ?? 0,
+          })
+          .eq('id', co.id);
+      }
+
       await submitCO.mutateAsync(co.id);
       toast.success('CO submitted for approval');
       await logActivity('submitted', undefined, submitAmount || undefined);

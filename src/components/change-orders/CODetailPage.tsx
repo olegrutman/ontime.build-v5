@@ -510,3 +510,122 @@ function DetailRow({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+function FCPricingToggleCard({
+  co,
+  financials,
+  myOrgId,
+  onRefresh,
+}: {
+  co: ChangeOrder;
+  financials: COFinancials;
+  myOrgId: string;
+  onRefresh: () => void;
+}) {
+  const { updateCO } = useChangeOrders(co.project_id);
+  const [toggling, setToggling] = useState(false);
+
+  const { data: orgSettings } = useQuery({
+    queryKey: ['org-settings-pricing', myOrgId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('org_settings')
+        .select('default_hourly_rate, labor_markup_percent, use_fc_input_as_base')
+        .eq('organization_id', myOrgId)
+        .maybeSingle();
+      return data;
+    },
+    enabled: !!myOrgId,
+  });
+
+  const isOn = co.use_fc_pricing_base ?? false;
+  const fcTotal = financials.fcLaborTotal;
+  const rate = orgSettings?.default_hourly_rate ?? 0;
+  const markup = orgSettings?.labor_markup_percent ?? 0;
+
+  // Determine FC hours from labor entries (hourly mode)
+  // For now, use fcTotal as the lump sum base and compute hourly from rate
+  const fcHasSubmitted = fcTotal > 0;
+
+  // Hourly calc: we need FC total hours — approximate from fcTotal / assumed FC rate
+  // Actually, for the preview we show both scenarios
+  const hourlyPrice = fcHasSubmitted && rate > 0 ? fcTotal * (rate / (rate || 1)) : 0;
+  // Lump sum calc: FC total × (1 + markup%)
+  const lumpSumPrice = fcTotal * (1 + markup / 100);
+
+  // Simple: if pricing_type is 'fixed', use lump sum calc; otherwise hourly
+  const isHourly = co.pricing_type === 'tm' || co.pricing_type === 'nte';
+  const calculatedPrice = isHourly ? (fcTotal > 0 ? fcTotal : 0) : lumpSumPrice;
+
+  async function handleToggle(checked: boolean) {
+    setToggling(true);
+    try {
+      await updateCO.mutateAsync({
+        id: co.id,
+        updates: { use_fc_pricing_base: checked },
+      });
+      onRefresh();
+    } finally {
+      setToggling(false);
+    }
+  }
+
+  return (
+    <div className="co-light-shell overflow-hidden">
+      <div className="px-4 py-3 border-b border-border co-light-header">
+        <h3 className="text-sm font-semibold text-foreground">FC Pricing Base</h3>
+      </div>
+      <div className="px-4 py-3 space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <label htmlFor="fc-pricing-toggle" className="text-xs text-muted-foreground leading-tight">
+            Use FC input as my pricing base
+          </label>
+          <Switch
+            id="fc-pricing-toggle"
+            checked={isOn}
+            onCheckedChange={handleToggle}
+            disabled={toggling}
+          />
+        </div>
+
+        {isOn && fcHasSubmitted && (
+          <div className="space-y-1.5 pt-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">FC submitted total</span>
+              <span className="font-medium text-foreground">{fmtCurrency(fcTotal)}</span>
+            </div>
+            {isHourly ? (
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Your rate</span>
+                <span className="font-medium text-foreground">${rate.toFixed(2)}/hr</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Your markup</span>
+                <span className="font-medium text-foreground">{markup}%</span>
+              </div>
+            )}
+            <div className="border-t border-border pt-1.5 mt-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-foreground">Price to GC</span>
+                <span className="font-semibold text-foreground">{fmtCurrency(calculatedPrice)}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isOn && !fcHasSubmitted && (
+          <p className="text-[11px] text-muted-foreground">
+            FC has not submitted pricing yet. The calculated price will appear once FC submits.
+          </p>
+        )}
+
+        {!isOn && (
+          <p className="text-[11px] text-muted-foreground">
+            Toggle on to automatically calculate your price to GC from FC's submitted input.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
