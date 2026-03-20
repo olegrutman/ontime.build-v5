@@ -518,8 +518,6 @@ function AddScopeItemButton({ coId, orgId, projectId, role, co, collaborators, o
   const [wizardData, setWizardData] = useState<import('./wizard/COWizard').COWizardData>({
     selectedItems: [],
     scopeDescription: '',
-    reason: null,
-    reasonNote: '',
     pricingType: 'fixed',
     nteCap: '',
     assignedToOrgId: '',
