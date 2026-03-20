@@ -94,7 +94,7 @@ export function COEquipmentPanel({
       const rows = valid.map(d => ({
         co_id:          coId,
         org_id:         orgId,
-        added_by_role:  'TC',
+        added_by_role:  isGC ? 'GC' : isFC ? 'FC' : 'TC',
         description:    d.description.trim(),
         duration_note:  d.duration_note.trim() || null,
         cost:           parseFloat(d.cost) || 0,
