@@ -13,7 +13,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  Share2, Send, Check, X, RotateCcw, Loader2,
+  Share2, Send, Check, X, RotateCcw, Loader2, Lock, CheckCircle2, ThumbsUp,
 } from 'lucide-react';
 import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
@@ -108,6 +108,17 @@ export function COStatusActions({
     }
   }
 
+  async function notifyAllCOParties(type: string, amount?: number) {
+    const orgIds = new Set<string>();
+    if (co.org_id) orgIds.add(co.org_id);
+    if (co.assigned_to_org_id) orgIds.add(co.assigned_to_org_id);
+    for (const c of collaborators) {
+      if (c.status === 'active') orgIds.add(c.organization_id);
+    }
+    orgIds.delete(currentOrgId);
+    await Promise.allSettled([...orgIds].map(oid => notifyOrg(oid, type, amount)));
+  }
+
   async function doShare() {
     setActing(true);
     try {
@@ -118,6 +129,53 @@ export function COStatusActions({
       onRefresh();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to share');
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function doSubmitToWIP() {
+    if (!co.assigned_to_org_id) {
+      toast.error('Assign a TC before submitting.');
+      return;
+    }
+    setActing(true);
+    try {
+      await updateCO.mutateAsync({
+        id: co.id,
+        updates: {
+          status: 'work_in_progress',
+          shared_at: new Date().toISOString(),
+          draft_shared_with_next: true,
+        },
+      });
+      toast.success('CO sent to TC as Work in Progress');
+      await logActivity('sent_to_wip');
+      await notifyOrg(co.assigned_to_org_id, 'CO_SHARED');
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed');
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function doCloseForPricing() {
+    setActing(true);
+    try {
+      await updateCO.mutateAsync({
+        id: co.id,
+        updates: {
+          status: 'closed_for_pricing',
+          closed_for_pricing_at: new Date().toISOString(),
+        },
+      });
+      toast.success('CO closed for final pricing');
+      await logActivity('closed_for_pricing');
+      await notifyAllCOParties('CO_CLOSED_FOR_PRICING');
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed');
     } finally {
       setActing(false);
     }
@@ -213,22 +271,79 @@ export function COStatusActions({
     }
   }
 
+  async function doMarkCompleted() {
+    setActing(true);
+    try {
+      await updateCO.mutateAsync({
+        id: co.id,
+        updates: { completed_at: new Date().toISOString() },
+      });
+      toast.success('CO marked as completed');
+      await logActivity('marked_completed');
+      await notifyOrg(co.assigned_to_org_id ?? co.org_id, 'CO_COMPLETED');
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed');
+    } finally {
+      setActing(false);
+    }
+  }
+
+  async function doAcknowledgeCompletion() {
+    setActing(true);
+    try {
+      await updateCO.mutateAsync({
+        id: co.id,
+        updates: { completion_acknowledged_at: new Date().toISOString() },
+      });
+      toast.success('Completion acknowledged — TC can now invoice');
+      await logActivity('acknowledged_completion');
+      await notifyOrg(co.org_id, 'CO_ACKNOWLEDGED');
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed');
+    } finally {
+      setActing(false);
+    }
+  }
+
   const isCreator = co.created_by_user_id === user?.id;
-  const isCollaborator = collaborators.some(collaborator => collaborator.organization_id === currentOrgId && collaborator.status === 'active');
+  const isCollaborator = collaborators.some(c => c.organization_id === currentOrgId && c.status === 'active');
+
+  /* Draft actions */
   const canShare = isCreator && status === 'draft' && !co.draft_shared_with_next;
-  const canSubmit = (isTC || isFC) && !isCollaborator && (status === 'draft' || status === 'shared');
+  /* GC can send to WIP (Flow 1) */
+  const canSendToWIP = isGC && isCreator && status === 'draft' && !!co.assigned_to_org_id;
+  /* GC can close for pricing (Flow 1) */
+  const canCloseForPricing = isGC && (status === 'work_in_progress');
+  /* TC/FC submit for approval */
+  const canSubmit = (isTC || isFC) && !isCollaborator && (status === 'draft' || status === 'shared' || status === 'closed_for_pricing');
   const canRecall = (isTC || isFC) && !isCollaborator && status === 'submitted';
   const canApprove = ((isGC && status === 'submitted' && co.assigned_to_org_id === currentOrgId) || forwardsToGC) && !isCollaborator;
   const canReject = canApprove;
-  const isContracted = status === 'contracted';
+  /* Flow 2 completion */
   const isApproved = status === 'approved';
+  const canMarkCompleted = isTC && isApproved && !co.completed_at;
+  const canAcknowledge = isGC && isApproved && !!co.completed_at && !co.completion_acknowledged_at;
+  const isContracted = status === 'contracted';
 
-  if (isContracted || isApproved) {
+  if (isContracted) {
     return (
       <div className="co-light-shell px-4 py-3 flex items-center gap-2">
         <Check className="h-4 w-4 co-light-success-text" />
         <span className="text-sm font-medium text-foreground">
-          {isContracted ? 'Contracted — TC can now invoice' : 'Approved'}
+          Contracted — TC can now invoice
+        </span>
+      </div>
+    );
+  }
+
+  if (isApproved && co.completion_acknowledged_at) {
+    return (
+      <div className="co-light-shell px-4 py-3 flex items-center gap-2">
+        <Check className="h-4 w-4 co-light-success-text" />
+        <span className="text-sm font-medium text-foreground">
+          Approved & acknowledged — ready for invoicing
         </span>
       </div>
     );
@@ -249,7 +364,17 @@ export function COStatusActions({
     );
   }
 
-  if (!canShare && !canSubmit && !canRecall && !canApprove && !canReject) {
+  const hasAnyAction = canShare || canSendToWIP || canCloseForPricing || canSubmit || canRecall || canApprove || canReject || canMarkCompleted || canAcknowledge;
+
+  if (!hasAnyAction) {
+    if (isApproved) {
+      return (
+        <div className="co-light-shell px-4 py-3 flex items-center gap-2">
+          <Check className="h-4 w-4 co-light-success-text" />
+          <span className="text-sm font-medium text-foreground">Approved</span>
+        </div>
+      );
+    }
     return null;
   }
 
@@ -264,6 +389,18 @@ export function COStatusActions({
             <Button variant="outline" size="sm" className="w-full h-8 text-xs gap-1" onClick={doShare} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Share2 className="h-3 w-3" />}
               Share with {co.assigned_to_org_id ? 'assigned party' : 'next party'}
+            </Button>
+          )}
+          {canSendToWIP && (
+            <Button size="sm" className="w-full h-8 text-xs gap-1" onClick={doSubmitToWIP} disabled={acting}>
+              {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+              Send to TC (Work in Progress)
+            </Button>
+          )}
+          {canCloseForPricing && (
+            <Button size="sm" variant="outline" className="w-full h-8 text-xs gap-1 border-amber-300 text-amber-700 hover:bg-amber-50" onClick={doCloseForPricing} disabled={acting}>
+              {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Lock className="h-3 w-3" />}
+              Close CO for Final Pricing
             </Button>
           )}
           {canSubmit && (
@@ -288,6 +425,18 @@ export function COStatusActions({
             <Button variant="destructive" size="sm" className="w-full h-8 text-xs gap-1" onClick={() => setRejectOpen(true)} disabled={acting}>
               <X className="h-3 w-3" />
               Reject
+            </Button>
+          )}
+          {canMarkCompleted && (
+            <Button size="sm" variant="outline" className="w-full h-8 text-xs gap-1" onClick={doMarkCompleted} disabled={acting}>
+              {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+              Mark Work Completed
+            </Button>
+          )}
+          {canAcknowledge && (
+            <Button size="sm" className="w-full h-8 text-xs gap-1" onClick={doAcknowledgeCompletion} disabled={acting}>
+              {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <ThumbsUp className="h-3 w-3" />}
+              Acknowledge Completion
             </Button>
           )}
         </div>

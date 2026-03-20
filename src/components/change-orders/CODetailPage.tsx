@@ -101,6 +101,8 @@ export function CODetailPage() {
   const isActiveStatus =
     co?.status === 'draft' ||
     co?.status === 'shared' ||
+    co?.status === 'work_in_progress' ||
+    co?.status === 'closed_for_pricing' ||
     co?.status === 'submitted';
 
   const isRunningPricing =
@@ -111,11 +113,14 @@ export function CODetailPage() {
   const isCollaboratorOrg = collaborators.some(
     collaborator => collaborator.organization_id === myOrgId && collaborator.status === 'active'
   );
-  const canRequestFCInput = !!co && isTC && co.assigned_to_org_id === myOrgId && (co.status === 'shared' || co.status === 'rejected');
+  const canRequestFCInput = !!co && isTC && co.assigned_to_org_id === myOrgId &&
+    (co.status === 'shared' || co.status === 'rejected' || co.status === 'work_in_progress' || co.status === 'closed_for_pricing');
   const canCompleteFCInput = !!co && isFC && isCollaboratorOrg;
   const canEdit = (isActiveStatus || (isRunningPricing && co?.status === 'submitted')) && (isTC || !currentCollaborator || isCollaboratorOrg);
 
+  /* NTE blocking at 100% */
   const nteUsedPercent = financials.nteUsedPercent ?? 0;
+  const nteBlocked = co?.pricing_type === 'nte' && !!co?.nte_cap && nteUsedPercent >= 100;
   const showNTEWarning = co?.pricing_type === 'nte' && !!co?.nte_cap && nteUsedPercent >= 80;
 
   const pricingType: ValidPricing = co && VALID_PRICING.includes(co.pricing_type as ValidPricing)

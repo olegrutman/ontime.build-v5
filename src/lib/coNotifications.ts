@@ -93,6 +93,34 @@ export function buildCONotification(
       title: 'NTE increase declined',
       body: `Your NTE increase request was declined on ${label}`,
     },
+    CO_CLOSED_FOR_PRICING: {
+      title: 'CO closed for final pricing',
+      body: `${label} — scope is finalized. Submit your final pricing.`,
+    },
+    CO_COMPLETED: {
+      title: 'Work marked complete',
+      body: `${label} has been marked as completed by TC. Acknowledgment required.`,
+    },
+    CO_ACKNOWLEDGED: {
+      title: 'Completion acknowledged',
+      body: `${label} completion has been acknowledged. You can now create an invoice.`,
+    },
+    CO_SCOPE_ADDED: {
+      title: 'New scope added to CO',
+      body: `${label} has new line items added.`,
+    },
+    NTE_WARNING_80: {
+      title: 'NTE cap at 80%',
+      body: `${label} has reached 80% of the NTE cap.`,
+    },
+    NTE_BLOCKED_100: {
+      title: 'NTE cap reached — additions blocked',
+      body: `${label} has reached 100% of the NTE cap. GC must increase or close.`,
+    },
+    FC_PRICING_SUBMITTED: {
+      title: 'FC pricing submitted',
+      body: `Field crew has submitted pricing on ${label}.`,
+    },
   };
 
   return map[type] ?? { title: 'Change order update', body: label };
