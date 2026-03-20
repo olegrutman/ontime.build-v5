@@ -47,10 +47,10 @@ export function RemindersTile({ reminders, onComplete, onAdd }: RemindersTilePro
       <div className="p-4">
         {upcomingReminders.length === 0 ? (
           <div className="text-center py-4">
-            <p className="text-sm text-muted-foreground mb-3">
+            <p className="text-[0.82rem] text-muted-foreground mb-3">
               No upcoming reminders
             </p>
-            <Button variant="outline" size="sm" onClick={onAdd} className="h-10 text-sm">
+            <Button variant="outline" size="sm" onClick={onAdd} className="h-10 text-[0.82rem]">
               <Plus className="h-4 w-4 mr-1" />
               Add Reminder
             </Button>
