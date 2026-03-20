@@ -163,7 +163,7 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
       <div className="border-t pt-4 grid grid-cols-2 gap-4">
         {/* Original Contract */}
         <div>
-          <p className="text-xs text-muted-foreground mb-0.5">
+          <p className="text-[0.68rem] text-muted-foreground mb-0.5">
             {isTC ? `Incoming (${getContractCounterpartyName(upstreamContract, userOrgIds)})` : `Contract with ${getContractCounterpartyName(upstreamContract, userOrgIds)}`}
           </p>
           <div className="group flex items-center gap-1.5">
