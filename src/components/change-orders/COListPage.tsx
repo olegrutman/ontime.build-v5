@@ -21,6 +21,8 @@ type COViewMode = 'card' | 'list';
 const STATUS_ORDER: COStatus[] = [
   'draft',
   'shared',
+  'work_in_progress',
+  'closed_for_pricing',
   'submitted',
   'approved',
   'rejected',
@@ -30,6 +32,8 @@ const STATUS_ORDER: COStatus[] = [
 const STATUS_BADGE_STYLES: Record<COStatus, string> = {
   draft: 'bg-muted text-muted-foreground border-border',
   shared: 'bg-accent text-accent-foreground border-border',
+  work_in_progress: 'bg-blue-100 text-blue-700 border-blue-200',
+  closed_for_pricing: 'bg-amber-100 text-amber-700 border-amber-200',
   submitted: 'bg-primary/15 text-primary border-primary/25',
   approved: 'bg-primary text-primary-foreground border-primary',
   rejected: 'bg-destructive/10 text-destructive border-destructive/30',
