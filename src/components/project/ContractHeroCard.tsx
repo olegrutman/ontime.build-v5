@@ -81,8 +81,8 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
   // FC contract creation overlay
   if (creating) {
     return (
-      <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 space-y-3">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Add Field Crew Contract</p>
+      <div data-sasha-card="Contract" className="bg-card rounded-lg border shadow-sm p-5 space-y-3">
+        <p className="kpi-label">Add Field Crew Contract</p>
         {fcParticipants.length > 1 && (
           <select className="w-full h-9 text-sm border rounded-lg px-3 bg-background" value={selectedFcOrg} onChange={e => setSelectedFcOrg(e.target.value)}>
             <option value="">Select Field Crew...</option>
