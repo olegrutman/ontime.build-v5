@@ -157,8 +157,13 @@ export function useChangeOrderDetail(coId: string | null) {
   const billableLaborEntries = laborEntries.filter(entry => !entry.is_actual_cost);
   const actualCostEntries = laborEntries.filter(entry => entry.is_actual_cost);
 
-  const fcLaborTotal = billableLaborEntries
-    .filter(entry => entry.entered_by_role === 'FC')
+  const fcBillableEntries = billableLaborEntries.filter(entry => entry.entered_by_role === 'FC');
+  const fcLaborTotal = fcBillableEntries.reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
+  const fcTotalHours = fcBillableEntries
+    .filter(entry => entry.pricing_mode === 'hourly')
+    .reduce((sum, entry) => sum + (entry.hours ?? 0), 0);
+  const fcLumpSumTotal = fcBillableEntries
+    .filter(entry => entry.pricing_mode === 'lump_sum')
     .reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
   const tcLaborTotal = billableLaborEntries
     .filter(entry => entry.entered_by_role === 'TC')
@@ -179,6 +184,8 @@ export function useChangeOrderDetail(coId: string | null) {
   const financials: COFinancials = {
     laborTotal,
     fcLaborTotal,
+    fcTotalHours,
+    fcLumpSumTotal,
     tcLaborTotal,
     materialsTotal,
     materialsCost,
