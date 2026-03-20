@@ -369,6 +369,7 @@ export function CODetailPage() {
                     isTC={isTC}
                     isGC={isGC}
                     isFC={isFC}
+                    equipmentResponsible={co.equipment_responsible}
                     canEdit={canEdit}
                     onRefresh={refreshDetail}
                   />

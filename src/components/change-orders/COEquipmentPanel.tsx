@@ -205,7 +205,7 @@ export function COEquipmentPanel({
                     </div>
                   )}
                 </div>
-                {canEdit && isTC && (
+                {canEdit && (isTC || isGC || isFC) && (
                   <button
                     onClick={() => deleteItem(item.id)}
                     disabled={deleting === item.id}
