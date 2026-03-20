@@ -253,8 +253,8 @@ export function CODetailPage() {
 
                 <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5">
                   <div className="co-light-kpi">
-                    <p className="co-light-kpi-label">{isTC ? 'TC labor' : 'Labor'}</p>
-                    <p className="co-light-kpi-value">{fmtCurrency(financials.laborTotal)}</p>
+                    <p className="co-light-kpi-label">{isTC ? 'TC labor' : isFC ? 'My labor' : 'Labor'}</p>
+                    <p className="co-light-kpi-value">{fmtCurrency(isGC ? financials.tcLaborTotal : isFC ? financials.fcLaborTotal : financials.laborTotal)}</p>
                   </div>
                   {isTC && financials.fcLaborTotal > 0 && (
                     <div className="co-light-kpi">
