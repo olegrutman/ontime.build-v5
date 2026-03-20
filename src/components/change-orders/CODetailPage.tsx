@@ -718,7 +718,7 @@ function AddScopeItemButton({ coId, orgId, projectId, role, co, collaborators, o
                         className="w-full text-left px-3 py-2.5 rounded-md hover:bg-accent/50 transition-colors"
                       >
                         <p className="text-sm font-medium text-foreground">{item.item_name}</p>
-                        <p className="text-[11px] text-muted-foreground">{item.default_unit}</p>
+                        <p className="text-[11px] text-muted-foreground">{item.unit}</p>
                       </button>
                     ))}
                   </div>
