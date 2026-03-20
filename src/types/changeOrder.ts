@@ -1,6 +1,8 @@
 export type COStatus =
   | 'draft'
   | 'shared'
+  | 'work_in_progress'
+  | 'closed_for_pricing'
   | 'submitted'
   | 'approved'
   | 'rejected'
@@ -44,12 +46,14 @@ export const CO_REASON_COLORS: Record<COReasonCode, { bg: string; text: string }
 };
 
 export const CO_STATUS_LABELS: Record<COStatus, string> = {
-  draft:      'Draft',
-  shared:     'Shared',
-  submitted:  'Submitted',
-  approved:   'Approved',
-  rejected:   'Rejected',
-  contracted: 'Contracted',
+  draft:              'Draft',
+  shared:             'Shared',
+  work_in_progress:   'Work in Progress',
+  closed_for_pricing: 'Closed for Pricing',
+  submitted:          'Submitted',
+  approved:           'Approved',
+  rejected:           'Rejected',
+  contracted:         'Contracted',
 };
 
 export interface ChangeOrder {
