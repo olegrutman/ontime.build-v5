@@ -34,10 +34,10 @@ export function CriticalScheduleCard({ projectId, onNavigate, maxItems = 5 }: Cr
 
   if (!criticalItems.length) {
     return (
-      <div className="bg-card rounded-2xl border p-4">
+      <div className="bg-card rounded-lg border p-4">
         <div className="flex items-center gap-2 mb-3">
           <Clock className="h-4 w-4 text-muted-foreground" />
-          <span className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Critical Schedule</span>
+          <span className="kpi-label">Critical Schedule</span>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
           <CheckCircle2 className="h-4 w-4 text-green-500" />
