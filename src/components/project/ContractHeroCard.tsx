@@ -120,8 +120,8 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
         <p className="kpi-value">{fmt(supplierOrderValue)}</p>
         <div className="border-t mt-4 pt-4 grid grid-cols-3 gap-4">
           <div>
-            <p className="text-[0.65rem] md:text-xs text-muted-foreground mb-0.5">Invoiced</p>
-            <p className="font-heading text-[1.2rem] md:text-sm font-bold tabular-nums">{fmt(supplierInvoiced)}</p>
+            <p className="text-[0.68rem] text-muted-foreground mb-0.5">Invoiced</p>
+            <p className="font-heading text-[1.2rem] font-bold tabular-nums">{fmt(supplierInvoiced)}</p>
           </div>
           <div>
             <p className="text-[0.65rem] md:text-xs text-muted-foreground mb-0.5">Paid</p>
