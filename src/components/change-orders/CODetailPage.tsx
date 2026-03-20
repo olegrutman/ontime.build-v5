@@ -32,6 +32,7 @@ import { CO_REASON_LABELS, CO_STATUS_LABELS } from '@/types/changeOrder';
 import type { COCreatedByRole, COFCOrgOption, COFinancials, COReasonCode, COStatus, ChangeOrder, WorkOrderCatalogItem } from '@/types/changeOrder';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { buildCONotification, sendCONotification } from '@/lib/coNotifications';
+import { StepCatalog } from './wizard/StepCatalog';
 
 const STATUS_BADGE: Record<COStatus, string> = {
   draft: 'bg-muted text-muted-foreground border-border',
