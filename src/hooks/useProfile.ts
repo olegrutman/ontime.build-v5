@@ -43,6 +43,7 @@ export interface OrgSettings {
   minimum_service_charge: number | null;
   default_crew_size: number | null;
   default_workday_hours: number | null;
+  use_fc_input_as_base: boolean;
 }
 
 export interface UserSettings {
