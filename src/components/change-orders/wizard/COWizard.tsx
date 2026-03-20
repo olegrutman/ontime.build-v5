@@ -95,6 +95,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
 
   function canAdvance(): boolean {
     const s = ALL_STEPS[step];
+    if (s.key === 'review') return true;
     if (s.key === 'catalog') return data.selectedItems.length > 0;
     if (s.key === 'location') {
       return data.locationTags.length > 0;
