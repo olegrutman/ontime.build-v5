@@ -15,6 +15,7 @@ import { StepCatalog } from './StepCatalog';
 import { StepLocation } from './StepLocation';
 import { StepReason } from './StepReason';
 import { StepConfig } from './StepConfig';
+import { StepReview } from './StepReview';
 
 export interface COWizardData {
   selectedItems: WorkOrderCatalogItem[];
