@@ -49,6 +49,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'ALL' | 'NEEDS_ACTION'>('ALL');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createFromCOsOpen, setCreateFromCOsOpen] = useState(false);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(null);
   const [invoiceDirection, setInvoiceDirection] = useState<'sent' | 'received'>('sent');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
