@@ -271,7 +271,12 @@ export function CODetailPage() {
                   </div>
                 </div>
 
-                {showNTEWarning && (
+                {nteBlocked && (
+                  <div className="rounded-xl px-3 py-2 text-xs bg-destructive/10 text-destructive border border-destructive/30 font-medium">
+                    NTE cap reached (100%). Further additions are blocked. GC must increase the cap or close the CO.
+                  </div>
+                )}
+                {showNTEWarning && !nteBlocked && (
                   <div className="co-light-warning rounded-xl px-3 py-2 text-xs">
                     Action required: NTE cap is nearing limit ({nteUsedPercent.toFixed(1)}% used).
                   </div>
