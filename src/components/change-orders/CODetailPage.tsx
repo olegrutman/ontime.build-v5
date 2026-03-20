@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { ArrowLeft, Calendar, MapPin, Plus, Search, ChevronRight, X } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Plus } from 'lucide-react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { BottomNav } from '@/components/layout/BottomNav';
