@@ -243,6 +243,15 @@ export default function PlatformProjectDetail() {
     // Work orders removed
     setWorkOrders([]);
 
+    // Fetch change orders
+    const { data: coData } = await supabase
+      .from('change_orders')
+      .select('id, co_number, status, pricing_type, created_at')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    setChangeOrders((coData || []) as unknown as CORow[]);
+
     setLoading(false);
   };
 
