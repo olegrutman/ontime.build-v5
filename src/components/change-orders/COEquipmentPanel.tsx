@@ -14,6 +14,7 @@ interface COEquipmentPanelProps {
   isTC:      boolean;
   isGC:      boolean;
   isFC:      boolean;
+  equipmentResponsible?: string | null;
   canEdit:   boolean;
   onRefresh: () => void;
 }
