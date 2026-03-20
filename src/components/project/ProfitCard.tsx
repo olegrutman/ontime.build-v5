@@ -148,10 +148,10 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
     if (!hasLaborBudget && !hasActualCost) return null;
 
     return (
-      <div className="bg-card rounded-2xl shadow-sm p-5 space-y-2.5">
+      <div className="bg-card rounded-lg border shadow-sm p-5 space-y-2.5">
         <div className="flex items-center gap-1.5 mb-1">
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Profit Position</span>
+          <span className="kpi-label">Profit Position</span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Contract Total</span>
