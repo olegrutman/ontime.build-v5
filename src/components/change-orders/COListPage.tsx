@@ -263,8 +263,8 @@ export function COListPage({ projectId }: COListPageProps) {
             <p className="co-light-kpi-value">{mine.draft.length + mine.shared.length}</p>
           </div>
           <div className="co-light-kpi">
-            <p className="co-light-kpi-label">Submitted</p>
-            <p className="co-light-kpi-value">{mine.submitted.length}</p>
+            <p className="co-light-kpi-label">In Progress</p>
+            <p className="co-light-kpi-value">{mine.work_in_progress.length + mine.closed_for_pricing.length + mine.submitted.length}</p>
           </div>
           <div className="co-light-kpi">
             <p className="co-light-kpi-label">Approved</p>
