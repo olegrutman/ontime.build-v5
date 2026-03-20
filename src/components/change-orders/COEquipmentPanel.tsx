@@ -243,7 +243,7 @@ export function COEquipmentPanel({
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className={cn("grid gap-2", isFC ? "grid-cols-1" : "grid-cols-3")}>
                     <div>
                       <p className="text-[10px] text-muted-foreground mb-1">Duration</p>
                       <Input
@@ -253,31 +253,35 @@ export function COEquipmentPanel({
                         className="h-7 text-xs"
                       />
                     </div>
-                    <div>
-                      <p className="text-[10px] text-muted-foreground mb-1">Cost $</p>
-                      <div className="relative">
-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
-                        <Input
-                          type="number"
-                          value={draft.cost}
-                          onChange={e => updateDraft(draft.tempId, 'cost', e.target.value)}
-                          placeholder="0.00"
-                          className="h-7 text-xs pl-5"
-                        />
+                    {!isFC && (
+                      <div>
+                        <p className="text-[10px] text-muted-foreground mb-1">Cost $</p>
+                        <div className="relative">
+                          <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
+                          <Input
+                            type="number"
+                            value={draft.cost}
+                            onChange={e => updateDraft(draft.tempId, 'cost', e.target.value)}
+                            placeholder="0.00"
+                            className="h-7 text-xs pl-5"
+                          />
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-muted-foreground mb-1">Markup %</p>
-                      <div className="relative">
-                        <Input
-                          type="number"
-                          value={draft.markup_percent}
-                          onChange={e => updateDraft(draft.tempId, 'markup_percent', e.target.value)}
-                          className="h-7 text-xs pr-5"
-                        />
-                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                    )}
+                    {!isFC && (
+                      <div>
+                        <p className="text-[10px] text-muted-foreground mb-1">Markup %</p>
+                        <div className="relative">
+                          <Input
+                            type="number"
+                            value={draft.markup_percent}
+                            onChange={e => updateDraft(draft.tempId, 'markup_percent', e.target.value)}
+                            className="h-7 text-xs pr-5"
+                          />
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   {billed > 0 && (
