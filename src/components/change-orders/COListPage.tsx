@@ -189,6 +189,8 @@ export function COListPage({ projectId }: COListPageProps) {
   const allMine: ChangeOrderWithMembers[] = [
     ...mine.draft,
     ...mine.shared,
+    ...mine.work_in_progress,
+    ...mine.closed_for_pricing,
     ...mine.submitted,
     ...mine.approved,
     ...mine.rejected,
