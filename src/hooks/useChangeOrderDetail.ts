@@ -31,13 +31,11 @@ export function useChangeOrderDetail(coId: string | null) {
     action: 'submit' | 'approve' | 'reject'
   ) => {
     if (data) return data;
-
     const actionMessages = {
-      submit: 'You don’t have permission to submit this change order.',
-      approve: 'You don’t have permission to approve this change order.',
-      reject: 'You don’t have permission to reject this change order.',
+      submit: 'You don't have permission to submit this change order.',
+      approve: 'You don't have permission to approve this change order.',
+      reject: 'You don't have permission to reject this change order.',
     } as const;
-
     throw new Error(actionMessages[action]);
   };
 
@@ -55,36 +53,16 @@ export function useChangeOrderDetail(coId: string | null) {
     },
   });
 
-  const isCombinedParent = !!co && co.status === 'combined' && !co.combined_co_id;
-
-  const { data: memberCOs = [] } = useQuery({
-    queryKey: ['co-detail', coId, 'members'],
-    enabled: !!coId && isCombinedParent,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('co_combined_members')
-        .select('member:change_orders!co_combined_members_member_co_id_fkey(*)') // ✓ verified
-        .eq('combined_co_id', coId!);
-      if (error) throw error;
-      const rows = (data ?? []) as Array<{ member: ChangeOrder | null }>;
-      return rows.flatMap(row => (row.member ? [row.member] : []));
-    },
-  });
-
-  const allCoIds = isCombinedParent && memberCOs.length > 0
-    ? memberCOs.map(member => member.id)
-    : coId
-      ? [coId]
-      : [];
+  const allCoIds = coId ? [coId] : [];
 
   const { data: lineItems = [] } = useQuery({
-    queryKey: ['co-detail', coId, 'line-items', allCoIds],
-    enabled: allCoIds.length > 0,
+    queryKey: ['co-detail', coId, 'line-items'],
+    enabled: !!coId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('co_line_items')
         .select('*')
-        .in('co_id', allCoIds) // ✓ verified — scoped to active CO/member IDs only
+        .eq('co_id', coId!)
         .order('sort_order');
       if (error) throw error;
       return data as COLineItem[];
@@ -92,13 +70,13 @@ export function useChangeOrderDetail(coId: string | null) {
   });
 
   const { data: laborEntries = [] } = useQuery({
-    queryKey: ['co-detail', coId, 'labor', allCoIds],
-    enabled: allCoIds.length > 0,
+    queryKey: ['co-detail', coId, 'labor'],
+    enabled: !!coId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('co_labor_entries')
         .select('*')
-        .in('co_id', allCoIds) // ✓ verified — scoped to active CO/member IDs only
+        .eq('co_id', coId!)
         .order('entry_date', { ascending: false });
       if (error) throw error;
       return data as COLaborEntry[];
@@ -106,27 +84,27 @@ export function useChangeOrderDetail(coId: string | null) {
   });
 
   const { data: materials = [] } = useQuery({
-    queryKey: ['co-detail', coId, 'materials', allCoIds],
-    enabled: allCoIds.length > 0,
+    queryKey: ['co-detail', coId, 'materials'],
+    enabled: !!coId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('co_material_items')
         .select('*')
-        .in('co_id', allCoIds) // ✓ verified — scoped to active CO/member IDs only
-        .order('created_at', { ascending: true }); // ✓ verified
+        .eq('co_id', coId!)
+        .order('created_at', { ascending: true });
       if (error) throw error;
       return data as COMaterialItem[];
     },
   });
 
   const { data: equipment = [] } = useQuery({
-    queryKey: ['co-detail', coId, 'equipment', allCoIds],
-    enabled: allCoIds.length > 0,
+    queryKey: ['co-detail', coId, 'equipment'],
+    enabled: !!coId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('co_equipment_items')
         .select('*')
-        .in('co_id', allCoIds) // ✓ verified — scoped to active CO/member IDs only
+        .eq('co_id', coId!)
         .order('created_at');
       if (error) throw error;
       return data as COEquipmentItem[];
@@ -140,7 +118,7 @@ export function useChangeOrderDetail(coId: string | null) {
       const { data, error } = await supabase
         .from('co_nte_log')
         .select('*')
-        .eq('co_id', coId!) // ✓ verified
+        .eq('co_id', coId!)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as CONTELogEntry[];
@@ -180,24 +158,23 @@ export function useChangeOrderDetail(coId: string | null) {
   const actualCostEntries = laborEntries.filter(entry => entry.is_actual_cost);
 
   const fcLaborTotal = billableLaborEntries
-    .filter(entry => entry.entered_by_role === 'FC') // ✓ verified
+    .filter(entry => entry.entered_by_role === 'FC')
     .reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
   const tcLaborTotal = billableLaborEntries
-    .filter(entry => entry.entered_by_role === 'TC') // ✓ verified
+    .filter(entry => entry.entered_by_role === 'TC')
     .reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
 
-  // FC billable is a downstream cost to the TC and is not rolled into TC upstream pricing.
-  const laborTotal = tcLaborTotal; // ✓ verified
+  const laborTotal = tcLaborTotal;
   const materialsCost = materials.reduce((sum, material) => sum + (material.line_cost ?? 0), 0);
   const materialsMarkup = materials.reduce((sum, material) => sum + (material.markup_amount ?? 0), 0);
-  const materialsTotal = materials.reduce((sum, material) => sum + (material.billed_amount ?? 0), 0); // ✓ verified
+  const materialsTotal = materials.reduce((sum, material) => sum + (material.billed_amount ?? 0), 0);
   const equipmentCost = equipment.reduce((sum, item) => sum + (item.cost ?? 0), 0);
   const equipmentMarkup = equipment.reduce((sum, item) => sum + (item.markup_amount ?? 0), 0);
   const equipmentTotal = equipment.reduce((sum, item) => sum + (item.billed_amount ?? 0), 0);
   const grandTotal = laborTotal + materialsTotal + equipmentTotal;
   const actualCostTotal = actualCostEntries.reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
   const profitMargin = grandTotal > 0 ? ((grandTotal - actualCostTotal) / grandTotal) * 100 : null;
-  const nteUsedPercent = co?.nte_cap && co.nte_cap > 0 ? (laborTotal / co.nte_cap) * 100 : 0; // ✓ verified
+  const nteUsedPercent = co?.nte_cap && co.nte_cap > 0 ? (laborTotal / co.nte_cap) * 100 : 0;
 
   const financials: COFinancials = {
     laborTotal,
@@ -498,7 +475,7 @@ export function useChangeOrderDetail(coId: string | null) {
         })
         .eq('id', coId)
         .select()
-        .single();
+        .maybeSingle();
       if (coError) throw coError;
       return data as ChangeOrder;
     },
@@ -513,30 +490,21 @@ export function useChangeOrderDetail(coId: string | null) {
       nteLogId: string;
       note: string;
     }) => {
-      const now = new Date().toISOString();
+      if (!coId || !user) throw new Error('Missing data');
       const { error } = await supabase
         .from('co_nte_log')
         .update({
-          rejected_at: now,
+          rejected_at: new Date().toISOString(),
           rejection_note: note,
         })
         .eq('id', nteLogId);
       if (error) throw error;
-      await supabase
-        .from('change_orders')
-        .update({
-          nte_increase_requested: null,
-          nte_increase_approved: false,
-          updated_at: now,
-        })
-        .eq('id', coId!);
     },
     onSuccess: invalidate,
   });
 
   return {
     co,
-    memberCOs,
     collaborators,
     lineItems,
     laborEntries,
@@ -560,9 +528,9 @@ export function useChangeOrderDetail(coId: string | null) {
     submitCO,
     approveCO,
     rejectCO,
+    requestNTEIncrease,
     requestFCInput,
     completeFCInput,
-    requestNTEIncrease,
     approveNTEIncrease,
     rejectNTEIncrease,
   };

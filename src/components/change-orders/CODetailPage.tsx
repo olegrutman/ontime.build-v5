@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { ArrowLeft, Calendar, ChevronDown, GitMerge, MapPin } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin } from 'lucide-react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { BottomNav } from '@/components/layout/BottomNav';
@@ -22,14 +22,12 @@ import { COStatusActions } from './COStatusActions';
 import { CONTEPanel } from './CONTEPanel';
 import { COActivityFeed } from './COActivityFeed';
 import { FCInputRequestCard } from './FCInputRequestCard';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { CO_REASON_LABELS, CO_STATUS_LABELS } from '@/types/changeOrder';
 import type { COCreatedByRole, COFCOrgOption, COReasonCode, COStatus, ChangeOrder } from '@/types/changeOrder';
 
 const STATUS_BADGE: Record<COStatus, string> = {
   draft: 'bg-muted text-muted-foreground border-border',
   shared: 'bg-accent text-accent-foreground border-border',
-  combined: 'bg-secondary/15 text-secondary border-secondary/25',
   submitted: 'bg-primary/15 text-primary border-primary/25',
   approved: 'bg-primary text-primary-foreground border-primary',
   rejected: 'bg-destructive/10 text-destructive border-destructive/30',
@@ -57,7 +55,6 @@ export function CODetailPage() {
 
   const {
     co,
-    memberCOs,
     collaborators,
     lineItems,
     laborEntries,
@@ -102,7 +99,6 @@ export function CODetailPage() {
   const isActiveStatus =
     co?.status === 'draft' ||
     co?.status === 'shared' ||
-    co?.status === 'combined' ||
     co?.status === 'submitted';
 
   const isRunningPricing =
@@ -113,27 +109,16 @@ export function CODetailPage() {
   const isCollaboratorOrg = collaborators.some(
     collaborator => collaborator.organization_id === myOrgId && collaborator.status === 'active'
   );
-  const canRequestFCInput = !!co && isTC && co.assigned_to_org_id === myOrgId && (co.status === 'shared' || co.status === 'rejected' || co.status === 'combined');
+  const canRequestFCInput = !!co && isTC && co.assigned_to_org_id === myOrgId && (co.status === 'shared' || co.status === 'rejected');
   const canCompleteFCInput = !!co && isFC && isCollaboratorOrg;
   const canEdit = (isActiveStatus || (isRunningPricing && co?.status === 'submitted')) && (isTC || !currentCollaborator || isCollaboratorOrg);
 
   const nteUsedPercent = financials.nteUsedPercent ?? 0;
   const showNTEWarning = co?.pricing_type === 'nte' && !!co?.nte_cap && nteUsedPercent >= 80;
 
-  const scopeSections = useMemo(() => {
-    const isCombinedParent = memberCOs.length > 0;
-    const sections: { memberCO: ChangeOrder | null; items: typeof lineItems }[] = [];
-
-    if (isCombinedParent) {
-      for (const mco of memberCOs) {
-        const items = lineItems.filter(li => li.co_id === mco.id);
-        sections.push({ memberCO: mco, items });
-      }
-      return sections;
-    }
-
-    return [{ memberCO: null, items: lineItems }];
-  }, [memberCOs, lineItems]);
+  const pricingType: ValidPricing = co && VALID_PRICING.includes(co.pricing_type as ValidPricing)
+    ? (co.pricing_type as ValidPricing)
+    : 'fixed';
 
   if (isLoading) {
     return (
@@ -172,11 +157,7 @@ export function CODetailPage() {
     );
   }
 
-  const isCombinedParent = memberCOs.length > 0;
-  const displayTitle = co.title ?? co.co_number ?? (isCombinedParent ? 'Combined change order' : 'Change order');
-  const pricingType: ValidPricing = VALID_PRICING.includes(co.pricing_type as ValidPricing)
-    ? (co.pricing_type as ValidPricing)
-    : 'fixed';
+  const displayTitle = co.title ?? co.co_number ?? 'Change order';
   const fcOrgOptions: COFCOrgOption[] = projectFCOrgs.filter(
     option => !collaboratorOrgIds.has(option.id) || option.id === currentCollaborator?.organization_id
   );
@@ -221,7 +202,6 @@ export function CODetailPage() {
                     </Button>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        {isCombinedParent && <GitMerge className="h-4 w-4 text-muted-foreground" />}
                         <h1 className="text-lg md:text-xl font-semibold truncate">{displayTitle}</h1>
                         <Badge variant="outline" className={cn('text-[11px]', STATUS_BADGE[co.status as COStatus])}>
                           {CO_STATUS_LABELS[co.status as COStatus]}
@@ -303,79 +283,30 @@ export function CODetailPage() {
                   </div>
 
                   <div>
-                    {scopeSections.map(({ memberCO, items }) => {
-                      const label = memberCO?.title ?? memberCO?.co_number ?? 'Scope section';
-                      const sectionLabor = laborEntries.filter(e => e.co_id === (memberCO?.id ?? co.id));
-
-                      if (memberCO) {
-                        return (
-                          <Collapsible key={memberCO.id} defaultOpen>
-                            <CollapsibleTrigger className="w-full px-4 py-3 border-b border-border bg-muted/20 hover:bg-muted/30 transition-colors text-left">
-                              <div className="flex items-center justify-between gap-3">
-                                <div className="min-w-0">
-                                  <p className="text-sm font-medium truncate">{label}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    {items.length} line item{items.length === 1 ? '' : 's'}
-                                  </p>
-                                </div>
-                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                              </div>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent>
-                              {items.length === 0 ? (
-                                <p className="px-4 py-4 text-sm text-muted-foreground">No scope items in this section</p>
-                              ) : (
-                                items.map(item => (
-                                  <COLineItemRow
-                                    key={item.id}
-                                    item={item}
-                                    laborEntries={sectionLabor.filter(e => e.co_line_item_id === item.id)}
-                                    role={role}
-                                    isGC={isGC}
-                                    isTC={isTC}
-                                    isFC={isFC}
-                                    coId={co.id}
-                                    orgId={myOrgId}
-                                    pricingType={pricingType}
-                                    nteCap={co.nte_cap}
-                                    nteUsed={financials.laborTotal}
-                                    canAddLabor={canEdit && (isTC || isFC)}
-                                    onRefresh={refreshDetail}
-                                  />
-                                ))
-                              )}
-                            </CollapsibleContent>
-                          </Collapsible>
-                        );
-                      }
-
-                      return items.length === 0 ? (
-                        <p key="empty-scope" className="px-4 py-4 text-sm text-muted-foreground">
-                          No scope items added yet
-                        </p>
-                      ) : (
-                        <div key="single-scope">
-                          {items.map(item => (
-                            <COLineItemRow
-                              key={item.id}
-                              item={item}
-                              laborEntries={sectionLabor.filter(e => e.co_line_item_id === item.id)}
-                              role={role}
-                              isGC={isGC}
-                              isTC={isTC}
-                              isFC={isFC}
-                              coId={co.id}
-                              orgId={myOrgId}
-                              pricingType={pricingType}
-                              nteCap={co.nte_cap}
-                              nteUsed={financials.laborTotal}
-                              canAddLabor={canEdit && (isTC || isFC)}
-                              onRefresh={refreshDetail}
-                            />
-                          ))}
-                        </div>
-                      );
-                    })}
+                    {lineItems.length === 0 ? (
+                      <p className="px-4 py-4 text-sm text-muted-foreground">
+                        No scope items added yet
+                      </p>
+                    ) : (
+                      lineItems.map(item => (
+                        <COLineItemRow
+                          key={item.id}
+                          item={item}
+                          laborEntries={laborEntries.filter(e => e.co_line_item_id === item.id)}
+                          role={role}
+                          isGC={isGC}
+                          isTC={isTC}
+                          isFC={isFC}
+                          coId={co.id}
+                          orgId={myOrgId}
+                          pricingType={pricingType}
+                          nteCap={co.nte_cap}
+                          nteUsed={financials.laborTotal}
+                          canAddLabor={canEdit && (isTC || isFC)}
+                          onRefresh={refreshDetail}
+                        />
+                      ))
+                    )}
                   </div>
                 </section>
 
