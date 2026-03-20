@@ -343,16 +343,18 @@ export function COStatusActions({
   const isCreator = co.created_by_user_id === user?.id;
   const isCollaborator = collaborators.some(c => c.organization_id === currentOrgId && c.status === 'active');
 
-  /* Draft actions */
-  const canShare = isCreator && status === 'draft' && !co.draft_shared_with_next;
-  /* GC can send to WIP (Flow 1) */
+  /* Draft actions — suppress Share when Send-to-WIP is available (M5) */
   const canSendToWIP = isGC && isCreator && status === 'draft' && !!co.assigned_to_org_id;
+  const canShare = isCreator && status === 'draft' && !co.draft_shared_with_next && !canSendToWIP;
   /* GC can close for pricing (Flow 1) */
   const canCloseForPricing = isGC && (status === 'work_in_progress') && (co.org_id === currentOrgId || co.created_by_user_id === user?.id);
-  /* TC/FC submit for approval */
-  const canSubmit = (isTC || isFC) && !isCollaborator && (status === 'draft' || status === 'shared' || status === 'closed_for_pricing');
+  /* TC/FC submit for approval — include 'rejected' (C3) */
+  const canSubmit = (isTC || isFC) && !isCollaborator && (status === 'draft' || status === 'shared' || status === 'closed_for_pricing' || status === 'rejected');
+  /* FC collaborator can submit pricing independently (M4) */
+  const canSubmitFCPricing = isFC && isCollaborator && status === 'closed_for_pricing';
   const canRecall = (isTC || isFC) && !isCollaborator && status === 'submitted';
-  const canApprove = ((isGC && status === 'submitted' && co.assigned_to_org_id === currentOrgId) || forwardsToGC) && !isCollaborator;
+  /* GC approves using org_id (creating org) not assigned_to_org_id (C2) */
+  const canApprove = ((isGC && status === 'submitted' && co.org_id === currentOrgId) || forwardsToGC) && !isCollaborator;
   const canReject = canApprove;
   /* Flow 2 completion */
   const isApproved = status === 'approved';
