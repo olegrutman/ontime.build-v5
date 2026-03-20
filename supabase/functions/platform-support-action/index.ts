@@ -31,6 +31,7 @@ const ACTION_MIN_ROLE: Record<string, string> = {
   DELETE_INVOICE: "PLATFORM_OWNER",
   DELETE_PURCHASE_ORDER: "PLATFORM_OWNER",
   DELETE_WORK_ORDER: "PLATFORM_OWNER",
+  DELETE_CHANGE_ORDER: "PLATFORM_OWNER",
 };
 
 function hasPermission(callerRole: string, requiredRole: string): boolean {
