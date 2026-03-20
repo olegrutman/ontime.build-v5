@@ -679,6 +679,7 @@ export type Database = {
           division: string | null
           id: string
           item_name: string
+          location_tag: string | null
           org_id: string
           qty: number | null
           sort_order: number | null
@@ -693,6 +694,7 @@ export type Database = {
           division?: string | null
           id?: string
           item_name: string
+          location_tag?: string | null
           org_id: string
           qty?: number | null
           sort_order?: number | null
@@ -707,6 +709,7 @@ export type Database = {
           division?: string | null
           id?: string
           item_name?: string
+          location_tag?: string | null
           org_id?: string
           qty?: number | null
           sort_order?: number | null

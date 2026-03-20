@@ -1,0 +1,1 @@
+ALTER TABLE public.co_line_items ADD COLUMN location_tag TEXT;
