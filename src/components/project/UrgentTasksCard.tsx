@@ -58,9 +58,9 @@ export function UrgentTasksCard({ projectId, onNavigate, isSupplier, supplierOrg
 
   if (items.length === 0) {
     return (
-      <div data-sasha-card="Urgent Tasks" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Urgent Tasks</p>
-        <p className="text-sm text-muted-foreground">No items need attention</p>
+      <div data-sasha-card="Urgent Tasks" className="bg-card rounded-lg border shadow-sm p-5">
+        <p className="kpi-label mb-3">Urgent Tasks</p>
+        <p className="text-[0.82rem] text-muted-foreground">No items need attention</p>
       </div>
     );
   }
