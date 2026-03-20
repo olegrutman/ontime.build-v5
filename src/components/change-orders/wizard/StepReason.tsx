@@ -2,11 +2,17 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import type { COReasonCode } from '@/types/changeOrder';
-import type { COWizardData } from './COWizard';
+
+/**
+ * Standalone reason picker — no longer used in the CO wizard
+ * (reason is now per-item inside StepCatalog).
+ * Kept for potential reuse elsewhere.
+ */
 
 interface StepReasonProps {
-  data:     COWizardData;
-  onChange: (patch: Partial<COWizardData>) => void;
+  reason: COReasonCode | null;
+  reasonNote: string;
+  onChange: (patch: { reason?: COReasonCode; reasonNote?: string }) => void;
 }
 
 const REASONS: { code: COReasonCode; description: string }[] = [
@@ -19,21 +25,21 @@ const REASONS: { code: COReasonCode; description: string }[] = [
   { code: 'other',             description: 'Anything else' },
 ];
 
-export function StepReason({ data, onChange }: StepReasonProps) {
+export function StepReason({ reason, reasonNote, onChange }: StepReasonProps) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Select the reason for this change order. This is required and will appear on the CO for all parties.
+        Select the reason for this change order.
       </p>
 
       <div className="space-y-2">
         {REASONS.map(({ code, description }) => {
-          const isSelected = data.reason === code;
-          const colors     = CO_REASON_COLORS[code];
+          const isSelected = reason === code;
+          const colors = CO_REASON_COLORS[code];
           return (
             <button
               key={code}
-              onClick={() => onChange({ reason: code, reasonNote: data.reasonNote })}
+              onClick={() => onChange({ reason: code })}
               className={cn(
                 'flex items-start gap-3 p-3.5 rounded-xl border-2 text-left transition-all w-full',
                 isSelected
@@ -55,13 +61,13 @@ export function StepReason({ data, onChange }: StepReasonProps) {
         })}
       </div>
 
-      {data.reason === 'other' && (
+      {reason === 'other' && (
         <div className="space-y-1.5">
           <label className="text-sm font-medium text-foreground">
             Describe the reason *
           </label>
           <Textarea
-            value={data.reasonNote}
+            value={reasonNote}
             onChange={(e) => onChange({ reasonNote: e.target.value })}
             placeholder="Explain the reason for this change order…"
             rows={3}
