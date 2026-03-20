@@ -37,6 +37,7 @@ interface COMaterialsPanelProps {
   isGC: boolean;
   isFC: boolean;
   materialsOnSite: boolean;
+  materialsResponsible?: string | null;
   canEdit: boolean;
   onRefresh: () => void;
 }
@@ -119,6 +120,7 @@ export function COMaterialsPanel({
   isGC,
   isFC,
   materialsOnSite,
+  materialsResponsible,
   canEdit,
   onRefresh,
 }: COMaterialsPanelProps) {
@@ -140,9 +142,9 @@ export function COMaterialsPanel({
   const [applyingPricing, setApplyingPricing] = useState(false);
   const [hasApprovedEstimate, setHasApprovedEstimate] = useState(false);
 
-  const canManageMaterials = canEdit && (isTC || isGC);
-  const showPricingColumns = isTC || isGC;
-  const addedByRole = isGC ? 'GC' : 'TC';
+  const canManageMaterials = canEdit && (isTC || isGC || isFC);
+  const showPricingColumns = isFC ? false : isGC ? true : isTC && materialsResponsible === 'TC';
+  const addedByRole = isGC ? 'GC' : isFC ? 'FC' : 'TC';
 
   const activePricingRequest = useMemo(
     () => linkedRequests.find(request => request.status !== 'DELIVERED') ?? linkedRequests[0] ?? null,

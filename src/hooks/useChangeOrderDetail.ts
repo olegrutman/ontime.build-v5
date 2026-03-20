@@ -169,7 +169,7 @@ export function useChangeOrderDetail(coId: string | null) {
     .filter(entry => entry.entered_by_role === 'TC')
     .reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
 
-  const laborTotal = tcLaborTotal;
+  const laborTotal = tcLaborTotal + fcLaborTotal;
   const materialsCost = materials.reduce((sum, material) => sum + (material.line_cost ?? 0), 0);
   const materialsMarkup = materials.reduce((sum, material) => sum + (material.markup_amount ?? 0), 0);
   const materialsTotal = materials.reduce((sum, material) => sum + (material.billed_amount ?? 0), 0);
@@ -179,7 +179,7 @@ export function useChangeOrderDetail(coId: string | null) {
   const grandTotal = laborTotal + materialsTotal + equipmentTotal;
   const actualCostTotal = actualCostEntries.reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
   const profitMargin = grandTotal > 0 ? ((grandTotal - actualCostTotal) / grandTotal) * 100 : null;
-  const nteUsedPercent = co?.nte_cap && co.nte_cap > 0 ? (laborTotal / co.nte_cap) * 100 : 0;
+  const nteUsedPercent = co?.nte_cap && co.nte_cap > 0 ? (grandTotal / co.nte_cap) * 100 : 0;
 
   const financials: COFinancials = {
     laborTotal,

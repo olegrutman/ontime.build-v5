@@ -14,6 +14,7 @@ interface COEquipmentPanelProps {
   isTC:      boolean;
   isGC:      boolean;
   isFC:      boolean;
+  equipmentResponsible?: string | null;
   canEdit:   boolean;
   onRefresh: () => void;
 }
@@ -56,6 +57,7 @@ export function COEquipmentPanel({
   isTC,
   isGC,
   isFC,
+  equipmentResponsible,
   canEdit,
   onRefresh,
 }: COEquipmentPanelProps) {
@@ -94,7 +96,7 @@ export function COEquipmentPanel({
       const rows = valid.map(d => ({
         co_id:          coId,
         org_id:         orgId,
-        added_by_role:  'TC',
+        added_by_role:  isGC ? 'GC' : isFC ? 'FC' : 'TC',
         description:    d.description.trim(),
         duration_note:  d.duration_note.trim() || null,
         cost:           parseFloat(d.cost) || 0,
@@ -135,7 +137,7 @@ export function COEquipmentPanel({
           <Wrench className="h-4 w-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold text-foreground">Equipment</h3>
         </div>
-        {canEdit && isTC && (
+        {canEdit && (isTC || isGC || isFC) && (
           <div className="flex gap-1">
             <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setShowPicker(p => !p)}>
               Pick from list
@@ -168,7 +170,7 @@ export function COEquipmentPanel({
       {equipment.length === 0 && drafts.length === 0 ? (
         <div className="px-4 py-8 text-center">
           <p className="text-sm text-muted-foreground">No equipment added yet</p>
-          {canEdit && isTC && (
+          {canEdit && (isTC || isGC || isFC) && (
             <Button variant="outline" size="sm" className="mt-3 text-xs gap-1" onClick={() => setShowPicker(true)}>
               <Plus className="h-3 w-3" />
               Add equipment
@@ -187,23 +189,23 @@ export function COEquipmentPanel({
                   )}
                 </div>
                 <div className="text-right text-sm shrink-0">
-                  {isTC && (
+                  {isTC && equipmentResponsible === 'TC' && (
                     <div className="text-xs text-muted-foreground">
                       Cost: ${fmt(item.cost ?? 0)}
                     </div>
                   )}
-                  {isTC && item.markup_percent > 0 && (
+                  {isTC && equipmentResponsible === 'TC' && item.markup_percent > 0 && (
                     <div className="text-[10px] text-muted-foreground">
                       +{item.markup_percent}% markup
                     </div>
                   )}
-                  {!isFC && (
+                  {!isFC && (isGC || (isTC && equipmentResponsible === 'TC')) && (
                     <div className="font-medium text-foreground">
                       ${fmt(item.billed_amount ?? 0)}
                     </div>
                   )}
                 </div>
-                {canEdit && isTC && (
+                {canEdit && (isTC || isGC || isFC) && (
                   <button
                     onClick={() => deleteItem(item.id)}
                     disabled={deleting === item.id}
@@ -306,7 +308,7 @@ export function COEquipmentPanel({
             </div>
           )}
 
-          {equipment.length > 0 && !isFC && (
+          {equipment.length > 0 && !isFC && (isGC || (isTC && equipmentResponsible === 'TC')) && (
             <div className="px-4 py-3 border-t border-border space-y-1">
               {isTC && totalCost > 0 && (
                 <div className="flex items-center justify-between text-xs">

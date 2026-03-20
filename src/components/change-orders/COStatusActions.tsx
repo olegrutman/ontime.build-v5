@@ -30,7 +30,7 @@ interface COStatusActionsProps {
   isFC: boolean;
   currentOrgId: string;
   projectId: string;
-  financials?: Pick<COFinancials, 'grandTotal' | 'fcLaborTotal'> | null;
+  financials?: Pick<COFinancials, 'grandTotal' | 'fcLaborTotal' | 'fcTotalHours' | 'fcLumpSumTotal'> | null;
   collaborators?: COCollaborator[];
   onRefresh: () => void;
 }
@@ -199,9 +199,10 @@ export function COStatusActions({
 
         const rate = settings?.default_hourly_rate ?? 0;
         const markup = settings?.labor_markup_percent ?? 0;
-        const fcTotal = financials?.fcLaborTotal ?? 0;
         const isHourly = co.pricing_type === 'tm' || co.pricing_type === 'nte';
-        const calcPrice = isHourly ? fcTotal : fcTotal * (1 + markup / 100);
+        const calcPrice = isHourly
+          ? (financials?.fcTotalHours ?? 0) * rate
+          : (financials?.fcLumpSumTotal ?? 0) * (1 + markup / 100);
 
         await supabase
           .from('change_orders')
@@ -347,7 +348,7 @@ export function COStatusActions({
   /* GC can send to WIP (Flow 1) */
   const canSendToWIP = isGC && isCreator && status === 'draft' && !!co.assigned_to_org_id;
   /* GC can close for pricing (Flow 1) */
-  const canCloseForPricing = isGC && (status === 'work_in_progress');
+  const canCloseForPricing = isGC && (status === 'work_in_progress') && (co.org_id === currentOrgId || co.created_by_user_id === user?.id);
   /* TC/FC submit for approval */
   const canSubmit = (isTC || isFC) && !isCollaborator && (status === 'draft' || status === 'shared' || status === 'closed_for_pricing');
   const canRecall = (isTC || isFC) && !isCollaborator && status === 'submitted';
