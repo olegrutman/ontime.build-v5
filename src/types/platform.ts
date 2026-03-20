@@ -30,7 +30,8 @@ export type SupportActionType =
   | 'DELETE_PROJECT'
   | 'DELETE_INVOICE'
   | 'DELETE_PURCHASE_ORDER'
-  | 'DELETE_WORK_ORDER';
+  | 'DELETE_WORK_ORDER'
+  | 'DELETE_CHANGE_ORDER';
 
 export interface SupportActionLog {
   id: string;
