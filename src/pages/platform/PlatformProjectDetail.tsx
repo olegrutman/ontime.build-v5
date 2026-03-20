@@ -655,9 +655,60 @@ export default function PlatformProjectDetail() {
         </CardContent>
       </Card>
 
+      {/* Change Orders */}
       <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-base">Team / Participants</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <GitBranch className="h-4 w-4" /> Change Orders
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>CO #</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Pricing Type</TableHead>
+                <TableHead>Created</TableHead>
+                {platformRole === 'PLATFORM_OWNER' && <TableHead className="w-[60px]" />}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {changeOrders.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={platformRole === 'PLATFORM_OWNER' ? 5 : 4} className="text-center py-4 text-muted-foreground">No change orders</TableCell>
+                </TableRow>
+              ) : (
+                changeOrders.map((co) => (
+                  <TableRow key={co.id}>
+                    <TableCell className="font-medium">{co.co_number || co.id.slice(0, 8)}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs capitalize">{co.status.toLowerCase().replace('_', ' ')}</Badge>
+                    </TableCell>
+                    <TableCell className="text-sm capitalize">{co.pricing_type.toLowerCase().replace('_', ' ')}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {co.created_at ? format(new Date(co.created_at), 'MMM d, yyyy') : '—'}
+                    </TableCell>
+                    {platformRole === 'PLATFORM_OWNER' && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => { setDeleteCOTarget(co); setDeleteCOOpen(true); }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
           <Table>
