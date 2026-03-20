@@ -59,7 +59,6 @@ interface WizardStep {
 }
 
 const ALL_STEPS: WizardStep[] = [
-  { key: 'reason', label: 'Reason', description: 'Cause of this change' },
   { key: 'config', label: 'Configuration', description: 'Pricing and assignment' },
   { key: 'catalog', label: 'Scope', description: 'Choose work items & locations' },
   { key: 'review', label: 'Review', description: 'Confirm before creating' },
