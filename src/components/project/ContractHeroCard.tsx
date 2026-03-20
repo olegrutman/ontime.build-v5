@@ -128,8 +128,8 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
             <p className="font-heading text-[1.2rem] font-bold tabular-nums text-green-600 dark:text-green-400">{fmt(supplierPaid)}</p>
           </div>
           <div>
-            <p className="text-[0.65rem] md:text-xs text-muted-foreground mb-0.5">Outstanding</p>
-            <p className={cn("font-heading text-[1.2rem] md:text-sm font-bold tabular-nums", supplierOutstanding > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-foreground')}>{fmt(supplierOutstanding)}</p>
+            <p className="text-[0.68rem] text-muted-foreground mb-0.5">Outstanding</p>
+            <p className={cn("font-heading text-[1.2rem] font-bold tabular-nums", supplierOutstanding > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-foreground')}>{fmt(supplierOutstanding)}</p>
           </div>
         </div>
       </div>
