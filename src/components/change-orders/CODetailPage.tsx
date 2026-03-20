@@ -1,8 +1,8 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQueryClient, useQuery } from '@tanstack/react-query';
+import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { ArrowLeft, Calendar, MapPin } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Plus, Search, ChevronRight, X } from 'lucide-react';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/layout/AppSidebar';
 import { BottomNav } from '@/components/layout/BottomNav';
@@ -10,13 +10,17 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
 import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useCORealtime } from '@/hooks/useCORealtime';
 import { useProjectFCOrgs } from '@/hooks/useProjectFCOrgs';
+import { useWorkOrderCatalog } from '@/hooks/useWorkOrderCatalog';
 import { COLineItemRow } from './COLineItemRow';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
@@ -25,8 +29,9 @@ import { CONTEPanel } from './CONTEPanel';
 import { COActivityFeed } from './COActivityFeed';
 import { FCInputRequestCard } from './FCInputRequestCard';
 import { CO_REASON_LABELS, CO_STATUS_LABELS } from '@/types/changeOrder';
-import type { COCreatedByRole, COFCOrgOption, COFinancials, COReasonCode, COStatus, ChangeOrder } from '@/types/changeOrder';
+import type { COCreatedByRole, COFCOrgOption, COFinancials, COReasonCode, COStatus, ChangeOrder, WorkOrderCatalogItem } from '@/types/changeOrder';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
+import { buildCONotification, sendCONotification } from '@/lib/coNotifications';
 
 const STATUS_BADGE: Record<COStatus, string> = {
   draft: 'bg-muted text-muted-foreground border-border',
