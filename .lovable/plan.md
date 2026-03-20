@@ -1,50 +1,53 @@
 
 
-# Fix: Allow GC to Add Scope Items to a CO
+# Add Per-Item Location & Auto-Number COs
 
-## Problem
+## Two changes requested
 
-Two issues prevent GC from adding tasks to a live CO:
+### 1. CO title = auto-generated number + date (not a description)
 
-1. **`canAddLabor` excludes GC** — line 320 of `CODetailPage.tsx` has `(isTC || isFC)`, so GC can never interact with line items
-2. **No "Add line item" UI on the detail page** — scope items can only be added during initial creation in the wizard. There's no button to add new scope items after a CO is created.
+Currently the wizard sets `title` from the first item name or a manual field. Instead:
+- Auto-generate title as `"CO-{sequential_number} · {MMM DD, YYYY}"` (e.g. `CO-003 · Mar 20, 2026`)
+- Sequential number = count of existing COs on this project + 1 (query at creation time)
+- Remove the manual title input from the wizard
+- Also populate `co_number` column with the sequential number string (e.g. `CO-003`)
+- Display this in list and detail pages as the CO identifier
 
-## Fix
+**Files**: `COWizard.tsx` (remove title from data, auto-generate at submit), `COWizardData` type (remove `title` field), `StepReview.tsx` (show auto-number preview), `COListPage.tsx` and `CODetailPage.tsx` (display `co_number` prominently instead of title)
 
-### 1. Add "Add scope item" button to the detail page
+### 2. Each scope item gets its own location (mini-wizard for adding items)
 
-**File: `CODetailPage.tsx`** — In the "Scope & labor" section header (line 294), add an "Add item" button visible when:
-- `canEdit` is true (CO is in an active status)
-- User is GC, TC, or FC (all roles can add scope per the spec)
-- NTE is not blocked
+Currently `location_tag` lives on the CO header. Each line item should have its own location instead.
 
-Clicking the button opens an inline form or a small dialog to pick from the work order catalog (reuse `StepCatalog` pattern) or type a custom item name. The new item is inserted into `co_line_items`.
+**Database migration**: Add `location_tag TEXT` column to `co_line_items`.
 
-### 2. Fix `canAddLabor` to include GC for labor logging
+**New "Add Scope Item" flow** — replace the current simple catalog dialog with a 2-step mini-wizard:
+1. **Step 1 — Pick item** from catalog (same catalog browser: search + drill Division → Category → Item)
+2. **Step 2 — Pick location** for that item (reuse the same location picker from `StepLocation.tsx`, but for a single location, not multi-select)
+3. Insert into `co_line_items` with the `location_tag` value
 
-**File: `CODetailPage.tsx`** — Change line 320 from:
-```
-canAddLabor={canEdit && (isTC || isFC) && !nteBlocked}
-```
-to:
-```
-canAddLabor={canEdit && !nteBlocked}
-```
+**CO creation wizard** — same change: in the Scope step, each selected item gets a location. The flow becomes: pick item → pick location → item added to list. Repeat. Location step (step 3) becomes optional or removed since location is per-item now.
 
-This allows GC to log hours/pricing on line items they added, which aligns with "GC can add new line items or update scope at any time."
+**Display**: In `COLineItemRow`, show a small `MapPin` badge with the location tag for each line item. In the CO header, remove or keep `location_tag` as a summary (join unique item locations).
 
-**However** — per the spec, GC doesn't typically log labor (TC and FC do the pricing). If GC should only add scope items but NOT log hours, then `canAddLabor` stays as-is and we only add the "Add scope item" button for GC.
+### Files to change
 
-### 3. Send notification on scope addition
-
-**File: `CODetailPage.tsx`** or the new add-item handler — after inserting a new `co_line_item`, call `notifyAllCOParties` with a new notification type (e.g., `CO_SCOPE_UPDATED`) to alert TC and FC.
-
-### Files changed
 | File | Change |
 |------|--------|
-| `CODetailPage.tsx` | Add "Add item" button in scope section header; include GC in the `canAddItem` condition; fire notification on add |
-| `coNotifications.ts` | Add `CO_SCOPE_UPDATED` message template (if not already present) |
+| **Migration** | Add `location_tag TEXT` to `co_line_items` |
+| `changeOrder.ts` | Add `location_tag` to `COLineItem` interface; remove `title` from `COWizardData` |
+| `COWizard.tsx` | Remove manual title; auto-generate `co_number` + title at submit; update Scope step to collect location per item; consider removing the standalone Location step |
+| `StepCatalog.tsx` | Refactor to support per-item location: after selecting a catalog item, show location picker before confirming |
+| `StepReview.tsx` | Show auto-generated CO number; show each item with its location |
+| `CODetailPage.tsx` | Replace `AddScopeItemButton` with mini-wizard (catalog pick → location pick); display `co_number` as heading; show per-item location in line item rows |
+| `COLineItemRow.tsx` | Show `location_tag` badge per item |
+| `COListPage.tsx` | Display `co_number` as the primary identifier instead of title |
 
-### No database changes needed
-The `co_line_items` INSERT RLS already uses `user_in_org(auth.uid(), org_id)` which works for GC inserting with their org_id.
+### Wizard step order after change
+1. **Reason** — cause of change
+2. **Configuration** — pricing, assignment
+3. **Scope** — pick items, each with its own location (catalog browse → location picker per item)
+4. **Review** — summary with auto-generated CO number
+
+Location step is removed as a standalone step since location is now per-item in the Scope step.
 
