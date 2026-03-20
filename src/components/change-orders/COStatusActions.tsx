@@ -348,7 +348,7 @@ export function COStatusActions({
   /* GC can send to WIP (Flow 1) */
   const canSendToWIP = isGC && isCreator && status === 'draft' && !!co.assigned_to_org_id;
   /* GC can close for pricing (Flow 1) */
-  const canCloseForPricing = isGC && (status === 'work_in_progress');
+  const canCloseForPricing = isGC && (status === 'work_in_progress') && (co.org_id === currentOrgId || co.created_by_user_id === user?.id);
   /* TC/FC submit for approval */
   const canSubmit = (isTC || isFC) && !isCollaborator && (status === 'draft' || status === 'shared' || status === 'closed_for_pricing');
   const canRecall = (isTC || isFC) && !isCollaborator && status === 'submitted';

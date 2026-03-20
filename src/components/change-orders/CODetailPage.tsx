@@ -125,7 +125,7 @@ export function CODetailPage() {
   const canRequestFCInput = !!co && isTC && co.assigned_to_org_id === myOrgId &&
     (co.status === 'shared' || co.status === 'rejected' || co.status === 'work_in_progress' || co.status === 'closed_for_pricing');
   const canCompleteFCInput = !!co && isFC && isCollaboratorOrg;
-  const canEdit = (isActiveStatus || (isRunningPricing && co?.status === 'submitted')) && (isTC || !currentCollaborator || isCollaboratorOrg);
+  const canEdit = (isActiveStatus || (isRunningPricing && co?.status === 'submitted')) && (isGC || isTC || !currentCollaborator || isCollaboratorOrg);
 
   /* NTE blocking at 100% */
   const nteUsedPercent = financials.nteUsedPercent ?? 0;
