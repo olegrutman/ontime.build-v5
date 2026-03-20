@@ -87,8 +87,8 @@ export function StepReview({ data, projectId }: StepReviewProps) {
 
 function Section({ icon: Icon, title, children }: { icon: React.ElementType; title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border bg-card p-4 space-y-2">
-      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+    <div className="rounded-lg border bg-card p-4 space-y-2">
+      <div className="flex items-center gap-2 kpi-label">
         <Icon className="h-4 w-4 text-primary" />
         {title}
       </div>
@@ -99,9 +99,9 @@ function Section({ icon: Icon, title, children }: { icon: React.ElementType; tit
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex gap-2 text-sm">
+    <div className="flex gap-2 text-[0.82rem]">
       <span className="text-muted-foreground w-24 shrink-0">{label}</span>
-      <span className="text-foreground">{value}</span>
+      <span className="text-foreground font-medium">{value}</span>
     </div>
   );
 }

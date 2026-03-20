@@ -82,8 +82,8 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
   if (viewerRole === 'General Contractor') {
     if (editing) {
       return (
-        <div className="bg-card rounded-2xl shadow-sm p-5 space-y-3">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Set Owner Contract Value</p>
+        <div className="bg-card rounded-lg border shadow-sm p-5 space-y-3">
+          <p className="kpi-label">Set Owner Contract Value</p>
           <div className="flex gap-2 items-end flex-wrap">
             <div className="relative flex-1 min-w-[100px]">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
@@ -100,10 +100,10 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
     const gcProfit = hasOwner ? ownerContractValue - currentTotal : 0;
 
     return (
-      <div className="bg-card rounded-2xl shadow-sm p-5 space-y-2.5" data-sasha-card="Profit Position">
+      <div className="bg-card rounded-lg border shadow-sm p-5 space-y-2.5" data-sasha-card="Profit Position">
         <div className="flex items-center gap-1.5 mb-1">
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Profit Position</span>
+          <span className="kpi-label">Profit Position</span>
         </div>
 
         <div className="flex items-center justify-between">
@@ -148,10 +148,10 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
     if (!hasLaborBudget && !hasActualCost) return null;
 
     return (
-      <div className="bg-card rounded-2xl shadow-sm p-5 space-y-2.5">
+      <div className="bg-card rounded-lg border shadow-sm p-5 space-y-2.5">
         <div className="flex items-center gap-1.5 mb-1">
           <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Profit Position</span>
+          <span className="kpi-label">Profit Position</span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Contract Total</span>
@@ -210,11 +210,11 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
 
     if (!isTCMaterialResponsible) {
       return (
-        <div className="bg-card rounded-2xl shadow-sm p-5 space-y-2.5">
+      <div className="bg-card rounded-lg border shadow-sm p-5 space-y-2.5">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-1.5">
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Profit Position</span>
+              <span className="kpi-label">Profit Position</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-muted-foreground">Self-Performing</span>
@@ -284,11 +284,11 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
     const totalProfit = laborMargin + materialMargin;
 
     return (
-      <div className="bg-card rounded-2xl shadow-sm p-5 space-y-2.5">
+      <div className="bg-card rounded-lg border shadow-sm p-5 space-y-2.5">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-1.5">
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Profit Position</span>
+            <span className="kpi-label">Profit Position</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-muted-foreground">Self-Performing</span>

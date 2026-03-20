@@ -1,7 +1,6 @@
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { CheckCircle } from 'lucide-react';
 import type { RFIWizardData } from '@/types/rfi';
 
 interface RFIReviewStepProps {
@@ -18,20 +17,17 @@ export function RFIReviewStep({ data, onChange }: RFIReviewStepProps) {
       : (loc.exterior_feature || '').split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 
   return (
-    <div className="space-y-6">
-      <div className="text-center mb-4">
-        <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3">
-          <CheckCircle className="w-6 h-6 text-primary" />
-        </div>
-        <h2 className="text-xl font-semibold">Review & Submit</h2>
-        <p className="text-muted-foreground text-sm mt-1">Edit the subject and question if needed</p>
+    <div className="space-y-5">
+      <div>
+        <h2 className="card-section-title">Review & Submit</h2>
+        <p className="text-[0.68rem] text-muted-foreground mt-1">Edit the subject and question if needed</p>
       </div>
 
       {/* Location summary */}
       {locationSummary && (
-        <div className="border-l-2 border-primary/50 pl-3 py-2 bg-muted/30 rounded-r-lg">
-          <p className="text-xs text-muted-foreground">Location</p>
-          <p className="font-medium text-sm">{loc.inside_outside === 'inside' ? 'Inside' : 'Outside'} — {locationSummary}</p>
+        <div className="rounded-lg border bg-card p-3">
+          <p className="kpi-label mb-1">Location</p>
+          <p className="text-[0.82rem] font-medium text-foreground">{loc.inside_outside === 'inside' ? 'Inside' : 'Outside'} — {locationSummary}</p>
         </div>
       )}
 

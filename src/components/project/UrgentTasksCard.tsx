@@ -58,18 +58,18 @@ export function UrgentTasksCard({ projectId, onNavigate, isSupplier, supplierOrg
 
   if (items.length === 0) {
     return (
-      <div data-sasha-card="Urgent Tasks" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">Urgent Tasks</p>
-        <p className="text-sm text-muted-foreground">No items need attention</p>
+      <div data-sasha-card="Urgent Tasks" className="bg-card rounded-lg border shadow-sm p-5">
+        <p className="kpi-label mb-3">Urgent Tasks</p>
+        <p className="text-[0.82rem] text-muted-foreground">No items need attention</p>
       </div>
     );
   }
 
   return (
-    <div data-sasha-card="Urgent Tasks" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5">
+    <div data-sasha-card="Urgent Tasks" className="bg-card rounded-lg border shadow-sm p-5">
       <div className="flex items-center gap-2 mb-3">
         <AlertTriangle className="h-4 w-4 text-amber-500" />
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Urgent Tasks</p>
+        <p className="kpi-label">Urgent Tasks</p>
       </div>
       <div className="space-y-2">
         {items.slice(0, 5).map((item, i) => (
@@ -77,9 +77,9 @@ export function UrgentTasksCard({ projectId, onNavigate, isSupplier, supplierOrg
             key={i}
             onClick={() => onNavigate(item.tab)}
             className={cn(
-              "w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl",
+              "w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg",
               "bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40",
-              "text-amber-800 dark:text-amber-200 text-sm font-medium",
+              "text-amber-800 dark:text-amber-200 text-[0.82rem] font-medium",
               "transition-colors text-left"
             )}
           >

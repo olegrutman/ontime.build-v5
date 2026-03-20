@@ -60,8 +60,8 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
   // Inline edit overlay
   if (editingId) {
     return (
-      <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 space-y-3">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Edit Contract</p>
+      <div data-sasha-card="Contract" className="bg-card rounded-lg border shadow-sm p-5 space-y-3">
+        <p className="kpi-label">Edit Contract</p>
         <div className="flex gap-2 items-end flex-wrap">
           <div className="relative flex-1 min-w-[120px]">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
@@ -81,8 +81,8 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
   // FC contract creation overlay
   if (creating) {
     return (
-      <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 space-y-3">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Add Field Crew Contract</p>
+      <div data-sasha-card="Contract" className="bg-card rounded-lg border shadow-sm p-5 space-y-3">
+        <p className="kpi-label">Add Field Crew Contract</p>
         {fcParticipants.length > 1 && (
           <select className="w-full h-9 text-sm border rounded-lg px-3 bg-background" value={selectedFcOrg} onChange={e => setSelectedFcOrg(e.target.value)}>
             <option value="">Select Field Crew...</option>
@@ -115,21 +115,21 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
   if (isSupplier) {
     const supplierOutstanding = supplierInvoiced - supplierPaid;
     return (
-      <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 md:p-6">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Order Value</p>
-        <p className="font-heading text-[1.9rem] md:text-3xl font-black tabular-nums text-foreground">{fmt(supplierOrderValue)}</p>
+      <div data-sasha-card="Contract" className="bg-card rounded-lg border shadow-sm p-5 md:p-6">
+        <p className="kpi-label mb-1">Order Value</p>
+        <p className="kpi-value">{fmt(supplierOrderValue)}</p>
         <div className="border-t mt-4 pt-4 grid grid-cols-3 gap-4">
           <div>
-            <p className="text-[0.65rem] md:text-xs text-muted-foreground mb-0.5">Invoiced</p>
-            <p className="font-heading text-[1.2rem] md:text-sm font-bold tabular-nums">{fmt(supplierInvoiced)}</p>
+            <p className="text-[0.68rem] text-muted-foreground mb-0.5">Invoiced</p>
+            <p className="font-heading text-[1.2rem] font-bold tabular-nums">{fmt(supplierInvoiced)}</p>
           </div>
           <div>
-            <p className="text-[0.65rem] md:text-xs text-muted-foreground mb-0.5">Paid</p>
-            <p className="font-heading text-[1.2rem] md:text-sm font-bold tabular-nums text-green-600 dark:text-green-400">{fmt(supplierPaid)}</p>
+            <p className="text-[0.68rem] text-muted-foreground mb-0.5">Paid</p>
+            <p className="font-heading text-[1.2rem] font-bold tabular-nums text-green-600 dark:text-green-400">{fmt(supplierPaid)}</p>
           </div>
           <div>
-            <p className="text-[0.65rem] md:text-xs text-muted-foreground mb-0.5">Outstanding</p>
-            <p className={cn("font-heading text-[1.2rem] md:text-sm font-bold tabular-nums", supplierOutstanding > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-foreground')}>{fmt(supplierOutstanding)}</p>
+            <p className="text-[0.68rem] text-muted-foreground mb-0.5">Outstanding</p>
+            <p className={cn("font-heading text-[1.2rem] font-bold tabular-nums", supplierOutstanding > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-foreground')}>{fmt(supplierOutstanding)}</p>
           </div>
         </div>
       </div>
@@ -141,12 +141,12 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
     const fcContract = downstreamContract;
     const fcValue = fcContract?.contract_sum || 0;
     return (
-      <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 md:p-6">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">
+      <div data-sasha-card="Contract" className="bg-card rounded-lg border shadow-sm p-5 md:p-6">
+        <p className="kpi-label mb-1">
           Contract with {getContractCounterpartyName(fcContract, userOrgIds)}
         </p>
         <div className="flex items-center gap-2 mb-4">
-          <p className="font-heading text-[1.9rem] md:text-3xl font-black tabular-nums text-foreground">{fcContract ? fmt(fcValue) : '—'}</p>
+          <p className="kpi-value">{fcContract ? fmt(fcValue) : '—'}</p>
         </div>
       </div>
     );
@@ -156,14 +156,14 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
   const currentTotal = gcContractValue;
 
   return (
-    <div data-sasha-card="Contract" className="bg-white dark:bg-card rounded-2xl shadow-sm p-5 md:p-6">
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Current Contract Total</p>
-      <p className="font-heading text-[1.9rem] md:text-3xl font-black tabular-nums text-foreground mb-4">{fmt(currentTotal)}</p>
+    <div data-sasha-card="Contract" className="bg-card rounded-lg border shadow-sm p-5 md:p-6">
+      <p className="kpi-label mb-1">Current Contract Total</p>
+      <p className="kpi-value mb-4">{fmt(currentTotal)}</p>
 
       <div className="border-t pt-4 grid grid-cols-2 gap-4">
         {/* Original Contract */}
         <div>
-          <p className="text-xs text-muted-foreground mb-0.5">
+          <p className="text-[0.68rem] text-muted-foreground mb-0.5">
             {isTC ? `Incoming (${getContractCounterpartyName(upstreamContract, userOrgIds)})` : `Contract with ${getContractCounterpartyName(upstreamContract, userOrgIds)}`}
           </p>
           <div className="group flex items-center gap-1.5">
@@ -182,7 +182,7 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
       {isTC && (
         <div className="border-t mt-4 pt-4">
           <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Outgoing ({getContractCounterpartyName(downstreamContract, userOrgIds)})</span>
+            <span className="text-[0.68rem] text-muted-foreground">Outgoing ({getContractCounterpartyName(downstreamContract, userOrgIds)})</span>
             <div className="group flex items-center gap-1.5">
               <span className="text-sm font-semibold tabular-nums">{downstreamContract ? fmt(fcContractValue) : '—'}</span>
               {(downstreamContract || fcParticipants.length > 0) && (
@@ -209,10 +209,10 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
         const materialCosts = isTCMaterialResponsible ? (materialEstimate || approvedEstimateSum || 0) : 0;
         const livePosition = gcContractValue - fcContractValue - materialCosts;
         return (
-          <div className="mt-4 flex items-center justify-between py-2.5 px-3 rounded-xl bg-accent/30">
+          <div className="mt-4 flex items-center justify-between py-2.5 px-3 rounded-lg bg-accent/30">
             <div className="flex items-center gap-1.5">
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs font-medium">Live Position</span>
+              <span className="text-[0.82rem] font-medium">Live Position</span>
             </div>
             <span className={cn("text-xl font-bold tabular-nums", livePosition > 0 ? 'text-green-600 dark:text-green-400' : livePosition < 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground')}>
               {fmt(livePosition)}

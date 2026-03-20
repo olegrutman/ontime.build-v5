@@ -292,11 +292,11 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
   };
 
   return (
-    <div data-sasha-card="Team" className="bg-white dark:bg-card rounded-2xl shadow-sm p-4 md:p-5">
+    <div data-sasha-card="Team" className="bg-card rounded-lg border shadow-sm p-4 md:p-5">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-1.5">
           <Users className="h-4 w-4 text-muted-foreground" />
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Team</p>
+          <p className="kpi-label">Team</p>
           {!loading && <span className="text-[10px] text-muted-foreground">({team.filter(m => m.status === 'Accepted').length})</span>}
         </div>
         <Button variant="ghost" size="sm" className="h-8 md:h-6 px-2 text-[11px]" onClick={() => setIsAddMemberOpen(true)}>

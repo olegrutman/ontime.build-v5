@@ -34,10 +34,10 @@ export function CriticalScheduleCard({ projectId, onNavigate, maxItems = 5 }: Cr
 
   if (!criticalItems.length) {
     return (
-      <div className="bg-card rounded-2xl border p-4">
+      <div className="bg-card rounded-lg border p-4">
         <div className="flex items-center gap-2 mb-3">
           <Clock className="h-4 w-4 text-muted-foreground" />
-          <span className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Critical Schedule</span>
+          <span className="kpi-label">Critical Schedule</span>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
           <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -48,14 +48,14 @@ export function CriticalScheduleCard({ projectId, onNavigate, maxItems = 5 }: Cr
   }
 
   return (
-    <div className="bg-card rounded-2xl border overflow-hidden">
+    <div className="bg-card rounded-lg border overflow-hidden">
       <button
         onClick={() => onNavigate('schedule')}
         className="flex items-center justify-between w-full p-4 pb-2 hover:bg-accent/30 transition-colors"
       >
         <div className="flex items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-destructive" />
-          <span className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Critical Schedule</span>
+          <span className="kpi-label">Critical Schedule</span>
           <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
             {criticalItems.length}
           </Badge>
@@ -73,7 +73,7 @@ export function CriticalScheduleCard({ projectId, onNavigate, maxItems = 5 }: Cr
             <button
               key={item.id}
               onClick={() => onNavigate('schedule')}
-              className="w-full text-left rounded-xl bg-muted/50 p-3 hover:bg-accent/40 transition-colors"
+              className="w-full text-left rounded-lg bg-muted/50 p-3 hover:bg-accent/40 transition-colors"
             >
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-sm font-medium truncate pr-2">{item.title}</span>

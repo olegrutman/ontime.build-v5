@@ -33,7 +33,7 @@ export function PendingInviteCard({ projectId }: PendingInviteCardProps) {
   if (responded) return null;
 
   return (
-    <div className="max-w-md w-full bg-card border rounded-xl p-6 space-y-4 shadow-sm">
+    <div className="max-w-md w-full bg-card border rounded-lg p-6 space-y-4 shadow-sm">
       <div className="flex items-center gap-3">
         <div className="p-2 rounded-lg bg-primary/10">
           <FolderOpen className="h-6 w-6 text-primary" />
