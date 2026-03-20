@@ -399,7 +399,7 @@ export function COStatusActions({
     );
   }
 
-  const hasAnyAction = canShare || canSendToWIP || canCloseForPricing || canSubmit || canRecall || canApprove || canReject || canMarkCompleted || canAcknowledge;
+  const hasAnyAction = canShare || canSendToWIP || canCloseForPricing || canSubmit || canSubmitFCPricing || canRecall || canApprove || canReject || canMarkCompleted || canAcknowledge;
 
   if (!hasAnyAction) {
     if (isApproved) {
