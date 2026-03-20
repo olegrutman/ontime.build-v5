@@ -18,6 +18,8 @@ import { StepReview } from './StepReview';
 
 export interface SelectedScopeItem extends WorkOrderCatalogItem {
   locationTag: string;
+  reason: COReasonCode;
+  reasonDescription: string;
 }
 
 export interface COWizardData {
