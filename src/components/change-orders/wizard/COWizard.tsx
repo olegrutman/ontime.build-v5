@@ -13,7 +13,6 @@ import { format } from 'date-fns';
 import type { COCreatedByRole, COReasonCode, COPricingType, WorkOrderCatalogItem } from '@/types/changeOrder';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { StepCatalog } from './StepCatalog';
-import { StepReason } from './StepReason';
 import { StepConfig } from './StepConfig';
 import { StepReview } from './StepReview';
 
