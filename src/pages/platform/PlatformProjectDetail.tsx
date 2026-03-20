@@ -161,6 +161,8 @@ export default function PlatformProjectDetail() {
   const [deletePOTarget, setDeletePOTarget] = useState<PORow | null>(null);
   const [deleteWOOpen, setDeleteWOOpen] = useState(false);
   const [deleteWOTarget, setDeleteWOTarget] = useState<WorkOrderRow | null>(null);
+  const [deleteCOOpen, setDeleteCOOpen] = useState(false);
+  const [deleteCOTarget, setDeleteCOTarget] = useState<CORow | null>(null);
 
   const fetchData = async () => {
     if (!projectId) return;
