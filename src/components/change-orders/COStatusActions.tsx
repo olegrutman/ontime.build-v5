@@ -199,9 +199,10 @@ export function COStatusActions({
 
         const rate = settings?.default_hourly_rate ?? 0;
         const markup = settings?.labor_markup_percent ?? 0;
-        const fcTotal = financials?.fcLaborTotal ?? 0;
         const isHourly = co.pricing_type === 'tm' || co.pricing_type === 'nte';
-        const calcPrice = isHourly ? fcTotal : fcTotal * (1 + markup / 100);
+        const calcPrice = isHourly
+          ? (financials?.fcTotalHours ?? 0) * rate
+          : (financials?.fcLumpSumTotal ?? 0) * (1 + markup / 100);
 
         await supabase
           .from('change_orders')
