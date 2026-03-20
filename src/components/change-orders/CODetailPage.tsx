@@ -385,6 +385,15 @@ export function CODetailPage() {
                   onComplete={handleCompleteFCInput}
                 />
 
+                {isTC && collaborators.length > 0 && (
+                  <FCPricingToggleCard
+                    co={co}
+                    financials={financials}
+                    myOrgId={myOrgId}
+                    onRefresh={refreshDetail}
+                  />
+                )}
+
                 <div className="co-light-shell overflow-hidden">
                   <div className="px-4 py-3 border-b border-border co-light-header">
                     <h3 className="text-sm font-semibold text-foreground">Financial</h3>
