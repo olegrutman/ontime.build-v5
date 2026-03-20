@@ -126,6 +126,7 @@ export function useProfile() {
             minimum_service_charge: null,
             default_crew_size: null,
             default_workday_hours: 8,
+            use_fc_input_as_base: false,
           });
         }
       }

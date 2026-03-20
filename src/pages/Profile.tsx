@@ -566,6 +566,26 @@ export default function Profile() {
               </div>
             </div>
 
+            {organization?.type === 'TC' && (
+              <>
+                <Separator />
+                <div className="flex items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <Label className="font-medium">Use FC input as pricing base by default</Label>
+                    <p className="text-xs text-muted-foreground">
+                      When ON, new COs with FC involvement will auto-calculate TC pricing from FC submissions using your rate/markup above.
+                    </p>
+                  </div>
+                  <Switch
+                    checked={orgSettings?.use_fc_input_as_base ?? false}
+                    onCheckedChange={async (checked) => {
+                      await updateOrgSettings({ use_fc_input_as_base: checked });
+                    }}
+                  />
+                </div>
+              </>
+            )}
+
             <div className="flex justify-end pt-2">
               <Button onClick={handleSavePricing} disabled={saving === 'pricing'}>
                 {saving === 'pricing' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
