@@ -20,7 +20,7 @@ import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
 import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useCORealtime } from '@/hooks/useCORealtime';
 import { useProjectFCOrgs } from '@/hooks/useProjectFCOrgs';
-import { useWorkOrderCatalog } from '@/hooks/useWorkOrderCatalog';
+
 import { COLineItemRow } from './COLineItemRow';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
