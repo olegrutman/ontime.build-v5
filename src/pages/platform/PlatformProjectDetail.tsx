@@ -97,6 +97,14 @@ interface WorkOrderRow {
   created_at: string;
 }
 
+interface CORow {
+  id: string;
+  co_number: string | null;
+  status: string;
+  pricing_type: string;
+  created_at: string | null;
+}
+
 function formatCurrency(val: number | null | undefined) {
   if (val == null) return '$0';
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
