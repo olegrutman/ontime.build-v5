@@ -439,12 +439,7 @@ export function COStatusActions({
             </Button>
           )}
           {(canSubmit || canSubmitFCPricing) && (
-            <Button size="sm" className="w-full h-8 text-xs gap-1" onClick={canSubmitFCPricing ? async () => {
-              setActing(true);
-              try {
-                await completeFCAndSubmit();
-              } finally { setActing(false); }
-            } : doSubmit} disabled={acting}>
+            <Button size="sm" className="w-full h-8 text-xs gap-1" onClick={doSubmit} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
               {canSubmitFCPricing ? 'Submit FC pricing' : 'Submit for approval'}
             </Button>
