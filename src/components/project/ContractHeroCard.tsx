@@ -209,10 +209,10 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
         const materialCosts = isTCMaterialResponsible ? (materialEstimate || approvedEstimateSum || 0) : 0;
         const livePosition = gcContractValue - fcContractValue - materialCosts;
         return (
-          <div className="mt-4 flex items-center justify-between py-2.5 px-3 rounded-xl bg-accent/30">
+          <div className="mt-4 flex items-center justify-between py-2.5 px-3 rounded-lg bg-accent/30">
             <div className="flex items-center gap-1.5">
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              <span className="text-xs font-medium">Live Position</span>
+              <span className="text-[0.82rem] font-medium">Live Position</span>
             </div>
             <span className={cn("text-xl font-bold tabular-nums", livePosition > 0 ? 'text-green-600 dark:text-green-400' : livePosition < 0 ? 'text-red-600 dark:text-red-400' : 'text-foreground')}>
               {fmt(livePosition)}
