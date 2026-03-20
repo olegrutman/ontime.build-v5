@@ -85,9 +85,8 @@ export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
   const { divisions, search, isLoading } = useWorkOrderCatalog();
   const { data: scope } = useProjectScope(projectId);
 
-  // Mini-wizard state: null = browse catalog, item = assign location
-  const [pendingItem, setPendingItem] = useState<WorkOrderCatalogItem | null>(null);
-  const [locationFields, setLocationFields] = useState<LocationFields>({ ...EMPTY_FIELDS });
+  // Mini-wizard state: null = browse catalog, pending = assign location then reason
+  const [pending, setPending] = useState<PendingItemState | null>(null);
 
   const [query, setQuery] = useState('');
   const [level, setLevel] = useState<DrillLevel>('division');
