@@ -1397,6 +1397,7 @@ export type Database = {
           approved_by: string | null
           billing_period_end: string
           billing_period_start: string
+          co_ids: string[] | null
           contract_id: string | null
           created_at: string
           created_by: string
@@ -1424,6 +1425,7 @@ export type Database = {
           approved_by?: string | null
           billing_period_end: string
           billing_period_start: string
+          co_ids?: string[] | null
           contract_id?: string | null
           created_at?: string
           created_by: string
@@ -1451,6 +1453,7 @@ export type Database = {
           approved_by?: string | null
           billing_period_end?: string
           billing_period_start?: string
+          co_ids?: string[] | null
           contract_id?: string | null
           created_at?: string
           created_by?: string

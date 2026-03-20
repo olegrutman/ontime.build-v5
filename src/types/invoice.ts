@@ -5,7 +5,8 @@ export interface Invoice {
   project_id: string;
   contract_id: string | null;
   sov_id: string | null;
-  po_id: string | null; // Link to PO for supplier invoices
+  po_id: string | null;
+  co_ids?: string[] | null;
   invoice_number: string;
   billing_period_start: string;
   billing_period_end: string;

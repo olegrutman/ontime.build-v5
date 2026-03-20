@@ -1,7 +1,6 @@
 export type COStatus =
   | 'draft'
   | 'shared'
-  | 'combined'
   | 'submitted'
   | 'approved'
   | 'rejected'
@@ -47,7 +46,6 @@ export const CO_REASON_COLORS: Record<COReasonCode, { bg: string; text: string }
 export const CO_STATUS_LABELS: Record<COStatus, string> = {
   draft:      'Draft',
   shared:     'Shared',
-  combined:   'Combined',
   submitted:  'Submitted',
   approved:   'Approved',
   rejected:   'Rejected',
@@ -78,9 +76,6 @@ export interface ChangeOrder {
   materials_responsible: 'GC' | 'TC' | null;
   equipment_responsible: 'GC' | 'TC' | null;
   shared_at: string | null;
-  combined_at: string | null;
-  combined_co_id: string | null;
-  parent_co_id: string | null;
   submitted_at: string | null;
   approved_at: string | null;
   rejected_at: string | null;
@@ -172,13 +167,6 @@ export interface CONTELogEntry {
   rejected_at: string | null;
   rejection_note: string | null;
   created_at: string;
-}
-
-export interface COCombinedMember {
-  id: string;
-  combined_co_id: string;
-  member_co_id: string;
-  added_at: string;
 }
 
 export interface COActivityEntry {

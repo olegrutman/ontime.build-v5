@@ -214,10 +214,9 @@ export function COStatusActions({
   }
 
   const isCreator = co.created_by_user_id === user?.id;
-  const isCombinedParent = status === 'combined' && !co.combined_co_id;
   const isCollaborator = collaborators.some(collaborator => collaborator.organization_id === currentOrgId && collaborator.status === 'active');
-  const canShare = isCreator && (status === 'draft' || isCombinedParent) && !co.draft_shared_with_next;
-  const canSubmit = (isTC || isFC) && !isCollaborator && (status === 'draft' || status === 'shared' || isCombinedParent);
+  const canShare = isCreator && status === 'draft' && !co.draft_shared_with_next;
+  const canSubmit = (isTC || isFC) && !isCollaborator && (status === 'draft' || status === 'shared');
   const canRecall = (isTC || isFC) && !isCollaborator && status === 'submitted';
   const canApprove = ((isGC && status === 'submitted' && co.assigned_to_org_id === currentOrgId) || forwardsToGC) && !isCollaborator;
   const canReject = canApprove;
