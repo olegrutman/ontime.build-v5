@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { ViewSwitcher, ViewMode } from '@/components/ui/view-switcher';
 import { CreateInvoiceFromSOV } from './CreateInvoiceFromSOV';
+import { CreateInvoiceFromCOs } from './CreateInvoiceFromCOs';
 import { InvoiceCard } from './InvoiceCard';
 import { InvoiceTableView } from './InvoiceTableView';
 import { InvoiceActionBar } from './InvoiceActionBar';
