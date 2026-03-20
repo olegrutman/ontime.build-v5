@@ -32,9 +32,9 @@ export function useChangeOrderDetail(coId: string | null) {
   ) => {
     if (data) return data;
     const actionMessages = {
-      submit: 'You don't have permission to submit this change order.',
-      approve: 'You don't have permission to approve this change order.',
-      reject: 'You don't have permission to reject this change order.',
+      submit: "You don't have permission to submit this change order.",
+      approve: "You don't have permission to approve this change order.",
+      reject: "You don't have permission to reject this change order.",
     } as const;
     throw new Error(actionMessages[action]);
   };
