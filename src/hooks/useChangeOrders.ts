@@ -74,6 +74,8 @@ export function useChangeOrders(projectId: string | null) {
     mine: {
       draft: [],
       shared: [],
+      work_in_progress: [],
+      closed_for_pricing: [],
       submitted: [],
       approved: [],
       rejected: [],
