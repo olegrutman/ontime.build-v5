@@ -202,6 +202,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
         await shareCO.mutateAsync(newCOId);
       }
 
+      queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
       toast.success('Change order created');
       handleClose();
     } catch (err: any) {
