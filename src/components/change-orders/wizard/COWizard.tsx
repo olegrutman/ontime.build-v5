@@ -15,6 +15,7 @@ import { StepCatalog } from './StepCatalog';
 import { StepLocation } from './StepLocation';
 import { StepReason } from './StepReason';
 import { StepConfig } from './StepConfig';
+import { StepReview } from './StepReview';
 
 export interface COWizardData {
   selectedItems: WorkOrderCatalogItem[];
@@ -65,6 +66,7 @@ const ALL_STEPS: WizardStep[] = [
   { key: 'config', label: 'Configuration', description: 'Pricing and assignment' },
   { key: 'location', label: 'Location', description: 'Where is the work' },
   { key: 'catalog', label: 'Scope', description: 'Choose the work items' },
+  { key: 'review', label: 'Review', description: 'Confirm before creating' },
 ];
 
 interface COWizardProps {
@@ -93,6 +95,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
 
   function canAdvance(): boolean {
     const s = ALL_STEPS[step];
+    if (s.key === 'review') return true;
     if (s.key === 'catalog') return data.selectedItems.length > 0;
     if (s.key === 'location') {
       return data.locationTags.length > 0;
@@ -292,6 +295,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
               {currentStep.key === 'location' && <StepLocation data={data} onChange={update} projectId={projectId} />}
               {currentStep.key === 'reason' && <StepReason data={data} onChange={update} />}
               {currentStep.key === 'config' && <StepConfig data={data} onChange={update} role={role} projectId={projectId} />}
+              {currentStep.key === 'review' && <StepReview data={data} projectId={projectId} />}
             </div>
           </div>
 
