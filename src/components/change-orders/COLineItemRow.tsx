@@ -75,10 +75,10 @@ export function COLineItemRow({
             {item.division ? ` · ${item.division}` : ''}
             {item.unit ? ` · ${item.unit}` : ''}
           </p>
-          {(item as any).location_tag && (
+          {item.location_tag && (
             <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
               <span className="inline-block w-2.5 h-2.5">📍</span>
-              {(item as any).location_tag}
+              {item.location_tag}
             </p>
           )}
           {!expanded && hasEntries && (
