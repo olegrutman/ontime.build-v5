@@ -86,10 +86,10 @@ function LaborBudgetCard({ laborBudget, actualLaborCost, upstreamContract, updat
 
   return (
     <>
-      <div data-sasha-card="Labor Budget" className="bg-card rounded-2xl shadow-sm p-5 space-y-2.5">
+      <div data-sasha-card="Labor Budget" className="bg-card rounded-lg border shadow-sm p-5 space-y-2.5">
         <div className="flex items-center gap-1.5 mb-1">
           <Users className="h-4 w-4 text-muted-foreground" />
-          <span className="text-xs font-medium uppercase text-muted-foreground tracking-wide">Labor Budget</span>
+          <span className="kpi-label">Labor Budget</span>
         </div>
 
         <div className="group flex items-center justify-between">

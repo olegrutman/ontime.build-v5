@@ -73,7 +73,7 @@ export function CriticalScheduleCard({ projectId, onNavigate, maxItems = 5 }: Cr
             <button
               key={item.id}
               onClick={() => onNavigate('schedule')}
-              className="w-full text-left rounded-xl bg-muted/50 p-3 hover:bg-accent/40 transition-colors"
+              className="w-full text-left rounded-lg bg-muted/50 p-3 hover:bg-accent/40 transition-colors"
             >
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-sm font-medium truncate pr-2">{item.title}</span>
