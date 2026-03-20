@@ -3,7 +3,8 @@ import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, Plus, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { LaborEntryForm } from './LaborEntryForm';
-import type { COLineItem, COLaborEntry, COCreatedByRole } from '@/types/changeOrder';
+import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
+import type { COLineItem, COLaborEntry, COCreatedByRole, COReasonCode } from '@/types/changeOrder';
 
 interface COLineItemRowProps {
   item: COLineItem;
@@ -70,11 +71,24 @@ export function COLineItemRow({
       >
         <div className="min-w-0">
           <p className="text-sm font-medium text-foreground truncate">{item.item_name}</p>
-          <p className="text-xs text-muted-foreground">
-            {item.category_name}
-            {item.division ? ` · ${item.division}` : ''}
-            {item.unit ? ` · ${item.unit}` : ''}
-          </p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="text-xs text-muted-foreground">
+              {item.category_name}
+              {item.division ? ` · ${item.division}` : ''}
+              {item.unit ? ` · ${item.unit}` : ''}
+            </p>
+            {item.reason && (
+              <span
+                className="inline-block px-1.5 py-0 rounded text-[10px] font-semibold"
+                style={{ backgroundColor: CO_REASON_COLORS[item.reason as COReasonCode].bg, color: CO_REASON_COLORS[item.reason as COReasonCode].text }}
+              >
+                {CO_REASON_LABELS[item.reason as COReasonCode]}
+              </span>
+            )}
+          </div>
+          {item.description && (
+            <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-2">{item.description}</p>
+          )}
           {item.location_tag && (
             <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
               <span className="inline-block w-2.5 h-2.5">📍</span>

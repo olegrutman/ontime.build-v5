@@ -1,5 +1,6 @@
-import { MapPin, FileText, Settings, ClipboardList, Share2 } from 'lucide-react';
-import { CO_REASON_LABELS } from '@/types/changeOrder';
+import { MapPin, Settings, ClipboardList, Share2 } from 'lucide-react';
+import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
+import type { COReasonCode } from '@/types/changeOrder';
 import type { COWizardData } from './COWizard';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,7 +25,6 @@ export function StepReview({ data, projectId }: StepReviewProps) {
     },
   });
 
-  // Preview the auto-generated CO number
   const { data: coCount } = useQuery({
     queryKey: ['co-count-preview', projectId],
     queryFn: async () => {
@@ -45,11 +45,6 @@ export function StepReview({ data, projectId }: StepReviewProps) {
   return (
     <div className="space-y-5">
       <div className="text-base font-semibold text-foreground">{coNumberPreview}</div>
-
-      <Section icon={FileText} title="Reason">
-        <Row label="Code" value={data.reason ? CO_REASON_LABELS[data.reason] : '—'} />
-        {data.reasonNote && <Row label="Note" value={data.reasonNote} />}
-      </Section>
 
       <Section icon={Settings} title="Configuration">
         <Row label="Pricing" value={pricingLabel} />
@@ -72,9 +67,9 @@ export function StepReview({ data, projectId }: StepReviewProps) {
         {data.selectedItems.length === 0 ? (
           <p className="text-sm text-muted-foreground">No items selected</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-3">
             {data.selectedItems.map((item) => (
-              <li key={item.id} className="space-y-0.5">
+              <li key={item.id} className="space-y-1 border-b border-border pb-2 last:border-b-0 last:pb-0">
                 <div className="flex items-baseline gap-2 text-sm">
                   <span className="font-medium text-foreground">{item.item_name}</span>
                   {item.category_name && (
@@ -85,6 +80,19 @@ export function StepReview({ data, projectId }: StepReviewProps) {
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <MapPin className="h-3 w-3 shrink-0" />
                     <span>{item.locationTag}</span>
+                  </div>
+                )}
+                {item.reason && (
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="inline-block px-1.5 py-0 rounded text-[10px] font-semibold"
+                      style={{ backgroundColor: CO_REASON_COLORS[item.reason as COReasonCode].bg, color: CO_REASON_COLORS[item.reason as COReasonCode].text }}
+                    >
+                      {CO_REASON_LABELS[item.reason as COReasonCode]}
+                    </span>
+                    {item.reasonDescription && (
+                      <span className="text-xs text-muted-foreground">{item.reasonDescription}</span>
+                    )}
                   </div>
                 )}
               </li>

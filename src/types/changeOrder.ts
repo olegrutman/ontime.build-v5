@@ -112,6 +112,8 @@ export interface COLineItem {
   qty: number | null;
   sort_order: number;
   location_tag: string | null;
+  reason: COReasonCode | null;
+  description: string | null;
   created_at: string;
 }
 

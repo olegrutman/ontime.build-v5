@@ -13,19 +13,18 @@ import { format } from 'date-fns';
 import type { COCreatedByRole, COReasonCode, COPricingType, WorkOrderCatalogItem } from '@/types/changeOrder';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { StepCatalog } from './StepCatalog';
-import { StepReason } from './StepReason';
 import { StepConfig } from './StepConfig';
 import { StepReview } from './StepReview';
 
 export interface SelectedScopeItem extends WorkOrderCatalogItem {
   locationTag: string;
+  reason: COReasonCode;
+  reasonDescription: string;
 }
 
 export interface COWizardData {
   selectedItems: SelectedScopeItem[];
   scopeDescription: string;
-  reason: COReasonCode | null;
-  reasonNote: string;
   pricingType: COPricingType;
   nteCap: string;
   assignedToOrgId: string;
@@ -41,8 +40,6 @@ export interface COWizardData {
 const INITIAL_DATA: COWizardData = {
   selectedItems: [],
   scopeDescription: '',
-  reason: null,
-  reasonNote: '',
   pricingType: 'fixed',
   nteCap: '',
   assignedToOrgId: '',
@@ -62,7 +59,6 @@ interface WizardStep {
 }
 
 const ALL_STEPS: WizardStep[] = [
-  { key: 'reason', label: 'Reason', description: 'Cause of this change' },
   { key: 'config', label: 'Configuration', description: 'Pricing and assignment' },
   { key: 'catalog', label: 'Scope', description: 'Choose work items & locations' },
   { key: 'review', label: 'Review', description: 'Confirm before creating' },
@@ -96,7 +92,6 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
     const s = ALL_STEPS[step];
     if (s.key === 'review') return true;
     if (s.key === 'catalog') return data.selectedItems.length > 0;
-    if (s.key === 'reason') return !!data.reason && (data.reason !== 'other' || data.reasonNote.trim().length > 0);
     if (s.key === 'config') {
       if (role === 'GC') {
         if (!data.assignedToOrgId) return false;
@@ -157,8 +152,8 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
           status: 'draft',
           pricing_type: data.pricingType,
           nte_cap: data.pricingType === 'nte' && data.nteCap ? parseFloat(data.nteCap) : null,
-          reason: data.reason,
-          reason_note: data.reasonNote || null,
+          reason: null,
+          reason_note: null,
           location_tag: locationTagSummary,
           assigned_to_org_id: data.assignedToOrgId || null,
           fc_input_needed: data.fcInputNeeded,
@@ -188,6 +183,8 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
           unit: item.unit,
           sort_order: idx,
           location_tag: item.locationTag || null,
+          reason: item.reason || null,
+          description: item.reasonDescription || null,
         }));
         const { error: lineError } = await supabase.from('co_line_items').insert(lineItemRows);
         if (lineError) {
@@ -300,7 +297,6 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
 
             <div className="co-light-shell p-4 sm:p-5">
               {currentStep.key === 'catalog' && <StepCatalog data={data} onChange={update} projectId={projectId} />}
-              {currentStep.key === 'reason' && <StepReason data={data} onChange={update} />}
               {currentStep.key === 'config' && <StepConfig data={data} onChange={update} role={role} projectId={projectId} />}
               {currentStep.key === 'review' && <StepReview data={data} projectId={projectId} />}
             </div>
