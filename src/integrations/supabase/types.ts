@@ -676,12 +676,14 @@ export type Database = {
           co_id: string
           created_at: string | null
           created_by_role: string
+          description: string | null
           division: string | null
           id: string
           item_name: string
           location_tag: string | null
           org_id: string
           qty: number | null
+          reason: string | null
           sort_order: number | null
           unit: string
         }
@@ -691,12 +693,14 @@ export type Database = {
           co_id: string
           created_at?: string | null
           created_by_role: string
+          description?: string | null
           division?: string | null
           id?: string
           item_name: string
           location_tag?: string | null
           org_id: string
           qty?: number | null
+          reason?: string | null
           sort_order?: number | null
           unit: string
         }
@@ -706,12 +710,14 @@ export type Database = {
           co_id?: string
           created_at?: string | null
           created_by_role?: string
+          description?: string | null
           division?: string | null
           id?: string
           item_name?: string
           location_tag?: string | null
           org_id?: string
           qty?: number | null
+          reason?: string | null
           sort_order?: number | null
           unit?: string
         }
