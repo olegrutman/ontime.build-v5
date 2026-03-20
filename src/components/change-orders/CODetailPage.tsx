@@ -28,6 +28,8 @@ import type { COCreatedByRole, COFCOrgOption, COReasonCode, COStatus, ChangeOrde
 const STATUS_BADGE: Record<COStatus, string> = {
   draft: 'bg-muted text-muted-foreground border-border',
   shared: 'bg-accent text-accent-foreground border-border',
+  work_in_progress: 'bg-blue-100 text-blue-700 border-blue-200',
+  closed_for_pricing: 'bg-amber-100 text-amber-700 border-amber-200',
   submitted: 'bg-primary/15 text-primary border-primary/25',
   approved: 'bg-primary text-primary-foreground border-primary',
   rejected: 'bg-destructive/10 text-destructive border-destructive/30',
@@ -99,6 +101,8 @@ export function CODetailPage() {
   const isActiveStatus =
     co?.status === 'draft' ||
     co?.status === 'shared' ||
+    co?.status === 'work_in_progress' ||
+    co?.status === 'closed_for_pricing' ||
     co?.status === 'submitted';
 
   const isRunningPricing =
@@ -109,11 +113,14 @@ export function CODetailPage() {
   const isCollaboratorOrg = collaborators.some(
     collaborator => collaborator.organization_id === myOrgId && collaborator.status === 'active'
   );
-  const canRequestFCInput = !!co && isTC && co.assigned_to_org_id === myOrgId && (co.status === 'shared' || co.status === 'rejected');
+  const canRequestFCInput = !!co && isTC && co.assigned_to_org_id === myOrgId &&
+    (co.status === 'shared' || co.status === 'rejected' || co.status === 'work_in_progress' || co.status === 'closed_for_pricing');
   const canCompleteFCInput = !!co && isFC && isCollaboratorOrg;
   const canEdit = (isActiveStatus || (isRunningPricing && co?.status === 'submitted')) && (isTC || !currentCollaborator || isCollaboratorOrg);
 
+  /* NTE blocking at 100% */
   const nteUsedPercent = financials.nteUsedPercent ?? 0;
+  const nteBlocked = co?.pricing_type === 'nte' && !!co?.nte_cap && nteUsedPercent >= 100;
   const showNTEWarning = co?.pricing_type === 'nte' && !!co?.nte_cap && nteUsedPercent >= 80;
 
   const pricingType: ValidPricing = co && VALID_PRICING.includes(co.pricing_type as ValidPricing)
@@ -264,7 +271,12 @@ export function CODetailPage() {
                   </div>
                 </div>
 
-                {showNTEWarning && (
+                {nteBlocked && (
+                  <div className="rounded-xl px-3 py-2 text-xs bg-destructive/10 text-destructive border border-destructive/30 font-medium">
+                    NTE cap reached (100%). Further additions are blocked. GC must increase the cap or close the CO.
+                  </div>
+                )}
+                {showNTEWarning && !nteBlocked && (
                   <div className="co-light-warning rounded-xl px-3 py-2 text-xs">
                     Action required: NTE cap is nearing limit ({nteUsedPercent.toFixed(1)}% used).
                   </div>
@@ -302,7 +314,7 @@ export function CODetailPage() {
                           pricingType={pricingType}
                           nteCap={co.nte_cap}
                           nteUsed={financials.laborTotal}
-                          canAddLabor={canEdit && (isTC || isFC)}
+                          canAddLabor={canEdit && (isTC || isFC) && !nteBlocked}
                           onRefresh={refreshDetail}
                         />
                       ))

@@ -12,6 +12,8 @@ export interface GroupedChangeOrders {
   mine: {
     draft: ChangeOrderWithMembers[];
     shared: ChangeOrderWithMembers[];
+    work_in_progress: ChangeOrderWithMembers[];
+    closed_for_pricing: ChangeOrderWithMembers[];
     submitted: ChangeOrderWithMembers[];
     approved: ChangeOrderWithMembers[];
     rejected: ChangeOrderWithMembers[];
@@ -72,6 +74,8 @@ export function useChangeOrders(projectId: string | null) {
     mine: {
       draft: [],
       shared: [],
+      work_in_progress: [],
+      closed_for_pricing: [],
       submitted: [],
       approved: [],
       rejected: [],

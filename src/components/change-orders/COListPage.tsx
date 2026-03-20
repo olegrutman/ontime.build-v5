@@ -21,6 +21,8 @@ type COViewMode = 'card' | 'list';
 const STATUS_ORDER: COStatus[] = [
   'draft',
   'shared',
+  'work_in_progress',
+  'closed_for_pricing',
   'submitted',
   'approved',
   'rejected',
@@ -30,6 +32,8 @@ const STATUS_ORDER: COStatus[] = [
 const STATUS_BADGE_STYLES: Record<COStatus, string> = {
   draft: 'bg-muted text-muted-foreground border-border',
   shared: 'bg-accent text-accent-foreground border-border',
+  work_in_progress: 'bg-blue-100 text-blue-700 border-blue-200',
+  closed_for_pricing: 'bg-amber-100 text-amber-700 border-amber-200',
   submitted: 'bg-primary/15 text-primary border-primary/25',
   approved: 'bg-primary text-primary-foreground border-primary',
   rejected: 'bg-destructive/10 text-destructive border-destructive/30',
@@ -185,6 +189,8 @@ export function COListPage({ projectId }: COListPageProps) {
   const allMine: ChangeOrderWithMembers[] = [
     ...mine.draft,
     ...mine.shared,
+    ...mine.work_in_progress,
+    ...mine.closed_for_pricing,
     ...mine.submitted,
     ...mine.approved,
     ...mine.rejected,
@@ -257,8 +263,8 @@ export function COListPage({ projectId }: COListPageProps) {
             <p className="co-light-kpi-value">{mine.draft.length + mine.shared.length}</p>
           </div>
           <div className="co-light-kpi">
-            <p className="co-light-kpi-label">Submitted</p>
-            <p className="co-light-kpi-value">{mine.submitted.length}</p>
+            <p className="co-light-kpi-label">In Progress</p>
+            <p className="co-light-kpi-value">{mine.work_in_progress.length + mine.closed_for_pricing.length + mine.submitted.length}</p>
           </div>
           <div className="co-light-kpi">
             <p className="co-light-kpi-label">Approved</p>

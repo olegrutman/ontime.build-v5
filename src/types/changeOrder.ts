@@ -1,6 +1,8 @@
 export type COStatus =
   | 'draft'
   | 'shared'
+  | 'work_in_progress'
+  | 'closed_for_pricing'
   | 'submitted'
   | 'approved'
   | 'rejected'
@@ -44,12 +46,14 @@ export const CO_REASON_COLORS: Record<COReasonCode, { bg: string; text: string }
 };
 
 export const CO_STATUS_LABELS: Record<COStatus, string> = {
-  draft:      'Draft',
-  shared:     'Shared',
-  submitted:  'Submitted',
-  approved:   'Approved',
-  rejected:   'Rejected',
-  contracted: 'Contracted',
+  draft:              'Draft',
+  shared:             'Shared',
+  work_in_progress:   'Work in Progress',
+  closed_for_pricing: 'Closed for Pricing',
+  submitted:          'Submitted',
+  approved:           'Approved',
+  rejected:           'Rejected',
+  contracted:         'Contracted',
 };
 
 export interface ChangeOrder {
@@ -82,6 +86,15 @@ export interface ChangeOrder {
   rejection_note: string | null;
   contracted_at: string | null;
   draft_shared_with_next: boolean;
+  /* New CO flow fields */
+  use_fc_pricing_base: boolean;
+  closed_for_pricing_at: string | null;
+  completed_at: string | null;
+  completion_acknowledged_at: string | null;
+  tc_snapshot_hourly_rate: number | null;
+  tc_snapshot_markup_percent: number | null;
+  tc_submitted_price: number | null;
+  fc_pricing_submitted_at: string | null;
   created_at: string;
   updated_at: string;
 }
