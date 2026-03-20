@@ -228,7 +228,7 @@ export function CODetailPage() {
                       </div>
 
                       <div className="mt-1 flex items-center gap-3 flex-wrap text-xs text-muted-foreground">
-                        {co.co_number && <span>{co.co_number}</span>}
+                        {/* co_number already in displayTitle — removed duplicate (m1) */}
                         {co.location_tag && co.location_tag.split(' | ').map((loc, i) => (
                           <span key={i} className="inline-flex items-center gap-1">
                             <MapPin className="h-3 w-3" />
