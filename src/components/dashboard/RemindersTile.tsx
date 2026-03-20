@@ -70,9 +70,9 @@ export function RemindersTile({ reminders, onComplete, onAdd }: RemindersTilePro
                     className="mt-0.5 h-5 w-5"
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-base truncate">{reminder.title}</p>
+                    <p className="text-[0.82rem] truncate">{reminder.title}</p>
                     <p className={cn(
-                      "text-sm",
+                      "text-[0.68rem]",
                       isOverdue ? "text-destructive font-semibold" : "text-muted-foreground"
                     )}>
                       {isOverdue && '⚠ Overdue • '}
