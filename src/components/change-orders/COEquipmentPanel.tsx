@@ -93,7 +93,9 @@ export function COEquipmentPanel({
 
     setSaving(true);
     try {
-      const rows = valid.map(d => ({
+      const rows = valid.map(d => {
+        const costVal = isFC ? 0 : (parseFloat(d.cost) || 0);
+        return {
         co_id:          coId,
         org_id:         orgId,
         added_by_role:  isGC ? 'GC' : isFC ? 'FC' : 'TC',
