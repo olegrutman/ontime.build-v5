@@ -3,6 +3,7 @@ import { CO_REASON_LABELS } from '@/types/changeOrder';
 import type { COWizardData } from './COWizard';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { format } from 'date-fns';
 
 interface StepReviewProps {
   data: COWizardData;
@@ -23,15 +24,27 @@ export function StepReview({ data, projectId }: StepReviewProps) {
     },
   });
 
+  // Preview the auto-generated CO number
+  const { data: coCount } = useQuery({
+    queryKey: ['co-count-preview', projectId],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('change_orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('project_id', projectId);
+      return (count ?? 0) + 1;
+    },
+  });
+
+  const coNumberPreview = coCount ? `CO-${String(coCount).padStart(3, '0')} · ${format(new Date(), 'MMM d, yyyy')}` : '...';
+
   const pricingLabel =
     data.pricingType === 'fixed' ? 'Fixed Price' :
     data.pricingType === 'tm' ? 'Time & Material' : 'Not-to-Exceed';
 
   return (
     <div className="space-y-5">
-      {data.title && (
-        <div className="text-base font-semibold text-foreground">{data.title}</div>
-      )}
+      <div className="text-base font-semibold text-foreground">{coNumberPreview}</div>
 
       <Section icon={FileText} title="Reason">
         <Row label="Code" value={data.reason ? CO_REASON_LABELS[data.reason] : '—'} />
@@ -55,20 +68,24 @@ export function StepReview({ data, projectId }: StepReviewProps) {
         {data.fcInputNeeded && <Row label="FC Input" value="Requested" />}
       </Section>
 
-      <Section icon={MapPin} title="Location">
-        <p className="text-sm text-foreground">{data.locationTags.join(' · ') || '—'}</p>
-      </Section>
-
-      <Section icon={ClipboardList} title="Scope">
+      <Section icon={ClipboardList} title="Scope & locations">
         {data.selectedItems.length === 0 ? (
           <p className="text-sm text-muted-foreground">No items selected</p>
         ) : (
-          <ul className="space-y-1.5">
+          <ul className="space-y-2">
             {data.selectedItems.map((item) => (
-              <li key={item.id} className="flex items-baseline gap-2 text-sm">
-                <span className="font-medium text-foreground">{item.item_name}</span>
-                {item.category_name && (
-                  <span className="text-xs text-muted-foreground">{item.category_name}</span>
+              <li key={item.id} className="space-y-0.5">
+                <div className="flex items-baseline gap-2 text-sm">
+                  <span className="font-medium text-foreground">{item.item_name}</span>
+                  {item.category_name && (
+                    <span className="text-xs text-muted-foreground">{item.category_name}</span>
+                  )}
+                </div>
+                {item.locationTag && (
+                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                    <MapPin className="h-3 w-3 shrink-0" />
+                    <span>{item.locationTag}</span>
+                  </div>
                 )}
               </li>
             ))}

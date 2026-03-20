@@ -9,19 +9,21 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
 import type { COCreatedByRole, COReasonCode, COPricingType, WorkOrderCatalogItem } from '@/types/changeOrder';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { StepCatalog } from './StepCatalog';
-import { StepLocation } from './StepLocation';
 import { StepReason } from './StepReason';
 import { StepConfig } from './StepConfig';
 import { StepReview } from './StepReview';
 
+export interface SelectedScopeItem extends WorkOrderCatalogItem {
+  locationTag: string;
+}
+
 export interface COWizardData {
-  selectedItems: WorkOrderCatalogItem[];
+  selectedItems: SelectedScopeItem[];
   scopeDescription: string;
-  title: string;
-  locationTags: string[];
   reason: COReasonCode | null;
   reasonNote: string;
   pricingType: COPricingType;
@@ -39,8 +41,6 @@ export interface COWizardData {
 const INITIAL_DATA: COWizardData = {
   selectedItems: [],
   scopeDescription: '',
-  title: '',
-  locationTags: [],
   reason: null,
   reasonNote: '',
   pricingType: 'fixed',
@@ -64,8 +64,7 @@ interface WizardStep {
 const ALL_STEPS: WizardStep[] = [
   { key: 'reason', label: 'Reason', description: 'Cause of this change' },
   { key: 'config', label: 'Configuration', description: 'Pricing and assignment' },
-  { key: 'location', label: 'Location', description: 'Where is the work' },
-  { key: 'catalog', label: 'Scope', description: 'Choose the work items' },
+  { key: 'catalog', label: 'Scope', description: 'Choose work items & locations' },
   { key: 'review', label: 'Review', description: 'Confirm before creating' },
 ];
 
@@ -97,9 +96,6 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
     const s = ALL_STEPS[step];
     if (s.key === 'review') return true;
     if (s.key === 'catalog') return data.selectedItems.length > 0;
-    if (s.key === 'location') {
-      return data.locationTags.length > 0;
-    }
     if (s.key === 'reason') return !!data.reason && (data.reason !== 'other' || data.reasonNote.trim().length > 0);
     if (s.key === 'config') {
       if (role === 'GC') {
@@ -133,10 +129,20 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
     }
     setSubmitting(true);
     try {
-      const title = data.title.trim() ||
-        (data.selectedItems.length > 0 ? data.selectedItems[0].item_name : null);
+      // Auto-generate CO number
+      const { count } = await supabase
+        .from('change_orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('project_id', projectId);
+      const seq = (count ?? 0) + 1;
+      const coNumber = `CO-${String(seq).padStart(3, '0')}`;
+      const title = `${coNumber} · ${format(new Date(), 'MMM d, yyyy')}`;
 
       const preGeneratedId = crypto.randomUUID();
+
+      // Join unique locations from items for CO-level summary
+      const uniqueLocations = [...new Set(data.selectedItems.map(i => i.locationTag).filter(Boolean))];
+      const locationTagSummary = uniqueLocations.length > 0 ? uniqueLocations.join(' | ') : null;
 
       const { error: insertError } = await supabase
         .from('change_orders')
@@ -147,12 +153,13 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
           created_by_user_id: user.id,
           created_by_role: role,
           title,
+          co_number: coNumber,
           status: 'draft',
           pricing_type: data.pricingType,
           nte_cap: data.pricingType === 'nte' && data.nteCap ? parseFloat(data.nteCap) : null,
           reason: data.reason,
           reason_note: data.reasonNote || null,
-          location_tag: data.locationTags.length > 0 ? data.locationTags.join(' | ') : null,
+          location_tag: locationTagSummary,
           assigned_to_org_id: data.assignedToOrgId || null,
           fc_input_needed: data.fcInputNeeded,
           materials_needed: data.materialsNeeded,
@@ -180,6 +187,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
           category_name: item.category_name,
           unit: item.unit,
           sort_order: idx,
+          location_tag: item.locationTag || null,
         }));
         const { error: lineError } = await supabase.from('co_line_items').insert(lineItemRows);
         if (lineError) {
@@ -196,7 +204,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
           actor_user_id: user.id,
           actor_role: role,
           action: 'created',
-          detail: title ?? null,
+          detail: title,
           amount: null,
         });
       if (activityError) throw activityError;
@@ -291,8 +299,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
             )}
 
             <div className="co-light-shell p-4 sm:p-5">
-              {currentStep.key === 'catalog' && <StepCatalog data={data} onChange={update} />}
-              {currentStep.key === 'location' && <StepLocation data={data} onChange={update} projectId={projectId} />}
+              {currentStep.key === 'catalog' && <StepCatalog data={data} onChange={update} projectId={projectId} />}
               {currentStep.key === 'reason' && <StepReason data={data} onChange={update} />}
               {currentStep.key === 'config' && <StepConfig data={data} onChange={update} role={role} projectId={projectId} />}
               {currentStep.key === 'review' && <StepReview data={data} projectId={projectId} />}
