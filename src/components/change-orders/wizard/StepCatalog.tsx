@@ -32,11 +32,30 @@ interface LocationFields {
   custom_exterior: string;
 }
 
+interface PendingItemState {
+  item: WorkOrderCatalogItem;
+  phase: 'location' | 'reason';
+  locationFields: LocationFields;
+  locationTag: string;
+  reason: COReasonCode | null;
+  reasonDescription: string;
+}
+
 const SEPARATOR = ' → ';
 const EMPTY_FIELDS: LocationFields = {
   inside_outside: '', building: '', level: '', unit: '',
   room_area: '', custom_room_area: '', exterior_feature: '', custom_exterior: '',
 };
+
+const REASONS: { code: COReasonCode; description: string }[] = [
+  { code: 'addition',          description: 'New scope not in the original contract' },
+  { code: 'rework',            description: 'Something built wrong that needs to be redone' },
+  { code: 'design_change',     description: 'Plans or drawings changed after work started' },
+  { code: 'owner_request',     description: 'Owner asked for something different' },
+  { code: 'gc_request',        description: 'GC directed the change' },
+  { code: 'damaged_by_others', description: 'Another trade or party caused the damage' },
+  { code: 'other',             description: 'Anything else' },
+];
 
 function buildLocationTag(f: LocationFields, exteriorLabel?: string): string {
   if (f.inside_outside === 'inside') {
