@@ -8,6 +8,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 import type { COCreatedByRole, COReasonCode, COPricingType, WorkOrderCatalogItem } from '@/types/changeOrder';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { StepCatalog } from './StepCatalog';
