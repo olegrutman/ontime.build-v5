@@ -101,10 +101,10 @@ export function COEquipmentPanel({
         added_by_role:  isGC ? 'GC' : isFC ? 'FC' : 'TC',
         description:    d.description.trim(),
         duration_note:  d.duration_note.trim() || null,
-        cost:           parseFloat(d.cost) || 0,
-        markup_percent: parseFloat(d.markup_percent) || 0,
+        cost:           costVal,
+        markup_percent: isFC ? 0 : (parseFloat(d.markup_percent) || 0),
         notes:          d.notes.trim() || null,
-      }));
+      }});
 
       const { error } = await supabase.from('co_equipment_items').insert(rows);
       if (error) throw error;
