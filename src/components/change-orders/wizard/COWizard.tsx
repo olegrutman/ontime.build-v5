@@ -295,6 +295,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
               {currentStep.key === 'location' && <StepLocation data={data} onChange={update} projectId={projectId} />}
               {currentStep.key === 'reason' && <StepReason data={data} onChange={update} />}
               {currentStep.key === 'config' && <StepConfig data={data} onChange={update} role={role} projectId={projectId} />}
+              {currentStep.key === 'review' && <StepReview data={data} projectId={projectId} />}
             </div>
           </div>
 
