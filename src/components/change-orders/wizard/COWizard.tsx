@@ -131,30 +131,38 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
       const title = data.title.trim() ||
         (data.selectedItems.length > 0 ? data.selectedItems[0].item_name : null);
 
-      const newCO = await createCO.mutateAsync({
-        org_id: orgId,
-        project_id: projectId,
-        created_by_user_id: user.id,
-        created_by_role: role,
-        title,
-        status: 'draft',
-        pricing_type: data.pricingType,
-        nte_cap: data.pricingType === 'nte' && data.nteCap ? parseFloat(data.nteCap) : null,
-        reason: data.reason,
-        reason_note: data.reasonNote || null,
-        location_tag: data.locationTags.length > 0 ? data.locationTags.join(' | ') : null,
-        assigned_to_org_id: data.assignedToOrgId || null,
-        fc_input_needed: data.fcInputNeeded,
-        materials_needed: data.materialsNeeded,
-        materials_on_site: data.materialsOnSite,
-        equipment_needed: data.equipmentNeeded,
-        materials_responsible: data.materialsResponsible,
-        equipment_responsible: data.equipmentResponsible,
-        draft_shared_with_next: data.shareDraftNow,
-        combined_co_id: null,
-        parent_co_id: null,
-        rejection_note: null,
-      });
+      const preGeneratedId = crypto.randomUUID();
+
+      const { error: insertError } = await supabase
+        .from('change_orders')
+        .insert({
+          id: preGeneratedId,
+          org_id: orgId,
+          project_id: projectId,
+          created_by_user_id: user.id,
+          created_by_role: role,
+          title,
+          status: 'draft',
+          pricing_type: data.pricingType,
+          nte_cap: data.pricingType === 'nte' && data.nteCap ? parseFloat(data.nteCap) : null,
+          reason: data.reason,
+          reason_note: data.reasonNote || null,
+          location_tag: data.locationTags.length > 0 ? data.locationTags.join(' | ') : null,
+          assigned_to_org_id: data.assignedToOrgId || null,
+          fc_input_needed: data.fcInputNeeded,
+          materials_needed: data.materialsNeeded,
+          materials_on_site: data.materialsOnSite,
+          equipment_needed: data.equipmentNeeded,
+          materials_responsible: data.materialsResponsible,
+          equipment_responsible: data.equipmentResponsible,
+          draft_shared_with_next: data.shareDraftNow,
+          combined_co_id: null,
+          parent_co_id: null,
+          rejection_note: null,
+        });
+      if (insertError) throw insertError;
+
+      const newCOId = preGeneratedId;
 
       if (data.selectedItems.length > 0) {
         const lineItemRows = data.selectedItems.map((item, idx) => ({
