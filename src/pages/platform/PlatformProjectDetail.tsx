@@ -11,7 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useSupportAction } from '@/hooks/useSupportAction';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { CheckCircle, DollarSign, FileText, ClipboardList, ShoppingCart, Package, Trash2, Wrench } from 'lucide-react';
+import { CheckCircle, DollarSign, FileText, ClipboardList, ShoppingCart, Package, Trash2, Wrench, GitBranch } from 'lucide-react';
 
 interface ProjectData {
   id: string;
@@ -97,6 +97,14 @@ interface WorkOrderRow {
   created_at: string;
 }
 
+interface CORow {
+  id: string;
+  co_number: string | null;
+  status: string;
+  pricing_type: string;
+  created_at: string | null;
+}
+
 function formatCurrency(val: number | null | undefined) {
   if (val == null) return '$0';
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
@@ -138,7 +146,7 @@ export default function PlatformProjectDetail() {
   const [financials, setFinancials] = useState({ invoiced: 0, paid: 0, retainage: 0, poTotal: 0 });
   const [estimates, setEstimates] = useState<SupplierEstimateRow[]>([]);
   const [workOrders, setWorkOrders] = useState<WorkOrderRow[]>([]);
-
+  const [changeOrders, setChangeOrders] = useState<CORow[]>([]);
   const { execute, loading: actionLoading } = useSupportAction();
   const { platformRole } = useAuth();
   const [forceAcceptOpen, setForceAcceptOpen] = useState(false);
@@ -153,6 +161,8 @@ export default function PlatformProjectDetail() {
   const [deletePOTarget, setDeletePOTarget] = useState<PORow | null>(null);
   const [deleteWOOpen, setDeleteWOOpen] = useState(false);
   const [deleteWOTarget, setDeleteWOTarget] = useState<WorkOrderRow | null>(null);
+  const [deleteCOOpen, setDeleteCOOpen] = useState(false);
+  const [deleteCOTarget, setDeleteCOTarget] = useState<CORow | null>(null);
 
   const fetchData = async () => {
     if (!projectId) return;
@@ -232,6 +242,15 @@ export default function PlatformProjectDetail() {
 
     // Work orders removed
     setWorkOrders([]);
+
+    // Fetch change orders
+    const { data: coData } = await supabase
+      .from('change_orders')
+      .select('id, co_number, status, pricing_type, created_at')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    setChangeOrders((coData || []) as unknown as CORow[]);
 
     setLoading(false);
   };
@@ -636,6 +655,60 @@ export default function PlatformProjectDetail() {
         </CardContent>
       </Card>
 
+      {/* Change Orders */}
+      <Card className="mb-6">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <GitBranch className="h-4 w-4" /> Change Orders
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0 overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>CO #</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Pricing Type</TableHead>
+                <TableHead>Created</TableHead>
+                {platformRole === 'PLATFORM_OWNER' && <TableHead className="w-[60px]" />}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {changeOrders.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={platformRole === 'PLATFORM_OWNER' ? 5 : 4} className="text-center py-4 text-muted-foreground">No change orders</TableCell>
+                </TableRow>
+              ) : (
+                changeOrders.map((co) => (
+                  <TableRow key={co.id}>
+                    <TableCell className="font-medium">{co.co_number || co.id.slice(0, 8)}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-xs capitalize">{co.status.toLowerCase().replace('_', ' ')}</Badge>
+                    </TableCell>
+                    <TableCell className="text-sm capitalize">{co.pricing_type.toLowerCase().replace('_', ' ')}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {co.created_at ? format(new Date(co.created_at), 'MMM d, yyyy') : '—'}
+                    </TableCell>
+                    {platformRole === 'PLATFORM_OWNER' && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          onClick={() => { setDeleteCOTarget(co); setDeleteCOOpen(true); }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-base">Team / Participants</CardTitle>
@@ -837,6 +910,28 @@ export default function PlatformProjectDetail() {
           if (ok) {
             setDeleteWOOpen(false);
             setDeleteWOTarget(null);
+            fetchData();
+          }
+        }}
+        loading={actionLoading}
+      />
+
+      {/* Delete Change Order Dialog */}
+      <SupportActionDialog
+        open={deleteCOOpen}
+        onOpenChange={setDeleteCOOpen}
+        title="Delete Change Order"
+        description={`Permanently delete change order "${deleteCOTarget?.co_number || deleteCOTarget?.id?.slice(0, 8)}" (${deleteCOTarget?.status}, ${deleteCOTarget?.pricing_type}). This removes the CO and all associated line items, labor entries, materials, equipment, and activity. Linked invoices will be unlinked. This action cannot be undone.`}
+        onConfirm={async (reason) => {
+          if (!deleteCOTarget) return;
+          const ok = await execute({
+            action_type: 'DELETE_CHANGE_ORDER',
+            reason,
+            co_id: deleteCOTarget.id,
+          });
+          if (ok) {
+            setDeleteCOOpen(false);
+            setDeleteCOTarget(null);
             fetchData();
           }
         }}
