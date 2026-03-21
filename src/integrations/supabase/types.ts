@@ -2775,6 +2775,99 @@ export type Database = {
           },
         ]
       }
+      project_profiles: {
+        Row: {
+          basement_type: string | null
+          created_at: string
+          foundation_types: string[]
+          garage_types: string[]
+          has_basement: boolean
+          has_clubhouse: boolean
+          has_commercial_spaces: boolean
+          has_deck_balcony: boolean
+          has_elevator: boolean
+          has_garage: boolean
+          has_pool: boolean
+          has_shed: boolean
+          has_stairs: boolean
+          id: string
+          is_complete: boolean
+          number_of_buildings: number
+          project_id: string
+          project_type_id: string
+          roof_type: string | null
+          stair_types: string[]
+          stories: number
+          units_per_building: number | null
+          updated_at: string
+        }
+        Insert: {
+          basement_type?: string | null
+          created_at?: string
+          foundation_types?: string[]
+          garage_types?: string[]
+          has_basement?: boolean
+          has_clubhouse?: boolean
+          has_commercial_spaces?: boolean
+          has_deck_balcony?: boolean
+          has_elevator?: boolean
+          has_garage?: boolean
+          has_pool?: boolean
+          has_shed?: boolean
+          has_stairs?: boolean
+          id?: string
+          is_complete?: boolean
+          number_of_buildings?: number
+          project_id: string
+          project_type_id: string
+          roof_type?: string | null
+          stair_types?: string[]
+          stories?: number
+          units_per_building?: number | null
+          updated_at?: string
+        }
+        Update: {
+          basement_type?: string | null
+          created_at?: string
+          foundation_types?: string[]
+          garage_types?: string[]
+          has_basement?: boolean
+          has_clubhouse?: boolean
+          has_commercial_spaces?: boolean
+          has_deck_balcony?: boolean
+          has_elevator?: boolean
+          has_garage?: boolean
+          has_pool?: boolean
+          has_shed?: boolean
+          has_stairs?: boolean
+          id?: string
+          is_complete?: boolean
+          number_of_buildings?: number
+          project_id?: string
+          project_type_id?: string
+          roof_type?: string | null
+          stair_types?: string[]
+          stories?: number
+          units_per_building?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_profiles_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_profiles_project_type_id_fkey"
+            columns: ["project_type_id"]
+            isOneToOne: false
+            referencedRelation: "project_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_relationships: {
         Row: {
           billing_direction: string
@@ -3151,6 +3244,64 @@ export type Database = {
           },
         ]
       }
+      project_scope_selections: {
+        Row: {
+          created_at: string
+          id: string
+          is_conflict: boolean
+          is_new: boolean
+          is_on: boolean
+          profile_id: string
+          project_id: string
+          scope_item_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_conflict?: boolean
+          is_new?: boolean
+          is_on?: boolean
+          profile_id: string
+          project_id: string
+          scope_item_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_conflict?: boolean
+          is_new?: boolean
+          is_on?: boolean
+          profile_id?: string
+          project_id?: string
+          scope_item_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_scope_selections_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "project_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_scope_selections_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_scope_selections_scope_item_id_fkey"
+            columns: ["scope_item_id"]
+            isOneToOne: false
+            referencedRelation: "scope_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_sov: {
         Row: {
           contract_id: string | null
@@ -3354,6 +3505,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      project_types: {
+        Row: {
+          created_at: string
+          default_number_of_buildings: number
+          default_stories: number
+          default_units_per_building: number | null
+          id: string
+          is_commercial: boolean
+          is_multifamily: boolean
+          is_single_family: boolean
+          name: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          default_number_of_buildings?: number
+          default_stories?: number
+          default_units_per_building?: number | null
+          id?: string
+          is_commercial?: boolean
+          is_multifamily?: boolean
+          is_single_family?: boolean
+          name: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          default_number_of_buildings?: number
+          default_stories?: number
+          default_units_per_building?: number | null
+          id?: string
+          is_commercial?: boolean
+          is_multifamily?: boolean
+          is_single_family?: boolean
+          name?: string
+          slug?: string
+        }
+        Relationships: []
       }
       projects: {
         Row: {
@@ -3906,6 +4096,89 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      scope_items: {
+        Row: {
+          created_at: string
+          default_on: boolean
+          display_order: number
+          excluded_project_types: string[]
+          id: string
+          item_type: string
+          label: string
+          min_stories: number | null
+          only_project_types: string[] | null
+          required_feature: string | null
+          section_id: string
+        }
+        Insert: {
+          created_at?: string
+          default_on?: boolean
+          display_order?: number
+          excluded_project_types?: string[]
+          id?: string
+          item_type?: string
+          label: string
+          min_stories?: number | null
+          only_project_types?: string[] | null
+          required_feature?: string | null
+          section_id: string
+        }
+        Update: {
+          created_at?: string
+          default_on?: boolean
+          display_order?: number
+          excluded_project_types?: string[]
+          id?: string
+          item_type?: string
+          label?: string
+          min_stories?: number | null
+          only_project_types?: string[] | null
+          required_feature?: string | null
+          section_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scope_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "scope_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scope_sections: {
+        Row: {
+          always_visible: boolean
+          created_at: string
+          description: string | null
+          display_order: number
+          id: string
+          label: string
+          required_feature: string | null
+          slug: string
+        }
+        Insert: {
+          always_visible?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          label: string
+          required_feature?: string | null
+          slug: string
+        }
+        Update: {
+          always_visible?: boolean
+          created_at?: string
+          description?: string | null
+          display_order?: number
+          id?: string
+          label?: string
+          required_feature?: string | null
+          slug?: string
+        }
+        Relationships: []
       }
       sov_templates: {
         Row: {
