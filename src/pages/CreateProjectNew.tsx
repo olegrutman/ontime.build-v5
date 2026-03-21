@@ -64,10 +64,6 @@ export default function CreateProjectNew() {
     setData(prev => ({ ...prev, team }));
   };
 
-  const updateScope = (scope: ScopeDetails) => {
-    setData(prev => ({ ...prev, scope }));
-  };
-
   const canProceed = (): boolean => {
     switch (currentStep) {
       case 0: // Basics
@@ -75,9 +71,7 @@ export default function CreateProjectNew() {
                   data.basics.city && data.basics.state && data.basics.zip);
       case 1: // Team - optional
         return true;
-      case 2: // Scope - optional
-        return true;
-      case 3: // Review
+      case 2: // Review
         return true;
       default:
         return false;
