@@ -14,7 +14,6 @@ import {
   ProjectBasics,
   TeamMember,
   ScopeDetails,
-  ProjectContract
 } from '@/types/projectWizard';
 import { OrgType } from '@/types/organization';
 
@@ -22,7 +21,6 @@ import { OrgType } from '@/types/organization';
 import { BasicsStepNew } from '@/components/project-wizard-new/BasicsStep';
 import { TeamStep } from '@/components/project-wizard-new/TeamStep';
 import { ScopeStep } from '@/components/project-wizard-new/ScopeStep';
-import { ContractsStep } from '@/components/project-wizard-new/ContractsStep';
 import { ReviewStepNew } from '@/components/project-wizard-new/ReviewStep';
 
 const initialBasics: ProjectBasics = {
@@ -72,10 +70,6 @@ export default function CreateProjectNew() {
     setData(prev => ({ ...prev, scope }));
   };
 
-  const updateContracts = (contracts: ProjectContract[]) => {
-    setData(prev => ({ ...prev, contracts }));
-  };
-
   const canProceed = (): boolean => {
     switch (currentStep) {
       case 0: // Basics
@@ -83,11 +77,9 @@ export default function CreateProjectNew() {
                   data.basics.city && data.basics.state && data.basics.zip);
       case 1: // Team - optional
         return true;
-      case 2: // Scope - optional but should have some data
+      case 2: // Scope - optional
         return true;
-      case 3: // Contracts
-        return true;
-      case 4: // Review
+      case 3: // Review
         return true;
       default:
         return false;
@@ -162,9 +154,6 @@ export default function CreateProjectNew() {
   };
 
   const saveTeam = async (projectId: string) => {
-    // Team members are now saved directly in TeamStep via AddTeamMemberDialog
-    // This function is kept for backward compatibility with local-only team data
-    // Check if any team members exist only in local state (not yet in DB)
     const { data: existingTeam } = await supabase
       .from('project_team')
       .select('invited_email')
@@ -172,14 +161,12 @@ export default function CreateProjectNew() {
     
     const existingEmails = new Set((existingTeam || []).map(m => m.invited_email?.toLowerCase()));
     
-    // Only save team members that aren't already in the database
     for (const member of data.team) {
       if (existingEmails.has(member.contactEmail.toLowerCase())) {
-        continue; // Already saved via dialog
+        continue;
       }
       
       try {
-        // Insert into project_team
         const { data: teamMember, error: teamError } = await supabase
           .from('project_team')
           .insert({
@@ -198,7 +185,6 @@ export default function CreateProjectNew() {
 
         if (teamError) throw teamError;
 
-        // Create invite token
         await supabase.from('project_invites').insert({
           project_id: projectId,
           project_team_id: teamMember.id,
@@ -271,123 +257,9 @@ export default function CreateProjectNew() {
     }
   };
 
-  const saveContracts = async (projectId: string) => {
-    console.log('Saving contracts, state has:', data.contracts.length, 'contracts');
-    
-    // Fetch team members from database to get accurate data
-    const { data: dbTeamMembers, error: teamError } = await supabase
-      .from('project_team')
-      .select('id, role, trade, trade_custom, invited_org_name, org_id')
-      .eq('project_id', projectId);
-    
-    if (teamError) {
-      console.error('Error fetching team members:', teamError);
-      return;
-    }
-    
-    // Determine which team members SHOULD have contracts based on creator role
-    const membersNeedingContracts = (dbTeamMembers || []).filter(m => {
-      if (creatorRole === 'General Contractor') {
-        return m.role === 'Trade Contractor';
-      }
-      if (creatorRole === 'Trade Contractor') {
-        // TC needs upstream contract with GC AND downstream with FC
-        return m.role === 'General Contractor' || m.role === 'Field Crew';
-      }
-      return false;
-    });
-    
-    console.log('Members needing contracts:', membersNeedingContracts.map(m => ({ id: m.id, role: m.role, name: m.invited_org_name })));
-    
-    // Fetch existing contracts to update in-place when re-visiting the step
-    // Match by org IDs since to_project_team_id may be null on initial creation
-    const { data: existingContracts, error: existingError } = await supabase
-      .from('project_contracts')
-      .select('id, from_org_id, to_org_id, to_project_team_id')
-      .eq('project_id', projectId);
-
-    if (existingError) {
-      console.error('Error fetching existing contracts:', existingError);
-    }
-
-    // Process each member that needs a contract
-    for (const teamMember of membersNeedingContracts) {
-      try {
-        // Find contract data from state (may not exist if UI didn't populate it)
-        const contract = data.contracts.find(c => c.toTeamMemberId === teamMember.id);
-        
-        console.log('Processing contract for:', teamMember.invited_org_name, teamMember.role, 
-          'state contract:', contract ? { sum: contract.contractSum, ret: contract.retainagePercent } : 'NOT FOUND');
-
-        // Determine contract direction based on who should invoice whom
-        // Worker (invoice sender) = from_org, Payer = to_org
-        // If creator is upstream (GC or TC inviting FC), invitee is the worker
-        const isCreatorUpstream = 
-          (creatorRole === 'General Contractor') ||
-          (creatorRole === 'Trade Contractor' && teamMember.role === 'Field Crew');
-
-        // Match existing contract by org IDs (which are always populated)
-        // This ensures we find contracts even if to_project_team_id wasn't set initially
-        const existing = existingContracts?.find((c) => {
-          if (isCreatorUpstream) {
-            return c.from_org_id === teamMember.org_id && c.to_org_id === currentOrg?.id;
-          } else {
-            return c.from_org_id === currentOrg?.id && c.to_org_id === teamMember.org_id;
-          }
-        });
-
-        const payload = isCreatorUpstream ? {
-          // Invitee is worker, creator is payer
-          project_id: projectId,
-          from_org_id: teamMember.org_id,
-          from_role: teamMember.role,
-          to_org_id: currentOrg?.id,
-          to_role: creatorRole,
-          trade: teamMember.trade,
-          to_project_team_id: teamMember.id,
-          contract_sum: contract?.contractSum ?? 0,
-          retainage_percent: contract?.retainagePercent ?? 0,
-          allow_mobilization_line_item: contract?.allowMobilization ?? false,
-          notes: contract?.notes ?? null,
-          material_responsibility: contract?.materialResponsibility ?? null,
-          created_by_user_id: user?.id,
-        } : {
-          // Creator is worker, invitee is payer (e.g., TC inviting GC)
-          project_id: projectId,
-          from_org_id: currentOrg?.id,
-          from_role: creatorRole,
-          to_org_id: teamMember.org_id,
-          to_role: teamMember.role,
-          trade: teamMember.trade,
-          to_project_team_id: teamMember.id,
-          contract_sum: contract?.contractSum ?? 0,
-          retainage_percent: contract?.retainagePercent ?? 0,
-          allow_mobilization_line_item: contract?.allowMobilization ?? false,
-          notes: contract?.notes ?? null,
-          material_responsibility: contract?.materialResponsibility ?? null,
-          created_by_user_id: user?.id,
-        };
-
-        console.log('Upserting contract payload:', { ...payload, contract_sum: payload.contract_sum }, 
-          'existing:', existing?.id ? 'UPDATE' : 'INSERT');
-
-        const { error } = existing?.id
-          ? await supabase.from('project_contracts').update(payload).eq('id', existing.id)
-          : await supabase.from('project_contracts').insert(payload);
-
-        if (error) {
-          console.error('Error inserting contract:', error);
-        }
-      } catch (error: any) {
-        console.error('Error saving contract:', error);
-      }
-    }
-  };
-
   const nextStep = async () => {
     setSaving(true);
     try {
-      // Save data on each step
       if (currentStep === 0) {
         const projectId = await saveBasics();
         if (!projectId) {
@@ -402,8 +274,6 @@ export default function CreateProjectNew() {
         supabase.functions.invoke('generate-scope-description', {
           body: { project_id: data.projectId },
         }).catch(err => console.error('Scope description generation failed:', err));
-      } else if (currentStep === 3 && data.projectId) {
-        await saveContracts(data.projectId);
       }
       
       setCurrentStep(prev => Math.min(prev + 1, WIZARD_STEPS.length - 1));
@@ -421,7 +291,6 @@ export default function CreateProjectNew() {
     
     setSaving(true);
     try {
-      // Keep project in setup state (readiness engine will determine when it can go active)
       await supabase
         .from('projects')
         .update({ status: 'setup' })
@@ -453,8 +322,6 @@ export default function CreateProjectNew() {
       case 2:
         return <ScopeStep projectType={data.basics.projectType} scope={data.scope} onChange={updateScope} />;
       case 3:
-        return <ContractsStep projectId={data.projectId} contracts={data.contracts} onChange={updateContracts} creatorRole={creatorRole} />;
-      case 4:
         return <ReviewStepNew data={data} creatorRole={creatorRole} />;
       default:
         return null;

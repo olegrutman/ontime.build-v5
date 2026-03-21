@@ -132,7 +132,6 @@ export const WIZARD_STEPS = [
   { id: 'basics', label: 'Project Basics', description: 'Name, type, and location' },
   { id: 'team', label: 'Project Team', description: 'Invite contractors and crew' },
   { id: 'scope', label: 'Scope & Details', description: 'Framing-relevant details' },
-  { id: 'contracts', label: 'Project Contracts', description: 'Contract terms' },
   { id: 'review', label: 'Review', description: 'Review and create' },
 ] as const;
 
