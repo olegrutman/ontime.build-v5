@@ -13,14 +13,12 @@ import {
   WIZARD_STEPS,
   ProjectBasics,
   TeamMember,
-  ScopeDetails,
 } from '@/types/projectWizard';
 import { OrgType } from '@/types/organization';
 
 // Import step components
 import { BasicsStepNew } from '@/components/project-wizard-new/BasicsStep';
 import { TeamStep } from '@/components/project-wizard-new/TeamStep';
-import { ScopeStep } from '@/components/project-wizard-new/ScopeStep';
 import { ReviewStepNew } from '@/components/project-wizard-new/ReviewStep';
 
 const initialBasics: ProjectBasics = {
