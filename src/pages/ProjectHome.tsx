@@ -165,6 +165,10 @@ export default function ProjectHome() {
   const changeOrdersEnabled = useFeatureEnabled('change_orders');
 
   const handleTabChange = (tab: string) => {
+    if (tab === 'scope-details') {
+      navigate(`/project/${id}/details-wizard`);
+      return;
+    }
     setSearchParams({ tab });
     setTabResetKey(prev => prev + 1);
   };
