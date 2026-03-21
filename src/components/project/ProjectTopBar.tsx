@@ -154,6 +154,13 @@ export function ProjectTopBar({
               >
                 Overview
               </TabsTrigger>
+              <TabsTrigger
+                value="scope-details"
+                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
+                onClick={() => onTabChange('scope-details')}
+              >
+                Scope & Details
+              </TabsTrigger>
               {!isSupplier && sovEnabled && (
                 <TabsTrigger
                   value="sov"

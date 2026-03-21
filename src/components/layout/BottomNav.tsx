@@ -69,6 +69,7 @@ export function BottomNav() {
   const primaryProjectItems: NavItem[] = [
     { label: 'Home', icon: Home, path: '/dashboard' },
     { label: 'Overview', icon: LayoutDashboard, tab: 'overview' },
+    { label: 'Scope', icon: ListChecks, tab: 'scope-details' },
     ...(changeOrdersEnabled ? [{ label: 'COs', icon: FileText, tab: 'change-orders' }] : []),
   ];
 
@@ -97,6 +98,8 @@ export function BottomNav() {
   const handleClick = (item: NavItem) => {
     if (item.path) {
       navigate(item.path);
+    } else if (item.tab === 'scope-details' && projectId) {
+      navigate(`/project/${projectId}/details-wizard`);
     } else if (item.tab && projectId) {
       navigate(`/project/${projectId}?tab=${item.tab}`);
     }
