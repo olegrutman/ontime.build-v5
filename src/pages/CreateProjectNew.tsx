@@ -240,8 +240,6 @@ export default function CreateProjectNew() {
           />
         );
       case 2:
-        return <ScopeStep projectType={data.basics.projectType} scope={data.scope} onChange={updateScope} />;
-      case 3:
         return <ReviewStepNew data={data} creatorRole={creatorRole} />;
       default:
         return null;
