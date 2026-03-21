@@ -1,30 +1,31 @@
 
 
-# Simplify Project Wizard
+# Remove Scope Step from Project Wizard
+
+Reduce the wizard from 4 steps to 3: **Basics → Team → Review**.
 
 ## Changes
 
-### 1. Remove Contracts step entirely
-- **`src/types/projectWizard.ts`**: Remove `contracts` step from `WIZARD_STEPS` (keep only basics, team, scope, review = 4 steps). Remove `ProjectContract` interface and related exports.
-- **`src/pages/CreateProjectNew.tsx`**: Remove `ContractsStep` import, `updateContracts`, `saveContracts`, and case 3/4 logic. Renumber steps: 0=basics, 1=team, 2=scope, 3=review. Remove `contracts` from `initialData` and `canProceed`. Remove contract saving from `nextStep`.
-- **`src/components/project-wizard-new/index.ts`**: Remove `ContractsStep` export.
+### 1. `src/types/projectWizard.ts`
+- Remove `scope` step from `WIZARD_STEPS` (keep basics, team, review)
 
-### 2. Remove "Number of Buildings" from Apartments/Hotels scope
-- **`src/components/project-wizard-new/ScopeStep.tsx`**: In the `isMultiFamily` "Building Basics" card (line 181-235), remove the "Number of Buildings" input. Keep only Stories and Construction Type.
+### 2. `src/pages/CreateProjectNew.tsx`
+- Remove `ScopeStep` import and `ScopeDetails` import
+- Remove `updateScope` function
+- Remove `scope: {}` from `initialData` (keep field in type for backward compat)
+- Update `canProceed`: case 0 = basics, case 1 = team, case 2 = review
+- Update `nextStep`: remove the `currentStep === 2` scope-saving block and the `generate-scope-description` call. Step 1 saves team, step 2 is review (no save needed before review)
+- Update `renderStep`: case 0 = Basics, case 1 = Team, case 2 = Review (remove ScopeStep case)
+- Remove `saveScope` function entirely
 
-### 3. Add Units + Stories for Townhomes
-- **`src/components/project-wizard-new/ScopeStep.tsx`**: In the Townhome/Duplex "Unit Details" card (line 238-266), ensure Townhomes show both "Number of Units" (already there) and "Stories per Unit" (add a select dropdown 1-4). Currently `storiesPerUnit` exists in the type but the input is missing from the Townhome section.
+### 3. `src/components/project-wizard-new/index.ts`
+- Remove `ScopeStep` export
 
-### 4. Simplify Review page — Basics + Team only, no description, no contracts
-- **`src/components/project-wizard-new/ReviewStep.tsx`**: Remove the entire "Project Description" card (AI-generated, lines 209-244). Remove all scope detail cards (lines 327-555). Remove all contract cards (lines 557-679). Keep only: Project Basics card + Project Team card + "Ready to create" footer.
-
-### Files changed
+### Files
 
 | File | Change |
 |------|--------|
-| `src/types/projectWizard.ts` | Remove contracts from WIZARD_STEPS |
-| `src/pages/CreateProjectNew.tsx` | Remove contracts step, renumber steps |
-| `src/components/project-wizard-new/ScopeStep.tsx` | Remove numBuildings, add storiesPerUnit for townhomes |
-| `src/components/project-wizard-new/ReviewStep.tsx` | Strip to basics + team only |
-| `src/components/project-wizard-new/index.ts` | Remove ContractsStep export |
+| `src/types/projectWizard.ts` | Remove scope from WIZARD_STEPS |
+| `src/pages/CreateProjectNew.tsx` | Remove scope step, saveScope, updateScope, renumber to 3 steps |
+| `src/components/project-wizard-new/index.ts` | Remove ScopeStep export |
 
