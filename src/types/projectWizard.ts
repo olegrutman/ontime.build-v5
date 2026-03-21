@@ -131,7 +131,6 @@ export interface NewProjectWizardData {
 export const WIZARD_STEPS = [
   { id: 'basics', label: 'Project Basics', description: 'Name, type, and location' },
   { id: 'team', label: 'Project Team', description: 'Invite contractors and crew' },
-  { id: 'scope', label: 'Scope & Details', description: 'Framing-relevant details' },
   { id: 'review', label: 'Review', description: 'Review and create' },
 ] as const;
 
