@@ -184,30 +184,19 @@ export function ScopeStep({ projectType, scope, onChange }: ScopeStepProps) {
             <CardTitle className="text-base">Building Basics</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Number of Buildings</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  value={scope.numBuildings || ''}
-                  onChange={(e) => update({ numBuildings: parseInt(e.target.value) || undefined })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Stories</Label>
-                <Select
-                  value={scope.stories?.toString() || ''}
-                  onValueChange={(v) => update({ stories: parseInt(v) })}
-                >
-                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                  <SelectContent>
-                    {[1, 2, 3, 4, 5, 6].map(n => (
-                      <SelectItem key={n} value={n.toString()}>{n}{n === 6 ? '+' : ''}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label>Stories</Label>
+              <Select
+                value={scope.stories?.toString() || ''}
+                onValueChange={(v) => update({ stories: parseInt(v) })}
+              >
+                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                <SelectContent>
+                  {[1, 2, 3, 4, 5, 6].map(n => (
+                    <SelectItem key={n} value={n.toString()}>{n}{n === 6 ? '+' : ''}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Construction Type</Label>
