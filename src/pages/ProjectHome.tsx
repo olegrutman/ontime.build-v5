@@ -342,6 +342,23 @@ export default function ProjectHome() {
                   ) : (
                     <div className="space-y-4">
                       {/* Setup cards */}
+                      {/* Scope & Details setup card */}
+                      <div
+                        className="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors"
+                        onClick={() => navigate(`/project/${id}/details-wizard`)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                            <ClipboardList className="h-5 w-5 text-amber-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm">Define Scope & Details</p>
+                            <p className="text-xs text-muted-foreground">Set up project type, structure, and scope of work</p>
+                          </div>
+                          <ChevronDown className="h-4 w-4 text-muted-foreground -rotate-90" />
+                        </div>
+                      </div>
+
                       {(project.status === 'setup' || project.status === 'draft') && !isFC && (
                         <ProjectReadinessCard readiness={readiness} />
                       )}
