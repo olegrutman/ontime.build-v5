@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Building2, Home, Castle, Factory, Store, Layers, Check, ChevronRight, ChevronLeft, Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
