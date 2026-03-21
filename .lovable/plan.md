@@ -1,42 +1,30 @@
 
 
-# Allow Platform Owner to Delete Change Orders
+# Simplify Project Wizard
 
-## What changes
+## Changes
 
-Add a `DELETE_CHANGE_ORDER` action following the exact same pattern as `DELETE_INVOICE`, `DELETE_PURCHASE_ORDER`, and `DELETE_WORK_ORDER`.
+### 1. Remove Contracts step entirely
+- **`src/types/projectWizard.ts`**: Remove `contracts` step from `WIZARD_STEPS` (keep only basics, team, scope, review = 4 steps). Remove `ProjectContract` interface and related exports.
+- **`src/pages/CreateProjectNew.tsx`**: Remove `ContractsStep` import, `updateContracts`, `saveContracts`, and case 3/4 logic. Renumber steps: 0=basics, 1=team, 2=scope, 3=review. Remove `contracts` from `initialData` and `canProceed`. Remove contract saving from `nextStep`.
+- **`src/components/project-wizard-new/index.ts`**: Remove `ContractsStep` export.
 
-## 1. Edge function — `platform-support-action/index.ts`
+### 2. Remove "Number of Buildings" from Apartments/Hotels scope
+- **`src/components/project-wizard-new/ScopeStep.tsx`**: In the `isMultiFamily` "Building Basics" card (line 181-235), remove the "Number of Buildings" input. Keep only Stories and Construction Type.
 
-- Add `DELETE_CHANGE_ORDER: "PLATFORM_OWNER"` to `ACTION_MIN_ROLE`
-- Add a new `case "DELETE_CHANGE_ORDER"` block:
-  1. Require `co_id` param
-  2. Fetch CO snapshot (`co_number`, `status`, `pricing_type`, `project_id`) from `change_orders`
-  3. Nullify non-cascading FKs:
-     - `change_orders.combined_co_id` and `parent_co_id` (self-refs, NO ACTION)
-     - `purchase_orders.source_change_order_id` (SET NULL)
-     - Remove CO id from `invoices.co_ids` array (array column, not FK)
-  4. Clean up notifications: `DELETE FROM notifications WHERE entity_type = 'change_order' AND entity_id = co_id`
-  5. Delete the CO — child tables (`co_line_items`, `co_labor_entries`, `co_material_items`, `co_equipment_items`, `co_nte_log`, `co_activity`, `change_order_collaborators`, `co_combined_members`) all CASCADE automatically
-  6. Log with project context
+### 3. Add Units + Stories for Townhomes
+- **`src/components/project-wizard-new/ScopeStep.tsx`**: In the Townhome/Duplex "Unit Details" card (line 238-266), ensure Townhomes show both "Number of Units" (already there) and "Stories per Unit" (add a select dropdown 1-4). Currently `storiesPerUnit` exists in the type but the input is missing from the Townhome section.
 
-## 2. Frontend — `PlatformProjectDetail.tsx`
+### 4. Simplify Review page — Basics + Team only, no description, no contracts
+- **`src/components/project-wizard-new/ReviewStep.tsx`**: Remove the entire "Project Description" card (AI-generated, lines 209-244). Remove all scope detail cards (lines 327-555). Remove all contract cards (lines 557-679). Keep only: Project Basics card + Project Team card + "Ready to create" footer.
 
-- Add CO interface, state variables, fetch query, table section, and delete dialog — mirroring the PO pattern exactly
-- Fetch `change_orders` for the project (id, co_number, status, pricing_type, created_at, plus the grand total via a simple field if available)
-- Add a "Change Orders" card with table showing CO#, status, type, created date, and a delete button (Platform Owner only)
-- Add `SupportActionDialog` for delete confirmation
-
-## 3. Types — `platform.ts`
-
-- Add `'DELETE_CHANGE_ORDER'` to `SupportActionType` union
-- Add label to `ACTION_TYPE_LABELS`: `'Change Order Deleted'`
-
-## Files changed
+### Files changed
 
 | File | Change |
 |------|--------|
-| `supabase/functions/platform-support-action/index.ts` | Add `DELETE_CHANGE_ORDER` case + permission |
-| `src/pages/platform/PlatformProjectDetail.tsx` | Add CO table + delete button + dialog |
-| `src/types/platform.ts` | Add type + label |
+| `src/types/projectWizard.ts` | Remove contracts from WIZARD_STEPS |
+| `src/pages/CreateProjectNew.tsx` | Remove contracts step, renumber steps |
+| `src/components/project-wizard-new/ScopeStep.tsx` | Remove numBuildings, add storiesPerUnit for townhomes |
+| `src/components/project-wizard-new/ReviewStep.tsx` | Strip to basics + team only |
+| `src/components/project-wizard-new/index.ts` | Remove ContractsStep export |
 
