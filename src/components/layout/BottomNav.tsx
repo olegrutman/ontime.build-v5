@@ -69,6 +69,7 @@ export function BottomNav() {
   const primaryProjectItems: NavItem[] = [
     { label: 'Home', icon: Home, path: '/dashboard' },
     { label: 'Overview', icon: LayoutDashboard, tab: 'overview' },
+    { label: 'Scope', icon: ListChecks, tab: 'scope-details' },
     ...(changeOrdersEnabled ? [{ label: 'COs', icon: FileText, tab: 'change-orders' }] : []),
   ];
 
