@@ -242,6 +242,20 @@ export function ScopeStep({ projectType, scope, onChange }: ScopeStepProps) {
                   />
                 </div>
               )}
+              <div className="space-y-2">
+                <Label>Stories per Unit</Label>
+                <Select
+                  value={scope.storiesPerUnit?.toString() || ''}
+                  onValueChange={(v) => update({ storiesPerUnit: parseInt(v) })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                  <SelectContent>
+                    {[1, 2, 3, 4].map(n => (
+                      <SelectItem key={n} value={n.toString()}>{n}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="flex items-center justify-between">
               <Label>Shared/Party Walls?</Label>
