@@ -166,12 +166,11 @@ export default function ProjectDetailsWizard() {
   const [defaultsApplied, setDefaultsApplied] = useState(false);
 
   // Keep draft in sync with loaded profile
-  const profileLoaded = existingProfile?.id;
-  useState(() => {
+  useEffect(() => {
     if (existingProfile && !draft.project_type_id) {
       setDraft({ ...existingProfile } as ProfileDraft);
     }
-  });
+  }, [existingProfile]);
 
   const selectedType = useMemo(
     () => projectTypes.find(t => t.id === draft.project_type_id),
