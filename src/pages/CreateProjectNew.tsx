@@ -194,6 +194,17 @@ export default function CreateProjectNew() {
     }
   };
 
+  const nextStep = async () => {
+    setSaving(true);
+    try {
+      if (currentStep === 0) {
+        const projectId = await saveBasics();
+        if (!projectId) {
+          setSaving(false);
+          return;
+        }
+      } else if (currentStep === 1 && data.projectId) {
+        await saveTeam(data.projectId);
       }
       
       setCurrentStep(prev => Math.min(prev + 1, WIZARD_STEPS.length - 1));
