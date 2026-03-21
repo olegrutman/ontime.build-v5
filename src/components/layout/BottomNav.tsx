@@ -98,6 +98,8 @@ export function BottomNav() {
   const handleClick = (item: NavItem) => {
     if (item.path) {
       navigate(item.path);
+    } else if (item.tab === 'scope-details' && projectId) {
+      navigate(`/project/${projectId}/details-wizard`);
     } else if (item.tab && projectId) {
       navigate(`/project/${projectId}?tab=${item.tab}`);
     }
