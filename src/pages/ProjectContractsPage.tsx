@@ -181,7 +181,7 @@ export default function ProjectContractsPage() {
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
         <div>
           <p className="text-sm text-muted-foreground">
-            Assign contract sums to each party. The scope sections below reflect the items toggled ON in the Scope Wizard.
+            {descriptionText} The scope sections below reflect the items toggled ON in the Scope Wizard.
           </p>
         </div>
 
