@@ -32,13 +32,15 @@ export default function ProjectSOVPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const defaultOpen = useDefaultSidebarOpen();
+  const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
 
   const {
     prereqs, prereqsLoading, currentSOV, sovLoading, items, itemsLoading,
     scopeCoverage, versions, generating, generateSOV, updateLinePct,
     toggleLineLock, deleteLine, addLine, resetLine, lockSOV,
     totalPct, contractMismatch, coveredCount, totalSections,
-  } = useSOVPage(projectId || '');
+    allContracts, activeContractId,
+  } = useSOVPage(projectId || '', selectedContractId);
 
   // Fetch project info
   const { data: project } = useQuery({
