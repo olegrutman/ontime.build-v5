@@ -423,11 +423,7 @@ export default function ProjectHome() {
               )}
 
               {/* Other tabs — unchanged */}
-              {activeTab === 'sov' && !isSupplier && (
-                <FeatureGate feature="sov_contracts">
-                  {isInDemoMode ? <DemoSOVTab /> : <ContractSOVEditor projectId={id!} />}
-                </FeatureGate>
-              )}
+              {/* SOV tab now routes to /project/:id/sov — handled in handleTabChange */}
               {activeTab === 'rfis' && (
                 isInDemoMode ? <DemoRFIsTab /> : <RFIsTab projectId={id!} />
               )}
