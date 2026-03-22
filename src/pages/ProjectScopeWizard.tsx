@@ -104,7 +104,7 @@ export default function ProjectScopeWizard() {
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Profile banner */}
-      <div className="sticky top-0 z-30 bg-card border-b px-4 py-3">
+       <div className="sticky top-0 z-30 bg-card border-b px-4 py-3">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm">
             <Badge className="bg-primary/15 text-primary border-0">{projectType?.name}</Badge>
@@ -112,9 +112,14 @@ export default function ProjectScopeWizard() {
             <span className="text-muted-foreground">·</span>
             <span className="text-muted-foreground">{totalOn}/{totalItems} items on</span>
           </div>
-          <Link to={`/project/${projectId}/details-wizard`}>
-            <Button variant="ghost" size="sm"><Pencil className="w-3.5 h-3.5 mr-1" /> Edit Profile</Button>
-          </Link>
+          <div className="flex items-center gap-1">
+            <Link to={`/project/${projectId}/details-wizard`}>
+              <Button variant="ghost" size="sm"><Pencil className="w-3.5 h-3.5 mr-1" /> Edit Profile</Button>
+            </Link>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/project/${projectId}?tab=scope-details`)}>
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
