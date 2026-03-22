@@ -8,6 +8,9 @@ import { useProjectProfile, useProjectTypes } from '@/hooks/useProjectProfile';
 import { useScopeSections, useScopeItems, useScopeSelections, filterSections, filterItems } from '@/hooks/useScopeWizard';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { DownstreamContractsCard } from './DownstreamContractsCard';
+import { ScopeSplitCard } from './ScopeSplitCard';
 
 interface Props {
   projectId: string;
