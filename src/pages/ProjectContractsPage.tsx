@@ -317,6 +317,7 @@ export default function ProjectContractsPage() {
                         value={contracts[m.id] ?? ''}
                         onChange={e => setContracts(p => ({ ...p, [m.id]: e.target.value }))}
                         className="pl-7"
+                        disabled={!isFromCreatorOrg && m.role === 'General Contractor'}
                       />
                     </div>
                   </div>
