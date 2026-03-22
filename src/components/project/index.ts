@@ -32,3 +32,4 @@ export { MaterialsBudgetDrawer } from './MaterialsBudgetDrawer';
 export { ProfitCard } from './ProfitCard';
 export { MaterialMarkupEditor } from './MaterialMarkupEditor';
 export { CriticalScheduleCard } from './CriticalScheduleCard';
+export { ScopeDetailsTab } from './ScopeDetailsTab';

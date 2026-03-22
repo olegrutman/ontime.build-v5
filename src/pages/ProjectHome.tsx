@@ -165,10 +165,6 @@ export default function ProjectHome() {
   const changeOrdersEnabled = useFeatureEnabled('change_orders');
 
   const handleTabChange = (tab: string) => {
-    if (tab === 'scope-details') {
-      navigate(`/project/${id}/details-wizard`);
-      return;
-    }
     if (tab === 'sov') {
       navigate(`/project/${id}/sov`);
       return;
