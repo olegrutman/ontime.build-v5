@@ -1,31 +1,27 @@
 
 
-# Fix: ProjectContractsPage Team Query
+# Filter Contract Price Entry to Creator↔TC Only
 
 ## Problem
-`ProjectContractsPage.tsx` queries `project_team` with `profiles:user_id(full_name)` and `organizations:organization_id(name)` — but `project_team` has no foreign key to `profiles` via `user_id`, so the query returns a 400 error. Team members never load, so the contracts page shows "No team members found."
+The standalone `ProjectContractsPage.tsx` shows ALL team members for contract price entry. Per the rule: if GC created the project, they should only enter contract price with TC (not FC). If TC created the project, they enter contract price with GC (upstream) and FC (downstream). The existing `ContractsStep.tsx` in the project wizard already has this logic — the standalone page doesn't.
 
 ## Fix
 
 **File: `src/pages/ProjectContractsPage.tsx`**
 
-1. Change the query to use columns that actually exist on `project_team`: `id, role, invited_org_name, org_id, status`
-2. Update the `TeamMember` interface to match
-3. Update the rendering to use `invited_org_name` (like every other component does) instead of `profiles.full_name`
+1. Fetch `projects.created_by` to identify the project creator
+2. Fetch the creator's org role to determine if they are GC or TC
+3. Filter the team list before rendering:
+   - **GC creator**: only show team members with `role === 'Trade Contractor'`
+   - **TC creator**: show `General Contractor` (upstream, as a read-context or contract entry) and `Field Crew` (downstream)
+   - **Exclude**: Suppliers (their pricing comes from approved supplier estimates), FC when GC is creator, GC when TC is creator's own org
+4. Update the description text to match: "Enter the contract sum with your Trade Contractor" (GC) or "Enter contract terms with GC and Field Crew" (TC)
 
-The query becomes:
-```ts
-supabase
-  .from('project_team')
-  .select('id, role, invited_org_name, org_id, status')
-  .eq('project_id', projectId)
-```
+This mirrors the exact filtering logic already in `ContractsStep.tsx` lines 72-80.
 
-Display uses `m.invited_org_name || 'Unknown'` for the name and `m.role` for the role label — matching the pattern in `TeamMembersCard.tsx` and `ProjectTeamSection.tsx`.
-
-## Files changed
+### Files changed
 
 | File | Change |
 |------|--------|
-| `src/pages/ProjectContractsPage.tsx` | Fix query, update interface, update rendering |
+| `src/pages/ProjectContractsPage.tsx` | Fetch project creator, determine creator role, filter team list by role |
 
