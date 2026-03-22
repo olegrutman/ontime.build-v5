@@ -348,7 +348,7 @@ export default function ProjectDetailsWizard() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-xl font-bold font-[Barlow_Condensed]">Special features & amenities</h2>
+          <h2 className="text-xl font-bold font-heading">Special features & amenities</h2>
           <p className="text-sm text-muted-foreground">Each feature unlocks a dedicated scope section.</p>
         </div>
         <Card><CardContent className="p-4 divide-y">
