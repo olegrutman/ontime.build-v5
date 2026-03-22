@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Building2, Home, Castle, Factory, Store, Layers, Check, ChevronRight, ChevronLeft, Minus, Plus } from 'lucide-react';
+import { Building2, Home, Castle, Factory, Store, Layers, Check, ChevronRight, ChevronLeft, Minus, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
