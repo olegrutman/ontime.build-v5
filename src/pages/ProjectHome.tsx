@@ -30,6 +30,7 @@ import {
   ProfitCard,
   MaterialMarkupEditor,
   CriticalScheduleCard,
+  ScopeDetailsTab,
 } from '@/components/project';
 import { ContractHeroCard } from '@/components/project/ContractHeroCard';
 import { BillingCashCard } from '@/components/project/BillingCashCard';
@@ -165,10 +166,6 @@ export default function ProjectHome() {
   const changeOrdersEnabled = useFeatureEnabled('change_orders');
 
   const handleTabChange = (tab: string) => {
-    if (tab === 'scope-details') {
-      navigate(`/project/${id}/details-wizard`);
-      return;
-    }
     if (tab === 'sov') {
       navigate(`/project/${id}/sov`);
       return;
@@ -420,6 +417,10 @@ export default function ProjectHome() {
                     </div>
                   )}
                 </>
+              )}
+
+              {activeTab === 'scope-details' && (
+                <ScopeDetailsTab projectId={id!} />
               )}
 
               {/* Other tabs — unchanged */}
