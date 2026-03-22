@@ -231,9 +231,11 @@ export function ScopeDetailsTab({ projectId }: Props) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="text-base font-semibold">Contract Summary</CardTitle>
-          <Button variant="ghost" size="sm" onClick={() => navigate(`/project/${projectId}/contracts`)}>
-            <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
-          </Button>
+          {isFromCreatorOrg && (
+            <Button variant="ghost" size="sm" onClick={() => navigate(`/project/${projectId}/contracts`)}>
+              <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {primaryContract ? (
@@ -255,6 +257,20 @@ export function ScopeDetailsTab({ projectId }: Props) {
           )}
         </CardContent>
       </Card>
+
+      {/* TC-only: Downstream FC contracts */}
+      {isTCOrg && currentUserOrgId && (
+        <DownstreamContractsCard projectId={projectId} tcOrgId={currentUserOrgId} />
+      )}
+
+      {/* TC-only: Scope split between TC and FC */}
+      {isTCOrg && currentUserOrgId && (
+        <ScopeSplitCard
+          projectId={projectId}
+          tcOrgId={currentUserOrgId}
+          fcOrgs={fcTeamOrgs}
+        />
+      )}
     </div>
   );
 }
