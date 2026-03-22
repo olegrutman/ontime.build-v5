@@ -242,21 +242,23 @@ export function useSOVPage(projectId: string) {
     if (!currentSOV || currentSOV.is_locked) return;
     const contractValue = prereqs?.contractValue || 0;
     const defaultPct = 1;
-    // Take from unlocked lines
     const unlocked = items.filter(i => !i.is_locked);
     const unlockTotal = unlocked.reduce((s, i) => s + (i.percent_of_contract || 0), 0);
 
-    for (const u of unlocked) {
-      const share = unlockTotal > 0 ? (u.percent_of_contract || 0) / unlockTotal : 1 / unlocked.length;
-      const newPct = (u.percent_of_contract || 0) - defaultPct * share;
-      const value = contractValue * Math.max(0, newPct) / 100;
-      const retainage = value * (prereqs?.retainagePct || 0) / 100;
-      await supabase.from('project_sov_items').update({
-        percent_of_contract: Math.max(0, newPct),
-        value_amount: value,
-        scheduled_value: value - retainage,
-        remaining_amount: value,
-      }).eq('id', u.id);
+    // Compute redistributed percentages for existing unlocked lines
+    if (unlocked.length > 0) {
+      const updates: { id: string; pct: number }[] = [];
+      for (const u of unlocked) {
+        const share = unlockTotal > 0 ? (u.percent_of_contract || 0) / unlockTotal : 1 / unlocked.length;
+        const newPct = (u.percent_of_contract || 0) - defaultPct * share;
+        updates.push({ id: u.id, pct: Math.max(0, newPct) });
+      }
+
+      await supabase.rpc('update_sov_line_percentages', {
+        p_updates: updates,
+        p_contract_value: contractValue,
+        p_retainage_pct: prereqs?.retainagePct || 0,
+      });
     }
 
     const value = contractValue * defaultPct / 100;
