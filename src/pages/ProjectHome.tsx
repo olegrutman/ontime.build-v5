@@ -169,6 +169,10 @@ export default function ProjectHome() {
       navigate(`/project/${id}/details-wizard`);
       return;
     }
+    if (tab === 'sov') {
+      navigate(`/project/${id}/sov`);
+      return;
+    }
     setSearchParams({ tab });
     setTabResetKey(prev => prev + 1);
   };
