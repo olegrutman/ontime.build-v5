@@ -273,6 +273,11 @@ export function useSOVPage(projectId: string) {
         const newPct = (u.percent_of_contract || 0) - defaultPct * share;
         updates.push({ id: u.id, pct: Math.max(0, newPct) });
       }
+      // Normalize: account for locked lines + new line's 1%
+      const locked = items.filter(i => i.is_locked);
+      const lockedTotal = locked.reduce((s, i) => s + (i.percent_of_contract || 0), 0);
+      const runningTotal = lockedTotal + defaultPct + updates.slice(0, -1).reduce((s, u) => s + u.pct, 0);
+      updates[updates.length - 1].pct = Math.round((100 - runningTotal) * 100) / 100;
 
       await supabase.rpc('update_sov_line_percentages', {
         p_updates: updates,
