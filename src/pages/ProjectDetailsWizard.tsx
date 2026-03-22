@@ -317,7 +317,7 @@ export default function ProjectDetailsWizard() {
   const renderStep2 = () => (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold font-[Barlow_Condensed]">Structural elements</h2>
+        <h2 className="text-xl font-bold font-heading">Structural elements</h2>
         <p className="text-sm text-muted-foreground">Toggle each element included in this project.</p>
       </div>
       <Card><CardContent className="p-4 divide-y">
