@@ -29,7 +29,8 @@ import { cn } from '@/lib/utils';
 export default function ProjectSOVPage() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userOrgRoles } = useAuth();
+  const userOrgId = userOrgRoles[0]?.organization_id || null;
   const { toast } = useToast();
   const defaultOpen = useDefaultSidebarOpen();
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
