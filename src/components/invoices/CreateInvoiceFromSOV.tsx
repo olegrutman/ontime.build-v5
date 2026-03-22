@@ -45,6 +45,8 @@ interface SOV {
   id: string;
   contract_id: string | null;
   sov_name: string | null;
+  version: number;
+  is_locked: boolean;
 }
 
 interface SOVItem {
@@ -184,8 +186,9 @@ export function CreateInvoiceFromSOV({
       
       const { data: sovsData } = await supabase
         .from('project_sov')
-        .select('id, contract_id, sov_name')
-        .eq('project_id', projectId);
+        .select('id, contract_id, sov_name, version, is_locked')
+        .eq('project_id', projectId)
+        .order('version', { ascending: false });
       
       setSovs((sovsData || []) as SOV[]);
       
@@ -262,10 +265,13 @@ export function CreateInvoiceFromSOV({
     [contracts, selectedContractId]
   );
   
-  const selectedSOV = useMemo(() => 
-    sovs.find(s => s.contract_id === selectedContractId),
-    [sovs, selectedContractId]
-  );
+  const selectedSOV = useMemo(() => {
+    const contractSovs = sovs.filter(s => s.contract_id === selectedContractId);
+    // Prefer latest locked version; fall back to latest version (already sorted DESC)
+    return contractSovs.find(s => s.is_locked) || contractSovs[0] || null;
+  }, [sovs, selectedContractId]);
+
+  const sovNotLocked = selectedSOV && !selectedSOV.is_locked;
 
   // Generate invoice number when contract is selected (only in create mode)
   useEffect(() => {
@@ -598,6 +604,16 @@ export function CreateInvoiceFromSOV({
                   Select the contract with your upstream party to create an invoice.
                 </p>
               </div>
+            )}
+
+            {/* Warning if SOV is not locked */}
+            {sovNotLocked && selectedContractId && (
+              <Alert className="border-amber-500/50 bg-amber-500/10">
+                <AlertCircle className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-700">
+                  The SOV for this contract is not locked yet. Lock the SOV before creating invoices to prevent billing against draft values.
+                </AlertDescription>
+              </Alert>
             )}
 
             {/* Invoice Details */}
