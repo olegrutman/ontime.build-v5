@@ -218,10 +218,10 @@ export default function ProjectContractsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {team.length === 0 && (
-              <p className="text-sm text-muted-foreground">No team members found. Add team members in the project wizard first.</p>
+            {filteredTeam.length === 0 && (
+              <p className="text-sm text-muted-foreground">No applicable team members found. Add team members in the project wizard first.</p>
             )}
-            {team.map(m => (
+            {filteredTeam.map(m => (
                 <div key={m.id} className="flex items-center gap-4">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{m.invited_org_name || 'Unknown'}</p>
