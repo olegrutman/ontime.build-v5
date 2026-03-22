@@ -418,6 +418,10 @@ export default function ProjectHome() {
                 </>
               )}
 
+              {activeTab === 'scope-details' && (
+                <ScopeDetailsTab projectId={id!} />
+              )}
+
               {/* Other tabs — unchanged */}
               {/* SOV tab now routes to /project/:id/sov — handled in handleTabChange */}
               {activeTab === 'rfis' && (

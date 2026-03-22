@@ -87,9 +87,9 @@ export function ScopeDetailsTab({ projectId }: Props) {
     }
   }
 
-  const totalContractValue = contracts?.reduce((sum, c) => sum + (Number(c.contract_value) || 0), 0) || 0;
+  const totalContractValue = contracts?.reduce((sum, c) => sum + (Number(c.contract_sum) || 0), 0) || 0;
   const avgRetainage = contracts?.length
-    ? contracts.reduce((sum, c) => sum + (Number(c.retainage_pct) || 0), 0) / contracts.length
+    ? contracts.reduce((sum, c) => sum + (Number(c.retainage_percent) || 0), 0) / contracts.length
     : 0;
 
   const featureFlags = [
