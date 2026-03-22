@@ -58,6 +58,7 @@ const CODetailPage = lazy(() => import("./pages/CODetail"));
 const ProjectDetailsWizard = lazy(() => import("./pages/ProjectDetailsWizard"));
 const ProjectScopeWizard = lazy(() => import("./pages/ProjectScopeWizard"));
 const ProjectContractsPage = lazy(() => import("./pages/ProjectContractsPage"));
+const ProjectSOVPage = lazy(() => import("./pages/ProjectSOVPage"));
 
 // Platform Admin pages
 const PlatformDashboard = lazy(() => import("./pages/platform/PlatformDashboard"));
