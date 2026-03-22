@@ -176,9 +176,9 @@ export default function ProjectSOVPage() {
                   <AlertTriangle className="h-4 w-4 shrink-0" />
                   <span>Contract value has changed to <strong>${(prereqs.contractValue || 0).toLocaleString()}</strong>. {isLocked ? 'Create a new version to update.' : 'Regenerate the SOV to update.'}</span>
                 </div>
-                {canEdit && !isLocked && (
+                {isCreator && (
                   <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white shrink-0" onClick={generateSOV} disabled={generating}>
-                    {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Regenerate'}
+                    {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : isLocked ? 'Create New Version' : 'Regenerate'}
                   </Button>
                 )}
               </div>
