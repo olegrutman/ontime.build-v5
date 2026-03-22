@@ -26,12 +26,19 @@ export function ScopeDetailsTab({ projectId }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('project_contracts')
-        .select('id, contract_sum, retainage_percent')
+        .select('id, contract_sum, retainage_percent, from_role, to_role, trade')
         .eq('project_id', projectId);
       if (error) throw error;
       return data;
     },
   });
+
+  const primaryContract = contracts?.find(c =>
+    c.from_role === 'Trade Contractor' &&
+    c.to_role === 'General Contractor' &&
+    c.trade !== 'Work Order' &&
+    c.trade !== 'Work Order Labor'
+  );
 
   const isComplete = profile?.is_complete === true;
   const projectType = projectTypes?.find(t => t.id === profile?.project_type_id);
@@ -87,10 +94,8 @@ export function ScopeDetailsTab({ projectId }: Props) {
     }
   }
 
-  const totalContractValue = contracts?.reduce((sum, c) => sum + (Number(c.contract_sum) || 0), 0) || 0;
-  const avgRetainage = contracts?.length
-    ? contracts.reduce((sum, c) => sum + (Number(c.retainage_percent) || 0), 0) / contracts.length
-    : 0;
+  const totalContractValue = Number(primaryContract?.contract_sum) || 0;
+  const retainagePercent = Number(primaryContract?.retainage_percent) || 0;
 
   const featureFlags = [
     { key: 'has_garage', label: 'Garage' },
@@ -185,7 +190,7 @@ export function ScopeDetailsTab({ projectId }: Props) {
           </Button>
         </CardHeader>
         <CardContent>
-          {contracts && contracts.length > 0 ? (
+          {primaryContract ? (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Total Contract Value</span>
@@ -193,7 +198,7 @@ export function ScopeDetailsTab({ projectId }: Props) {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Retainage</span>
-                <span className="font-semibold">{avgRetainage.toFixed(1)}%</span>
+                <span className="font-semibold">{retainagePercent.toFixed(1)}%</span>
               </div>
             </div>
           ) : (
