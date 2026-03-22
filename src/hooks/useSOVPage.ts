@@ -4,28 +4,44 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { SOVLine, SOVVersion, ScopeCoverage, SOVPrerequisites } from '@/types/sov';
 
-export function useSOVPage(projectId: string) {
+export function useSOVPage(projectId: string, contractId?: string | null) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [generating, setGenerating] = useState(false);
 
-  // Fetch prerequisites
-  const { data: prereqs, isLoading: prereqsLoading } = useQuery<SOVPrerequisites>({
-    queryKey: ['sov-prereqs', projectId],
+  // Fetch all contracts for this project (for multi-contract selector)
+  const { data: allContracts = [] } = useQuery({
+    queryKey: ['sov-all-contracts', projectId],
     queryFn: async () => {
-      const [profileRes, scopeRes, contractRes] = await Promise.all([
+      const { data } = await supabase
+        .from('project_contracts')
+        .select('id, contract_sum, retainage_percent, from_role, to_role, trade, from_org_id, to_org_id')
+        .eq('project_id', projectId)
+        .neq('trade', 'Work Order')
+        .neq('trade', 'Work Order Labor');
+      return data || [];
+    },
+    enabled: !!projectId,
+  });
+
+  // Determine which contract to use
+  const activeContractId = contractId || allContracts[0]?.id || null;
+  const activeContract = allContracts.find(c => c.id === activeContractId) || allContracts[0] || null;
+
+  // Fetch prerequisites using the active contract
+  const { data: prereqs, isLoading: prereqsLoading } = useQuery<SOVPrerequisites>({
+    queryKey: ['sov-prereqs', projectId, activeContractId],
+    queryFn: async () => {
+      const [profileRes, scopeRes] = await Promise.all([
         supabase.from('project_profiles').select('id, project_type_id, stories, units_per_building, number_of_buildings, foundation_types, roof_type, has_garage, garage_types, has_basement, basement_type, has_stairs, stair_types, has_deck_balcony, has_pool, has_elevator, has_clubhouse, has_commercial_spaces, has_shed, is_complete').eq('project_id', projectId).maybeSingle(),
         supabase.from('project_scope_selections').select('id', { count: 'exact' }).eq('project_id', projectId).eq('is_on', true),
-        supabase.from('project_contracts').select('id, contract_sum, retainage_percent, status').eq('project_id', projectId).limit(1).maybeSingle(),
       ]);
 
       const profile = profileRes.data;
       const scopeCount = scopeRes.count || 0;
-      const contract = contractRes.data;
 
       let profileSummary = '';
       if (profile) {
-        // Fetch project type name
         const { data: pt } = await supabase.from('project_types').select('name').eq('id', profile.project_type_id).maybeSingle();
         profileSummary = `${pt?.name || 'Unknown'} · ${profile.stories} stories · ${profile.number_of_buildings} building(s)`;
       }
@@ -33,12 +49,12 @@ export function useSOVPage(projectId: string) {
       return {
         hasProfile: !!profile?.is_complete,
         hasScope: scopeCount > 0,
-        hasContract: !!contract?.contract_sum && contract.contract_sum > 0,
+        hasContract: !!activeContract?.contract_sum && activeContract.contract_sum > 0,
         profileSummary,
         scopeCount,
-        contractValue: contract?.contract_sum || 0,
-        retainagePct: contract?.retainage_percent || 0,
-        contractId: contract?.id,
+        contractValue: activeContract?.contract_sum || 0,
+        retainagePct: activeContract?.retainage_percent || 0,
+        contractId: activeContract?.id,
         profileId: profile?.id,
       };
     },
