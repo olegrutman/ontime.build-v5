@@ -53,9 +53,10 @@ export default function ProjectSOVPage() {
     enabled: !!projectId,
   });
 
-  const isCreator = project?.created_by === user?.id;
+  const activeContract = allContracts.find(c => c.id === activeContractId);
+  const isContractClient = !!userOrgId && activeContract?.to_org_id === userOrgId;
   const isLocked = currentSOV?.is_locked || false;
-  const canEdit = isCreator && !isLocked;
+  const canEdit = isContractClient && !isLocked;
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newItemName, setNewItemName] = useState('');
