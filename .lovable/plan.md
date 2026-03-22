@@ -1,23 +1,17 @@
 
 
-# Allow SOV Regeneration When Contract Value Changes
+# Fix: Deploy `generate-sov` Edge Function
 
-## Problem
-When the SOV is locked and the contract value changes, the mismatch banner says "Create a new version to update" but provides no button. The edge function already handles versioning (creates a new SOV version), so we just need to expose the button.
+## Root Cause
+
+The `generate-sov` edge function code exists in `supabase/functions/generate-sov/index.ts` but was never deployed. The network request returns 404 ("Requested function was not found"), and there are zero edge function logs — confirming the function doesn't exist on the backend yet.
 
 ## Fix
 
-**File: `src/pages/ProjectSOVPage.tsx`**
+Deploy the edge function. No code changes needed — the function source is correct (CORS headers, auth verification, AI call, SOV item insertion all look good).
 
-1. In the contract mismatch banner (line 179), change the condition from `canEdit && !isLocked` to `isCreator` — the creator should always be able to regenerate when there's a mismatch, because regenerating creates a **new version** (it doesn't modify the locked one).
+### Action
+- Deploy edge function `generate-sov`
 
-2. Update the button label: show "Create New Version" when the current SOV is locked, "Regenerate" when unlocked.
-
-That's it — one condition change, one label tweak. The edge function and hook already handle everything else correctly.
-
-## Files changed
-
-| File | Change |
-|------|--------|
-| `src/pages/ProjectSOVPage.tsx` | Change regenerate button condition from `canEdit && !isLocked` to `isCreator`, update button label for locked state |
+That's it. The function code is already complete and correct. Once deployed, the "Generate" button on the SOV page will work.
 
