@@ -26,12 +26,19 @@ export function ScopeDetailsTab({ projectId }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('project_contracts')
-        .select('id, contract_sum, retainage_percent')
+        .select('id, contract_sum, retainage_percent, from_role, to_role, trade')
         .eq('project_id', projectId);
       if (error) throw error;
       return data;
     },
   });
+
+  const primaryContract = contracts?.find(c =>
+    c.from_role === 'Trade Contractor' &&
+    c.to_role === 'General Contractor' &&
+    c.trade !== 'Work Order' &&
+    c.trade !== 'Work Order Labor'
+  );
 
   const isComplete = profile?.is_complete === true;
   const projectType = projectTypes?.find(t => t.id === profile?.project_type_id);
