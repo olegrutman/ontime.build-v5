@@ -61,17 +61,20 @@ export function useSOVPage(projectId: string, contractId?: string | null) {
     enabled: !!projectId,
   });
 
-  // Fetch current SOV
+  // Fetch current SOV (filtered by contract)
   const { data: currentSOV, isLoading: sovLoading } = useQuery<SOVVersion | null>({
-    queryKey: ['sov-current', projectId],
+    queryKey: ['sov-current', projectId, activeContractId],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('project_sov')
         .select('*')
         .eq('project_id', projectId)
         .order('version', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
+      if (activeContractId) {
+        query = query.eq('contract_id', activeContractId);
+      }
+      const { data } = await query.maybeSingle();
       return data as SOVVersion | null;
     },
     enabled: !!projectId,
