@@ -125,7 +125,7 @@ export default function ProjectScopeWizard() {
 
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
         <div>
-          <h1 className="text-2xl font-bold font-[Barlow_Condensed]">Project Scope</h1>
+          <h1 className="text-2xl font-bold font-heading">Project Scope</h1>
           <p className="text-sm text-muted-foreground">Toggle line items on or off. STD items are standard scope, OPT items are optional add-ons.</p>
         </div>
 

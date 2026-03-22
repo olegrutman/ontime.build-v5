@@ -376,7 +376,7 @@ export default function ProjectDetailsWizard() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-xl font-bold font-[Barlow_Condensed]">Project Profile</h2>
+          <h2 className="text-xl font-bold font-heading">Project Profile</h2>
           <p className="text-sm text-muted-foreground">Review your selections. This profile locks your scope wizard contents.</p>
         </div>
 
