@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Building2, Home, Castle, Factory, Store, Layers, Check, ChevronRight, ChevronLeft, Minus, Plus } from 'lucide-react';
+import { Building2, Home, Castle, Factory, Store, Layers, Check, ChevronRight, ChevronLeft, Minus, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -51,10 +51,13 @@ function emptyDraft(projectId: string): ProfileDraft {
 }
 
 /* ─── Progress Bar ─────────────────────────────────────────── */
-function ProgressBar({ step, onNav }: { step: number; onNav: (s: number) => void }) {
+function ProgressBar({ step, onNav, onClose }: { step: number; onNav: (s: number) => void; onClose: () => void }) {
   return (
     <div className="sticky top-0 z-30 bg-card border-b px-4 py-3">
       <div className="flex items-center gap-1 sm:gap-2 max-w-3xl mx-auto">
+        <button onClick={onClose} className="mr-2 p-1.5 rounded-md hover:bg-muted transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label="Exit wizard">
+          <X className="w-5 h-5 text-muted-foreground" />
+        </button>
         {WIZARD_STEPS.map((label, i) => {
           const done = i < step;
           const active = i === step;
@@ -444,7 +447,7 @@ export default function ProjectDetailsWizard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <ProgressBar step={step} onNav={setStep} />
+      <ProgressBar step={step} onNav={setStep} onClose={() => navigate(`/projects/${projectId}`)} />
       <div className="max-w-2xl mx-auto px-4 py-6">
         {steps[step]()}
       </div>
