@@ -29,6 +29,7 @@ export default function ProjectContractsPage() {
   const { user, userOrgRoles } = useAuth();
 
   const currentUserOrgId = userOrgRoles.length > 0 ? userOrgRoles[0].organization_id : null;
+  const isFromCreatorOrg = project?.organization_id === currentUserOrgId;
 
   const { data: profile } = useProjectProfile(projectId);
   const { data: projectTypes = [] } = useProjectTypes();
