@@ -37,7 +37,7 @@ export default function ProjectSOVPage() {
     prereqs, prereqsLoading, currentSOV, sovLoading, items, itemsLoading,
     scopeCoverage, versions, generating, generateSOV, updateLinePct,
     toggleLineLock, deleteLine, addLine, resetLine, lockSOV,
-    totalPct, coveredCount, totalSections,
+    totalPct, contractMismatch, coveredCount, totalSections,
   } = useSOVPage(projectId || '');
 
   // Fetch project info
@@ -101,15 +101,25 @@ export default function ProjectSOVPage() {
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <SidebarInset className="flex flex-col flex-1 bg-background">
+          {/* Sticky back bar */}
+          <div className="sticky top-0 z-50 bg-card border-b px-4 py-2 flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/project/${projectId}?tab=overview`)}
+              className="shrink-0"
+            >
+              <ArrowLeft className="h-4 w-4 mr-1" />
+              Back to Overview
+            </Button>
+            <span className="text-sm text-muted-foreground truncate">{project?.name}</span>
+          </div>
+
           {/* Header */}
-          <header className="sticky top-0 z-40 border-b bg-card backdrop-blur">
+          <header className="sticky top-[49px] z-40 border-b bg-card backdrop-blur">
             <div className="flex items-center gap-3 px-4 h-14">
-              <Button variant="ghost" size="icon" onClick={() => navigate(`/project/${projectId}?tab=overview`)}>
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
               <div className="flex-1 min-w-0">
                 <h1 className="text-lg font-semibold font-heading truncate">Schedule of Values</h1>
-                <p className="text-xs text-muted-foreground truncate">{project?.name}</p>
               </div>
               <div className="flex items-center gap-2">
                 <Button variant="ghost" size="sm" onClick={() => setShowVersions(true)}>
@@ -157,6 +167,23 @@ export default function ProjectSOVPage() {
               />
             </div>
           </header>
+
+          {/* Contract mismatch banner */}
+          {contractMismatch && currentSOV && (
+            <div className="mx-3 sm:mx-6 mt-3">
+              <div className="flex items-center justify-between gap-3 p-3 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/10">
+                <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-300">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  <span>Contract value has changed to <strong>${(prereqs.contractValue || 0).toLocaleString()}</strong>. {isLocked ? 'Create a new version to update.' : 'Regenerate the SOV to update.'}</span>
+                </div>
+                {canEdit && !isLocked && (
+                  <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white shrink-0" onClick={generateSOV} disabled={generating}>
+                    {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Regenerate'}
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
 
           <main className="flex-1 overflow-auto pb-24 lg:pb-6">
             <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 space-y-4">
