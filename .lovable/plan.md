@@ -1,27 +1,35 @@
 
 
-# Filter Contract Price Entry to Creator↔TC Only
+# Connect Contracts Page to `project_contracts` Table
 
 ## Problem
-The standalone `ProjectContractsPage.tsx` shows ALL team members for contract price entry. Per the rule: if GC created the project, they should only enter contract price with TC (not FC). If TC created the project, they enter contract price with GC (upstream) and FC (downstream). The existing `ContractsStep.tsx` in the project wizard already has this logic — the standalone page doesn't.
+The `ProjectContractsPage` `handleSave` currently just shows a toast and navigates away — it never writes to `project_contracts`. So the contract sum entered there is lost and never appears in the ContractHeroCard or financial system.
 
-## Fix
+## What needs to happen
 
-**File: `src/pages/ProjectContractsPage.tsx`**
+The `handleSave` function must **upsert** into `project_contracts` for each team member with a contract value entered. The financial system (`useProjectFinancials`) already reads from `project_contracts` using `from_org_id`, `to_org_id`, `from_role`, `to_role`, `contract_sum` — so the insert must populate these fields correctly.
 
-1. Fetch `projects.created_by` to identify the project creator
-2. Fetch the creator's org role to determine if they are GC or TC
-3. Filter the team list before rendering:
-   - **GC creator**: only show team members with `role === 'Trade Contractor'`
-   - **TC creator**: show `General Contractor` (upstream, as a read-context or contract entry) and `Field Crew` (downstream)
-   - **Exclude**: Suppliers (their pricing comes from approved supplier estimates), FC when GC is creator, GC when TC is creator's own org
-4. Update the description text to match: "Enter the contract sum with your Trade Contractor" (GC) or "Enter contract terms with GC and Field Crew" (TC)
+### Contract direction rules (from memory context)
+- `from_org_id` = the contractor (the one who sends invoices / does work)
+- `to_org_id` = the client (the one who pays)
+- GC creator entering TC contract: `from_org_id = TC's org_id`, `to_org_id = GC's org_id (project org)`, `from_role = 'Trade Contractor'`, `to_role = 'General Contractor'`
+- TC creator entering FC contract: `from_org_id = FC's org_id`, `to_org_id = TC's org_id`, `from_role = 'Field Crew'`, `to_role = 'Trade Contractor'`
+- TC creator entering GC contract: `from_org_id = TC's org_id`, `to_org_id = GC's org_id`, `from_role = 'Trade Contractor'`, `to_role = 'General Contractor'`
 
-This mirrors the exact filtering logic already in `ContractsStep.tsx` lines 72-80.
+### Changes to `src/pages/ProjectContractsPage.tsx`
 
-### Files changed
+1. **Get current user's org ID** — fetch from `useAuth()` or `user_org_roles`
+2. **`handleSave`** — for each team member with a contract value:
+   - Check if a `project_contracts` row already exists for this project + team member pair (use `to_project_team_id`)
+   - If exists: UPDATE `contract_sum`
+   - If not: INSERT with correct `from_org_id`, `to_org_id`, `from_role`, `to_role`, `contract_sum`, `project_id`, `to_project_team_id`, `created_by_user_id`
+3. **Initialize state from existing contracts** — fix the init logic to use `to_project_team_id` as the key (matching team member `id`)
+4. **Invalidate queries** — after save, invalidate `['project_contracts']` and `['project_financials']` so the ContractHeroCard refreshes
+5. **Add `useAuth`** import to get `user.id` and org membership
+
+### File changes
 
 | File | Change |
 |------|--------|
-| `src/pages/ProjectContractsPage.tsx` | Fetch project creator, determine creator role, filter team list by role |
+| `src/pages/ProjectContractsPage.tsx` | Add real upsert logic in handleSave, fix init from existing, get user's org |
 
