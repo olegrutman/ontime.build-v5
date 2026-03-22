@@ -223,7 +223,7 @@ export default function ProjectDetailsWizard() {
   const renderStep0 = () => (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold font-[Barlow_Condensed]">What type of project is this?</h2>
+        <h2 className="text-xl font-bold font-heading">What type of project is this?</h2>
         <p className="text-sm text-muted-foreground">This defines your scope sections, default items, and contract structure.</p>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
