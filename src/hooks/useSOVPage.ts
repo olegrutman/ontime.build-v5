@@ -348,9 +348,9 @@ export function useSOVPage(projectId: string, contractId?: string | null) {
       locked_at: new Date().toISOString(),
       locked_by: session.session?.user?.id || null,
     }).eq('id', currentSOV.id);
-    qc.invalidateQueries({ queryKey: ['sov-current', projectId] });
+    qc.invalidateQueries({ queryKey: ['sov-current', projectId, activeContractId] });
     toast({ title: 'SOV locked', description: 'This version is now the billing template' });
-  }, [currentSOV, items, projectId, qc, toast]);
+  }, [currentSOV, items, projectId, activeContractId, qc, toast]);
 
   const totalPct = useMemo(() => items.reduce((s, i) => s + (i.percent_of_contract || 0), 0), [items]);
   const sovTotalValue = useMemo(() => items.reduce((s, i) => s + (i.value_amount || 0), 0), [items]);
@@ -381,5 +381,7 @@ export function useSOVPage(projectId: string, contractId?: string | null) {
     contractMismatch,
     coveredCount,
     totalSections: scopeCoverage.length,
+    allContracts,
+    activeContractId,
   };
 }
