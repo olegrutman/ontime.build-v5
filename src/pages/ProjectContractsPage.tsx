@@ -44,10 +44,10 @@ export default function ProjectContractsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('project_team')
-        .select('id, user_id, role, organization_id, profiles:user_id(full_name), organizations:organization_id(name)')
+        .select('id, role, invited_org_name, org_id, status')
         .eq('project_id', projectId!);
       if (error) throw error;
-      return (data ?? []) as unknown as TeamMember[];
+      return (data ?? []) as TeamMember[];
     },
   });
 
