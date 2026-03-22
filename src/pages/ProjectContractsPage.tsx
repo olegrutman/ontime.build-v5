@@ -14,19 +14,10 @@ import { useProjectProfile, useProjectTypes } from '@/hooks/useProjectProfile';
 
 interface TeamMember {
   id: string;
-  user_id: string;
   role: string;
-  organization_id: string | null;
-  profiles?: { full_name: string | null } | null;
-  organizations?: { name: string | null } | null;
-}
-
-interface ContractRow {
-  team_member_id: string;
-  name: string;
-  org: string;
-  role: string;
-  amount: string;
+  invited_org_name: string | null;
+  org_id: string | null;
+  status: string;
 }
 
 export default function ProjectContractsPage() {
@@ -53,10 +44,10 @@ export default function ProjectContractsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('project_team')
-        .select('id, user_id, role, organization_id, profiles:user_id(full_name), organizations:organization_id(name)')
+        .select('id, role, invited_org_name, org_id, status')
         .eq('project_id', projectId!);
       if (error) throw error;
-      return (data ?? []) as unknown as TeamMember[];
+      return (data ?? []) as TeamMember[];
     },
   });
 
@@ -171,14 +162,11 @@ export default function ProjectContractsPage() {
             {team.length === 0 && (
               <p className="text-sm text-muted-foreground">No team members found. Add team members in the project wizard first.</p>
             )}
-            {team.map(m => {
-              const name = (m.profiles as any)?.full_name || 'Unknown';
-              const org = (m.organizations as any)?.name || '';
-              return (
+            {team.map(m => (
                 <div key={m.id} className="flex items-center gap-4">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{name}</p>
-                    <p className="text-xs text-muted-foreground">{org} · {m.role}</p>
+                    <p className="text-sm font-medium truncate">{m.invited_org_name || 'Unknown'}</p>
+                    <p className="text-xs text-muted-foreground">{m.role}</p>
                   </div>
                   <div className="w-40">
                     <Label className="sr-only">Contract amount</Label>
@@ -194,8 +182,7 @@ export default function ProjectContractsPage() {
                     </div>
                   </div>
                 </div>
-              );
-            })}
+            ))}
           </CardContent>
         </Card>
       </div>
