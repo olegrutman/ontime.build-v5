@@ -5441,6 +5441,14 @@ export type Database = {
         Args: { p_project_id: string }
         Returns: undefined
       }
+      update_sov_line_percentages: {
+        Args: {
+          p_contract_value: number
+          p_retainage_pct: number
+          p_updates: Json
+        }
+        Returns: undefined
+      }
       user_has_active_projects: { Args: { _user_id: string }; Returns: boolean }
       user_has_read_notification: {
         Args: { _notification_id: string; _user_id: string }
