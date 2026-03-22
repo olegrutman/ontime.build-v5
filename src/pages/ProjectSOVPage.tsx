@@ -29,7 +29,8 @@ import { cn } from '@/lib/utils';
 export default function ProjectSOVPage() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, userOrgRoles } = useAuth();
+  const userOrgId = userOrgRoles[0]?.organization_id || null;
   const { toast } = useToast();
   const defaultOpen = useDefaultSidebarOpen();
   const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
@@ -52,9 +53,10 @@ export default function ProjectSOVPage() {
     enabled: !!projectId,
   });
 
-  const isCreator = project?.created_by === user?.id;
+  const activeContract = allContracts.find(c => c.id === activeContractId);
+  const isContractClient = !!userOrgId && activeContract?.to_org_id === userOrgId;
   const isLocked = currentSOV?.is_locked || false;
-  const canEdit = isCreator && !isLocked;
+  const canEdit = isContractClient && !isLocked;
 
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [newItemName, setNewItemName] = useState('');
@@ -198,7 +200,7 @@ export default function ProjectSOVPage() {
                   <AlertTriangle className="h-4 w-4 shrink-0" />
                   <span>Contract value has changed to <strong>${(prereqs.contractValue || 0).toLocaleString()}</strong>. {isLocked ? 'Create a new version to update.' : 'Regenerate the SOV to update.'}</span>
                 </div>
-                {isCreator && (
+                {isContractClient && (
                   <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white shrink-0" onClick={generateSOV} disabled={generating}>
                     {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : isLocked ? 'Create New Version' : 'Regenerate'}
                   </Button>
