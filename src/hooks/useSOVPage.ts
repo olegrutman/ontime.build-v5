@@ -176,16 +176,15 @@ export function useSOVPage(projectId: string) {
       updates.push({ id: u.id, pct: Math.max(0, adjusted) });
     }
 
-    for (const up of updates) {
-      const value = contractValue * up.pct / 100;
-      const retainage = value * (prereqs?.retainagePct || 0) / 100;
-      await supabase.from('project_sov_items').update({
-        percent_of_contract: up.pct,
-        value_amount: value,
-        scheduled_value: value - retainage,
-        remaining_amount: value,
-      }).eq('id', up.id);
-    }
+    // Normalize: force last entry to absorb rounding remainder
+    const runningTotal = updates.slice(0, -1).reduce((s, u) => s + u.pct, 0);
+    updates[updates.length - 1].pct = Math.round((100 - runningTotal) * 100) / 100;
+
+    await supabase.rpc('update_sov_line_percentages', {
+      p_updates: updates,
+      p_contract_value: contractValue,
+      p_retainage_pct: prereqs?.retainagePct || 0,
+    });
     qc.invalidateQueries({ queryKey: ['sov-items', currentSOV.id] });
   }, [items, currentSOV, prereqs, qc]);
 
