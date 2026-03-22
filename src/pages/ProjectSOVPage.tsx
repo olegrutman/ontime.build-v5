@@ -37,7 +37,7 @@ export default function ProjectSOVPage() {
     prereqs, prereqsLoading, currentSOV, sovLoading, items, itemsLoading,
     scopeCoverage, versions, generating, generateSOV, updateLinePct,
     toggleLineLock, deleteLine, addLine, resetLine, lockSOV,
-    totalPct, coveredCount, totalSections,
+    totalPct, contractMismatch, coveredCount, totalSections,
   } = useSOVPage(projectId || '');
 
   // Fetch project info
