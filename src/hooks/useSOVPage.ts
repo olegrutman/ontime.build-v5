@@ -170,11 +170,29 @@ export function useSOVPage(projectId: string) {
     const unlockTotal = unlocked.reduce((s, i) => s + (i.percent_of_contract || 0), 0);
 
     const updates: { id: string; pct: number }[] = [{ id: lineId, pct: newPct }];
+    // Two-pass redistribution to handle clamped (negative) values
+    let clampedExcess = 0;
+    const rawAdjusted: { id: string; pct: number }[] = [];
     for (const u of unlocked) {
       const share = unlockTotal > 0 ? (u.percent_of_contract || 0) / unlockTotal : 1 / unlocked.length;
       const adjusted = (u.percent_of_contract || 0) - delta * share;
-      updates.push({ id: u.id, pct: Math.max(0, adjusted) });
+      if (adjusted < 0) {
+        clampedExcess += Math.abs(adjusted);
+        rawAdjusted.push({ id: u.id, pct: 0 });
+      } else {
+        rawAdjusted.push({ id: u.id, pct: adjusted });
+      }
     }
+    // Redistribute clamped excess across remaining positive lines
+    if (clampedExcess > 0) {
+      const positiveTotal = rawAdjusted.reduce((s, u) => s + u.pct, 0);
+      for (const u of rawAdjusted) {
+        if (u.pct > 0 && positiveTotal > 0) {
+          u.pct = Math.max(0, u.pct - clampedExcess * (u.pct / positiveTotal));
+        }
+      }
+    }
+    updates.push(...rawAdjusted);
 
     // Normalize: account for locked lines + force last entry to absorb rounding remainder
     const locked = items.filter((i, j) => j !== idx && i.is_locked);
