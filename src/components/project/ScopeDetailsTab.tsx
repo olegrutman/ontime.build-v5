@@ -190,7 +190,7 @@ export function ScopeDetailsTab({ projectId }: Props) {
           </Button>
         </CardHeader>
         <CardContent>
-          {contracts && contracts.length > 0 ? (
+          {primaryContract ? (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Total Contract Value</span>
@@ -198,7 +198,7 @@ export function ScopeDetailsTab({ projectId }: Props) {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Retainage</span>
-                <span className="font-semibold">{avgRetainage.toFixed(1)}%</span>
+                <span className="font-semibold">{retainagePercent.toFixed(1)}%</span>
               </div>
             </div>
           ) : (
