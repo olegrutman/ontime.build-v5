@@ -260,7 +260,7 @@ export default function ProjectDetailsWizard() {
     return (
       <div className="space-y-8">
         <div>
-          <h2 className="text-xl font-bold font-[Barlow_Condensed]">Building scale & structure</h2>
+          <h2 className="text-xl font-bold font-heading">Building scale & structure</h2>
           <p className="text-sm text-muted-foreground">These numbers drive floor level options and contract scope.</p>
         </div>
 
