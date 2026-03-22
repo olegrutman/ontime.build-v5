@@ -159,13 +159,16 @@ export function useSOVPage(projectId: string, contractId?: string | null) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.session?.access_token}`,
         },
-        body: JSON.stringify({ project_id: projectId }),
+        body: JSON.stringify({
+          project_id: projectId,
+          contract_id: activeContractId,
+        }),
       });
       if (!res.ok) {
         const err = await res.text();
         throw new Error(err || 'Failed to generate SOV');
       }
-      await qc.invalidateQueries({ queryKey: ['sov-current', projectId] });
+      await qc.invalidateQueries({ queryKey: ['sov-current', projectId, activeContractId] });
       await qc.invalidateQueries({ queryKey: ['sov-items'] });
       await qc.invalidateQueries({ queryKey: ['sov-versions', projectId] });
       toast({ title: 'SOV generated successfully' });
@@ -174,7 +177,7 @@ export function useSOVPage(projectId: string, contractId?: string | null) {
     } finally {
       setGenerating(false);
     }
-  }, [prereqs, projectId, qc, toast]);
+  }, [prereqs, projectId, activeContractId, qc, toast]);
 
   // Update a line's percentage and redistribute
   const updateLinePct = useCallback(async (lineId: string, newPct: number) => {
