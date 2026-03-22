@@ -298,7 +298,7 @@ export function useSOVPage(projectId: string) {
       scheduled_value: value - retainage,
       remaining_amount: value,
       sort_order: items.length + 1,
-      source: 'manual',
+      source: 'user',
       scope_section_slug: sectionSlug,
       default_enabled: true,
     });
