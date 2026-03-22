@@ -218,11 +218,11 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
       }
 
       const contractIds = contractsWhereUserIsParty.map(c => c.id);
-      const visibleInvoices = currentOrgId && contractIds.length > 0
+      const visibleInvoices = currentOrgId
         ? allInvoices.filter(inv => 
             !inv.contract_id || contractIds.includes(inv.contract_id)
           )
-        : allInvoices;
+        : [];
       setInvoices(visibleInvoices);
     }
     setLoading(false);
