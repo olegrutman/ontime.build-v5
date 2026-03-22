@@ -265,10 +265,13 @@ export function CreateInvoiceFromSOV({
     [contracts, selectedContractId]
   );
   
-  const selectedSOV = useMemo(() => 
-    sovs.find(s => s.contract_id === selectedContractId),
-    [sovs, selectedContractId]
-  );
+  const selectedSOV = useMemo(() => {
+    const contractSovs = sovs.filter(s => s.contract_id === selectedContractId);
+    // Prefer latest locked version; fall back to latest version (already sorted DESC)
+    return contractSovs.find(s => s.is_locked) || contractSovs[0] || null;
+  }, [sovs, selectedContractId]);
+
+  const sovNotLocked = selectedSOV && !selectedSOV.is_locked;
 
   // Generate invoice number when contract is selected (only in create mode)
   useEffect(() => {
