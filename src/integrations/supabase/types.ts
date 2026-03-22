@@ -3077,6 +3077,55 @@ export type Database = {
           },
         ]
       }
+      project_scope_assignments: {
+        Row: {
+          assigned_role: string
+          assigned_to_org_id: string
+          created_at: string | null
+          id: string
+          project_id: string
+          scope_item_id: string
+        }
+        Insert: {
+          assigned_role: string
+          assigned_to_org_id: string
+          created_at?: string | null
+          id?: string
+          project_id: string
+          scope_item_id: string
+        }
+        Update: {
+          assigned_role?: string
+          assigned_to_org_id?: string
+          created_at?: string | null
+          id?: string
+          project_id?: string
+          scope_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_scope_assignments_assigned_to_org_id_fkey"
+            columns: ["assigned_to_org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_scope_assignments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_scope_assignments_scope_item_id_fkey"
+            columns: ["scope_item_id"]
+            isOneToOne: false
+            referencedRelation: "scope_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_scope_details: {
         Row: {
           balcony_type: string | null
