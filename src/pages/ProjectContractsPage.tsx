@@ -37,6 +37,43 @@ export default function ProjectContractsPage() {
     [projectTypes, profile],
   );
 
+  // Fetch project to identify creator
+  const { data: project } = useQuery({
+    queryKey: ['project_creator', projectId],
+    enabled: !!projectId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('created_by, organization_id')
+        .eq('id', projectId!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch creator's org type to determine role
+  const { data: creatorOrg } = useQuery({
+    queryKey: ['creator_org_type', project?.organization_id],
+    enabled: !!project?.organization_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('type')
+        .eq('id', project!.organization_id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const creatorRole = useMemo(() => {
+    if (!creatorOrg) return null;
+    if (creatorOrg.type === 'GC') return 'General Contractor';
+    if (creatorOrg.type === 'TC') return 'Trade Contractor';
+    return null;
+  }, [creatorOrg]);
+
   // Fetch team
   const { data: team = [] } = useQuery({
     queryKey: ['project_team_contracts', projectId],
@@ -50,6 +87,28 @@ export default function ProjectContractsPage() {
       return (data ?? []) as TeamMember[];
     },
   });
+
+  // Filter team based on creator role
+  const filteredTeam = useMemo(() => {
+    if (!creatorRole) return [];
+    if (creatorRole === 'General Contractor') {
+      return team.filter(m => m.role === 'Trade Contractor');
+    }
+    if (creatorRole === 'Trade Contractor') {
+      return team.filter(m => m.role === 'General Contractor' || m.role === 'Field Crew');
+    }
+    return [];
+  }, [team, creatorRole]);
+
+  const descriptionText = useMemo(() => {
+    if (creatorRole === 'General Contractor') {
+      return 'Enter the contract sum with your Trade Contractor.';
+    }
+    if (creatorRole === 'Trade Contractor') {
+      return 'Enter contract terms with your GC and Field Crew.';
+    }
+    return 'Assign contract sums to each party.';
+  }, [creatorRole]);
 
   // Fetch existing contracts
   const { data: existingContracts = [] } = useQuery({
@@ -122,7 +181,7 @@ export default function ProjectContractsPage() {
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
         <div>
           <p className="text-sm text-muted-foreground">
-            Assign contract sums to each party. The scope sections below reflect the items toggled ON in the Scope Wizard.
+            {descriptionText} The scope sections below reflect the items toggled ON in the Scope Wizard.
           </p>
         </div>
 
@@ -159,10 +218,10 @@ export default function ProjectContractsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {team.length === 0 && (
-              <p className="text-sm text-muted-foreground">No team members found. Add team members in the project wizard first.</p>
+            {filteredTeam.length === 0 && (
+              <p className="text-sm text-muted-foreground">No applicable team members found. Add team members in the project wizard first.</p>
             )}
-            {team.map(m => (
+            {filteredTeam.map(m => (
                 <div key={m.id} className="flex items-center gap-4">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{m.invited_org_name || 'Unknown'}</p>
