@@ -221,7 +221,7 @@ IMPORTANT: The SOV must cover every scope section listed above. If a scope secti
         scheduled_value: value - retainage,
         remaining_amount: value,
         sort_order: idx + 1,
-        source: "ai",
+        source: "user",
         scope_section_slug: line.scope_section_slug,
         ai_original_pct: line.percent,
         default_enabled: true,
