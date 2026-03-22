@@ -45,6 +45,8 @@ interface SOV {
   id: string;
   contract_id: string | null;
   sov_name: string | null;
+  version: number;
+  is_locked: boolean;
 }
 
 interface SOVItem {
