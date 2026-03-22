@@ -26,7 +26,7 @@ export function ScopeDetailsTab({ projectId }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('project_contracts')
-        .select('id, contract_value, retainage_pct')
+        .select('id, contract_sum, retainage_percent')
         .eq('project_id', projectId);
       if (error) throw error;
       return data;
