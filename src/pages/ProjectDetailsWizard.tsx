@@ -223,7 +223,7 @@ export default function ProjectDetailsWizard() {
   const renderStep0 = () => (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold font-[Barlow_Condensed]">What type of project is this?</h2>
+        <h2 className="text-xl font-bold font-heading">What type of project is this?</h2>
         <p className="text-sm text-muted-foreground">This defines your scope sections, default items, and contract structure.</p>
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -260,7 +260,7 @@ export default function ProjectDetailsWizard() {
     return (
       <div className="space-y-8">
         <div>
-          <h2 className="text-xl font-bold font-[Barlow_Condensed]">Building scale & structure</h2>
+          <h2 className="text-xl font-bold font-heading">Building scale & structure</h2>
           <p className="text-sm text-muted-foreground">These numbers drive floor level options and contract scope.</p>
         </div>
 
@@ -317,7 +317,7 @@ export default function ProjectDetailsWizard() {
   const renderStep2 = () => (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold font-[Barlow_Condensed]">Structural elements</h2>
+        <h2 className="text-xl font-bold font-heading">Structural elements</h2>
         <p className="text-sm text-muted-foreground">Toggle each element included in this project.</p>
       </div>
       <Card><CardContent className="p-4 divide-y">
@@ -348,7 +348,7 @@ export default function ProjectDetailsWizard() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-xl font-bold font-[Barlow_Condensed]">Special features & amenities</h2>
+          <h2 className="text-xl font-bold font-heading">Special features & amenities</h2>
           <p className="text-sm text-muted-foreground">Each feature unlocks a dedicated scope section.</p>
         </div>
         <Card><CardContent className="p-4 divide-y">
@@ -376,7 +376,7 @@ export default function ProjectDetailsWizard() {
     return (
       <div className="space-y-6">
         <div>
-          <h2 className="text-xl font-bold font-[Barlow_Condensed]">Project Profile</h2>
+          <h2 className="text-xl font-bold font-heading">Project Profile</h2>
           <p className="text-sm text-muted-foreground">Review your selections. This profile locks your scope wizard contents.</p>
         </div>
 
@@ -447,7 +447,7 @@ export default function ProjectDetailsWizard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <ProgressBar step={step} onNav={setStep} onClose={() => navigate(`/projects/${projectId}`)} />
+      <ProgressBar step={step} onNav={setStep} onClose={() => navigate(`/project/${projectId}?tab=scope-details`)} />
       <div className="max-w-2xl mx-auto px-4 py-6">
         {steps[step]()}
       </div>

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ChevronLeft, DollarSign, FileCheck } from 'lucide-react';
+import { ChevronLeft, DollarSign, FileCheck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -242,11 +242,16 @@ export default function ProjectContractsPage() {
             <Link to={`/project/${projectId}/scope-wizard`}>
               <Button variant="ghost" size="icon"><ChevronLeft className="w-4 h-4" /></Button>
             </Link>
-            <h1 className="text-lg font-bold font-[Barlow_Condensed]">Contracts</h1>
+            <h1 className="text-lg font-bold font-heading">Contracts</h1>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Badge className="bg-primary/15 text-primary border-0">{projectType?.name}</Badge>
-            <span>{onCount} scope items</span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Badge className="bg-primary/15 text-primary border-0">{projectType?.name}</Badge>
+              <span>{onCount} scope items</span>
+            </div>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/project/${projectId}?tab=scope-details`)}>
+              <X className="w-4 h-4" />
+            </Button>
           </div>
         </div>
       </div>

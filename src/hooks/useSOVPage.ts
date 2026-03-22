@@ -78,7 +78,7 @@ export function useSOVPage(projectId: string) {
 
   // Fetch scope sections for coverage panel
   const { data: scopeCoverage = [] } = useQuery<ScopeCoverage[]>({
-    queryKey: ['sov-scope-coverage', projectId, items],
+    queryKey: ['sov-scope-coverage', projectId, currentSOV?.id, items.length],
     queryFn: async () => {
       // Get active scope selections grouped by section
       const { data: selections } = await supabase
