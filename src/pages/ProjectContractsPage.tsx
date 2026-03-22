@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ChevronLeft, DollarSign, FileCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,9 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useScopeSelections, useScopeSections, useScopeItems } from '@/hooks/useScopeWizard';
 import { useProjectProfile, useProjectTypes } from '@/hooks/useProjectProfile';
+import { useAuth } from '@/hooks/useAuth';
 
 interface TeamMember {
   id: string;
@@ -25,6 +26,9 @@ export default function ProjectContractsPage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { user, userOrgRoles } = useAuth();
+
+  const currentUserOrgId = userOrgRoles.length > 0 ? userOrgRoles[0].organization_id : null;
 
   const { data: profile } = useProjectProfile(projectId);
   const { data: projectTypes = [] } = useProjectTypes();
@@ -125,15 +129,15 @@ export default function ProjectContractsPage() {
   });
 
   const [contracts, setContracts] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
-  // Initialize from existing
-  useMemo(() => {
-    if (existingContracts.length > 0 && Object.keys(contracts).length === 0) {
+  // Initialize from existing contracts using to_project_team_id as key
+  useEffect(() => {
+    if (existingContracts.length > 0) {
       const init: Record<string, string> = {};
       for (const c of existingContracts) {
-        const memberId = (c as any).party_org_id || (c as any).id;
-        if ((c as any).contract_amount != null) {
-          init[memberId] = String((c as any).contract_amount);
+        if (c.to_project_team_id && c.contract_sum != null) {
+          init[c.to_project_team_id] = String(c.contract_sum);
         }
       }
       if (Object.keys(init).length > 0) setContracts(init);
@@ -157,8 +161,77 @@ export default function ProjectContractsPage() {
   const activeSections = allSections.filter(s => itemsBySectionId[s.id]?.length);
 
   const handleSave = async () => {
-    toast({ title: 'Contracts saved', description: 'Returning to project...' });
-    navigate(`/project/${projectId}`);
+    if (!projectId || !user || !creatorRole || !project) return;
+    setSaving(true);
+
+    try {
+      for (const member of filteredTeam) {
+        const valueStr = contracts[member.id];
+        if (!valueStr) continue;
+        const contractSum = parseFloat(valueStr);
+        if (isNaN(contractSum)) continue;
+
+        // Determine from/to based on contract direction rules
+        let fromOrgId: string | null = null;
+        let toOrgId: string | null = null;
+        let fromRole = '';
+        let toRole = '';
+
+        if (creatorRole === 'General Contractor' && member.role === 'Trade Contractor') {
+          // TC does work for GC: from=TC, to=GC
+          fromOrgId = member.org_id;
+          toOrgId = project.organization_id;
+          fromRole = 'Trade Contractor';
+          toRole = 'General Contractor';
+        } else if (creatorRole === 'Trade Contractor' && member.role === 'General Contractor') {
+          // TC does work for GC: from=TC(creator), to=GC
+          fromOrgId = project.organization_id;
+          toOrgId = member.org_id;
+          fromRole = 'Trade Contractor';
+          toRole = 'General Contractor';
+        } else if (creatorRole === 'Trade Contractor' && member.role === 'Field Crew') {
+          // FC does work for TC: from=FC, to=TC
+          fromOrgId = member.org_id;
+          toOrgId = project.organization_id;
+          fromRole = 'Field Crew';
+          toRole = 'Trade Contractor';
+        }
+
+        // Check for existing contract for this team member
+        const existing = existingContracts.find(c => c.to_project_team_id === member.id);
+
+        if (existing) {
+          await supabase
+            .from('project_contracts')
+            .update({ contract_sum: contractSum })
+            .eq('id', existing.id);
+        } else {
+          await supabase
+            .from('project_contracts')
+            .insert({
+              project_id: projectId,
+              to_project_team_id: member.id,
+              from_org_id: fromOrgId,
+              to_org_id: toOrgId,
+              from_role: fromRole,
+              to_role: toRole,
+              contract_sum: contractSum,
+              created_by_user_id: user.id,
+            });
+        }
+      }
+
+      // Invalidate related queries
+      qc.invalidateQueries({ queryKey: ['project_contracts'] });
+      qc.invalidateQueries({ queryKey: ['project_financials'] });
+
+      toast({ title: 'Contracts saved', description: 'Contract values updated successfully.' });
+      navigate(`/project/${projectId}`);
+    } catch (err: any) {
+      toast({ title: 'Error saving contracts', description: err.message, variant: 'destructive' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -253,8 +326,8 @@ export default function ProjectContractsPage() {
             className="min-h-[44px]">
             Back to Scope
           </Button>
-          <Button onClick={handleSave} className="min-h-[44px]">
-            Save Contracts
+          <Button onClick={handleSave} disabled={saving} className="min-h-[44px]">
+            {saving ? 'Saving…' : 'Save Contracts'}
           </Button>
         </div>
       </div>
