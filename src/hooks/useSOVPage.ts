@@ -323,6 +323,7 @@ export function useSOVPage(projectId: string) {
     resetLine,
     lockSOV,
     totalPct,
+    contractMismatch,
     coveredCount,
     totalSections: scopeCoverage.length,
   };
