@@ -1,41 +1,31 @@
 
 
-# Scope & Details Tab — Landing Page
+# Fix: ProjectContractsPage Team Query
 
-## What changes
+## Problem
+`ProjectContractsPage.tsx` queries `project_team` with `profiles:user_id(full_name)` and `organizations:organization_id(name)` — but `project_team` has no foreign key to `profiles` via `user_id`, so the query returns a 400 error. Team members never load, so the contracts page shows "No team members found."
 
-Replace the current redirect behavior of the "Scope & Details" tab with an actual in-project tab page that renders inside ProjectHome.
+## Fix
 
-### Two states:
+**File: `src/pages/ProjectContractsPage.tsx`**
 
-**State A — Not set up yet**
-- Sticky bar at top with amber "Setup Project Scope & Details" button → navigates to `/project/:id/details-wizard`
-- Empty state message below: "No project profile configured yet"
+1. Change the query to use columns that actually exist on `project_team`: `id, role, invited_org_name, org_id, status`
+2. Update the `TeamMember` interface to match
+3. Update the rendering to use `invited_org_name` (like every other component does) instead of `profiles.full_name`
 
-**State B — Setup complete** (project_profile.is_complete = true)
-- Summary cards showing:
-  - **Project Profile**: type, stories, units, buildings, foundation, roof, features (pills)
-  - **Scope Summary**: X of Y sections active, total items ON, list of active sections with item counts
-  - **Contract Summary**: contract value, retainage %, team member assignments
-- "Edit Profile" and "Edit Scope" buttons to re-enter the wizards
+The query becomes:
+```ts
+supabase
+  .from('project_team')
+  .select('id, role, invited_org_name, org_id, status')
+  .eq('project_id', projectId)
+```
 
-### Files changed
+Display uses `m.invited_org_name || 'Unknown'` for the name and `m.role` for the role label — matching the pattern in `TeamMembersCard.tsx` and `ProjectTeamSection.tsx`.
+
+## Files changed
 
 | File | Change |
 |------|--------|
-| `src/pages/ProjectHome.tsx` | Stop redirecting on `scope-details` tab — render it inline like other tabs. Add `ScopeDetailsTab` component (or import). Fetch profile/scope/contract data. |
-| `src/components/project/ScopeDetailsTab.tsx` | New — the tab content. Shows sticky setup bar (state A) or summary (state B). Uses existing `useProjectProfile` and `useScopeWizard` hooks for data. |
-| `src/components/project/index.ts` | Export new component |
-| `src/components/layout/BottomNav.tsx` | Remove the special-case redirect for `scope-details` — let it behave like a normal tab |
-
-### Data fetching
-- `useProjectProfile(projectId)` — already exists, returns profile + project type
-- `useScopeSelections(projectId)` from `useScopeWizard` — already exists, returns active selections
-- Query `project_contracts` for contract sum — simple inline query
-
-### Summary layout
-- Profile card: project type badge, stories, units/buildings (if applicable), foundation chips, roof chip, feature pills (green for ON)
-- Scope card: "X sections active · Y items ON" header, collapsible list of sections with counts
-- Contract card: total contract value, retainage %, per-team-member breakdown if available
-- Each card has an "Edit" ghost button linking to the relevant wizard page
+| `src/pages/ProjectContractsPage.tsx` | Fix query, update interface, update rendering |
 
