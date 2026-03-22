@@ -92,6 +92,8 @@ export default function ProjectContractsPage() {
     },
   });
 
+  const isFromCreatorOrg = project?.organization_id === currentUserOrgId;
+
   // Filter team based on creator role
   const filteredTeam = useMemo(() => {
     if (!creatorRole) return [];
