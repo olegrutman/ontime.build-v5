@@ -170,11 +170,29 @@ export function useSOVPage(projectId: string) {
     const unlockTotal = unlocked.reduce((s, i) => s + (i.percent_of_contract || 0), 0);
 
     const updates: { id: string; pct: number }[] = [{ id: lineId, pct: newPct }];
+    // Two-pass redistribution to handle clamped (negative) values
+    let clampedExcess = 0;
+    const rawAdjusted: { id: string; pct: number }[] = [];
     for (const u of unlocked) {
       const share = unlockTotal > 0 ? (u.percent_of_contract || 0) / unlockTotal : 1 / unlocked.length;
       const adjusted = (u.percent_of_contract || 0) - delta * share;
-      updates.push({ id: u.id, pct: Math.max(0, adjusted) });
+      if (adjusted < 0) {
+        clampedExcess += Math.abs(adjusted);
+        rawAdjusted.push({ id: u.id, pct: 0 });
+      } else {
+        rawAdjusted.push({ id: u.id, pct: adjusted });
+      }
     }
+    // Redistribute clamped excess across remaining positive lines
+    if (clampedExcess > 0) {
+      const positiveTotal = rawAdjusted.reduce((s, u) => s + u.pct, 0);
+      for (const u of rawAdjusted) {
+        if (u.pct > 0 && positiveTotal > 0) {
+          u.pct = Math.max(0, u.pct - clampedExcess * (u.pct / positiveTotal));
+        }
+      }
+    }
+    updates.push(...rawAdjusted);
 
     // Normalize: account for locked lines + force last entry to absorb rounding remainder
     const locked = items.filter((i, j) => j !== idx && i.is_locked);
@@ -255,6 +273,11 @@ export function useSOVPage(projectId: string) {
         const newPct = (u.percent_of_contract || 0) - defaultPct * share;
         updates.push({ id: u.id, pct: Math.max(0, newPct) });
       }
+      // Normalize: account for locked lines + new line's 1%
+      const locked = items.filter(i => i.is_locked);
+      const lockedTotal = locked.reduce((s, i) => s + (i.percent_of_contract || 0), 0);
+      const runningTotal = lockedTotal + defaultPct + updates.slice(0, -1).reduce((s, u) => s + u.pct, 0);
+      updates[updates.length - 1].pct = Math.round((100 - runningTotal) * 100) / 100;
 
       await supabase.rpc('update_sov_line_percentages', {
         p_updates: updates,
@@ -275,7 +298,7 @@ export function useSOVPage(projectId: string) {
       scheduled_value: value - retainage,
       remaining_amount: value,
       sort_order: items.length + 1,
-      source: 'manual',
+      source: 'user',
       scope_section_slug: sectionSlug,
       default_enabled: true,
     });

@@ -183,6 +183,17 @@ IMPORTANT: The SOV must cover every scope section listed above. If a scope secti
       return new Response(JSON.stringify({ error: "AI returned empty result" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // Normalize percentages to sum to exactly 100.00%
+    const rawTotal = lines.reduce((s, l) => s + l.percent, 0);
+    if (Math.abs(rawTotal - 100) > 0.001) {
+      const scale = 100 / rawTotal;
+      for (const line of lines) {
+        line.percent = Math.round(line.percent * scale * 100) / 100;
+      }
+      const adjusted = lines.slice(0, -1).reduce((s, l) => s + l.percent, 0);
+      lines[lines.length - 1].percent = Math.round((100 - adjusted) * 100) / 100;
+    }
+
     // Determine version
     const { data: existingSov } = await admin.from("project_sov").select("id, version").eq("project_id", project_id).order("version", { ascending: false }).limit(1).maybeSingle();
 
