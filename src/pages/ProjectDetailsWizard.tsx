@@ -447,7 +447,7 @@ export default function ProjectDetailsWizard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <ProgressBar step={step} onNav={setStep} onClose={() => navigate(`/projects/${projectId}`)} />
+      <ProgressBar step={step} onNav={setStep} onClose={() => navigate(`/project/${projectId}?tab=scope-details`)} />
       <div className="max-w-2xl mx-auto px-4 py-6">
         {steps[step]()}
       </div>
