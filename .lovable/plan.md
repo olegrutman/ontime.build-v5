@@ -1,32 +1,23 @@
 
 
-# Fix: Total Contract Value Shows Wrong Amount on Scope & Details Tab
+# Allow SOV Regeneration When Contract Value Changes
 
-## Bug
-
-`ScopeDetailsTab.tsx` line 90 sums **all** `project_contracts` rows for the project. This includes work orders, FC→TC contracts, and the main GC↔TC contract. The displayed value is $3,465,010 when it should be $650,000.
-
-## Root Cause
-
-The query on line 27-33 fetches all contracts without filtering, and line 90 sums them all:
-```ts
-const totalContractValue = contracts?.reduce((sum, c) => sum + (Number(c.contract_sum) || 0), 0) || 0;
-```
+## Problem
+When the SOV is locked and the contract value changes, the mismatch banner says "Create a new version to update" but provides no button. The edge function already handles versioning (creates a new SOV version), so we just need to expose the button.
 
 ## Fix
 
-**File: `src/components/project/ScopeDetailsTab.tsx`**
+**File: `src/pages/ProjectSOVPage.tsx`**
 
-1. Update the contracts query to also fetch `from_role`, `to_role`, and `trade`
-2. Filter to only the primary contract: `from_role = 'Trade Contractor' AND to_role = 'General Contractor' AND trade NOT IN ('Work Order', 'Work Order Labor')`
-3. Use the filtered contract's `contract_sum` directly instead of summing all contracts
-4. Show the primary contract's retainage directly instead of averaging all contracts
+1. In the contract mismatch banner (line 179), change the condition from `canEdit && !isLocked` to `isCreator` — the creator should always be able to regenerate when there's a mismatch, because regenerating creates a **new version** (it doesn't modify the locked one).
 
-The primary contract is the GC↔TC "Framer" contract — the one entered in the Contracts setup page. This matches how `useProjectFinancials` identifies `upstreamContract`.
+2. Update the button label: show "Create New Version" when the current SOV is locked, "Regenerate" when unlocked.
+
+That's it — one condition change, one label tweak. The edge function and hook already handle everything else correctly.
 
 ## Files changed
 
 | File | Change |
 |------|--------|
-| `src/components/project/ScopeDetailsTab.tsx` | Filter contracts query to primary GC↔TC contract only, use its value directly |
+| `src/pages/ProjectSOVPage.tsx` | Change regenerate button condition from `canEdit && !isLocked` to `isCreator`, update button label for locked state |
 
