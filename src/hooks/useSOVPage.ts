@@ -215,17 +215,24 @@ export function useSOVPage(projectId: string) {
 
     await supabase.from('project_sov_items').delete().eq('id', lineId);
 
-    for (const u of unlocked) {
-      const share = unlockTotal > 0 ? (u.percent_of_contract || 0) / unlockTotal : 1 / unlocked.length;
-      const newPct = (u.percent_of_contract || 0) + pctToRedist * share;
-      const value = contractValue * newPct / 100;
-      const retainage = value * (prereqs?.retainagePct || 0) / 100;
-      await supabase.from('project_sov_items').update({
-        percent_of_contract: newPct,
-        value_amount: value,
-        scheduled_value: value - retainage,
-        remaining_amount: value,
-      }).eq('id', u.id);
+    if (unlocked.length > 0) {
+      const updates: { id: string; pct: number }[] = [];
+      for (const u of unlocked) {
+        const share = unlockTotal > 0 ? (u.percent_of_contract || 0) / unlockTotal : 1 / unlocked.length;
+        const newPct = (u.percent_of_contract || 0) + pctToRedist * share;
+        updates.push({ id: u.id, pct: Math.max(0, newPct) });
+      }
+      // Normalize last
+      const locked = items.filter(i => i.id !== lineId && i.is_locked);
+      const lockedTotal = locked.reduce((s, i) => s + (i.percent_of_contract || 0), 0);
+      const runningTotal = lockedTotal + updates.slice(0, -1).reduce((s, u) => s + u.pct, 0);
+      updates[updates.length - 1].pct = Math.round((100 - runningTotal) * 100) / 100;
+
+      await supabase.rpc('update_sov_line_percentages', {
+        p_updates: updates,
+        p_contract_value: contractValue,
+        p_retainage_pct: prereqs?.retainagePct || 0,
+      });
     }
     qc.invalidateQueries({ queryKey: ['sov-items', currentSOV.id] });
   }, [items, currentSOV, prereqs, qc]);
