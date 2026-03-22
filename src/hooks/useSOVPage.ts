@@ -298,6 +298,11 @@ export function useSOVPage(projectId: string) {
   }, [currentSOV, items, projectId, qc, toast]);
 
   const totalPct = useMemo(() => items.reduce((s, i) => s + (i.percent_of_contract || 0), 0), [items]);
+  const sovTotalValue = useMemo(() => items.reduce((s, i) => s + (i.value_amount || 0), 0), [items]);
+  const contractMismatch = useMemo(() => {
+    if (!currentSOV || items.length === 0) return false;
+    return Math.abs(sovTotalValue - (prereqs?.contractValue || 0)) > 0.01;
+  }, [sovTotalValue, prereqs?.contractValue, currentSOV, items.length]);
   const coveredCount = useMemo(() => scopeCoverage.filter(s => s.covered).length, [scopeCoverage]);
 
   return {
