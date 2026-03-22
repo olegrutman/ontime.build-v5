@@ -3311,8 +3311,12 @@ export type Database = {
           is_locked: boolean
           locked_at: string | null
           locked_by: string | null
+          previous_version_id: string | null
           project_id: string
+          project_profile_id: string | null
+          scope_snapshot: Json | null
           sov_name: string | null
+          version: number
         }
         Insert: {
           contract_id?: string | null
@@ -3322,8 +3326,12 @@ export type Database = {
           is_locked?: boolean
           locked_at?: string | null
           locked_by?: string | null
+          previous_version_id?: string | null
           project_id: string
+          project_profile_id?: string | null
+          scope_snapshot?: Json | null
           sov_name?: string | null
+          version?: number
         }
         Update: {
           contract_id?: string | null
@@ -3333,8 +3341,12 @@ export type Database = {
           is_locked?: boolean
           locked_at?: string | null
           locked_by?: string | null
+          previous_version_id?: string | null
           project_id?: string
+          project_profile_id?: string | null
+          scope_snapshot?: Json | null
           sov_name?: string | null
+          version?: number
         }
         Relationships: [
           {
@@ -3345,25 +3357,44 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "project_sov_previous_version_id_fkey"
+            columns: ["previous_version_id"]
+            isOneToOne: false
+            referencedRelation: "project_sov"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "project_sov_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "project_sov_project_profile_id_fkey"
+            columns: ["project_profile_id"]
+            isOneToOne: false
+            referencedRelation: "project_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
       project_sov_items: {
         Row: {
+          ai_original_pct: number | null
           billed_to_date: number | null
+          billing_status: string
           created_at: string
           default_enabled: boolean
           id: string
+          is_locked: boolean
           item_group: string | null
           item_name: string
           percent_of_contract: number | null
           project_id: string
+          remaining_amount: number
           scheduled_value: number | null
+          scope_section_slug: string | null
           sort_order: number
           source: string
           sov_id: string | null
@@ -3373,15 +3404,20 @@ export type Database = {
           value_amount: number | null
         }
         Insert: {
+          ai_original_pct?: number | null
           billed_to_date?: number | null
+          billing_status?: string
           created_at?: string
           default_enabled?: boolean
           id?: string
+          is_locked?: boolean
           item_group?: string | null
           item_name: string
           percent_of_contract?: number | null
           project_id: string
+          remaining_amount?: number
           scheduled_value?: number | null
+          scope_section_slug?: string | null
           sort_order?: number
           source?: string
           sov_id?: string | null
@@ -3391,15 +3427,20 @@ export type Database = {
           value_amount?: number | null
         }
         Update: {
+          ai_original_pct?: number | null
           billed_to_date?: number | null
+          billing_status?: string
           created_at?: string
           default_enabled?: boolean
           id?: string
+          is_locked?: boolean
           item_group?: string | null
           item_name?: string
           percent_of_contract?: number | null
           project_id?: string
+          remaining_amount?: number
           scheduled_value?: number | null
+          scope_section_slug?: string | null
           sort_order?: number
           source?: string
           sov_id?: string | null
@@ -4179,6 +4220,45 @@ export type Database = {
           slug?: string
         }
         Relationships: []
+      }
+      sov_invoice_lines: {
+        Row: {
+          amount_billed: number
+          created_at: string
+          id: string
+          invoice_id: string
+          sov_item_id: string
+        }
+        Insert: {
+          amount_billed: number
+          created_at?: string
+          id?: string
+          invoice_id: string
+          sov_item_id: string
+        }
+        Update: {
+          amount_billed?: number
+          created_at?: string
+          id?: string
+          invoice_id?: string
+          sov_item_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sov_invoice_lines_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sov_invoice_lines_sov_item_id_fkey"
+            columns: ["sov_item_id"]
+            isOneToOne: false
+            referencedRelation: "project_sov_items"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       sov_templates: {
         Row: {
