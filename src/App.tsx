@@ -58,6 +58,7 @@ const CODetailPage = lazy(() => import("./pages/CODetail"));
 const ProjectDetailsWizard = lazy(() => import("./pages/ProjectDetailsWizard"));
 const ProjectScopeWizard = lazy(() => import("./pages/ProjectScopeWizard"));
 const ProjectContractsPage = lazy(() => import("./pages/ProjectContractsPage"));
+const ProjectSOVPage = lazy(() => import("./pages/ProjectSOVPage"));
 
 // Platform Admin pages
 const PlatformDashboard = lazy(() => import("./pages/platform/PlatformDashboard"));
@@ -176,6 +177,7 @@ function AppRoutes() {
             <Route path="/project/:id/details-wizard" element={<RequireAuth><ProjectDetailsWizard /></RequireAuth>} />
             <Route path="/project/:id/scope-wizard" element={<RequireAuth><ProjectScopeWizard /></RequireAuth>} />
             <Route path="/project/:id/contracts" element={<RequireAuth><ProjectContractsPage /></RequireAuth>} />
+            <Route path="/project/:id/sov" element={<RequireAuth><ProjectSOVPage /></RequireAuth>} />
             <Route path="/partners" element={<RequireAuth><PartnerDirectory /></RequireAuth>} />
             
             <Route path="/org/team" element={<RequireAuth><OrgTeam /></RequireAuth>} />

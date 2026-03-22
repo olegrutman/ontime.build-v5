@@ -169,6 +169,10 @@ export default function ProjectHome() {
       navigate(`/project/${id}/details-wizard`);
       return;
     }
+    if (tab === 'sov') {
+      navigate(`/project/${id}/sov`);
+      return;
+    }
     setSearchParams({ tab });
     setTabResetKey(prev => prev + 1);
   };
@@ -419,11 +423,7 @@ export default function ProjectHome() {
               )}
 
               {/* Other tabs — unchanged */}
-              {activeTab === 'sov' && !isSupplier && (
-                <FeatureGate feature="sov_contracts">
-                  {isInDemoMode ? <DemoSOVTab /> : <ContractSOVEditor projectId={id!} />}
-                </FeatureGate>
-              )}
+              {/* SOV tab now routes to /project/:id/sov — handled in handleTabChange */}
               {activeTab === 'rfis' && (
                 isInDemoMode ? <DemoRFIsTab /> : <RFIsTab projectId={id!} />
               )}
