@@ -162,14 +162,11 @@ export default function ProjectContractsPage() {
             {team.length === 0 && (
               <p className="text-sm text-muted-foreground">No team members found. Add team members in the project wizard first.</p>
             )}
-            {team.map(m => {
-              const name = (m.profiles as any)?.full_name || 'Unknown';
-              const org = (m.organizations as any)?.name || '';
-              return (
+            {team.map(m => (
                 <div key={m.id} className="flex items-center gap-4">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{name}</p>
-                    <p className="text-xs text-muted-foreground">{org} · {m.role}</p>
+                    <p className="text-sm font-medium truncate">{m.invited_org_name || 'Unknown'}</p>
+                    <p className="text-xs text-muted-foreground">{m.role}</p>
                   </div>
                   <div className="w-40">
                     <Label className="sr-only">Contract amount</Label>
@@ -185,8 +182,7 @@ export default function ProjectContractsPage() {
                     </div>
                   </div>
                 </div>
-              );
-            })}
+            ))}
           </CardContent>
         </Card>
       </div>
