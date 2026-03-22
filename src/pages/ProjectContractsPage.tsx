@@ -14,19 +14,10 @@ import { useProjectProfile, useProjectTypes } from '@/hooks/useProjectProfile';
 
 interface TeamMember {
   id: string;
-  user_id: string;
   role: string;
-  organization_id: string | null;
-  profiles?: { full_name: string | null } | null;
-  organizations?: { name: string | null } | null;
-}
-
-interface ContractRow {
-  team_member_id: string;
-  name: string;
-  org: string;
-  role: string;
-  amount: string;
+  invited_org_name: string | null;
+  org_id: string | null;
+  status: string;
 }
 
 export default function ProjectContractsPage() {
