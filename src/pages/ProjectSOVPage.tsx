@@ -32,13 +32,15 @@ export default function ProjectSOVPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const defaultOpen = useDefaultSidebarOpen();
+  const [selectedContractId, setSelectedContractId] = useState<string | null>(null);
 
   const {
     prereqs, prereqsLoading, currentSOV, sovLoading, items, itemsLoading,
     scopeCoverage, versions, generating, generateSOV, updateLinePct,
     toggleLineLock, deleteLine, addLine, resetLine, lockSOV,
     totalPct, contractMismatch, coveredCount, totalSections,
-  } = useSOVPage(projectId || '');
+    allContracts, activeContractId,
+  } = useSOVPage(projectId || '', selectedContractId);
 
   // Fetch project info
   const { data: project } = useQuery({
@@ -147,6 +149,26 @@ export default function ProjectSOVPage() {
                 )}
               </div>
             </div>
+
+            {/* Contract selector (if multiple contracts) */}
+            {allContracts.length > 1 && (
+              <div className="flex items-center gap-2 px-4 pb-2 overflow-x-auto">
+                {allContracts.map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => setSelectedContractId(c.id)}
+                    className={cn(
+                      "px-3 py-1 rounded-full text-xs font-medium border transition-colors whitespace-nowrap",
+                      activeContractId === c.id
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted text-muted-foreground border-border hover:bg-accent"
+                    )}
+                  >
+                    {c.from_role} → {c.to_role} · ${(c.contract_sum || 0).toLocaleString()}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Status strip */}
             <div className="flex items-center gap-4 px-4 pb-2 overflow-x-auto text-xs">

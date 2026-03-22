@@ -24,18 +24,24 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { project_id } = await req.json();
+    const { project_id, contract_id } = await req.json();
     if (!project_id) {
       return new Response(JSON.stringify({ error: "project_id required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const admin = createClient(supabaseUrl, serviceKey);
 
+    // Fetch contract — use specific contract_id if provided, else first contract
+    let contractQuery = admin.from("project_contracts").select("id, contract_sum, retainage_percent").eq("project_id", project_id);
+    if (contract_id) {
+      contractQuery = contractQuery.eq("id", contract_id);
+    }
+    const contractRes = await contractQuery.limit(1).maybeSingle();
+
     // Fetch all three data sources
-    const [profileRes, scopeRes, contractRes, teamRes] = await Promise.all([
+    const [profileRes, scopeRes, teamRes] = await Promise.all([
       admin.from("project_profiles").select("*, project_types(name, slug, is_multifamily, is_single_family)").eq("project_id", project_id).maybeSingle(),
       admin.from("project_scope_selections").select("scope_item_id, scope_items(label, scope_sections(slug, label))").eq("project_id", project_id).eq("is_on", true),
-      admin.from("project_contracts").select("id, contract_sum, retainage_percent").eq("project_id", project_id).limit(1).maybeSingle(),
       admin.from("project_team").select("user_id").eq("project_id", project_id).eq("user_id", user.id).eq("status", "Accepted").maybeSingle(),
     ]);
 
@@ -44,8 +50,37 @@ serve(async (req) => {
     }
 
     const profile = profileRes.data;
-    const scopeItems = scopeRes.data || [];
     const contract = contractRes.data;
+    
+    // If contract_id provided, check for scope assignments to filter items
+    let scopeItems = scopeRes.data || [];
+    if (contract_id) {
+      const { data: assignments } = await admin
+        .from("project_scope_assignments")
+        .select("scope_item_id, assigned_role")
+        .eq("project_id", project_id);
+      
+      if (assignments && assignments.length > 0) {
+        // Determine if this is an FC contract (from_role=Field Crew)
+        const contractData = contractRes.data;
+        const isFCContract = contractData && await (async () => {
+          const { data: fullContract } = await admin
+            .from("project_contracts")
+            .select("from_role")
+            .eq("id", contract_id)
+            .single();
+          return fullContract?.from_role === 'Field Crew';
+        })();
+
+        const assignedRole = isFCContract ? 'Field Crew' : 'Trade Contractor';
+        const assignedIds = new Set(
+          assignments.filter(a => a.assigned_role === assignedRole).map(a => a.scope_item_id)
+        );
+        
+        // Filter scope items to only those assigned to this contract's role
+        scopeItems = scopeItems.filter((s: any) => assignedIds.has(s.scope_item_id));
+      }
+    }
 
     if (!profile || !contract?.contract_sum) {
       return new Response(JSON.stringify({ error: "Missing profile or contract" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });

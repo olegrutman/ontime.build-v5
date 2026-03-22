@@ -4,28 +4,44 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { SOVLine, SOVVersion, ScopeCoverage, SOVPrerequisites } from '@/types/sov';
 
-export function useSOVPage(projectId: string) {
+export function useSOVPage(projectId: string, contractId?: string | null) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [generating, setGenerating] = useState(false);
 
-  // Fetch prerequisites
-  const { data: prereqs, isLoading: prereqsLoading } = useQuery<SOVPrerequisites>({
-    queryKey: ['sov-prereqs', projectId],
+  // Fetch all contracts for this project (for multi-contract selector)
+  const { data: allContracts = [] } = useQuery({
+    queryKey: ['sov-all-contracts', projectId],
     queryFn: async () => {
-      const [profileRes, scopeRes, contractRes] = await Promise.all([
+      const { data } = await supabase
+        .from('project_contracts')
+        .select('id, contract_sum, retainage_percent, from_role, to_role, trade, from_org_id, to_org_id')
+        .eq('project_id', projectId)
+        .neq('trade', 'Work Order')
+        .neq('trade', 'Work Order Labor');
+      return data || [];
+    },
+    enabled: !!projectId,
+  });
+
+  // Determine which contract to use
+  const activeContractId = contractId || allContracts[0]?.id || null;
+  const activeContract = allContracts.find(c => c.id === activeContractId) || allContracts[0] || null;
+
+  // Fetch prerequisites using the active contract
+  const { data: prereqs, isLoading: prereqsLoading } = useQuery<SOVPrerequisites>({
+    queryKey: ['sov-prereqs', projectId, activeContractId],
+    queryFn: async () => {
+      const [profileRes, scopeRes] = await Promise.all([
         supabase.from('project_profiles').select('id, project_type_id, stories, units_per_building, number_of_buildings, foundation_types, roof_type, has_garage, garage_types, has_basement, basement_type, has_stairs, stair_types, has_deck_balcony, has_pool, has_elevator, has_clubhouse, has_commercial_spaces, has_shed, is_complete').eq('project_id', projectId).maybeSingle(),
         supabase.from('project_scope_selections').select('id', { count: 'exact' }).eq('project_id', projectId).eq('is_on', true),
-        supabase.from('project_contracts').select('id, contract_sum, retainage_percent, status').eq('project_id', projectId).limit(1).maybeSingle(),
       ]);
 
       const profile = profileRes.data;
       const scopeCount = scopeRes.count || 0;
-      const contract = contractRes.data;
 
       let profileSummary = '';
       if (profile) {
-        // Fetch project type name
         const { data: pt } = await supabase.from('project_types').select('name').eq('id', profile.project_type_id).maybeSingle();
         profileSummary = `${pt?.name || 'Unknown'} · ${profile.stories} stories · ${profile.number_of_buildings} building(s)`;
       }
@@ -33,29 +49,32 @@ export function useSOVPage(projectId: string) {
       return {
         hasProfile: !!profile?.is_complete,
         hasScope: scopeCount > 0,
-        hasContract: !!contract?.contract_sum && contract.contract_sum > 0,
+        hasContract: !!activeContract?.contract_sum && activeContract.contract_sum > 0,
         profileSummary,
         scopeCount,
-        contractValue: contract?.contract_sum || 0,
-        retainagePct: contract?.retainage_percent || 0,
-        contractId: contract?.id,
+        contractValue: activeContract?.contract_sum || 0,
+        retainagePct: activeContract?.retainage_percent || 0,
+        contractId: activeContract?.id,
         profileId: profile?.id,
       };
     },
     enabled: !!projectId,
   });
 
-  // Fetch current SOV
+  // Fetch current SOV (filtered by contract)
   const { data: currentSOV, isLoading: sovLoading } = useQuery<SOVVersion | null>({
-    queryKey: ['sov-current', projectId],
+    queryKey: ['sov-current', projectId, activeContractId],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('project_sov')
         .select('*')
         .eq('project_id', projectId)
         .order('version', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .limit(1);
+      if (activeContractId) {
+        query = query.eq('contract_id', activeContractId);
+      }
+      const { data } = await query.maybeSingle();
       return data as SOVVersion | null;
     },
     enabled: !!projectId,
@@ -140,13 +159,16 @@ export function useSOVPage(projectId: string) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.session?.access_token}`,
         },
-        body: JSON.stringify({ project_id: projectId }),
+        body: JSON.stringify({
+          project_id: projectId,
+          contract_id: activeContractId,
+        }),
       });
       if (!res.ok) {
         const err = await res.text();
         throw new Error(err || 'Failed to generate SOV');
       }
-      await qc.invalidateQueries({ queryKey: ['sov-current', projectId] });
+      await qc.invalidateQueries({ queryKey: ['sov-current', projectId, activeContractId] });
       await qc.invalidateQueries({ queryKey: ['sov-items'] });
       await qc.invalidateQueries({ queryKey: ['sov-versions', projectId] });
       toast({ title: 'SOV generated successfully' });
@@ -155,7 +177,7 @@ export function useSOVPage(projectId: string) {
     } finally {
       setGenerating(false);
     }
-  }, [prereqs, projectId, qc, toast]);
+  }, [prereqs, projectId, activeContractId, qc, toast]);
 
   // Update a line's percentage and redistribute
   const updateLinePct = useCallback(async (lineId: string, newPct: number) => {
@@ -326,9 +348,9 @@ export function useSOVPage(projectId: string) {
       locked_at: new Date().toISOString(),
       locked_by: session.session?.user?.id || null,
     }).eq('id', currentSOV.id);
-    qc.invalidateQueries({ queryKey: ['sov-current', projectId] });
+    qc.invalidateQueries({ queryKey: ['sov-current', projectId, activeContractId] });
     toast({ title: 'SOV locked', description: 'This version is now the billing template' });
-  }, [currentSOV, items, projectId, qc, toast]);
+  }, [currentSOV, items, projectId, activeContractId, qc, toast]);
 
   const totalPct = useMemo(() => items.reduce((s, i) => s + (i.percent_of_contract || 0), 0), [items]);
   const sovTotalValue = useMemo(() => items.reduce((s, i) => s + (i.value_amount || 0), 0), [items]);
@@ -359,5 +381,7 @@ export function useSOVPage(projectId: string) {
     contractMismatch,
     coveredCount,
     totalSections: scopeCoverage.length,
+    allContracts,
+    activeContractId,
   };
 }

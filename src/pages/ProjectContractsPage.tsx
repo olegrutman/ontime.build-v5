@@ -92,6 +92,8 @@ export default function ProjectContractsPage() {
     },
   });
 
+  const isFromCreatorOrg = project?.organization_id === currentUserOrgId;
+
   // Filter team based on creator role
   const filteredTeam = useMemo(() => {
     if (!creatorRole) return [];
@@ -315,6 +317,7 @@ export default function ProjectContractsPage() {
                         value={contracts[m.id] ?? ''}
                         onChange={e => setContracts(p => ({ ...p, [m.id]: e.target.value }))}
                         className="pl-7"
+                        disabled={!isFromCreatorOrg && m.role === 'General Contractor'}
                       />
                     </div>
                   </div>

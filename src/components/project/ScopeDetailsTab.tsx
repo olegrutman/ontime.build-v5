@@ -8,6 +8,9 @@ import { useProjectProfile, useProjectTypes } from '@/hooks/useProjectProfile';
 import { useScopeSections, useScopeItems, useScopeSelections, filterSections, filterItems } from '@/hooks/useScopeWizard';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { DownstreamContractsCard } from './DownstreamContractsCard';
+import { ScopeSplitCard } from './ScopeSplitCard';
 
 interface Props {
   projectId: string;
@@ -15,11 +18,54 @@ interface Props {
 
 export function ScopeDetailsTab({ projectId }: Props) {
   const navigate = useNavigate();
+  const { userOrgRoles } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProjectProfile(projectId);
   const { data: projectTypes } = useProjectTypes();
   const { data: sections } = useScopeSections();
   const { data: items } = useScopeItems();
   const { data: selections } = useScopeSelections(projectId);
+
+  const currentUserOrgId = userOrgRoles.length > 0 ? userOrgRoles[0].organization_id : null;
+  const currentUserOrgType = userOrgRoles.length > 0 ? userOrgRoles[0].organization?.type : null;
+  const isTCOrg = currentUserOrgType === 'TC';
+
+  // Fetch project creator org
+  const { data: projectInfo } = useQuery({
+    queryKey: ['project_creator_org', projectId],
+    enabled: !!projectId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('organization_id')
+        .eq('id', projectId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const isFromCreatorOrg = projectInfo?.organization_id === currentUserOrgId;
+
+  // Fetch FC orgs on the project (for scope split)
+  const { data: fcTeamOrgs = [] } = useQuery({
+    queryKey: ['project_fc_orgs_scope', projectId],
+    enabled: !!projectId && isTCOrg,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('project_team')
+        .select('org_id, invited_org_name')
+        .eq('project_id', projectId)
+        .eq('role', 'Field Crew');
+      if (error) throw error;
+      const unique = new Map<string, { id: string; name: string }>();
+      for (const m of data ?? []) {
+        if (m.org_id && !unique.has(m.org_id)) {
+          unique.set(m.org_id, { id: m.org_id, name: m.invited_org_name || 'Field Crew' });
+        }
+      }
+      return Array.from(unique.values());
+    },
+  });
 
   const { data: contracts } = useQuery({
     queryKey: ['project_contracts_summary', projectId],
@@ -185,9 +231,11 @@ export function ScopeDetailsTab({ projectId }: Props) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="text-base font-semibold">Contract Summary</CardTitle>
-          <Button variant="ghost" size="sm" onClick={() => navigate(`/project/${projectId}/contracts`)}>
-            <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
-          </Button>
+          {isFromCreatorOrg && (
+            <Button variant="ghost" size="sm" onClick={() => navigate(`/project/${projectId}/contracts`)}>
+              <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {primaryContract ? (
@@ -209,6 +257,20 @@ export function ScopeDetailsTab({ projectId }: Props) {
           )}
         </CardContent>
       </Card>
+
+      {/* TC-only: Downstream FC contracts */}
+      {isTCOrg && currentUserOrgId && (
+        <DownstreamContractsCard projectId={projectId} tcOrgId={currentUserOrgId} />
+      )}
+
+      {/* TC-only: Scope split between TC and FC */}
+      {isTCOrg && currentUserOrgId && (
+        <ScopeSplitCard
+          projectId={projectId}
+          tcOrgId={currentUserOrgId}
+          fcOrgs={fcTeamOrgs}
+        />
+      )}
     </div>
   );
 }
