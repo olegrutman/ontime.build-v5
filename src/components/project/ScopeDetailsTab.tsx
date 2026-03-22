@@ -94,10 +94,8 @@ export function ScopeDetailsTab({ projectId }: Props) {
     }
   }
 
-  const totalContractValue = contracts?.reduce((sum, c) => sum + (Number(c.contract_sum) || 0), 0) || 0;
-  const avgRetainage = contracts?.length
-    ? contracts.reduce((sum, c) => sum + (Number(c.retainage_percent) || 0), 0) / contracts.length
-    : 0;
+  const totalContractValue = Number(primaryContract?.contract_sum) || 0;
+  const retainagePercent = Number(primaryContract?.retainage_percent) || 0;
 
   const featureFlags = [
     { key: 'has_garage', label: 'Garage' },
