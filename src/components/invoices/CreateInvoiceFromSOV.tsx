@@ -186,8 +186,9 @@ export function CreateInvoiceFromSOV({
       
       const { data: sovsData } = await supabase
         .from('project_sov')
-        .select('id, contract_id, sov_name')
-        .eq('project_id', projectId);
+        .select('id, contract_id, sov_name, version, is_locked')
+        .eq('project_id', projectId)
+        .order('version', { ascending: false });
       
       setSovs((sovsData || []) as SOV[]);
       
