@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { DollarSign, Save, Loader2 } from 'lucide-react';
+import { DollarSign, Save, Loader2, Check } from 'lucide-react';
 
 interface FCTeamMember {
   id: string;
