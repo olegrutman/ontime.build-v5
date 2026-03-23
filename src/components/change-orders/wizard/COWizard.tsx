@@ -81,6 +81,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
   const { shareCO } = useChangeOrders(projectId);
   const queryClient = useQueryClient();
   const orgId = userOrgRoles?.[0]?.organization_id ?? null;
+  const orgName = (userOrgRoles?.[0] as any)?.organization?.name ?? role;
 
   const role: COCreatedByRole =
     currentRole === 'GC_PM' ? 'GC' :
@@ -356,7 +357,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
         <div className="flex items-center justify-between px-6 py-4 border-b shrink-0 bg-card">
           <div>
             <h2 className="text-lg font-semibold">New Change Order</h2>
-            <p className="text-xs text-muted-foreground">{role} · Step {step + 1} of {ALL_STEPS.length}</p>
+            <p className="text-xs text-muted-foreground">{orgName} · Step {step + 1} of {ALL_STEPS.length}</p>
           </div>
           <div className="flex gap-1.5">
             {ALL_STEPS.map((_, i) => (
