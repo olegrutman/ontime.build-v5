@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList, CheckCircle2, AlertCircle, Pencil, ChevronRight, Layers, Building2, Home, Factory, Store, Castle } from 'lucide-react';
+import { ClipboardList, CheckCircle2, AlertCircle, Pencil, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,6 +20,7 @@ interface Props {
 
 export function ScopeDetailsTab({ projectId }: Props) {
   const navigate = useNavigate();
+  const [selectedSection, setSelectedSection] = useState<string | null>(null);
   const { userOrgRoles } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProjectProfile(projectId);
   const { data: projectTypes } = useProjectTypes();
@@ -217,10 +220,15 @@ export function ScopeDetailsTab({ projectId }: Props) {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {sectionCounts.map(sec => (
-              <div key={sec.slug} className="flex items-center gap-2 text-sm py-1.5 px-2 rounded-md bg-muted/50">
+              <div
+                key={sec.slug}
+                className="flex items-center gap-2 text-sm py-1.5 px-2 rounded-md bg-muted/50 cursor-pointer hover:bg-muted transition-colors"
+                onClick={() => setSelectedSection(sec.slug)}
+              >
                 <div className="h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
                 <span className="flex-1 truncate">{sec.label}</span>
                 <span className="text-muted-foreground text-xs">{sec.count} items</span>
+                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
               </div>
             ))}
           </div>
@@ -228,6 +236,29 @@ export function ScopeDetailsTab({ projectId }: Props) {
             <p className="text-sm text-muted-foreground">No scope items selected yet</p>
           )}
         </CardContent>
+
+        {/* Section items dialog */}
+        <Dialog open={!!selectedSection} onOpenChange={(open) => !open && setSelectedSection(null)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>{sectionCounts.find(s => s.slug === selectedSection)?.label}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-1.5 max-h-[60vh] overflow-y-auto">
+              {(() => {
+                const sec = visibleSections.find(s => s.slug === selectedSection);
+                if (!sec || !items || !profile) return null;
+                const sectionItems = filterItems(items, sec.id, profile as any, typeSlug);
+                const onItems = sectionItems.filter(si => onSelections.some(sel => sel.scope_item_id === si.id));
+                return onItems.map(item => (
+                  <div key={item.id} className="flex items-center gap-2 py-1.5 px-2 rounded-md bg-muted/30">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                    <span className="text-sm">{item.label}</span>
+                  </div>
+                ));
+              })()}
+            </div>
+          </DialogContent>
+        </Dialog>
       </Card>
 
       {/* Contract Summary Card */}
