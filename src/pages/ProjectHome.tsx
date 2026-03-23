@@ -149,6 +149,13 @@ export default function ProjectHome() {
   // Derive active tab from route section param
   const activeTab = section || 'overview';
 
+  // Redirect /project/:id to /project/:id/overview
+  useEffect(() => {
+    if (id && !section) {
+      navigate(`/project/${id}/overview`, { replace: true });
+    }
+  }, [id, section, navigate]);
+
   // Navigation helper — replaces old handleTabChange
   const handleTabChange = (tab: string) => {
     if (tab === 'sov') {
