@@ -45,7 +45,7 @@ export function SupplierReturnsQueue({ returns }: Props) {
             return (
               <button
                 key={ret.id}
-                onClick={() => navigate(`/project/${ret.projectId}?tab=returns`)}
+                onClick={() => navigate(`/project/${ret.projectId}/returns`)}
                 className={`w-full text-left border border-border rounded-md border-l-[3px] ${
                   urgencyBorder[ret.urgency || 'Standard']
                 } px-3 py-2.5 hover:bg-accent transition-all flex items-center gap-2.5`}

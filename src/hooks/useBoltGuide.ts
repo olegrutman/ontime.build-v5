@@ -18,7 +18,7 @@ export function useBoltGuide() {
 
   const navigateToStep = useCallback((step: BoltStep) => {
     if (step.targetTab && demoProjectId) {
-      navigate(`/project/${demoProjectId}?tab=${step.targetTab}&demo=true`);
+      navigate(`/project/${demoProjectId}/${step.targetTab}?demo=true`);
     }
   }, [navigate, demoProjectId]);
 
