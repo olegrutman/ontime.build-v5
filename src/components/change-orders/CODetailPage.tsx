@@ -444,6 +444,9 @@ export function CODetailPage() {
                     financials={financials}
                     myOrgId={myOrgId}
                     onRefresh={refreshDetail}
+                    fcCollabName={fcCollabName}
+                    gcSideName={gcSideName}
+                  />
                   />
                 )}
 
@@ -692,11 +695,15 @@ function FCPricingToggleCard({
   financials,
   myOrgId,
   onRefresh,
+  fcCollabName,
+  gcSideName,
 }: {
   co: ChangeOrder;
   financials: COFinancials;
   myOrgId: string;
   onRefresh: () => void;
+  fcCollabName: string;
+  gcSideName: string;
 }) {
   const { updateCO } = useChangeOrders(co.project_id);
   const [toggling, setToggling] = useState(false);

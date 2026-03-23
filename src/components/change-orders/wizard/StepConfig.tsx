@@ -374,9 +374,13 @@ export function StepConfig({ data, onChange, role, projectId }: StepConfigProps)
 function ResponsibilitySection({
   data,
   onChange,
+  tcOrgName,
+  gcOrgName,
 }: {
   data:     COWizardData;
   onChange: (patch: Partial<COWizardData>) => void;
+  tcOrgName?: string;
+  gcOrgName?: string;
 }) {
   return (
     <div className="space-y-4">
