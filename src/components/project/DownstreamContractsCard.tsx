@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { DollarSign, Save, Loader2 } from 'lucide-react';
+import { DollarSign, Save, Loader2, Check } from 'lucide-react';
 
 interface FCTeamMember {
   id: string;
@@ -25,6 +25,7 @@ export function DownstreamContractsCard({ projectId, tcOrgId }: Props) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
 
   // Fetch FC team members
@@ -106,7 +107,10 @@ export function DownstreamContractsCard({ projectId, tcOrgId }: Props) {
 
       qc.invalidateQueries({ queryKey: ['project_fc_contracts', projectId] });
       qc.invalidateQueries({ queryKey: ['project_contracts'] });
-      toast({ title: 'FC contracts saved' });
+      qc.invalidateQueries({ queryKey: ['project_financials', projectId] });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+      toast({ title: '✓ FC contracts saved successfully' });
     } catch (err: any) {
       toast({ title: 'Error saving', description: err.message, variant: 'destructive' });
     } finally {
@@ -123,9 +127,9 @@ export function DownstreamContractsCard({ projectId, tcOrgId }: Props) {
           <DollarSign className="h-4 w-4" />
           Downstream Contracts (FC)
         </CardTitle>
-        <Button size="sm" variant="outline" onClick={handleSave} disabled={saving}>
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}
-          Save
+        <Button size="sm" variant={saved ? "default" : "outline"} onClick={handleSave} disabled={saving || saved} className={saved ? "bg-green-600 hover:bg-green-600 text-white" : ""}>
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : saved ? <Check className="h-3.5 w-3.5 mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}
+          {saved ? 'Saved!' : 'Save'}
         </Button>
       </CardHeader>
       <CardContent className="space-y-3">
