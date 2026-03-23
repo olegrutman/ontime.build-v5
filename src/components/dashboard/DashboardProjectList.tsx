@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, Plus, MoreVertical, HardHat, Truck } from 'lucide-react';
+import { Briefcase, Plus, MoreVertical, HardHat, Truck, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -165,7 +165,7 @@ export function DashboardProjectList({
           {filteredProjects.map((project) => (
             <div
               key={project.id}
-              className="px-4 py-3 hover:bg-accent/50 transition-colors cursor-pointer flex items-center gap-3 group"
+              className="px-4 py-3.5 border-l-[3px] border-l-transparent hover:border-l-primary hover:bg-accent/60 transition-all cursor-pointer flex items-center gap-3 group"
               style={{ minHeight: '56px' }}
               onClick={() => navigate(`/project/${project.id}`)}
             >
@@ -213,6 +213,9 @@ export function DashboardProjectList({
               <span className="text-[0.82rem] font-semibold text-foreground shrink-0">
                 {project.contractValue != null ? formatCurrency(project.contractValue) : '—'}
               </span>
+
+              {/* Chevron indicator */}
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
 
               {/* Actions menu */}
               <DropdownMenu>
