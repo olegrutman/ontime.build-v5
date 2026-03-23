@@ -213,7 +213,7 @@ export function CODetailPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => navigate(`/projects/${projectId}?tab=change-orders`)}
+                      onClick={() => navigate(`/project/${projectId}?tab=change-orders`)}
                       className="shrink-0"
                     >
                       <ArrowLeft className="h-4 w-4" />
