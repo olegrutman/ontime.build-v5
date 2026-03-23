@@ -1,28 +1,70 @@
 
 
-# Turn Scope Page Into a Step-by-Step Wizard
+# Reorganize Scope Sections Using Real-World Construction Logic
 
-## What I Understand
+## Database Migration — Move items between sections, rename sections, rename items
 
-Right now, the Scope page shows all sections stacked on one long scrollable page with collapsible cards. You want each section (e.g. "Foundation", "Framing", "Exterior", etc.) to be its own wizard step — so the user sees one section at a time with Back/Next buttons to move between them. You also want the STD and OPT badges removed from each item — just show the item name and its toggle, clean and simple.
+### 1. Rename "Floor Systems" → "Exterior Framing"
+- Update section label and slug
+- Rename items: "1st floor framing" → "1st floor walls", "2nd floor framing" → "2nd floor walls", etc.
 
-## Changes
+### 2. Move "Exterior sheathing" from "Sheathing & WRB" → "Exterior Framing"
+- Item `2e2f78a1` ("Exterior sheathing") moves to section `db75d502` (Exterior Framing)
+- Also move "Integral insulation sheathing" (`17e2f447`) since it's wall sheathing
 
-### File: `src/pages/ProjectScopeWizard.tsx`
+### 3. Rename "Sheathing & WRB" → "WRB"
+- Remaining items: House wrap/WRB, opening treatments, drip caps, sill pans, base of wall transitions, patio transitions, penetration sealing — all WRB work
+- Update section label and slug
 
-1. **Add a `currentStep` state** (starts at 0) to track which section the user is viewing
-2. **Replace the `visibleSections.map()` loop** with a single-section view showing only `visibleSections[currentStep]` and its items
-3. **Add a step indicator** at the top (reuse the existing `WizardProgress` component from `src/components/ui/wizard-progress.tsx`) showing section names as steps
-4. **Update the sticky footer**:
-   - "Back" goes to previous section (or back to profile on step 0)
-   - "Next" goes to next section
-   - On the last section, "Next" becomes "Save Scope & Continue" (triggers save)
-5. **Remove the STD/OPT Badge** entirely from each item row — just show the item label and the switch
-6. **Remove the Collapsible/accordion logic** — no longer needed since each section is its own page
-7. **Update the subtitle text** — remove the "STD items are standard scope, OPT items are optional add-ons" explanation
-8. **Show section title and description** prominently as a heading for each step
+### 4. Move "Fascia and sub-fascia" from Roof → "Siding & Exterior Trim"
+- Item `725f521e` moves to section `7f18ff2d`
+
+### 5. Move backout items to "Hardware & Backout"
+- "Shim and shave exterior walls" (`9ee823fa`) from Siding → Backout
+- "Shim bottom plates" (`5f9ec2da`) from Siding → Backout  
+- "Stud replacement after MEP punch" (`779ef220`) from Siding → Backout (note: similar item already exists in Backout as "Stud replacement after MEP pulls" — may merge)
+- "TV mounts" (`018c426c`) from Interior Framing → Backout
+
+### 6. Rename "Hardware & Backout" → "Backout"
+- Clean up the label
+
+## SQL Migration Summary
+
+```sql
+-- 1. Rename Floor Systems → Exterior Framing
+UPDATE scope_sections SET label = 'Exterior Framing', slug = 'exterior_framing' WHERE id = 'db75d502-754a-457e-83b7-5ef17403a194';
+
+-- Rename framing items to "walls"
+UPDATE scope_items SET label = '1st floor walls' WHERE id = 'f8e3e622-2892-497b-b754-2ceb65c231cf';
+UPDATE scope_items SET label = '2nd floor walls' WHERE id = '071a7b39-636c-4368-93c2-bdd28e0b7e64';
+UPDATE scope_items SET label = '3rd floor walls' WHERE id = '6cc1b6f2-91d2-4dff-8b29-b7d0f6a3dd09';
+UPDATE scope_items SET label = '4th floor walls' WHERE id = '78351c15-6c76-48de-a27f-3ca0117f6737';
+
+-- 2. Move exterior sheathing items to Exterior Framing
+UPDATE scope_items SET section_id = 'db75d502-754a-457e-83b7-5ef17403a194', display_order = 12 WHERE id = '2e2f78a1-c84e-4c2d-92e9-3434360ca791';
+UPDATE scope_items SET section_id = 'db75d502-754a-457e-83b7-5ef17403a194', display_order = 13 WHERE id = '17e2f447-58c2-48b7-ac42-cf85dd03a83d';
+
+-- 3. Rename Sheathing & WRB → WRB
+UPDATE scope_sections SET label = 'WRB', slug = 'wrb' WHERE id = '77de21ed-d4f3-4dc4-83a3-72f84184e7e3';
+
+-- 4. Move fascia/sub-fascia from Roof → Siding & Exterior Trim
+UPDATE scope_items SET section_id = '7f18ff2d-4471-472a-b94b-c81e3dc7409a', display_order = 13 WHERE id = '725f521e-8952-4e57-9df4-57d57997079f';
+
+-- 5. Move backout items to Hardware & Backout section
+UPDATE scope_items SET section_id = (SELECT id FROM scope_sections WHERE slug = 'hardware_backout'), display_order = 7 WHERE id = '9ee823fa-fed1-4ea9-98bc-b52177c6ce91'; -- shim and shave
+UPDATE scope_items SET section_id = (SELECT id FROM scope_sections WHERE slug = 'hardware_backout'), display_order = 8 WHERE id = '5f9ec2da-95ac-452f-b101-9510d8cba403'; -- shim bottom plates
+UPDATE scope_items SET section_id = (SELECT id FROM scope_sections WHERE slug = 'hardware_backout'), display_order = 9 WHERE id = '779ef220-4df1-4722-ae03-321562a0a9d4'; -- stud replacement (dupe — merge with existing)
+UPDATE scope_items SET section_id = (SELECT id FROM scope_sections WHERE slug = 'hardware_backout'), display_order = 10 WHERE id = '018c426c-6ab7-4ef4-bda7-18e4d4e3af02'; -- TV mounts → blocking
+
+-- 6. Rename Hardware & Backout → Backout
+UPDATE scope_sections SET label = 'Backout', slug = 'backout' WHERE slug = 'hardware_backout';
+```
+
+### Code changes
 
 | File | Change |
 |------|--------|
-| `src/pages/ProjectScopeWizard.tsx` | Convert from scrollable list to step-per-section wizard, remove STD/OPT badges |
+| `src/types/projectProfile.ts` | Update any slug references from `floor_systems` → `exterior_framing`, `sheathing_wrb` → `wrb`, `hardware_backout` → `backout` |
+| `src/pages/ProjectScopeWizard.tsx` | No changes needed — sections are loaded dynamically from DB |
+| `src/components/project/ProjectScopeSection.tsx` | No changes needed — reads from DB |
 
