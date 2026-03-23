@@ -510,17 +510,21 @@ export default function ProjectSOVPage() {
 
           <main className="flex-1 overflow-auto pb-24 lg:pb-6">
             <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 space-y-4">
-              {allContracts.length === 0 ? (
-                <Card>
-                  <CardContent className="p-6 text-center text-muted-foreground">
-                    <p className="text-sm">No contracts found for this project.</p>
-                    <Button size="sm" variant="outline" className="mt-3" onClick={() => navigate(`/project/${projectId}/contracts`)}>
-                      Create Contract
-                    </Button>
-                  </CardContent>
-                </Card>
-              ) : (
-                allContracts.map(contract => (
+              {(() => {
+                const visibleContracts = allContracts.filter(c =>
+                  c.from_org_id === userOrgId || c.to_org_id === userOrgId
+                );
+                if (visibleContracts.length === 0) return (
+                  <Card>
+                    <CardContent className="p-6 text-center text-muted-foreground">
+                      <p className="text-sm">No contracts found for this project.</p>
+                      <Button size="sm" variant="outline" className="mt-3" onClick={() => navigate(`/project/${projectId}/contracts`)}>
+                        Create Contract
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+                return visibleContracts.map(contract => (
                   <SOVContractSection
                     key={contract.id}
                     projectId={projectId!}
