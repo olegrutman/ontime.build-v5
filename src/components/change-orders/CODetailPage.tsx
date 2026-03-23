@@ -447,7 +447,6 @@ export function CODetailPage() {
                     fcCollabName={fcCollabName}
                     gcSideName={gcSideName}
                   />
-                  />
                 )}
 
                 <div className="co-light-shell overflow-hidden">
