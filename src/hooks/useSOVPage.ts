@@ -17,8 +17,7 @@ export function useSOVPage(projectId: string, contractId?: string | null) {
         .from('project_contracts')
         .select('id, contract_sum, retainage_percent, from_role, to_role, trade, from_org_id, to_org_id')
         .eq('project_id', projectId)
-        .neq('trade', 'Work Order')
-        .neq('trade', 'Work Order Labor');
+        .or('trade.is.null,and(trade.neq.Work Order,trade.neq.Work Order Labor)');
       return data || [];
     },
     enabled: !!projectId,
