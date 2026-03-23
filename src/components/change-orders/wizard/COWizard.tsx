@@ -28,6 +28,7 @@ export interface COWizardData {
   pricingType: COPricingType;
   nteCap: string;
   assignedToOrgId: string;
+  fcOrgId: string;
   fcInputNeeded: boolean;
   materialsNeeded: boolean;
   materialsOnSite: boolean;
@@ -43,6 +44,7 @@ const INITIAL_DATA: COWizardData = {
   pricingType: 'fixed',
   nteCap: '',
   assignedToOrgId: '',
+  fcOrgId: '',
   fcInputNeeded: false,
   materialsNeeded: false,
   materialsOnSite: false,
