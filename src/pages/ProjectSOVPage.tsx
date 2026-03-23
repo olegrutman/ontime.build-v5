@@ -41,7 +41,7 @@ function SOVContractSection({
 }) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   const {
     prereqs, prereqsLoading, currentSOV, sovLoading, items, itemsLoading,
