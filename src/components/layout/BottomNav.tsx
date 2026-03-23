@@ -35,26 +35,12 @@ export function BottomNav() {
   const [searchParams] = useSearchParams();
   const { permissions, userOrgRoles } = useAuth();
   const [moreOpen, setMoreOpen] = useState(false);
-  const [captureOpen, setCaptureOpen] = useState(false);
 
   const canManageOrg = permissions?.canManageOrg ?? false;
-  const isSupplier = userOrgRoles[0]?.organization?.type === 'SUPPLIER';
 
   // On project pages, ProjectBottomNav handles mobile nav — hide this one
+  const isProjectPage = location.pathname.startsWith('/project/');
   if (isProjectPage) return null;
-  const projectId = isProjectPage ? location.pathname.split('/')[2] : null;
-  const activeTab = searchParams.get('tab') || 'overview';
-
-  // Feature access checks
-  const sovEnabled = useFeatureEnabled('sov_contracts');
-  const changeOrdersEnabled = useFeatureEnabled('change_orders');
-  const scheduleEnabled = useFeatureEnabled('schedule_gantt');
-  const dailyLogEnabled = useFeatureEnabled('daily_logs');
-  const invoicingEnabled = useFeatureEnabled('invoicing');
-  const posEnabled = useFeatureEnabled('purchase_orders');
-  const returnsEnabled = useFeatureEnabled('returns_tracking');
-  const fieldCaptureEnabled = useFeatureEnabled('field_capture');
-  const orgId = userOrgRoles[0]?.organization_id;
 
   const dashboardPrimaryItems: NavItem[] = [
     { label: 'Home', icon: Home, path: '/dashboard' },
@@ -67,40 +53,18 @@ export function BottomNav() {
     ...(canManageOrg ? [{ label: 'My Team', icon: Users, path: '/org/team' }] : []),
   ];
 
-  const primaryProjectItems: NavItem[] = [
-    { label: 'Home', icon: Home, path: '/dashboard' },
-    { label: 'Overview', icon: LayoutDashboard, tab: 'overview' },
-    { label: 'Scope', icon: ListChecks, tab: 'scope-details' },
-    ...(changeOrdersEnabled ? [{ label: 'COs', icon: FileText, tab: 'change-orders' }] : []),
-  ];
-
-  const moreProjectItems: NavItem[] = [
-    ...(!isSupplier && sovEnabled ? [{ label: 'SOV', icon: ListChecks, tab: 'sov' }] : []),
-    ...(scheduleEnabled ? [{ label: 'Schedule', icon: CalendarDays, tab: 'schedule' }] : []),
-    ...(dailyLogEnabled ? [{ label: 'Daily Log', icon: ClipboardList, tab: 'daily-log' }] : []),
-    ...(invoicingEnabled ? [{ label: 'Invoices', icon: FileText, tab: 'invoices' }] : []),
-    ...(posEnabled ? [{ label: 'POs', icon: ShoppingCart, tab: 'purchase-orders' }] : []),
-    ...(returnsEnabled ? [{ label: 'Returns', icon: Undo2, tab: 'returns' }] : []),
-    { label: 'RFIs', icon: MessageSquareMore, tab: 'rfis' },
-  ];
-
-  const items = isProjectPage ? primaryProjectItems : dashboardPrimaryItems;
-  const moreItems = isProjectPage ? moreProjectItems : dashboardMoreItems;
-  const moreIsActive = isProjectPage
-    ? moreProjectItems.some(i => i.tab === activeTab)
-    : dashboardMoreItems.some(i => i.path === location.pathname);
+  const items = dashboardPrimaryItems;
+  const moreItems = dashboardMoreItems;
+  const moreIsActive = dashboardMoreItems.some(i => i.path === location.pathname);
 
   const isActive = (item: NavItem) => {
     if (item.path) return location.pathname === item.path;
-    if (item.tab) return activeTab === item.tab;
     return false;
   };
 
   const handleClick = (item: NavItem) => {
     if (item.path) {
       navigate(item.path);
-    } else if (item.tab && projectId) {
-      navigate(`/project/${projectId}?tab=${item.tab}`);
     }
   };
 
