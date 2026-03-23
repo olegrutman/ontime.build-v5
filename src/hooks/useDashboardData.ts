@@ -497,18 +497,7 @@ export function useDashboardData(): DashboardData {
       recentDocsList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setRecentDocs(recentDocsList.slice(0, 10));
 
-      // Contract detail map for invoice filtering
-      const contractIds = [...new Set(allInvoices.map(i => i.contract_id).filter((id): id is string => id !== null))];
-      let contractDetailMap = new Map<string, { from_org_id: string | null; to_org_id: string | null }>();
-      if (contractIds.length > 0) {
-        const { data: contractDetails } = await supabase
-          .from('project_contracts')
-          .select('id, from_org_id, to_org_id')
-          .in('id', contractIds);
-        (contractDetails || []).forEach((c: any) => {
-          contractDetailMap.set(c.id, { from_org_id: c.from_org_id, to_org_id: c.to_org_id });
-        });
-      }
+      // contractDetailMap already built above — reuse it
 
       // Outstanding to Pay
       const invoicesToPay = allInvoices.filter(i => {
