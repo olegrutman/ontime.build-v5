@@ -55,30 +55,27 @@ serve(async (req) => {
     // If contract_id provided, check for scope assignments to filter items
     let scopeItems = scopeRes.data || [];
     if (contract_id) {
-      const { data: assignments } = await admin
-        .from("project_scope_assignments")
-        .select("scope_item_id, assigned_role")
-        .eq("project_id", project_id);
-      
-      if (assignments && assignments.length > 0) {
-        // Determine if this is an FC contract (from_role=Field Crew)
-        const contractData = contractRes.data;
-        const isFCContract = contractData && await (async () => {
-          const { data: fullContract } = await admin
-            .from("project_contracts")
-            .select("from_role")
-            .eq("id", contract_id)
-            .single();
-          return fullContract?.from_role === 'Field Crew';
-        })();
+      // Determine if this is an FC contract (check both roles for consistency)
+      const { data: fullContract } = await admin
+        .from("project_contracts")
+        .select("from_role, to_role")
+        .eq("id", contract_id)
+        .single();
+      const isFCContract = fullContract?.from_role === 'Field Crew' || fullContract?.to_role === 'Field Crew';
 
-        const assignedRole = isFCContract ? 'Field Crew' : 'Trade Contractor';
-        const assignedIds = new Set(
-          assignments.filter(a => a.assigned_role === assignedRole).map(a => a.scope_item_id)
-        );
-        
-        // Filter scope items to only those assigned to this contract's role
-        scopeItems = scopeItems.filter((s: any) => assignedIds.has(s.scope_item_id));
+      // Only filter scope items for FC contracts — GC↔TC covers all work
+      if (isFCContract) {
+        const { data: assignments } = await admin
+          .from("project_scope_assignments")
+          .select("scope_item_id, assigned_role")
+          .eq("project_id", project_id);
+
+        if (assignments && assignments.length > 0) {
+          const fcIds = new Set(
+            assignments.filter(a => a.assigned_role === 'Field Crew').map(a => a.scope_item_id)
+          );
+          scopeItems = scopeItems.filter((s: any) => fcIds.has(s.scope_item_id));
+        }
       }
     }
 
@@ -230,7 +227,7 @@ IMPORTANT: The SOV must cover every scope section listed above. If a scope secti
     }
 
     // Determine version
-    const { data: existingSov } = await admin.from("project_sov").select("id, version").eq("project_id", project_id).order("version", { ascending: false }).limit(1).maybeSingle();
+    const { data: existingSov } = await admin.from("project_sov").select("id, version").eq("project_id", project_id).eq("contract_id", contract.id).order("version", { ascending: false }).limit(1).maybeSingle();
 
     const newVersion = existingSov ? existingSov.version + 1 : 1;
 
