@@ -145,7 +145,7 @@ export function ScopeSplitCard({ projectId, tcOrgId, fcOrgs }: Props) {
           </div>
           {fcAssignedCount === 0 && (
             <p className="text-sm text-muted-foreground">
-              All scope items are assigned to your team. Use "Split Scope" to assign items to your Field Crew.
+              All scope items are assigned to your team. Use "Split Scope" to assign items to {fcOrgs[0]?.name || 'your field crew'}.
             </p>
           )}
         </CardContent>
