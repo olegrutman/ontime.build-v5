@@ -28,6 +28,7 @@ export interface COWizardData {
   pricingType: COPricingType;
   nteCap: string;
   assignedToOrgId: string;
+  fcOrgId: string;
   fcInputNeeded: boolean;
   materialsNeeded: boolean;
   materialsOnSite: boolean;
@@ -43,6 +44,7 @@ const INITIAL_DATA: COWizardData = {
   pricingType: 'fixed',
   nteCap: '',
   assignedToOrgId: '',
+  fcOrgId: '',
   fcInputNeeded: false,
   materialsNeeded: false,
   materialsOnSite: false,
@@ -83,6 +85,8 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
   const role: COCreatedByRole =
     currentRole === 'GC_PM' ? 'GC' :
     currentRole === 'TC_PM' ? 'TC' : 'FC';
+
+  const orgName = (userOrgRoles?.[0] as any)?.organization?.name ?? role;
 
   function update(patch: Partial<COWizardData>) {
     setData(prev => ({ ...prev, ...patch }));
@@ -354,7 +358,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
         <div className="flex items-center justify-between px-6 py-4 border-b shrink-0 bg-card">
           <div>
             <h2 className="text-lg font-semibold">New Change Order</h2>
-            <p className="text-xs text-muted-foreground">{role} · Step {step + 1} of {ALL_STEPS.length}</p>
+            <p className="text-xs text-muted-foreground">{orgName} · Step {step + 1} of {ALL_STEPS.length}</p>
           </div>
           <div className="flex gap-1.5">
             {ALL_STEPS.map((_, i) => (
