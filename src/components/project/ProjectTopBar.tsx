@@ -57,15 +57,6 @@ export function ProjectTopBar({
   const { toast } = useToast();
   const [downloading, setDownloading] = useState(false);
 
-  // Feature access checks for all gated tabs
-  const sovEnabled = useFeatureEnabled('sov_contracts');
-  const changeOrdersEnabled = useFeatureEnabled('change_orders');
-  const scheduleEnabled = useFeatureEnabled('schedule_gantt');
-  const dailyLogEnabled = useFeatureEnabled('daily_logs');
-  const invoicingEnabled = useFeatureEnabled('invoicing');
-  const posEnabled = useFeatureEnabled('purchase_orders');
-  const returnsEnabled = useFeatureEnabled('returns_tracking');
-  const estimatesEnabled = useFeatureEnabled('supplier_estimates');
 
   const handleDownloadSummary = async () => {
     setDownloading(true);
