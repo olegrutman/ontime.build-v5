@@ -63,22 +63,22 @@ export function StepConfig({ data, onChange, role, projectId }: StepConfigProps)
     if (!projectId) return;
     setLoading(true);
     supabase
-      .from('project_team')
+      .from('project_participants')
       .select(`
         id,
-        org_id,
+        organization_id,
         role,
-        organization:organizations(id, name)
+        organizations:organization_id(id, name)
       `)
       .eq('project_id', projectId)
-      .eq('status', 'Accepted')
+      .eq('invite_status', 'ACCEPTED')
       .then(({ data: rows }) => {
         const members: TeamMember[] = (rows ?? [])
-          .filter((r: any) => r.org_id && r.organization)
+          .filter((r: any) => r.organization_id && r.organizations)
           .map((r: any) => ({
             id:       r.id,
-            org_id:   r.org_id,
-            org_name: r.organization?.name ?? 'Unknown',
+            org_id:   r.organization_id,
+            org_name: r.organizations?.name ?? 'Unknown',
             role:     r.role ?? '',
           }));
         setTcMembers(members.filter(m =>
@@ -263,8 +263,8 @@ export function StepConfig({ data, onChange, role, projectId }: StepConfigProps)
             <div className="pl-4 space-y-2">
               <Label>Assign field crew</Label>
               <Select
-                value={data.assignedToOrgId}
-                onValueChange={(v) => onChange({ assignedToOrgId: v })}
+                value={data.fcOrgId ?? ''}
+                onValueChange={(v) => onChange({ fcOrgId: v } as any)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select field crew" />

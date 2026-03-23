@@ -53,9 +53,13 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess 
   const [submitting, setSubmitting] = useState(false);
   const [retainagePercent, setRetainagePercent] = useState(0);
 
+  // Determine invoicing role from org type
+  const orgType = userOrgRoles[0]?.organization?.type as string | undefined;
+  const invoicingRole: 'TC' | 'FC' | null = orgType === 'TC' ? 'TC' : orgType === 'FC' ? 'FC' : null;
+
   // Fetch approved COs and existing billed CO IDs
   useEffect(() => {
-    if (!open || !projectId) return;
+    if (!open || !projectId || !currentOrgId) return;
     setStep('select');
     setSelectedIds(new Set());
     setLineItems([]);
@@ -63,14 +67,27 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess 
     (async () => {
       setLoading(true);
       try {
-        // Get approved COs on this project
+        // Get approved COs on this project filtered by org involvement
         const { data: cos, error: cosErr } = await supabase
           .from('change_orders')
-          .select('id, title, co_number, location_tag, reason, pricing_type')
+          .select('id, title, co_number, location_tag, reason, pricing_type, org_id, assigned_to_org_id, completion_acknowledged_at')
           .eq('project_id', projectId)
           .in('status', ['approved', 'contracted'])
           .order('created_at', { ascending: false });
         if (cosErr) throw cosErr;
+
+        // Filter: TC sees COs assigned to them; FC sees COs where they own it
+        const filtered = (cos ?? []).filter(co => {
+          if (invoicingRole === 'TC') {
+            // TC invoices GC: only COs assigned to TC's org with completion acknowledged
+            return co.assigned_to_org_id === currentOrgId && co.completion_acknowledged_at;
+          }
+          if (invoicingRole === 'FC') {
+            // FC invoices TC: only COs created by FC's org
+            return co.org_id === currentOrgId;
+          }
+          return false; // GC doesn't create invoices from COs
+        });
 
         // Get already-billed CO IDs from existing invoices
         const { data: invoices, error: invErr } = await supabase
@@ -87,7 +104,7 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess 
         }
 
         setExistingCoIds(billed);
-        setApprovedCOs((cos ?? []) as ApprovedCO[]);
+        setApprovedCOs(filtered as ApprovedCO[]);
       } catch (err: any) {
         toast.error(err.message || 'Failed to load change orders');
       } finally {
@@ -114,12 +131,27 @@ export function CreateInvoiceFromCOs({ open, onOpenChange, projectId, onSuccess 
     try {
       const ids = Array.from(selectedIds);
 
-      // Fetch labor, materials, equipment for selected COs
+      // Fetch labor, materials, equipment for selected COs — filtered by invoicing role
+      let laborQuery = supabase.from('co_labor_entries').select('*').in('co_id', ids).eq('is_actual_cost', false).order('entry_date');
+      if (invoicingRole) {
+        laborQuery = laborQuery.eq('entered_by_role', invoicingRole);
+      }
+
+      let materialsQuery = supabase.from('co_material_items').select('*').in('co_id', ids).order('line_number');
+      if (invoicingRole) {
+        materialsQuery = materialsQuery.eq('added_by_role', invoicingRole);
+      }
+
+      let equipmentQuery = supabase.from('co_equipment_items').select('*').in('co_id', ids).order('created_at');
+      if (invoicingRole) {
+        equipmentQuery = equipmentQuery.eq('added_by_role', invoicingRole);
+      }
+
       const [laborRes, lineItemsRes, materialsRes, equipmentRes] = await Promise.all([
-        supabase.from('co_labor_entries').select('*').in('co_id', ids).eq('is_actual_cost', false).order('entry_date'),
+        laborQuery,
         supabase.from('co_line_items').select('*').in('co_id', ids).order('sort_order'),
-        supabase.from('co_material_items').select('*').in('co_id', ids).order('line_number'),
-        supabase.from('co_equipment_items').select('*').in('co_id', ids).order('created_at'),
+        materialsQuery,
+        equipmentQuery,
       ]);
 
       if (laborRes.error) throw laborRes.error;

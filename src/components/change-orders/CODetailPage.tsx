@@ -412,7 +412,7 @@ export function CODetailPage() {
               <aside className="space-y-4 md:space-y-5">
                 <div className="co-light-shell p-4 space-y-1">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Current role</p>
-                  <p className="text-sm font-semibold text-foreground">{role}</p>
+                  <p className="text-sm font-semibold text-foreground">{myOrgName}</p>
                   <p className="text-xs text-muted-foreground truncate">{user?.email ?? 'Authenticated user'}</p>
                 </div>
 
@@ -536,7 +536,7 @@ export function CODetailPage() {
                     <DetailRow label="Pricing" value={PRICING_LABEL[co.pricing_type] ?? co.pricing_type} />
                     {/* co.reason is now per-item on co_line_items — removed dead field (m3) */}
                     {co.location_tag && <DetailRow label="Location" value={co.location_tag} />}
-                    <DetailRow label="Created by" value={co.created_by_role} />
+                    <DetailRow label="Created by" value={coOwnerOrgName ?? co.created_by_role} />
                     <DetailRow label="Created" value={co.created_at ? format(new Date(co.created_at), 'MMM d, yyyy') : '—'} />
                   </div>
                 </div>
