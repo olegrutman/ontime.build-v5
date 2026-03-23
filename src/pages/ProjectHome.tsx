@@ -138,6 +138,9 @@ export default function ProjectHome() {
   const realtimeKey = useProjectRealtime(id);
   const financials = useProjectFinancials(id || '', isSupplier, supplierOrgId);
   const readiness = useProjectReadiness(id);
+  const { data: projectProfile } = useProjectProfile(id);
+  const { data: scopeSelections } = useScopeSelections(id);
+  const showSetupBanner = !projectProfile || !scopeSelections || scopeSelections.length === 0;
 
   // Sync local project status when auto-activation completes
   useEffect(() => {
