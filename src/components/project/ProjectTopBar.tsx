@@ -20,8 +20,6 @@ interface ProjectTopBarProps {
   projectName: string;
   projectId: string;
   projectStatus: string;
-  activeTab: string;
-  onTabChange: (tab: string) => void;
   onStatusChange?: (status: string) => void;
   isSupplier?: boolean;
 }
@@ -53,8 +51,6 @@ export function ProjectTopBar({
   projectName,
   projectId,
   projectStatus,
-  activeTab,
-  onTabChange,
   onStatusChange,
   isSupplier = false,
 }: ProjectTopBarProps) {
