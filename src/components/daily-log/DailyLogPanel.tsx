@@ -155,7 +155,7 @@ export function DailyLogPanel({ projectId }: DailyLogPanelProps) {
       </div>
 
       {/* Critical schedule */}
-      <CriticalScheduleCard projectId={projectId} onNavigate={(tab) => { window.location.pathname = window.location.pathname.replace(//[^/]*$/, '/') + tab; }} />
+      <CriticalScheduleCard projectId={projectId} onNavigate={(tab) => { window.location.pathname = window.location.pathname.replace(/\/[^/]*$/, '/') + tab; }} />
 
       {/* Cards */}
       <WeatherCard
