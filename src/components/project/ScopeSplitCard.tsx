@@ -139,8 +139,8 @@ export function ScopeSplitCard({ projectId, tcOrgId, fcOrgs }: Props) {
           <div className="flex items-center gap-2 mb-2">
             <Badge variant="secondary">{activeItems.length} total items</Badge>
             <span className="text-sm text-muted-foreground">
-              · {fcAssignedCount} assigned to FC
-              · {activeItems.length - fcAssignedCount} kept by TC
+              · {fcAssignedCount} assigned to {fcOrgs[0]?.name || 'Field Crew'}
+              · {activeItems.length - fcAssignedCount} kept by your team
             </span>
           </div>
           {fcAssignedCount === 0 && (
