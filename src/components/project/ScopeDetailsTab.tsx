@@ -72,16 +72,19 @@ export function ScopeDetailsTab({ projectId }: Props) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('project_contracts')
-        .select('id, contract_sum, retainage_percent, from_role, to_role, trade')
+        .select('id, contract_sum, retainage_percent, from_role, to_role, trade, from_org_id, to_org_id')
         .eq('project_id', projectId);
       if (error) throw error;
       return data;
     },
   });
 
-  const primaryContract = contracts?.find(c =>
-    c.from_role === 'Trade Contractor' &&
-    c.to_role === 'General Contractor' &&
+  // Filter contracts to only those where user's org is a party
+  const myContracts = contracts?.filter(c =>
+    c.from_org_id === currentUserOrgId || c.to_org_id === currentUserOrgId
+  );
+
+  const primaryContract = myContracts?.find(c =>
     c.trade !== 'Work Order' &&
     c.trade !== 'Work Order Labor'
   );
