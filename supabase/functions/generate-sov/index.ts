@@ -227,7 +227,7 @@ IMPORTANT: The SOV must cover every scope section listed above. If a scope secti
     }
 
     // Determine version
-    const { data: existingSov } = await admin.from("project_sov").select("id, version").eq("project_id", project_id).order("version", { ascending: false }).limit(1).maybeSingle();
+    const { data: existingSov } = await admin.from("project_sov").select("id, version").eq("project_id", project_id).eq("contract_id", contract.id).order("version", { ascending: false }).limit(1).maybeSingle();
 
     const newVersion = existingSov ? existingSov.version + 1 : 1;
 

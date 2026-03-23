@@ -156,9 +156,24 @@ export function ScopeSplitCard({ projectId, tcOrgId, fcOrgs }: Props) {
           <DialogHeader>
             <DialogTitle>Split Scope — TC vs FC</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Check items to assign to <strong>{fcOrgs[0]?.name || 'Field Crew'}</strong>. Unchecked items stay with your team.
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Check items to assign to <strong>{fcOrgs[0]?.name || 'Field Crew'}</strong>. Unchecked items stay with your team.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (fcAssignments.size === activeItems.length) {
+                  setFcAssignments(new Set());
+                } else {
+                  setFcAssignments(new Set(activeItems.map(i => i.id)));
+                }
+              }}
+            >
+              {fcAssignments.size === activeItems.length ? 'Deselect All' : 'Select All'}
+            </Button>
+          </div>
           <div className="flex-1 overflow-auto space-y-4 py-2">
             {(() => {
               const grouped = new Map<string, typeof activeItems>();
