@@ -570,6 +570,7 @@ function AddScopeItemButton({ coId, orgId, projectId, role, co, collaborators, o
     pricingType: 'fixed',
     nteCap: '',
     assignedToOrgId: '',
+    fcOrgId: '',
     fcInputNeeded: false,
     materialsNeeded: false,
     materialsOnSite: false,
