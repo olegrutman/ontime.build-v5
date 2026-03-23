@@ -36,17 +36,17 @@ const PRICING_OPTIONS: {
   {
     type:        'fixed',
     title:       'Fixed price',
-    description: 'TC submits a lump sum or itemized price. You approve before work begins.',
+    description: 'They submit a lump sum or itemized price. You approve before work begins.',
   },
   {
     type:        'tm',
     title:       'Time and material',
-    description: 'TC logs hours and costs as work happens. Running total is visible to you in real time.',
+    description: 'They log hours and costs as work happens. Running total is visible to you in real time.',
   },
   {
     type:        'nte',
     title:       'Not to exceed',
-    description: 'TC tracks hours like T&M but cannot bill past the cap you set. TC must notify you before going over.',
+    description: 'They track hours like T&M but cannot bill past the cap you set. They must notify you before going over.',
   },
 ];
 
@@ -54,6 +54,10 @@ export function StepConfig({ data, onChange, role, projectId }: StepConfigProps)
   const [tcMembers, setTcMembers] = useState<TeamMember[]>([]);
   const [fcMembers, setFcMembers] = useState<TeamMember[]>([]);
   const [loading,   setLoading]   = useState(false);
+
+  // Resolve selected org names for dynamic labels
+  const selectedTcName = tcMembers.find(m => m.org_id === data.assignedToOrgId)?.org_name;
+  const selectedFcName = fcMembers.find(m => m.org_id === data.assignedToOrgId)?.org_name;
 
   useEffect(() => {
     if (!projectId) return;
@@ -93,7 +97,7 @@ export function StepConfig({ data, onChange, role, projectId }: StepConfigProps)
       <div className="space-y-6">
         {/* Assign TC */}
         <div className="space-y-2">
-          <Label>Assign to Trade Contractor *</Label>
+          <Label>Assign to *</Label>
           <Select
             value={data.assignedToOrgId}
             onValueChange={(v) => onChange({ assignedToOrgId: v })}
@@ -170,21 +174,21 @@ export function StepConfig({ data, onChange, role, projectId }: StepConfigProps)
                 />
               </div>
               <p className="text-xs text-muted-foreground">
-                TC will be warned at 80% and notified at 95%. They must request your approval to exceed this amount.
+                They will be warned at 80% and notified at 95%. They must request your approval to exceed this amount.
               </p>
             </div>
           )}
         </div>
 
         {/* Responsibility */}
-        <ResponsibilitySection data={data} onChange={onChange} />
+        <ResponsibilitySection data={data} onChange={onChange} tcOrgName={selectedTcName} />
 
         {/* Share toggle */}
         <ShareToggle
           value={data.shareDraftNow}
           onChange={(v) => onChange({ shareDraftNow: v })}
-          label="Share this CO with TC immediately"
-          hint="If off, TC cannot see this CO until you choose to share it."
+          label={`Share with ${selectedTcName ?? 'them'} immediately`}
+          hint={`If off, they cannot see this CO until you choose to share it.`}
         />
       </div>
     );
@@ -250,14 +254,14 @@ export function StepConfig({ data, onChange, role, projectId }: StepConfigProps)
         <div className="space-y-3">
           <ToggleRow
             label="Field crew input needed"
-            hint="FC will be able to add hours and notes"
+            hint="They will be able to add hours and notes"
             checked={data.fcInputNeeded}
             onChange={(v) => onChange({ fcInputNeeded: v })}
           />
 
           {data.fcInputNeeded && (
             <div className="pl-4 space-y-2">
-              <Label>Assign Field Crew</Label>
+              <Label>Assign field crew</Label>
               <Select
                 value={data.assignedToOrgId}
                 onValueChange={(v) => onChange({ assignedToOrgId: v })}
@@ -313,8 +317,8 @@ export function StepConfig({ data, onChange, role, projectId }: StepConfigProps)
         <ShareToggle
           value={data.shareDraftNow}
           onChange={(v) => onChange({ shareDraftNow: v })}
-          label="Share with GC immediately"
-          hint="If off, GC cannot see this CO until you choose to share it."
+          label="Share immediately"
+          hint="If off, they cannot see this CO until you choose to share it."
         />
       </div>
     );
@@ -357,11 +361,11 @@ export function StepConfig({ data, onChange, role, projectId }: StepConfigProps)
         </div>
       )}
 
-      <ShareToggle
-        value={data.shareDraftNow}
-        onChange={(v) => onChange({ shareDraftNow: v })}
-        label="Share with TC immediately"
-        hint="If off, TC cannot see this CO until you choose to share it."
+        <ShareToggle
+          value={data.shareDraftNow}
+          onChange={(v) => onChange({ shareDraftNow: v })}
+          label="Share immediately"
+          hint="If off, they cannot see this CO until you choose to share it."
       />
     </div>
   );
@@ -383,7 +387,7 @@ function ResponsibilitySection({
           <div>
             <p className="text-sm font-medium">Materials needed</p>
             <p className="text-xs text-muted-foreground">
-              TC will build a material list on this CO
+              They will build a material list on this CO
             </p>
           </div>
           <Switch
@@ -399,7 +403,7 @@ function ResponsibilitySection({
 
         {data.materialsNeeded && (
           <div className="flex gap-2">
-            {(['TC', 'GC'] as const).map(party => (
+           {(['TC', 'GC'] as const).map(party => (
               <button
                 key={party}
                 onClick={() => onChange({ materialsResponsible: party })}
@@ -410,7 +414,7 @@ function ResponsibilitySection({
                     : 'border-border text-muted-foreground hover:border-primary/30'
                 )}
               >
-                {party} responsible
+                {party === 'TC' ? (tcOrgName ?? 'TC') : (gcOrgName ?? 'GC')} responsible
               </button>
             ))}
           </div>
@@ -424,7 +428,7 @@ function ResponsibilitySection({
           <div>
             <p className="text-sm font-medium">Equipment needed</p>
             <p className="text-xs text-muted-foreground">
-              TC will add equipment costs to this CO
+              They will add equipment costs to this CO
             </p>
           </div>
           <Switch
@@ -440,7 +444,7 @@ function ResponsibilitySection({
 
         {data.equipmentNeeded && (
           <div className="flex gap-2">
-            {(['TC', 'GC'] as const).map(party => (
+           {(['TC', 'GC'] as const).map(party => (
               <button
                 key={party}
                 onClick={() => onChange({ equipmentResponsible: party })}
@@ -451,7 +455,7 @@ function ResponsibilitySection({
                     : 'border-border text-muted-foreground hover:border-primary/30'
                 )}
               >
-                {party} responsible
+                {party === 'TC' ? (tcOrgName ?? 'TC') : (gcOrgName ?? 'GC')} responsible
               </button>
             ))}
           </div>

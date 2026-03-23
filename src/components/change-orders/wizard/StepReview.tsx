@@ -54,13 +54,13 @@ export function StepReview({ data, projectId }: StepReviewProps) {
         {data.assignedToOrgId && (
           <Row label="Assigned To" value={assignedOrg ?? '...'} />
         )}
-        {data.materialsNeeded && (
-          <Row label="Materials" value={`Needed · ${data.materialsResponsible ?? '—'} responsible${data.materialsOnSite ? ' · On site' : ''}`} />
+         {data.materialsNeeded && (
+          <Row label="Materials" value={`Needed · ${data.materialsResponsible === 'TC' ? (assignedOrg ?? 'TC') : data.materialsResponsible === 'GC' ? 'GC' : '—'} responsible${data.materialsOnSite ? ' · On site' : ''}`} />
         )}
         {data.equipmentNeeded && (
-          <Row label="Equipment" value={`Needed · ${data.equipmentResponsible ?? '—'} responsible`} />
+          <Row label="Equipment" value={`Needed · ${data.equipmentResponsible === 'TC' ? (assignedOrg ?? 'TC') : data.equipmentResponsible === 'GC' ? 'GC' : '—'} responsible`} />
         )}
-        {data.fcInputNeeded && <Row label="FC Input" value="Requested" />}
+        {data.fcInputNeeded && <Row label="Field crew input" value="Requested" />}
       </Section>
 
       <Section icon={ClipboardList} title="Scope & locations">

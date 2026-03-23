@@ -97,6 +97,7 @@ export function CODetailPage() {
   const isTC = !isGC && !isFC && (activeOrgType === 'TC' || activeRole === 'TC_PM' || activeRole === 'FS');
   const role: COCreatedByRole = isGC ? 'GC' : isTC ? 'TC' : 'FC';
   const myOrgId = activeMembership?.organization_id ?? co?.assigned_to_org_id ?? co?.org_id ?? '';
+  const myOrgName = activeMembership?.organization?.name ?? role;
 
   const queryClient = useQueryClient();
   const [fcActionPending, setFCActionPending] = useState(false);
@@ -119,6 +120,28 @@ export function CODetailPage() {
     co?.pricing_type === 'nte';
 
   const currentCollaborator = collaborators.find(collaborator => collaborator.status === 'active') ?? null;
+  const fcCollabName = currentCollaborator?.organization?.name ?? 'Field crew';
+
+  const { data: coOwnerOrgName } = useQuery({
+    queryKey: ['org-name', co?.org_id],
+    enabled: !!co?.org_id,
+    queryFn: async () => {
+      const { data: org } = await supabase.from('organizations').select('name').eq('id', co!.org_id).single();
+      return org?.name ?? '';
+    },
+  });
+  const { data: assignedOrgName } = useQuery({
+    queryKey: ['org-name', co?.assigned_to_org_id],
+    enabled: !!co?.assigned_to_org_id,
+    queryFn: async () => {
+      const { data: org } = await supabase.from('organizations').select('name').eq('id', co!.assigned_to_org_id!).single();
+      return org?.name ?? '';
+    },
+  });
+
+  // Resolve display names for the two sides of this CO
+  const gcSideName = isGC ? myOrgName : (co?.created_by_role === 'GC' ? (coOwnerOrgName ?? 'GC') : (assignedOrgName ?? 'GC'));
+  const tcSideName = isTC ? myOrgName : (co?.created_by_role === 'TC' ? (coOwnerOrgName ?? 'TC') : (assignedOrgName ?? 'TC'));
   const isCollaboratorOrg = collaborators.some(
     collaborator => collaborator.organization_id === myOrgId && collaborator.status === 'active'
   );
@@ -241,7 +264,7 @@ export function CODetailPage() {
                           <Calendar className="h-3 w-3" />
                           {co.created_at ? format(new Date(co.created_at), 'MMM d, yyyy') : '—'}
                         </span>
-                        <span>{role} view</span>
+                        <span>{myOrgName} view</span>
                       </div>
                     </div>
                   </div>
@@ -255,12 +278,12 @@ export function CODetailPage() {
 
                 <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5">
                   <div className="co-light-kpi">
-                    <p className="co-light-kpi-label">{isTC ? 'TC labor' : isFC ? 'My labor' : 'Labor'}</p>
+                    <p className="co-light-kpi-label">{isTC ? `${myOrgName} labor` : isFC ? 'My labor' : 'Labor'}</p>
                     <p className="co-light-kpi-value">{fmtCurrency(isGC ? financials.tcLaborTotal : isFC ? financials.fcLaborTotal : financials.laborTotal)}</p>
                   </div>
                   {isTC && financials.fcLaborTotal > 0 && (
                     <div className="co-light-kpi">
-                      <p className="co-light-kpi-label">FC cost to TC</p>
+                      <p className="co-light-kpi-label">{fcCollabName} cost</p>
                       <p className="co-light-kpi-value">{fmtCurrency(financials.fcLaborTotal)}</p>
                     </div>
                   )}
@@ -446,8 +469,8 @@ export function CODetailPage() {
                       const tcReviewedTotal = financials.tcLaborTotal + tcMaterialsTotal + tcEquipmentTotal;
                       return (
                         <>
-                          {financials.fcLaborTotal > 0 && <FinRow label="FC cost to TC" value={financials.fcLaborTotal} muted />}
-                          <FinRow label="TC labor" value={financials.tcLaborTotal} />
+                          {financials.fcLaborTotal > 0 && <FinRow label={`${fcCollabName} cost`} value={financials.fcLaborTotal} muted />}
+                          <FinRow label={`${myOrgName} labor`} value={financials.tcLaborTotal} />
                           {co.materials_needed && co.materials_responsible === 'TC' && (
                             <>
                               <FinRow label="Materials cost" value={financials.materialsCost ?? 0} muted />
@@ -736,12 +759,12 @@ function FCPricingToggleCard({
   return (
     <div className="co-light-shell overflow-hidden">
       <div className="px-4 py-3 border-b border-border co-light-header">
-        <h3 className="text-sm font-semibold text-foreground">FC Pricing Base</h3>
+        <h3 className="text-sm font-semibold text-foreground">{fcCollabName} Pricing Base</h3>
       </div>
       <div className="px-4 py-3 space-y-3">
         <div className="flex items-center justify-between gap-2">
           <label htmlFor="fc-pricing-toggle" className="text-xs text-muted-foreground leading-tight">
-            Use FC input as my pricing base
+            Use {fcCollabName} input as my pricing base
           </label>
           <Switch
             id="fc-pricing-toggle"
@@ -756,7 +779,7 @@ function FCPricingToggleCard({
             {isHourly ? (
               <>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">FC hours</span>
+                  <span className="text-muted-foreground">{fcCollabName} hours</span>
                   <span className="font-medium text-foreground">{fcHours} hrs</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
@@ -767,7 +790,7 @@ function FCPricingToggleCard({
             ) : (
               <>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground">FC lump sum</span>
+                  <span className="text-muted-foreground">{fcCollabName} lump sum</span>
                   <span className="font-medium text-foreground">{fmtCurrency(fcLumpSum)}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
@@ -778,7 +801,7 @@ function FCPricingToggleCard({
             )}
             <div className="border-t border-border pt-1.5 mt-1.5">
               <div className="flex items-center justify-between text-xs">
-                <span className="font-semibold text-foreground">Price to GC</span>
+                <span className="font-semibold text-foreground">Price to {gcSideName}</span>
                 <span className="font-semibold text-foreground">{fmtCurrency(calculatedPrice)}</span>
               </div>
             </div>
@@ -787,13 +810,13 @@ function FCPricingToggleCard({
 
         {isOn && !fcHasSubmitted && (
           <p className="text-[11px] text-muted-foreground">
-            FC has not submitted pricing yet. The calculated price will appear once FC submits.
+            {fcCollabName} has not submitted pricing yet. The calculated price will appear once they submit.
           </p>
         )}
 
         {!isOn && (
           <p className="text-[11px] text-muted-foreground">
-            Toggle on to automatically calculate your price to GC from FC's submitted input.
+            Toggle on to automatically calculate your price to {gcSideName} from {fcCollabName}'s submitted input.
           </p>
         )}
       </div>
