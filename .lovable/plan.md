@@ -1,45 +1,33 @@
 
 
-# Fix: GC↔TC Contract Hidden Due to NULL Trade Filter
+# Fix: Hide Setup Banner When Complete + Improve FC Contract Save Feedback
 
-## Root Cause
+## Problem 1: "Define Scope & Details" banner always shows
+The amber banner in `ProjectHome.tsx` (line 347-361) has **no condition** — it renders for every non-demo, non-supplier user regardless of whether scope and profile are already set up. It should be hidden once the project has a profile and scope selections.
 
-The GC↔TC contract (`26f2c4a2`) has `trade = NULL`. In PostgreSQL, `NULL != 'Work Order'` evaluates to `NULL` (falsy), so the `.neq('trade', 'Work Order')` filter in the contracts query **silently excludes** any contract with a NULL trade value.
+## Problem 2: FC contract save has no visual confirmation
+When TC saves the contract price with FC in the Downstream Contracts card, the toast appears but is subtle. The save button doesn't change state to indicate success, and the `project_financials` query isn't invalidated so the overview doesn't immediately reflect the new FC cost.
 
-This is why the TC only sees one contract (TC↔FC, trade='Framer') and the GC↔TC SOV section disappears entirely.
+## Plain English
+- The orange "Define Scope & Details" card on the Overview tab will disappear once you've completed the scope wizard. Right now it stays forever — that's the bug.
+- When you save the FC contract price, the button will briefly show a checkmark and "Saved!" so you know it worked. The financials on the overview will also refresh immediately.
 
-The SOVs themselves are fine — v5 (GC↔TC, locked) and v7 (TC↔FC) are separate in the database. The bug is purely in the query filter.
+## Changes
 
-## Fix
+### File: `src/pages/ProjectHome.tsx`
+1. Import `useProjectProfile` and `useScopeSelections` hooks (already exist)
+2. Fetch profile and scope selections for the project
+3. Wrap the banner in a condition: only show when `!profile || scopeSelections.length === 0`
 
-### Both contract queries need updating (same pattern in 2 places)
-
-**File: `src/pages/ProjectSOVPage.tsx`** — Lines 459-464
-**File: `src/hooks/useSOVPage.ts`** — Lines 16-21
-
-Replace:
-```ts
-.neq('trade', 'Work Order')
-.neq('trade', 'Work Order Labor');
-```
-With:
-```ts
-.or('trade.is.null,and(trade.neq.Work Order,trade.neq.Work Order Labor)');
-```
-
-This keeps contracts where `trade` is NULL (like the GC↔TC contract) while still excluding Work Order contracts.
-
-### Also: Set trade on GC↔TC contract creation
-
-**File: `src/pages/ProjectContractsPage.tsx`** — `handleSave` function
-
-When creating the GC↔TC contract, the `trade` field is never set, leaving it NULL. While the query fix above handles this, it's better to also set `trade` during contract creation to avoid future filter issues. The project's trade type should be populated from the project team member's role or the org's trade.
+### File: `src/components/project/DownstreamContractsCard.tsx`
+1. After successful save, also invalidate `project_financials` query so the overview's Contract Hero and Profit cards update
+2. Add a `saved` state that shows a checkmark on the save button for 2 seconds after success
+3. Change toast to use a more prominent success style
 
 ## Files changed
 
 | File | Change |
 |------|--------|
-| `src/pages/ProjectSOVPage.tsx` | Fix `.neq` filter to include NULL trade values |
-| `src/hooks/useSOVPage.ts` | Same filter fix |
-| `src/pages/ProjectContractsPage.tsx` | Set `trade` field when creating contracts |
+| `src/pages/ProjectHome.tsx` | Conditionally hide "Define Scope & Details" banner when profile and scope exist |
+| `src/components/project/DownstreamContractsCard.tsx` | Add `project_financials` query invalidation + visual save confirmation |
 
