@@ -40,7 +40,8 @@ export function BottomNav() {
   const canManageOrg = permissions?.canManageOrg ?? false;
   const isSupplier = userOrgRoles[0]?.organization?.type === 'SUPPLIER';
 
-  const isProjectPage = location.pathname.startsWith('/project/');
+  // On project pages, ProjectBottomNav handles mobile nav — hide this one
+  if (isProjectPage) return null;
   const projectId = isProjectPage ? location.pathname.split('/')[2] : null;
   const activeTab = searchParams.get('tab') || 'overview';
 
