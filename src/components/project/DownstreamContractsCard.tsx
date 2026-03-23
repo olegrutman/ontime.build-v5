@@ -25,6 +25,7 @@ export function DownstreamContractsCard({ projectId, tcOrgId }: Props) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [values, setValues] = useState<Record<string, string>>({});
 
   // Fetch FC team members
