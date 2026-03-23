@@ -58,7 +58,7 @@ export function useSOVPage(projectId: string, contractId?: string | null) {
         profileId: profile?.id,
       };
     },
-    enabled: !!projectId,
+    enabled: !!projectId && (!contractId || !!activeContract),
   });
 
   // Fetch current SOV (filtered by contract)
