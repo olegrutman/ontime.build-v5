@@ -211,6 +211,7 @@ export interface COFinancials {
   equipmentMarkup: number;
   grandTotal: number;
   actualCostTotal: number;
+  tcBillableToGC: number;
   profitMargin: number | null;
   nteUsedPercent: number | null;
 }

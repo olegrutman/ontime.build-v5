@@ -279,7 +279,7 @@ export function CODetailPage() {
                 <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5">
                   <div className="co-light-kpi">
                     <p className="co-light-kpi-label">{isTC ? `${myOrgName} labor` : isFC ? 'My labor' : 'Labor'}</p>
-                    <p className="co-light-kpi-value">{fmtCurrency(isGC ? financials.tcLaborTotal : isFC ? financials.fcLaborTotal : financials.laborTotal)}</p>
+                    <p className="co-light-kpi-value">{fmtCurrency(isGC ? financials.tcBillableToGC : isFC ? financials.fcLaborTotal : financials.tcBillableToGC)}</p>
                   </div>
                   {isTC && financials.fcLaborTotal > 0 && (
                     <div className="co-light-kpi">
@@ -302,9 +302,9 @@ export function CODetailPage() {
                   <div className="co-light-kpi">
                     <p className="co-light-kpi-label">Grand total</p>
                     <p className="co-light-kpi-value">{fmtCurrency(
-                      isGC ? (financials.tcLaborTotal + financials.materialsTotal + financials.equipmentTotal)
+                      isGC ? (financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal)
                         : isFC ? financials.fcLaborTotal
-                        : (financials.tcLaborTotal
+                        : (financials.tcBillableToGC
                           + (co.materials_responsible === 'TC' ? financials.materialsTotal : 0)
                           + (co.equipment_responsible === 'TC' ? financials.equipmentTotal : 0))
                     )}</p>
@@ -457,11 +457,11 @@ export function CODetailPage() {
                   <div className="px-4 py-3 space-y-2">
                     {isGC && (
                       <>
-                        <FinRow label="Labor" value={financials.tcLaborTotal} />
+                        <FinRow label="Labor" value={financials.tcBillableToGC} />
                         {co.materials_needed && <FinRow label="Materials" value={financials.materialsTotal} />}
                         {co.equipment_needed && <FinRow label="Equipment" value={financials.equipmentTotal} />}
                         <div className="border-t border-border pt-2 mt-2">
-                          <FinRow label="Total billed" value={financials.tcLaborTotal + financials.materialsTotal + financials.equipmentTotal} bold />
+                          <FinRow label="Total billed" value={financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal} bold />
                         </div>
                       </>
                     )}
@@ -469,11 +469,11 @@ export function CODetailPage() {
                     {isTC && (() => {
                       const tcMaterialsTotal = co.materials_needed && co.materials_responsible === 'TC' ? financials.materialsTotal : 0;
                       const tcEquipmentTotal = co.equipment_needed && co.equipment_responsible === 'TC' ? financials.equipmentTotal : 0;
-                      const tcReviewedTotal = financials.tcLaborTotal + tcMaterialsTotal + tcEquipmentTotal;
+                      const tcReviewedTotal = financials.tcBillableToGC + tcMaterialsTotal + tcEquipmentTotal;
                       return (
                         <>
                           {financials.fcLaborTotal > 0 && <FinRow label={`${fcCollabName} cost`} value={financials.fcLaborTotal} muted />}
-                          <FinRow label={`${myOrgName} labor`} value={financials.tcLaborTotal} />
+                          <FinRow label={`${myOrgName} billable`} value={financials.tcBillableToGC} />
                           {co.materials_needed && co.materials_responsible === 'TC' && (
                             <>
                               <FinRow label="Materials cost" value={financials.materialsCost ?? 0} muted />
@@ -493,8 +493,8 @@ export function CODetailPage() {
                             <div className="flex items-center justify-between text-xs mt-1">
                               <span className="text-muted-foreground">Margin</span>
                               <span className="font-medium text-foreground">
-                                {fmtCurrency(tcReviewedTotal - financials.fcLaborTotal)}
-                                {tcReviewedTotal > 0 && ` (${((tcReviewedTotal - financials.fcLaborTotal) / tcReviewedTotal * 100).toFixed(1)}%)`}
+                                {fmtCurrency(financials.tcBillableToGC - financials.fcLaborTotal)}
+                                {financials.tcBillableToGC > 0 && ` (${((financials.tcBillableToGC - financials.fcLaborTotal) / financials.tcBillableToGC * 100).toFixed(1)}%)`}
                               </span>
                             </div>
                           )}
