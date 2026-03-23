@@ -81,11 +81,12 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
   const { shareCO } = useChangeOrders(projectId);
   const queryClient = useQueryClient();
   const orgId = userOrgRoles?.[0]?.organization_id ?? null;
-  const orgName = (userOrgRoles?.[0] as any)?.organization?.name ?? role;
 
   const role: COCreatedByRole =
     currentRole === 'GC_PM' ? 'GC' :
     currentRole === 'TC_PM' ? 'TC' : 'FC';
+
+  const orgName = (userOrgRoles?.[0] as any)?.organization?.name ?? role;
 
   function update(patch: Partial<COWizardData>) {
     setData(prev => ({ ...prev, ...patch }));
