@@ -1,53 +1,66 @@
 
 
-# Fix: FC Pricing Base — Price to GC Not Reflected in Financials
+# Fix: FC Loses CO Access After Input Completion + GC Materials Missing in Financial Card
 
-## The Bug
+## Bug 1: FC CO disappears after approval (and after completing input)
 
-When the FC Pricing Base toggle is ON, the calculated price ($4,745 = 73 hrs × $65/hr) is correctly shown in the Pricing Base card and persisted to `tc_submitted_price`. However, the hero KPI cards and Financial sidebar both read from `tcLaborTotal` (sum of TC labor entries = $2,555), ignoring the pricing base override entirely.
+**Root cause — two layers:**
 
-This means:
-- TC sees "$2,555" as their labor in the hero and sidebar, but "$4,745 Price to GC" in the pricing base card — contradictory
-- GC would see "$2,555" as Labor — which is the TC's internal cost, not the price the TC is charging
-- The grand total is wrong for both roles
+1. **RLS function `can_access_change_order`** checks collaborator `status = 'active'`. When FC completes input, the `complete_fc_change_order_input` RPC sets status to `'completed'`. After that, FC cannot read the CO or any of its data (labor, materials, equipment, activity) via RLS.
 
-## Root Cause
+2. **Client-side grouping** in `useChangeOrders.ts` line 89: `isCollaborator` requires `collaboratorStatus === 'active'`, so completed collaborators are filtered out of the list.
 
-`tcLaborTotal` is computed in `useChangeOrderDetail.ts` purely from labor entries where `entered_by_role === 'TC'`. When FC Pricing Base is ON, the TC's price to GC should be `co.tc_submitted_price` (the calculated/overridden amount), but this field is never read into the financials.
+**Fix:**
 
-## Fix
+- **Database migration**: Update `can_access_change_order` to allow `status IN ('active', 'completed')` instead of just `'active'`
+- **`src/hooks/useChangeOrders.ts` line 89**: Change the check to include both `active` and `completed` statuses: `co.collaboratorStatus === 'active' || co.collaboratorStatus === 'completed'`
 
-### File: `src/hooks/useChangeOrderDetail.ts`
+## Bug 2: GC materials don't show in Financial sidebar card
 
-Add a new derived field `tcBillableToGC` to `COFinancials`:
-- If `co.use_fc_pricing_base === true` AND `co.tc_submitted_price > 0`: `tcBillableToGC = co.tc_submitted_price`
-- Otherwise: `tcBillableToGC = tcLaborTotal`
+**Root cause:** The Financial sidebar (line 461) gates material display on `co.materials_needed`. If the wizard didn't set this flag but materials were added to the CO anyway (e.g., TC added them during work), the GC never sees material costs in the sidebar or the grand total.
 
-This keeps `tcLaborTotal` as the TC's internal labor cost (for margin calculation) while providing a separate billable amount for display.
+**Fix in `src/components/change-orders/CODetailPage.tsx`:**
 
-### File: `src/types/changeOrder.ts`
+Replace `co.materials_needed` checks in the Financial sidebar with `(co.materials_needed || financials.materialsTotal > 0)` — show materials whenever there's actual material cost, regardless of the wizard flag.
 
-Add `tcBillableToGC: number` to the `COFinancials` interface.
+Apply same logic for equipment: `(co.equipment_needed || financials.equipmentTotal > 0)`.
 
-### File: `src/components/change-orders/CODetailPage.tsx`
+Also apply to the hero KPI cards (lines 290, 296) so the KPI appears whenever there are actual costs.
 
-**Hero KPIs (line 282):**
-- GC view: Use `financials.tcBillableToGC` instead of `financials.tcLaborTotal`
-- TC view: Show `financials.tcBillableToGC` as the labor KPI (this is what they're billing)
-- Grand total (lines 305-309): Use `tcBillableToGC` instead of `tcLaborTotal`
+## SQL Migration
 
-**Financial sidebar (lines 469-502):**
-- TC section: Show `tcBillableToGC` as the billable labor line
-- Keep `fcLaborTotal` as "FC cost" (unchanged — that's TC's cost basis)
-- Margin calculation: `tcBillableToGC - fcLaborTotal` (billable minus cost)
-- Reviewed total: Use `tcBillableToGC` + materials + equipment
+```sql
+CREATE OR REPLACE FUNCTION public.can_access_change_order(_co_id uuid, _user_id uuid DEFAULT auth.uid())
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.change_orders co
+    WHERE co.id = _co_id
+      AND (
+        public.user_in_org(_user_id, co.org_id)
+        OR (co.assigned_to_org_id IS NOT NULL AND public.user_in_org(_user_id, co.assigned_to_org_id))
+        OR EXISTS (
+          SELECT 1
+          FROM public.change_order_collaborators coc
+          WHERE coc.co_id = co.id
+            AND coc.status IN ('active', 'completed')
+            AND public.user_in_org(_user_id, coc.organization_id)
+        )
+      )
+  );
+$$;
+```
 
-**GC Financial sidebar (lines 458-466):**
-- Use `tcBillableToGC` for "Labor" line and total
+## Files changed
 
 | File | Change |
 |------|--------|
-| `src/types/changeOrder.ts` | Add `tcBillableToGC` to `COFinancials` |
-| `src/hooks/useChangeOrderDetail.ts` | Compute `tcBillableToGC` from `tc_submitted_price` when pricing base is ON |
-| `src/components/change-orders/CODetailPage.tsx` | Use `tcBillableToGC` in hero KPIs, GC financials, TC financials, and grand total |
+| Migration | Update `can_access_change_order` to allow `completed` collaborators |
+| `src/hooks/useChangeOrders.ts` | Include `completed` collaborator status in FC visibility check |
+| `src/components/change-orders/CODetailPage.tsx` | Show materials/equipment in Financial card and hero KPIs when actual costs exist, not just when wizard flag is set |
 
