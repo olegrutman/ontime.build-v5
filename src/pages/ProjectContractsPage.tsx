@@ -217,6 +217,7 @@ export default function ProjectContractsPage() {
               to_org_id: toOrgId,
               from_role: fromRole,
               to_role: toRole,
+              trade: projectType?.name || member.role,
               contract_sum: contractSum,
               created_by_user_id: user.id,
             });
