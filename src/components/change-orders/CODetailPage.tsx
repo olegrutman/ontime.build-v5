@@ -122,8 +122,10 @@ export function CODetailPage() {
   const isCollaboratorOrg = collaborators.some(
     collaborator => collaborator.organization_id === myOrgId && collaborator.status === 'active'
   );
-  const canRequestFCInput = !!co && isTC && co.assigned_to_org_id === myOrgId &&
-    (co.status === 'shared' || co.status === 'rejected' || co.status === 'work_in_progress' || co.status === 'closed_for_pricing');
+  const canRequestFCInput = !!co && isTC && (
+    (co.assigned_to_org_id === myOrgId && ['shared', 'rejected', 'work_in_progress', 'closed_for_pricing'].includes(co.status)) ||
+    (co.org_id === myOrgId && co.status === 'draft')
+  );
   const canCompleteFCInput = !!co && isFC && isCollaboratorOrg;
   const canEdit = (isActiveStatus || (isRunningPricing && co?.status === 'submitted')) && (isGC || isTC || isFC);
 
@@ -432,27 +434,32 @@ export function CODetailPage() {
                       </>
                     )}
 
-                    {isTC && (
-                      <>
-                        {financials.fcLaborTotal > 0 && <FinRow label="FC cost to TC" value={financials.fcLaborTotal} muted />}
-                        <FinRow label="TC labor" value={financials.tcLaborTotal} />
-                        {co.materials_needed && (
-                          <>
-                            <FinRow label="Materials cost" value={financials.materialsCost ?? 0} muted />
-                            <FinRow label="Materials billed" value={financials.materialsTotal} />
-                          </>
-                        )}
-                        {co.equipment_needed && (
-                          <>
-                            <FinRow label="Equipment cost" value={financials.equipmentCost ?? 0} muted />
-                            <FinRow label="Equipment billed" value={financials.equipmentTotal} />
-                          </>
-                        )}
-                        <div className="border-t border-border pt-2 mt-2">
-                          <FinRow label="Reviewed total" value={financials.grandTotal} bold />
-                        </div>
-                      </>
-                    )}
+                    {isTC && (() => {
+                      const tcMaterialsTotal = co.materials_needed && co.materials_responsible === 'TC' ? financials.materialsTotal : 0;
+                      const tcEquipmentTotal = co.equipment_needed && co.equipment_responsible === 'TC' ? financials.equipmentTotal : 0;
+                      const tcReviewedTotal = financials.tcLaborTotal + tcMaterialsTotal + tcEquipmentTotal;
+                      return (
+                        <>
+                          {financials.fcLaborTotal > 0 && <FinRow label="FC cost to TC" value={financials.fcLaborTotal} muted />}
+                          <FinRow label="TC labor" value={financials.tcLaborTotal} />
+                          {co.materials_needed && co.materials_responsible === 'TC' && (
+                            <>
+                              <FinRow label="Materials cost" value={financials.materialsCost ?? 0} muted />
+                              <FinRow label="Materials billed" value={financials.materialsTotal} />
+                            </>
+                          )}
+                          {co.equipment_needed && co.equipment_responsible === 'TC' && (
+                            <>
+                              <FinRow label="Equipment cost" value={financials.equipmentCost ?? 0} muted />
+                              <FinRow label="Equipment billed" value={financials.equipmentTotal} />
+                            </>
+                          )}
+                          <div className="border-t border-border pt-2 mt-2">
+                            <FinRow label="Reviewed total" value={tcReviewedTotal} bold />
+                          </div>
+                        </>
+                      );
+                    })()}
 
                     {isFC && (
                       <>
