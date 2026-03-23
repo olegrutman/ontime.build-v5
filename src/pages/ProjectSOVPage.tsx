@@ -532,8 +532,8 @@ export default function ProjectSOVPage() {
                     contract={contract}
                     userOrgId={userOrgId}
                   />
-                ))
-              )}
+                ));
+              })()}
             </div>
           </main>
         </SidebarInset>
