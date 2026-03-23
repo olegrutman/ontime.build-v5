@@ -36,7 +36,7 @@ function SOVContractSection({
 }: {
   projectId: string;
   contractId: string;
-  contract: { from_role: string; to_role: string; contract_sum: number | null; to_org_id: string | null };
+  contract: { from_role: string; to_role: string; contract_sum: number | null; to_org_id: string | null; from_org?: { name: string } | null; to_org?: { name: string } | null };
   userOrgId: string | null;
 }) {
   const navigate = useNavigate();
