@@ -110,7 +110,7 @@ export function DownstreamContractsCard({ projectId, tcOrgId }: Props) {
       qc.invalidateQueries({ queryKey: ['project_financials', projectId] });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-      toast({ title: '✓ FC contracts saved successfully' });
+      toast({ title: '✓ Contracts saved successfully' });
     } catch (err: any) {
       toast({ title: 'Error saving', description: err.message, variant: 'destructive' });
     } finally {
