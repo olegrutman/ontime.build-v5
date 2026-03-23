@@ -410,10 +410,10 @@ export function useDashboardData(): DashboardData {
         projectIds.length > 0
           ? supabase
               .from('invoices')
-              .select('id, invoice_number, status, total_amount, created_at, project_id')
+              .select('id, invoice_number, status, total_amount, created_at, project_id, contract_id, po_id')
               .in('project_id', projectIds)
               .order('created_at', { ascending: false })
-              .limit(20)
+              .limit(40)
           : Promise.resolve({ data: [] }),
       ]);
 
@@ -430,11 +430,57 @@ export function useDashboardData(): DashboardData {
       }));
       setReminders(remindersList);
 
-      // Build recent docs
-      const recentDocsList: RecentDoc[] = [];
-      const recentInvoices = (recentInvoicesResult.data || []) as any[];
+      // Build contract detail map FIRST (needed for both recent docs and financials)
+      const allInvoiceContractIds = [...new Set([
+        ...allInvoices.map(i => i.contract_id),
+        ...((recentInvoicesResult.data || []) as any[]).map((i: any) => i.contract_id),
+      ].filter((id): id is string => id !== null))];
+      
+      let contractDetailMap = new Map<string, { from_org_id: string | null; to_org_id: string | null }>();
+      if (allInvoiceContractIds.length > 0) {
+        const { data: contractDetails } = await supabase
+          .from('project_contracts')
+          .select('id, from_org_id, to_org_id')
+          .in('id', allInvoiceContractIds);
+        (contractDetails || []).forEach((c: any) => {
+          contractDetailMap.set(c.id, { from_org_id: c.from_org_id, to_org_id: c.to_org_id });
+        });
+      }
 
-      recentInvoices.forEach((inv: any) => {
+      // Build PO ownership map for PO-linked invoices
+      const recentInvoicesRaw = (recentInvoicesResult.data || []) as any[];
+      const poIds = [...new Set(recentInvoicesRaw.map((i: any) => i.po_id).filter((id: any): id is string => !!id))];
+      let poOrgMap = new Map<string, { pricing_owner_org_id: string | null; supplier_org_id: string | null }>();
+      if (poIds.length > 0) {
+        const { data: poDetails } = await supabase
+          .from('purchase_orders')
+          .select('id, pricing_owner_org_id, supplier_org_id')
+          .in('id', poIds);
+        (poDetails || []).forEach((po: any) => {
+          poOrgMap.set(po.id, { pricing_owner_org_id: po.pricing_owner_org_id, supplier_org_id: po.supplier_org_id });
+        });
+      }
+
+      // Build recent docs — filtered by org ownership
+      const recentDocsList: RecentDoc[] = [];
+
+      recentInvoicesRaw.forEach((inv: any) => {
+        // Filter: contract-linked → org must be from or to
+        if (inv.contract_id) {
+          const contract = contractDetailMap.get(inv.contract_id);
+          if (!contract || (contract.from_org_id !== currentOrg.id && contract.to_org_id !== currentOrg.id)) {
+            return; // not our contract
+          }
+        } else if (inv.po_id) {
+          // PO-linked → org must be pricing owner or supplier
+          const po = poOrgMap.get(inv.po_id);
+          if (!po || (po.pricing_owner_org_id !== currentOrg.id && po.supplier_org_id !== currentOrg.id)) {
+            return; // not our PO
+          }
+        } else {
+          return; // no contract, no PO — skip
+        }
+
         const proj = allProjects.find(p => p.id === inv.project_id);
         recentDocsList.push({
           id: inv.id,
@@ -451,18 +497,7 @@ export function useDashboardData(): DashboardData {
       recentDocsList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setRecentDocs(recentDocsList.slice(0, 10));
 
-      // Contract detail map for invoice filtering
-      const contractIds = [...new Set(allInvoices.map(i => i.contract_id).filter((id): id is string => id !== null))];
-      let contractDetailMap = new Map<string, { from_org_id: string | null; to_org_id: string | null }>();
-      if (contractIds.length > 0) {
-        const { data: contractDetails } = await supabase
-          .from('project_contracts')
-          .select('id, from_org_id, to_org_id')
-          .in('id', contractIds);
-        (contractDetails || []).forEach((c: any) => {
-          contractDetailMap.set(c.id, { from_org_id: c.from_org_id, to_org_id: c.to_org_id });
-        });
-      }
+      // contractDetailMap already built above — reuse it
 
       // Outstanding to Pay
       const invoicesToPay = allInvoices.filter(i => {
