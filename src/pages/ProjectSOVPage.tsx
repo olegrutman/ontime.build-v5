@@ -458,7 +458,7 @@ export default function ProjectSOVPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from('project_contracts')
-        .select('id, contract_sum, retainage_percent, from_role, to_role, trade, from_org_id, to_org_id')
+        .select('id, contract_sum, retainage_percent, from_role, to_role, trade, from_org_id, to_org_id, from_org:organizations!project_contracts_from_org_id_fkey(name), to_org:organizations!project_contracts_to_org_id_fkey(name)')
         .eq('project_id', projectId!)
         .or('trade.is.null,and(trade.neq.Work Order,trade.neq.Work Order Labor)');
       return data || [];
