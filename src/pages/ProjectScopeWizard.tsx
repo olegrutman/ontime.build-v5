@@ -135,7 +135,7 @@ export default function ProjectScopeWizard() {
             <Link to={`/project/${projectId}/details-wizard`}>
               <Button variant="ghost" size="sm"><Pencil className="w-3.5 h-3.5 mr-1" /> Edit Profile</Button>
             </Link>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/project/${projectId}?tab=scope-details`)}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/project/${projectId}/scope`)}>
               <X className="w-4 h-4" />
             </Button>
           </div>

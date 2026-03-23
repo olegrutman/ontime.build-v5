@@ -494,7 +494,7 @@ export default function ProjectSOVPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate(`/project/${projectId}?tab=overview`)}
+              onClick={() => navigate(`/project/${projectId}/overview`)}
               className="shrink-0"
             >
               <ArrowLeft className="h-4 w-4 mr-1" />
