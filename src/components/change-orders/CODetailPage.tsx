@@ -425,6 +425,7 @@ export function CODetailPage() {
                   projectId={projectId ?? ''}
                   financials={financials}
                   collaborators={collaborators}
+                  assignedOrgName={assignedOrgName}
                   onRefresh={refreshDetail}
                 />
 
