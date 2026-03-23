@@ -139,13 +139,13 @@ export function ScopeSplitCard({ projectId, tcOrgId, fcOrgs }: Props) {
           <div className="flex items-center gap-2 mb-2">
             <Badge variant="secondary">{activeItems.length} total items</Badge>
             <span className="text-sm text-muted-foreground">
-              · {fcAssignedCount} assigned to FC
-              · {activeItems.length - fcAssignedCount} kept by TC
+              · {fcAssignedCount} assigned to {fcOrgs[0]?.name || 'Field Crew'}
+              · {activeItems.length - fcAssignedCount} kept by your team
             </span>
           </div>
           {fcAssignedCount === 0 && (
             <p className="text-sm text-muted-foreground">
-              All scope items are assigned to your team. Use "Split Scope" to assign items to your Field Crew.
+              All scope items are assigned to your team. Use "Split Scope" to assign items to {fcOrgs[0]?.name || 'your field crew'}.
             </p>
           )}
         </CardContent>
@@ -154,7 +154,7 @@ export function ScopeSplitCard({ projectId, tcOrgId, fcOrgs }: Props) {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Split Scope — TC vs FC</DialogTitle>
+            <DialogTitle>Split Scope</DialogTitle>
           </DialogHeader>
           <div className="flex items-center justify-between">
             <p className="text-sm text-muted-foreground">

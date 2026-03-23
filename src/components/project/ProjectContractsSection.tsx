@@ -136,7 +136,7 @@ function ContractRow({ contract, currentOrgId, teamMembers, canEdit, onContractU
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           <p className="text-xs text-muted-foreground">
-            {contract.from_role} → {contract.to_role}
+            {contract.from_org_name || contract.from_role} → {contract.to_org_name || contract.to_role}
           </p>
           {isTCContract && contract.material_responsibility && (
             <div className="flex items-center gap-1">

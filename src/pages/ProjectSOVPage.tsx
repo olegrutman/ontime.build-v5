@@ -36,7 +36,7 @@ function SOVContractSection({
 }: {
   projectId: string;
   contractId: string;
-  contract: { from_role: string; to_role: string; contract_sum: number | null; to_org_id: string | null };
+  contract: { from_role: string; to_role: string; contract_sum: number | null; to_org_id: string | null; from_org?: { name: string } | null; to_org?: { name: string } | null };
   userOrgId: string | null;
 }) {
   const navigate = useNavigate();
@@ -79,7 +79,9 @@ function SOVContractSection({
     setEditingId(null);
   };
 
-  const contractLabel = `${contract.from_role} → ${contract.to_role}`;
+  const fromName = contract.from_org?.name || contract.from_role;
+  const toName = contract.to_org?.name || contract.to_role;
+  const contractLabel = `${fromName} → ${toName}`;
   const contractValue = contract.contract_sum || 0;
 
   if (prereqsLoading || sovLoading) {
@@ -458,7 +460,7 @@ export default function ProjectSOVPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from('project_contracts')
-        .select('id, contract_sum, retainage_percent, from_role, to_role, trade, from_org_id, to_org_id')
+        .select('id, contract_sum, retainage_percent, from_role, to_role, trade, from_org_id, to_org_id, from_org:organizations!project_contracts_from_org_id_fkey(name), to_org:organizations!project_contracts_to_org_id_fkey(name)')
         .eq('project_id', projectId!)
         .or('trade.is.null,and(trade.neq.Work Order,trade.neq.Work Order Labor)');
       return data || [];

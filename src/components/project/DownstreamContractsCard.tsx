@@ -110,7 +110,7 @@ export function DownstreamContractsCard({ projectId, tcOrgId }: Props) {
       qc.invalidateQueries({ queryKey: ['project_financials', projectId] });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
-      toast({ title: '✓ FC contracts saved successfully' });
+      toast({ title: '✓ Contracts saved successfully' });
     } catch (err: any) {
       toast({ title: 'Error saving', description: err.message, variant: 'destructive' });
     } finally {
@@ -125,7 +125,7 @@ export function DownstreamContractsCard({ projectId, tcOrgId }: Props) {
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
           <DollarSign className="h-4 w-4" />
-          Downstream Contracts (FC)
+          Downstream Contracts
         </CardTitle>
         <Button size="sm" variant={saved ? "default" : "outline"} onClick={handleSave} disabled={saving || saved} className={saved ? "bg-green-600 hover:bg-green-600 text-white" : ""}>
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : saved ? <Check className="h-3.5 w-3.5 mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}
@@ -137,7 +137,6 @@ export function DownstreamContractsCard({ projectId, tcOrgId }: Props) {
           <div key={m.org_id} className="flex items-center gap-4">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{m.invited_org_name || 'Field Crew'}</p>
-              <p className="text-xs text-muted-foreground">Field Crew</p>
             </div>
             <div className="w-40">
               <Label className="sr-only">Contract amount</Label>

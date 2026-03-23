@@ -472,7 +472,7 @@ export default function PlatformProjectDetail() {
                         </button>
                       ) : '—'}
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{c.from_role} → {c.to_role}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{c.from_org?.name || c.from_role} → {c.to_org?.name || c.to_role}</TableCell>
                     <TableCell className="text-sm">{c.trade || '—'}</TableCell>
                     <TableCell className="text-right font-medium">{formatCurrency(c.contract_sum)}</TableCell>
                     <TableCell className="text-right text-sm">{formatCurrency(c.labor_budget)}</TableCell>
