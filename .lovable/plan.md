@@ -1,72 +1,53 @@
 
 
-# Fix All CO System Bugs — Full Plan
+# Fix: FC Pricing Base — Price to GC Not Reflected in Financials
 
-## Bugs to Fix
+## The Bug
 
-### CRITICAL
+When the FC Pricing Base toggle is ON, the calculated price ($4,745 = 73 hrs × $65/hr) is correctly shown in the Pricing Base card and persisted to `tc_submitted_price`. However, the hero KPI cards and Financial sidebar both read from `tcLaborTotal` (sum of TC labor entries = $2,555), ignoring the pricing base override entirely.
 
-**C1 — TC/FC-created COs have no `assigned_to_org_id`, blocking submission**
-`src/components/change-orders/wizard/COWizard.tsx` — When TC creates a CO, the wizard never sets `assignedToOrgId` (no GC picker). The `doSubmit` in COStatusActions checks `co.assigned_to_org_id` and errors out. Same for FC.
-**Fix:** Auto-resolve the GC org (project owner) and set `assigned_to_org_id` automatically for TC/FC-created COs during wizard submission.
+This means:
+- TC sees "$2,555" as their labor in the hero and sidebar, but "$4,745 Price to GC" in the pricing base card — contradictory
+- GC would see "$2,555" as Labor — which is the TC's internal cost, not the price the TC is charging
+- The grand total is wrong for both roles
 
-**C2 — FC collaborator not created after CO creation**
-`src/components/change-orders/wizard/COWizard.tsx` — When TC toggles "FC input needed" and selects an FC org via `fcOrgId`, no `co_collaborators` record is inserted. The FC never gets access.
-**Fix:** After CO + line items insert, if `data.fcInputNeeded && data.fcOrgId`, insert a `co_collaborators` record with `status: 'active'`.
+## Root Cause
 
-**C3 — Notification routing sends to wrong org**
-`src/components/change-orders/COStatusActions.tsx`:
-- `CHANGE_APPROVED` (line 258): notifies `co.org_id` (creator) — if GC created and approves, GC notifies themselves. Should notify `co.assigned_to_org_id`.
-- `CHANGE_REJECTED` (line 278): same — notifies creator instead of the submitter (`assigned_to_org_id`).
-- `CO_ACKNOWLEDGED` (line 334): GC acknowledges, notifies `co.org_id` (themselves if GC created). Should notify `co.assigned_to_org_id`.
-**Fix:** Change all three to `notifyOrg(co.assigned_to_org_id, ...)`.
+`tcLaborTotal` is computed in `useChangeOrderDetail.ts` purely from labor entries where `entered_by_role === 'TC'`. When FC Pricing Base is ON, the TC's price to GC should be `co.tc_submitted_price` (the calculated/overridden amount), but this field is never read into the financials.
 
-### MEDIUM
+## Fix
 
-**M1 — `selectedFcName` resolves wrong field**
-`src/components/change-orders/wizard/StepConfig.tsx` line 60: `selectedFcName` looks up `data.assignedToOrgId` in `fcMembers`. Should use `data.fcOrgId`.
-**Fix:** Change to `fcMembers.find(m => m.org_id === data.fcOrgId)?.org_name`.
+### File: `src/hooks/useChangeOrderDetail.ts`
 
-**M2 — StepReview doesn't show selected FC org**
-`src/components/change-orders/wizard/StepReview.tsx` line 76: Shows "Field crew input: Requested" but doesn't show which FC was selected.
-**Fix:** Resolve `data.fcOrgId` to org name and display it.
+Add a new derived field `tcBillableToGC` to `COFinancials`:
+- If `co.use_fc_pricing_base === true` AND `co.tc_submitted_price > 0`: `tcBillableToGC = co.tc_submitted_price`
+- Otherwise: `tcBillableToGC = tcLaborTotal`
 
-**M3 — "Send to TC" button label is hardcoded**
-`src/components/change-orders/COStatusActions.tsx` line 433: Says "Send to TC (Work in Progress)" instead of using the assigned org name.
-**Fix:** Pass `assignedOrgName` into COStatusActions and use it in the button label.
+This keeps `tcLaborTotal` as the TC's internal labor cost (for margin calculation) while providing a separate billable amount for display.
 
-### LOW
+### File: `src/types/changeOrder.ts`
 
-**L1 — `contracted` status is a dead end**
-No UI action transitions a CO to `contracted`. It exists in the status machine but is unreachable. No fix needed now — just documenting.
+Add `tcBillableToGC: number` to the `COFinancials` interface.
 
-## Changes by File
+### File: `src/components/change-orders/CODetailPage.tsx`
 
-### `src/components/change-orders/wizard/COWizard.tsx`
-1. Before CO insert, auto-resolve GC org for TC/FC roles by querying `projects.organization_id`
-2. Set `assigned_to_org_id` to the project's GC org when role is TC or FC
-3. After line items insert succeeds, if `data.fcInputNeeded && data.fcOrgId`, insert `co_collaborators` row
+**Hero KPIs (line 282):**
+- GC view: Use `financials.tcBillableToGC` instead of `financials.tcLaborTotal`
+- TC view: Show `financials.tcBillableToGC` as the labor KPI (this is what they're billing)
+- Grand total (lines 305-309): Use `tcBillableToGC` instead of `tcLaborTotal`
 
-### `src/components/change-orders/wizard/StepConfig.tsx`
-4. Line 60: Fix `selectedFcName` to use `data.fcOrgId` instead of `data.assignedToOrgId`
+**Financial sidebar (lines 469-502):**
+- TC section: Show `tcBillableToGC` as the billable labor line
+- Keep `fcLaborTotal` as "FC cost" (unchanged — that's TC's cost basis)
+- Margin calculation: `tcBillableToGC - fcLaborTotal` (billable minus cost)
+- Reviewed total: Use `tcBillableToGC` + materials + equipment
 
-### `src/components/change-orders/wizard/StepReview.tsx`
-5. Add query to resolve `data.fcOrgId` to org name and display in review
+**GC Financial sidebar (lines 458-466):**
+- Use `tcBillableToGC` for "Labor" line and total
 
-### `src/components/change-orders/COStatusActions.tsx`
-6. Line 258: Change `notifyOrg(co.org_id, 'CHANGE_APPROVED', ...)` → `notifyOrg(co.assigned_to_org_id, 'CHANGE_APPROVED', ...)`
-7. Line 278: Change `notifyOrg(co.org_id, 'CHANGE_REJECTED')` → `notifyOrg(co.assigned_to_org_id, 'CHANGE_REJECTED')`
-8. Line 334: Change `notifyOrg(co.org_id, 'CO_ACKNOWLEDGED')` → `notifyOrg(co.assigned_to_org_id, 'CO_ACKNOWLEDGED')`
-9. Accept `assignedOrgName` prop and use in "Send to TC" button label
-
-### `src/components/change-orders/CODetailPage.tsx`
-10. Pass `assignedOrgName` to COStatusActions
-
-| File | Changes |
-|------|---------|
-| `COWizard.tsx` | Auto-resolve GC org for TC/FC, create FC collaborator on submission |
-| `StepConfig.tsx` | Fix `selectedFcName` lookup |
-| `StepReview.tsx` | Show selected FC org name |
-| `COStatusActions.tsx` | Fix 3 notification targets, use org name in button label |
-| `CODetailPage.tsx` | Pass assignedOrgName to status actions |
+| File | Change |
+|------|--------|
+| `src/types/changeOrder.ts` | Add `tcBillableToGC` to `COFinancials` |
+| `src/hooks/useChangeOrderDetail.ts` | Compute `tcBillableToGC` from `tc_submitted_price` when pricing base is ON |
+| `src/components/change-orders/CODetailPage.tsx` | Use `tcBillableToGC` in hero KPIs, GC financials, TC financials, and grand total |
 
