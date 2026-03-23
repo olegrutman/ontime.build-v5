@@ -123,8 +123,9 @@ export function useChangeOrders(projectId: string | null) {
         .update({ ...updates, updated_at: new Date().toISOString() })
         .eq('id', id)
         .select()
-        .single();
+        .maybeSingle();
       if (error) throw error;
+      if (!data) throw new Error("You don't have permission to update this change order.");
       return data as ChangeOrder;
     },
     onSuccess: invalidateChangeOrders,
