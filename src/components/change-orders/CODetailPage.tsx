@@ -264,13 +264,13 @@ export function CODetailPage() {
                       <p className="co-light-kpi-value">{fmtCurrency(financials.fcLaborTotal)}</p>
                     </div>
                   )}
-                  {co.materials_needed && (
+                  {co.materials_needed && (!isTC || co.materials_responsible === 'TC') && (
                     <div className="co-light-kpi">
                       <p className="co-light-kpi-label">Materials</p>
                       <p className="co-light-kpi-value">{fmtCurrency(financials.materialsTotal)}</p>
                     </div>
                   )}
-                  {co.equipment_needed && (
+                  {co.equipment_needed && (!isTC || co.equipment_responsible === 'TC') && (
                     <div className="co-light-kpi">
                       <p className="co-light-kpi-label">Equipment</p>
                       <p className="co-light-kpi-value">{fmtCurrency(financials.equipmentTotal)}</p>
@@ -278,7 +278,13 @@ export function CODetailPage() {
                   )}
                   <div className="co-light-kpi">
                     <p className="co-light-kpi-label">Grand total</p>
-                    <p className="co-light-kpi-value">{fmtCurrency(isGC ? (financials.tcLaborTotal + financials.materialsTotal + financials.equipmentTotal) : isFC ? financials.fcLaborTotal : financials.grandTotal)}</p>
+                    <p className="co-light-kpi-value">{fmtCurrency(
+                      isGC ? (financials.tcLaborTotal + financials.materialsTotal + financials.equipmentTotal)
+                        : isFC ? financials.fcLaborTotal
+                        : (financials.tcLaborTotal
+                          + (co.materials_responsible === 'TC' ? financials.materialsTotal : 0)
+                          + (co.equipment_responsible === 'TC' ? financials.equipmentTotal : 0))
+                    )}</p>
                   </div>
                 </div>
 
@@ -457,6 +463,15 @@ export function CODetailPage() {
                           <div className="border-t border-border pt-2 mt-2">
                             <FinRow label="Reviewed total" value={tcReviewedTotal} bold />
                           </div>
+                          {financials.fcLaborTotal > 0 && (
+                            <div className="flex items-center justify-between text-xs mt-1">
+                              <span className="text-muted-foreground">Margin</span>
+                              <span className="font-medium text-foreground">
+                                {fmtCurrency(tcReviewedTotal - financials.fcLaborTotal)}
+                                {tcReviewedTotal > 0 && ` (${((tcReviewedTotal - financials.fcLaborTotal) / tcReviewedTotal * 100).toFixed(1)}%)`}
+                              </span>
+                            </div>
+                          )}
                         </>
                       );
                     })()}
@@ -689,12 +704,28 @@ function FCPricingToggleCard({
     ? fcHours * rate
     : fcLumpSum * (1 + markup / 100);
 
+  // Persist the calculated price whenever FC pricing base is on and FC has submitted
+  useEffect(() => {
+    if (!isOn || !fcHasSubmitted || calculatedPrice <= 0) return;
+    // Write calculated price to tc_submitted_price so submission flow uses it
+    supabase
+      .from('change_orders')
+      .update({ tc_submitted_price: calculatedPrice, updated_at: new Date().toISOString() })
+      .eq('id', co.id)
+      .then(({ error }) => {
+        if (error) console.error('Failed to persist FC pricing base price', error);
+      });
+  }, [isOn, fcHasSubmitted, calculatedPrice, co.id]);
+
   async function handleToggle(checked: boolean) {
     setToggling(true);
     try {
+      const updates: Record<string, any> = { use_fc_pricing_base: checked };
+      // Clear tc_submitted_price when toggling off
+      if (!checked) updates.tc_submitted_price = null;
       await updateCO.mutateAsync({
         id: co.id,
-        updates: { use_fc_pricing_base: checked },
+        updates,
       });
       onRefresh();
     } finally {
