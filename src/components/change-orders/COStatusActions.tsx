@@ -32,6 +32,7 @@ interface COStatusActionsProps {
   projectId: string;
   financials?: Pick<COFinancials, 'grandTotal' | 'fcLaborTotal' | 'fcTotalHours' | 'fcLumpSumTotal'> | null;
   collaborators?: COCollaborator[];
+  assignedOrgName?: string;
   onRefresh: () => void;
 }
 
@@ -44,6 +45,7 @@ export function COStatusActions({
   projectId,
   financials,
   collaborators = [],
+  assignedOrgName,
   onRefresh,
 }: COStatusActionsProps) {
   const { submitCO, approveCO, rejectCO } = useChangeOrderDetail(co.id);
@@ -255,7 +257,7 @@ export function COStatusActions({
         await approveCO.mutateAsync(co.id);
         toast.success('CO approved');
         await logActivity('approved', undefined, financials?.grandTotal || undefined);
-        await notifyOrg(co.org_id, 'CHANGE_APPROVED', financials?.grandTotal || undefined);
+        await notifyOrg(co.assigned_to_org_id, 'CHANGE_APPROVED', financials?.grandTotal || undefined);
       }
 
       setApproveOpen(false);
@@ -275,7 +277,7 @@ export function COStatusActions({
       await rejectCO.mutateAsync({ coId: co.id, note: rejectNote.trim() });
       toast.success('CO rejected');
       await logActivity('rejected', rejectNote.trim());
-      await notifyOrg(co.org_id, 'CHANGE_REJECTED');
+      await notifyOrg(co.assigned_to_org_id, 'CHANGE_REJECTED');
       setRejectOpen(false);
       setRejectNote('');
       onRefresh();
@@ -331,7 +333,7 @@ export function COStatusActions({
       });
       toast.success('Completion acknowledged — TC can now invoice');
       await logActivity('acknowledged_completion');
-      await notifyOrg(co.org_id, 'CO_ACKNOWLEDGED');
+      await notifyOrg(co.assigned_to_org_id, 'CO_ACKNOWLEDGED');
       onRefresh();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed');
@@ -429,7 +431,7 @@ export function COStatusActions({
           {canSendToWIP && (
             <Button size="sm" className="w-full h-8 text-xs gap-1" onClick={doSubmitToWIP} disabled={acting}>
               {acting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-              Send to TC (Work in Progress)
+              Send to {assignedOrgName ?? 'TC'} (Work in Progress)
             </Button>
           )}
           {canCloseForPricing && (

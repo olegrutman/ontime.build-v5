@@ -25,6 +25,19 @@ export function StepReview({ data, projectId }: StepReviewProps) {
     },
   });
 
+  const { data: fcOrgName } = useQuery({
+    queryKey: ['org-name', data.fcOrgId],
+    enabled: !!data.fcOrgId,
+    queryFn: async () => {
+      const { data: org } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', data.fcOrgId)
+        .single();
+      return org?.name ?? '';
+    },
+  });
+
   // Resolve GC org name (project owner) for responsibility labels
   const { data: projectOrg } = useQuery({
     queryKey: ['project-owner-org', projectId],
@@ -73,7 +86,7 @@ export function StepReview({ data, projectId }: StepReviewProps) {
         {data.equipmentNeeded && (
           <Row label="Equipment" value={`Needed · ${data.equipmentResponsible === 'TC' ? (assignedOrg ?? 'TC') : data.equipmentResponsible === 'GC' ? (projectOrg ?? 'GC') : '—'} responsible`} />
         )}
-        {data.fcInputNeeded && <Row label="Field crew input" value="Requested" />}
+        {data.fcInputNeeded && <Row label="Field crew input" value={fcOrgName ? `Requested — ${fcOrgName}` : 'Requested'} />}
       </Section>
 
       <Section icon={ClipboardList} title="Scope & locations">

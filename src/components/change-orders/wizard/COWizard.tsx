@@ -143,6 +143,17 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
       const uniqueLocations = [...new Set(data.selectedItems.map(i => i.locationTag).filter(Boolean))];
       const locationTagSummary = uniqueLocations.length > 0 ? uniqueLocations.join(' | ') : null;
 
+      // C1 fix: Auto-resolve GC org (project owner) for TC/FC-created COs
+      let resolvedAssignedToOrgId = data.assignedToOrgId || null;
+      if (!resolvedAssignedToOrgId && (role === 'TC' || role === 'FC')) {
+        const { data: proj } = await supabase
+          .from('projects')
+          .select('organization_id')
+          .eq('id', projectId)
+          .single();
+        resolvedAssignedToOrgId = proj?.organization_id ?? null;
+      }
+
       const { error: insertError } = await supabase
         .from('change_orders')
         .insert({
@@ -159,7 +170,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
           reason: null,
           reason_note: null,
           location_tag: locationTagSummary,
-          assigned_to_org_id: data.assignedToOrgId || null,
+          assigned_to_org_id: resolvedAssignedToOrgId,
           fc_input_needed: data.fcInputNeeded,
           materials_needed: data.materialsNeeded,
           materials_on_site: data.materialsOnSite,
@@ -194,6 +205,22 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
         if (lineError) {
           await supabase.from('change_orders').delete().eq('id', newCOId);
           throw new Error(`Failed to save scope items: ${lineError.message}`);
+        }
+      }
+
+      // C2 fix: Create FC collaborator record if TC selected an FC org
+      if (data.fcInputNeeded && data.fcOrgId && user) {
+        const { error: collabError } = await supabase
+          .from('change_order_collaborators')
+          .insert({
+            co_id: newCOId,
+            organization_id: data.fcOrgId,
+            collaborator_type: 'FC',
+            invited_by_user_id: user.id,
+            status: 'active',
+          });
+        if (collabError) {
+          console.warn('Failed to create FC collaborator:', collabError);
         }
       }
 
