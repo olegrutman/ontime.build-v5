@@ -162,10 +162,13 @@ export function DashboardProjectList({
         </div>
       ) : (
         <div className="divide-y divide-border">
-          {filteredProjects.map((project) => (
+          {filteredProjects.map((project, index) => (
             <div
               key={project.id}
-              className="px-4 py-3.5 border-l-[3px] border-l-transparent hover:border-l-primary hover:bg-accent/60 transition-all cursor-pointer flex items-center gap-3 group"
+              className={cn(
+                "px-4 py-3.5 border-l-[3px] border-l-transparent hover:border-l-primary hover:bg-accent/60 transition-all cursor-pointer flex items-center gap-3 group",
+                index % 2 === 0 ? "bg-muted/40" : "bg-card"
+              )}
               style={{ minHeight: '56px' }}
               onClick={() => navigate(`/project/${project.id}`)}
             >
