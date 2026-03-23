@@ -1,26 +1,16 @@
 import { useState } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   Home,
   Handshake,
-  LayoutDashboard,
-  ListChecks,
-  FileText,
-  ShoppingCart,
-  ClipboardList,
   MessageSquareMore,
   MoreHorizontal,
   Bell,
   Users,
-  Undo2,
-  CalendarDays,
-  Camera,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
-import { useFeatureEnabled } from '@/components/auth/FeatureGate';
-import { FieldCaptureSheet } from '@/components/field-capture/FieldCaptureSheet';
 
 interface NavItem {
   label: string;
