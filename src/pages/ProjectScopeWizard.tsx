@@ -1,13 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ChevronDown, ChevronRight, Pencil, AlertTriangle, X } from 'lucide-react';
+import { Pencil, AlertTriangle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { WizardProgress } from '@/components/ui/wizard-progress';
 import { useToast } from '@/hooks/use-toast';
-import { cn } from '@/lib/utils';
 import { useProjectProfile, useProjectTypes } from '@/hooks/useProjectProfile';
 import {
   useScopeSections, useScopeItems, useScopeSelections,
@@ -28,7 +26,7 @@ export default function ProjectScopeWizard() {
   const saveMutation = useSaveScopeSelections(projectId!);
 
   const [toggles, setToggles] = useState<Record<string, boolean>>({});
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const [currentStep, setCurrentStep] = useState(0);
   const [initialized, setInitialized] = useState(false);
 
   const projectType = useMemo(
@@ -76,10 +74,6 @@ export default function ProjectScopeWizard() {
     }
   }, [profileLoading, profile, projectId, navigate]);
 
-  const toggleSection = (id: string) => {
-    setOpenSections(p => ({ ...p, [id]: !p[id] }));
-  };
-
   const conflicts = existingSelections.filter(s => s.is_conflict);
 
   const handleSave = async () => {
@@ -98,13 +92,38 @@ export default function ProjectScopeWizard() {
     return <div className="flex items-center justify-center min-h-screen text-muted-foreground">Loading…</div>;
   }
 
+  // Filter out sections with no items
+  const nonEmptySections = visibleSections.filter(s => (sectionItems[s.id] || []).length > 0);
+  const totalSteps = nonEmptySections.length;
+  const safeStep = Math.min(currentStep, totalSteps - 1);
+  const currentSection = nonEmptySections[safeStep];
+  const currentItems = currentSection ? (sectionItems[currentSection.id] || []) : [];
+
   const totalOn = Object.values(toggles).filter(Boolean).length;
   const totalItems = Object.values(toggles).length;
+
+  const handleNext = () => {
+    if (safeStep < totalSteps - 1) {
+      setCurrentStep(safeStep + 1);
+    } else {
+      handleSave();
+    }
+  };
+
+  const handleBack = () => {
+    if (safeStep > 0) {
+      setCurrentStep(safeStep - 1);
+    } else {
+      navigate(`/project/${projectId}/details-wizard`);
+    }
+  };
+
+  const isLastStep = safeStep === totalSteps - 1;
 
   return (
     <div className="min-h-screen bg-background pb-24">
       {/* Profile banner */}
-       <div className="sticky top-0 z-30 bg-card border-b px-4 py-3">
+      <div className="sticky top-0 z-30 bg-card border-b px-4 py-3">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm">
             <Badge className="bg-primary/15 text-primary border-0">{projectType?.name}</Badge>
@@ -123,79 +142,58 @@ export default function ProjectScopeWizard() {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
-        <div>
-          <h1 className="text-2xl font-bold font-heading">Project Scope</h1>
-          <p className="text-sm text-muted-foreground">Toggle line items on or off. STD items are standard scope, OPT items are optional add-ons.</p>
-        </div>
+      <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+        {/* Step indicator */}
+        {totalSteps > 0 && (
+          <WizardProgress
+            currentStep={safeStep}
+            totalSteps={totalSteps}
+            steps={nonEmptySections.map(s => ({ title: s.label, description: s.description || undefined }))}
+          />
+        )}
 
-        {conflicts.length > 0 && (
+        {conflicts.length > 0 && safeStep === 0 && (
           <div className="flex items-start gap-2 bg-destructive/10 text-destructive rounded-lg p-3 text-sm">
             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>{conflicts.length} items in your scope no longer match your project profile. Review before continuing.</span>
           </div>
         )}
 
-        {visibleSections.map(section => {
-          const items = sectionItems[section.id] || [];
-          if (items.length === 0) return null;
-          const open = openSections[section.id] ?? true;
-          const onCount = items.filter(i => toggles[i.id]).length;
+        {/* Current section */}
+        {currentSection && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-xl font-bold font-heading">{currentSection.label}</h2>
+              {currentSection.description && (
+                <p className="text-sm text-muted-foreground mt-1">{currentSection.description}</p>
+              )}
+            </div>
 
-          return (
-            <Card key={section.id}>
-              <Collapsible open={open} onOpenChange={() => toggleSection(section.id)}>
-                <CollapsibleTrigger className="w-full">
-                  <div className="flex items-center justify-between p-4 cursor-pointer hover:bg-accent/30 transition-colors">
-                    <div className="flex items-center gap-2">
-                      {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                      <span className="font-semibold text-sm">{section.label}</span>
-                      {section.description && (
-                        <span className="text-xs text-muted-foreground hidden sm:inline">— {section.description}</span>
-                      )}
-                    </div>
-                    <Badge variant="outline" className="text-xs">{onCount}/{items.length}</Badge>
-                  </div>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <CardContent className="p-0">
-                    <div className="divide-y">
-                      {items.map(item => (
-                        <div key={item.id} className="flex items-center justify-between px-4 py-3 min-h-[48px]">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm">{item.label}</span>
-                            <Badge variant={item.item_type === 'STD' ? 'default' : 'outline'}
-                              className={cn(
-                                'text-[10px] px-1.5 py-0',
-                                item.item_type === 'STD' ? 'bg-secondary text-secondary-foreground' : '',
-                              )}>
-                              {item.item_type}
-                            </Badge>
-                          </div>
-                          <Switch
-                            checked={toggles[item.id] ?? item.default_on}
-                            onCheckedChange={v => setToggles(p => ({ ...p, [item.id]: v }))}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </CollapsibleContent>
-              </Collapsible>
-            </Card>
-          );
-        })}
+            <div className="rounded-lg border bg-card divide-y">
+              {currentItems.map(item => (
+                <div key={item.id} className="flex items-center justify-between px-4 py-3.5 min-h-[52px]">
+                  <span className="text-sm font-medium">{item.label}</span>
+                  <Switch
+                    checked={toggles[item.id] ?? item.default_on}
+                    onCheckedChange={v => setToggles(p => ({ ...p, [item.id]: v }))}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Sticky footer */}
       <div className="fixed bottom-0 left-0 right-0 bg-card border-t px-4 py-3 z-30">
         <div className="max-w-3xl mx-auto flex justify-between">
-          <Button variant="outline" onClick={() => navigate(`/project/${projectId}/details-wizard`)}
-            className="min-h-[44px]">
-            Back to Profile
+          <Button variant="outline" onClick={handleBack} className="min-h-[44px]">
+            {safeStep === 0 ? 'Back to Profile' : 'Back'}
           </Button>
-          <Button onClick={handleSave} disabled={saveMutation.isPending} className="min-h-[44px]">
-            {saveMutation.isPending ? 'Saving...' : 'Save Scope & Continue'}
+          <Button onClick={handleNext} disabled={saveMutation.isPending} className="min-h-[44px]">
+            {isLastStep
+              ? (saveMutation.isPending ? 'Saving...' : 'Save Scope & Continue')
+              : 'Next'}
           </Button>
         </div>
       </div>
