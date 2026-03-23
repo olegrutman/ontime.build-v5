@@ -211,7 +211,11 @@ export function DashboardProjectList({
 
               {/* Contract value */}
               <span className="text-[0.82rem] font-semibold text-foreground shrink-0">
-                {project.contractValue != null ? formatCurrency(project.contractValue) : '—'}
+              {project.contractValue != null ? formatCurrency(project.contractValue) : '—'}
+              </span>
+
+              {/* Chevron indicator */}
+              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
               </span>
 
               {/* Actions menu */}
