@@ -5,7 +5,7 @@ import { ChevronDown, ClipboardList } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { useProjectRealtime } from '@/hooks/useProjectRealtime';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -34,6 +34,8 @@ import {
   CriticalScheduleCard,
   ScopeDetailsTab,
 } from '@/components/project';
+import { ProjectIconRail } from '@/components/project/ProjectIconRail';
+import { ProjectBottomNav } from '@/components/project/ProjectBottomNav';
 import { ContractHeroCard } from '@/components/project/ContractHeroCard';
 import { BillingCashCard } from '@/components/project/BillingCashCard';
 import { UrgentTasksCard } from '@/components/project/UrgentTasksCard';
@@ -115,8 +117,8 @@ function CollapsibleOperations({ projectId, projectType, financials, onNavigate 
 }
 
 export default function ProjectHome() {
-  const { id } = useParams<{ id: string }>();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const { id, section } = useParams<{ id: string; section?: string }>();
+  const location = useLocation();
   const navigate = useNavigate();
   const { user, userOrgRoles } = useAuth();
   const { toast } = useToast();
@@ -141,6 +143,21 @@ export default function ProjectHome() {
   const { data: projectProfile } = useProjectProfile(id);
   const { data: scopeSelections } = useScopeSelections(id);
   const showSetupBanner = !projectProfile || !scopeSelections || scopeSelections.length === 0;
+
+  const changeOrdersEnabled = useFeatureEnabled('change_orders');
+
+  // Derive active tab from route section param
+  const activeTab = section || 'overview';
+
+  // Navigation helper — replaces old handleTabChange
+  const handleTabChange = (tab: string) => {
+    if (tab === 'sov') {
+      navigate(`/project/${id}/sov`);
+      return;
+    }
+    navigate(`/project/${id}/${tab}`);
+    setTabResetKey(prev => prev + 1);
+  };
 
   // Sync local project status when auto-activation completes
   useEffect(() => {
@@ -167,26 +184,11 @@ export default function ProjectHome() {
   });
   const { data: estimateRows } = useProjectEstimateRows(id || '', projectSupplierOrgId ?? null);
 
-  const activeTab = searchParams.get('tab') || 'overview';
-  const changeOrdersEnabled = useFeatureEnabled('change_orders');
-
-  const handleTabChange = (tab: string) => {
-    if (tab === 'sov') {
-      navigate(`/project/${id}/sov`);
-      return;
-    }
-    setSearchParams({ tab });
-    setTabResetKey(prev => prev + 1);
-  };
-
+  // Redirect legacy work-orders tab
   useEffect(() => {
     if (activeTab !== 'work-orders') return;
-
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set('tab', changeOrdersEnabled ? 'change-orders' : 'overview');
-    setSearchParams(nextParams, { replace: true });
-    setTabResetKey(prev => prev + 1);
-  }, [activeTab, changeOrdersEnabled, searchParams, setSearchParams]);
+    navigate(`/project/${id}/${changeOrdersEnabled ? 'change-orders' : 'overview'}`, { replace: true });
+  }, [activeTab, changeOrdersEnabled, id, navigate]);
 
   const handleStatusChange = async (newStatus: string) => {
     if (!project) return;
@@ -226,7 +228,6 @@ export default function ProjectHome() {
       const { data: proj, error } = await supabase.from('projects').select('*').eq('id', id).single();
       if (error) {
         console.error('Error fetching project:', error);
-        // Check if user has a pending invite for this project
         if (user) {
           const { data: invite } = await supabase
             .from('project_participants')
@@ -236,7 +237,6 @@ export default function ProjectHome() {
             .limit(1)
             .maybeSingle();
           if (invite) {
-            // Check if this invite belongs to the user's org
             const userOrgIds = userOrgRoles.map(r => r.organization?.id).filter(Boolean);
             if (userOrgIds.includes(invite.organization_id)) {
               setPendingInvite(true);
@@ -326,173 +326,189 @@ export default function ProjectHome() {
               projectName={project.name}
               projectId={id!}
               projectStatus={projectStatus}
-              activeTab={activeTab}
-              onTabChange={handleTabChange}
               onStatusChange={handleStatusChange}
               isSupplier={isSupplier}
             />
           </div>
 
-          <main className="flex-1 overflow-auto">
-            <div className={cn(
-              "max-w-7xl mx-auto w-full pb-24 lg:pb-6",
-              activeTab === 'overview' ? 'px-3 sm:px-6 py-4 sm:py-6' : 'px-3 sm:px-6 py-4 sm:py-6 space-y-6'
-            )}>
-              {/* Overview Tab */}
-              {activeTab === 'overview' && (
-                <>
-                  {isInDemoMode ? (
-                    <DemoProjectOverview onNavigate={handleTabChange} />
-                  ) : isSupplier && supplierOrgId ? (
-                    <SupplierMaterialsOverview projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
-                  ) : (
-                    <div className="space-y-4">
-                      {showSetupBanner && (
-                        <div
-                          className="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors"
-                          onClick={() => navigate(`/project/${id}/details-wizard`)}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                              <ClipboardList className="h-5 w-5 text-amber-600" />
+          {/* Icon rail + content layout */}
+          <div className="flex flex-1 overflow-hidden">
+            <ProjectIconRail isSupplier={isSupplier} />
+            <main className="flex-1 overflow-auto">
+              <div className={cn(
+                "max-w-7xl mx-auto w-full pb-24 lg:pb-6",
+                activeTab === 'overview' ? 'px-3 sm:px-6 py-4 sm:py-6' : 'px-3 sm:px-6 py-4 sm:py-6 space-y-6'
+              )}>
+                {/* Overview Tab */}
+                {activeTab === 'overview' && (
+                  <>
+                    {isInDemoMode ? (
+                      <DemoProjectOverview onNavigate={handleTabChange} />
+                    ) : isSupplier && supplierOrgId ? (
+                      <SupplierMaterialsOverview projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
+                    ) : (
+                      <div className="space-y-4">
+                        {showSetupBanner && (
+                          <div
+                            className="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors"
+                            onClick={() => navigate(`/project/${id}/details-wizard`)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                                <ClipboardList className="h-5 w-5 text-amber-600" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-sm">Define Scope & Details</p>
+                                <p className="text-xs text-muted-foreground">Set up project type, structure, and scope of work</p>
+                              </div>
+                              <ChevronDown className="h-4 w-4 text-muted-foreground -rotate-90" />
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-sm">Define Scope & Details</p>
-                              <p className="text-xs text-muted-foreground">Set up project type, structure, and scope of work</p>
-                            </div>
-                            <ChevronDown className="h-4 w-4 text-muted-foreground -rotate-90" />
                           </div>
+                        )}
+
+                        {(project.status === 'setup' || project.status === 'draft') && !isFC && (
+                          <ProjectReadinessCard readiness={readiness} />
+                        )}
+
+                        {/* Mobile attention banner */}
+                        <div className="lg:hidden">
+                          <AttentionBanner projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
                         </div>
-                      )}
 
-                      {(project.status === 'setup' || project.status === 'draft') && !isFC && (
-                        <ProjectReadinessCard readiness={readiness} />
-                      )}
-  
-
-                      {/* Mobile attention banner */}
-                      <div className="lg:hidden">
-                        <AttentionBanner projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
-                      </div>
-
-                      {/* Main grid: left content + right sidebar */}
-                      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
-                        {/* LEFT COLUMN */}
-                        <div className="space-y-4">
-                          <ContractHeroCard financials={financials} projectId={id!} />
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <BillingCashCard financials={financials} />
-                            <ProfitCard financials={financials} projectId={id!} />
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
-                            <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
-                          </div>
-                          {projectSupplierOrgId && (
-                            <MaterialsBudgetStatusCard
+                        {/* Main grid: left content + right sidebar */}
+                        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
+                          {/* LEFT COLUMN */}
+                          <div className="space-y-4">
+                            <ContractHeroCard financials={financials} projectId={id!} />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <BillingCashCard financials={financials} />
+                              <ProfitCard financials={financials} projectId={id!} />
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
+                              <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
+                            </div>
+                            {projectSupplierOrgId && (
+                              <MaterialsBudgetStatusCard
+                                projectId={id!}
+                                supplierOrgId={projectSupplierOrgId}
+                                financials={financials}
+                              />
+                            )}
+                            {estimateRows && estimateRows.length > 0 && (
+                              <SupplierEstimateCatalog estimates={estimateRows} hidePricing={currentOrg?.type === 'TC' && materialResponsibility === 'GC'} />
+                            )}
+                            <CriticalScheduleCard projectId={id!} onNavigate={handleTabChange} />
+                            <MaterialMarkupEditor financials={financials} projectId={id!} projectStatus={projectStatus} />
+                            <CollapsibleOperations
                               projectId={id!}
-                              supplierOrgId={projectSupplierOrgId}
+                              projectType={project.project_type}
                               financials={financials}
+                              onNavigate={handleTabChange}
                             />
-                          )}
-                          {estimateRows && estimateRows.length > 0 && (
-                            <SupplierEstimateCatalog estimates={estimateRows} hidePricing={currentOrg?.type === 'TC' && materialResponsibility === 'GC'} />
-                          )}
-                          <CriticalScheduleCard projectId={id!} onNavigate={handleTabChange} />
-                          <MaterialMarkupEditor financials={financials} projectId={id!} projectStatus={projectStatus} />
-                          <CollapsibleOperations
-                            projectId={id!}
-                            projectType={project.project_type}
-                            financials={financials}
-                            onNavigate={handleTabChange}
-                          />
+                          </div>
+
+                          {/* RIGHT SIDEBAR — desktop only */}
+                          <div className="hidden lg:flex flex-col gap-4">
+                            <UrgentTasksCard projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
+                            <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} onTeamChanged={readiness.recalculate} />
+                          </div>
                         </div>
 
-                        {/* RIGHT SIDEBAR — desktop only */}
-                        <div className="hidden lg:flex flex-col gap-4">
-                          <UrgentTasksCard projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
+                        {/* Mobile: team + urgent below */}
+                        <div className="lg:hidden space-y-4">
                           <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} onTeamChanged={readiness.recalculate} />
                         </div>
                       </div>
+                    )}
+                  </>
+                )}
 
-                      {/* Mobile: team + urgent below */}
-                      <div className="lg:hidden space-y-4">
-                        <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} onTeamChanged={readiness.recalculate} />
+                {activeTab === 'scope' && (
+                  <ScopeDetailsTab projectId={id!} />
+                )}
+                {/* Backwards compat: old scope-details route */}
+                {activeTab === 'scope-details' && (
+                  <ScopeDetailsTab projectId={id!} />
+                )}
+
+                {activeTab === 'sov' && (
+                  <FeatureGate feature="sov_contracts">
+                    <ContractSOVEditor projectId={id!} />
+                  </FeatureGate>
+                )}
+
+                {activeTab === 'rfis' && (
+                  isInDemoMode ? <DemoRFIsTab /> : <RFIsTab projectId={id!} />
+                )}
+                {activeTab === 'estimates' && isSupplier && supplierOrgId && (
+                  <FeatureGate feature="supplier_estimates">
+                    <SupplierEstimatesSection projectId={id!} projectName={project?.name} supplierOrgId={supplierOrgId} />
+                  </FeatureGate>
+                )}
+                {activeTab === 'estimates' && !isSupplier && (
+                  <FeatureGate feature="supplier_estimates">
+                    {materialResponsibility && (
+                      (currentOrg?.type === 'GC' && materialResponsibility === 'TC') ||
+                      (currentOrg?.type !== 'GC' && materialResponsibility === 'GC')
+                    ) ? (
+                      <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
+                        Materials are managed by the {materialResponsibility === 'GC' ? 'General Contractor' : 'Trade Contractor'} on this project.
                       </div>
-                    </div>
-                  )}
-                </>
-              )}
-
-              {activeTab === 'scope-details' && (
-                <ScopeDetailsTab projectId={id!} />
-              )}
-
-              {/* Other tabs — unchanged */}
-              {/* SOV tab now routes to /project/:id/sov — handled in handleTabChange */}
-              {activeTab === 'rfis' && (
-                isInDemoMode ? <DemoRFIsTab /> : <RFIsTab projectId={id!} />
-              )}
-              {activeTab === 'estimates' && isSupplier && supplierOrgId && (
-                <FeatureGate feature="supplier_estimates">
-                  <SupplierEstimatesSection projectId={id!} projectName={project?.name} supplierOrgId={supplierOrgId} />
-                </FeatureGate>
-              )}
-              {activeTab === 'estimates' && !isSupplier && (
-                <FeatureGate feature="supplier_estimates">
-                  {materialResponsibility && (
-                    (currentOrg?.type === 'GC' && materialResponsibility === 'TC') ||
-                    (currentOrg?.type !== 'GC' && materialResponsibility === 'GC')
-                  ) ? (
-                    <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
-                      Materials are managed by the {materialResponsibility === 'GC' ? 'General Contractor' : 'Trade Contractor'} on this project.
-                    </div>
-                  ) : (
-                    <ProjectEstimatesReview projectId={id!} />
-                  )}
-                </FeatureGate>
-              )}
-              {activeTab === 'invoices' && (
-                <FeatureGate feature="invoicing">
-                  {isInDemoMode
-                    ? <DemoInvoicesTab projectId={id!} />
-                    : <InvoicesTab key={`invoices-${tabResetKey}-${realtimeKey}`} projectId={id!} retainagePercent={project.retainage_percent || 0} projectStatus={projectStatus} />
-                  }
-                </FeatureGate>
-              )}
-              {activeTab === 'purchase-orders' && (
-                <FeatureGate feature="purchase_orders">
-                  {isInDemoMode
-                    ? <DemoPurchaseOrdersTab projectId={id!} />
-                    : <PurchaseOrdersTab key={`po-${tabResetKey}-${realtimeKey}`} projectId={id!} projectName={project?.name} projectStatus={projectStatus}
-                        projectAddress={project?.address ? `${project.address.street || ''}, ${project.address.city || ''}, ${project.address.state || ''} ${project.address.zip || ''}`.replace(/^,\s*|,\s*$/g, '').trim() : ''} />
-                  }
-                </FeatureGate>
-              )}
-              {activeTab === 'schedule' && (
-                <FeatureGate feature="schedule_gantt">
-                  <ScheduleTab projectId={id!} />
-                </FeatureGate>
-              )}
-              {activeTab === 'daily-log' && (
-                <FeatureGate feature="daily_logs">
-                  <DailyLogPanel projectId={id!} />
-                </FeatureGate>
-              )}
-              {activeTab === 'returns' && (
-                <FeatureGate feature="returns_tracking">
-                  <ReturnsTab projectId={id!} />
-                </FeatureGate>
-              )}
-              {activeTab === 'change-orders' && (
-                <FeatureGate feature="change_orders">
-                  <COListPage projectId={id!} />
-                </FeatureGate>
-              )}
-            </div>
-          </main>
+                    ) : (
+                      <ProjectEstimatesReview projectId={id!} />
+                    )}
+                  </FeatureGate>
+                )}
+                {activeTab === 'invoices' && (
+                  <FeatureGate feature="invoicing">
+                    {isInDemoMode
+                      ? <DemoInvoicesTab projectId={id!} />
+                      : <InvoicesTab key={`invoices-${tabResetKey}-${realtimeKey}`} projectId={id!} retainagePercent={project.retainage_percent || 0} projectStatus={projectStatus} />
+                    }
+                  </FeatureGate>
+                )}
+                {activeTab === 'purchase-orders' && (
+                  <FeatureGate feature="purchase_orders">
+                    {isInDemoMode
+                      ? <DemoPurchaseOrdersTab projectId={id!} />
+                      : <PurchaseOrdersTab key={`po-${tabResetKey}-${realtimeKey}`} projectId={id!} projectName={project?.name} projectStatus={projectStatus}
+                          projectAddress={project?.address ? `${project.address.street || ''}, ${project.address.city || ''}, ${project.address.state || ''} ${project.address.zip || ''}`.replace(/^,\s*|,\s*$/g, '').trim() : ''} />
+                    }
+                  </FeatureGate>
+                )}
+                {activeTab === 'schedule' && (
+                  <FeatureGate feature="schedule_gantt">
+                    <ScheduleTab projectId={id!} />
+                  </FeatureGate>
+                )}
+                {activeTab === 'daily-log' && (
+                  <FeatureGate feature="daily_logs">
+                    <DailyLogPanel projectId={id!} />
+                  </FeatureGate>
+                )}
+                {activeTab === 'returns' && (
+                  <FeatureGate feature="returns_tracking">
+                    <ReturnsTab projectId={id!} />
+                  </FeatureGate>
+                )}
+                {activeTab === 'change-orders' && (
+                  <FeatureGate feature="change_orders">
+                    <COListPage projectId={id!} />
+                  </FeatureGate>
+                )}
+              </div>
+            </main>
+          </div>
         </SidebarInset>
-        <BottomNav />
+        {/* Mobile: project-specific bottom nav on project pages */}
+        <div className="md:hidden">
+          <ProjectBottomNav isSupplier={isSupplier} />
+        </div>
+        {/* Dashboard bottom nav hidden on project pages on mobile, visible on desktop (not needed but BottomNav has lg:hidden) */}
+        <div className="hidden">
+          {/* BottomNav is hidden on project pages — ProjectBottomNav handles mobile */}
+        </div>
       </div>
     </SidebarProvider>
   );
