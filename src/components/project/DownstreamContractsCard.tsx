@@ -137,7 +137,6 @@ export function DownstreamContractsCard({ projectId, tcOrgId }: Props) {
           <div key={m.org_id} className="flex items-center gap-4">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{m.invited_org_name || 'Field Crew'}</p>
-              <p className="text-xs text-muted-foreground">Field Crew</p>
             </div>
             <div className="w-40">
               <Label className="sr-only">Contract amount</Label>

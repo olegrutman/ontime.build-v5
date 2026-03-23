@@ -611,7 +611,7 @@ export default function EditProject() {
                             <Badge variant="outline">{contract.trade}</Badge>
                           )}
                         </span>
-                        <Badge variant="secondary">
+                        <Badge variant="secondary" className="text-xs">
                           {contract.from_role} → {contract.to_role}
                         </Badge>
                       </CardTitle>

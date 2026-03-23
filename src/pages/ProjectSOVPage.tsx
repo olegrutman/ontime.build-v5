@@ -79,7 +79,9 @@ function SOVContractSection({
     setEditingId(null);
   };
 
-  const contractLabel = `${contract.from_role} → ${contract.to_role}`;
+  const fromName = contract.from_org?.name || contract.from_role;
+  const toName = contract.to_org?.name || contract.to_role;
+  const contractLabel = `${fromName} → ${toName}`;
   const contractValue = contract.contract_sum || 0;
 
   if (prereqsLoading || sovLoading) {
