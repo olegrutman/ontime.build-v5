@@ -97,31 +97,20 @@ export function BottomNav() {
               </button>
             );
           })}
-          {/* Capture FAB — only on project pages */}
-          {isProjectPage && fieldCaptureEnabled && (
+          {/* More button */}
+          {moreItems.length > 0 && (
             <button
-              onClick={() => setCaptureOpen(true)}
+              onClick={() => setMoreOpen(true)}
               className="flex flex-col items-center justify-center gap-0.5 flex-1 transition-colors"
-              style={{ color: '#F5A623', minHeight: '58px' }}
+              style={{
+                color: moreIsActive ? '#F5A623' : 'rgba(255,255,255,0.35)',
+                minHeight: '58px',
+              }}
             >
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                <Camera className="w-4.5 h-4.5 text-primary-foreground" />
-              </div>
-              <span className="text-[10px] font-bold">Capture</span>
+              <MoreHorizontal className="w-6 h-6" />
+              <span className="text-[11px] font-semibold">More</span>
             </button>
           )}
-          {/* More button */}
-          <button
-            onClick={() => setMoreOpen(true)}
-            className="flex flex-col items-center justify-center gap-0.5 flex-1 transition-colors"
-            style={{
-              color: moreIsActive ? '#F5A623' : 'rgba(255,255,255,0.35)',
-              minHeight: '58px',
-            }}
-          >
-            <MoreHorizontal className="w-6 h-6" />
-            <span className="text-[11px] font-semibold">More</span>
-          </button>
         </div>
       </nav>
 
@@ -154,16 +143,6 @@ export function BottomNav() {
           </div>
         </DrawerContent>
       </Drawer>
-
-      {/* Field Capture Sheet */}
-      {isProjectPage && projectId && orgId && (
-        <FieldCaptureSheet
-          open={captureOpen}
-          onOpenChange={setCaptureOpen}
-          projectId={projectId}
-          organizationId={orgId}
-        />
-      )}
     </>
   );
 }
