@@ -165,7 +165,7 @@ export function DashboardProjectList({
           {filteredProjects.map((project) => (
             <div
               key={project.id}
-              className="px-4 py-3 hover:bg-accent/50 transition-colors cursor-pointer flex items-center gap-3 group"
+              className="px-4 py-3.5 border-l-[3px] border-l-transparent hover:border-l-primary hover:bg-accent/60 transition-all cursor-pointer flex items-center gap-3 group"
               style={{ minHeight: '56px' }}
               onClick={() => navigate(`/project/${project.id}`)}
             >
