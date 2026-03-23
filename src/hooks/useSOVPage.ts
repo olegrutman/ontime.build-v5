@@ -30,7 +30,7 @@ export function useSOVPage(projectId: string, contractId?: string | null) {
 
   // Fetch prerequisites using the active contract
   const { data: prereqs, isLoading: prereqsLoading } = useQuery<SOVPrerequisites>({
-    queryKey: ['sov-prereqs', projectId, activeContractId],
+    queryKey: ['sov-prereqs', projectId, activeContractId, activeContract?.id],
     queryFn: async () => {
       const [profileRes, scopeRes] = await Promise.all([
         supabase.from('project_profiles').select('id, project_type_id, stories, units_per_building, number_of_buildings, foundation_types, roof_type, has_garage, garage_types, has_basement, basement_type, has_stairs, stair_types, has_deck_balcony, has_pool, has_elevator, has_clubhouse, has_commercial_spaces, has_shed, is_complete').eq('project_id', projectId).maybeSingle(),
