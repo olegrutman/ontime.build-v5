@@ -705,7 +705,7 @@ export function COMaterialsPanel({
                   <th className="text-left px-2 py-2 font-medium">UOM</th>
                   {showPricingColumns && <th className="text-right px-2 py-2 font-medium">Unit cost</th>}
                   {showPricingColumns && <th className="text-right px-2 py-2 font-medium">Markup %</th>}
-                  {!isFC && <th className="text-right px-4 py-2 font-medium">Amount</th>}
+                  {showPricingColumns && <th className="text-right px-4 py-2 font-medium">Amount</th>}
                   {canManageMaterials && <th className="w-8" />}
                 </tr>
               </thead>
@@ -747,7 +747,7 @@ export function COMaterialsPanel({
                           {material.markup_percent > 0 ? `${material.markup_percent}%` : '—'}
                         </td>
                       )}
-                      {!isFC && (
+                      {showPricingColumns && (
                         <td className="text-right px-4 py-2.5 font-medium text-foreground">
                           ${fmt(displayAmount)}
                         </td>
@@ -840,7 +840,7 @@ export function COMaterialsPanel({
                           </div>
                         </td>
                       )}
-                      {!isFC && (
+                      {showPricingColumns && (
                         <td className="text-right px-4 py-2 text-xs text-muted-foreground">
                           {billed > 0 ? `$${fmt(billed)}` : '—'}
                         </td>
@@ -877,7 +877,7 @@ export function COMaterialsPanel({
             </div>
           )}
 
-          {materials.length > 0 && !isFC && (
+          {materials.length > 0 && showPricingColumns && (
             <div className="px-4 py-3 border-t border-border space-y-1">
               {hasSupplierPricing && (
                 <div className="flex items-center gap-1.5 mb-1">
