@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -14,7 +14,7 @@ import { ChevronDown, Download, Loader2 } from 'lucide-react';
 import { NotificationSheet } from '@/components/notifications/NotificationSheet';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useFeatureEnabled, TAB_FEATURE_MAP } from '@/components/auth/FeatureGate';
+
 
 interface ProjectTopBarProps {
   projectName: string;
