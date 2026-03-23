@@ -176,6 +176,9 @@ export function useChangeOrderDetail(coId: string | null) {
   const equipmentCost = equipment.reduce((sum, item) => sum + (item.cost ?? 0), 0);
   const equipmentMarkup = equipment.reduce((sum, item) => sum + (item.markup_amount ?? 0), 0);
   const equipmentTotal = equipment.reduce((sum, item) => sum + (item.billed_amount ?? 0), 0);
+  const tcBillableToGC = co?.use_fc_pricing_base && co?.tc_submitted_price && co.tc_submitted_price > 0
+    ? co.tc_submitted_price
+    : tcLaborTotal;
   const grandTotal = laborTotal + materialsTotal + equipmentTotal;
   const actualCostTotal = actualCostEntries.reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
   const profitMargin = grandTotal > 0 ? ((grandTotal - actualCostTotal) / grandTotal) * 100 : null;
@@ -193,6 +196,7 @@ export function useChangeOrderDetail(coId: string | null) {
     equipmentTotal,
     equipmentCost,
     equipmentMarkup,
+    tcBillableToGC,
     grandTotal,
     actualCostTotal,
     profitMargin,
