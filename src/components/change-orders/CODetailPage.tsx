@@ -287,13 +287,13 @@ export function CODetailPage() {
                       <p className="co-light-kpi-value">{fmtCurrency(financials.fcLaborTotal)}</p>
                     </div>
                   )}
-                  {co.materials_needed && (!isTC || co.materials_responsible === 'TC') && (
+                  {(co.materials_needed || financials.materialsTotal > 0) && (!isTC || co.materials_responsible === 'TC') && (
                     <div className="co-light-kpi">
                       <p className="co-light-kpi-label">Materials</p>
                       <p className="co-light-kpi-value">{fmtCurrency(financials.materialsTotal)}</p>
                     </div>
                   )}
-                  {co.equipment_needed && (!isTC || co.equipment_responsible === 'TC') && (
+                  {(co.equipment_needed || financials.equipmentTotal > 0) && (!isTC || co.equipment_responsible === 'TC') && (
                     <div className="co-light-kpi">
                       <p className="co-light-kpi-label">Equipment</p>
                       <p className="co-light-kpi-value">{fmtCurrency(financials.equipmentTotal)}</p>
@@ -458,8 +458,8 @@ export function CODetailPage() {
                     {isGC && (
                       <>
                         <FinRow label="Labor" value={financials.tcBillableToGC} />
-                        {co.materials_needed && <FinRow label="Materials" value={financials.materialsTotal} />}
-                        {co.equipment_needed && <FinRow label="Equipment" value={financials.equipmentTotal} />}
+                        {(co.materials_needed || financials.materialsTotal > 0) && <FinRow label="Materials" value={financials.materialsTotal} />}
+                        {(co.equipment_needed || financials.equipmentTotal > 0) && <FinRow label="Equipment" value={financials.equipmentTotal} />}
                         <div className="border-t border-border pt-2 mt-2">
                           <FinRow label="Total billed" value={financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal} bold />
                         </div>
@@ -467,20 +467,20 @@ export function CODetailPage() {
                     )}
 
                     {isTC && (() => {
-                      const tcMaterialsTotal = co.materials_needed && co.materials_responsible === 'TC' ? financials.materialsTotal : 0;
-                      const tcEquipmentTotal = co.equipment_needed && co.equipment_responsible === 'TC' ? financials.equipmentTotal : 0;
+                      const tcMaterialsTotal = (co.materials_needed || financials.materialsTotal > 0) && co.materials_responsible === 'TC' ? financials.materialsTotal : 0;
+                      const tcEquipmentTotal = (co.equipment_needed || financials.equipmentTotal > 0) && co.equipment_responsible === 'TC' ? financials.equipmentTotal : 0;
                       const tcReviewedTotal = financials.tcBillableToGC + tcMaterialsTotal + tcEquipmentTotal;
                       return (
                         <>
                           {financials.fcLaborTotal > 0 && <FinRow label={`${fcCollabName} cost`} value={financials.fcLaborTotal} muted />}
                           <FinRow label={`${myOrgName} billable`} value={financials.tcBillableToGC} />
-                          {co.materials_needed && co.materials_responsible === 'TC' && (
+                          {(co.materials_needed || financials.materialsTotal > 0) && co.materials_responsible === 'TC' && (
                             <>
                               <FinRow label="Materials cost" value={financials.materialsCost ?? 0} muted />
                               <FinRow label="Materials billed" value={financials.materialsTotal} />
                             </>
                           )}
-                          {co.equipment_needed && co.equipment_responsible === 'TC' && (
+                          {(co.equipment_needed || financials.equipmentTotal > 0) && co.equipment_responsible === 'TC' && (
                             <>
                               <FinRow label="Equipment cost" value={financials.equipmentCost ?? 0} muted />
                               <FinRow label="Equipment billed" value={financials.equipmentTotal} />

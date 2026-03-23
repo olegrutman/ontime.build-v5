@@ -86,7 +86,7 @@ export function useChangeOrders(projectId: string | null) {
 
   for (const co of changeOrders) {
     const isMine = co.org_id === orgId;
-    const isCollaborator = co.collaboratorOrgId === orgId && co.collaboratorStatus === 'active';
+    const isCollaborator = co.collaboratorOrgId === orgId && (co.collaboratorStatus === 'active' || co.collaboratorStatus === 'completed');
 
     if (isMine) {
       const bucket = co.status as COStatus;
