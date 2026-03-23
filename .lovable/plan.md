@@ -1,41 +1,41 @@
 
 
-# Show All SOVs on One Page with Collapsible Sections
+# Fix: TC Can't See GC↔TC SOV — Stale Prerequisites Cache
 
-## Current Behavior
-The SOV page shows a contract selector (pill buttons) and displays only one SOV at a time. TC must click between contracts to see each SOV.
+## Root Cause
 
-## New Behavior
-Show all relevant SOVs stacked vertically, each in a collapsible card. TC sees both "GC → TC" and "TC → FC" SOVs at once. Each section is independently collapsible with its own generate/lock actions.
+In `src/hooks/useSOVPage.ts`, the `prereqs` query has a **stale closure** bug:
 
-## Approach
+1. Hook receives `contractId` from the page
+2. `activeContractId = contractId` (set immediately)
+3. `activeContract = allContracts.find(c => c.id === activeContractId)` — returns `undefined` until `allContracts` query resolves
+4. `prereqs` query runs with `hasContract: !!activeContract?.contract_sum` → **false** (because `activeContract` is still null)
+5. When `allContracts` loads, `activeContract` gets a value, but the query key `['sov-prereqs', projectId, activeContractId]` **hasn't changed** — so the query doesn't re-fetch
+6. Result: `hasContract` stays `false`, the SOV table is hidden behind "Prerequisites required — Create a contract"
 
-### File: `src/pages/ProjectSOVPage.tsx`
+This affects TC viewing the GC↔TC SOV because the page's `allContracts` query and the hook's `allContracts` query use the same cache key, but there's still a render cycle where the hook's `allContracts` is empty.
 
-1. **Remove the single-contract architecture** — instead of one `useSOVPage` call with a selected contract, call `useSOVPage` per contract using a new `SOVContractSection` component.
+## Fix
 
-2. **Create `SOVContractSection` component** (inline in the same file):
-   - Receives `projectId`, `contractId`, `contract` info, `userOrgId`
-   - Calls `useSOVPage(projectId, contractId)` internally
-   - Renders a `Collapsible` card with:
-     - Header: contract label (e.g. "Trade Contractor → General Contractor · $650,000"), version badge, locked badge, collapse chevron
-     - Body: the existing SOV table, status strip, scope coverage panel, action buttons (generate/lock/add)
-   - Each section manages its own open/closed state, defaulting to open
+**File: `src/hooks/useSOVPage.ts`**
 
-3. **Simplify the page component**:
-   - Fetch `allContracts` directly (lightweight query, already exists in useSOVPage)
-   - Fetch project info
-   - Map over contracts → render one `SOVContractSection` per contract
-   - Remove `selectedContractId` state and contract selector pills
+1. Add `activeContract?.id` to the prereqs query key so it re-fetches when the contract object becomes available:
 
-4. **Use `Collapsible` from radix** (already available at `src/components/ui/collapsible.tsx`)
+```ts
+queryKey: ['sov-prereqs', projectId, activeContractId, activeContract?.id],
+```
 
-### File: `src/hooks/useSOVPage.ts`
-No changes needed — it already accepts a `contractId` parameter and returns contract-specific data.
+2. Alternatively (more robust), disable the prereqs query until `activeContract` is available when a `contractId` is passed:
+
+```ts
+enabled: !!projectId && (!contractId || !!activeContract),
+```
+
+Both changes together ensure the prereqs query always reflects the actual contract data.
 
 ## Files changed
 
 | File | Change |
 |------|--------|
-| `src/pages/ProjectSOVPage.tsx` | Refactor to render one collapsible SOV section per contract instead of a single switchable view |
+| `src/hooks/useSOVPage.ts` | Fix prereqs query key and enabled condition to prevent stale `hasContract: false` |
 
