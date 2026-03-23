@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
+import { useProjectProfile } from '@/hooks/useProjectProfile';
+import { useScopeSelections } from '@/hooks/useScopeWizard';
 import { ChevronDown, ClipboardList } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';

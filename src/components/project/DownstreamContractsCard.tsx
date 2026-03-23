@@ -127,9 +127,9 @@ export function DownstreamContractsCard({ projectId, tcOrgId }: Props) {
           <DollarSign className="h-4 w-4" />
           Downstream Contracts (FC)
         </CardTitle>
-        <Button size="sm" variant="outline" onClick={handleSave} disabled={saving}>
-          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}
-          Save
+        <Button size="sm" variant={saved ? "default" : "outline"} onClick={handleSave} disabled={saving || saved} className={saved ? "bg-green-600 hover:bg-green-600 text-white" : ""}>
+          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : saved ? <Check className="h-3.5 w-3.5 mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}
+          {saved ? 'Saved!' : 'Save'}
         </Button>
       </CardHeader>
       <CardContent className="space-y-3">
