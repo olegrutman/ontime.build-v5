@@ -73,7 +73,7 @@ export function StepReview({ data, projectId }: StepReviewProps) {
         {data.equipmentNeeded && (
           <Row label="Equipment" value={`Needed · ${data.equipmentResponsible === 'TC' ? (assignedOrg ?? 'TC') : data.equipmentResponsible === 'GC' ? (projectOrg ?? 'GC') : '—'} responsible`} />
         )}
-        {data.fcInputNeeded && <Row label="Field crew input" value="Requested" />}
+        {data.fcInputNeeded && <Row label="Field crew input" value={fcOrgName ? `Requested — ${fcOrgName}` : 'Requested'} />}
       </Section>
 
       <Section icon={ClipboardList} title="Scope & locations">

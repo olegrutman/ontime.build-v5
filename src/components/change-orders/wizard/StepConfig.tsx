@@ -57,7 +57,7 @@ export function StepConfig({ data, onChange, role, projectId }: StepConfigProps)
 
   // Resolve selected org names for dynamic labels
   const selectedTcName = tcMembers.find(m => m.org_id === data.assignedToOrgId)?.org_name;
-  const selectedFcName = fcMembers.find(m => m.org_id === data.assignedToOrgId)?.org_name;
+  const selectedFcName = fcMembers.find(m => m.org_id === data.fcOrgId)?.org_name;
 
   useEffect(() => {
     if (!projectId) return;
