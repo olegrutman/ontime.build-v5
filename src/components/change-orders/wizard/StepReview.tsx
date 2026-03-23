@@ -25,6 +25,19 @@ export function StepReview({ data, projectId }: StepReviewProps) {
     },
   });
 
+  // Resolve GC org name (project owner) for responsibility labels
+  const { data: projectOrg } = useQuery({
+    queryKey: ['project-owner-org', projectId],
+    queryFn: async () => {
+      const { data: proj } = await supabase
+        .from('projects')
+        .select('organization_id, organizations:organization_id(name)')
+        .eq('id', projectId)
+        .single();
+      return (proj as any)?.organizations?.name ?? 'GC';
+    },
+  });
+
   const { data: coCount } = useQuery({
     queryKey: ['co-count-preview', projectId],
     queryFn: async () => {
@@ -55,10 +68,10 @@ export function StepReview({ data, projectId }: StepReviewProps) {
           <Row label="Assigned To" value={assignedOrg ?? '...'} />
         )}
          {data.materialsNeeded && (
-          <Row label="Materials" value={`Needed · ${data.materialsResponsible === 'TC' ? (assignedOrg ?? 'TC') : data.materialsResponsible === 'GC' ? 'GC' : '—'} responsible${data.materialsOnSite ? ' · On site' : ''}`} />
+          <Row label="Materials" value={`Needed · ${data.materialsResponsible === 'TC' ? (assignedOrg ?? 'TC') : data.materialsResponsible === 'GC' ? (projectOrg ?? 'GC') : '—'} responsible${data.materialsOnSite ? ' · On site' : ''}`} />
         )}
         {data.equipmentNeeded && (
-          <Row label="Equipment" value={`Needed · ${data.equipmentResponsible === 'TC' ? (assignedOrg ?? 'TC') : data.equipmentResponsible === 'GC' ? 'GC' : '—'} responsible`} />
+          <Row label="Equipment" value={`Needed · ${data.equipmentResponsible === 'TC' ? (assignedOrg ?? 'TC') : data.equipmentResponsible === 'GC' ? (projectOrg ?? 'GC') : '—'} responsible`} />
         )}
         {data.fcInputNeeded && <Row label="Field crew input" value="Requested" />}
       </Section>
