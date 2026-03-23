@@ -33,3 +33,5 @@ export { ProfitCard } from './ProfitCard';
 export { MaterialMarkupEditor } from './MaterialMarkupEditor';
 export { CriticalScheduleCard } from './CriticalScheduleCard';
 export { ScopeDetailsTab } from './ScopeDetailsTab';
+export { ProjectIconRail } from './ProjectIconRail';
+export { ProjectBottomNav } from './ProjectBottomNav';

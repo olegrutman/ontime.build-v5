@@ -37,7 +37,7 @@ export function DashboardRecentDocs({ docs }: Props) {
   const navigate = useNavigate();
 
   const handleRowClick = (doc: RecentDoc) => {
-    navigate(`/project/${doc.projectId}?tab=invoices`);
+    navigate(`/project/${doc.projectId}/invoices`);
   };
 
   return (

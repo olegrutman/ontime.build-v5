@@ -252,7 +252,7 @@ export default function ProjectContractsPage() {
               <Badge className="bg-primary/15 text-primary border-0">{projectType?.name}</Badge>
               <span>{onCount} scope items</span>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/project/${projectId}?tab=scope-details`)}>
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/project/${projectId}/scope`)}>
               <X className="w-4 h-4" />
             </Button>
           </div>

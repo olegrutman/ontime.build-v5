@@ -258,7 +258,7 @@ export function ProjectQuickOverview({ projectId, stats }: ProjectQuickOverviewP
 
   const navigateToTab = (tab?: string) => {
     const base = `/project/${projectId}`;
-    navigate(tab ? `${base}?tab=${tab}` : base);
+    navigate(tab ? `${base}/${tab}` : `${base}/overview`);
   };
 
   // Bug 5 fix: Dynamic grid columns

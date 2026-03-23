@@ -99,31 +99,31 @@ export function SashaBubble() {
       if (currentProjectId) {
         const projectPath = `/project/${currentProjectId}`;
         if (lower.includes('work order') && lower.includes('tab') || lower.includes('go to work order')) {
-          navigate(`${projectPath}?tab=work-orders`); return;
+          navigate(`${projectPath}/change-orders`); return;
         }
         if (lower.includes('purchase order') || lower.includes('go to po')) {
-          navigate(`${projectPath}?tab=purchase-orders`); return;
+          navigate(`${projectPath}/purchase-orders`); return;
         }
         if (lower.includes('invoice') && (lower.includes('tab') || lower.includes('view invoice'))) {
-          navigate(`${projectPath}?tab=invoices`); return;
+          navigate(`${projectPath}/invoices`); return;
         }
         if (lower.includes('sov') || lower.includes('schedule of values')) {
-          navigate(`${projectPath}?tab=sov`); return;
+          navigate(`${projectPath}/sov`); return;
         }
         if (lower.includes('rfi')) {
-          navigate(`${projectPath}?tab=rfis`); return;
+          navigate(`${projectPath}/rfis`); return;
         }
         if (lower.includes('team')) {
-          navigate(`${projectPath}?tab=team`); return;
+          navigate(`${projectPath}/overview`); return;
         }
         if (lower.includes('financial')) {
-          navigate(`${projectPath}?tab=financials`); return;
+          navigate(`${projectPath}/overview`); return;
         }
         if (lower.includes('overview') || lower.includes('project home')) {
-          navigate(`${projectPath}?tab=overview`); return;
+          navigate(`${projectPath}/overview`); return;
         }
         if (lower.includes('return')) {
-          navigate(`${projectPath}?tab=returns`); return;
+          navigate(`${projectPath}/returns`); return;
         }
       }
 

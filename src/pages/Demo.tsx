@@ -35,7 +35,7 @@ export default function Demo() {
   const handleSelectProject = (projectId: string) => {
     if (!selectedRole) return;
     enterDemo(selectedRole, projectId);
-    navigate(`/project/${projectId}?tab=overview&demo=true`);
+    navigate(`/project/${projectId}/overview&demo=true`);
   };
 
   return (

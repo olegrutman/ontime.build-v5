@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { SidebarTrigger } from '@/components/ui/sidebar';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -14,14 +14,12 @@ import { ChevronDown, Download, Loader2 } from 'lucide-react';
 import { NotificationSheet } from '@/components/notifications/NotificationSheet';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useFeatureEnabled, TAB_FEATURE_MAP } from '@/components/auth/FeatureGate';
+
 
 interface ProjectTopBarProps {
   projectName: string;
   projectId: string;
   projectStatus: string;
-  activeTab: string;
-  onTabChange: (tab: string) => void;
   onStatusChange?: (status: string) => void;
   isSupplier?: boolean;
 }
@@ -53,23 +51,12 @@ export function ProjectTopBar({
   projectName,
   projectId,
   projectStatus,
-  activeTab,
-  onTabChange,
   onStatusChange,
   isSupplier = false,
 }: ProjectTopBarProps) {
   const { toast } = useToast();
   const [downloading, setDownloading] = useState(false);
 
-  // Feature access checks for all gated tabs
-  const sovEnabled = useFeatureEnabled('sov_contracts');
-  const changeOrdersEnabled = useFeatureEnabled('change_orders');
-  const scheduleEnabled = useFeatureEnabled('schedule_gantt');
-  const dailyLogEnabled = useFeatureEnabled('daily_logs');
-  const invoicingEnabled = useFeatureEnabled('invoicing');
-  const posEnabled = useFeatureEnabled('purchase_orders');
-  const returnsEnabled = useFeatureEnabled('returns_tracking');
-  const estimatesEnabled = useFeatureEnabled('supplier_estimates');
 
   const handleDownloadSummary = async () => {
     setDownloading(true);
@@ -139,112 +126,6 @@ export function ProjectTopBar({
         </Button>
 
         {/* Notifications */}
-        <NotificationSheet />
-      </div>
-
-      {/* Bottom row: Navigation tabs - hidden on mobile/tablet, shown on desktop */}
-      <div className="relative pb-2 hidden lg:block">
-        <Tabs value={activeTab}>
-          <div className="overflow-x-auto px-3 sm:px-4">
-            <TabsList className="h-11 w-max justify-start bg-transparent p-0 gap-1">
-              <TabsTrigger
-                value="overview"
-                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
-                onClick={() => onTabChange('overview')}
-              >
-                Overview
-              </TabsTrigger>
-              <TabsTrigger
-                value="scope-details"
-                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
-                onClick={() => onTabChange('scope-details')}
-              >
-                Scope & Details
-              </TabsTrigger>
-              {!isSupplier && sovEnabled && (
-                <TabsTrigger
-                  value="sov"
-                  className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
-                  onClick={() => onTabChange('sov')}
-                >
-                  SOV
-                </TabsTrigger>
-              )}
-              {changeOrdersEnabled && (
-              <TabsTrigger
-                value="change-orders"
-                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
-                onClick={() => onTabChange('change-orders')}
-              >
-                <span className="lg:hidden">COs</span>
-                <span className="hidden lg:inline">Change Orders</span>
-              </TabsTrigger>
-              )}
-              <TabsTrigger
-                value="rfis"
-                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
-                onClick={() => onTabChange('rfis')}
-              >
-                RFIs
-              </TabsTrigger>
-              {estimatesEnabled && (
-              <TabsTrigger
-                value="estimates"
-                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
-                onClick={() => onTabChange('estimates')}
-              >
-                Estimates
-              </TabsTrigger>
-              )}
-              {scheduleEnabled && (
-              <TabsTrigger
-                value="schedule"
-                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
-                onClick={() => onTabChange('schedule')}
-              >
-                Schedule
-              </TabsTrigger>
-              )}
-              {dailyLogEnabled && (
-              <TabsTrigger
-                value="daily-log"
-                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
-                onClick={() => onTabChange('daily-log')}
-              >
-                Daily Log
-              </TabsTrigger>
-              )}
-              {invoicingEnabled && (
-              <TabsTrigger
-                value="invoices"
-                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
-                onClick={() => onTabChange('invoices')}
-              >
-                Invoices
-              </TabsTrigger>
-              )}
-              {posEnabled && (
-              <TabsTrigger
-                value="purchase-orders"
-                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
-                onClick={() => onTabChange('purchase-orders')}
-              >
-                <span className="lg:hidden">POs</span>
-                <span className="hidden lg:inline">Purchase Orders</span>
-              </TabsTrigger>
-              )}
-              {returnsEnabled && (
-              <TabsTrigger
-                value="returns"
-                className="h-10 px-4 text-sm data-[state=active]:bg-muted data-[state=active]:shadow-none rounded-md whitespace-nowrap"
-                onClick={() => onTabChange('returns')}
-              >
-                Returns
-              </TabsTrigger>
-              )}
-            </TabsList>
-          </div>
-        </Tabs>
       </div>
     </header>
   );
