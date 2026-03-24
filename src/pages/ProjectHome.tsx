@@ -391,10 +391,7 @@ export default function ProjectHome() {
                               <BillingCashCard financials={financials} />
                               <ProfitCard financials={financials} projectId={id!} />
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
-                              <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
-                            </div>
+                            <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
                             {projectSupplierOrgId && (
                               <MaterialsBudgetStatusCard
                                 projectId={id!}

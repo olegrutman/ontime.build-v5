@@ -80,7 +80,7 @@ function KPICard({ label, value, tag, tagColor, subText, barPercent, barColor, d
         {label}
       </div>
       <div className="flex items-center justify-between mb-1">
-        <span className="font-heading text-[2rem] font-black tracking-tight text-foreground leading-none">
+        <span className="font-heading text-[1.5rem] md:text-[2rem] font-black tracking-tight text-foreground leading-none">
           {formatCurrency(animatedValue)}
         </span>
         <span className={`text-[0.68rem] font-semibold px-2 py-0.5 rounded-full ${tagStyles[tagColor]}`}>

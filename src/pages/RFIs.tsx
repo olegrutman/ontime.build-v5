@@ -34,8 +34,8 @@ export default function RFIs() {
   return (
     <AppLayout title="RFIs">
       <div className="space-y-4">
-        <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-          <SelectTrigger className="w-64">
+        <Select value={selectedProjectId} onValueChange={setSelectedProjectId} >
+          <SelectTrigger className="w-full sm:w-64">
             <SelectValue placeholder="Select project" />
           </SelectTrigger>
           <SelectContent>

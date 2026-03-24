@@ -229,7 +229,7 @@ export function COListPage({ projectId }: COListPageProps) {
           </div>
 
           <div className="flex items-center gap-2 w-full md:w-auto">
-            <div className="co-light-toggle">
+            <div className="co-light-toggle hidden md:flex">
               <button
                 type="button"
                 className={cn('co-light-toggle-btn inline-flex items-center gap-1.5', viewMode === 'card' && 'co-light-toggle-btn--active')}
