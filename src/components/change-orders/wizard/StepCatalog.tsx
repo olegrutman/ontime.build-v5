@@ -2,16 +2,13 @@ import { useState, useMemo, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, X, ChevronRight, MapPin, Home, Building2, Layers, DoorOpen, Plus, ArrowLeft } from 'lucide-react';
+import { Search, X, ChevronRight, MapPin, Plus, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWorkOrderCatalog } from '@/hooks/useWorkOrderCatalog';
-import { useProjectScope, getLevelOptions, getExteriorOptions } from '@/hooks/useProjectScope';
-import { ROOM_AREA_OPTIONS } from '@/types/location';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import type { WorkOrderCatalogItem, COReasonCode } from '@/types/changeOrder';
 import type { COWizardData, SelectedScopeItem } from './COWizard';
+import { VisualLocationPicker } from '../VisualLocationPicker';
 
 interface StepCatalogProps {
   data: COWizardData;
@@ -20,33 +17,7 @@ interface StepCatalogProps {
 }
 
 type DrillLevel = 'division' | 'category' | 'group' | 'item';
-
-interface LocationFields {
-  inside_outside: 'inside' | 'outside' | '';
-  building: string;
-  level: string;
-  unit: string;
-  room_area: string;
-  custom_room_area: string;
-  exterior_feature: string;
-  custom_exterior: string;
-}
-
-type PendingPhase = 'location' | 'reason';
-
-interface PendingState {
-  item: WorkOrderCatalogItem;
-  phase: PendingPhase;
-  locationTag: string;
-  reason: COReasonCode | null;
-  reasonDescription: string;
-}
-
-const SEPARATOR = ' → ';
-const EMPTY_FIELDS: LocationFields = {
-  inside_outside: '', building: '', level: '', unit: '',
-  room_area: '', custom_room_area: '', exterior_feature: '', custom_exterior: '',
-};
+type Phase = 'location' | 'reason' | 'items';
 
 const REASONS: { code: COReasonCode; description: string }[] = [
   { code: 'addition',          description: 'New scope not in the original contract' },
@@ -58,38 +29,15 @@ const REASONS: { code: COReasonCode; description: string }[] = [
   { code: 'other',             description: 'Anything else' },
 ];
 
-function buildLocationTag(f: LocationFields, exteriorLabel?: string): string {
-  if (f.inside_outside === 'inside') {
-    const parts = ['Inside'];
-    if (f.building) parts.push(f.building);
-    if (f.level) parts.push(f.level);
-    if (f.unit) parts.push(`Unit ${f.unit}`);
-    if (f.room_area && f.room_area !== 'Other') parts.push(f.room_area);
-    else if (f.room_area === 'Other' && f.custom_room_area) parts.push(f.custom_room_area);
-    return parts.join(SEPARATOR);
-  }
-  if (f.inside_outside === 'outside') {
-    const parts = ['Outside'];
-    if (f.exterior_feature === 'other' && f.custom_exterior) parts.push(f.custom_exterior);
-    else if (f.exterior_feature && exteriorLabel) parts.push(exteriorLabel);
-    return parts.join(SEPARATOR);
-  }
-  return '';
-}
-
-function isValidTag(tag: string): boolean {
-  if (!tag) return false;
-  return (tag.startsWith('Inside') || tag.startsWith('Outside')) && tag.includes(SEPARATOR);
-}
-
 export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
   const { divisions, search, isLoading } = useWorkOrderCatalog();
-  const { data: scope } = useProjectScope(projectId);
 
-  const [pending, setPending] = useState<PendingState | null>(null);
-  const [locationFields, setLocationFields] = useState<LocationFields>({ ...EMPTY_FIELDS });
-  const [lastLocationFields, setLastLocationFields] = useState<LocationFields | null>(null);
-  const [lastLocationTag, setLastLocationTag] = useState<string | null>(null);
+  // Internal phase: location → reason → items
+  const [phase, setPhase] = useState<Phase>(() => {
+    if (data.locationTag && data.reason) return 'items';
+    if (data.locationTag) return 'reason';
+    return 'location';
+  });
 
   const [query, setQuery] = useState('');
   const [level, setLevel] = useState<DrillLevel>('division');
@@ -100,52 +48,38 @@ export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
   const selectedIds = useMemo(() => new Set(data.selectedItems.map(i => i.id)), [data.selectedItems]);
   const searchResults = useMemo(() => search(query), [query, search]);
 
-  const levelOptions = useMemo(() => getLevelOptions(scope ?? null), [scope]);
-  const exteriorOptions = useMemo(() => getExteriorOptions(scope ?? null), [scope]);
-  const numBuildings = scope?.num_buildings ?? 1;
-  const numUnits = scope?.num_units ?? 0;
+  // Saved location from localStorage for shortcut
+  const savedLocationKey = `co_wizard_last_location_${projectId}`;
+  const savedLocation = typeof window !== 'undefined' ? localStorage.getItem(savedLocationKey) : null;
 
-  const extLabel = exteriorOptions.find(o => o.value === locationFields.exterior_feature)?.label;
-  const currentTag = buildLocationTag(locationFields, extLabel);
-  const canConfirmLocation = isValidTag(currentTag);
+  function handleLocationConfirm(tag: string) {
+    onChange({ locationTag: tag });
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(savedLocationKey, tag);
+    }
+    setPhase('reason');
+  }
+
+  function handleReasonSelect(code: COReasonCode) {
+    onChange({ reason: code });
+    setPhase('items');
+  }
 
   function selectItem(item: WorkOrderCatalogItem) {
     if (selectedIds.has(item.id)) {
       onChange({ selectedItems: data.selectedItems.filter(i => i.id !== item.id) });
       return;
     }
-    setPending({ item, phase: 'location', locationTag: '', reason: null, reasonDescription: '' });
-    setLocationFields({ ...EMPTY_FIELDS });
-  }
-
-  function goToReasonPhase() {
-    if (!pending || !canConfirmLocation) return;
-    setPending(prev => prev ? { ...prev, phase: 'reason', locationTag: currentTag } : null);
-  }
-
-  function confirmItem() {
-    if (!pending || !pending.reason) return;
-    if (pending.reason === 'other' && !pending.reasonDescription.trim()) return;
     const newItem: SelectedScopeItem = {
-      ...pending.item,
-      locationTag: pending.locationTag,
-      reason: pending.reason,
-      reasonDescription: pending.reasonDescription,
+      ...item,
+      locationTag: data.locationTag,
+      reason: data.reason!,
+      reasonDescription: '',
     };
     onChange({
       selectedItems: [...data.selectedItems, newItem],
       scopeDescription: data.scopeDescription || [...data.selectedItems, newItem].map(i => i.item_name).join(', '),
     });
-    // FIX 3: Save location for shortcut on next item
-    setLastLocationFields({ ...locationFields });
-    setLastLocationTag(pending.locationTag);
-    setPending(null);
-    setLocationFields({ ...EMPTY_FIELDS });
-  }
-
-  function cancelPending() {
-    setPending(null);
-    setLocationFields({ ...EMPTY_FIELDS });
   }
 
   function removeItem(id: string) {
@@ -159,57 +93,63 @@ export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
     setActiveGroup(group ?? null);
   }
 
-  const updateField = useCallback((field: keyof LocationFields, value: string) => {
-    setLocationFields(prev => {
-      const next = { ...prev, [field]: value };
-      if (field === 'inside_outside') {
-        if (value === 'inside') { next.exterior_feature = ''; next.custom_exterior = ''; }
-        else { next.building = ''; next.level = ''; next.unit = ''; next.room_area = ''; next.custom_room_area = ''; }
-      }
-      if (field === 'room_area' && value !== 'Other') next.custom_room_area = '';
-      if (field === 'exterior_feature' && value !== 'other') next.custom_exterior = '';
-      return next;
-    });
-  }, []);
-
   const currentDiv = divisions.find(d => d.division === activeDivision);
   const currentCat = currentDiv?.categories.find(c => c.category_id === activeCategory);
   const currentGrp = currentCat?.groups.find(g => g.group_id === activeGroup);
-
-  const isInside = locationFields.inside_outside === 'inside';
-  const isOutside = locationFields.inside_outside === 'outside';
 
   if (isLoading) {
     return <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">Loading catalog…</div>;
   }
 
-  // ── REASON PICKER SCREEN ──
-  if (pending && pending.phase === 'reason') {
+  // ── PHASE 1: LOCATION ──
+  if (phase === 'location') {
+    return (
+      <div className="space-y-4">
+        <div>
+          <h4 className="text-sm font-semibold text-foreground">Where is the work?</h4>
+          <p className="text-xs text-muted-foreground mt-0.5">Pick the location for this change order</p>
+        </div>
+        <VisualLocationPicker
+          projectId={projectId}
+          onConfirm={handleLocationConfirm}
+          savedLocation={savedLocation}
+          compact
+        />
+      </div>
+    );
+  }
+
+  // ── PHASE 2: REASON ──
+  if (phase === 'reason') {
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setPending(prev => prev ? { ...prev, phase: 'location' } : null)} className="h-7 px-2">
+          <Button variant="ghost" size="sm" onClick={() => setPhase('location')} className="h-7 px-2">
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="min-w-0">
-            <p className="text-sm font-medium truncate">{pending.item.item_name}</p>
-            <p className="text-xs text-muted-foreground">Why is this item needed?</p>
+            <h4 className="text-sm font-semibold text-foreground">Why is this needed?</h4>
+            <p className="text-xs text-muted-foreground">Select the reason for this change order</p>
           </div>
         </div>
 
-        <div className="space-y-2">
+        {/* Location summary pill */}
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary text-secondary-foreground">
+          <MapPin className="h-3 w-3 shrink-0" />
+          <span className="text-sm font-medium">{data.locationTag}</span>
+          <button onClick={() => setPhase('location')} className="ml-auto text-xs text-muted-foreground hover:text-foreground">Change</button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {REASONS.map(({ code, description }) => {
-            const isSelected = pending.reason === code;
             const colors = CO_REASON_COLORS[code];
             return (
               <button
                 key={code}
-                onClick={() => setPending(prev => prev ? { ...prev, reason: code } : null)}
+                onClick={() => handleReasonSelect(code)}
                 className={cn(
                   'flex items-start gap-3 p-3 rounded-lg border-2 text-left transition-all w-full',
-                  isSelected
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border hover:border-primary/30 hover:bg-muted/40'
+                  'border-border hover:border-primary/30 hover:bg-muted/40'
                 )}
               >
                 <span
@@ -223,179 +163,31 @@ export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
             );
           })}
         </div>
-
-        <div className="space-y-1.5">
-          <Label className="text-sm text-muted-foreground">
-            {pending.reason === 'other' ? 'Description *' : 'Description (optional)'}
-          </Label>
-          <Textarea
-            value={pending.reasonDescription}
-            onChange={e => setPending(prev => prev ? { ...prev, reasonDescription: e.target.value } : null)}
-            placeholder="Describe why this item is on the CO…"
-            rows={2}
-            className="resize-none"
-          />
-        </div>
-
-        <div className="flex items-center gap-2 pt-2 border-t border-border">
-          <div className="flex-1 text-xs text-muted-foreground">
-            📍 {pending.locationTag}
-          </div>
-          <Button
-            size="sm"
-            onClick={confirmItem}
-            disabled={!pending.reason || (pending.reason === 'other' && !pending.reasonDescription.trim())}
-            className="gap-1.5 shrink-0"
-          >
-            <Plus className="w-4 h-4" /> Add item
-          </Button>
-        </div>
       </div>
     );
   }
 
-  // ── LOCATION PICKER SCREEN ──
-  if (pending && pending.phase === 'location') {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={cancelPending} className="h-7 px-2">
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="min-w-0">
-            <p className="text-sm font-medium truncate">{pending.item.item_name}</p>
-            <p className="text-xs text-muted-foreground">Assign a location for this item</p>
-          </div>
-        </div>
-
-        {/* FIX 3: Location shortcut banner */}
-        {lastLocationTag && (
-          <div className="flex items-center gap-2 p-2.5 rounded-lg border border-primary/20 bg-primary/5">
-            <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs text-muted-foreground">Last location</p>
-              <p className="text-sm font-medium truncate">{lastLocationTag}</p>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-xs shrink-0"
-              onClick={() => {
-                if (lastLocationFields) setLocationFields({ ...lastLocationFields });
-                setPending(prev => prev ? { ...prev, phase: 'reason', locationTag: lastLocationTag } : null);
-              }}
-            >
-              Use same
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 text-xs shrink-0"
-              onClick={() => { setLastLocationTag(null); setLastLocationFields(null); }}
-            >
-              New
-            </Button>
-          </div>
-        )}
-
-        <div className="space-y-4">
-          <div>
-            <Label className="text-sm text-muted-foreground mb-2 block">Location</Label>
-            <div className="flex gap-3">
-              <ToggleButton selected={isInside} onClick={() => updateField('inside_outside', 'inside')} icon={Home}>Inside</ToggleButton>
-              <ToggleButton selected={isOutside} onClick={() => updateField('inside_outside', 'outside')} icon={Building2}>Outside</ToggleButton>
-            </div>
-          </div>
-
-          {isInside && (
-            <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
-              {numBuildings > 1 && (
-                <div>
-                  <Label className="flex items-center gap-2 mb-1.5"><Building2 className="w-4 h-4" />Building</Label>
-                  <Select value={locationFields.building || ''} onValueChange={v => updateField('building', v)}>
-                    <SelectTrigger className="h-10"><SelectValue placeholder="Select building..." /></SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: numBuildings }, (_, i) => {
-                        const label = `Bldg ${String.fromCharCode(65 + i)}`;
-                        return <SelectItem key={label} value={label}>{label}</SelectItem>;
-                      })}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              <div>
-                <Label className="flex items-center gap-2 mb-1.5"><Layers className="w-4 h-4" />Level</Label>
-                <Select value={locationFields.level || ''} onValueChange={v => updateField('level', v)}>
-                  <SelectTrigger className="h-10"><SelectValue placeholder="Select level..." /></SelectTrigger>
-                  <SelectContent>
-                    {levelOptions.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              {numUnits > 1 && (
-                <div>
-                  <Label className="mb-1.5 block">Unit ID (Optional)</Label>
-                  <Input placeholder="e.g., 101, A" value={locationFields.unit || ''} onChange={e => updateField('unit', e.target.value)} className="h-10" />
-                </div>
-              )}
-              <div>
-                <Label className="flex items-center gap-2 mb-1.5"><DoorOpen className="w-4 h-4" />Room / Area</Label>
-                <Select value={locationFields.room_area || ''} onValueChange={v => updateField('room_area', v)}>
-                  <SelectTrigger className="h-10"><SelectValue placeholder="Select room or area..." /></SelectTrigger>
-                  <SelectContent>
-                    {ROOM_AREA_OPTIONS.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              {locationFields.room_area === 'Other' && (
-                <div>
-                  <Label className="mb-1.5 block">Specify Location</Label>
-                  <Input placeholder="Describe..." value={locationFields.custom_room_area || ''} onChange={e => updateField('custom_room_area', e.target.value)} className="h-10" />
-                </div>
-              )}
-            </div>
-          )}
-
-          {isOutside && (
-            <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
-              <div>
-                <Label className="flex items-center gap-2 mb-1.5"><Building2 className="w-4 h-4" />Exterior Feature</Label>
-                <Select value={locationFields.exterior_feature || ''} onValueChange={v => updateField('exterior_feature', v)}>
-                  <SelectTrigger className="h-10"><SelectValue placeholder="Select exterior feature..." /></SelectTrigger>
-                  <SelectContent>
-                    {exteriorOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              {locationFields.exterior_feature === 'other' && (
-                <div>
-                  <Label className="mb-1.5 block">Specify Location</Label>
-                  <Input placeholder="Describe..." value={locationFields.custom_exterior || ''} onChange={e => updateField('custom_exterior', e.target.value)} className="h-10" />
-                </div>
-              )}
-            </div>
-          )}
-
-          {currentTag && (
-            <div className="flex items-center gap-2 pt-2 border-t border-border">
-              <div className="flex-1 border-l-2 border-primary/50 pl-3 py-1.5 bg-muted/30 rounded-r-lg">
-                <p className="text-xs text-muted-foreground">Location preview</p>
-                <p className="text-sm font-medium">{currentTag}</p>
-              </div>
-              <Button size="sm" onClick={goToReasonPhase} disabled={!canConfirmLocation} className="gap-1.5 shrink-0">
-                Next
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // ── CATALOG BROWSER SCREEN ──
+  // ── PHASE 3: ITEMS (CATALOG BROWSER) ──
   return (
     <div className="space-y-4">
+      {/* CO-level location + reason summary */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground text-xs font-medium">
+          <MapPin className="h-3 w-3" />
+          {data.locationTag}
+          <button onClick={() => setPhase('location')} className="ml-1 text-muted-foreground hover:text-foreground">✕</button>
+        </div>
+        {data.reason && (
+          <div
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold"
+            style={{ backgroundColor: CO_REASON_COLORS[data.reason].bg, color: CO_REASON_COLORS[data.reason].text }}
+          >
+            {CO_REASON_LABELS[data.reason]}
+            <button onClick={() => setPhase('reason')} className="ml-1 opacity-60 hover:opacity-100">✕</button>
+          </div>
+        )}
+      </div>
+
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
@@ -513,7 +305,7 @@ export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
         ) : null}
       </div>
 
-      {/* Selected items with locations + reasons */}
+      {/* Selected items */}
       {data.selectedItems.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs font-medium text-muted-foreground">{data.selectedItems.length} selected</p>
@@ -522,25 +314,6 @@ export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
               <div key={item.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/10">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-foreground truncate">{item.item_name}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    {item.locationTag && (
-                      <p className="text-xs text-muted-foreground flex items-center gap-1">
-                        <MapPin className="h-3 w-3 shrink-0" />
-                        <span className="truncate">{item.locationTag}</span>
-                      </p>
-                    )}
-                    {item.reason && (
-                      <span
-                        className="inline-block px-1.5 py-0 rounded text-[10px] font-semibold"
-                        style={{ backgroundColor: CO_REASON_COLORS[item.reason].bg, color: CO_REASON_COLORS[item.reason].text }}
-                      >
-                        {CO_REASON_LABELS[item.reason]}
-                      </span>
-                    )}
-                  </div>
-                  {item.reasonDescription && (
-                    <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{item.reasonDescription}</p>
-                  )}
                 </div>
                 <button onClick={() => removeItem(item.id)} className="text-muted-foreground hover:text-foreground shrink-0">
                   <X className="h-3.5 w-3.5" />
@@ -565,24 +338,6 @@ function Checkbox({ selected }: { selected: boolean }) {
         </svg>
       )}
     </span>
-  );
-}
-
-function ToggleButton({ selected, onClick, children, icon: Icon }: {
-  selected: boolean; onClick: () => void; children: React.ReactNode; icon?: React.ElementType;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 font-medium transition-all flex-1',
-        selected ? 'bg-primary text-primary-foreground border-primary' : 'bg-background border-border hover:border-primary/50 hover:bg-muted/50'
-      )}
-    >
-      {Icon && <Icon className="w-5 h-5" />}
-      {children}
-    </button>
   );
 }
 

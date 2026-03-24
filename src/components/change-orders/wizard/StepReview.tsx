@@ -89,37 +89,34 @@ export function StepReview({ data, projectId }: StepReviewProps) {
         {data.fcInputNeeded && <Row label="Field crew input" value={fcOrgName ? `Requested — ${fcOrgName}` : 'Requested'} />}
       </Section>
 
-      <Section icon={ClipboardList} title="Scope & locations">
+      <Section icon={ClipboardList} title="Scope & location">
+        {/* CO-level location and reason */}
+        {data.locationTag && (
+          <div className="flex items-center gap-1 text-sm">
+            <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <span className="font-medium text-foreground">{data.locationTag}</span>
+          </div>
+        )}
+        {data.reason && (
+          <div className="flex items-center gap-2">
+            <span
+              className="inline-block px-1.5 py-0 rounded text-[10px] font-semibold"
+              style={{ backgroundColor: CO_REASON_COLORS[data.reason].bg, color: CO_REASON_COLORS[data.reason].text }}
+            >
+              {CO_REASON_LABELS[data.reason]}
+            </span>
+          </div>
+        )}
+
         {data.selectedItems.length === 0 ? (
           <p className="text-sm text-muted-foreground">No items selected</p>
         ) : (
-          <ul className="space-y-3">
+          <ul className="space-y-1.5 mt-2">
             {data.selectedItems.map((item) => (
-              <li key={item.id} className="space-y-1 border-b border-border pb-2 last:border-b-0 last:pb-0">
-                <div className="flex items-baseline gap-2 text-sm">
-                  <span className="font-medium text-foreground">{item.item_name}</span>
-                  {item.category_name && (
-                    <span className="text-xs text-muted-foreground">{item.category_name}</span>
-                  )}
-                </div>
-                {item.locationTag && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <MapPin className="h-3 w-3 shrink-0" />
-                    <span>{item.locationTag}</span>
-                  </div>
-                )}
-                {item.reason && (
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="inline-block px-1.5 py-0 rounded text-[10px] font-semibold"
-                      style={{ backgroundColor: CO_REASON_COLORS[item.reason as COReasonCode].bg, color: CO_REASON_COLORS[item.reason as COReasonCode].text }}
-                    >
-                      {CO_REASON_LABELS[item.reason as COReasonCode]}
-                    </span>
-                    {item.reasonDescription && (
-                      <span className="text-xs text-muted-foreground">{item.reasonDescription}</span>
-                    )}
-                  </div>
+              <li key={item.id} className="flex items-baseline gap-2 text-sm">
+                <span className="font-medium text-foreground">{item.item_name}</span>
+                {item.category_name && (
+                  <span className="text-xs text-muted-foreground">{item.category_name}</span>
                 )}
               </li>
             ))}
