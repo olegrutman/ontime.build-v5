@@ -1,215 +1,101 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { formatDistanceToNow } from 'date-fns';
-import { ChevronRight, LayoutGrid, List, Loader2, Plus } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
+import { LayoutGrid, List, Loader2, Plus } from 'lucide-react';
 import { useChangeOrders, type ChangeOrderWithMembers } from '@/hooks/useChangeOrders';
 import { useAuth } from '@/hooks/useAuth';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { COWizard } from './wizard/COWizard';
-import type { COReasonCode, COStatus } from '@/types/changeOrder';
-import { CO_REASON_LABELS, CO_STATUS_LABELS } from '@/types/changeOrder';
+import { COBoard } from './COBoard';
+import { COBoardCard } from './COBoardCard';
+import { COSlideOver } from './COSlideOver';
+import type { COStatus } from '@/types/changeOrder';
+import { CO_STATUS_LABELS } from '@/types/changeOrder';
 
 interface COListPageProps {
   projectId: string;
 }
 
-type COViewMode = 'card' | 'list';
+type ViewMode = 'board' | 'list';
 
-const STATUS_ORDER: COStatus[] = [
-  'draft',
-  'shared',
-  'work_in_progress',
-  'closed_for_pricing',
-  'submitted',
-  'approved',
-  'rejected',
-  'contracted',
-];
-
-const STATUS_BADGE_STYLES: Record<COStatus, string> = {
-  draft: 'bg-muted text-muted-foreground border-border',
-  shared: 'bg-accent text-accent-foreground border-border',
-  work_in_progress: 'bg-blue-100 text-blue-700 border-blue-200',
-  closed_for_pricing: 'bg-amber-100 text-amber-700 border-amber-200',
-  submitted: 'bg-primary/15 text-primary border-primary/25',
-  approved: 'bg-primary text-primary-foreground border-primary',
-  rejected: 'bg-destructive/10 text-destructive border-destructive/30',
-  contracted: 'bg-secondary text-secondary-foreground border-secondary',
-};
-
-const PRICING_BADGE: Record<string, string> = {
-  fixed: 'Fixed',
-  tm: 'T&M',
-  nte: 'NTE',
-};
-
-function ReasonChip({ reason }: { reason: COReasonCode }) {
-  return (
-    <span className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground">
-      {CO_REASON_LABELS[reason]}
-    </span>
-  );
-}
-
-function CORow({
-  co,
-  onClick,
-  mobile,
-}: {
-  co: ChangeOrderWithMembers;
-  onClick: (id: string) => void;
-  mobile: boolean;
-}) {
-  const title = co.co_number ? `${co.co_number} · ${co.created_at ? new Date(co.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}` : (co.title ?? 'Untitled CO');
-  const age = co.created_at
-    ? formatDistanceToNow(new Date(co.created_at), { addSuffix: true })
-    : 'just now';
-
-  return (
-    <div
-      className={cn(
-        'co-light-shell cursor-pointer transition-all hover:border-primary/40 hover:shadow-md',
-        mobile ? 'px-3 py-3' : 'px-4 py-3',
-      )}
-      onClick={() => onClick(co.id)}
-    >
-      <div className="flex items-start gap-3">
-        <div className="flex-1 min-w-0 space-y-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-medium text-foreground truncate">{title}</span>
-            <Badge variant="outline" className={cn('text-[11px] shrink-0', STATUS_BADGE_STYLES[co.status as COStatus])}>
-              {CO_STATUS_LABELS[co.status as COStatus]}
-            </Badge>
-            {co.pricing_type && (
-              <Badge variant="secondary" className="text-[11px] shrink-0">
-                {PRICING_BADGE[co.pricing_type] ?? co.pricing_type}
-              </Badge>
-            )}
-          </div>
-
-          <div className="flex items-center justify-between gap-3 flex-wrap text-xs text-muted-foreground">
-            <div className="flex items-center gap-2 flex-wrap">
-              {co.reason && <ReasonChip reason={co.reason as COReasonCode} />}
-              {co.location_tag && (() => {
-                const locs = co.location_tag.split(' | ');
-                return <span className="truncate max-w-[180px]">{locs[0]}{locs.length > 1 ? ` +${locs.length - 1} more` : ''}</span>;
-              })()}
-            </div>
-            <span>{age}</span>
-          </div>
-        </div>
-
-        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-      </div>
-    </div>
-  );
-}
-
-function COCard({
-  co,
-  onClick,
-}: {
-  co: ChangeOrderWithMembers;
-  onClick: (id: string) => void;
-}) {
-  const title = co.co_number ? `${co.co_number} · ${co.created_at ? new Date(co.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''}` : (co.title ?? 'Untitled CO');
-  const age = co.created_at
-    ? formatDistanceToNow(new Date(co.created_at), { addSuffix: true })
-    : 'just now';
-
-  return (
-    <article
-      className="co-light-shell cursor-pointer transition-all hover:border-primary/40 hover:shadow-md p-4 space-y-3"
-      onClick={() => onClick(co.id)}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="space-y-1 min-w-0">
-          {co.co_number && <p className="text-[11px] font-medium text-muted-foreground">{co.co_number}</p>}
-          <h3 className="text-sm font-semibold text-foreground line-clamp-2">{title}</h3>
-        </div>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant="outline" className={cn('text-[11px]', STATUS_BADGE_STYLES[co.status as COStatus])}>
-          {CO_STATUS_LABELS[co.status as COStatus]}
-        </Badge>
-        {co.pricing_type && (
-          <Badge variant="secondary" className="text-[11px]">
-            {PRICING_BADGE[co.pricing_type] ?? co.pricing_type}
-          </Badge>
-        )}
-        {co.reason && <ReasonChip reason={co.reason as COReasonCode} />}
-      </div>
-
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span className="truncate max-w-[60%]">{co.location_tag ? (() => {
-          const locs = co.location_tag.split(' | ');
-          return locs[0] + (locs.length > 1 ? ` +${locs.length - 1} more` : '');
-        })() : 'No location'}</span>
-        <span>{age}</span>
-      </div>
-    </article>
-  );
-}
-
-function SectionHeader({ label, count }: { label: string; count: number }) {
-  if (count === 0) return null;
-  return (
-    <div className="flex items-center gap-2 pt-3 pb-1">
-      <span className="text-sm font-semibold text-foreground">{label}</span>
-      <span className="text-xs text-muted-foreground">({count})</span>
-    </div>
-  );
-}
+type FilterKey = 'all' | 'my_action' | 'in_progress' | 'approved_filter';
 
 export function COListPage({ projectId }: COListPageProps) {
-  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const isMobile = useIsMobile();
-  const { user } = useAuth();
-  const { grouped, isLoading } = useChangeOrders(projectId);
+  const { user, userOrgRoles, currentRole } = useAuth();
+  const { changeOrders, boardColumns, isLoading } = useChangeOrders(projectId);
 
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<COViewMode>('card');
+  const [viewMode, setViewMode] = useState<ViewMode>('board');
+  const [filter, setFilter] = useState<FilterKey>('all');
 
-  const storageKey = `co_view_mode_${user?.id ?? 'anon'}`;
+  // Slide-over: open CO from URL ?co=<id>
+  const activeCOId = searchParams.get('co');
 
+  const storageKey = `co_view_mode_v2_${user?.id ?? 'anon'}`;
   useEffect(() => {
     const stored = localStorage.getItem(storageKey);
-    if (stored === 'card' || stored === 'list') setViewMode(stored);
+    if (stored === 'board' || stored === 'list') setViewMode(stored);
   }, [storageKey]);
-
   useEffect(() => {
     localStorage.setItem(storageKey, viewMode);
   }, [storageKey, viewMode]);
 
-  const mine = grouped.mine;
-  const allMine: ChangeOrderWithMembers[] = [
-    ...mine.draft,
-    ...mine.shared,
-    ...mine.work_in_progress,
-    ...mine.closed_for_pricing,
-    ...mine.submitted,
-    ...mine.approved,
-    ...mine.rejected,
-    ...mine.contracted,
-  ];
-  const sharedWithMe = grouped.sharedWithMe;
+  // Auto-open CO if URL param present
+  useEffect(() => {
+    const coParam = searchParams.get('co');
+    if (coParam && changeOrders.length > 0) {
+      const exists = changeOrders.some(c => c.id === coParam);
+      if (!exists) {
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [changeOrders, searchParams, setSearchParams]);
 
-  const totalMine = allMine.length;
-  const totalSharedWithMe = sharedWithMe.length;
-  const total = totalMine + totalSharedWithMe;
-
-  const statusGroups = useMemo(
-    () => STATUS_ORDER.map(status => ({ status, items: mine[status] })).filter(group => group.items.length > 0),
-    [mine],
-  );
-
-  function handleOpenCO(id: string) {
-    navigate(`/projects/${projectId}/change-orders/${id}`);
+  function handleCardClick(id: string) {
+    setSearchParams({ co: id });
   }
+
+  function handleClosePanel() {
+    setSearchParams({}, { replace: true });
+  }
+
+  const orgId = userOrgRoles?.[0]?.organization_id ?? null;
+  const total = changeOrders.length;
+
+  // Stats
+  const stats = useMemo(() => {
+    let totalValue = 0;
+    let pendingApproval = 0;
+    let awaitingPricing = 0;
+    let approvedBillable = 0;
+
+    for (const co of changeOrders) {
+      if (co.status === 'submitted' && co.org_id === orgId) pendingApproval++;
+      if (co.status === 'closed_for_pricing') awaitingPricing++;
+      if (co.status === 'approved') approvedBillable++;
+    }
+
+    return { totalValue, pendingApproval, awaitingPricing, approvedBillable };
+  }, [changeOrders, orgId]);
+
+  // Mobile filter
+  const filteredCOs = useMemo(() => {
+    if (filter === 'all') return changeOrders;
+    if (filter === 'my_action') return changeOrders.filter(co =>
+      (co.status === 'submitted' && co.org_id === orgId) ||
+      (co.status === 'closed_for_pricing' && (co.assigned_to_org_id === orgId || co.org_id === orgId))
+    );
+    if (filter === 'in_progress') return changeOrders.filter(co =>
+      ['draft', 'shared', 'work_in_progress', 'closed_for_pricing', 'submitted'].includes(co.status)
+    );
+    if (filter === 'approved_filter') return changeOrders.filter(co =>
+      ['approved', 'contracted'].includes(co.status)
+    );
+    return changeOrders;
+  }, [changeOrders, filter, orgId]);
 
   if (isLoading) {
     return (
@@ -220,7 +106,8 @@ export function COListPage({ projectId }: COListPageProps) {
   }
 
   return (
-    <div className="space-y-4 md:space-y-5 pb-20 md:pb-0">
+    <div className="space-y-4 pb-20 md:pb-0">
+      {/* Page Header */}
       <div className="co-light-shell p-4 md:p-5 space-y-4">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
@@ -229,21 +116,20 @@ export function COListPage({ projectId }: COListPageProps) {
           </div>
 
           <div className="flex items-center gap-2 w-full md:w-auto">
+            {/* View toggle — hidden on mobile */}
             <div className="co-light-toggle hidden md:flex">
               <button
                 type="button"
-                className={cn('co-light-toggle-btn inline-flex items-center gap-1.5', viewMode === 'card' && 'co-light-toggle-btn--active')}
-                onClick={() => setViewMode('card')}
-                aria-pressed={viewMode === 'card'}
+                className={cn('co-light-toggle-btn inline-flex items-center gap-1.5', viewMode === 'board' && 'co-light-toggle-btn--active')}
+                onClick={() => setViewMode('board')}
               >
                 <LayoutGrid className="h-3.5 w-3.5" />
-                Card
+                Board
               </button>
               <button
                 type="button"
                 className={cn('co-light-toggle-btn inline-flex items-center gap-1.5', viewMode === 'list' && 'co-light-toggle-btn--active')}
                 onClick={() => setViewMode('list')}
-                aria-pressed={viewMode === 'list'}
               >
                 <List className="h-3.5 w-3.5" />
                 List
@@ -257,26 +143,57 @@ export function COListPage({ projectId }: COListPageProps) {
           </div>
         </div>
 
+        {/* Filter pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {([
+            { key: 'all', label: `All COs`, count: total },
+            { key: 'my_action', label: 'Needs my action', count: stats.pendingApproval },
+            { key: 'in_progress', label: 'In progress', count: stats.awaitingPricing },
+            { key: 'approved_filter', label: 'Approved', count: stats.approvedBillable },
+          ] as { key: FilterKey; label: string; count: number }[]).map(f => (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className={cn(
+                'shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors border',
+                filter === f.key
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : 'bg-card text-muted-foreground border-border hover:bg-accent',
+              )}
+            >
+              {f.label}
+              <span className={cn(
+                'text-[10px] px-1.5 py-0.5 rounded-full',
+                filter === f.key ? 'bg-primary-foreground/20' : 'bg-muted',
+              )}>
+                {f.count}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {/* Stats row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="co-light-kpi">
-            <p className="co-light-kpi-label">Draft + Shared</p>
-            <p className="co-light-kpi-value">{mine.draft.length + mine.shared.length}</p>
+            <p className="co-light-kpi-label">Total COs</p>
+            <p className="co-light-kpi-value">{total}</p>
           </div>
           <div className="co-light-kpi">
-            <p className="co-light-kpi-label">In Progress</p>
-            <p className="co-light-kpi-value">{mine.work_in_progress.length + mine.closed_for_pricing.length + mine.submitted.length}</p>
+            <p className="co-light-kpi-label">Pending approval</p>
+            <p className="co-light-kpi-value">{stats.pendingApproval}</p>
           </div>
           <div className="co-light-kpi">
-            <p className="co-light-kpi-label">Approved</p>
-            <p className="co-light-kpi-value">{mine.approved.length + mine.contracted.length}</p>
+            <p className="co-light-kpi-label">Awaiting pricing</p>
+            <p className="co-light-kpi-value">{stats.awaitingPricing}</p>
           </div>
           <div className="co-light-kpi">
-            <p className="co-light-kpi-label">Shared With Me</p>
-            <p className="co-light-kpi-value">{sharedWithMe.length}</p>
+            <p className="co-light-kpi-label">Approved & billable</p>
+            <p className="co-light-kpi-value">{stats.approvedBillable}</p>
           </div>
         </div>
       </div>
 
+      {/* Board or List */}
       {total === 0 ? (
         <div className="co-light-shell flex flex-col items-center justify-center py-16 text-center gap-3 px-4">
           <p className="text-lg font-medium text-foreground">No change orders yet</p>
@@ -287,74 +204,38 @@ export function COListPage({ projectId }: COListPageProps) {
           </Button>
         </div>
       ) : (
-        <div className="space-y-4">
-          {totalMine > 0 && (
-            <section className="co-light-shell p-3 md:p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground">My change orders</span>
-              </div>
-
-              <div className="space-y-2">
-                {statusGroups.map(group => (
-                  <div key={group.status} className="space-y-2">
-                    <SectionHeader label={CO_STATUS_LABELS[group.status]} count={group.items.length} />
-                    {viewMode === 'card' ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
-                        {group.items.map(co => (
-                          <COCard
-                            key={co.id}
-                            co={co}
-                            onClick={handleOpenCO}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      group.items.map(co => (
-                        <CORow
-                          key={co.id}
-                          co={co}
-                          onClick={handleOpenCO}
-                          mobile={isMobile}
-                        />
-                      ))
-                    )}
-                  </div>
-                ))}
-              </div>
-            </section>
+        <>
+          {/* Desktop: board or list */}
+          {!isMobile && viewMode === 'board' ? (
+            <COBoard
+              columns={boardColumns}
+              activeCOId={activeCOId}
+              onCardClick={handleCardClick}
+              onNewCO={() => setWizardOpen(true)}
+            />
+          ) : (
+            /* Mobile always list, desktop list when toggled */
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
+              {filteredCOs.map(co => (
+                <COBoardCard
+                  key={co.id}
+                  co={co}
+                  isActive={co.id === activeCOId}
+                  onClick={handleCardClick}
+                />
+              ))}
+            </div>
           )}
+        </>
+      )}
 
-          {totalSharedWithMe > 0 && (
-            <section className="co-light-shell p-3 md:p-4">
-              <div className="pb-2">
-                <span className="text-sm font-semibold text-foreground">Shared with me</span>
-              </div>
-
-              {viewMode === 'card' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-2.5">
-                  {sharedWithMe.map(co => (
-                    <COCard
-                      key={co.id}
-                      co={co}
-                      onClick={handleOpenCO}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {sharedWithMe.map(co => (
-                    <CORow
-                      key={co.id}
-                      co={co}
-                      onClick={handleOpenCO}
-                      mobile={isMobile}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
-        </div>
+      {/* Slide-over panel */}
+      {activeCOId && (
+        <COSlideOver
+          coId={activeCOId}
+          projectId={projectId}
+          onClose={handleClosePanel}
+        />
       )}
 
       <COWizard open={wizardOpen} onOpenChange={setWizardOpen} projectId={projectId} />

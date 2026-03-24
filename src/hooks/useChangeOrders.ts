@@ -8,6 +8,27 @@ export interface ChangeOrderWithMembers extends ChangeOrder {
   collaboratorOrgId?: string;
 }
 
+export type BoardColumnKey = 'wip' | 'pending_pricing' | 'gc_review' | 'approved' | 'invoiced';
+
+export const BOARD_COLUMNS: { key: BoardColumnKey; label: string; color: string }[] = [
+  { key: 'wip', label: 'Work in progress', color: '#2563EB' },
+  { key: 'pending_pricing', label: 'Pending pricing', color: '#F5A623' },
+  { key: 'gc_review', label: 'GC review', color: '#F5A623' },
+  { key: 'approved', label: 'Approved — billable', color: '#059669' },
+  { key: 'invoiced', label: 'Invoiced / Paid', color: '#6B7280' },
+];
+
+const STATUS_TO_COLUMN: Record<string, BoardColumnKey> = {
+  draft: 'wip',
+  shared: 'wip',
+  work_in_progress: 'wip',
+  rejected: 'wip',
+  closed_for_pricing: 'pending_pricing',
+  submitted: 'gc_review',
+  approved: 'approved',
+  contracted: 'invoiced',
+};
+
 export interface GroupedChangeOrders {
   mine: {
     draft: ChangeOrderWithMembers[];
@@ -21,6 +42,9 @@ export interface GroupedChangeOrders {
   };
   sharedWithMe: ChangeOrderWithMembers[];
 }
+
+export type BoardColumns = Record<BoardColumnKey, ChangeOrderWithMembers[]>;
+
 
 export function useChangeOrders(projectId: string | null) {
   const { userOrgRoles, user } = useAuth();
@@ -98,6 +122,21 @@ export function useChangeOrders(projectId: string | null) {
     }
   }
 
+  // Board-oriented grouping
+  const boardColumns: BoardColumns = {
+    wip: [],
+    pending_pricing: [],
+    gc_review: [],
+    approved: [],
+    invoiced: [],
+  };
+
+  const allCOs = [...changeOrders];
+  for (const co of allCOs) {
+    const column = STATUS_TO_COLUMN[co.status] ?? 'wip';
+    boardColumns[column].push(co);
+  }
+
   const createCO = useMutation({
     mutationFn: async (input: Omit<ChangeOrder,
       'id' | 'created_at' | 'updated_at' | 'co_number' |
@@ -153,6 +192,7 @@ export function useChangeOrders(projectId: string | null) {
   return {
     changeOrders,
     grouped,
+    boardColumns,
     isLoading,
     createCO,
     updateCO,
