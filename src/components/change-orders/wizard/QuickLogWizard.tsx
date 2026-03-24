@@ -135,22 +135,27 @@ export function QuickLogWizard({ open, onOpenChange, projectId, preSelectedReaso
     setSubmitting(true);
 
     try {
-      // Resolve the GC org for this project to set assigned_to_org_id
-      const { data: projectTeam } = await supabase
+      // Resolve the TC/GC org for this project to set assigned_to_org_id
+      // Query project_team joined to user_org_roles to find TC and GC orgs
+      const { data: teamMembers } = await supabase
         .from('project_team')
-        .select('user_id, user_org_roles!inner(organization_id, organization:organizations!inner(type))')
+        .select('user_id')
         .eq('project_id', projectId)
         .eq('status', 'Accepted');
 
-      const gcMember = (projectTeam ?? []).find(
-        (m: any) => m.user_org_roles?.organization?.type === 'GC'
-      );
-      const tcMember = (projectTeam ?? []).find(
-        (m: any) => m.user_org_roles?.organization?.type === 'TC'
-      );
-      const assignedToOrgId = tcMember?.user_org_roles?.organization_id
-        ?? gcMember?.user_org_roles?.organization_id
-        ?? null;
+      let assignedToOrgId: string | null = null;
+
+      if (teamMembers && teamMembers.length > 0) {
+        const userIds = teamMembers.map(m => m.user_id);
+        const { data: roles } = await supabase
+          .from('user_org_roles')
+          .select('user_id, organization_id, organization:organizations!inner(type)')
+          .in('user_id', userIds);
+
+        const tcRole = (roles ?? []).find((r: any) => r.organization?.type === 'TC');
+        const gcRole = (roles ?? []).find((r: any) => r.organization?.type === 'GC');
+        assignedToOrgId = tcRole?.organization_id ?? gcRole?.organization_id ?? null;
+      }
 
       // Create CO
       const { data: co, error: coError } = await supabase
