@@ -122,25 +122,23 @@ export function useChangeOrders(projectId: string | null) {
     }
   }
 
-  const createCO = useMutation({
-    mutationFn: async (input: Omit<ChangeOrder,
-      'id' | 'created_at' | 'updated_at' | 'co_number' |
-      'shared_at' | 'submitted_at' |
-      'approved_at' | 'rejected_at' | 'contracted_at' |
-      'nte_increase_requested' | 'nte_increase_approved'
-    >) => {
-      const { data, error } = await supabase
-        .from('change_orders')
-        .insert(input)
-        .select()
-        .single();
-      if (error) throw error;
-      return data as ChangeOrder;
-    },
-    onSuccess: invalidateChangeOrders,
-  });
+  // Board-oriented grouping
+  const boardColumns: BoardColumns = {
+    wip: [],
+    pending_pricing: [],
+    gc_review: [],
+    approved: [],
+    invoiced: [],
+  };
 
-  const updateCO = useMutation({
+  const allCOs = [...changeOrders];
+  for (const co of allCOs) {
+    const column = STATUS_TO_COLUMN[co.status] ?? 'wip';
+    boardColumns[column].push(co);
+  }
+
+  const createCO = useMutation({
+
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<ChangeOrder> }) => {
       const { data, error } = await supabase
         .from('change_orders')
