@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { COWizard } from './wizard/COWizard';
 import { COBoardCard } from './COBoardCard';
+import { FCHomeScreen } from './FCHomeScreen';
+import { useCORoleContext } from '@/hooks/useCORoleContext';
 
 interface COListPageProps {
   projectId: string;
@@ -18,6 +20,10 @@ export function COListPage({ projectId }: COListPageProps) {
   const navigate = useNavigate();
   const { userOrgRoles } = useAuth();
   const { changeOrders, isLoading } = useChangeOrders(projectId);
+
+  // Determine if FC role
+  const orgType = userOrgRoles?.[0]?.organization?.type;
+  const isFC = orgType === 'FC';
 
   const [wizardOpen, setWizardOpen] = useState(false);
   const [filter, setFilter] = useState<FilterKey>('all');
@@ -83,6 +89,11 @@ export function COListPage({ projectId }: COListPageProps) {
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
+  }
+
+  // FC gets their own home screen
+  if (isFC) {
+    return <FCHomeScreen projectId={projectId} />;
   }
 
   return (

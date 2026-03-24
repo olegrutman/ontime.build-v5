@@ -24,7 +24,7 @@ import { COEquipmentPanel } from './COEquipmentPanel';
 import { CONTEPanel } from './CONTEPanel';
 import { FCInputRequestCard } from './FCInputRequestCard';
 import { FCPricingToggleCard } from './FCPricingToggleCard';
-import { CORoleBanner } from './CORoleBanner';
+import { COContextualAlert } from './COContextualAlert';
 import { COWhosHere } from './COWhosHere';
 import { CO_STATUS_LABELS } from '@/types/changeOrder';
 import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
@@ -172,9 +172,15 @@ export function COSlideOver({ coId, projectId, onClose }: COSlideOverProps) {
         {/* FIX 1: Who's Here presence bar */}
         <COWhosHere coId={coId} role={role} activeTab={activeTab} />
 
-        {/* Role banner */}
         <div className="shrink-0 px-4 pt-3">
-          <CORoleBanner role={role} financials={financials} />
+          <COContextualAlert
+            co={co}
+            isGC={isGC}
+            isTC={isTC}
+            isFC={isFC}
+            fcCollabName={fcCollabName}
+            financials={financials}
+          />
         </div>
 
         {/* Tabs */}
