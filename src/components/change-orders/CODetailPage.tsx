@@ -580,6 +580,8 @@ function AddScopeItemButton({ coId, orgId, projectId, role, co, collaborators, o
     materialsResponsible: null,
     equipmentResponsible: null,
     shareDraftNow: false,
+    locationTag: '',
+    reason: null,
   });
   const [saving, setSaving] = useState(false);
   const queryClient = useQueryClient();
