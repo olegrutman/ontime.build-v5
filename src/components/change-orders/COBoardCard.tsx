@@ -122,7 +122,7 @@ export function COBoardCard({ co, isActive, onClick }: COBoardCardProps) {
             )}
           </div>
           <span className="text-xs font-mono font-medium text-foreground">
-            {fmtCurrency(0)}
+            {fmtCurrency(co.tc_submitted_price ?? 0)}
           </span>
         </div>
       </div>
