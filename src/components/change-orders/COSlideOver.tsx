@@ -21,6 +21,7 @@ import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { CONTEPanel } from './CONTEPanel';
 import { FCInputRequestCard } from './FCInputRequestCard';
+import { FCPricingToggleCard } from './FCPricingToggleCard';
 import { CORoleBanner } from './CORoleBanner';
 import { CO_STATUS_LABELS } from '@/types/changeOrder';
 import type { COCreatedByRole, COFinancials, COStatus, ChangeOrder, COCollaborator, COFCOrgOption } from '@/types/changeOrder';
@@ -222,10 +223,21 @@ export function COSlideOver({ coId, projectId, onClose }: COSlideOverProps) {
                   </>
                 )}
                 {isTC && (() => {
+                  const fcCollabName = collaborators.find(c => c.status === 'active')?.organization?.name ?? 'Field crew';
                   const tcMat = (co.materials_needed || financials.materialsTotal > 0) && co.materials_responsible === 'TC' ? financials.materialsTotal : 0;
                   const tcEq = (co.equipment_needed || financials.equipmentTotal > 0) && co.equipment_responsible === 'TC' ? financials.equipmentTotal : 0;
                   return (
                     <>
+                      {collaborators.length > 0 && (
+                        <FCPricingToggleCard
+                          co={co}
+                          financials={financials}
+                          myOrgId={myOrgId}
+                          onRefresh={refreshDetail}
+                          fcCollabName={fcCollabName}
+                          gcSideName="GC"
+                        />
+                      )}
                       {financials.fcLaborTotal > 0 && <FinRow label="FC cost" value={financials.fcLaborTotal} muted />}
                       <FinRow label="Billable to GC" value={financials.tcBillableToGC} />
                       {tcMat > 0 && <FinRow label="Materials" value={tcMat} />}
