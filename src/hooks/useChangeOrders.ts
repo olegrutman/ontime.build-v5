@@ -138,7 +138,24 @@ export function useChangeOrders(projectId: string | null) {
   }
 
   const createCO = useMutation({
+    mutationFn: async (input: Omit<ChangeOrder,
+      'id' | 'created_at' | 'updated_at' | 'co_number' |
+      'shared_at' | 'submitted_at' |
+      'approved_at' | 'rejected_at' | 'contracted_at' |
+      'nte_increase_requested' | 'nte_increase_approved'
+    >) => {
+      const { data, error } = await supabase
+        .from('change_orders')
+        .insert(input)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as ChangeOrder;
+    },
+    onSuccess: invalidateChangeOrders,
+  });
 
+  const updateCO = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<ChangeOrder> }) => {
       const { data, error } = await supabase
         .from('change_orders')
@@ -175,6 +192,7 @@ export function useChangeOrders(projectId: string | null) {
   return {
     changeOrders,
     grouped,
+    boardColumns,
     isLoading,
     createCO,
     updateCO,
