@@ -1,122 +1,96 @@
 
 
-# Icon Rail Navigation — Understanding Confirmation
+# Mobile Optimization — Full Plan
 
-## What is being removed and what replaces it
+## Scope
 
-**Removed:** The horizontal `<Tabs>` row inside `ProjectTopBar.tsx` (lines 146-248) — the scrollable tab strip with 11 text-label tabs. Also removed: the project-specific items in `BottomNav.tsx` that currently handle mobile project navigation via `?tab=` query params.
+Optimize every page for the 390px mobile viewport. This is a CSS/layout pass — no new features, no backend changes. The app already has responsive foundations (mobile topbar, bottom nav, `grid-cols-1` fallbacks) but many areas have spacing, overflow, touch target, and layout issues at 390px.
 
-**Replaced with:**
-- **Desktop (>=768px):** A 44px-wide vertical icon rail sitting between the global `AppSidebar` and the main content `SidebarInset`. Navy #162E52 background. Contains 11 icons in 4 groups separated by dividers.
-- **Mobile (<768px):** A 56px bottom navigation bar with 5 items (Overview, Change Orders, Invoices, Orders, More). The More button opens a bottom sheet listing all remaining sections.
+## Changes by Area
 
-## All 11 sections, icons, groups, and routes
+### 1. Dashboard Page (`src/pages/Dashboard.tsx`)
+- Right sidebar column (`lg:grid-cols-[1fr_340px]`) stacks on mobile but produces a long scroll. Reorder so **Needs Attention** card appears before **Project List** on mobile using `order-first lg:order-none` on the attention card.
+- Budget Card, Attention Card, and Reminders Tile stack naturally — no changes needed.
 
-**Group 1 — Contract:**
-1. Overview — `LayoutDashboard` — `/project/:id/overview`
-2. Scope & Details — `ClipboardList` — `/project/:id/scope`
-3. SOV — `DollarSign` — `/project/:id/sov`
+### 2. Dashboard KPI Row (`src/components/dashboard/DashboardKPIRow.tsx`)
+- Currently `grid-cols-2 lg:grid-cols-4` — works at 390px but values overflow at `text-[2rem]`. Reduce KPI value to `text-[1.5rem]` on mobile (`text-[1.5rem] md:text-[2rem]`).
+- Tag pill font is fine. Bar height is fine.
 
-[divider]
+### 3. Dashboard Project List (`src/components/dashboard/DashboardProjectList.tsx`)
+- Contract value text overflows on narrow screens. Hide contract value column below `sm` breakpoint.
+- The `DropdownMenuTrigger` (three-dot menu) is `opacity-0 group-hover:opacity-100` — on touch devices it's never visible. Make it always visible on mobile (`opacity-100 sm:opacity-0 sm:group-hover:opacity-100`).
+- Status filter pills: already have `min-h-[36px]` on mobile — good. Ensure horizontal scroll doesn't clip with `px-4` padding.
 
-**Group 2 — Operations:**
-4. Change Orders — `AlertTriangle` (delta/warning) — `/project/:id/change-orders`
-5. RFIs — `MessageSquareMore` — `/project/:id/rfis`
-6. Estimates — `FileText` — `/project/:id/estimates`
+### 4. Project Home Overview (`src/pages/ProjectHome.tsx`)
+- The overview grid `grid-cols-1 lg:grid-cols-[1fr_280px]` is correct.
+- Duplicate `<BudgetTracking>` on lines 395-397 — remove the duplicate (bug).
+- Inner cards (BillingCashCard, ProfitCard) use `md:grid-cols-2` — change to single column on mobile for readability.
 
-[divider]
+### 5. Project TopBar / Mobile Header
+- `MobileProjectHeader` is well-optimized. No changes needed.
+- Desktop `ProjectTopBar` is `hidden lg:block` — correct.
 
-**Group 3 — Billing:**
-7. Invoices — `Receipt` — `/project/:id/invoices`
-8. Purchase Orders — `Package` — `/project/:id/purchase-orders`
-9. Returns — `RotateCcw` — `/project/:id/returns`
+### 6. Project Bottom Nav (`src/components/project/ProjectBottomNav.tsx`)
+- Already handles mobile well with 56px height and safe area padding.
+- Ensure the Capture FAB button doesn't overlap content — add `pb-[72px]` to the project content area on mobile (already `pb-24` which is 96px — sufficient).
 
-[divider]
+### 7. CO List Page (`src/components/change-orders/COListPage.tsx`)
+- Header flex-wrap works. The toggle buttons + "New CO" button squeeze on 390px.
+- Make the view mode toggle hidden on mobile (force card view) — `hidden md:flex` on the toggle wrapper.
+- KPI grid `grid-cols-2 lg:grid-cols-4` is fine at 390px.
 
-**Group 4 — Field:**
-10. Schedule — `CalendarDays` — `/project/:id/schedule`
-11. Daily Log — `PenLine` — `/project/:id/daily-log`
+### 8. CO Detail Page (`src/components/change-orders/CODetailPage.tsx`)
+- This is a long page — needs `px-3` on mobile (currently handled by parent).
+- The two-column layout for hero KPIs should stack on mobile.
+- Financial sidebar should be full-width on mobile.
 
-`/project/:id` redirects to `/project/:id/overview`.
+### 9. Invoices Tab (`src/components/invoices/InvoicesTab.tsx`)
+- Header with filter dropdown and view switcher wraps OK with `flex-wrap`.
+- The `SelectTrigger` is `w-[180px]` — change to `w-full sm:w-[180px]`.
+- Force card/list view on mobile instead of table view (table is unusable at 390px).
 
-## Active, hover, and badge states
+### 10. Profile Page (`src/pages/Profile.tsx`)
+- Form grids `grid-cols-1 sm:grid-cols-2` and `sm:grid-cols-3` are correct.
+- The page title section at top should use tighter padding on mobile.
+- Save buttons should be full-width on mobile.
 
-- **Active:** 32x32 touch target with amber (#F5A623) background, 8px border-radius. Icon stroke changes to navy #0D1F3C.
-- **Hover:** rgba(255,255,255,0.1) background. Icon stroke brightens to rgba(255,255,255,0.7).
-- **Inactive:** No background. Icon stroke rgba(255,255,255,0.45).
-- **Badge:** 7px red (#DC2626) dot, top-right corner, 1.5px border matching rail background (#162E52).
+### 11. Settings Page (`src/pages/Settings.tsx`)
+- Already uses single-column Card layout — works well on mobile.
+- Password toggle button touch target is fine.
 
-## Tooltip behavior
+### 12. Partner Directory (`src/pages/PartnerDirectory.tsx`)
+- Search input `max-w-md` is fine.
+- Tab triggers may need `min-h-[44px]` for touch targets.
 
-On hover, a tooltip appears 150ms after hover starts, to the right of the icon. Navy #0D1F3C background, white text, 10px font, 4px 8px padding, 4px border-radius, left-pointing arrow. Full section name, never truncated.
+### 13. RFIs Page (`src/pages/RFIs.tsx`)
+- Project selector `w-64` — change to `w-full sm:w-64`.
 
-## Mobile collapse and More bottom sheet
+### 14. Reminders Page (`src/pages/Reminders.tsx`)
+- Uses `RemindersTile` which is already mobile-friendly.
 
-Below 768px the icon rail is hidden. A 56px bottom bar appears (#0D1F3C background) with 5 items:
-1. Overview (grid icon)
-2. Change Orders (with badge)
-3. Invoices (with badge)
-4. Orders (package icon)
-5. More (hamburger → opens bottom sheet)
+### 15. Global AppLayout (`src/components/layout/AppLayout.tsx`)
+- Content padding `px-3 sm:px-5 md:px-6` and `pb-24 lg:pb-6` — correct for bottom nav clearance.
 
-Icons 20px, labels 9px. Active = amber. Inactive = rgba(255,255,255,0.35). Badges = 7px red dot.
+### 16. Landing Page
+- Not in scope — separate public-facing page with its own responsive design.
 
-The More bottom sheet slides up, lists all remaining sections with full names and badges. Tap navigates and closes sheet.
+## Files to Modify
 
-## Nothing inside any section content changes
-
-Confirmed. All section components (Overview cards, SOV editor, CO list, RFI list, Invoices tab, etc.) render identically. Only the navigation mechanism changes.
-
-## URL routing and redirect
-
-Each section becomes a real route (`/project/:id/overview`, `/project/:id/scope`, etc.) instead of `?tab=` query params. `/project/:id` redirects to `/project/:id/overview`. Browser back/forward works. The `activeTab` logic in `ProjectHome.tsx` is replaced by reading the route segment.
-
-Existing routes like `/project/:id/sov` and `/project/:id/details-wizard` continue to work. The CO detail route (`/projects/:projectId/change-orders/:coId`) is unchanged.
-
-## First-time tooltip reveal
-
-On first visit after deployment, all tooltip labels appear expanded (visible without hover) for 3 seconds, then fade to hover-only. Stored in `localStorage` (`project-rail-onboarded`). Fires once per user per device.
-
-## Assumptions
-
-1. **Feature gating** still applies — if a feature (e.g. `schedule_gantt`) is disabled, its icon is hidden from the rail. The groups and dividers adjust.
-2. **Supplier role** hides SOV icon (matches current behavior where SOV tab is hidden for suppliers).
-3. The topbar (project name, status, download, notifications) remains as a horizontal bar above both the icon rail and content area — it spans the full width of `SidebarInset`.
-4. The global `AppSidebar` (left sidebar) is untouched. The icon rail is a separate component nested inside `SidebarInset`.
-5. The existing `BottomNav` component continues to work on non-project pages (dashboard, partners, etc.). On project pages, the project-specific bottom bar replaces it.
-6. Routes use `/project/:id/...` (singular, matching the existing pattern) rather than `/projects/:id/...` from the spec, since the app already uses `/project/`.
-
----
-
-## Technical Plan
-
-### New files
-
-| File | Purpose |
+| File | Changes |
 |------|---------|
-| `src/components/project/ProjectIconRail.tsx` | The 44px vertical icon rail component |
-| `src/components/project/ProjectBottomNav.tsx` | Mobile 56px bottom bar + More sheet |
+| `src/components/dashboard/DashboardKPIRow.tsx` | Responsive KPI value size |
+| `src/components/dashboard/DashboardProjectList.tsx` | Hide contract value on mobile, always-visible menu button |
+| `src/pages/ProjectHome.tsx` | Remove duplicate BudgetTracking, stack cards single-column on small screens |
+| `src/components/change-orders/COListPage.tsx` | Hide view toggle on mobile, force card view |
+| `src/components/invoices/InvoicesTab.tsx` | Full-width filter dropdown on mobile, force non-table view on mobile |
+| `src/pages/RFIs.tsx` | Full-width project selector on mobile |
+| `src/pages/Profile.tsx` | Full-width save buttons on mobile |
+| `src/components/change-orders/CODetailPage.tsx` | Stack hero KPIs and financial panels on mobile |
 
-### Modified files
-
-| File | Change |
-|------|--------|
-| `src/App.tsx` | Add nested routes under `/project/:id/*` for each section; redirect `/project/:id` → `/project/:id/overview` |
-| `src/pages/ProjectHome.tsx` | Replace `?tab=` query param logic with `useParams` route segment; render `ProjectIconRail` + `Outlet` pattern; remove `handleTabChange` tab switching; pass route-based active section to icon rail |
-| `src/components/project/ProjectTopBar.tsx` | Remove the entire bottom tabs row (lines 146-248); remove `activeTab`/`onTabChange` props; keep the top header row |
-| `src/components/layout/BottomNav.tsx` | On project pages, render `ProjectBottomNav` instead of current project tab items |
-| `src/components/project/index.ts` | Export new components |
-
-### Routing approach
-
-Instead of a single `ProjectHome` that conditionally renders sections based on `?tab=`, restructure as:
-- `/project/:id` → redirect to `/project/:id/overview`
-- `/project/:id/overview` → Overview content
-- `/project/:id/scope` → ScopeDetailsTab
-- `/project/:id/change-orders` → COListPage
-- etc.
-
-The `ProjectHome` becomes a layout wrapper with the icon rail + `<Outlet />`, and each section becomes a child route.
-
-All internal navigation calls (`onNavigate('invoices')`, `handleTabChange('change-orders')`) are updated to use `navigate(`/project/${id}/invoices`)` instead of `setSearchParams({ tab: 'invoices' })`.
+## What Does NOT Change
+- No backend changes
+- No new components
+- No routing changes
+- No feature additions
+- All existing functionality remains identical
 
