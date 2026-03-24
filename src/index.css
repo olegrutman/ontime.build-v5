@@ -357,6 +357,15 @@
   .animate-pulse-dot {
     animation: pulse-dot 2s infinite;
   }
+
+  @keyframes slideInRight {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+
+  .animate-slide-in-right {
+    animation: slideInRight 250ms ease-out both;
+  }
 }
 
 @layer utilities {
