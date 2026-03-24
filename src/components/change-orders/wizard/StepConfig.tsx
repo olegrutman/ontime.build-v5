@@ -364,9 +364,9 @@ export function StepConfig({ data, onChange, role, projectId }: StepConfigProps)
         <ShareToggle
           value={data.shareDraftNow}
           onChange={(v) => onChange({ shareDraftNow: v })}
-          label="Share immediately"
-          hint="If off, they cannot see this CO until you choose to share it."
-      />
+          label="Share with TC immediately"
+          hint="If off, TC cannot see this CO until you share it."
+        />
     </div>
   );
 }

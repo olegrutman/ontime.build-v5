@@ -1,16 +1,18 @@
-import { useState, useMemo } from 'react';
-import { X, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { X, Loader2, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useCORealtime } from '@/hooks/useCORealtime';
-import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { useProjectFCOrgs } from '@/hooks/useProjectFCOrgs';
+import { useCORoleContext } from '@/hooks/useCORoleContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -23,8 +25,9 @@ import { CONTEPanel } from './CONTEPanel';
 import { FCInputRequestCard } from './FCInputRequestCard';
 import { FCPricingToggleCard } from './FCPricingToggleCard';
 import { CORoleBanner } from './CORoleBanner';
+import { COWhosHere } from './COWhosHere';
 import { CO_STATUS_LABELS } from '@/types/changeOrder';
-import type { COCreatedByRole, COFinancials, COStatus, ChangeOrder, COCollaborator, COFCOrgOption } from '@/types/changeOrder';
+import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
 
 interface COSlideOverProps {
   coId: string;
@@ -49,10 +52,22 @@ function fmtCurrency(value: number) {
 }
 
 export function COSlideOver({ coId, projectId, onClose }: COSlideOverProps) {
-  const { currentRole, user, userOrgRoles } = useAuth();
-  const [activeTab, setActiveTab] = useState('details');
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
+
+  // BUG 5: Persist tab state per CO via localStorage
+  const tabStorageKey = `co_tab_${coId}`;
+  const [activeTab, setActiveTab] = useState(() => {
+    try { return localStorage.getItem(tabStorageKey) || 'details'; } catch { return 'details'; }
+  });
   const [comment, setComment] = useState('');
   const [sendingComment, setSendingComment] = useState(false);
+
+  function handleTabChange(tab: string) {
+    setActiveTab(tab);
+    try { localStorage.setItem(tabStorageKey, tab); } catch {}
+  }
 
   const {
     co, collaborators, lineItems, laborEntries, materials, equipment,
@@ -63,41 +78,21 @@ export function COSlideOver({ coId, projectId, onClose }: COSlideOverProps) {
   useCORealtime(coId);
   const { data: projectFCOrgs = [] } = useProjectFCOrgs(projectId);
 
-  const activeMembership =
-    userOrgRoles.find(({ organization_id }) => organization_id === co?.assigned_to_org_id) ??
-    userOrgRoles.find(({ organization_id }) => organization_id === co?.org_id) ??
-    userOrgRoles[0];
+  // ISSUE 1: Shared role resolution hook
+  const {
+    isGC, isTC, isFC, role, myOrgId,
+    canEdit, canRequestFCInput, canCompleteFCInput, nteBlocked,
+    pricingType, collaboratorOrgIds, currentCollaborator, fcCollabName,
+  } = useCORoleContext(co ?? null, collaborators, financials);
 
-  const activeRole = activeMembership?.role ?? currentRole;
-  const activeOrgType = activeMembership?.organization?.type;
-  const isFC = activeOrgType === 'FC' || activeRole === 'FC_PM';
-  const isGC = activeOrgType === 'GC' || activeRole === 'GC_PM';
-  const isTC = !isGC && !isFC && (activeOrgType === 'TC' || activeRole === 'TC_PM' || activeRole === 'FS');
-  const role: COCreatedByRole = isGC ? 'GC' : isTC ? 'TC' : 'FC';
-  const myOrgId = activeMembership?.organization_id ?? co?.assigned_to_org_id ?? co?.org_id ?? '';
-
-  const collaboratorOrgIds = new Set(collaborators.map(c => c.organization_id));
-  const currentCollaborator = collaborators.find(c => c.status === 'active') ?? null;
-  const isCollaboratorOrg = collaborators.some(c => c.organization_id === myOrgId && c.status === 'active');
   const fcOrgOptions: COFCOrgOption[] = projectFCOrgs.filter(
     o => !collaboratorOrgIds.has(o.id) || o.id === currentCollaborator?.organization_id
   );
 
-  const canRequestFCInput = !!co && isTC && (
-    (co.assigned_to_org_id === myOrgId && ['shared', 'rejected', 'work_in_progress', 'closed_for_pricing'].includes(co.status)) ||
-    (co.org_id === myOrgId && co.status === 'draft')
-  );
-  const canCompleteFCInput = !!co && isFC && isCollaboratorOrg;
-
-  const isActiveStatus = ['draft', 'shared', 'work_in_progress', 'closed_for_pricing', 'submitted'].includes(co?.status ?? '');
-  const isRunningPricing = co?.pricing_type === 'tm' || co?.pricing_type === 'nte';
-  const canEdit = (isActiveStatus || (isRunningPricing && co?.status === 'submitted')) && (isGC || isTC || isFC);
-  const nteBlocked = co?.pricing_type === 'nte' && !!co?.nte_cap && (financials.nteUsedPercent ?? 0) >= 100;
-
-  const pricingType = co && ['fixed', 'tm', 'nte'].includes(co.pricing_type) ? co.pricing_type as 'fixed' | 'tm' | 'nte' : 'fixed';
-
+  // BUG 1: Actually invalidate queries on refresh
   function refreshDetail() {
-    // re-fetch via react-query invalidation happens from the hooks
+    queryClient.invalidateQueries({ queryKey: ['co-detail', coId] });
+    queryClient.invalidateQueries({ queryKey: ['change-orders', projectId] });
   }
 
   async function handleSendComment() {
@@ -114,6 +109,7 @@ export function COSlideOver({ coId, projectId, onClose }: COSlideOverProps) {
       });
       setComment('');
       toast.success('Comment added');
+      refreshDetail();
     } catch {
       toast.error('Failed to add comment');
     } finally {
@@ -124,7 +120,7 @@ export function COSlideOver({ coId, projectId, onClose }: COSlideOverProps) {
   if (isLoading || !co) {
     return (
       <>
-        <div className="fixed inset-0 z-40 bg-[rgba(7,14,29,0.45)] backdrop-blur-sm" onClick={onClose} />
+        {!isMobile && <div className="fixed inset-0 z-40 bg-[rgba(7,14,29,0.45)] backdrop-blur-sm" onClick={onClose} />}
         <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-[660px] bg-card border-l border-border shadow-2xl flex items-center justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
@@ -138,41 +134,43 @@ export function COSlideOver({ coId, projectId, onClose }: COSlideOverProps) {
 
   return (
     <>
-      {/* Overlay */}
-      <div className="fixed inset-0 z-40 bg-[rgba(7,14,29,0.45)] backdrop-blur-sm" onClick={onClose} />
+      {/* Overlay — desktop only (FIX 4) */}
+      {!isMobile && (
+        <div className="fixed inset-0 z-40 bg-[rgba(7,14,29,0.45)] backdrop-blur-sm" onClick={onClose} />
+      )}
 
       {/* Panel */}
       <div className="fixed right-0 top-0 bottom-0 z-50 w-full max-w-[660px] bg-card border-l border-border shadow-2xl flex flex-col animate-slide-in-right">
         {/* Header */}
-        <div className="shrink-0 border-b border-border px-4 py-3 space-y-2">
+        <div className="shrink-0 border-b border-border px-4 py-3">
           <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-mono text-muted-foreground">{co.co_number ?? '—'}</p>
-              <h2 className="text-base font-semibold text-foreground truncate">{displayTitle}</h2>
+            <div className="flex items-start gap-2 min-w-0 flex-1">
+              {/* FIX 4: Mobile back arrow */}
+              {isMobile && (
+                <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 shrink-0">
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-mono text-muted-foreground">{co.co_number ?? '—'}</p>
+                <h2 className="text-base font-semibold text-foreground truncate">{displayTitle}</h2>
+              </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <Badge variant="outline" className={cn('text-[11px]', STATUS_BADGE[co.status as COStatus])}>
                 {CO_STATUS_LABELS[co.status as COStatus]}
               </Badge>
-              <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
-                <X className="h-4 w-4" />
-              </Button>
+              {!isMobile && (
+                <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8">
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
             </div>
           </div>
-
-          {/* Action buttons */}
-          <COStatusActions
-            co={co}
-            isGC={isGC}
-            isTC={isTC}
-            isFC={isFC}
-            currentOrgId={myOrgId}
-            projectId={projectId}
-            financials={financials}
-            collaborators={collaborators}
-            onRefresh={refreshDetail}
-          />
         </div>
+
+        {/* FIX 1: Who's Here presence bar */}
+        <COWhosHere coId={coId} role={role} activeTab={activeTab} />
 
         {/* Role banner */}
         <div className="shrink-0 px-4 pt-3">
@@ -180,7 +178,7 @@ export function COSlideOver({ coId, projectId, onClose }: COSlideOverProps) {
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="flex-1 flex flex-col min-h-0">
           <TabsList className="shrink-0 mx-4 mt-3 bg-muted/50 w-fit">
             <TabsTrigger value="details" className="text-xs">Details</TabsTrigger>
             <TabsTrigger value="pricing" className="text-xs">Pricing</TabsTrigger>
@@ -189,8 +187,20 @@ export function COSlideOver({ coId, projectId, onClose }: COSlideOverProps) {
           </TabsList>
 
           <div className="flex-1 overflow-y-auto px-4 pb-4">
-            {/* Details Tab */}
+            {/* Details Tab — FIX 2: Actions moved here from header */}
             <TabsContent value="details" className="space-y-3 mt-3">
+              <COStatusActions
+                co={co}
+                isGC={isGC}
+                isTC={isTC}
+                isFC={isFC}
+                currentOrgId={myOrgId}
+                projectId={projectId}
+                financials={financials}
+                collaborators={collaborators}
+                onRefresh={refreshDetail}
+              />
+
               <div className="co-light-shell p-3 space-y-2">
                 <DetailRow label="Status" value={CO_STATUS_LABELS[co.status as COStatus]} />
                 <DetailRow label="Pricing" value={PRICING_LABEL[co.pricing_type] ?? co.pricing_type} />
@@ -204,8 +214,8 @@ export function COSlideOver({ coId, projectId, onClose }: COSlideOverProps) {
                 options={fcOrgOptions}
                 collaborators={collaborators}
                 acting={false}
-                onRequest={async (orgId) => { await requestFCInput.mutateAsync(orgId); }}
-                onComplete={async () => { await completeFCInput.mutateAsync(); }}
+                onRequest={async (orgId) => { await requestFCInput.mutateAsync(orgId); refreshDetail(); }}
+                onComplete={async () => { await completeFCInput.mutateAsync(); refreshDetail(); }}
               />
             </TabsContent>
 
@@ -223,7 +233,6 @@ export function COSlideOver({ coId, projectId, onClose }: COSlideOverProps) {
                   </>
                 )}
                 {isTC && (() => {
-                  const fcCollabName = collaborators.find(c => c.status === 'active')?.organization?.name ?? 'Field crew';
                   const tcMat = (co.materials_needed || financials.materialsTotal > 0) && co.materials_responsible === 'TC' ? financials.materialsTotal : 0;
                   const tcEq = (co.equipment_needed || financials.equipmentTotal > 0) && co.equipment_responsible === 'TC' ? financials.equipmentTotal : 0;
                   return (

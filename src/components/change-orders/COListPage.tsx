@@ -70,15 +70,30 @@ export function COListPage({ projectId }: COListPageProps) {
     let totalValue = 0;
     let pendingApproval = 0;
     let awaitingPricing = 0;
-    let approvedBillable = 0;
+    let approvedBillableValue = 0;
+    let approvedCount = 0;
+    let myActionCount = 0;
+    let inProgressCount = 0;
 
     for (const co of changeOrders) {
+      if (co.status !== 'draft') totalValue += (co.tc_submitted_price ?? 0);
       if (co.status === 'submitted' && co.org_id === orgId) pendingApproval++;
       if (co.status === 'closed_for_pricing') awaitingPricing++;
-      if (co.status === 'approved') approvedBillable++;
+      if (co.status === 'approved') {
+        approvedBillableValue += (co.tc_submitted_price ?? 0);
+        approvedCount++;
+      }
+      if (['draft', 'shared', 'work_in_progress', 'closed_for_pricing', 'submitted'].includes(co.status)) {
+        inProgressCount++;
+      }
+      if (
+        (co.status === 'submitted' && co.org_id === orgId) ||
+        (co.status === 'closed_for_pricing' && (co.org_id === orgId || co.assigned_to_org_id === orgId)) ||
+        (co.status === 'work_in_progress' && co.assigned_to_org_id === orgId)
+      ) myActionCount++;
     }
 
-    return { totalValue, pendingApproval, awaitingPricing, approvedBillable };
+    return { totalValue, pendingApproval, awaitingPricing, approvedBillableValue, approvedCount, myActionCount, inProgressCount };
   }, [changeOrders, orgId]);
 
   // Mobile filter
@@ -86,7 +101,8 @@ export function COListPage({ projectId }: COListPageProps) {
     if (filter === 'all') return changeOrders;
     if (filter === 'my_action') return changeOrders.filter(co =>
       (co.status === 'submitted' && co.org_id === orgId) ||
-      (co.status === 'closed_for_pricing' && (co.assigned_to_org_id === orgId || co.org_id === orgId))
+      (co.status === 'closed_for_pricing' && (co.org_id === orgId || co.assigned_to_org_id === orgId)) ||
+      (co.status === 'work_in_progress' && co.assigned_to_org_id === orgId)
     );
     if (filter === 'in_progress') return changeOrders.filter(co =>
       ['draft', 'shared', 'work_in_progress', 'closed_for_pricing', 'submitted'].includes(co.status)
@@ -147,9 +163,9 @@ export function COListPage({ projectId }: COListPageProps) {
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           {([
             { key: 'all', label: `All COs`, count: total },
-            { key: 'my_action', label: 'Needs my action', count: stats.pendingApproval },
-            { key: 'in_progress', label: 'In progress', count: stats.awaitingPricing },
-            { key: 'approved_filter', label: 'Approved', count: stats.approvedBillable },
+            { key: 'my_action', label: 'Needs my action', count: stats.myActionCount },
+            { key: 'in_progress', label: 'In progress', count: stats.inProgressCount },
+            { key: 'approved_filter', label: 'Approved', count: stats.approvedCount },
           ] as { key: FilterKey; label: string; count: number }[]).map(f => (
             <button
               key={f.key}
@@ -175,8 +191,8 @@ export function COListPage({ projectId }: COListPageProps) {
         {/* Stats row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="co-light-kpi">
-            <p className="co-light-kpi-label">Total COs</p>
-            <p className="co-light-kpi-value">{total}</p>
+            <p className="co-light-kpi-label">Total CO value</p>
+            <p className="co-light-kpi-value">${stats.totalValue.toLocaleString()}</p>
           </div>
           <div className="co-light-kpi">
             <p className="co-light-kpi-label">Pending approval</p>
@@ -188,7 +204,7 @@ export function COListPage({ projectId }: COListPageProps) {
           </div>
           <div className="co-light-kpi">
             <p className="co-light-kpi-label">Approved & billable</p>
-            <p className="co-light-kpi-value">{stats.approvedBillable}</p>
+            <p className="co-light-kpi-value">${stats.approvedBillableValue.toLocaleString()}</p>
           </div>
         </div>
       </div>
