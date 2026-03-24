@@ -21,6 +21,7 @@ import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { CONTEPanel } from './CONTEPanel';
 import { FCInputRequestCard } from './FCInputRequestCard';
+import { FCPricingToggleCard } from './FCPricingToggleCard';
 import { CORoleBanner } from './CORoleBanner';
 import { CO_STATUS_LABELS } from '@/types/changeOrder';
 import type { COCreatedByRole, COFinancials, COStatus, ChangeOrder, COCollaborator, COFCOrgOption } from '@/types/changeOrder';
