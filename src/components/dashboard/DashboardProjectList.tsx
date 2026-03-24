@@ -213,7 +213,7 @@ export function DashboardProjectList({
               </div>
 
               {/* Contract value */}
-              <span className="text-[0.82rem] font-semibold text-foreground shrink-0">
+              <span className="hidden sm:inline text-[0.82rem] font-semibold text-foreground shrink-0">
                 {project.contractValue != null ? formatCurrency(project.contractValue) : '—'}
               </span>
 
@@ -224,7 +224,7 @@ export function DashboardProjectList({
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button
-                    className="p-1.5 rounded hover:bg-accent opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                    className="p-1.5 rounded hover:bg-accent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <MoreVertical className="h-3.5 w-3.5 text-muted-foreground" />

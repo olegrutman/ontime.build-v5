@@ -276,7 +276,7 @@ export function CODetailPage() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 xl:grid-cols-4 gap-2.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
                   <div className="co-light-kpi">
                     <p className="co-light-kpi-label">{isTC ? `${myOrgName} labor` : isFC ? 'My labor' : 'Labor'}</p>
                     <p className="co-light-kpi-value">{fmtCurrency(isGC ? financials.tcBillableToGC : isFC ? financials.fcLaborTotal : financials.tcBillableToGC)}</p>
@@ -324,7 +324,7 @@ export function CODetailPage() {
               </div>
             </header>
 
-            <div className="px-4 md:px-6 py-4 md:py-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-4 md:gap-5">
+            <div className="px-3 sm:px-4 md:px-6 py-4 md:py-6 grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_320px] gap-4 md:gap-5">
               <div className="space-y-4 md:space-y-5">
                 <section className="co-light-shell overflow-hidden">
                   <div className="px-4 py-3 border-b border-border co-light-header">

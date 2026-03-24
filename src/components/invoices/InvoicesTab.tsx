@@ -405,7 +405,7 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
       );
     }
 
-    if (viewMode === 'table') {
+    if (viewMode === 'table' && typeof window !== 'undefined' && window.innerWidth >= 640) {
       return (
         <InvoiceTableView
           invoices={currentInvoices}
@@ -476,14 +476,16 @@ export function InvoicesTab({ projectId, retainagePercent, projectStatus }: Invo
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
-        <ViewSwitcher
-          value={viewMode}
-          onChange={setViewMode}
-          availableModes={['table', 'list']}
-        />
+        <div className="hidden sm:block">
+          <ViewSwitcher
+            value={viewMode}
+            onChange={setViewMode}
+            availableModes={['table', 'list']}
+          />
+        </div>
 
         <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as InvoiceStatus | 'ALL' | 'NEEDS_ACTION')}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <Filter className="h-4 w-4 mr-2" />
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>

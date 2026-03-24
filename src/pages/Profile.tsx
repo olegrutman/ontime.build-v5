@@ -300,7 +300,7 @@ export default function Profile() {
             </div>
 
             <div className="flex justify-end pt-2">
-              <Button onClick={handleSavePersonal} disabled={saving === 'personal'}>
+              <Button onClick={handleSavePersonal} disabled={saving === 'personal'} className="w-full sm:w-auto">
                 {saving === 'personal' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                 Save Personal Info
               </Button>
@@ -475,7 +475,7 @@ export default function Profile() {
             </div>
 
             <div className="flex justify-end pt-2">
-              <Button onClick={handleSaveOrganization} disabled={saving === 'org'}>
+              <Button onClick={handleSaveOrganization} disabled={saving === 'org'} className="w-full sm:w-auto">
                 {saving === 'org' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                 Save Organization
               </Button>
@@ -587,7 +587,7 @@ export default function Profile() {
             )}
 
             <div className="flex justify-end pt-2">
-              <Button onClick={handleSavePricing} disabled={saving === 'pricing'}>
+              <Button onClick={handleSavePricing} disabled={saving === 'pricing'} className="w-full sm:w-auto">
                 {saving === 'pricing' ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                 Save Pricing Defaults
               </Button>
