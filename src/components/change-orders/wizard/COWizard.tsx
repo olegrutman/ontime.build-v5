@@ -36,6 +36,8 @@ export interface COWizardData {
   materialsResponsible: 'GC' | 'TC' | null;
   equipmentResponsible: 'GC' | 'TC' | null;
   shareDraftNow: boolean;
+  locationTag: string;
+  reason: COReasonCode | null;
 }
 
 const INITIAL_DATA: COWizardData = {
@@ -52,6 +54,8 @@ const INITIAL_DATA: COWizardData = {
   materialsResponsible: null,
   equipmentResponsible: null,
   shareDraftNow: false,
+  locationTag: '',
+  reason: null,
 };
 
 interface WizardStep {
@@ -139,9 +143,8 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
 
       const preGeneratedId = crypto.randomUUID();
 
-      // Join unique locations from items for CO-level summary
-      const uniqueLocations = [...new Set(data.selectedItems.map(i => i.locationTag).filter(Boolean))];
-      const locationTagSummary = uniqueLocations.length > 0 ? uniqueLocations.join(' | ') : null;
+      // Use CO-level location tag, fall back to item-level for legacy
+      const locationTagSummary = data.locationTag || null;
 
       // C1 fix: Auto-resolve GC org (project owner) for TC/FC-created COs
       let resolvedAssignedToOrgId = data.assignedToOrgId || null;
@@ -167,7 +170,7 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
           status: 'draft',
           pricing_type: data.pricingType,
           nte_cap: data.pricingType === 'nte' && data.nteCap ? parseFloat(data.nteCap) : null,
-          reason: null,
+          reason: data.reason,
           reason_note: null,
           location_tag: locationTagSummary,
           assigned_to_org_id: resolvedAssignedToOrgId,
@@ -197,8 +200,8 @@ export function COWizard({ open, onOpenChange, projectId }: COWizardProps) {
           category_name: item.category_name,
           unit: item.unit,
           sort_order: idx,
-          location_tag: item.locationTag || null,
-          reason: item.reason || null,
+          location_tag: data.locationTag || item.locationTag || null,
+          reason: (data.reason || item.reason || null) as string | null,
           description: item.reasonDescription || null,
         }));
         const { error: lineError } = await supabase.from('co_line_items').insert(lineItemRows);
