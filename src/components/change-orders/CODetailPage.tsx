@@ -28,6 +28,7 @@ import { COStatusActions } from './COStatusActions';
 import { CONTEPanel } from './CONTEPanel';
 import { COActivityFeed } from './COActivityFeed';
 import { FCInputRequestCard } from './FCInputRequestCard';
+import { FCPricingToggleCard } from './FCPricingToggleCard';
 import { CO_REASON_LABELS, CO_STATUS_LABELS } from '@/types/changeOrder';
 import type { COCreatedByRole, COFCOrgOption, COFinancials, COReasonCode, COStatus, ChangeOrder } from '@/types/changeOrder';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
