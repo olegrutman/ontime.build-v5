@@ -88,6 +88,8 @@ export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
 
   const [pending, setPending] = useState<PendingState | null>(null);
   const [locationFields, setLocationFields] = useState<LocationFields>({ ...EMPTY_FIELDS });
+  const [lastLocationFields, setLastLocationFields] = useState<LocationFields | null>(null);
+  const [lastLocationTag, setLastLocationTag] = useState<string | null>(null);
 
   const [query, setQuery] = useState('');
   const [level, setLevel] = useState<DrillLevel>('division');
@@ -134,6 +136,9 @@ export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
       selectedItems: [...data.selectedItems, newItem],
       scopeDescription: data.scopeDescription || [...data.selectedItems, newItem].map(i => i.item_name).join(', '),
     });
+    // FIX 3: Save location for shortcut on next item
+    setLastLocationFields({ ...locationFields });
+    setLastLocationTag(pending.locationTag);
     setPending(null);
     setLocationFields({ ...EMPTY_FIELDS });
   }
@@ -262,6 +267,36 @@ export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
             <p className="text-xs text-muted-foreground">Assign a location for this item</p>
           </div>
         </div>
+
+        {/* FIX 3: Location shortcut banner */}
+        {lastLocationTag && (
+          <div className="flex items-center gap-2 p-2.5 rounded-lg border border-primary/20 bg-primary/5">
+            <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-muted-foreground">Last location</p>
+              <p className="text-sm font-medium truncate">{lastLocationTag}</p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs shrink-0"
+              onClick={() => {
+                if (lastLocationFields) setLocationFields({ ...lastLocationFields });
+                setPending(prev => prev ? { ...prev, phase: 'reason', locationTag: lastLocationTag } : null);
+              }}
+            >
+              Use same
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs shrink-0"
+              onClick={() => { setLastLocationTag(null); setLastLocationFields(null); }}
+            >
+              New
+            </Button>
+          </div>
+        )}
 
         <div className="space-y-4">
           <div>

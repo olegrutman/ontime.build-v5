@@ -105,15 +105,17 @@ export function LaborEntryForm({
       return;
     }
 
-    // Hard block at 100% NTE — no escape hatch (M7)
-    if (!isActualCost && ntePercent !== null && ntePercent >= 100) {
-      toast.error('NTE cap reached (100%). GC must increase the cap before you can log more.');
-      return;
-    }
-
-    if (!isActualCost && willExceed && !showNTEWarn) {
-      setShowNTEWarn(true);
-      return;
+    // NTE enforcement — hard block only if cap was already reached before this entry
+    if (!isActualCost && nteCap && nteCap > 0) {
+      const alreadyAtCap = nteUsed >= nteCap;
+      if (alreadyAtCap) {
+        toast.error('NTE cap reached (100%). GC must increase the cap before you can log more.');
+        return;
+      }
+      if (willExceed && !showNTEWarn) {
+        setShowNTEWarn(true);
+        return;
+      }
     }
 
     setSaving(true);
