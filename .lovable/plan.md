@@ -1,24 +1,27 @@
 
 
-# Fix: Broken Links & Missing Data in CO Board
+# Fix: Add FC Pricing Toggle to CO Slide-Over Panel
 
-## Issues Found
+## Problem
+The TC Pricing tab in the slide-over panel shows only static financial rows ("Billable to GC", "Total") but is missing the **FC Pricing Toggle** — the switch that lets TC use FC hours/lump sum as their pricing base. The role banner says "Toggle below to use as your base" but the toggle doesn't exist in the slide-over.
 
-### Bug 1: CO Board cards always show `$0`
-In `COBoardCard.tsx` line 125, the amount is hardcoded as `fmtCurrency(0)`. The `ChangeOrderWithMembers` type doesn't include financial data, so there's no amount to display. The fix is to use `co.tc_submitted_price` (or a simple field from the CO record) as the card amount — this avoids needing to compute full financials per card.
+## Root Cause
+The `FCPricingToggleCard` component is defined inside `CODetailPage.tsx` (the old full-page detail view) and was never imported into `COSlideOver.tsx`.
 
-### Bug 2: SOV, Edit, and Contracts routes bypass the project layout
-In `App.tsx`, the routes `/project/:id/sov` (line 181), `/project/:id/edit` (line 175), `/project/:id/contracts` (line 180) are standalone page routes that render outside the `ProjectHome` layout. React Router v6 ranks static segments higher than dynamic `:section`, so clicking "SOV" in the icon rail navigates to the standalone `ProjectSOVPage` (no icon rail, no project topbar) instead of the embedded tab. Same for contracts and edit.
+## Fix
+In `COSlideOver.tsx`, add the `FCPricingToggleCard` to the TC section of the Pricing tab (before the financial summary rows). The component needs:
+- `co`, `financials`, `myOrgId`, `onRefresh` — all already available in the slide-over
+- `fcCollabName` — derived from `collaborators` (the active FC collaborator's org name)
+- `gcSideName` — derived from the CO's org name or "GC"
 
-**Fix**: Remove the standalone `/project/:id/sov` and `/project/:id/contracts` routes from App.tsx since ProjectHome already handles `activeTab === 'sov'` and `activeTab === 'contracts'` internally. Keep `/project/:id/edit` as it's intentionally a separate full-page editor.
-
-### Bug 3: DailyLogPanel uses fragile `window.location.pathname` manipulation
-Line 158 of `DailyLogPanel.tsx` uses `window.location.pathname.replace(...)` for navigation instead of React Router's `navigate()`. This works but is fragile. Low priority — cosmetic fix.
-
-## Files to Modify
+**Steps:**
+1. Extract `FCPricingToggleCard` from `CODetailPage.tsx` into its own file `src/components/change-orders/FCPricingToggleCard.tsx` so both views can use it
+2. Import and render it in `COSlideOver.tsx` inside the TC pricing section, gated on `isTC && collaborators.length > 0`
+3. Import it in `CODetailPage.tsx` from the new file location
 
 | File | Change |
 |------|--------|
-| `src/components/change-orders/COBoardCard.tsx` | Replace `fmtCurrency(0)` with `fmtCurrency(co.tc_submitted_price ?? 0)` to show actual CO value |
-| `src/App.tsx` | Remove `/project/:id/sov` and `/project/:id/contracts` standalone routes (lines 180-181) so the `:section` catch-all in ProjectHome handles them with the full project layout |
+| `src/components/change-orders/FCPricingToggleCard.tsx` | New file — extracted component |
+| `src/components/change-orders/COSlideOver.tsx` | Import + render toggle in TC pricing tab |
+| `src/components/change-orders/CODetailPage.tsx` | Import from new file instead of inline definition |
 
