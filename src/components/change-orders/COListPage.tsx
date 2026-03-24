@@ -1,71 +1,35 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { LayoutGrid, List, Loader2, Plus } from 'lucide-react';
-import { useChangeOrders, type ChangeOrderWithMembers } from '@/hooks/useChangeOrders';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Loader2, Plus } from 'lucide-react';
+import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { useAuth } from '@/hooks/useAuth';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { COWizard } from './wizard/COWizard';
-import { COBoard } from './COBoard';
 import { COBoardCard } from './COBoardCard';
-import { COSlideOver } from './COSlideOver';
-import type { COStatus } from '@/types/changeOrder';
-import { CO_STATUS_LABELS } from '@/types/changeOrder';
 
 interface COListPageProps {
   projectId: string;
 }
 
-type ViewMode = 'board' | 'list';
-
 type FilterKey = 'all' | 'my_action' | 'in_progress' | 'approved_filter';
 
 export function COListPage({ projectId }: COListPageProps) {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const isMobile = useIsMobile();
-  const { user, userOrgRoles, currentRole } = useAuth();
-  const { changeOrders, boardColumns, isLoading } = useChangeOrders(projectId);
+  const navigate = useNavigate();
+  const { userOrgRoles } = useAuth();
+  const { changeOrders, isLoading } = useChangeOrders(projectId);
 
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('board');
   const [filter, setFilter] = useState<FilterKey>('all');
 
-  // Slide-over: open CO from URL ?co=<id>
-  const activeCOId = searchParams.get('co');
-
-  const storageKey = `co_view_mode_v2_${user?.id ?? 'anon'}`;
-  useEffect(() => {
-    const stored = localStorage.getItem(storageKey);
-    if (stored === 'board' || stored === 'list') setViewMode(stored);
-  }, [storageKey]);
-  useEffect(() => {
-    localStorage.setItem(storageKey, viewMode);
-  }, [storageKey, viewMode]);
-
-  // Auto-open CO if URL param present
-  useEffect(() => {
-    const coParam = searchParams.get('co');
-    if (coParam && changeOrders.length > 0) {
-      const exists = changeOrders.some(c => c.id === coParam);
-      if (!exists) {
-        setSearchParams({}, { replace: true });
-      }
-    }
-  }, [changeOrders, searchParams, setSearchParams]);
-
   function handleCardClick(id: string) {
-    setSearchParams({ co: id });
-  }
-
-  function handleClosePanel() {
-    setSearchParams({}, { replace: true });
+    navigate(`/project/${projectId}/change-orders/${id}`);
   }
 
   const orgId = userOrgRoles?.[0]?.organization_id ?? null;
   const total = changeOrders.length;
 
-  // Stats
+  // Stats — preserves BUG 2, 3 fixes
   const stats = useMemo(() => {
     let totalValue = 0;
     let pendingApproval = 0;
@@ -96,7 +60,7 @@ export function COListPage({ projectId }: COListPageProps) {
     return { totalValue, pendingApproval, awaitingPricing, approvedBillableValue, approvedCount, myActionCount, inProgressCount };
   }, [changeOrders, orgId]);
 
-  // Mobile filter
+  // Filter
   const filteredCOs = useMemo(() => {
     if (filter === 'all') return changeOrders;
     if (filter === 'my_action') return changeOrders.filter(co =>
@@ -131,38 +95,16 @@ export function COListPage({ projectId }: COListPageProps) {
             <p className="text-sm text-muted-foreground mt-1">{total === 0 ? 'No change orders yet' : `${total} total`}</p>
           </div>
 
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            {/* View toggle — hidden on mobile */}
-            <div className="co-light-toggle hidden md:flex">
-              <button
-                type="button"
-                className={cn('co-light-toggle-btn inline-flex items-center gap-1.5', viewMode === 'board' && 'co-light-toggle-btn--active')}
-                onClick={() => setViewMode('board')}
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-                Board
-              </button>
-              <button
-                type="button"
-                className={cn('co-light-toggle-btn inline-flex items-center gap-1.5', viewMode === 'list' && 'co-light-toggle-btn--active')}
-                onClick={() => setViewMode('list')}
-              >
-                <List className="h-3.5 w-3.5" />
-                List
-              </button>
-            </div>
-
-            <Button onClick={() => setWizardOpen(true)} className="gap-2 flex-1 md:flex-none">
-              <Plus className="h-4 w-4" />
-              New CO
-            </Button>
-          </div>
+          <Button onClick={() => setWizardOpen(true)} className="gap-2 flex-1 md:flex-none">
+            <Plus className="h-4 w-4" />
+            New CO
+          </Button>
         </div>
 
         {/* Filter pills */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
           {([
-            { key: 'all', label: `All COs`, count: total },
+            { key: 'all', label: 'All COs', count: total },
             { key: 'my_action', label: 'Needs my action', count: stats.myActionCount },
             { key: 'in_progress', label: 'In progress', count: stats.inProgressCount },
             { key: 'approved_filter', label: 'Approved', count: stats.approvedCount },
@@ -209,7 +151,7 @@ export function COListPage({ projectId }: COListPageProps) {
         </div>
       </div>
 
-      {/* Board or List */}
+      {/* Card Grid */}
       {total === 0 ? (
         <div className="co-light-shell flex flex-col items-center justify-center py-16 text-center gap-3 px-4">
           <p className="text-lg font-medium text-foreground">No change orders yet</p>
@@ -220,38 +162,16 @@ export function COListPage({ projectId }: COListPageProps) {
           </Button>
         </div>
       ) : (
-        <>
-          {/* Desktop: board or list */}
-          {!isMobile && viewMode === 'board' ? (
-            <COBoard
-              columns={boardColumns}
-              activeCOId={activeCOId}
-              onCardClick={handleCardClick}
-              onNewCO={() => setWizardOpen(true)}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
+          {filteredCOs.map(co => (
+            <COBoardCard
+              key={co.id}
+              co={co}
+              isActive={false}
+              onClick={handleCardClick}
             />
-          ) : (
-            /* Mobile always list, desktop list when toggled */
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
-              {filteredCOs.map(co => (
-                <COBoardCard
-                  key={co.id}
-                  co={co}
-                  isActive={co.id === activeCOId}
-                  onClick={handleCardClick}
-                />
-              ))}
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Slide-over panel */}
-      {activeCOId && (
-        <COSlideOver
-          coId={activeCOId}
-          projectId={projectId}
-          onClose={handleClosePanel}
-        />
+          ))}
+        </div>
       )}
 
       <COWizard open={wizardOpen} onOpenChange={setWizardOpen} projectId={projectId} />
