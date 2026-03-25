@@ -21,7 +21,7 @@ import {
   SIDING_TYPE_OPTIONS, SIDING_LEVEL_OPTIONS,
   EXTERIOR_TRIM_TYPE_OPTIONS, SOFFIT_TYPE_OPTIONS, FASCIA_TYPE_OPTIONS,
   WRB_TYPE_OPTIONS, SCOPE_DECK_TYPE_OPTIONS,
-  SCOPE_EXTRAS_OPTIONS, SCOPE_EXTRAS_COMMERCIAL,
+  SCOPE_EXTRAS_OPTIONS, SCOPE_EXTRAS_COMMERCIAL, BACKOUT_BLOCKING_OPTIONS,
   getSmartDefaults,
   type ProfileDraft, type ProjectType,
 } from '@/types/projectProfile';
@@ -70,11 +70,14 @@ function emptyDraft(projectId: string): ProfileDraft {
     scope_exterior_trim: false, scope_exterior_trim_type: null,
     scope_soffit_fascia: false, scope_fascia_type: null, scope_soffit_type: null,
     scope_backout: false,
+    scope_backout_blocking: true, scope_backout_blocking_items: [],
+    scope_backout_shimming: true, scope_backout_stud_repair: true,
+    scope_backout_nailer_plates: true, scope_backout_pickup_framing: true,
     scope_decks_railings: false, scope_deck_type: null, scope_railings: false,
     scope_garage_framing: false, scope_garage_trim_openings: false,
     scope_wrb: false, scope_wrb_type: null, scope_sheathing: false,
     scope_extras: [],
-    scope_interior_blocking: false, scope_fire_stopping: false,
+    scope_fire_stopping: false,
     scope_stairs_scope: false,
     scope_curtain_wall: false, scope_storefront_framing: false,
   };
@@ -170,7 +173,7 @@ export default function ProjectDetailsWizard() {
     setDraft(prev => ({ ...prev, [key]: val }));
   }, []);
 
-  const toggleArrayField = useCallback((key: 'foundation_types' | 'special_rooms' | 'scope_extras', val: string) => {
+  const toggleArrayField = useCallback((key: 'foundation_types' | 'special_rooms' | 'scope_extras' | 'scope_backout_blocking_items', val: string) => {
     setDraft(prev => {
       const arr = (prev[key] as string[]) || [];
       return { ...prev, [key]: arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val] };
@@ -548,12 +551,50 @@ export default function ProjectDetailsWizard() {
           </div>
         </FieldSection>
 
-        {/* Backout */}
-        <FieldSection label="Backout Plan" subtitle="Shimming, stud replacement, TV blocking, etc.">
-          <div className="flex items-center gap-3">
+        {/* Backout Plan */}
+        <FieldSection label="Backout Plan" subtitle="Shimming, blocking, stud repair, pickup framing">
+          <div className="flex items-center gap-3 mb-2">
             <Switch checked={draft.scope_backout} onCheckedChange={v => update('scope_backout', v)} />
             <span className="text-sm">{draft.scope_backout ? 'Backout included' : 'Not included'}</span>
           </div>
+          {draft.scope_backout && (
+            <div className="space-y-3 pl-2 border-l-2 border-primary/20">
+              {/* Blocking */}
+              <div>
+                <div className="flex items-center gap-3 mb-1">
+                  <Switch checked={draft.scope_backout_blocking} onCheckedChange={v => update('scope_backout_blocking', v)} />
+                  <span className="text-sm">{draft.scope_backout_blocking ? 'Blocking included' : 'No blocking'}</span>
+                </div>
+                {draft.scope_backout_blocking && (
+                  <div className="pl-4 mt-1">
+                    <Label className="text-xs text-muted-foreground mb-1 block">Blocking Types</Label>
+                    <ChipSelect options={BACKOUT_BLOCKING_OPTIONS} selected={draft.scope_backout_blocking_items}
+                      onToggle={v => toggleArrayField('scope_backout_blocking_items', v)} multi />
+                  </div>
+                )}
+              </div>
+              {/* Shimming */}
+              <div className="flex items-center gap-3">
+                <Switch checked={draft.scope_backout_shimming} onCheckedChange={v => update('scope_backout_shimming', v)} />
+                <span className="text-sm">{draft.scope_backout_shimming ? 'Shimming (doors & windows)' : 'No shimming'}</span>
+              </div>
+              {/* Stud Repair */}
+              <div className="flex items-center gap-3">
+                <Switch checked={draft.scope_backout_stud_repair} onCheckedChange={v => update('scope_backout_stud_repair', v)} />
+                <span className="text-sm">{draft.scope_backout_stud_repair ? 'Stud repair / straightening' : 'No stud repair'}</span>
+              </div>
+              {/* Nailer Plates */}
+              <div className="flex items-center gap-3">
+                <Switch checked={draft.scope_backout_nailer_plates} onCheckedChange={v => update('scope_backout_nailer_plates', v)} />
+                <span className="text-sm">{draft.scope_backout_nailer_plates ? 'Nailer plates' : 'No nailer plates'}</span>
+              </div>
+              {/* Pickup Framing */}
+              <div className="flex items-center gap-3">
+                <Switch checked={draft.scope_backout_pickup_framing} onCheckedChange={v => update('scope_backout_pickup_framing', v)} />
+                <span className="text-sm">{draft.scope_backout_pickup_framing ? 'Pickup framing & patching' : 'No pickup framing'}</span>
+              </div>
+            </div>
+          )}
         </FieldSection>
 
         {/* Decks & Railings — single family */}
@@ -598,12 +639,6 @@ export default function ProjectDetailsWizard() {
         {/* Multi-family specific */}
         {isMultiFamily && (
           <>
-            <FieldSection label="Interior Blocking" subtitle="Blocking for cabinets, grab bars, etc.">
-              <div className="flex items-center gap-3">
-                <Switch checked={draft.scope_interior_blocking} onCheckedChange={v => update('scope_interior_blocking', v)} />
-                <span className="text-sm">{draft.scope_interior_blocking ? 'Included' : 'Not included'}</span>
-              </div>
-            </FieldSection>
             <FieldSection label="Fire Stopping">
               <div className="flex items-center gap-3">
                 <Switch checked={draft.scope_fire_stopping} onCheckedChange={v => update('scope_fire_stopping', v)} />
@@ -658,10 +693,18 @@ export default function ProjectDetailsWizard() {
       draft.scope_soffit_fascia && 'Soffit & Fascia',
       draft.scope_wrb && `WRB${draft.scope_wrb_type ? ` — ${draft.scope_wrb_type}` : ''}`,
       draft.scope_sheathing && 'Sheathing',
-      draft.scope_backout && 'Backout Plan',
+      draft.scope_backout && (() => {
+        const subs = [
+          draft.scope_backout_blocking && `Blocking (${draft.scope_backout_blocking_items.length})`,
+          draft.scope_backout_shimming && 'Shimming',
+          draft.scope_backout_stud_repair && 'Stud Repair',
+          draft.scope_backout_nailer_plates && 'Nailer Plates',
+          draft.scope_backout_pickup_framing && 'Pickup Framing',
+        ].filter(Boolean);
+        return `Backout Plan (${subs.length} items)`;
+      })(),
       draft.scope_decks_railings && `Decks${draft.scope_deck_type ? ` — ${draft.scope_deck_type}` : ''}${draft.scope_railings ? ' + Railings' : ''}`,
       draft.scope_garage_framing && `Garage Framing${draft.scope_garage_trim_openings ? ' + Trim' : ''}`,
-      draft.scope_interior_blocking && 'Interior Blocking',
       draft.scope_fire_stopping && 'Fire Stopping',
       draft.scope_stairs_scope && 'Stairs',
       draft.scope_curtain_wall && 'Curtain Wall Framing',

@@ -2955,6 +2955,12 @@ export type Database = {
           roof_system: string | null
           roof_type: string | null
           scope_backout: boolean | null
+          scope_backout_blocking: boolean
+          scope_backout_blocking_items: string[]
+          scope_backout_nailer_plates: boolean
+          scope_backout_pickup_framing: boolean
+          scope_backout_shimming: boolean
+          scope_backout_stud_repair: boolean
           scope_curtain_wall: boolean | null
           scope_deck_type: string | null
           scope_decks_railings: boolean | null
@@ -2965,7 +2971,6 @@ export type Database = {
           scope_fire_stopping: boolean | null
           scope_garage_framing: boolean | null
           scope_garage_trim_openings: boolean | null
-          scope_interior_blocking: boolean | null
           scope_patio_door_type: string | null
           scope_patio_doors: boolean | null
           scope_railings: boolean | null
@@ -3021,6 +3026,12 @@ export type Database = {
           roof_system?: string | null
           roof_type?: string | null
           scope_backout?: boolean | null
+          scope_backout_blocking?: boolean
+          scope_backout_blocking_items?: string[]
+          scope_backout_nailer_plates?: boolean
+          scope_backout_pickup_framing?: boolean
+          scope_backout_shimming?: boolean
+          scope_backout_stud_repair?: boolean
           scope_curtain_wall?: boolean | null
           scope_deck_type?: string | null
           scope_decks_railings?: boolean | null
@@ -3031,7 +3042,6 @@ export type Database = {
           scope_fire_stopping?: boolean | null
           scope_garage_framing?: boolean | null
           scope_garage_trim_openings?: boolean | null
-          scope_interior_blocking?: boolean | null
           scope_patio_door_type?: string | null
           scope_patio_doors?: boolean | null
           scope_railings?: boolean | null
@@ -3087,6 +3097,12 @@ export type Database = {
           roof_system?: string | null
           roof_type?: string | null
           scope_backout?: boolean | null
+          scope_backout_blocking?: boolean
+          scope_backout_blocking_items?: string[]
+          scope_backout_nailer_plates?: boolean
+          scope_backout_pickup_framing?: boolean
+          scope_backout_shimming?: boolean
+          scope_backout_stud_repair?: boolean
           scope_curtain_wall?: boolean | null
           scope_deck_type?: string | null
           scope_decks_railings?: boolean | null
@@ -3097,7 +3113,6 @@ export type Database = {
           scope_fire_stopping?: boolean | null
           scope_garage_framing?: boolean | null
           scope_garage_trim_openings?: boolean | null
-          scope_interior_blocking?: boolean | null
           scope_patio_door_type?: string | null
           scope_patio_doors?: boolean | null
           scope_railings?: boolean | null

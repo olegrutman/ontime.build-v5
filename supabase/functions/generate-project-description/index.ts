@@ -105,12 +105,24 @@ Deno.serve(async (req) => {
         [profile.scope_soffit_type, profile.scope_fascia_type].filter(Boolean).join(" / ") || null);
       addScope(profile.scope_wrb, "WRB", profile.scope_wrb_type);
       addScope(profile.scope_sheathing, "Sheathing");
-      addScope(profile.scope_backout, "Backout plan");
+      if (profile.scope_backout) {
+        const backoutParts: string[] = [];
+        if (profile.scope_backout_blocking) {
+          const items = profile.scope_backout_blocking_items;
+          backoutParts.push(Array.isArray(items) && items.length ? `Blocking (${items.join(", ")})` : "Blocking");
+        }
+        if (profile.scope_backout_shimming) backoutParts.push("Shimming");
+        if (profile.scope_backout_stud_repair) backoutParts.push("Stud Repair");
+        if (profile.scope_backout_nailer_plates) backoutParts.push("Nailer Plates");
+        if (profile.scope_backout_pickup_framing) backoutParts.push("Pickup Framing");
+        scopeLines.push(`Backout plan: Included (${backoutParts.join(", ")})`);
+      } else {
+        scopeLines.push("Backout plan: Not included");
+      }
       addScope(profile.scope_decks_railings, "Decks & railings", profile.scope_deck_type);
       if (profile.scope_decks_railings && profile.scope_railings) scopeLines.push("Railings: Included");
       addScope(profile.scope_garage_framing, "Garage framing");
       if (profile.scope_garage_framing && profile.scope_garage_trim_openings) scopeLines.push("Garage trim openings: Included");
-      addScope(profile.scope_interior_blocking, "Interior blocking");
       addScope(profile.scope_fire_stopping, "Fire stopping");
       addScope(profile.scope_stairs_scope, "Stairs scope");
       addScope(profile.scope_curtain_wall, "Curtain wall");
