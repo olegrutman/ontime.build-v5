@@ -1,25 +1,35 @@
 
 
-# Improve Project Description Generation
+# Add Regenerate Button for Project Description
 
 ## What
-Update the `generate-project-description` edge function to include all new building structure fields (framing, floor/roof systems, garage car count) and all scope fields (windows, siding, exterior trim, WRB, backout, extras, etc.) in the AI prompt. Also improve the system prompt to produce a short "project brief" style message that communicates to all parties what the job includes.
+Currently the "Generate Description" button only shows when no description exists. Once generated, there's no way to regenerate it. Add a regenerate option next to the existing description.
 
-## Changes
+## Change
 
-### 1. Update `supabase/functions/generate-project-description/index.ts`
+### `src/components/project/ScopeDetailsTab.tsx` (~lines 247-265)
 
-**Expand the context builder** to include all new profile fields:
+Replace the current either/or logic (show description OR show generate button) with: always show the description if it exists, AND always show a generate/regenerate button. When a description exists, show a small `RefreshCw` icon button next to or below the description text. When no description exists, keep the current "Generate Description" button.
 
-- **Structure**: framing system, floor system, roof system, structure type, corridors, entry type, special rooms, stories per unit, garage car count
-- **Scope inclusions**: windows (+ type), patio doors (+ type), siding (+ type + level), exterior trim (+ type), soffit/fascia (+ types), WRB (+ type), sheathing, backout plan, decks/railings (+ type), garage framing (+ trim openings), interior blocking, fire stopping, stairs, curtain wall, storefront framing, extras array
-- **Scope exclusions**: list what is NOT included (e.g., "Windows: Not included", "Siding: Not included") so the AI can mention it
+```
+{projectInfo?.description && (
+  <div className="flex items-start gap-2">
+    <p className="text-sm text-muted-foreground leading-relaxed flex-1">{projectInfo.description}</p>
+    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={handleGenerateDescription} disabled={generatingDesc}>
+      {generatingDesc ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+    </Button>
+  </div>
+)}
+{!projectInfo?.description && (
+  <Button variant="outline" size="sm" onClick={handleGenerateDescription} disabled={generatingDesc} className="gap-1.5">
+    {generatingDesc ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+    {generatingDesc ? 'Generating...' : 'Generate Description'}
+  </Button>
+)}
+```
 
-**Improve the system prompt** to something like:
-> "You are a construction project describer. Write a concise 3-4 sentence project brief that summarizes: (1) the building type, scale, and location, (2) the structural systems (framing, floor, roof), (3) what work is included in this project's scope (siding, windows, trim, etc.), and (4) any notable extras or exclusions. Write in professional construction language as if briefing all project stakeholders. Output only the description."
-
-Increase `max_tokens` to 500 to accommodate the longer output.
+Add `RefreshCw` to the existing lucide-react imports.
 
 ### Files Changed
-- `supabase/functions/generate-project-description/index.ts` — expanded context + improved prompt
+- `src/components/project/ScopeDetailsTab.tsx` — add regenerate button when description exists
 
