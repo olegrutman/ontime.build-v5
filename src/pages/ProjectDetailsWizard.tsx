@@ -70,11 +70,14 @@ function emptyDraft(projectId: string): ProfileDraft {
     scope_exterior_trim: false, scope_exterior_trim_type: null,
     scope_soffit_fascia: false, scope_fascia_type: null, scope_soffit_type: null,
     scope_backout: false,
+    scope_backout_blocking: true, scope_backout_blocking_items: [],
+    scope_backout_shimming: true, scope_backout_stud_repair: true,
+    scope_backout_nailer_plates: true, scope_backout_pickup_framing: true,
     scope_decks_railings: false, scope_deck_type: null, scope_railings: false,
     scope_garage_framing: false, scope_garage_trim_openings: false,
     scope_wrb: false, scope_wrb_type: null, scope_sheathing: false,
     scope_extras: [],
-    scope_interior_blocking: false, scope_fire_stopping: false,
+    scope_fire_stopping: false,
     scope_stairs_scope: false,
     scope_curtain_wall: false, scope_storefront_framing: false,
   };
@@ -548,12 +551,50 @@ export default function ProjectDetailsWizard() {
           </div>
         </FieldSection>
 
-        {/* Backout */}
-        <FieldSection label="Backout Plan" subtitle="Shimming, stud replacement, TV blocking, etc.">
-          <div className="flex items-center gap-3">
+        {/* Backout Plan */}
+        <FieldSection label="Backout Plan" subtitle="Shimming, blocking, stud repair, pickup framing">
+          <div className="flex items-center gap-3 mb-2">
             <Switch checked={draft.scope_backout} onCheckedChange={v => update('scope_backout', v)} />
             <span className="text-sm">{draft.scope_backout ? 'Backout included' : 'Not included'}</span>
           </div>
+          {draft.scope_backout && (
+            <div className="space-y-3 pl-2 border-l-2 border-primary/20">
+              {/* Blocking */}
+              <div>
+                <div className="flex items-center gap-3 mb-1">
+                  <Switch checked={draft.scope_backout_blocking} onCheckedChange={v => update('scope_backout_blocking', v)} />
+                  <span className="text-sm">{draft.scope_backout_blocking ? 'Blocking included' : 'No blocking'}</span>
+                </div>
+                {draft.scope_backout_blocking && (
+                  <div className="pl-4 mt-1">
+                    <Label className="text-xs text-muted-foreground mb-1 block">Blocking Types</Label>
+                    <ChipSelect options={BACKOUT_BLOCKING_OPTIONS} selected={draft.scope_backout_blocking_items}
+                      onToggle={v => toggleArrayField('scope_backout_blocking_items', v)} multi />
+                  </div>
+                )}
+              </div>
+              {/* Shimming */}
+              <div className="flex items-center gap-3">
+                <Switch checked={draft.scope_backout_shimming} onCheckedChange={v => update('scope_backout_shimming', v)} />
+                <span className="text-sm">{draft.scope_backout_shimming ? 'Shimming (doors & windows)' : 'No shimming'}</span>
+              </div>
+              {/* Stud Repair */}
+              <div className="flex items-center gap-3">
+                <Switch checked={draft.scope_backout_stud_repair} onCheckedChange={v => update('scope_backout_stud_repair', v)} />
+                <span className="text-sm">{draft.scope_backout_stud_repair ? 'Stud repair / straightening' : 'No stud repair'}</span>
+              </div>
+              {/* Nailer Plates */}
+              <div className="flex items-center gap-3">
+                <Switch checked={draft.scope_backout_nailer_plates} onCheckedChange={v => update('scope_backout_nailer_plates', v)} />
+                <span className="text-sm">{draft.scope_backout_nailer_plates ? 'Nailer plates' : 'No nailer plates'}</span>
+              </div>
+              {/* Pickup Framing */}
+              <div className="flex items-center gap-3">
+                <Switch checked={draft.scope_backout_pickup_framing} onCheckedChange={v => update('scope_backout_pickup_framing', v)} />
+                <span className="text-sm">{draft.scope_backout_pickup_framing ? 'Pickup framing & patching' : 'No pickup framing'}</span>
+              </div>
+            </div>
+          )}
         </FieldSection>
 
         {/* Decks & Railings — single family */}
@@ -598,12 +639,6 @@ export default function ProjectDetailsWizard() {
         {/* Multi-family specific */}
         {isMultiFamily && (
           <>
-            <FieldSection label="Interior Blocking" subtitle="Blocking for cabinets, grab bars, etc.">
-              <div className="flex items-center gap-3">
-                <Switch checked={draft.scope_interior_blocking} onCheckedChange={v => update('scope_interior_blocking', v)} />
-                <span className="text-sm">{draft.scope_interior_blocking ? 'Included' : 'Not included'}</span>
-              </div>
-            </FieldSection>
             <FieldSection label="Fire Stopping">
               <div className="flex items-center gap-3">
                 <Switch checked={draft.scope_fire_stopping} onCheckedChange={v => update('scope_fire_stopping', v)} />

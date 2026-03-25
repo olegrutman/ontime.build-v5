@@ -362,7 +362,8 @@ export function getSmartDefaults(slug: string): Partial<ProfileDraft> {
         has_balcony: true, has_deck: false, has_covered_porch: false,
         deck_porch_type: 'None', entry_type: 'Standard',
         stories_per_unit: null,
-        scope_interior_blocking: true, scope_fire_stopping: true, scope_stairs_scope: true,
+        scope_backout_blocking_items: ['TV Mounts', 'Cabinet Blocking', 'Handrail Blocking', 'Grab Bar Blocking', 'Tub/Shower Blocking'],
+        scope_fire_stopping: true, scope_stairs_scope: true,
       };
     case 'hotel':
       return {
