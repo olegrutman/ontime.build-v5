@@ -639,6 +639,7 @@ export function useContractSOV(projectId: string | undefined) {
             item_name: name,
             percent_of_contract: percent,
             value_amount: value,
+            floor_label: null,
             source: 'template' as const
           };
         });
@@ -775,6 +776,7 @@ export function useContractSOV(projectId: string | undefined) {
           item_name: name,
           percent_of_contract: percent,
           value_amount: value,
+          floor_label: null,
           source: 'template' as const
         };
       });
