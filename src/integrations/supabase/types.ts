@@ -887,6 +887,153 @@ export type Database = {
           },
         ]
       }
+      contract_scope_categories: {
+        Row: {
+          created_at: string
+          display_order: number
+          id: string
+          label: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          label: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          id?: string
+          label?: string
+          slug?: string
+        }
+        Relationships: []
+      }
+      contract_scope_details: {
+        Row: {
+          created_at: string
+          detail_key: string
+          detail_value: string
+          id: string
+          selection_id: string
+        }
+        Insert: {
+          created_at?: string
+          detail_key: string
+          detail_value: string
+          id?: string
+          selection_id: string
+        }
+        Update: {
+          created_at?: string
+          detail_key?: string
+          detail_value?: string
+          id?: string
+          selection_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_scope_details_selection_id_fkey"
+            columns: ["selection_id"]
+            isOneToOne: false
+            referencedRelation: "contract_scope_selections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_scope_exclusions: {
+        Row: {
+          contract_id: string
+          created_at: string
+          exclusion_label: string
+          id: string
+          is_custom: boolean
+          project_id: string
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          exclusion_label: string
+          id?: string
+          is_custom?: boolean
+          project_id: string
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          exclusion_label?: string
+          id?: string
+          is_custom?: boolean
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_scope_exclusions_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "project_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_scope_exclusions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contract_scope_selections: {
+        Row: {
+          category_slug: string
+          contract_id: string
+          created_at: string
+          id: string
+          is_included: boolean
+          project_id: string
+        }
+        Insert: {
+          category_slug: string
+          contract_id: string
+          created_at?: string
+          id?: string
+          is_included?: boolean
+          project_id: string
+        }
+        Update: {
+          category_slug?: string
+          contract_id?: string
+          created_at?: string
+          id?: string
+          is_included?: boolean
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_scope_selections_category_slug_fkey"
+            columns: ["category_slug"]
+            isOneToOne: false
+            referencedRelation: "contract_scope_categories"
+            referencedColumns: ["slug"]
+          },
+          {
+            foreignKeyName: "contract_scope_selections_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "project_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_scope_selections_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_log_delays: {
         Row: {
           cause: string
