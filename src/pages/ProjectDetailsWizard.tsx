@@ -443,7 +443,7 @@ export default function ProjectDetailsWizard() {
 
         <div className="flex flex-wrap gap-1.5">
           {[
-            draft.has_garage && `Garage (${draft.garage_types[0] || 'Yes'})`,
+            draft.has_garage && `Garage (${draft.garage_types[0] || 'Yes'}${draft.garage_car_count ? `, ${draft.garage_car_count}-car` : ''})`,
             draft.has_balcony && 'Balcony',
             draft.deck_porch_type && draft.deck_porch_type !== 'None' && draft.deck_porch_type,
             draft.has_corridors && draft.corridor_type && `${draft.corridor_type} Corridors`,
