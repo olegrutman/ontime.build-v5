@@ -49,6 +49,34 @@ export interface ProjectProfile {
   special_rooms: string[];
   stories_per_unit: number | null;
   garage_car_count: number | null;
+  // Scope fields
+  scope_windows_install: boolean;
+  scope_windows_type: string | null;
+  scope_patio_doors: boolean;
+  scope_patio_door_type: string | null;
+  scope_siding: boolean;
+  scope_siding_type: string | null;
+  scope_siding_level: string | null;
+  scope_exterior_trim: boolean;
+  scope_exterior_trim_type: string | null;
+  scope_soffit_fascia: boolean;
+  scope_fascia_type: string | null;
+  scope_soffit_type: string | null;
+  scope_backout: boolean;
+  scope_decks_railings: boolean;
+  scope_deck_type: string | null;
+  scope_railings: boolean;
+  scope_garage_framing: boolean;
+  scope_garage_trim_openings: boolean;
+  scope_wrb: boolean;
+  scope_wrb_type: string | null;
+  scope_sheathing: boolean;
+  scope_extras: string[];
+  scope_interior_blocking: boolean;
+  scope_fire_stopping: boolean;
+  scope_stairs_scope: boolean;
+  scope_curtain_wall: boolean;
+  scope_storefront_framing: boolean;
 }
 
 export interface ScopeSection {
@@ -166,6 +194,52 @@ export const ROOF_PITCH_OPTIONS = [
   'Pitched',
 ] as const;
 
+// ── Scope Option Constants ────────────────────────────────────
+
+export const WINDOW_TYPE_OPTIONS = [
+  'Vinyl', 'Wood', 'Aluminum', 'Mixed',
+] as const;
+
+export const PATIO_DOOR_TYPE_OPTIONS = [
+  'Sliding', 'French', 'Standard Exterior',
+] as const;
+
+export const SIDING_TYPE_OPTIONS = [
+  'Vinyl', 'Hardie', 'Wood', 'Metal', 'Mixed',
+] as const;
+
+export const SIDING_LEVEL_OPTIONS = [
+  'Full', 'Partial',
+] as const;
+
+export const EXTERIOR_TRIM_TYPE_OPTIONS = [
+  'Wood', 'PVC', 'Composite',
+] as const;
+
+export const SOFFIT_TYPE_OPTIONS = [
+  'Vinyl', 'Aluminum', 'Wood', 'Hardie',
+] as const;
+
+export const FASCIA_TYPE_OPTIONS = [
+  'Wood', 'PVC', 'Aluminum',
+] as const;
+
+export const WRB_TYPE_OPTIONS = [
+  'Tyvek', 'Zip System', 'Felt Paper', 'Other',
+] as const;
+
+export const SCOPE_DECK_TYPE_OPTIONS = [
+  'Wood', 'Composite', 'Trex',
+] as const;
+
+export const SCOPE_EXTRAS_OPTIONS = [
+  'Columns', 'Corbels', 'Custom Headers', 'Specialty Blocking', 'Rake Boards', 'Frieze Boards',
+] as const;
+
+export const SCOPE_EXTRAS_COMMERCIAL = [
+  'Curtain Wall Framing', 'Storefront Framing',
+] as const;
+
 // Legacy options kept for backward compat with scope wizard
 export const ROOF_OPTIONS = [
   'Truss — gable',
@@ -204,6 +278,7 @@ export const STAIR_TYPE_OPTIONS = [
 export const WIZARD_STEPS = [
   'Project Type',
   'Building Structure',
+  'Scope',
   'Review',
 ] as const;
 
@@ -214,6 +289,21 @@ export function getSmartDefaults(slug: string): Partial<ProfileDraft> {
     has_deck_balcony: false,
     garage_types: [] as string[], stair_types: [] as string[],
     special_rooms: [] as string[],
+    // Scope defaults
+    scope_windows_install: true, scope_windows_type: 'Vinyl' as string | null,
+    scope_patio_doors: true, scope_patio_door_type: null as string | null,
+    scope_siding: true, scope_siding_type: 'Hardie' as string | null, scope_siding_level: 'Full' as string | null,
+    scope_exterior_trim: true, scope_exterior_trim_type: 'PVC' as string | null,
+    scope_soffit_fascia: true, scope_fascia_type: 'PVC' as string | null, scope_soffit_type: 'Vinyl' as string | null,
+    scope_backout: true,
+    scope_decks_railings: false, scope_deck_type: null as string | null, scope_railings: false,
+    scope_garage_framing: false, scope_garage_trim_openings: false,
+    scope_wrb: true, scope_wrb_type: 'Tyvek' as string | null,
+    scope_sheathing: true,
+    scope_extras: [] as string[],
+    scope_interior_blocking: false, scope_fire_stopping: false,
+    scope_stairs_scope: false,
+    scope_curtain_wall: false, scope_storefront_framing: false,
   };
 
   switch (slug) {
@@ -259,6 +349,7 @@ export function getSmartDefaults(slug: string): Partial<ProfileDraft> {
         has_balcony: true, has_deck: false, has_covered_porch: false,
         deck_porch_type: 'None', entry_type: 'Standard',
         stories_per_unit: null,
+        scope_interior_blocking: true, scope_fire_stopping: true, scope_stairs_scope: true,
       };
     case 'hotel':
       return {

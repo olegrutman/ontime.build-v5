@@ -17,6 +17,11 @@ import {
   SPECIAL_ROOM_OPTIONS, CORRIDOR_OPTIONS, ROOF_PITCH_OPTIONS,
   BASEMENT_SUBTYPE_OPTIONS, BASEMENT_FINISH_OPTIONS,
   GARAGE_CAR_COUNT_OPTIONS,
+  WINDOW_TYPE_OPTIONS, PATIO_DOOR_TYPE_OPTIONS,
+  SIDING_TYPE_OPTIONS, SIDING_LEVEL_OPTIONS,
+  EXTERIOR_TRIM_TYPE_OPTIONS, SOFFIT_TYPE_OPTIONS, FASCIA_TYPE_OPTIONS,
+  WRB_TYPE_OPTIONS, SCOPE_DECK_TYPE_OPTIONS,
+  SCOPE_EXTRAS_OPTIONS, SCOPE_EXTRAS_COMMERCIAL,
   getSmartDefaults,
   type ProfileDraft, type ProjectType,
 } from '@/types/projectProfile';
@@ -58,6 +63,20 @@ function emptyDraft(projectId: string): ProfileDraft {
     has_balcony: false, has_deck: false, has_covered_porch: false,
     deck_porch_type: null, entry_type: 'Standard',
     special_rooms: [], stories_per_unit: null, garage_car_count: null,
+    // Scope defaults
+    scope_windows_install: false, scope_windows_type: null,
+    scope_patio_doors: false, scope_patio_door_type: null,
+    scope_siding: false, scope_siding_type: null, scope_siding_level: null,
+    scope_exterior_trim: false, scope_exterior_trim_type: null,
+    scope_soffit_fascia: false, scope_fascia_type: null, scope_soffit_type: null,
+    scope_backout: false,
+    scope_decks_railings: false, scope_deck_type: null, scope_railings: false,
+    scope_garage_framing: false, scope_garage_trim_openings: false,
+    scope_wrb: false, scope_wrb_type: null, scope_sheathing: false,
+    scope_extras: [],
+    scope_interior_blocking: false, scope_fire_stopping: false,
+    scope_stairs_scope: false,
+    scope_curtain_wall: false, scope_storefront_framing: false,
   };
 }
 
@@ -151,7 +170,7 @@ export default function ProjectDetailsWizard() {
     setDraft(prev => ({ ...prev, [key]: val }));
   }, []);
 
-  const toggleArrayField = useCallback((key: 'foundation_types' | 'special_rooms', val: string) => {
+  const toggleArrayField = useCallback((key: 'foundation_types' | 'special_rooms' | 'scope_extras', val: string) => {
     setDraft(prev => {
       const arr = (prev[key] as string[]) || [];
       return { ...prev, [key]: arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val] };
@@ -413,59 +432,308 @@ export default function ProjectDetailsWizard() {
     );
   };
 
-  /* ── STEP 2: Review ────────────────────────────────────────── */
-  const renderReview = () => (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold font-heading">Review Building Definition</h2>
-        <p className="text-sm text-muted-foreground">Confirm everything looks right before saving.</p>
+  /* ── STEP 2: Scope — What's Included? ────────────────────────── */
+  const renderStep2 = () => {
+    const extrasOptions = isHotelCommercial ? SCOPE_EXTRAS_COMMERCIAL : SCOPE_EXTRAS_OPTIONS;
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-xl font-bold font-heading">What's Included in This Project?</h2>
+          <p className="text-sm text-muted-foreground">Define what work is part of this job — this drives your SOV and contract scope.</p>
+        </div>
+
+        {/* Windows & Doors */}
+        <FieldSection label="Windows & Patio Doors" subtitle="Are you responsible for installing windows?">
+          <div className="flex items-center gap-3">
+            <Switch checked={draft.scope_windows_install} onCheckedChange={v => update('scope_windows_install', v)} />
+            <span className="text-sm">{draft.scope_windows_install ? 'Installing windows' : 'Not included'}</span>
+          </div>
+          {draft.scope_windows_install && (
+            <div className="mt-3 space-y-3 pl-2 border-l-2 border-primary/20">
+              <div>
+                <Label className="text-xs text-muted-foreground">Window Type</Label>
+                <ChipSelect options={WINDOW_TYPE_OPTIONS} selected={draft.scope_windows_type}
+                  onToggle={v => update('scope_windows_type', draft.scope_windows_type === v ? null : v)} />
+              </div>
+            </div>
+          )}
+          <div className="mt-3 flex items-center gap-3">
+            <Switch checked={draft.scope_patio_doors} onCheckedChange={v => update('scope_patio_doors', v)} />
+            <span className="text-sm">{draft.scope_patio_doors ? 'Patio doors included' : 'No patio doors'}</span>
+          </div>
+          {draft.scope_patio_doors && (
+            <div className="mt-2 pl-2 border-l-2 border-primary/20">
+              <Label className="text-xs text-muted-foreground">Door Type</Label>
+              <ChipSelect options={PATIO_DOOR_TYPE_OPTIONS} selected={draft.scope_patio_door_type}
+                onToggle={v => update('scope_patio_door_type', draft.scope_patio_door_type === v ? null : v)} />
+            </div>
+          )}
+        </FieldSection>
+
+        {/* Siding */}
+        <FieldSection label="Siding" subtitle="Is siding included in this contract?">
+          <div className="flex items-center gap-3">
+            <Switch checked={draft.scope_siding} onCheckedChange={v => update('scope_siding', v)} />
+            <span className="text-sm">{draft.scope_siding ? 'Siding included' : 'Not included'}</span>
+          </div>
+          {draft.scope_siding && (
+            <div className="mt-3 space-y-3 pl-2 border-l-2 border-primary/20">
+              <div>
+                <Label className="text-xs text-muted-foreground">Siding Type</Label>
+                <ChipSelect options={SIDING_TYPE_OPTIONS} selected={draft.scope_siding_type}
+                  onToggle={v => update('scope_siding_type', draft.scope_siding_type === v ? null : v)} />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Coverage</Label>
+                <ChipSelect options={SIDING_LEVEL_OPTIONS} selected={draft.scope_siding_level}
+                  onToggle={v => update('scope_siding_level', draft.scope_siding_level === v ? null : v)} />
+              </div>
+            </div>
+          )}
+        </FieldSection>
+
+        {/* Exterior Trim */}
+        <FieldSection label="Exterior Trim" subtitle="Trim around windows, doors, corners, etc.">
+          <div className="flex items-center gap-3">
+            <Switch checked={draft.scope_exterior_trim} onCheckedChange={v => update('scope_exterior_trim', v)} />
+            <span className="text-sm">{draft.scope_exterior_trim ? 'Trim included' : 'Not included'}</span>
+          </div>
+          {draft.scope_exterior_trim && (
+            <div className="mt-3 pl-2 border-l-2 border-primary/20">
+              <Label className="text-xs text-muted-foreground">Trim Material</Label>
+              <ChipSelect options={EXTERIOR_TRIM_TYPE_OPTIONS} selected={draft.scope_exterior_trim_type}
+                onToggle={v => update('scope_exterior_trim_type', draft.scope_exterior_trim_type === v ? null : v)} />
+            </div>
+          )}
+        </FieldSection>
+
+        {/* Soffit & Fascia */}
+        <FieldSection label="Soffit & Fascia">
+          <div className="flex items-center gap-3">
+            <Switch checked={draft.scope_soffit_fascia} onCheckedChange={v => update('scope_soffit_fascia', v)} />
+            <span className="text-sm">{draft.scope_soffit_fascia ? 'Included' : 'Not included'}</span>
+          </div>
+          {draft.scope_soffit_fascia && (
+            <div className="mt-3 space-y-3 pl-2 border-l-2 border-primary/20">
+              <div>
+                <Label className="text-xs text-muted-foreground">Fascia Type</Label>
+                <ChipSelect options={FASCIA_TYPE_OPTIONS} selected={draft.scope_fascia_type}
+                  onToggle={v => update('scope_fascia_type', draft.scope_fascia_type === v ? null : v)} />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Soffit Type</Label>
+                <ChipSelect options={SOFFIT_TYPE_OPTIONS} selected={draft.scope_soffit_type}
+                  onToggle={v => update('scope_soffit_type', draft.scope_soffit_type === v ? null : v)} />
+              </div>
+            </div>
+          )}
+        </FieldSection>
+
+        {/* WRB & Sheathing */}
+        <FieldSection label="WRB & Sheathing" subtitle="Weather Resistant Barrier and wall sheathing">
+          <div className="flex items-center gap-3 mb-2">
+            <Switch checked={draft.scope_wrb} onCheckedChange={v => update('scope_wrb', v)} />
+            <span className="text-sm">{draft.scope_wrb ? 'WRB included' : 'WRB not included'}</span>
+          </div>
+          {draft.scope_wrb && (
+            <div className="mb-3 pl-2 border-l-2 border-primary/20">
+              <Label className="text-xs text-muted-foreground">WRB Type</Label>
+              <ChipSelect options={WRB_TYPE_OPTIONS} selected={draft.scope_wrb_type}
+                onToggle={v => update('scope_wrb_type', draft.scope_wrb_type === v ? null : v)} />
+            </div>
+          )}
+          <div className="flex items-center gap-3">
+            <Switch checked={draft.scope_sheathing} onCheckedChange={v => update('scope_sheathing', v)} />
+            <span className="text-sm">{draft.scope_sheathing ? 'Sheathing included' : 'Not included'}</span>
+          </div>
+        </FieldSection>
+
+        {/* Backout */}
+        <FieldSection label="Backout Plan" subtitle="Shimming, stud replacement, TV blocking, etc.">
+          <div className="flex items-center gap-3">
+            <Switch checked={draft.scope_backout} onCheckedChange={v => update('scope_backout', v)} />
+            <span className="text-sm">{draft.scope_backout ? 'Backout included' : 'Not included'}</span>
+          </div>
+        </FieldSection>
+
+        {/* Decks & Railings — single family */}
+        {isSingleFamily && (
+          <FieldSection label="Decks & Railings" subtitle="Deck framing and railing installation">
+            <div className="flex items-center gap-3 mb-2">
+              <Switch checked={draft.scope_decks_railings} onCheckedChange={v => update('scope_decks_railings', v)} />
+              <span className="text-sm">{draft.scope_decks_railings ? 'Decks included' : 'Not included'}</span>
+            </div>
+            {draft.scope_decks_railings && (
+              <div className="space-y-3 pl-2 border-l-2 border-primary/20">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Deck Material</Label>
+                  <ChipSelect options={SCOPE_DECK_TYPE_OPTIONS} selected={draft.scope_deck_type}
+                    onToggle={v => update('scope_deck_type', draft.scope_deck_type === v ? null : v)} />
+                </div>
+                <div className="flex items-center gap-3">
+                  <Switch checked={draft.scope_railings} onCheckedChange={v => update('scope_railings', v)} />
+                  <span className="text-sm">{draft.scope_railings ? 'Railings included' : 'No railings'}</span>
+                </div>
+              </div>
+            )}
+          </FieldSection>
+        )}
+
+        {/* Garage Framing — single family with garage */}
+        {isSingleFamily && draft.has_garage && (
+          <FieldSection label="Garage Scope" subtitle="Framing and trim around garage openings">
+            <div className="flex items-center gap-3 mb-2">
+              <Switch checked={draft.scope_garage_framing} onCheckedChange={v => update('scope_garage_framing', v)} />
+              <span className="text-sm">{draft.scope_garage_framing ? 'Garage framing included' : 'Not included'}</span>
+            </div>
+            {draft.scope_garage_framing && (
+              <div className="flex items-center gap-3 pl-2 border-l-2 border-primary/20">
+                <Switch checked={draft.scope_garage_trim_openings} onCheckedChange={v => update('scope_garage_trim_openings', v)} />
+                <span className="text-sm">{draft.scope_garage_trim_openings ? 'Trim around openings included' : 'No trim around openings'}</span>
+              </div>
+            )}
+          </FieldSection>
+        )}
+
+        {/* Multi-family specific */}
+        {isMultiFamily && (
+          <>
+            <FieldSection label="Interior Blocking" subtitle="Blocking for cabinets, grab bars, etc.">
+              <div className="flex items-center gap-3">
+                <Switch checked={draft.scope_interior_blocking} onCheckedChange={v => update('scope_interior_blocking', v)} />
+                <span className="text-sm">{draft.scope_interior_blocking ? 'Included' : 'Not included'}</span>
+              </div>
+            </FieldSection>
+            <FieldSection label="Fire Stopping">
+              <div className="flex items-center gap-3">
+                <Switch checked={draft.scope_fire_stopping} onCheckedChange={v => update('scope_fire_stopping', v)} />
+                <span className="text-sm">{draft.scope_fire_stopping ? 'Included' : 'Not included'}</span>
+              </div>
+            </FieldSection>
+            {draft.has_stairs && (
+              <FieldSection label="Stairs Scope" subtitle="Stair framing and installation">
+                <div className="flex items-center gap-3">
+                  <Switch checked={draft.scope_stairs_scope} onCheckedChange={v => update('scope_stairs_scope', v)} />
+                  <span className="text-sm">{draft.scope_stairs_scope ? 'Stairs in scope' : 'Not in scope'}</span>
+                </div>
+              </FieldSection>
+            )}
+          </>
+        )}
+
+        {/* Hotel/Commercial specific */}
+        {isHotelCommercial && (
+          <>
+            <FieldSection label="Curtain Wall Framing">
+              <div className="flex items-center gap-3">
+                <Switch checked={draft.scope_curtain_wall} onCheckedChange={v => update('scope_curtain_wall', v)} />
+                <span className="text-sm">{draft.scope_curtain_wall ? 'Included' : 'Not included'}</span>
+              </div>
+            </FieldSection>
+            <FieldSection label="Storefront Framing">
+              <div className="flex items-center gap-3">
+                <Switch checked={draft.scope_storefront_framing} onCheckedChange={v => update('scope_storefront_framing', v)} />
+                <span className="text-sm">{draft.scope_storefront_framing ? 'Included' : 'Not included'}</span>
+              </div>
+            </FieldSection>
+          </>
+        )}
+
+        {/* Extras */}
+        <FieldSection label="Extras" subtitle="Select any additional items in scope">
+          <ChipSelect options={extrasOptions} selected={draft.scope_extras}
+            onToggle={v => toggleArrayField('scope_extras', v)} multi />
+        </FieldSection>
       </div>
+    );
+  };
 
-      <Card><CardContent className="p-4 space-y-4">
-        <Label className="font-semibold">Building Summary</Label>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-          <Row label="Project Type" value={selectedType?.name ?? '—'} />
-          <Row label="Floors / Stories" value={String(draft.stories)} />
-          {draft.stories_per_unit && <Row label="Stories per Unit" value={String(draft.stories_per_unit)} />}
-          {draft.units_per_building && <Row label="Units" value={String(draft.units_per_building)} />}
-          {draft.number_of_buildings > 1 && <Row label="Buildings" value={String(draft.number_of_buildings)} />}
-          {draft.framing_system && <Row label="Framing" value={draft.framing_system} />}
-          {draft.structure_type && <Row label="Structure" value={draft.structure_type} />}
-          {draft.floor_system && <Row label="Floor System" value={draft.floor_system} />}
-          {draft.roof_system && <Row label="Roof System" value={draft.roof_system} />}
-          {draft.entry_type && draft.entry_type !== 'Standard' && <Row label="Entry" value={draft.entry_type} />}
+  /* ── STEP 3: Review ────────────────────────────────────────── */
+  const renderReview = () => {
+    const scopeItems = [
+      draft.scope_windows_install && `Windows${draft.scope_windows_type ? ` — ${draft.scope_windows_type}` : ''}`,
+      draft.scope_patio_doors && `Patio Doors${draft.scope_patio_door_type ? ` — ${draft.scope_patio_door_type}` : ''}`,
+      draft.scope_siding && `Siding${draft.scope_siding_type ? ` — ${draft.scope_siding_type}` : ''}${draft.scope_siding_level ? ` (${draft.scope_siding_level})` : ''}`,
+      draft.scope_exterior_trim && `Exterior Trim${draft.scope_exterior_trim_type ? ` — ${draft.scope_exterior_trim_type}` : ''}`,
+      draft.scope_soffit_fascia && 'Soffit & Fascia',
+      draft.scope_wrb && `WRB${draft.scope_wrb_type ? ` — ${draft.scope_wrb_type}` : ''}`,
+      draft.scope_sheathing && 'Sheathing',
+      draft.scope_backout && 'Backout Plan',
+      draft.scope_decks_railings && `Decks${draft.scope_deck_type ? ` — ${draft.scope_deck_type}` : ''}${draft.scope_railings ? ' + Railings' : ''}`,
+      draft.scope_garage_framing && `Garage Framing${draft.scope_garage_trim_openings ? ' + Trim' : ''}`,
+      draft.scope_interior_blocking && 'Interior Blocking',
+      draft.scope_fire_stopping && 'Fire Stopping',
+      draft.scope_stairs_scope && 'Stairs',
+      draft.scope_curtain_wall && 'Curtain Wall Framing',
+      draft.scope_storefront_framing && 'Storefront Framing',
+      ...draft.scope_extras.map(e => e),
+    ].filter(Boolean) as string[];
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-xl font-bold font-heading">Review Project Definition</h2>
+          <p className="text-sm text-muted-foreground">Confirm everything looks right before saving.</p>
         </div>
 
-        <div className="flex flex-wrap gap-1.5 mt-2">
-          {draft.foundation_types.map(f => <Badge key={f} className="bg-primary/15 text-primary border-0">{f}</Badge>)}
-          {draft.has_basement && draft.basement_type && <Badge className="bg-primary/15 text-primary border-0">{draft.basement_type} Basement</Badge>}
-        </div>
+        <Card><CardContent className="p-4 space-y-4">
+          <Label className="font-semibold">Building Summary</Label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            <Row label="Project Type" value={selectedType?.name ?? '—'} />
+            <Row label="Floors / Stories" value={String(draft.stories)} />
+            {draft.stories_per_unit && <Row label="Stories per Unit" value={String(draft.stories_per_unit)} />}
+            {draft.units_per_building && <Row label="Units" value={String(draft.units_per_building)} />}
+            {draft.number_of_buildings > 1 && <Row label="Buildings" value={String(draft.number_of_buildings)} />}
+            {draft.framing_system && <Row label="Framing" value={draft.framing_system} />}
+            {draft.structure_type && <Row label="Structure" value={draft.structure_type} />}
+            {draft.floor_system && <Row label="Floor System" value={draft.floor_system} />}
+            {draft.roof_system && <Row label="Roof System" value={draft.roof_system} />}
+            {draft.entry_type && draft.entry_type !== 'Standard' && <Row label="Entry" value={draft.entry_type} />}
+          </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          {[
-            draft.has_garage && `Garage (${draft.garage_types[0] || 'Yes'}${draft.garage_car_count ? `, ${draft.garage_car_count}-car` : ''})`,
-            draft.has_balcony && 'Balcony',
-            draft.deck_porch_type && draft.deck_porch_type !== 'None' && draft.deck_porch_type,
-            draft.has_corridors && draft.corridor_type && `${draft.corridor_type} Corridors`,
-            draft.has_elevator && 'Elevator',
-            draft.has_stairs && 'Stairs',
-          ].filter(Boolean).map(f => (
-            <Badge key={f as string} variant="secondary">{f}</Badge>
-          ))}
-        </div>
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            {draft.foundation_types.map(f => <Badge key={f} className="bg-primary/15 text-primary border-0">{f}</Badge>)}
+            {draft.has_basement && draft.basement_type && <Badge className="bg-primary/15 text-primary border-0">{draft.basement_type} Basement</Badge>}
+          </div>
 
-        {draft.special_rooms.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
-            {draft.special_rooms.map(r => (
-              <Badge key={r} className="bg-green-100 text-green-800 border-0">{r}</Badge>
+            {[
+              draft.has_garage && `Garage (${draft.garage_types[0] || 'Yes'}${draft.garage_car_count ? `, ${draft.garage_car_count}-car` : ''})`,
+              draft.has_balcony && 'Balcony',
+              draft.deck_porch_type && draft.deck_porch_type !== 'None' && draft.deck_porch_type,
+              draft.has_corridors && draft.corridor_type && `${draft.corridor_type} Corridors`,
+              draft.has_elevator && 'Elevator',
+              draft.has_stairs && 'Stairs',
+            ].filter(Boolean).map(f => (
+              <Badge key={f as string} variant="secondary">{f}</Badge>
             ))}
           </div>
-        )}
-      </CardContent></Card>
-    </div>
-  );
 
-  const steps = [renderStep0, renderStep1, renderReview];
+          {draft.special_rooms.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {draft.special_rooms.map(r => (
+                <Badge key={r} className="bg-accent/50 text-accent-foreground border-0">{r}</Badge>
+              ))}
+            </div>
+          )}
+        </CardContent></Card>
+
+        {scopeItems.length > 0 && (
+          <Card><CardContent className="p-4 space-y-3">
+            <Label className="font-semibold">Scope Summary</Label>
+            <p className="text-xs text-muted-foreground">What's included in this project's work</p>
+            <div className="flex flex-wrap gap-1.5">
+              {scopeItems.map(item => (
+                <Badge key={item} className="bg-primary/10 text-primary border-0">{item}</Badge>
+              ))}
+            </div>
+          </CardContent></Card>
+        )}
+      </div>
+    );
+  };
+
+  const steps = [renderStep0, renderStep1, renderStep2, renderReview];
   const totalSteps = steps.length;
 
   return (

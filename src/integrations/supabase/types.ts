@@ -2954,6 +2954,33 @@ export type Database = {
           project_type_id: string
           roof_system: string | null
           roof_type: string | null
+          scope_backout: boolean | null
+          scope_curtain_wall: boolean | null
+          scope_deck_type: string | null
+          scope_decks_railings: boolean | null
+          scope_exterior_trim: boolean | null
+          scope_exterior_trim_type: string | null
+          scope_extras: string[] | null
+          scope_fascia_type: string | null
+          scope_fire_stopping: boolean | null
+          scope_garage_framing: boolean | null
+          scope_garage_trim_openings: boolean | null
+          scope_interior_blocking: boolean | null
+          scope_patio_door_type: string | null
+          scope_patio_doors: boolean | null
+          scope_railings: boolean | null
+          scope_sheathing: boolean | null
+          scope_siding: boolean | null
+          scope_siding_level: string | null
+          scope_siding_type: string | null
+          scope_soffit_fascia: boolean | null
+          scope_soffit_type: string | null
+          scope_stairs_scope: boolean | null
+          scope_storefront_framing: boolean | null
+          scope_windows_install: boolean | null
+          scope_windows_type: string | null
+          scope_wrb: boolean | null
+          scope_wrb_type: string | null
           special_rooms: string[] | null
           stair_types: string[]
           stories: number
@@ -2993,6 +3020,33 @@ export type Database = {
           project_type_id: string
           roof_system?: string | null
           roof_type?: string | null
+          scope_backout?: boolean | null
+          scope_curtain_wall?: boolean | null
+          scope_deck_type?: string | null
+          scope_decks_railings?: boolean | null
+          scope_exterior_trim?: boolean | null
+          scope_exterior_trim_type?: string | null
+          scope_extras?: string[] | null
+          scope_fascia_type?: string | null
+          scope_fire_stopping?: boolean | null
+          scope_garage_framing?: boolean | null
+          scope_garage_trim_openings?: boolean | null
+          scope_interior_blocking?: boolean | null
+          scope_patio_door_type?: string | null
+          scope_patio_doors?: boolean | null
+          scope_railings?: boolean | null
+          scope_sheathing?: boolean | null
+          scope_siding?: boolean | null
+          scope_siding_level?: string | null
+          scope_siding_type?: string | null
+          scope_soffit_fascia?: boolean | null
+          scope_soffit_type?: string | null
+          scope_stairs_scope?: boolean | null
+          scope_storefront_framing?: boolean | null
+          scope_windows_install?: boolean | null
+          scope_windows_type?: string | null
+          scope_wrb?: boolean | null
+          scope_wrb_type?: string | null
           special_rooms?: string[] | null
           stair_types?: string[]
           stories?: number
@@ -3032,6 +3086,33 @@ export type Database = {
           project_type_id?: string
           roof_system?: string | null
           roof_type?: string | null
+          scope_backout?: boolean | null
+          scope_curtain_wall?: boolean | null
+          scope_deck_type?: string | null
+          scope_decks_railings?: boolean | null
+          scope_exterior_trim?: boolean | null
+          scope_exterior_trim_type?: string | null
+          scope_extras?: string[] | null
+          scope_fascia_type?: string | null
+          scope_fire_stopping?: boolean | null
+          scope_garage_framing?: boolean | null
+          scope_garage_trim_openings?: boolean | null
+          scope_interior_blocking?: boolean | null
+          scope_patio_door_type?: string | null
+          scope_patio_doors?: boolean | null
+          scope_railings?: boolean | null
+          scope_sheathing?: boolean | null
+          scope_siding?: boolean | null
+          scope_siding_level?: string | null
+          scope_siding_type?: string | null
+          scope_soffit_fascia?: boolean | null
+          scope_soffit_type?: string | null
+          scope_stairs_scope?: boolean | null
+          scope_storefront_framing?: boolean | null
+          scope_windows_install?: boolean | null
+          scope_windows_type?: string | null
+          scope_wrb?: boolean | null
+          scope_wrb_type?: string | null
           special_rooms?: string[] | null
           stair_types?: string[]
           stories?: number
