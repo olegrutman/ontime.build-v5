@@ -131,18 +131,22 @@ export default function ProjectContractsPage() {
   });
 
   const [contracts, setContracts] = useState<Record<string, string>>({});
+  const [retainages, setRetainages] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   // Initialize from existing contracts using to_project_team_id as key
   useEffect(() => {
     if (existingContracts.length > 0) {
-      const init: Record<string, string> = {};
+      const initC: Record<string, string> = {};
+      const initR: Record<string, string> = {};
       for (const c of existingContracts) {
-        if (c.to_project_team_id && c.contract_sum != null) {
-          init[c.to_project_team_id] = String(c.contract_sum);
+        if (c.to_project_team_id) {
+          if (c.contract_sum != null) initC[c.to_project_team_id] = String(c.contract_sum);
+          if (c.retainage_percent != null) initR[c.to_project_team_id] = String(c.retainage_percent);
         }
       }
-      if (Object.keys(init).length > 0) setContracts(init);
+      if (Object.keys(initC).length > 0) setContracts(initC);
+      if (Object.keys(initR).length > 0) setRetainages(initR);
     }
   }, [existingContracts]);
 
@@ -172,6 +176,7 @@ export default function ProjectContractsPage() {
         if (!valueStr) continue;
         const contractSum = parseFloat(valueStr);
         if (isNaN(contractSum)) continue;
+        const retainagePercent = parseFloat(retainages[member.id] || '0') || 0;
 
         // Determine from/to based on contract direction rules
         let fromOrgId: string | null = null;
@@ -205,7 +210,7 @@ export default function ProjectContractsPage() {
         if (existing) {
           await supabase
             .from('project_contracts')
-            .update({ contract_sum: contractSum })
+            .update({ contract_sum: contractSum, retainage_percent: retainagePercent })
             .eq('id', existing.id);
         } else {
           await supabase
@@ -219,6 +224,7 @@ export default function ProjectContractsPage() {
               to_role: toRole,
               trade: projectType?.name || member.role,
               contract_sum: contractSum,
+              retainage_percent: retainagePercent,
               created_by_user_id: user.id,
             });
         }
@@ -320,6 +326,23 @@ export default function ProjectContractsPage() {
                         className="pl-7"
                         disabled={!isFromCreatorOrg && m.role === 'General Contractor'}
                       />
+                    </div>
+                  </div>
+                  <div className="w-24">
+                    <Label className="sr-only">Retainage percent</Label>
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        step="0.5"
+                        min="0"
+                        max="100"
+                        value={retainages[m.id] ?? ''}
+                        onChange={e => setRetainages(p => ({ ...p, [m.id]: e.target.value }))}
+                        className="pr-7"
+                        disabled={!isFromCreatorOrg && m.role === 'General Contractor'}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
                     </div>
                   </div>
                 </div>
