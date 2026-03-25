@@ -60,8 +60,8 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
   // Inline edit overlay
   if (editingId) {
     return (
-      <div data-sasha-card="Contract" className="bg-card rounded-lg border shadow-sm p-5 space-y-3">
-        <p className="kpi-label">Edit Contract</p>
+      <div data-sasha-card="Contract" className="bg-card border border-border rounded-lg px-3.5 py-3.5 space-y-3">
+        <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Edit Contract</p>
         <div className="flex gap-2 items-end flex-wrap">
           <div className="relative flex-1 min-w-[120px]">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
@@ -81,8 +81,8 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
   // FC contract creation overlay
   if (creating) {
     return (
-      <div data-sasha-card="Contract" className="bg-card rounded-lg border shadow-sm p-5 space-y-3">
-        <p className="kpi-label">Add Field Crew Contract</p>
+      <div data-sasha-card="Contract" className="bg-card border border-border rounded-lg px-3.5 py-3.5 space-y-3">
+        <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Add Field Crew Contract</p>
         {fcParticipants.length > 1 && (
           <select className="w-full h-9 text-sm border rounded-lg px-3 bg-background" value={selectedFcOrg} onChange={e => setSelectedFcOrg(e.target.value)}>
             <option value="">Select Field Crew...</option>
@@ -115,10 +115,10 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
   if (isSupplier) {
     const supplierOutstanding = supplierInvoiced - supplierPaid;
     return (
-      <div data-sasha-card="Contract" className="bg-card rounded-lg border shadow-sm p-5 md:p-6">
-        <p className="kpi-label mb-1">Order Value</p>
-        <p className="kpi-value">{fmt(supplierOrderValue)}</p>
-        <div className="border-t mt-4 pt-4 grid grid-cols-3 gap-4">
+      <div data-sasha-card="Contract" className="bg-card border border-border rounded-lg px-3.5 py-3.5">
+        <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium mb-1">Order Value</p>
+        <p className="font-heading text-[1.5rem] md:text-[2rem] font-black tracking-tight text-foreground leading-none">{fmt(supplierOrderValue)}</p>
+        <div className="border-t mt-3 pt-3 grid grid-cols-3 gap-3">
           <div>
             <p className="text-[0.68rem] text-muted-foreground mb-0.5">Invoiced</p>
             <p className="font-heading text-[1.2rem] font-bold tabular-nums">{fmt(supplierInvoiced)}</p>
@@ -141,12 +141,12 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
     const fcContract = downstreamContract;
     const fcValue = fcContract?.contract_sum || 0;
     return (
-      <div data-sasha-card="Contract" className="bg-card rounded-lg border shadow-sm p-5 md:p-6">
-        <p className="kpi-label mb-1">
+      <div data-sasha-card="Contract" className="bg-card border border-border rounded-lg px-3.5 py-3.5">
+        <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium mb-1">
           Contract with {getContractCounterpartyName(fcContract, userOrgIds)}
         </p>
-        <div className="flex items-center gap-2 mb-4">
-          <p className="kpi-value">{fcContract ? fmt(fcValue) : '—'}</p>
+        <div className="flex items-center gap-2 mb-3">
+          <p className="font-heading text-[1.5rem] md:text-[2rem] font-black tracking-tight text-foreground leading-none">{fcContract ? fmt(fcValue) : '—'}</p>
         </div>
       </div>
     );
@@ -156,11 +156,11 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
   const currentTotal = gcContractValue;
 
   return (
-    <div data-sasha-card="Contract" className="bg-card rounded-lg border shadow-sm p-5 md:p-6">
-      <p className="kpi-label mb-1">Current Contract Total</p>
-      <p className="kpi-value mb-4">{fmt(currentTotal)}</p>
+    <div data-sasha-card="Contract" className="bg-card border border-border rounded-lg px-3.5 py-3.5">
+      <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium mb-1">Current Contract Total</p>
+      <p className="font-heading text-[1.5rem] md:text-[2rem] font-black tracking-tight text-foreground leading-none mb-3">{fmt(currentTotal)}</p>
 
-      <div className="border-t pt-4 grid grid-cols-2 gap-4">
+      <div className="border-t pt-3 grid grid-cols-2 gap-3">
         {/* Original Contract */}
         <div>
           <p className="text-[0.68rem] text-muted-foreground mb-0.5">

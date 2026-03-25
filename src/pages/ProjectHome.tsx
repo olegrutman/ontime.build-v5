@@ -88,7 +88,7 @@ function CollapsibleOperations({ projectId, projectType, financials, onNavigate 
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <div className="bg-white dark:bg-card rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-card border border-border rounded-lg overflow-hidden">
         <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-accent/30 transition-colors">
           <div className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4 text-muted-foreground" />
@@ -354,7 +354,7 @@ export default function ProjectHome() {
                     ) : isSupplier && supplierOrgId ? (
                       <SupplierMaterialsOverview projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
                     ) : (
-                      <div className="space-y-4">
+                      <div className="space-y-2.5">
                         {showSetupBanner && (
                           <div
                             className="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors"
@@ -383,11 +383,11 @@ export default function ProjectHome() {
                         </div>
 
                         {/* Main grid: left content + right sidebar */}
-                        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
+                        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-2.5">
                           {/* LEFT COLUMN */}
-                          <div className="space-y-4">
+                          <div className="space-y-2.5">
                             <ContractHeroCard financials={financials} projectId={id!} />
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                               <BillingCashCard financials={financials} />
                               <ProfitCard financials={financials} projectId={id!} />
                             </div>
@@ -413,14 +413,14 @@ export default function ProjectHome() {
                           </div>
 
                           {/* RIGHT SIDEBAR — desktop only */}
-                          <div className="hidden lg:flex flex-col gap-4">
+                          <div className="hidden lg:flex flex-col gap-2.5">
                             <UrgentTasksCard projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
                             <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} onTeamChanged={readiness.recalculate} />
                           </div>
                         </div>
 
                         {/* Mobile: team + urgent below */}
-                        <div className="lg:hidden space-y-4">
+                        <div className="lg:hidden space-y-2.5">
                           <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} onTeamChanged={readiness.recalculate} />
                         </div>
                       </div>

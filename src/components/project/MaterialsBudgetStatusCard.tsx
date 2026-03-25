@@ -31,7 +31,7 @@ export function MaterialsBudgetStatusCard({ projectId, supplierOrgId, financials
       ? 'Trade Contractor'
       : 'General Contractor';
     return (
-      <div className="bg-card rounded-2xl shadow-sm p-4">
+      <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">
         <p className="text-sm text-muted-foreground">
           Materials controlled by the {responsibleParty}
         </p>
@@ -66,7 +66,7 @@ export function MaterialsBudgetStatusCard({ projectId, supplierOrgId, financials
     <>
       <button
         onClick={() => setDrawerOpen(true)}
-        className="w-full text-left bg-card rounded-2xl shadow-sm p-5 space-y-2.5 hover:bg-accent/30 transition-colors group"
+        className="w-full text-left bg-card border border-border rounded-lg px-3.5 py-3.5 space-y-2.5 hover:bg-accent/30 transition-colors group"
         data-sasha-card="Materials Budget"
       >
         <div className="flex items-center justify-between">
