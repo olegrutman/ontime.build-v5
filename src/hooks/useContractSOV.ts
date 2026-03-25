@@ -66,6 +66,7 @@ export interface ContractSOVItem {
   sort_order: number;
   item_name: string;
   item_group: string | null;
+  floor_label: string | null;
   percent_of_contract: number;
   value_amount: number;
   billed_to_date: number;
