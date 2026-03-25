@@ -58,6 +58,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
   } = useContractSOV(projectId);
 
   const [expandedSovs, setExpandedSovs] = useState<Set<string>>(new Set());
+  const [expandedFloors, setExpandedFloors] = useState<Set<string>>(new Set());
   const [newItemNames, setNewItemNames] = useState<Record<string, string>>({});
   const [editingItem, setEditingItem] = useState<{ sovId: string; itemId: string } | null>(null);
   const [editingName, setEditingName] = useState('');
