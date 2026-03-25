@@ -63,6 +63,12 @@ export interface ProjectProfile {
   scope_fascia_type: string | null;
   scope_soffit_type: string | null;
   scope_backout: boolean;
+  scope_backout_blocking: boolean;
+  scope_backout_blocking_items: string[];
+  scope_backout_shimming: boolean;
+  scope_backout_stud_repair: boolean;
+  scope_backout_nailer_plates: boolean;
+  scope_backout_pickup_framing: boolean;
   scope_decks_railings: boolean;
   scope_deck_type: string | null;
   scope_railings: boolean;
@@ -72,7 +78,6 @@ export interface ProjectProfile {
   scope_wrb_type: string | null;
   scope_sheathing: boolean;
   scope_extras: string[];
-  scope_interior_blocking: boolean;
   scope_fire_stopping: boolean;
   scope_stairs_scope: boolean;
   scope_curtain_wall: boolean;
@@ -232,8 +237,13 @@ export const SCOPE_DECK_TYPE_OPTIONS = [
   'Wood', 'Composite', 'Trex',
 ] as const;
 
+export const BACKOUT_BLOCKING_OPTIONS = [
+  'TV Mounts', 'Cabinet Blocking', 'Handrail Blocking', 'Grab Bar Blocking',
+  'Shelf Blocking', 'Medicine Cabinet', 'Tub/Shower Blocking', 'Specialty Blocking',
+] as const;
+
 export const SCOPE_EXTRAS_OPTIONS = [
-  'Columns', 'Corbels', 'Custom Headers', 'Specialty Blocking', 'Rake Boards', 'Frieze Boards',
+  'Columns', 'Corbels', 'Custom Headers', 'Rake Boards', 'Frieze Boards',
 ] as const;
 
 export const SCOPE_EXTRAS_COMMERCIAL = [
@@ -296,12 +306,15 @@ export function getSmartDefaults(slug: string): Partial<ProfileDraft> {
     scope_exterior_trim: true, scope_exterior_trim_type: 'PVC' as string | null,
     scope_soffit_fascia: true, scope_fascia_type: 'PVC' as string | null, scope_soffit_type: 'Vinyl' as string | null,
     scope_backout: true,
+    scope_backout_blocking: true, scope_backout_blocking_items: ['TV Mounts', 'Cabinet Blocking', 'Handrail Blocking'] as string[],
+    scope_backout_shimming: true, scope_backout_stud_repair: true,
+    scope_backout_nailer_plates: true, scope_backout_pickup_framing: true,
     scope_decks_railings: false, scope_deck_type: null as string | null, scope_railings: false,
     scope_garage_framing: false, scope_garage_trim_openings: false,
     scope_wrb: true, scope_wrb_type: 'Tyvek' as string | null,
     scope_sheathing: true,
     scope_extras: [] as string[],
-    scope_interior_blocking: false, scope_fire_stopping: false,
+    scope_fire_stopping: false,
     scope_stairs_scope: false,
     scope_curtain_wall: false, scope_storefront_framing: false,
   };
