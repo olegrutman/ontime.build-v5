@@ -58,6 +58,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
   } = useContractSOV(projectId);
 
   const [expandedSovs, setExpandedSovs] = useState<Set<string>>(new Set());
+  const [expandedFloors, setExpandedFloors] = useState<Set<string>>(new Set());
   const [newItemNames, setNewItemNames] = useState<Record<string, string>>({});
   const [editingItem, setEditingItem] = useState<{ sovId: string; itemId: string } | null>(null);
   const [editingName, setEditingName] = useState('');
@@ -79,11 +80,17 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
   const toggleSov = (sovId: string) => {
     setExpandedSovs(prev => {
       const next = new Set(prev);
-      if (next.has(sovId)) {
-        next.delete(sovId);
-      } else {
-        next.add(sovId);
-      }
+      if (next.has(sovId)) next.delete(sovId);
+      else next.add(sovId);
+      return next;
+    });
+  };
+
+  const toggleFloor = (floorKey: string) => {
+    setExpandedFloors(prev => {
+      const next = new Set(prev);
+      if (next.has(floorKey)) next.delete(floorKey);
+      else next.add(floorKey);
       return next;
     });
   };
@@ -262,6 +269,169 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
     return contract?.to_org_id === currentOrgId; // TC is payer (TC pays FC)
   }) : [];
 
+
+  const renderSOVItem = (sov: ContractSOV, item: ContractSOVItem, index: number, isLocked: boolean) => {
+    const isEditing = editingItem?.sovId === sov.id && editingItem?.itemId === item.id;
+    const isEditingPct = editingPercent?.sovId === sov.id && editingPercent?.itemId === item.id;
+    const isDragging = draggedItem?.id === item.id;
+    const isDragOver = dragOverIndex?.sovId === sov.id && dragOverIndex?.index === index;
+
+    return (
+      <div
+        key={item.id}
+        draggable={!isEditing && !isEditingPct && !isLocked}
+        onDragStart={(e) => !isLocked && handleDragStart(e, sov.id, item)}
+        onDragOver={(e) => !isLocked && handleDragOver(e, sov.id, index)}
+        onDragLeave={() => setDragOverIndex(null)}
+        onDrop={(e) => !isLocked && handleDrop(e, sov.id, index)}
+        onDragEnd={() => { setDraggedItem(null); setDragOverIndex(null); }}
+        className={`
+          group rounded-lg border bg-card overflow-hidden
+          ${isDragging ? 'opacity-50' : ''}
+          ${isDragOver ? 'border-primary border-2' : 'border-border'}
+          transition-colors
+        `}
+      >
+        <div className={`
+          flex items-center gap-2 p-3
+          ${!isEditing && !isEditingPct ? 'cursor-move hover:bg-muted/50' : ''}
+        `}>
+          <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <span className="text-sm text-muted-foreground w-8 flex-shrink-0">{index + 1}.</span>
+
+          {isEditing ? (
+            <div className="flex-1 flex items-center gap-2">
+              <Input
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveEdit();
+                  if (e.key === 'Escape') setEditingItem(null);
+                }}
+                autoFocus
+                className="h-8"
+              />
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSaveEdit}>
+                <Check className="h-4 w-4 text-green-600" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingItem(null)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-medium truncate block">{item.item_name}</span>
+              </div>
+
+              {item.source === 'user' && (
+                <Badge variant="outline" className="text-xs flex-shrink-0">Custom</Badge>
+              )}
+
+              {isEditingPct ? (
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={editingPercentValue}
+                    onChange={(e) => setEditingPercentValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSavePercentEdit();
+                      if (e.key === 'Escape') setEditingPercent(null);
+                    }}
+                    autoFocus
+                    className="h-8 w-20"
+                  />
+                  <span className="text-sm">%</span>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSavePercentEdit}>
+                    <Check className="h-4 w-4 text-green-600" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingPercent(null)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-sm flex-shrink-0">
+                  <span className="text-muted-foreground w-16 text-right tabular-nums">
+                    {item.percent_of_contract?.toFixed(2)}%
+                  </span>
+                  <span className="font-medium w-24 text-right tabular-nums">
+                    {formatCurrency(item.value_amount || 0)}
+                  </span>
+                </div>
+              )}
+
+              {!isLocked && !isFC && (
+                <>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                    onClick={() => handleStartPercentEdit(sov.id, item)}
+                    title="Edit percentage"
+                  >
+                    <Pencil className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                    onClick={() => handleStartEdit(sov.id, item)}
+                    title="Edit name"
+                  >
+                    <Pencil className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+
+                  {(item.total_billed_amount || 0) === 0 ? (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="icon" variant="ghost" className="h-8 w-8">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Line Item</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete "{item.item_name}"?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteItem(sov.id, item.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  ) : (
+                    <Button size="icon" variant="ghost" className="h-8 w-8 cursor-not-allowed opacity-50" disabled title="Has billing history">
+                      <Trash2 className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  )}
+                </>
+              )}
+            </>
+          )}
+        </div>
+
+        {(item.value_amount || 0) > 0 && !isEditing && (
+          <div className="px-3 pb-2">
+            <SOVProgressBar
+              scheduledValue={item.value_amount}
+              billedToDate={item.total_billed_amount || 0}
+              size="sm"
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderSOVCard = (sov: ContractSOV) => {
         const contract = getContractForSOV(sov);
@@ -528,187 +698,86 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                     </div>
                   )}
 
-                  {/* Items list */}
-                  <div className="space-y-2">
-                    {items.map((item, index) => {
-                      const isEditing = editingItem?.sovId === sov.id && editingItem?.itemId === item.id;
-                      const isEditingPercent = editingPercent?.sovId === sov.id && editingPercent?.itemId === item.id;
-                      const isDragging = draggedItem?.id === item.id;
-                      const isDragOver = dragOverIndex?.sovId === sov.id && dragOverIndex?.index === index;
+                  {/* Items list — grouped by floor_label */}
+                  {(() => {
+                    // Group items by floor_label
+                    const floorGroups: { label: string; items: typeof items }[] = [];
+                    const groupMap = new Map<string, typeof items>();
+                    
+                    for (const item of items) {
+                      const label = item.floor_label || 'Uncategorized';
+                      if (!groupMap.has(label)) {
+                        groupMap.set(label, []);
+                        floorGroups.push({ label, items: groupMap.get(label)! });
+                      }
+                      groupMap.get(label)!.push(item);
+                    }
 
-                      // Use effective lock (manual lock OR billing activity)
-                      const isLocked = isEffectivelyLocked;
+                    // If no floor_label grouping exists (legacy), render flat
+                    const hasFloorLabels = items.some(i => i.floor_label);
 
+                    if (!hasFloorLabels) {
                       return (
-                        <div
-                          key={item.id}
-                          draggable={!isEditing && !isEditingPercent && !isLocked}
-                          onDragStart={(e) => !isLocked && handleDragStart(e, sov.id, item)}
-                          onDragOver={(e) => !isLocked && handleDragOver(e, sov.id, index)}
-                          onDragLeave={() => setDragOverIndex(null)}
-                          onDrop={(e) => !isLocked && handleDrop(e, sov.id, index)}
-                          onDragEnd={() => { setDraggedItem(null); setDragOverIndex(null); }}
-                          className={`
-                            group rounded-lg border bg-card overflow-hidden
-                            ${isDragging ? 'opacity-50' : ''}
-                            ${isDragOver ? 'border-primary border-2' : 'border-border'}
-                            transition-colors
-                          `}
-                        >
-                          <div className={`
-                            flex items-center gap-2 p-4
-                            ${!isEditing && !isEditingPercent ? 'cursor-move hover:bg-muted/50' : ''}
-                          `}>
-                            <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                            
-                            <span className="text-sm text-muted-foreground w-8 flex-shrink-0">
-                              {index + 1}.
-                            </span>
-
-                            {isEditing ? (
-                              <div className="flex-1 flex items-center gap-2">
-                                <Input
-                                  value={editingName}
-                                  onChange={(e) => setEditingName(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleSaveEdit();
-                                    if (e.key === 'Escape') setEditingItem(null);
-                                  }}
-                                  autoFocus
-                                  className="h-8"
-                                />
-                                <Button size="icon" variant="ghost" className="h-10 w-10" onClick={handleSaveEdit}>
-                                  <Check className="h-4 w-4 text-green-600" />
-                                </Button>
-                                <Button size="icon" variant="ghost" className="h-10 w-10" onClick={() => setEditingItem(null)}>
-                                  <X className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ) : (
-                              <>
-                                <div className="flex-1 min-w-0">
-                                  <span className="text-sm font-medium truncate block">{item.item_name}</span>
-                                </div>
-
-                                {item.source === 'user' && (
-                                  <Badge variant="outline" className="text-xs flex-shrink-0">Custom</Badge>
-                                )}
-
-                                {/* Percent */}
-                                {isEditingPercent ? (
-                                  <div className="flex items-center gap-1 flex-shrink-0">
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      min="0"
-                                      max="100"
-                                      value={editingPercentValue}
-                                      onChange={(e) => setEditingPercentValue(e.target.value)}
-                                      onKeyDown={(e) => {
-                                        if (e.key === 'Enter') handleSavePercentEdit();
-                                        if (e.key === 'Escape') setEditingPercent(null);
-                                      }}
-                                      autoFocus
-                                      className="h-8 w-20"
-                                    />
-                                    <span className="text-sm">%</span>
-                                    <Button size="icon" variant="ghost" className="h-10 w-10" onClick={handleSavePercentEdit}>
-                                      <Check className="h-4 w-4 text-green-600" />
-                                    </Button>
-                                    <Button size="icon" variant="ghost" className="h-10 w-10" onClick={() => setEditingPercent(null)}>
-                                      <X className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                ) : (
-                                  <div className="flex items-center gap-2 text-sm flex-shrink-0">
-                                    <span className="text-muted-foreground w-20 text-right">
-                                      {item.percent_of_contract?.toFixed(2)}%
-                                    </span>
-                                    <span className="font-medium w-28 text-right">
-                                      {formatCurrency(item.value_amount || 0)}
-                                    </span>
-                                  </div>
-                                )}
-
-                                {/* Edit buttons - hidden when locked or FC */}
-                                {!isLocked && !isFC && (
-                                  <>
-                                    <Button 
-                                      size="icon" 
-                                      variant="ghost" 
-                                      className="h-10 w-10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" 
-                                      onClick={() => handleStartPercentEdit(sov.id, item)}
-                                      title="Edit percentage"
-                                    >
-                                      <Pencil className="h-3 w-3 text-muted-foreground" />
-                                    </Button>
-                                    <Button 
-                                      size="icon" 
-                                      variant="ghost" 
-                                      className="h-10 w-10 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" 
-                                      onClick={() => handleStartEdit(sov.id, item)}
-                                      title="Edit name"
-                                    >
-                                      <Pencil className="h-4 w-4 text-muted-foreground" />
-                                    </Button>
-
-                                    {/* Delete button - only for unused items (no billing) */}
-                                 {(item.total_billed_amount || 0) === 0 ? (
-                                      <AlertDialog>
-                                        <AlertDialogTrigger asChild>
-                                          <Button size="icon" variant="ghost" className="h-10 w-10">
-                                            <Trash2 className="h-4 w-4 text-destructive" />
-                                          </Button>
-                                        </AlertDialogTrigger>
-                                        <AlertDialogContent>
-                                          <AlertDialogHeader>
-                                            <AlertDialogTitle>Delete Line Item</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                              Are you sure you want to delete "{item.item_name}"? This action cannot be undone.
-                                            </AlertDialogDescription>
-                                          </AlertDialogHeader>
-                                          <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction
-                                              onClick={() => deleteItem(sov.id, item.id)}
-                                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                            >
-                                              Delete
-                                            </AlertDialogAction>
-                                          </AlertDialogFooter>
-                                        </AlertDialogContent>
-                                      </AlertDialog>
-                                    ) : (
-                                      <Button
-                                        size="icon"
-                                        variant="ghost"
-                                        className="h-10 w-10 cursor-not-allowed opacity-50"
-                                        disabled
-                                        title="Cannot delete - item has billing history"
-                                      >
-                                        <Trash2 className="h-4 w-4 text-muted-foreground" />
-                                      </Button>
-                                    )}
-                                  </>
-                                )}
-                              </>
-                            )}
-                          </div>
-
-                          {/* Progress bar */}
-                          {(item.value_amount || 0) > 0 && !isEditing && (
-                            <div className="px-3 pb-3">
-                              <SOVProgressBar
-                                scheduledValue={item.value_amount}
-                                billedToDate={item.total_billed_amount || 0}
-                                size="sm"
-                              />
-                            </div>
-                          )}
+                        <div className="space-y-2">
+                          {items.map((item, index) => renderSOVItem(sov, item, index, isEffectivelyLocked))}
                         </div>
                       );
-                    })}
-                  </div>
+                    }
+
+                    return (
+                      <div className="space-y-3">
+                        {floorGroups.map(({ label, items: floorItems }) => {
+                          const floorPercent = floorItems.reduce((s, i) => s + (i.percent_of_contract || 0), 0);
+                          const floorValue = floorItems.reduce((s, i) => s + (i.value_amount || 0), 0);
+                          const floorBilled = floorItems.reduce((s, i) => s + (i.total_billed_amount || 0), 0);
+                          const floorKey = `${sov.id}-${label}`;
+                          const isFloorExpanded = expandedFloors.has(floorKey);
+
+                          return (
+                            <Collapsible key={floorKey} open={isFloorExpanded} onOpenChange={() => toggleFloor(floorKey)}>
+                              <CollapsibleTrigger asChild>
+                                <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-muted cursor-pointer border">
+                                  <div className="flex items-center gap-2">
+                                    {isFloorExpanded ? (
+                                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                    )}
+                                    <span className="font-semibold text-sm">{label}</span>
+                                    <Badge variant="outline" className="text-xs">
+                                      {floorItems.length} item{floorItems.length !== 1 ? 's' : ''}
+                                    </Badge>
+                                  </div>
+                                  <div className="flex items-center gap-3 text-sm">
+                                    <span className="text-muted-foreground tabular-nums">{floorPercent.toFixed(2)}%</span>
+                                    <span className="font-medium tabular-nums">{formatCurrency(floorValue)}</span>
+                                    {floorBilled > 0 && floorValue > 0 && (
+                                      <div className="w-16">
+                                        <SOVProgressBar
+                                          scheduledValue={floorValue}
+                                          billedToDate={floorBilled}
+                                          showLabels={false}
+                                          size="sm"
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent>
+                                <div className="space-y-2 mt-2 ml-4 border-l-2 border-muted pl-3">
+                                  {floorItems.map((item) => {
+                                    const globalIndex = items.indexOf(item);
+                                    return renderSOVItem(sov, item, globalIndex, isEffectivelyLocked);
+                                  })}
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
 
                   {items.length === 0 && (
                     <p className="text-center text-sm text-muted-foreground py-8">

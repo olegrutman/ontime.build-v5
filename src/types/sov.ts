@@ -52,6 +52,7 @@ export interface AISOVLine {
   group: string;
   percent: number;
   scope_section_slug: string;
+  floor_label: string;
 }
 
 export interface SOVPrerequisites {

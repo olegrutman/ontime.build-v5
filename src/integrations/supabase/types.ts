@@ -3720,6 +3720,7 @@ export type Database = {
           billing_status: string
           created_at: string
           default_enabled: boolean
+          floor_label: string | null
           id: string
           is_locked: boolean
           item_group: string | null
@@ -3743,6 +3744,7 @@ export type Database = {
           billing_status?: string
           created_at?: string
           default_enabled?: boolean
+          floor_label?: string | null
           id?: string
           is_locked?: boolean
           item_group?: string | null
@@ -3766,6 +3768,7 @@ export type Database = {
           billing_status?: string
           created_at?: string
           default_enabled?: boolean
+          floor_label?: string | null
           id?: string
           is_locked?: boolean
           item_group?: string | null

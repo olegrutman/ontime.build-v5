@@ -6,6 +6,86 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+function buildFloorLabels(profile: any): string[] {
+  const floors: string[] = [];
+  const stories = profile.stories || 1;
+  const foundationTypes: string[] = profile.foundation_types || [];
+  const hasBasement = foundationTypes.some((f: string) => f.toLowerCase().includes("basement"));
+
+  if (hasBasement) floors.push("Basement");
+  for (let i = 1; i <= stories; i++) floors.push(`Floor ${i}`);
+  floors.push("Roof");
+  floors.push("Exterior");
+  if (profile.has_garage) floors.push("Garage");
+  if (profile.has_deck_balcony || profile.has_covered_porch) floors.push("Decks / Porches");
+  if (profile.has_stairs && stories > 1) floors.push("Stairs");
+  floors.push("Punch / Misc");
+
+  return floors;
+}
+
+function buildProfileContext(profile: any, pt: any): string {
+  const stories = profile.stories || 1;
+  const foundationTypes: string[] = profile.foundation_types || [];
+  const hasBasement = foundationTypes.some((f: string) => f.toLowerCase().includes("basement"));
+  const isMultifamily = pt?.is_multifamily;
+  const isSingleFamily = pt?.is_single_family;
+  const elevationNaming = isMultifamily ? "South/North/East/West" : "Front/Rear/Left/Right";
+
+  const features: string[] = [];
+  if (profile.has_garage) features.push(`Garage (${profile.garage_car_count || 2}-car, types: ${(profile.garage_types || []).join(", ") || "standard"})`);
+  if (hasBasement) features.push(`Basement (${profile.basement_type || "Standard"})`);
+  if (profile.has_stairs) features.push(`Stairs (${(profile.stair_types || []).join(", ") || "standard"})`);
+  if (profile.has_deck_balcony) features.push("Decks & Balconies");
+  if (profile.has_covered_porch) features.push("Covered Porch");
+  if (profile.has_pool) features.push("Pool");
+  if (profile.has_elevator) features.push("Elevator");
+  if (profile.has_clubhouse) features.push("Clubhouse");
+  if (profile.has_commercial_spaces) features.push("Commercial Spaces");
+  if (profile.has_shed) features.push("Shed / Outbuilding");
+
+  // Scope details
+  const scopeLines: string[] = [];
+  if (profile.scope_wrb) scopeLines.push(`WRB: Yes (${profile.wrb_type || "standard"})`);
+  if (profile.scope_siding) scopeLines.push(`Siding: Yes (type: ${profile.siding_type || "unknown"}, elevation naming: ${elevationNaming})`);
+  if (profile.scope_exterior_trim) scopeLines.push(`Exterior Trim: Yes (${profile.exterior_trim_type || "standard"})`);
+  if (profile.scope_soffit_fascia) scopeLines.push(`Soffit & Fascia: Yes (soffit: ${profile.soffit_type || "standard"}, fascia: ${profile.fascia_type || "standard"})`);
+  if (profile.scope_windows_install) scopeLines.push("Windows Install: Yes");
+  if (profile.scope_patio_doors) scopeLines.push("Patio Doors: Yes");
+  if (profile.scope_garage_framing) scopeLines.push(`Garage Framing: Yes`);
+
+  // Backout details
+  if (profile.scope_backout) {
+    const backoutParts: string[] = [];
+    if (profile.scope_backout_blocking) {
+      const items = (profile.scope_backout_blocking_items || []).join(", ");
+      backoutParts.push(`Blocking (${items || "general"})`);
+    }
+    if (profile.scope_backout_shimming) backoutParts.push("Shimming");
+    if (profile.scope_backout_stud_repair) backoutParts.push("Stud Repair");
+    if (profile.scope_backout_nailer_plates) backoutParts.push("Nailer Plates");
+    if (profile.scope_backout_pickup_framing) backoutParts.push("Pickup Framing");
+    scopeLines.push(`Backout: Yes (${backoutParts.join(", ")})`);
+  }
+
+  return `PROJECT PROFILE:
+Project type: ${pt?.name || "Unknown"}
+Stories: ${stories}
+Has basement: ${hasBasement}${hasBasement ? ` (type: ${profile.basement_type || "Standard"})` : ""}
+${profile.units_per_building ? `Units per building: ${profile.units_per_building}` : ""}
+${profile.number_of_buildings > 1 ? `Number of buildings: ${profile.number_of_buildings}` : ""}
+Framing system: ${profile.framing_system || "Stick Frame"}
+Floor system: ${profile.floor_system || "Not specified"}
+Roof system: ${profile.roof_type || "Not specified"}
+Foundation: ${foundationTypes.join(", ") || "Not specified"}
+is_single_family: ${isSingleFamily}
+is_multifamily: ${isMultifamily}
+Active features: ${features.length > 0 ? features.join("; ") : "None"}
+
+SCOPE INCLUSIONS:
+${scopeLines.length > 0 ? scopeLines.join("\n") : "No specific scope flags set"}`;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -15,7 +95,6 @@ serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const lovableKey = Deno.env.get("LOVABLE_API_KEY");
 
-    // Verify user
     const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -31,14 +110,12 @@ serve(async (req) => {
 
     const admin = createClient(supabaseUrl, serviceKey);
 
-    // Fetch contract — use specific contract_id if provided, else first contract
-    let contractQuery = admin.from("project_contracts").select("id, contract_sum, retainage_percent").eq("project_id", project_id);
-    if (contract_id) {
-      contractQuery = contractQuery.eq("id", contract_id);
-    }
+    // Fetch contract
+    let contractQuery = admin.from("project_contracts").select("id, contract_sum, retainage_percent, from_role, to_role").eq("project_id", project_id);
+    if (contract_id) contractQuery = contractQuery.eq("id", contract_id);
     const contractRes = await contractQuery.limit(1).maybeSingle();
 
-    // Fetch all three data sources
+    // Fetch profile, scope, team
     const [profileRes, scopeRes, teamRes] = await Promise.all([
       admin.from("project_profiles").select("*, project_types(name, slug, is_multifamily, is_single_family)").eq("project_id", project_id).maybeSingle(),
       admin.from("project_scope_selections").select("scope_item_id, scope_items(label, scope_sections(slug, label))").eq("project_id", project_id).eq("is_on", true),
@@ -51,29 +128,18 @@ serve(async (req) => {
 
     const profile = profileRes.data;
     const contract = contractRes.data;
-    
-    // If contract_id provided, check for scope assignments to filter items
-    let scopeItems = scopeRes.data || [];
-    if (contract_id) {
-      // Determine if this is an FC contract (check both roles for consistency)
-      const { data: fullContract } = await admin
-        .from("project_contracts")
-        .select("from_role, to_role")
-        .eq("id", contract_id)
-        .single();
-      const isFCContract = fullContract?.from_role === 'Field Crew' || fullContract?.to_role === 'Field Crew';
 
-      // Only filter scope items for FC contracts — GC↔TC covers all work
+    // Filter scope items for FC contracts
+    let scopeItems = scopeRes.data || [];
+    if (contract_id && contract) {
+      const isFCContract = contract.from_role === 'Field Crew' || contract.to_role === 'Field Crew';
       if (isFCContract) {
         const { data: assignments } = await admin
           .from("project_scope_assignments")
           .select("scope_item_id, assigned_role")
           .eq("project_id", project_id);
-
         if (assignments && assignments.length > 0) {
-          const fcIds = new Set(
-            assignments.filter(a => a.assigned_role === 'Field Crew').map(a => a.scope_item_id)
-          );
+          const fcIds = new Set(assignments.filter((a: any) => a.assigned_role === 'Field Crew').map((a: any) => a.scope_item_id));
           scopeItems = scopeItems.filter((s: any) => fcIds.has(s.scope_item_id));
         }
       }
@@ -84,10 +150,8 @@ serve(async (req) => {
     }
 
     const pt = (profile as any).project_types;
-    const isMultifamily = pt?.is_multifamily;
-    const isSingleFamily = pt?.is_single_family;
 
-    // Group scope items by section
+    // Build scope sections string
     const sectionMap: Record<string, { label: string; items: string[] }> = {};
     for (const s of scopeItems) {
       const sec = (s as any).scope_items?.scope_sections;
@@ -97,81 +161,92 @@ serve(async (req) => {
       sectionMap[sec.slug].items.push(itemLabel);
     }
 
-    // Build scope string
     let scopeStr = "";
     for (const [slug, { label, items }] of Object.entries(sectionMap)) {
       scopeStr += `\nSection: ${label}\n`;
       for (const item of items) scopeStr += `- ${item}\n`;
     }
 
-    const elevationNaming = isMultifamily ? "South/North/East/West" : "Front/Rear/Left/Right";
-    const stories = profile.stories || 1;
+    // Build floor labels and profile context
+    const floorLabels = buildFloorLabels(profile);
+    const profileContext = buildProfileContext(profile, pt);
 
-    const features: string[] = [];
-    if (profile.has_garage) features.push("Garage");
-    if (profile.has_basement) features.push("Basement");
-    if (profile.has_stairs) features.push("Stairs");
-    if (profile.has_deck_balcony) features.push("Decks & Balconies");
-    if (profile.has_pool) features.push("Pool");
-    if (profile.has_elevator) features.push("Elevator");
-    if (profile.has_clubhouse) features.push("Clubhouse");
-    if (profile.has_commercial_spaces) features.push("Commercial Spaces");
-    if (profile.has_shed) features.push("Shed / Outbuilding");
+    if (!lovableKey) {
+      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
-    const systemPrompt = `You are an expert construction cost estimator specializing in framing and exterior subcontracts. Generate a Schedule of Values (SOV) for a framing/exterior subcontractor.
+    const systemPrompt = `You are an expert construction cost estimator specializing in framing and exterior subcontracts. Generate a floor-based Schedule of Values (SOV) for a framing/exterior subcontractor.
+
+CORE PRINCIPLE: The SOV must represent HOW THE BUILD HAPPENS IN REAL LIFE — organized by floors, then categories within each floor. NOT abstract accounting buckets.
+
+FLOOR STRUCTURE:
+The SOV must use these exact floor_label values: ${JSON.stringify(floorLabels)}
+
+PERCENTAGE DISTRIBUTION RULES:
+- Floor levels (Basement + Floor 1..N) combined: 60–80% of total
+- Roof: 8–15%
+- Exterior: 3–10% (only if exterior scope items exist)
+- Garage: only if garage is included in scope
+- Decks/Porches: only if present
+- Stairs: only if multi-story
+- Punch / Misc: 1–5% (always present)
+
+WITHIN EACH FLOOR LEVEL, include categories as appropriate:
+- Layout (5–10% of floor)
+- Walls (30–45% of floor) — adjust down for Pre-Fabricated/Panelized walls
+- Floor System (20–35% of floor) — adjust up for Floor Trusses
+- Sheathing (15–25% of floor)
+- Backout (per floor, with specific sub-items if provided)
+- Hardware & Holdowns
+
+SCOPE-DRIVEN ADJUSTMENTS:
+- Pre-Fabricated Walls → reduce wall %, increase installation %
+- Floor Trusses → increase floor system %
+- Stick Frame Roof → increase roof %
+- Trusses Roof → standard distribution
+- Hardie siding → higher % than vinyl
+- PVC soffit/fascia → higher % than aluminum
+- Composite decking → higher % than wood
+
+SIDING RULES:
+- Break out siding by elevation (Front/Rear/Left/Right for single family, South/North/East/West for multifamily)
+- If garage exists, add a "Siding — Garage" line under the Garage floor_label
+
+WRB RULES:
+- WRB is ALWAYS its own standalone line under "Exterior". Never merge with windows or siding.
+
+BACKOUT RULES:
+- One backout line per floor level (NOT global)
+- Include the specific backout sub-items in the item name if provided
 
 CRITICAL RULES:
-1. WRB (Weather Resistive Barrier) is ALWAYS its own standalone group. Never merge with windows or siding.
-2. Backout items are broken out PER FLOOR LEVEL: "Backout — Level 1", "Backout — Level 2", etc.
-3. Siding is broken out by elevation. For multifamily: South, North, East, West. For single family: Front, Rear, Left, Right. If garage exists, add "Siding — Garage" line.
-4. Roof trusses should be the HIGHEST single line item.
-5. Wall sheathing per level: 3.0–3.8%, NEVER exceed 4%.
-6. Floor-to-floor wall difference: max 1.2 percentage points.
-7. Pre-pour embeds: max 0.5% single building, 0.6% multi-building.
-8. Building layout: max 0.5%.
-9. Windows and patio/SGD doors: ALWAYS separate lines.
-10. Framing hardware + backout per floor combined: 2.5–3.5%.
-11. Punchlist: 0.3–0.5% max.
-12. Upper floor premium: 0.3–0.8% per level, 4th floor+ adds 0.5–1.0% height premium.
-13. The SOV must cover EVERY scope section listed. Do not add lines for sections not in scope.
-14. All percentages must sum to exactly 100.00%.
+1. Every line must have a floor_label from the provided list
+2. Roof trusses should be the HIGHEST single line item
+3. Pre-pour embeds: max 0.5% single building, 0.6% multi-building
+4. Punchlist: 0.3–0.5% max
+5. All percentages must sum to exactly 100.00%
+6. Do not add lines for scope not included
 
 OUTPUT FORMAT: Return a JSON array only (no markdown, no explanation). Each element:
-{"item_name": "string", "group": "string", "percent": number, "scope_section_slug": "string"}
+{"item_name": "string", "group": "string", "percent": number, "scope_section_slug": "string", "floor_label": "string"}
 
-The "group" field groups related items (e.g., "Foundation", "Interior Framing", "Roof", "Sheathing & WRB", "Windows & Doors", "Siding", "Decks", "Garage", etc.).
-The "scope_section_slug" must match one of the section slugs from the scope data.`;
+The "group" field is a category within the floor (e.g., "Layout", "Walls", "Floor System", "Sheathing", "Backout", "Hardware", "Trusses", "WRB", "Siding", "Trim", "Soffit & Fascia", "Framing", "Punchlist").
+The "floor_label" must be one of: ${JSON.stringify(floorLabels)}`;
 
-    const userMessage = `Generate a Schedule of Values for this project.
+    const userMessage = `Generate a floor-based Schedule of Values for this project.
 
 CONTRACT:
 Contract value: $${contract.contract_sum.toLocaleString()}
 Retainage: ${contract.retainage_percent || 0}%
 
-PROJECT PROFILE:
-Project type: ${pt?.name || "Unknown"}
-Stories: ${stories}
-${profile.units_per_building ? `Units per building: ${profile.units_per_building}` : ""}
-${profile.number_of_buildings > 1 ? `Number of buildings: ${profile.number_of_buildings}` : ""}
-Foundation: ${(profile.foundation_types || []).join(", ") || "Not specified"}
-Roof: ${profile.roof_type || "Not specified"}
-Garage: ${profile.has_garage ? (profile.garage_types || []).join(", ") : "None"}
-Basement: ${profile.has_basement ? (profile.basement_type || "Yes") : "None"}
-Stairs: ${profile.has_stairs ? (profile.stair_types || []).join(", ") : "None"}
-Active features: ${features.length > 0 ? features.join(", ") : "None"}
-is_single_family: ${isSingleFamily}
-is_multifamily: ${isMultifamily}
-Siding elevation naming: ${elevationNaming}
-Backout lines: one per floor, Level 1 through Level ${stories}
+${profileContext}
 
-ACTIVE SCOPE ITEMS:
-${scopeStr}
+ACTIVE SCOPE ITEMS (from scope catalog):
+${scopeStr || "No catalog scope items selected — use profile scope flags above."}
 
-IMPORTANT: The SOV must cover every scope section listed above. If a scope section has active items, there must be at least one SOV line for it. Do not add SOV lines for scope sections not listed above.`;
+FLOOR LABELS TO USE: ${JSON.stringify(floorLabels)}
 
-    if (!lovableKey) {
-      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
+IMPORTANT: Generate SOV lines grouped by floor. Each line must have a floor_label from the list above. The SOV must cover all relevant scope and every floor level must have at least one line item.`;
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -199,11 +274,9 @@ IMPORTANT: The SOV must cover every scope section listed above. If a scope secti
 
     const aiData = await aiRes.json();
     let content = aiData.choices?.[0]?.message?.content || "";
-    
-    // Strip markdown code fences if present
     content = content.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
 
-    let lines: Array<{ item_name: string; group: string; percent: number; scope_section_slug: string }>;
+    let lines: Array<{ item_name: string; group: string; percent: number; scope_section_slug: string; floor_label: string }>;
     try {
       lines = JSON.parse(content);
     } catch (e) {
@@ -228,7 +301,6 @@ IMPORTANT: The SOV must cover every scope section listed above. If a scope secti
 
     // Determine version
     const { data: existingSov } = await admin.from("project_sov").select("id, version").eq("project_id", project_id).eq("contract_id", contract.id).order("version", { ascending: false }).limit(1).maybeSingle();
-
     const newVersion = existingSov ? existingSov.version + 1 : 1;
 
     // Create new SOV record
@@ -247,9 +319,13 @@ IMPORTANT: The SOV must cover every scope section listed above. If a scope secti
       return new Response(JSON.stringify({ error: "Failed to create SOV record" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Insert SOV items
+    // Insert SOV items with floor_label
     const contractValue = contract.contract_sum;
     const retainagePct = contract.retainage_percent || 0;
+
+    // Sort lines by floor order, then by sort within group
+    const floorOrder = Object.fromEntries(floorLabels.map((f, i) => [f, i]));
+    lines.sort((a, b) => (floorOrder[a.floor_label] ?? 99) - (floorOrder[b.floor_label] ?? 99));
 
     const sovItems = lines.map((line, idx) => {
       const value = contractValue * line.percent / 100;
@@ -259,6 +335,7 @@ IMPORTANT: The SOV must cover every scope section listed above. If a scope secti
         project_id,
         item_name: line.item_name,
         item_group: line.group,
+        floor_label: line.floor_label,
         percent_of_contract: line.percent,
         value_amount: value,
         scheduled_value: value - retainage,
