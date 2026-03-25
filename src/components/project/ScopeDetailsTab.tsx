@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList, CheckCircle2, AlertCircle, Pencil, ChevronRight, Sparkles, Loader2, MapPin } from 'lucide-react';
+import { ClipboardList, CheckCircle2, AlertCircle, Pencil, ChevronRight, Sparkles, Loader2, MapPin, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -246,20 +246,15 @@ export function ScopeDetailsTab({ projectId }: Props) {
 
           {/* AI Description */}
           {projectInfo?.description ? (
-            <p className="text-sm text-muted-foreground leading-relaxed">{projectInfo.description}</p>
+            <div className="flex items-start gap-2">
+              <p className="text-sm text-muted-foreground leading-relaxed flex-1">{projectInfo.description}</p>
+              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={handleGenerateDescription} disabled={generatingDesc}>
+                {generatingDesc ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              </Button>
+            </div>
           ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleGenerateDescription}
-              disabled={generatingDesc}
-              className="gap-1.5"
-            >
-              {generatingDesc ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              ) : (
-                <Sparkles className="h-3.5 w-3.5" />
-              )}
+            <Button variant="outline" size="sm" onClick={handleGenerateDescription} disabled={generatingDesc} className="gap-1.5">
+              {generatingDesc ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
               {generatingDesc ? 'Generating...' : 'Generate Description'}
             </Button>
           )}
