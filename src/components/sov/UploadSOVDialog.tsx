@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Upload, Loader2, Trash2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,12 @@ export function UploadSOVDialog({ open, onOpenChange, contracts, projectId, onCr
   const [items, setItems] = useState<ParsedItem[]>([]);
   const [warnings, setWarnings] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!selectedContractId && contracts.length === 1) {
+      setSelectedContractId(contracts[0].id);
+    }
+  }, [contracts, selectedContractId]);
 
   const selectedContract = contracts.find(c => c.id === selectedContractId);
 
