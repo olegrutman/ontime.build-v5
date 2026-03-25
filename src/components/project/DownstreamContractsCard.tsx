@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { DollarSign, Save, Loader2, Check } from 'lucide-react';
+import { DollarSign, Save, Loader2, Check, Layers } from 'lucide-react';
+import { ScopeSplitCard } from './ScopeSplitCard';
 
 interface FCTeamMember {
   id: string;
@@ -18,9 +19,10 @@ interface FCTeamMember {
 interface Props {
   projectId: string;
   tcOrgId: string;
+  fcOrgs: { id: string; name: string }[];
 }
 
-export function DownstreamContractsCard({ projectId, tcOrgId }: Props) {
+export function DownstreamContractsCard({ projectId, tcOrgId, fcOrgs }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -39,7 +41,6 @@ export function DownstreamContractsCard({ projectId, tcOrgId }: Props) {
         .eq('project_id', projectId)
         .eq('role', 'Field Crew');
       if (error) throw error;
-      // Deduplicate by org_id
       const unique = new Map<string, FCTeamMember>();
       for (const m of data ?? []) {
         if (m.org_id && !unique.has(m.org_id)) {
@@ -118,41 +119,59 @@ export function DownstreamContractsCard({ projectId, tcOrgId }: Props) {
     }
   };
 
-  if (fcMembers.length === 0) return null;
+  if (fcMembers.length === 0 && fcOrgs.length === 0) return null;
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <CardTitle className="text-base font-semibold flex items-center gap-2">
           <DollarSign className="h-4 w-4" />
-          Downstream Contracts
+          Downstream Contracts & Scope
         </CardTitle>
         <Button size="sm" variant={saved ? "default" : "outline"} onClick={handleSave} disabled={saving || saved} className={saved ? "bg-green-600 hover:bg-green-600 text-white" : ""}>
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : saved ? <Check className="h-3.5 w-3.5 mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}
           {saved ? 'Saved!' : 'Save'}
         </Button>
       </CardHeader>
-      <CardContent className="space-y-3">
-        {fcMembers.map(m => (
-          <div key={m.org_id} className="flex items-center gap-4">
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{m.invited_org_name || 'Field Crew'}</p>
-            </div>
-            <div className="w-40">
-              <Label className="sr-only">Contract amount</Label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
-                <Input
-                  type="number"
-                  placeholder="0.00"
-                  value={values[m.org_id] ?? ''}
-                  onChange={e => setValues(p => ({ ...p, [m.org_id]: e.target.value }))}
-                  className="pl-7"
-                />
+      <CardContent className="space-y-4">
+        {/* Contract values */}
+        {fcMembers.length > 0 && (
+          <div className="space-y-3">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Contract Values</p>
+            {fcMembers.map(m => (
+              <div key={m.org_id} className="flex items-center gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{m.invited_org_name || 'Field Crew'}</p>
+                </div>
+                <div className="w-40">
+                  <Label className="sr-only">Contract amount</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      value={values[m.org_id] ?? ''}
+                      onChange={e => setValues(p => ({ ...p, [m.org_id]: e.target.value }))}
+                      className="pl-7"
+                    />
+                  </div>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
-        ))}
+        )}
+
+        {/* Scope Split section */}
+        {fcOrgs.length > 0 && (
+          <div className="border-t pt-4">
+            <ScopeSplitCard
+              projectId={projectId}
+              tcOrgId={tcOrgId}
+              fcOrgs={fcOrgs}
+              embedded
+            />
+          </div>
+        )}
       </CardContent>
     </Card>
   );
