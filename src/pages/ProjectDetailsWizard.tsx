@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { DetailsSummaryPanel } from '@/components/project-wizard-new/DetailsSummaryPanel';
 import {
   WIZARD_STEPS, FOUNDATION_OPTIONS, ROOF_OPTIONS,
   GARAGE_TYPE_OPTIONS, BASEMENT_TYPE_OPTIONS, STAIR_TYPE_OPTIONS,
