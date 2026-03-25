@@ -20,6 +20,7 @@ import { OrgType } from '@/types/organization';
 import { BasicsStepNew } from '@/components/project-wizard-new/BasicsStep';
 import { TeamStep } from '@/components/project-wizard-new/TeamStep';
 import { ReviewStepNew } from '@/components/project-wizard-new/ReviewStep';
+import { WizardSummaryPanel } from '@/components/project-wizard-new/WizardSummaryPanel';
 
 const initialBasics: ProjectBasics = {
   name: '',
@@ -303,6 +304,7 @@ export default function CreateProjectNew() {
                   ))}
                 </nav>
               </CardContent>
+              <WizardSummaryPanel data={data} />
             </Card>
           </div>
 
