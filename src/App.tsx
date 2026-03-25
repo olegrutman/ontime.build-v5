@@ -58,6 +58,7 @@ const CODetailPage = lazy(() => import("./pages/CODetail"));
 const ProjectDetailsWizard = lazy(() => import("./pages/ProjectDetailsWizard"));
 const ProjectScopeWizard = lazy(() => import("./pages/ProjectScopeWizard"));
 const ProjectContractsPage = lazy(() => import("./pages/ProjectContractsPage"));
+// Note: ProjectContractsPage is a standalone editor page (like EditProject), not a ProjectHome tab
 const ProjectSOVPage = lazy(() => import("./pages/ProjectSOVPage"));
 
 // Platform Admin pages
@@ -173,6 +174,7 @@ function AppRoutes() {
             <Route path="/project/:id" element={<RequireAuth><ProjectHome /></RequireAuth>} />
             <Route path="/project/:id/:section" element={<RequireAuth><ProjectHome /></RequireAuth>} />
             <Route path="/project/:id/edit" element={<RequireAuth><EditProject /></RequireAuth>} />
+            <Route path="/project/:id/contracts" element={<RequireAuth><ProjectContractsPage /></RequireAuth>} />
             <Route path="/projects/:id/scope" element={<RequireAuth><EditProjectScope /></RequireAuth>} />
             <Route path="/project/:id/change-orders/:coId" element={<RequireAuth><CODetailPage /></RequireAuth>} />
             <Route path="/project/:id/details-wizard" element={<RequireAuth><ProjectDetailsWizard /></RequireAuth>} />
