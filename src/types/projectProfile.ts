@@ -48,6 +48,7 @@ export interface ProjectProfile {
   entry_type: string | null;
   special_rooms: string[];
   stories_per_unit: number | null;
+  garage_car_count: number | null;
 }
 
 export interface ScopeSection {
@@ -154,6 +155,10 @@ export const CORRIDOR_OPTIONS = [
   'Interior',
   'Exterior',
   'None',
+] as const;
+
+export const GARAGE_CAR_COUNT_OPTIONS = [
+  '1', '2', '3', '4',
 ] as const;
 
 export const ROOF_PITCH_OPTIONS = [

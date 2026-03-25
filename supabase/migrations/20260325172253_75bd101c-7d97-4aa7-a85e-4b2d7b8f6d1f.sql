@@ -1,0 +1,1 @@
+ALTER TABLE public.project_profiles ADD COLUMN garage_car_count integer DEFAULT NULL;
