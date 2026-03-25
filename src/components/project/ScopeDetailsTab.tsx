@@ -87,26 +87,40 @@ export function ScopeDetailsTab({ projectId }: Props) {
     }
   };
 
-  // Fetch FC orgs on the project (for scope split)
-  const { data: fcTeamOrgs = [] } = useQuery({
-    queryKey: ['project_fc_orgs_scope', projectId],
-    enabled: !!projectId && isTCOrg,
+  // Fetch all team members for name lookups + FC orgs for scope split
+  const { data: allTeamMembers = [] } = useQuery({
+    queryKey: ['project_team_all', projectId],
+    enabled: !!projectId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('project_team')
-        .select('org_id, invited_org_name')
-        .eq('project_id', projectId)
-        .eq('role', 'Field Crew');
+        .select('org_id, invited_org_name, role')
+        .eq('project_id', projectId);
       if (error) throw error;
-      const unique = new Map<string, { id: string; name: string }>();
-      for (const m of data ?? []) {
-        if (m.org_id && !unique.has(m.org_id)) {
-          unique.set(m.org_id, { id: m.org_id, name: m.invited_org_name || 'Field Crew' });
-        }
-      }
-      return Array.from(unique.values());
+      return data ?? [];
     },
   });
+
+  // Build org name lookup from team data
+  const teamOrgNames = new Map<string, string>();
+  for (const m of allTeamMembers) {
+    if (m.org_id && m.invited_org_name && !teamOrgNames.has(m.org_id)) {
+      teamOrgNames.set(m.org_id, m.invited_org_name);
+    }
+  }
+
+  // FC orgs for scope split (TC only)
+  const fcTeamOrgs = isTCOrg
+    ? Array.from(
+        allTeamMembers
+          .filter(m => m.role === 'Field Crew' && m.org_id)
+          .reduce((map, m) => {
+            if (!map.has(m.org_id!)) map.set(m.org_id!, { id: m.org_id!, name: m.invited_org_name || 'Field Crew' });
+            return map;
+          }, new Map<string, { id: string; name: string }>())
+          .values()
+      )
+    : [];
 
   // Fetch contracts with org names
   const { data: contracts } = useQuery({
@@ -331,9 +345,10 @@ export function ScopeDetailsTab({ projectId }: Props) {
       {displayContracts.length > 0 ? (
         displayContracts.map(contract => {
           const isFromOrg = contract.from_org_id === currentUserOrgId;
+          const counterpartyOrgId = isFromOrg ? contract.to_org_id : contract.from_org_id;
           const counterpartyName = isFromOrg
-            ? (contract.to_org as any)?.name || 'Unknown'
-            : (contract.from_org as any)?.name || 'Unknown';
+            ? (contract.to_org as any)?.name || teamOrgNames.get(counterpartyOrgId || '') || 'Unknown'
+            : (contract.from_org as any)?.name || teamOrgNames.get(counterpartyOrgId || '') || 'Unknown';
           const counterpartyRole = isFromOrg ? contract.to_role : contract.from_role;
           const contractValue = Number(contract.contract_sum) || 0;
           const retainage = Number(contract.retainage_percent) || 0;
