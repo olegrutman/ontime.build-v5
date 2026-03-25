@@ -57,6 +57,8 @@ interface FinancialSummary {
   totalCosts: number;
   profitMargin: number;
   totalBilled: number;
+  paidByYou: number;
+  paidToYou: number;
   outstandingBilling: number;
   potentialProfit: number;
 }
@@ -118,6 +120,8 @@ export function useDashboardData(): DashboardData {
     totalCosts: 0,
     profitMargin: 0,
     totalBilled: 0,
+    paidByYou: 0,
+    paidToYou: 0,
     outstandingBilling: 0,
     potentialProfit: 0,
   });
@@ -571,6 +575,23 @@ export function useDashboardData(): DashboardData {
       let totalRevenue = 0;
       let totalCosts = 0;
       let totalBilled = 0;
+      let paidByYou = 0;
+      let paidToYou = 0;
+
+      // Compute paidByYou and paidToYou for all org types
+      const paidInvoices = allInvoices.filter(i => i.status === 'PAID');
+      paidInvoices.forEach(i => {
+        const amount = i.total_amount || 0;
+        if (i.contract_id) {
+          const contract = contractDetailMap.get(i.contract_id);
+          if (contract?.to_org_id === currentOrg.id) paidByYou += amount;
+          if (contract?.from_org_id === currentOrg.id) paidToYou += amount;
+        } else if (i.po_id) {
+          const po = poOrgMap.get(i.po_id);
+          if (po?.pricing_owner_org_id === currentOrg.id) paidByYou += amount;
+          if (po?.supplier_org_id === currentOrg.id) paidToYou += amount;
+        }
+      });
 
       if (orgType === 'TC') {
         contracts.forEach(c => {
@@ -582,29 +603,14 @@ export function useDashboardData(): DashboardData {
           }
         });
 
-        const billedInvoices = allInvoices.filter(i => {
-          if (i.status !== 'PAID') return false;
-          if (i.contract_id) {
-            const contract = contractDetailMap.get(i.contract_id);
-            return contract?.from_org_id === currentOrg.id;
-          }
-          if (i.po_id) {
-            const po = poOrgMap.get(i.po_id);
-            return po?.supplier_org_id === currentOrg.id;
-          }
-          return false;
-        });
-        totalBilled = billedInvoices.reduce((sum, i) => sum + (i.total_amount || 0), 0);
+        totalBilled = paidToYou; // TC: billed = money received
       } else if (orgType === 'GC') {
-        // GC Revenue = owner_contract_value or sum of contracts where GC is to_org
-        // GC Costs = sum of contracts where GC is to_org (amounts owed to TCs)
         contracts.forEach(c => {
           if (c.to_org_id === currentOrg.id) {
             totalCosts += c.contract_sum || 0;
           }
         });
 
-        // Use owner_contract_value as revenue if available
         const ownerValues = contracts
           .filter(c => c.to_org_id === currentOrg.id)
           .map(c => (c as any).owner_contract_value)
@@ -612,53 +618,23 @@ export function useDashboardData(): DashboardData {
         if (ownerValues.length > 0) {
           totalRevenue = ownerValues.reduce((sum: number, v: number) => sum + v, 0);
         } else {
-          totalRevenue = totalCosts; // fallback: show contract obligations
+          totalRevenue = totalCosts;
         }
 
-
-        // GC billed = invoices received (where GC is to_org)
-        const receivedInvoices = allInvoices.filter(i => {
-          if (i.status !== 'PAID') return false;
-          if (i.contract_id) {
-            const contract = contractDetailMap.get(i.contract_id);
-            return contract?.to_org_id === currentOrg.id;
-          }
-          if (i.po_id) {
-            const po = poOrgMap.get(i.po_id);
-            return po?.pricing_owner_org_id === currentOrg.id;
-          }
-          return false;
-        });
-        totalBilled = receivedInvoices.reduce((sum, i) => sum + (i.total_amount || 0), 0);
+        totalBilled = paidByYou; // GC: billed = money paid out
       } else if (orgType === 'FC') {
-        // FC Revenue = contracts where FC is from_org
         contracts.forEach(c => {
           if (c.from_org_id === currentOrg.id) {
             totalRevenue += c.contract_sum || 0;
           }
         });
 
-        // FC labor budget as costs
         const fcContracts = contracts.filter(c => c.from_org_id === currentOrg.id);
         fcContracts.forEach(c => {
           totalCosts += (c as any).labor_budget || 0;
         });
 
-
-        // FC billed = invoices sent (where FC is from_org)
-        const sentInvoices = allInvoices.filter(i => {
-          if (i.status !== 'PAID') return false;
-          if (i.contract_id) {
-            const contract = contractDetailMap.get(i.contract_id);
-            return contract?.from_org_id === currentOrg.id;
-          }
-          if (i.po_id) {
-            const po = poOrgMap.get(i.po_id);
-            return po?.supplier_org_id === currentOrg.id;
-          }
-          return false;
-        });
-        totalBilled = sentInvoices.reduce((sum, i) => sum + (i.total_amount || 0), 0);
+        totalBilled = paidToYou; // FC: billed = money received
       }
 
       const potentialProfit = totalRevenue - totalCosts;
@@ -673,6 +649,8 @@ export function useDashboardData(): DashboardData {
         totalCosts,
         profitMargin,
         totalBilled,
+        paidByYou,
+        paidToYou,
         outstandingBilling,
         potentialProfit,
       });
