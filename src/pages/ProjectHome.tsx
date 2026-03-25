@@ -88,7 +88,7 @@ function CollapsibleOperations({ projectId, projectType, financials, onNavigate 
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <div className="bg-white dark:bg-card rounded-2xl shadow-sm overflow-hidden">
+      <div className="bg-card border border-border rounded-lg overflow-hidden">
         <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-accent/30 transition-colors">
           <div className="flex items-center gap-2">
             <ClipboardList className="h-4 w-4 text-muted-foreground" />
@@ -387,7 +387,7 @@ export default function ProjectHome() {
                           {/* LEFT COLUMN */}
                           <div className="space-y-2.5">
                             <ContractHeroCard financials={financials} projectId={id!} />
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                               <BillingCashCard financials={financials} />
                               <ProfitCard financials={financials} projectId={id!} />
                             </div>
