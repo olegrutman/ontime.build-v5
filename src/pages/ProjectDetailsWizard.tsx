@@ -21,7 +21,7 @@ import {
   SIDING_TYPE_OPTIONS, SIDING_LEVEL_OPTIONS,
   EXTERIOR_TRIM_TYPE_OPTIONS, SOFFIT_TYPE_OPTIONS, FASCIA_TYPE_OPTIONS,
   WRB_TYPE_OPTIONS, SCOPE_DECK_TYPE_OPTIONS,
-  SCOPE_EXTRAS_OPTIONS, SCOPE_EXTRAS_COMMERCIAL,
+  SCOPE_EXTRAS_OPTIONS, SCOPE_EXTRAS_COMMERCIAL, BACKOUT_BLOCKING_OPTIONS,
   getSmartDefaults,
   type ProfileDraft, type ProjectType,
 } from '@/types/projectProfile';
@@ -173,7 +173,7 @@ export default function ProjectDetailsWizard() {
     setDraft(prev => ({ ...prev, [key]: val }));
   }, []);
 
-  const toggleArrayField = useCallback((key: 'foundation_types' | 'special_rooms' | 'scope_extras', val: string) => {
+  const toggleArrayField = useCallback((key: 'foundation_types' | 'special_rooms' | 'scope_extras' | 'scope_backout_blocking_items', val: string) => {
     setDraft(prev => {
       const arr = (prev[key] as string[]) || [];
       return { ...prev, [key]: arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val] };
@@ -693,10 +693,18 @@ export default function ProjectDetailsWizard() {
       draft.scope_soffit_fascia && 'Soffit & Fascia',
       draft.scope_wrb && `WRB${draft.scope_wrb_type ? ` — ${draft.scope_wrb_type}` : ''}`,
       draft.scope_sheathing && 'Sheathing',
-      draft.scope_backout && 'Backout Plan',
+      draft.scope_backout && (() => {
+        const subs = [
+          draft.scope_backout_blocking && `Blocking (${draft.scope_backout_blocking_items.length})`,
+          draft.scope_backout_shimming && 'Shimming',
+          draft.scope_backout_stud_repair && 'Stud Repair',
+          draft.scope_backout_nailer_plates && 'Nailer Plates',
+          draft.scope_backout_pickup_framing && 'Pickup Framing',
+        ].filter(Boolean);
+        return `Backout Plan (${subs.length} items)`;
+      })(),
       draft.scope_decks_railings && `Decks${draft.scope_deck_type ? ` — ${draft.scope_deck_type}` : ''}${draft.scope_railings ? ' + Railings' : ''}`,
       draft.scope_garage_framing && `Garage Framing${draft.scope_garage_trim_openings ? ' + Trim' : ''}`,
-      draft.scope_interior_blocking && 'Interior Blocking',
       draft.scope_fire_stopping && 'Fire Stopping',
       draft.scope_stairs_scope && 'Stairs',
       draft.scope_curtain_wall && 'Curtain Wall Framing',

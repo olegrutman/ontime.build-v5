@@ -50,7 +50,7 @@ export function DetailsSummaryPanel({ draft, typeName }: DetailsSummaryPanelProp
     draft.scope_backout && 'Backout',
     draft.scope_decks_railings && 'Decks',
     draft.scope_garage_framing && 'Garage Framing',
-    draft.scope_interior_blocking && 'Int. Blocking',
+    draft.scope_backout_blocking && 'Blocking',
     draft.scope_fire_stopping && 'Fire Stopping',
     draft.scope_stairs_scope && 'Stairs Scope',
     draft.scope_curtain_wall && 'Curtain Wall',
