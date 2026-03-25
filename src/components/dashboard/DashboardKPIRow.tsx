@@ -105,30 +105,21 @@ interface DashboardKPIRowProps {
     paidByYou: number;
     paidToYou: number;
   };
-  billing: {
-    outstandingToPay: number;
-    outstandingToCollect: number;
-  };
-  attentionCount: number;
 }
 
-export function DashboardKPIRow({ financials, billing, attentionCount }: DashboardKPIRowProps) {
+export function DashboardKPIRow({ financials }: DashboardKPIRowProps) {
   const contractValue = financials.totalRevenue || 0;
   const paidByYou = financials.paidByYou || 0;
   const paidToYou = financials.paidToYou || 0;
   const paidByYouPercent = contractValue > 0 ? Math.round((paidByYou / contractValue) * 100) : 0;
   const paidToYouPercent = contractValue > 0 ? Math.round((paidToYou / contractValue) * 100) : 0;
 
-  const outstandingToPay = billing.outstandingToPay || 0;
-  const outstandingToCollect = billing.outstandingToCollect || 0;
-
-  const pendingValue = outstandingToPay;
-  const pendingPercent = contractValue > 0 ? Math.round((pendingValue / contractValue) * 100) : 0;
-
-  const collectPercent = contractValue > 0 ? Math.min(Math.round((outstandingToCollect / contractValue) * 100), 100) : 0;
+  const profit = paidToYou - paidByYou;
+  const marginPercent = paidToYou > 0 ? Math.round((profit / paidToYou) * 100) : 0;
+  const profitBarPercent = contractValue > 0 ? Math.min(Math.round((Math.abs(profit) / contractValue) * 100), 100) : 0;
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
       <KPICard
         label="Contract Value"
         value={contractValue}
@@ -160,24 +151,14 @@ export function DashboardKPIRow({ financials, billing, attentionCount }: Dashboa
         delay={80}
       />
       <KPICard
-        label="Pending Review"
-        value={pendingValue}
-        tag={`${attentionCount} items`}
-        tagColor="yellow"
-        subText="Invoices awaiting approval"
-        barPercent={Math.min(pendingPercent, 100)}
-        barColor="yellow"
+        label="Profit Margin"
+        value={Math.abs(profit)}
+        tag={`${marginPercent}%`}
+        tagColor={profit >= 0 ? 'green' : 'red'}
+        subText="Net from paid invoices"
+        barPercent={profitBarPercent}
+        barColor={profit >= 0 ? 'green' : 'yellow'}
         delay={120}
-      />
-      <KPICard
-        label="Outstanding"
-        value={outstandingToCollect}
-        tag="To collect"
-        tagColor="neutral"
-        subText="Submitted & approved"
-        barPercent={collectPercent}
-        barColor="navy"
-        delay={160}
       />
     </div>
   );

@@ -216,8 +216,6 @@ export default function Dashboard() {
         {/* KPI Row */}
         <DashboardKPIRow
           financials={financials}
-          billing={billing}
-          attentionCount={totalAttention}
         />
 
         {/* Two-column grid */}
