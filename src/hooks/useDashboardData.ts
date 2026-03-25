@@ -387,7 +387,7 @@ export function useDashboardData(): DashboardData {
         projectIds.length > 0
           ? supabase
               .from('invoices')
-              .select('status, total_amount, created_at, contract_id')
+              .select('status, total_amount, created_at, contract_id, po_id')
               .in('project_id', projectIds)
           : Promise.resolve({ data: [] }),
         user?.id
@@ -417,7 +417,7 @@ export function useDashboardData(): DashboardData {
           : Promise.resolve({ data: [] }),
       ]);
 
-      const allInvoices = (allInvoicesResult.data || []) as { status: string; total_amount: number; created_at: string; contract_id: string | null }[];
+      const allInvoices = (allInvoicesResult.data || []) as { status: string; total_amount: number; created_at: string; contract_id: string | null; po_id: string | null }[];
 
       // Process reminders
       const remindersList: Reminder[] = ((remindersResult.data || []) as any[]).map((r: any) => ({
@@ -447,9 +447,12 @@ export function useDashboardData(): DashboardData {
         });
       }
 
-      // Build PO ownership map for PO-linked invoices
+      // Build PO ownership map for PO-linked invoices (from both recent and all invoices)
       const recentInvoicesRaw = (recentInvoicesResult.data || []) as any[];
-      const poIds = [...new Set(recentInvoicesRaw.map((i: any) => i.po_id).filter((id: any): id is string => !!id))];
+      const poIds = [...new Set([
+        ...recentInvoicesRaw.map((i: any) => i.po_id),
+        ...allInvoices.map(i => i.po_id),
+      ].filter((id): id is string => !!id))];
       let poOrgMap = new Map<string, { pricing_owner_org_id: string | null; supplier_org_id: string | null }>();
       if (poIds.length > 0) {
         const { data: poDetails } = await supabase
@@ -499,18 +502,32 @@ export function useDashboardData(): DashboardData {
 
       // contractDetailMap already built above — reuse it
 
-      // Outstanding to Pay
+      // Outstanding to Pay (Pending Review) — contract-linked OR PO-linked
       const invoicesToPay = allInvoices.filter(i => {
-        if (i.status !== 'SUBMITTED' || !i.contract_id) return false;
-        const contract = contractDetailMap.get(i.contract_id);
-        return contract?.to_org_id === currentOrg.id;
+        if (i.status !== 'SUBMITTED') return false;
+        if (i.contract_id) {
+          const contract = contractDetailMap.get(i.contract_id);
+          return contract?.to_org_id === currentOrg.id;
+        }
+        if (i.po_id) {
+          const po = poOrgMap.get(i.po_id);
+          return po?.pricing_owner_org_id === currentOrg.id;
+        }
+        return false;
       });
 
-      // Outstanding to Collect
+      // Outstanding to Collect — contract-linked OR PO-linked
       const invoicesToCollect = allInvoices.filter(i => {
-        if (!['SUBMITTED', 'APPROVED'].includes(i.status) || !i.contract_id) return false;
-        const contract = contractDetailMap.get(i.contract_id);
-        return contract?.from_org_id === currentOrg.id;
+        if (!['SUBMITTED', 'APPROVED'].includes(i.status)) return false;
+        if (i.contract_id) {
+          const contract = contractDetailMap.get(i.contract_id);
+          return contract?.from_org_id === currentOrg.id;
+        }
+        if (i.po_id) {
+          const po = poOrgMap.get(i.po_id);
+          return po?.supplier_org_id === currentOrg.id;
+        }
+        return false;
       });
 
       const outstandingToPay = invoicesToPay.reduce((sum, i) => sum + (i.total_amount || 0), 0);
@@ -566,9 +583,16 @@ export function useDashboardData(): DashboardData {
         });
 
         const billedInvoices = allInvoices.filter(i => {
-          if (i.status === 'DRAFT' || !i.contract_id) return false;
-          const contract = contractDetailMap.get(i.contract_id);
-          return contract?.from_org_id === currentOrg.id;
+          if (i.status !== 'PAID') return false;
+          if (i.contract_id) {
+            const contract = contractDetailMap.get(i.contract_id);
+            return contract?.from_org_id === currentOrg.id;
+          }
+          if (i.po_id) {
+            const po = poOrgMap.get(i.po_id);
+            return po?.supplier_org_id === currentOrg.id;
+          }
+          return false;
         });
         totalBilled = billedInvoices.reduce((sum, i) => sum + (i.total_amount || 0), 0);
       } else if (orgType === 'GC') {
@@ -594,9 +618,16 @@ export function useDashboardData(): DashboardData {
 
         // GC billed = invoices received (where GC is to_org)
         const receivedInvoices = allInvoices.filter(i => {
-          if (i.status === 'DRAFT' || !i.contract_id) return false;
-          const contract = contractDetailMap.get(i.contract_id);
-          return contract?.to_org_id === currentOrg.id;
+          if (i.status !== 'PAID') return false;
+          if (i.contract_id) {
+            const contract = contractDetailMap.get(i.contract_id);
+            return contract?.to_org_id === currentOrg.id;
+          }
+          if (i.po_id) {
+            const po = poOrgMap.get(i.po_id);
+            return po?.pricing_owner_org_id === currentOrg.id;
+          }
+          return false;
         });
         totalBilled = receivedInvoices.reduce((sum, i) => sum + (i.total_amount || 0), 0);
       } else if (orgType === 'FC') {
@@ -616,9 +647,16 @@ export function useDashboardData(): DashboardData {
 
         // FC billed = invoices sent (where FC is from_org)
         const sentInvoices = allInvoices.filter(i => {
-          if (i.status === 'DRAFT' || !i.contract_id) return false;
-          const contract = contractDetailMap.get(i.contract_id);
-          return contract?.from_org_id === currentOrg.id;
+          if (i.status !== 'PAID') return false;
+          if (i.contract_id) {
+            const contract = contractDetailMap.get(i.contract_id);
+            return contract?.from_org_id === currentOrg.id;
+          }
+          if (i.po_id) {
+            const po = poOrgMap.get(i.po_id);
+            return po?.supplier_org_id === currentOrg.id;
+          }
+          return false;
         });
         totalBilled = sentInvoices.reduce((sum, i) => sum + (i.total_amount || 0), 0);
       }
