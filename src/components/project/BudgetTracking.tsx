@@ -65,8 +65,8 @@ function LaborBudgetCard({ laborBudget, actualLaborCost, upstreamContract, updat
 
   if (editing) {
     return (
-      <div data-sasha-card="Labor Budget" className="bg-card rounded-lg border shadow-sm p-5 space-y-3">
-        <p className="kpi-label">Set Labor Budget</p>
+      <div data-sasha-card="Labor Budget" className="bg-card border border-border rounded-lg px-3.5 py-3.5 space-y-3">
+        <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Set Labor Budget</p>
         <div className="flex gap-2 items-end flex-wrap">
           <div className="relative flex-1 min-w-[100px]">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
@@ -86,10 +86,10 @@ function LaborBudgetCard({ laborBudget, actualLaborCost, upstreamContract, updat
 
   return (
     <>
-      <div data-sasha-card="Labor Budget" className="bg-card rounded-lg border shadow-sm p-5 space-y-2.5">
+      <div data-sasha-card="Labor Budget" className="bg-card border border-border rounded-lg px-3.5 py-3.5 space-y-2.5">
         <div className="flex items-center gap-1.5 mb-1">
           <Users className="h-4 w-4 text-muted-foreground" />
-          <span className="kpi-label">Labor Budget</span>
+          <span className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Labor Budget</span>
         </div>
 
         <div className="group flex items-center justify-between">

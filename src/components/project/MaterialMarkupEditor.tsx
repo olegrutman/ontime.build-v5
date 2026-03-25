@@ -46,7 +46,7 @@ export function MaterialMarkupEditor({ financials, projectId, projectStatus }: M
 
   if (editing) {
     return (
-      <div className="bg-card rounded-2xl shadow-sm p-5 space-y-3">
+      <div className="bg-card border border-border rounded-lg px-3.5 py-3.5 space-y-3">
         <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Material Markup</p>
         <ToggleGroup type="single" value={editType} onValueChange={(v) => v && setEditType(v)} className="justify-start">
           <ToggleGroupItem value="percent" className="text-xs gap-1 h-8"><Percent className="h-3 w-3" /> Percentage</ToggleGroupItem>
@@ -69,7 +69,7 @@ export function MaterialMarkupEditor({ financials, projectId, projectStatus }: M
   const hasMarkup = materialMarkupType != null && materialMarkupValue != null && materialMarkupValue > 0;
 
   return (
-    <div className="bg-card rounded-2xl shadow-sm p-4">
+    <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">
       <div className="group flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <Percent className="h-4 w-4 text-muted-foreground" />

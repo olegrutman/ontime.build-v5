@@ -58,18 +58,18 @@ export function UrgentTasksCard({ projectId, onNavigate, isSupplier, supplierOrg
 
   if (items.length === 0) {
     return (
-      <div data-sasha-card="Urgent Tasks" className="bg-card rounded-lg border shadow-sm p-5">
-        <p className="kpi-label mb-3">Urgent Tasks</p>
+      <div data-sasha-card="Urgent Tasks" className="bg-card border border-border rounded-lg px-3.5 py-3.5">
+        <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium mb-3">Urgent Tasks</p>
         <p className="text-[0.82rem] text-muted-foreground">No items need attention</p>
       </div>
     );
   }
 
   return (
-    <div data-sasha-card="Urgent Tasks" className="bg-card rounded-lg border shadow-sm p-5">
+    <div data-sasha-card="Urgent Tasks" className="bg-card border border-border rounded-lg px-3.5 py-3.5">
       <div className="flex items-center gap-2 mb-3">
         <AlertTriangle className="h-4 w-4 text-amber-500" />
-        <p className="kpi-label">Urgent Tasks</p>
+        <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Urgent Tasks</p>
       </div>
       <div className="space-y-2">
         {items.slice(0, 5).map((item, i) => (
