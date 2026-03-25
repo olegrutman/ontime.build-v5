@@ -48,7 +48,7 @@ function SOVContractSection({
     scopeCoverage, versions, generating, generateSOV, updateLinePct,
     toggleLineLock, deleteLine, addLine, resetLine, lockSOV,
     totalPct, contractMismatch, coveredCount, totalSections,
-  } = useSOVPage(projectId, contractId);
+  } = useSOVPage(projectId, contractId, userOrgId);
 
   const isContractClient = !!userOrgId && contract.to_org_id === userOrgId;
   const isLocked = currentSOV?.is_locked || false;
