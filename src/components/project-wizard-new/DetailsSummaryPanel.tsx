@@ -47,7 +47,10 @@ export function DetailsSummaryPanel({ draft, typeName }: DetailsSummaryPanelProp
     draft.scope_soffit_fascia && 'Soffit/Fascia',
     draft.scope_wrb && 'WRB',
     draft.scope_sheathing && 'Sheathing',
-    draft.scope_backout && 'Backout',
+    draft.scope_backout && (() => {
+      const count = [draft.scope_backout_blocking, draft.scope_backout_shimming, draft.scope_backout_stud_repair, draft.scope_backout_nailer_plates, draft.scope_backout_pickup_framing].filter(Boolean).length;
+      return `Backout (${count})`;
+    })(),
     draft.scope_decks_railings && 'Decks',
     draft.scope_garage_framing && 'Garage Framing',
     draft.scope_backout_blocking && 'Blocking',
