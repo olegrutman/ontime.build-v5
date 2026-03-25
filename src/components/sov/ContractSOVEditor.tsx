@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { UploadSOVDialog } from './UploadSOVDialog';
-import { Plus, Trash2, GripVertical, FileSpreadsheet, Pencil, Check, X, AlertCircle, ChevronDown, ChevronRight, Lock, Unlock, DollarSign, Upload } from 'lucide-react';
+import { Plus, Trash2, GripVertical, FileSpreadsheet, Pencil, Check, X, AlertCircle, ChevronDown, ChevronRight, Lock, Unlock, DollarSign, Upload, Sparkles, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -41,10 +41,13 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
     sovItems,
     loading,
     saving,
+    generating,
     hasSOVs,
     contractsMissingSOVs,
     createAllSOVs,
     createSOVForContract,
+    generateSOV,
+    generateAllSOVs,
     updateItemPercent,
     updateItemName,
     addItem,
@@ -209,27 +212,14 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                   </div>
                 ))}
               </div>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button disabled={saving}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create SOVs from Template
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Create Schedule of Values</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will generate SOV line items for each contract based on your project type.
-                      Line items will be distributed evenly by percentage and must total 100%.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={createAllSOVs}>Create SOVs</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <Button onClick={generateAllSOVs} disabled={saving || generating}>
+                {generating ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                {generating ? 'Generating...' : 'Generate SOV (AI-powered)'}
+              </Button>
               <p className="text-xs text-muted-foreground my-2">— or —</p>
               <Button variant="outline" onClick={() => setUploadDialogOpen(true)} disabled={saving}>
                 <Upload className="mr-2 h-4 w-4" />
@@ -515,6 +505,30 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                         </Badge>
                       )}
                       
+                      {/* Regenerate button - only when unlocked, not FC, no billing */}
+                      {!isFC && !hasBilling && !sov.is_locked && contract && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                className="h-10 w-10"
+                                disabled={saving || generating}
+                                onClick={() => generateSOV(contract.id)}
+                              >
+                                {generating ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Regenerate with AI</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+
                       {/* Lock/Unlock button - hidden for FC and when billing is active */}
                       {!isFC && !hasBilling && (
                         <>
