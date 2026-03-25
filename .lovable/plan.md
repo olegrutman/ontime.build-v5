@@ -1,51 +1,30 @@
 
 
-# Fix: FC Can See SOV Between GC and TC
+# Fix: "Invoices Paid" and "Pending Review" KPI calculations
 
-## Problem
-Field Crew users can currently see Schedule of Values for GC-TC contracts. This violates the visibility rule: "Users see only contracts (and associated SOVs) where their organization is either the from_org_id or to_org_id."
+## Problems
 
-The UI filter on `ProjectSOVPage.tsx` line 516 correctly filters visible contracts, but the underlying RLS policies are too broad. Two policy sets override the contract-scoped policy:
-- "Project team can view SOVs" / "Project team can manage SOVs" — allows any accepted team member to see ALL SOVs
-- "Project team can view SOV items" / "Project team can manage SOV items" — same for items
+From the screenshot, the dashboard shows:
+- **Invoices Paid: $40,249** — but only $21,249 (INV-IM-HA-0001) + $13,813 (INV-PA-IM-0001) = $35,062 are actually PAID. The $19,000 SUBMITTED invoice is incorrectly included.
+- **Pending Review: $0** — PO-linked invoices with status SUBMITTED are excluded because the filter requires `i.contract_id` to exist (`!i.contract_id` returns true and skips them).
 
-Since Postgres RLS policies are OR'd, the broad team policies negate the contract-scoped ones.
+### Root causes
 
-Additionally, the `useSOVPage` hook fetches contracts without org filtering, potentially leaking data to the client even if the UI hides it.
+1. **"Invoices Paid" (`totalBilled`)**: The TC calculation at line 568 filters out only `DRAFT` status, so SUBMITTED, APPROVED, and REJECTED invoices are all counted. It should only count `PAID` invoices.
+
+2. **"Pending Review" (`outstandingToPay`)**: Line 504 requires `!i.contract_id` — this skips PO-linked invoices that have no contract. PO invoices submitted to the TC's org should also appear as pending review.
 
 ## Changes
 
-### 1. Database: Tighten RLS policies
+### `src/hooks/useDashboardData.ts`
 
-**Drop overly broad policies on `project_sov`:**
-- Drop "Project team can view SOVs"
-- Drop "Project team can manage SOVs"
+1. **Fix `totalBilled` for all roles (TC/GC/FC)**: Change the filter from `i.status === 'DRAFT'` to `i.status !== 'PAID'` so only PAID invoices are summed for "Invoices Paid".
 
-**Drop overly broad policies on `project_sov_items`:**
-- Drop "Project team can view SOV items"
-- Drop "Project team can manage SOV items"
+2. **Fix `invoicesToPay`**: Include PO-linked invoices where the current org is the pricing owner (`pricing_owner_org_id === currentOrg.id`) and status is SUBMITTED.
 
-The remaining contract-scoped SELECT policies ("Users can view SOV for their contracts" / "Users can view SOV items for their contracts") already handle read access correctly. The existing "Project members can create/update/delete" policies handle writes (they check project creator or participant org).
+3. **Fix `invoicesToCollect`**: Similarly include PO-linked invoices where the current org is the supplier.
 
-**Update write policies** on both tables to also enforce contract-org membership (ensure only the `to_org_id` — the hiring party — can insert/update/delete SOV data for a given contract).
+### `src/components/dashboard/DashboardKPIRow.tsx`
 
-### 2. Code: Filter contracts in `useSOVPage` hook
-
-| File | Change |
-|------|--------|
-| `src/hooks/useSOVPage.ts` | Add `userOrgId` parameter. Filter `allContracts` query to only return contracts where `from_org_id` or `to_org_id` matches the user's org. This prevents client-side data leakage. |
-
-### Migration SQL (summary)
-
-```sql
--- Drop broad team policies on project_sov
-DROP POLICY "Project team can view SOVs" ON project_sov;
-DROP POLICY "Project team can manage SOVs" ON project_sov;
-
--- Drop broad team policies on project_sov_items
-DROP POLICY "Project team can view SOV items" ON project_sov_items;
-DROP POLICY "Project team can manage SOV items" ON project_sov_items;
-```
-
-The remaining policies already enforce contract-scoped access for SELECT and project-member checks for INSERT/UPDATE/DELETE.
+No changes needed — it correctly displays whatever values it receives.
 
