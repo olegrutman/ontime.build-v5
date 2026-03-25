@@ -17,6 +17,11 @@ import {
   SPECIAL_ROOM_OPTIONS, CORRIDOR_OPTIONS, ROOF_PITCH_OPTIONS,
   BASEMENT_SUBTYPE_OPTIONS, BASEMENT_FINISH_OPTIONS,
   GARAGE_CAR_COUNT_OPTIONS,
+  WINDOW_TYPE_OPTIONS, PATIO_DOOR_TYPE_OPTIONS,
+  SIDING_TYPE_OPTIONS, SIDING_LEVEL_OPTIONS,
+  EXTERIOR_TRIM_TYPE_OPTIONS, SOFFIT_TYPE_OPTIONS, FASCIA_TYPE_OPTIONS,
+  WRB_TYPE_OPTIONS, SCOPE_DECK_TYPE_OPTIONS,
+  SCOPE_EXTRAS_OPTIONS, SCOPE_EXTRAS_COMMERCIAL,
   getSmartDefaults,
   type ProfileDraft, type ProjectType,
 } from '@/types/projectProfile';
@@ -58,6 +63,20 @@ function emptyDraft(projectId: string): ProfileDraft {
     has_balcony: false, has_deck: false, has_covered_porch: false,
     deck_porch_type: null, entry_type: 'Standard',
     special_rooms: [], stories_per_unit: null, garage_car_count: null,
+    // Scope defaults
+    scope_windows_install: false, scope_windows_type: null,
+    scope_patio_doors: false, scope_patio_door_type: null,
+    scope_siding: false, scope_siding_type: null, scope_siding_level: null,
+    scope_exterior_trim: false, scope_exterior_trim_type: null,
+    scope_soffit_fascia: false, scope_fascia_type: null, scope_soffit_type: null,
+    scope_backout: false,
+    scope_decks_railings: false, scope_deck_type: null, scope_railings: false,
+    scope_garage_framing: false, scope_garage_trim_openings: false,
+    scope_wrb: false, scope_wrb_type: null, scope_sheathing: false,
+    scope_extras: [],
+    scope_interior_blocking: false, scope_fire_stopping: false,
+    scope_stairs_scope: false,
+    scope_curtain_wall: false, scope_storefront_framing: false,
   };
 }
 

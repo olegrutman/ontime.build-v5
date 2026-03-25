@@ -289,6 +289,21 @@ export function getSmartDefaults(slug: string): Partial<ProfileDraft> {
     has_deck_balcony: false,
     garage_types: [] as string[], stair_types: [] as string[],
     special_rooms: [] as string[],
+    // Scope defaults
+    scope_windows_install: true, scope_windows_type: 'Vinyl' as string | null,
+    scope_patio_doors: true, scope_patio_door_type: null as string | null,
+    scope_siding: true, scope_siding_type: 'Hardie' as string | null, scope_siding_level: 'Full' as string | null,
+    scope_exterior_trim: true, scope_exterior_trim_type: 'PVC' as string | null,
+    scope_soffit_fascia: true, scope_fascia_type: 'PVC' as string | null, scope_soffit_type: 'Vinyl' as string | null,
+    scope_backout: true,
+    scope_decks_railings: false, scope_deck_type: null as string | null, scope_railings: false,
+    scope_garage_framing: false, scope_garage_trim_openings: false,
+    scope_wrb: true, scope_wrb_type: 'Tyvek' as string | null,
+    scope_sheathing: true,
+    scope_extras: [] as string[],
+    scope_interior_blocking: false, scope_fire_stopping: false,
+    scope_stairs_scope: false,
+    scope_curtain_wall: false, scope_storefront_framing: false,
   };
 
   switch (slug) {
