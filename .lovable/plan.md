@@ -1,26 +1,20 @@
 
 
-# Fix: Upload SOV button does nothing
+# Clear All SOVs from Project
 
-## Problem
-`selectedContractId` is initialized in `useState(contracts.length === 1 ? contracts[0].id : '')`. This only runs once on mount. If `contracts` is empty at mount time (async loading) or changes later, `selectedContractId` stays `''`. The `handleUpload` guard `if (!file || !selectedContractId || !selectedContract) return` silently aborts.
+## What
+Delete all SOV data for project `7295c3d2-90be-4bb9-94bc-99f000b2fdd8`:
+1. Delete all rows from `project_sov_items` where `project_id` matches
+2. Delete all rows from `project_sov` where `project_id` matches
 
-## Fix
+Order matters — items first (they reference `project_sov`), then the parent SOV records.
 
-**`src/components/sov/UploadSOVDialog.tsx`**: Add a `useEffect` to sync `selectedContractId` when `contracts` changes:
-
-```typescript
-useEffect(() => {
-  if (!selectedContractId && contracts.length === 1) {
-    setSelectedContractId(contracts[0].id);
-  }
-}, [contracts, selectedContractId]);
+## How
+Two DELETE statements via the data insert tool:
+```sql
+DELETE FROM project_sov_items WHERE project_id = '7295c3d2-90be-4bb9-94bc-99f000b2fdd8';
+DELETE FROM project_sov WHERE project_id = '7295c3d2-90be-4bb9-94bc-99f000b2fdd8';
 ```
 
-This ensures that when contracts load asynchronously or the prop updates, the single-contract auto-selection still works.
-
-### Files to modify
-| File | Change |
-|------|--------|
-| `src/components/sov/UploadSOVDialog.tsx` | Add `useEffect` to sync `selectedContractId` when `contracts` prop changes |
+No code changes needed.
 
