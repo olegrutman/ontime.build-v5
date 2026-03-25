@@ -48,6 +48,7 @@ export interface ProjectProfile {
   entry_type: string | null;
   special_rooms: string[];
   stories_per_unit: number | null;
+  garage_car_count: number | null;
 }
 
 export interface ScopeSection {
@@ -156,6 +157,10 @@ export const CORRIDOR_OPTIONS = [
   'None',
 ] as const;
 
+export const GARAGE_CAR_COUNT_OPTIONS = [
+  '1', '2', '3', '4',
+] as const;
+
 export const ROOF_PITCH_OPTIONS = [
   'Flat',
   'Pitched',
@@ -225,7 +230,7 @@ export function getSmartDefaults(slug: string): Partial<ProfileDraft> {
         has_corridors: false, corridor_type: null,
         has_balcony: false, has_deck: false, has_covered_porch: false,
         deck_porch_type: 'None', entry_type: 'Standard',
-        stories_per_unit: null,
+        stories_per_unit: null, garage_car_count: 2,
       };
     case 'townhome':
       return {
@@ -239,7 +244,7 @@ export function getSmartDefaults(slug: string): Partial<ProfileDraft> {
         has_corridors: false, corridor_type: null,
         has_balcony: true, has_deck: false, has_covered_porch: false,
         deck_porch_type: 'None', entry_type: 'Standard',
-        stories_per_unit: 3,
+        stories_per_unit: 3, garage_car_count: 2,
       };
     case 'apartment':
       return {

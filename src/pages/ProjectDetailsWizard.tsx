@@ -16,6 +16,7 @@ import {
   GARAGE_OPTIONS, DECK_PORCH_OPTIONS, ENTRY_TYPE_OPTIONS,
   SPECIAL_ROOM_OPTIONS, CORRIDOR_OPTIONS, ROOF_PITCH_OPTIONS,
   BASEMENT_SUBTYPE_OPTIONS, BASEMENT_FINISH_OPTIONS,
+  GARAGE_CAR_COUNT_OPTIONS,
   getSmartDefaults,
   type ProfileDraft, type ProjectType,
 } from '@/types/projectProfile';
@@ -56,7 +57,7 @@ function emptyDraft(projectId: string): ProfileDraft {
     has_corridors: false, corridor_type: null,
     has_balcony: false, has_deck: false, has_covered_porch: false,
     deck_porch_type: null, entry_type: 'Standard',
-    special_rooms: [], stories_per_unit: null,
+    special_rooms: [], stories_per_unit: null, garage_car_count: null,
   };
 }
 
@@ -332,11 +333,20 @@ export default function ProjectDetailsWizard() {
                 if (v === 'None') {
                   update('has_garage', false);
                   update('garage_types', []);
+                  update('garage_car_count', null);
                 } else {
                   update('has_garage', true);
                   update('garage_types', [v === 'Attached' ? 'Attached private' : 'Detached private']);
+                  if (!draft.garage_car_count) update('garage_car_count', 2);
                 }
               }} />
+            {draft.has_garage && (
+              <div className="mt-3">
+                <p className="text-sm font-medium text-muted-foreground mb-2">How many cars?</p>
+                <ChipSelect options={GARAGE_CAR_COUNT_OPTIONS} selected={String(draft.garage_car_count ?? 2)}
+                  onToggle={v => update('garage_car_count', Number(v))} />
+              </div>
+            )}
           </FieldSection>
         )}
 
@@ -433,7 +443,7 @@ export default function ProjectDetailsWizard() {
 
         <div className="flex flex-wrap gap-1.5">
           {[
-            draft.has_garage && `Garage (${draft.garage_types[0] || 'Yes'})`,
+            draft.has_garage && `Garage (${draft.garage_types[0] || 'Yes'}${draft.garage_car_count ? `, ${draft.garage_car_count}-car` : ''})`,
             draft.has_balcony && 'Balcony',
             draft.deck_porch_type && draft.deck_porch_type !== 'None' && draft.deck_porch_type,
             draft.has_corridors && draft.corridor_type && `${draft.corridor_type} Corridors`,

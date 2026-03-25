@@ -18,7 +18,7 @@ export function DetailsSummaryPanel({ draft, typeName }: DetailsSummaryPanelProp
   draft.foundation_types.forEach(f => structureBadges.push(f));
 
   const elements = [
-    draft.has_garage && 'Garage',
+    draft.has_garage && `Garage${draft.garage_car_count ? ` (${draft.garage_car_count}-car)` : ''}`,
     draft.has_basement && `Basement${draft.basement_type ? ` (${draft.basement_type})` : ''}`,
     draft.has_stairs && 'Stairs',
     draft.has_corridors && draft.corridor_type && `${draft.corridor_type} Corridors`,

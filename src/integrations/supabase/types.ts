@@ -2932,6 +2932,7 @@ export type Database = {
           floor_system: string | null
           foundation_types: string[]
           framing_system: string | null
+          garage_car_count: number | null
           garage_types: string[]
           has_balcony: boolean
           has_basement: boolean
@@ -2970,6 +2971,7 @@ export type Database = {
           floor_system?: string | null
           foundation_types?: string[]
           framing_system?: string | null
+          garage_car_count?: number | null
           garage_types?: string[]
           has_balcony?: boolean
           has_basement?: boolean
@@ -3008,6 +3010,7 @@ export type Database = {
           floor_system?: string | null
           foundation_types?: string[]
           framing_system?: string | null
+          garage_car_count?: number | null
           garage_types?: string[]
           has_balcony?: boolean
           has_basement?: boolean
