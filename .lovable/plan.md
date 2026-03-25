@@ -1,35 +1,59 @@
 
 
-# Add Regenerate Button for Project Description
+# Expand Backout Plan with Sub-Items
 
 ## What
-Currently the "Generate Description" button only shows when no description exists. Once generated, there's no way to regenerate it. Add a regenerate option next to the existing description.
+Currently backout is a single toggle. In reality, backout includes multiple distinct work items: blocking (TV, cabinet, handrail, etc.), shimming, stud replacement, and more. Expand the backout section so users can specify which backout tasks are included, with blocking as a key sub-item.
 
-## Change
+## Changes
 
-### `src/components/project/ScopeDetailsTab.tsx` (~lines 247-265)
+### 1. Database Migration — add backout detail columns to `project_profiles`
 
-Replace the current either/or logic (show description OR show generate button) with: always show the description if it exists, AND always show a generate/regenerate button. When a description exists, show a small `RefreshCw` icon button next to or below the description text. When no description exists, keep the current "Generate Description" button.
+New columns:
+- `scope_backout_blocking` boolean default true — general blocking (TV mounts, cabinets, handrails, grab bars)
+- `scope_backout_blocking_items` text[] default '{}' — specific blocking types selected
+- `scope_backout_shimming` boolean default true — shimming doors/windows
+- `scope_backout_stud_repair` boolean default true — stud replacement/straightening
+- `scope_backout_nailer_plates` boolean default true — nail plates on notched/drilled studs
+- `scope_backout_pickup_framing` boolean default true — misc pickup framing/patching
+
+Remove `scope_interior_blocking` (it's now covered by `scope_backout_blocking`).
+
+### 2. Update `src/types/projectProfile.ts`
+
+- Add new fields to `ProjectProfile` interface
+- Add `BACKOUT_BLOCKING_OPTIONS` constant:
+  `['TV Mounts', 'Cabinet Blocking', 'Handrail Blocking', 'Grab Bar Blocking', 'Shelf Blocking', 'Medicine Cabinet', 'Tub/Shower Blocking', 'Specialty Blocking']`
+- Update `getSmartDefaults()` — when backout is on, all sub-items default true; blocking items default to common ones per project type (e.g., custom homes get TV + Cabinet + Handrail; apartments add Grab Bar + Tub/Shower)
+
+### 3. Update `src/pages/ProjectDetailsWizard.tsx` — Scope step
+
+Replace the single backout toggle with an expanded section:
 
 ```
-{projectInfo?.description && (
-  <div className="flex items-start gap-2">
-    <p className="text-sm text-muted-foreground leading-relaxed flex-1">{projectInfo.description}</p>
-    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={handleGenerateDescription} disabled={generatingDesc}>
-      {generatingDesc ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-    </Button>
-  </div>
-)}
-{!projectInfo?.description && (
-  <Button variant="outline" size="sm" onClick={handleGenerateDescription} disabled={generatingDesc} className="gap-1.5">
-    {generatingDesc ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-    {generatingDesc ? 'Generating...' : 'Generate Description'}
-  </Button>
-)}
+FieldSection "Backout Plan"
+  └─ Switch: Backout included (master toggle)
+  └─ When ON, show sub-items:
+     ├─ Switch: Blocking → when ON, show chip multi-select for blocking types
+     ├─ Switch: Shimming (doors & windows)
+     ├─ Switch: Stud Repair / Straightening
+     ├─ Switch: Nailer Plates
+     └─ Switch: Pickup Framing & Patching
 ```
 
-Add `RefreshCw` to the existing lucide-react imports.
+### 4. Update `DetailsSummaryPanel.tsx`
+
+Show "Backout" with count of sub-items when enabled.
+
+### 5. Update Review step & description generator
+
+- Review step: list backout sub-items under "Backout Plan" section
+- `generate-project-description` edge function: include backout detail in scope lines
 
 ### Files Changed
-- `src/components/project/ScopeDetailsTab.tsx` — add regenerate button when description exists
+- `supabase/migrations/` — new columns
+- `src/types/projectProfile.ts` — fields + constants + defaults
+- `src/pages/ProjectDetailsWizard.tsx` — expanded backout UI
+- `src/components/project-wizard-new/DetailsSummaryPanel.tsx` — backout detail
+- `supabase/functions/generate-project-description/index.ts` — backout in prompt
 
