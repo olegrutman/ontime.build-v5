@@ -1,26 +1,22 @@
 
 
-# Split "Invoices Paid" KPI into "Paid by You" and "Paid to You"
+# Replace Pending/Outstanding with Profit Margin KPI
 
-## Overview
-Replace the single "Invoices Paid" KPI card with two separate cards: one showing invoices you've paid out and one showing invoices paid to you. The grid expands from 4 to 5 columns.
+## Problem
+"Pending Review" and "Outstanding" show essentially the same concept. Instead, show a **Profit Margin** card that displays the difference between "Paid to You" and "Paid by You".
 
 ## Changes
 
-### 1. `src/hooks/useDashboardData.ts`
-Add two new fields to the `financials` state:
-- **`paidByYou`**: PAID invoices where your org is `to_org_id` (contract) or `pricing_owner_org_id` (PO) — money you paid out
-- **`paidToYou`**: PAID invoices where your org is `from_org_id` (contract) or `supplier_org_id` (PO) — money you received
+### `src/components/dashboard/DashboardKPIRow.tsx`
+- Remove the "Pending Review" and "Outstanding" cards
+- Add a single **"Profit Margin"** card:
+  - **Value**: `paidToYou - paidByYou`
+  - **Tag**: percentage margin (`paidToYou > 0 ? ((profit / paidToYou) * 100) : 0`) with green if positive, red if negative
+  - **Sub text**: "Net from paid invoices"
+  - **Bar**: profit as % of contract value
+- Grid goes from `lg:grid-cols-5` → `lg:grid-cols-4`
+- Remove `billing` and `attentionCount` props since they're no longer needed
 
-Compute these for all three roles (TC, GC, FC) alongside the existing `totalBilled` calculation.
-
-### 2. `src/components/dashboard/DashboardKPIRow.tsx`
-- Update `DashboardKPIRowProps` to include `paidByYou` and `paidToYou` in `financials`
-- Replace the single "Invoices Paid" `KPICard` with two cards:
-  - **"Paid by You"** — red-tinted tag, shows outgoing payments
-  - **"Paid to You"** — green-tinted tag, shows incoming payments
-- Change grid from `lg:grid-cols-4` to `lg:grid-cols-5`
-
-### 3. `src/pages/Dashboard.tsx`
-No changes needed — it already passes the full `financials` object.
+### `src/pages/Dashboard.tsx`
+- Stop passing `billing` and `attentionCount` to `DashboardKPIRow`
 
