@@ -251,7 +251,7 @@ export default function Dashboard() {
           <div className="space-y-2.5">
             <DashboardBudgetCard
               financials={financials}
-              billing={billing}
+              billing={{ pendingAmount: orgType === 'GC' ? billing.outstandingToPay : billing.outstandingToCollect }}
               activeProjectName={activeProject?.name || null}
               activeProjectId={activeProject?.id || null}
             />
