@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge';
-import { Building2, Layers, Home, Sparkles, Hammer } from 'lucide-react';
+import { Building2, Layers, Home, Sparkles, Hammer, ClipboardList } from 'lucide-react';
 import type { ProfileDraft } from '@/types/projectProfile';
 
 interface DetailsSummaryPanelProps {
@@ -37,6 +37,26 @@ export function DetailsSummaryPanel({ draft, typeName }: DetailsSummaryPanelProp
   if (draft.special_rooms?.length > 0) {
     features.push(...draft.special_rooms);
   }
+
+  // Scope summary items
+  const scopeItems = [
+    draft.scope_windows_install && 'Windows',
+    draft.scope_patio_doors && 'Patio Doors',
+    draft.scope_siding && `Siding${draft.scope_siding_type ? ` (${draft.scope_siding_type})` : ''}`,
+    draft.scope_exterior_trim && 'Ext. Trim',
+    draft.scope_soffit_fascia && 'Soffit/Fascia',
+    draft.scope_wrb && 'WRB',
+    draft.scope_sheathing && 'Sheathing',
+    draft.scope_backout && 'Backout',
+    draft.scope_decks_railings && 'Decks',
+    draft.scope_garage_framing && 'Garage Framing',
+    draft.scope_interior_blocking && 'Int. Blocking',
+    draft.scope_fire_stopping && 'Fire Stopping',
+    draft.scope_stairs_scope && 'Stairs Scope',
+    draft.scope_curtain_wall && 'Curtain Wall',
+    draft.scope_storefront_framing && 'Storefront',
+    ...draft.scope_extras,
+  ].filter(Boolean) as string[];
 
   if (!hasType) return null;
 
@@ -90,6 +110,16 @@ export function DetailsSummaryPanel({ draft, typeName }: DetailsSummaryPanelProp
         <div className="flex items-start gap-2">
           <Layers className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
           <p className="text-xs text-muted-foreground">{draft.entry_type}</p>
+        </div>
+      )}
+
+      {scopeItems.length > 0 && (
+        <div className="flex items-start gap-2">
+          <ClipboardList className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold text-muted-foreground uppercase mb-0.5">Scope</p>
+            <p className="text-xs text-muted-foreground">{scopeItems.join(', ')}</p>
+          </div>
         </div>
       )}
     </div>
