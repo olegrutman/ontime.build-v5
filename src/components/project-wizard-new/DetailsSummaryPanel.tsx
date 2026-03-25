@@ -1,5 +1,5 @@
 import { Badge } from '@/components/ui/badge';
-import { Building2, Layers, Home, Fence, Sparkles } from 'lucide-react';
+import { Building2, Layers, Home, Sparkles, Hammer } from 'lucide-react';
 import type { ProfileDraft } from '@/types/projectProfile';
 
 interface DetailsSummaryPanelProps {
@@ -9,20 +9,34 @@ interface DetailsSummaryPanelProps {
 
 export function DetailsSummaryPanel({ draft, typeName }: DetailsSummaryPanelProps) {
   const hasType = !!draft.project_type_id;
-  const hasStructure = draft.foundation_types.length > 0 || !!draft.roof_type;
+
+  const structureBadges: string[] = [];
+  if (draft.framing_system) structureBadges.push(draft.framing_system);
+  if (draft.floor_system) structureBadges.push(draft.floor_system);
+  if (draft.roof_system) structureBadges.push(draft.roof_system);
+  if (draft.structure_type) structureBadges.push(draft.structure_type);
+  draft.foundation_types.forEach(f => structureBadges.push(f));
+
   const elements = [
     draft.has_garage && 'Garage',
-    draft.has_basement && 'Basement',
+    draft.has_basement && `Basement${draft.basement_type ? ` (${draft.basement_type})` : ''}`,
     draft.has_stairs && 'Stairs',
+    draft.has_corridors && draft.corridor_type && `${draft.corridor_type} Corridors`,
   ].filter(Boolean) as string[];
+
   const features = [
-    draft.has_deck_balcony && 'Deck / Balcony',
-    draft.has_pool && 'Pool / Spa',
+    draft.has_balcony && 'Balcony',
+    draft.deck_porch_type && draft.deck_porch_type !== 'None' && draft.deck_porch_type,
     draft.has_elevator && 'Elevator',
+    draft.has_pool && 'Pool / Spa',
     draft.has_clubhouse && 'Clubhouse',
     draft.has_commercial_spaces && 'Commercial',
     draft.has_shed && 'Shed',
   ].filter(Boolean) as string[];
+
+  if (draft.special_rooms?.length > 0) {
+    features.push(...draft.special_rooms);
+  }
 
   if (!hasType) return null;
 
@@ -41,21 +55,19 @@ export function DetailsSummaryPanel({ draft, typeName }: DetailsSummaryPanelProp
               {draft.stories} {draft.stories === 1 ? 'story' : 'stories'}
               {draft.units_per_building ? ` · ${draft.units_per_building} units` : ''}
               {draft.number_of_buildings > 1 ? ` · ${draft.number_of_buildings} bldgs` : ''}
+              {draft.stories_per_unit ? ` · ${draft.stories_per_unit} stories/unit` : ''}
             </p>
           </div>
         </div>
       )}
 
-      {hasStructure && (
+      {structureBadges.length > 0 && (
         <div className="flex items-start gap-2">
-          <Layers className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+          <Hammer className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
           <div className="flex flex-wrap gap-1">
-            {draft.foundation_types.map(f => (
-              <Badge key={f} variant="secondary" className="text-[10px] px-1.5 py-0">{f}</Badge>
+            {structureBadges.map(b => (
+              <Badge key={b} variant="secondary" className="text-[10px] px-1.5 py-0">{b}</Badge>
             ))}
-            {draft.roof_type && (
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{draft.roof_type}</Badge>
-            )}
           </div>
         </div>
       )}
@@ -71,6 +83,13 @@ export function DetailsSummaryPanel({ draft, typeName }: DetailsSummaryPanelProp
         <div className="flex items-start gap-2">
           <Sparkles className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
           <p className="text-xs text-muted-foreground">{features.join(', ')}</p>
+        </div>
+      )}
+
+      {draft.entry_type && draft.entry_type !== 'Standard' && (
+        <div className="flex items-start gap-2">
+          <Layers className="h-3.5 w-3.5 mt-0.5 text-muted-foreground shrink-0" />
+          <p className="text-xs text-muted-foreground">{draft.entry_type}</p>
         </div>
       )}
     </div>

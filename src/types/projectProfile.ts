@@ -34,6 +34,20 @@ export interface ProjectProfile {
   is_complete: boolean;
   created_at: string;
   updated_at: string;
+  // New building definition fields
+  framing_system: string | null;
+  floor_system: string | null;
+  roof_system: string | null;
+  structure_type: string | null;
+  has_corridors: boolean;
+  corridor_type: string | null;
+  has_balcony: boolean;
+  has_deck: boolean;
+  has_covered_porch: boolean;
+  deck_porch_type: string | null;
+  entry_type: string | null;
+  special_rooms: string[];
+  stories_per_unit: number | null;
 }
 
 export interface ScopeSection {
@@ -71,15 +85,83 @@ export interface ScopeSelection {
 
 export type ProfileDraft = Omit<ProjectProfile, 'id' | 'created_at' | 'updated_at'>;
 
+// ── Option Constants ──────────────────────────────────────────
+
 export const FOUNDATION_OPTIONS = [
-  'Slab on grade',
-  'Post-tension slab',
-  'Crawl space',
-  'Full basement',
-  'Pier and beam',
-  'Walk-out basement',
+  'Slab',
+  'Crawl Space',
+  'Basement',
 ] as const;
 
+export const BASEMENT_SUBTYPE_OPTIONS = [
+  'Walkout',
+  'Standard',
+] as const;
+
+export const BASEMENT_FINISH_OPTIONS = [
+  'Finished',
+  'Unfinished',
+] as const;
+
+export const FRAMING_SYSTEM_OPTIONS = [
+  'Stick Frame',
+  'Pre-Fabricated Walls (Panelized)',
+] as const;
+
+export const FLOOR_SYSTEM_OPTIONS = [
+  'TJI (Engineered Joists)',
+  'Floor Trusses',
+] as const;
+
+export const ROOF_SYSTEM_OPTIONS = [
+  'Stick Frame Roof',
+  'Pre-Manufactured Trusses',
+  'Flat Roof System',
+] as const;
+
+export const STRUCTURE_TYPE_OPTIONS = [
+  'Wood Frame',
+  'Steel',
+  'Mixed',
+] as const;
+
+export const GARAGE_OPTIONS = [
+  'None',
+  'Attached',
+  'Detached',
+] as const;
+
+export const DECK_PORCH_OPTIONS = [
+  'None',
+  'Deck',
+  'Covered Porch',
+  'Both',
+] as const;
+
+export const ENTRY_TYPE_OPTIONS = [
+  'Standard',
+  'Open Entry',
+  'Covered Entry',
+] as const;
+
+export const SPECIAL_ROOM_OPTIONS = [
+  'Mechanical Room',
+  'Boiler Room',
+  'Elevator Shaft',
+] as const;
+
+export const CORRIDOR_OPTIONS = [
+  'Interior',
+  'Exterior',
+  'None',
+] as const;
+
+export const ROOF_PITCH_OPTIONS = [
+  'Flat',
+  'Pitched',
+] as const;
+
+// Legacy options kept for backward compat with scope wizard
 export const ROOF_OPTIONS = [
   'Truss — gable',
   'Truss — hip',
@@ -116,74 +198,94 @@ export const STAIR_TYPE_OPTIONS = [
 
 export const WIZARD_STEPS = [
   'Project Type',
-  'Structure',
-  'Building Details',
-  'Features',
+  'Building Structure',
   'Review',
 ] as const;
 
 /** Maps project_type slug → smart defaults for ProfileDraft fields */
 export function getSmartDefaults(slug: string): Partial<ProfileDraft> {
+  const base = {
+    has_pool: false, has_clubhouse: false, has_commercial_spaces: false, has_shed: false,
+    has_deck_balcony: false,
+    garage_types: [] as string[], stair_types: [] as string[],
+    special_rooms: [] as string[],
+  };
+
   switch (slug) {
-    case 'apartment':
+    case 'custom_home':
+    case 'production_home':
       return {
-        stories: 3, units_per_building: 36, number_of_buildings: 10,
-        foundation_types: ['Post-tension slab'], roof_type: 'Truss — hip',
-        has_garage: false, garage_types: [],
-        has_basement: false, basement_type: null,
-        has_stairs: true, stair_types: ['Common corridor', 'Exterior egress concrete'],
-        has_deck_balcony: true, has_pool: false, has_elevator: false,
-        has_clubhouse: false, has_commercial_spaces: false, has_shed: false,
+        ...base,
+        stories: 2, units_per_building: null, number_of_buildings: 1,
+        foundation_types: ['Slab'], roof_type: null,
+        framing_system: 'Stick Frame', floor_system: 'TJI (Engineered Joists)',
+        roof_system: 'Pre-Manufactured Trusses', structure_type: null,
+        has_garage: true, has_basement: false, basement_type: null,
+        has_stairs: true, has_elevator: false,
+        has_corridors: false, corridor_type: null,
+        has_balcony: false, has_deck: false, has_covered_porch: false,
+        deck_porch_type: 'None', entry_type: 'Standard',
+        stories_per_unit: null,
       };
     case 'townhome':
       return {
+        ...base,
         stories: 3, units_per_building: 8, number_of_buildings: 1,
-        foundation_types: ['Slab on grade'], roof_type: 'Truss — gable',
-        has_garage: true, garage_types: ['Attached private', 'Tuck-under'],
-        has_basement: false, basement_type: null,
-        has_stairs: true, stair_types: ['Interior wood'],
-        has_deck_balcony: true, has_pool: false, has_elevator: false,
-        has_clubhouse: false, has_commercial_spaces: false, has_shed: false,
+        foundation_types: ['Slab'], roof_type: null,
+        framing_system: 'Stick Frame', floor_system: 'Floor Trusses',
+        roof_system: 'Pre-Manufactured Trusses', structure_type: null,
+        has_garage: true, has_basement: false, basement_type: null,
+        has_stairs: true, has_elevator: false,
+        has_corridors: false, corridor_type: null,
+        has_balcony: true, has_deck: false, has_covered_porch: false,
+        deck_porch_type: 'None', entry_type: 'Standard',
+        stories_per_unit: 3,
       };
-    case 'custom_home':
+    case 'apartment':
       return {
-        stories: 2, units_per_building: null, number_of_buildings: 1,
-        foundation_types: ['Slab on grade'], roof_type: 'Truss — gable',
-        has_garage: true, garage_types: ['Attached private'],
-        has_basement: false, basement_type: null,
-        has_stairs: true, stair_types: ['Interior wood'],
-        has_deck_balcony: false, has_pool: false, has_elevator: false,
-        has_clubhouse: false, has_commercial_spaces: false, has_shed: false,
+        ...base,
+        stories: 3, units_per_building: 36, number_of_buildings: 10,
+        foundation_types: ['Slab'], roof_type: null,
+        framing_system: 'Stick Frame', floor_system: 'Floor Trusses',
+        roof_system: 'Pre-Manufactured Trusses', structure_type: null,
+        has_garage: false, has_basement: false, basement_type: null,
+        has_stairs: true, has_elevator: false,
+        has_corridors: true, corridor_type: 'Interior',
+        has_balcony: true, has_deck: false, has_covered_porch: false,
+        deck_porch_type: 'None', entry_type: 'Standard',
+        stories_per_unit: null,
       };
-    case 'production_home':
+    case 'hotel':
       return {
-        stories: 2, units_per_building: null, number_of_buildings: 1,
-        foundation_types: ['Slab on grade'], roof_type: 'Truss — gable',
-        has_garage: true, garage_types: ['Attached private'],
-        has_basement: false, basement_type: null,
-        has_stairs: true, stair_types: ['Interior wood'],
-        has_deck_balcony: false, has_pool: false, has_elevator: false,
-        has_clubhouse: false, has_commercial_spaces: false, has_shed: false,
+        ...base,
+        stories: 5, units_per_building: null, number_of_buildings: 1,
+        foundation_types: ['Slab'], roof_type: null,
+        framing_system: null, floor_system: 'Floor Trusses',
+        roof_system: 'Flat Roof System', structure_type: 'Wood Frame',
+        has_garage: false, has_basement: false, basement_type: null,
+        has_stairs: true, has_elevator: true,
+        has_corridors: true, corridor_type: 'Interior',
+        has_balcony: false, has_deck: false, has_covered_porch: false,
+        deck_porch_type: 'None', entry_type: 'Standard',
+        stories_per_unit: null,
       };
     case 'commercial':
-      return {
-        stories: 2, units_per_building: null, number_of_buildings: 1,
-        foundation_types: ['Slab on grade'], roof_type: 'Flat / TPO',
-        has_garage: false, garage_types: [],
-        has_basement: false, basement_type: null,
-        has_stairs: true, stair_types: ['Interior steel', 'Exterior egress concrete'],
-        has_deck_balcony: false, has_pool: false, has_elevator: false,
-        has_clubhouse: false, has_commercial_spaces: false, has_shed: false,
-      };
     case 'mixed_use':
       return {
-        stories: 4, units_per_building: 20, number_of_buildings: 1,
-        foundation_types: ['Post-tension slab'], roof_type: 'Flat / TPO',
-        has_garage: false, garage_types: [],
-        has_basement: false, basement_type: null,
-        has_stairs: true, stair_types: ['Interior steel', 'Common corridor', 'Exterior egress concrete'],
-        has_deck_balcony: false, has_pool: false, has_elevator: false,
-        has_clubhouse: false, has_commercial_spaces: true, has_shed: false,
+        ...base,
+        stories: slug === 'mixed_use' ? 4 : 2,
+        units_per_building: slug === 'mixed_use' ? 20 : null,
+        number_of_buildings: 1,
+        foundation_types: ['Slab'], roof_type: null,
+        framing_system: null, floor_system: 'Floor Trusses',
+        roof_system: 'Flat Roof System', structure_type: 'Wood Frame',
+        has_garage: false, has_basement: false, basement_type: null,
+        has_stairs: true, has_elevator: false,
+        has_corridors: false, corridor_type: null,
+        has_balcony: false, has_deck: false, has_covered_porch: false,
+        deck_porch_type: 'None', entry_type: 'Standard',
+        stories_per_unit: null,
+        has_commercial_spaces: slug === 'mixed_use',
       };
     default:
       return {};
@@ -194,7 +296,6 @@ export function getSmartDefaults(slug: string): Partial<ProfileDraft> {
 export function checkItemFeature(feature: string | null, profile: ProfileDraft): boolean {
   if (!feature) return true;
 
-  // Section-level boolean features
   const boolFeatures: Record<string, keyof ProfileDraft> = {
     has_garage: 'has_garage',
     has_basement: 'has_basement',
@@ -211,15 +312,10 @@ export function checkItemFeature(feature: string | null, profile: ProfileDraft):
     return !!profile[boolFeatures[feature]];
   }
 
-  // Garage sub-types
   if (feature === 'garage_types_tuck_under') return profile.garage_types.includes('Tuck-under');
   if (feature === 'garage_types_carport') return profile.garage_types.includes('Carport');
-
-  // Basement sub-types
   if (feature === 'basement_type_walk_out') return profile.basement_type === 'Walk-out';
   if (feature === 'basement_type_full_finished') return profile.basement_type === 'Full finished';
-
-  // Stair sub-types
   if (feature === 'stair_types_interior_wood') return profile.stair_types.includes('Interior wood');
   if (feature === 'stair_types_interior_steel') return profile.stair_types.includes('Interior steel');
   if (feature === 'stair_types_exterior_egress_concrete') return profile.stair_types.includes('Exterior egress concrete');
