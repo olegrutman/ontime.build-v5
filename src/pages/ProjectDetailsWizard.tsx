@@ -448,13 +448,59 @@ export default function ProjectDetailsWizard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <ProgressBar step={step} onNav={setStep} onClose={() => navigate(`/project/${projectId}/scope`)} />
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        {steps[step]()}
+      {/* Mobile: top progress bar */}
+      <div className="lg:hidden">
+        <ProgressBar step={step} onNav={setStep} onClose={() => navigate(`/project/${projectId}/scope`)} />
       </div>
+
+      <div className="max-w-6xl mx-auto px-4 py-6 flex gap-6">
+        {/* Desktop sidebar */}
+        <aside className="hidden lg:block w-56 shrink-0">
+          <div className="sticky top-6 space-y-1">
+            <button onClick={() => navigate(`/project/${projectId}/scope`)} className="mb-3 p-1.5 rounded-md hover:bg-muted transition-colors" aria-label="Exit wizard">
+              <X className="w-5 h-5 text-muted-foreground" />
+            </button>
+            {WIZARD_STEPS.map((label, i) => {
+              const done = i < step;
+              const active = i === step;
+              return (
+                <button
+                  key={i}
+                  disabled={i > step}
+                  onClick={() => i <= step && setStep(i)}
+                  className={cn(
+                    'flex items-center gap-2 w-full text-left text-sm py-2 px-2 rounded-md transition-colors min-h-[40px]',
+                    done && 'text-green-600 cursor-pointer hover:bg-muted/50',
+                    active && 'text-primary font-semibold bg-muted',
+                    !done && !active && 'text-muted-foreground',
+                    i > step && 'opacity-40 cursor-not-allowed',
+                  )}
+                >
+                  <span className={cn(
+                    'w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0',
+                    done && 'bg-green-600 text-white',
+                    active && 'bg-secondary text-secondary-foreground',
+                    !done && !active && 'bg-muted/30 text-muted-foreground',
+                  )}>
+                    {done ? <Check className="w-3.5 h-3.5" /> : i + 1}
+                  </span>
+                  {label}
+                </button>
+              );
+            })}
+            <DetailsSummaryPanel draft={draft} typeName={selectedType?.name} />
+          </div>
+        </aside>
+
+        {/* Main content */}
+        <div className="flex-1 max-w-2xl">
+          {steps[step]()}
+        </div>
+      </div>
+
       {/* Sticky footer */}
       <div className="sticky bottom-0 bg-card border-t px-4 py-3">
-        <div className="max-w-2xl mx-auto flex justify-between">
+        <div className="max-w-2xl mx-auto flex justify-between lg:ml-56 lg:pl-6">
           <Button variant="outline" disabled={step === 0} onClick={() => setStep(s => s - 1)}
             className="min-h-[44px]">
             <ChevronLeft className="w-4 h-4 mr-1" /> Back
@@ -473,7 +519,6 @@ export default function ProjectDetailsWizard() {
         </div>
       </div>
     </div>
-  );
 }
 
 function Row({ label, value }: { label: string; value: string }) {
