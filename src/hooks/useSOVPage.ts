@@ -11,14 +11,17 @@ export function useSOVPage(projectId: string, contractId?: string | null, userOr
 
   // Fetch all contracts for this project (for multi-contract selector)
   const { data: allContracts = [] } = useQuery({
-    queryKey: ['sov-all-contracts', projectId],
+    queryKey: ['sov-all-contracts', projectId, userOrgId],
     queryFn: async () => {
-      const { data } = await supabase
+      let query = supabase
         .from('project_contracts')
         .select('id, contract_sum, retainage_percent, from_role, to_role, trade, from_org_id, to_org_id')
         .eq('project_id', projectId)
         .or('trade.is.null,and(trade.neq.Work Order,trade.neq.Work Order Labor)');
-      return data || [];
+      if (userOrgId) {
+        query = query.or(`from_org_id.eq.${userOrgId},to_org_id.eq.${userOrgId}`);
+      }
+      return (await query).data || [];
     },
     enabled: !!projectId,
   });
