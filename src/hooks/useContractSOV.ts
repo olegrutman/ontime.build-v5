@@ -1117,16 +1117,59 @@ export function useContractSOV(projectId: string | undefined) {
     return sovBillingStatus[sovId] || false;
   }, [sovBillingStatus]);
 
+  // AI-powered floor-based SOV generation via edge function
+  const [generating, setGenerating] = useState(false);
+
+  const generateSOV = useCallback(async (contractId: string) => {
+    if (!projectId) return;
+    setGenerating(true);
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      const url = `https://${import.meta.env.VITE_SUPABASE_PROJECT_ID}.supabase.co/functions/v1/generate-sov`;
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.session?.access_token}`,
+        },
+        body: JSON.stringify({ project_id: projectId, contract_id: contractId }),
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || 'Failed to generate SOV');
+      }
+      toast({ title: 'SOV Generated', description: 'AI-powered floor-based SOV created successfully.' });
+      await fetchData();
+    } catch (error: any) {
+      toast({ title: 'Generation Failed', description: error.message, variant: 'destructive' });
+    } finally {
+      setGenerating(false);
+    }
+  }, [projectId, fetchData]);
+
+  const generateAllSOVs = useCallback(async () => {
+    if (!projectId) return;
+    const eligible = contractsMissingSOVs.length > 0 ? contractsMissingSOVs : contracts.filter(c =>
+      (c.contract_sum || 0) > 0 && !isWorkOrderContract(c)
+    );
+    for (const c of eligible) {
+      await generateSOV(c.id);
+    }
+  }, [projectId, contracts, contractsMissingSOVs, generateSOV, isWorkOrderContract]);
+
   return {
     contracts,
     sovs,
     sovItems,
     loading,
     saving,
+    generating,
     hasSOVs: sovs.length > 0,
     contractsMissingSOVs,
     createAllSOVs,
     createSOVForContract,
+    generateSOV,
+    generateAllSOVs,
     updateItemPercent,
     updateItemName,
     addItem,
