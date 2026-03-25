@@ -102,6 +102,8 @@ interface DashboardKPIRowProps {
   financials: {
     totalRevenue: number;
     totalBilled: number;
+    paidByYou: number;
+    paidToYou: number;
   };
   billing: {
     outstandingToPay: number;
@@ -112,8 +114,10 @@ interface DashboardKPIRowProps {
 
 export function DashboardKPIRow({ financials, billing, attentionCount }: DashboardKPIRowProps) {
   const contractValue = financials.totalRevenue || 0;
-  const invoicesPaid = financials.totalBilled || 0;
-  const billedPercent = contractValue > 0 ? Math.round((invoicesPaid / contractValue) * 100) : 0;
+  const paidByYou = financials.paidByYou || 0;
+  const paidToYou = financials.paidToYou || 0;
+  const paidByYouPercent = contractValue > 0 ? Math.round((paidByYou / contractValue) * 100) : 0;
+  const paidToYouPercent = contractValue > 0 ? Math.round((paidToYou / contractValue) * 100) : 0;
 
   const outstandingToPay = billing.outstandingToPay || 0;
   const outstandingToCollect = billing.outstandingToCollect || 0;
@@ -124,7 +128,7 @@ export function DashboardKPIRow({ financials, billing, attentionCount }: Dashboa
   const collectPercent = contractValue > 0 ? Math.min(Math.round((outstandingToCollect / contractValue) * 100), 100) : 0;
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+    <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
       <KPICard
         label="Contract Value"
         value={contractValue}
@@ -136,14 +140,24 @@ export function DashboardKPIRow({ financials, billing, attentionCount }: Dashboa
         delay={0}
       />
       <KPICard
-        label="Invoices Paid"
-        value={invoicesPaid}
-        tag={billedPercent > 0 ? `↑ ${billedPercent}%` : '0%'}
-        tagColor={billedPercent > 0 ? 'green' : 'neutral'}
-        subText={`${billedPercent}% of contract`}
-        barPercent={billedPercent}
-        barColor="green"
+        label="Paid by You"
+        value={paidByYou}
+        tag={paidByYouPercent > 0 ? `${paidByYouPercent}%` : '0%'}
+        tagColor="red"
+        subText="Outgoing payments"
+        barPercent={Math.min(paidByYouPercent, 100)}
+        barColor="yellow"
         delay={40}
+      />
+      <KPICard
+        label="Paid to You"
+        value={paidToYou}
+        tag={paidToYouPercent > 0 ? `${paidToYouPercent}%` : '0%'}
+        tagColor="green"
+        subText="Incoming payments"
+        barPercent={Math.min(paidToYouPercent, 100)}
+        barColor="green"
+        delay={80}
       />
       <KPICard
         label="Pending Review"
@@ -153,7 +167,7 @@ export function DashboardKPIRow({ financials, billing, attentionCount }: Dashboa
         subText="Invoices awaiting approval"
         barPercent={Math.min(pendingPercent, 100)}
         barColor="yellow"
-        delay={80}
+        delay={120}
       />
       <KPICard
         label="Outstanding"
@@ -163,7 +177,7 @@ export function DashboardKPIRow({ financials, billing, attentionCount }: Dashboa
         subText="Submitted & approved"
         barPercent={collectPercent}
         barColor="navy"
-        delay={120}
+        delay={160}
       />
     </div>
   );
