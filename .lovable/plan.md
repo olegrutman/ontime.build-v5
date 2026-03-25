@@ -1,33 +1,26 @@
 
 
-# Allow TC (Project Creator) to Enter GC Contract Price and Retainage
+# Fix: Upload SOV button does nothing
 
 ## Problem
-When a TC creates a project and adds a GC team member, the ProjectContractsPage shows the GC in the filtered team list but:
-1. The contract sum input works (since `isFromCreatorOrg` is true for TC creator), but there's no retainage field anywhere on this page
-2. The save logic doesn't persist `retainage_percent`
-3. The ScopeDetailsTab "Edit" button is also gated by `isFromCreatorOrg` which is correct for TC creators
+`selectedContractId` is initialized in `useState(contracts.length === 1 ? contracts[0].id : '')`. This only runs once on mount. If `contracts` is empty at mount time (async loading) or changes later, `selectedContractId` stays `''`. The `handleUpload` guard `if (!file || !selectedContractId || !selectedContract) return` silently aborts.
 
-## Changes
+## Fix
 
-### `src/pages/ProjectContractsPage.tsx`
+**`src/components/sov/UploadSOVDialog.tsx`**: Add a `useEffect` to sync `selectedContractId` when `contracts` changes:
 
-1. **Add retainage state** — a parallel `Record<string, string>` for retainage percentages, initialized from `existingContracts` just like contract sums
-
-2. **Add retainage input** — for each team member row, add a retainage % input field next to the contract sum input. Same disabled logic as the contract sum field.
-
-3. **Save retainage** — include `retainage_percent` in both the `.update()` and `.insert()` calls
-
-### Layout per team member row
-```
-[Org Name]          [$  contract sum ]  [  retainage %  ]
-[Role label]
+```typescript
+useEffect(() => {
+  if (!selectedContractId && contracts.length === 1) {
+    setSelectedContractId(contracts[0].id);
+  }
+}, [contracts, selectedContractId]);
 ```
 
-Retainage input: number field with `%` suffix, placeholder "0", `step="0.5"`, width ~24 (w-24).
+This ensures that when contracts load asynchronously or the prop updates, the single-contract auto-selection still works.
 
 ### Files to modify
 | File | Change |
 |------|--------|
-| `src/pages/ProjectContractsPage.tsx` | Add `retainages` state, retainage input per row, persist `retainage_percent` on save |
+| `src/components/sov/UploadSOVDialog.tsx` | Add `useEffect` to sync `selectedContractId` when `contracts` prop changes |
 
