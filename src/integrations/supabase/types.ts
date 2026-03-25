@@ -2778,12 +2778,21 @@ export type Database = {
       project_profiles: {
         Row: {
           basement_type: string | null
+          corridor_type: string | null
           created_at: string
+          deck_porch_type: string | null
+          entry_type: string | null
+          floor_system: string | null
           foundation_types: string[]
+          framing_system: string | null
           garage_types: string[]
+          has_balcony: boolean
           has_basement: boolean
           has_clubhouse: boolean
           has_commercial_spaces: boolean
+          has_corridors: boolean
+          has_covered_porch: boolean
+          has_deck: boolean
           has_deck_balcony: boolean
           has_elevator: boolean
           has_garage: boolean
@@ -2795,20 +2804,33 @@ export type Database = {
           number_of_buildings: number
           project_id: string
           project_type_id: string
+          roof_system: string | null
           roof_type: string | null
+          special_rooms: string[] | null
           stair_types: string[]
           stories: number
+          stories_per_unit: number | null
+          structure_type: string | null
           units_per_building: number | null
           updated_at: string
         }
         Insert: {
           basement_type?: string | null
+          corridor_type?: string | null
           created_at?: string
+          deck_porch_type?: string | null
+          entry_type?: string | null
+          floor_system?: string | null
           foundation_types?: string[]
+          framing_system?: string | null
           garage_types?: string[]
+          has_balcony?: boolean
           has_basement?: boolean
           has_clubhouse?: boolean
           has_commercial_spaces?: boolean
+          has_corridors?: boolean
+          has_covered_porch?: boolean
+          has_deck?: boolean
           has_deck_balcony?: boolean
           has_elevator?: boolean
           has_garage?: boolean
@@ -2820,20 +2842,33 @@ export type Database = {
           number_of_buildings?: number
           project_id: string
           project_type_id: string
+          roof_system?: string | null
           roof_type?: string | null
+          special_rooms?: string[] | null
           stair_types?: string[]
           stories?: number
+          stories_per_unit?: number | null
+          structure_type?: string | null
           units_per_building?: number | null
           updated_at?: string
         }
         Update: {
           basement_type?: string | null
+          corridor_type?: string | null
           created_at?: string
+          deck_porch_type?: string | null
+          entry_type?: string | null
+          floor_system?: string | null
           foundation_types?: string[]
+          framing_system?: string | null
           garage_types?: string[]
+          has_balcony?: boolean
           has_basement?: boolean
           has_clubhouse?: boolean
           has_commercial_spaces?: boolean
+          has_corridors?: boolean
+          has_covered_porch?: boolean
+          has_deck?: boolean
           has_deck_balcony?: boolean
           has_elevator?: boolean
           has_garage?: boolean
@@ -2845,9 +2880,13 @@ export type Database = {
           number_of_buildings?: number
           project_id?: string
           project_type_id?: string
+          roof_system?: string | null
           roof_type?: string | null
+          special_rooms?: string[] | null
           stair_types?: string[]
           stories?: number
+          stories_per_unit?: number | null
+          structure_type?: string | null
           units_per_building?: number | null
           updated_at?: string
         }
