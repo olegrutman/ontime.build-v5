@@ -1,0 +1,1 @@
+ALTER TABLE public.project_sov_items ADD COLUMN IF NOT EXISTS floor_label text;
