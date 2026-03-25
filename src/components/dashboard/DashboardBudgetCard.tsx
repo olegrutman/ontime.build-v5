@@ -8,7 +8,7 @@ interface Props {
     totalBilled: number;
   };
   billing: {
-    outstandingToPay: number;
+    pendingAmount: number;
   };
   activeProjectName: string | null;
   activeProjectId?: string | null;
@@ -25,7 +25,7 @@ export function DashboardBudgetCard({ financials, billing, activeProjectName, ac
   const navigate = useNavigate();
   const total = financials.totalRevenue || 0;
   const paid = financials.totalBilled || 0;
-  const pending = billing.outstandingToPay || 0;
+  const pending = billing.pendingAmount || 0;
   const remaining = Math.max(0, total - paid - pending);
 
   const paidPct = total > 0 ? Math.round((paid / total) * 100) : 0;
