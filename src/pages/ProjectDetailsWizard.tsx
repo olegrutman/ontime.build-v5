@@ -170,7 +170,7 @@ export default function ProjectDetailsWizard() {
     setDraft(prev => ({ ...prev, [key]: val }));
   }, []);
 
-  const toggleArrayField = useCallback((key: 'foundation_types' | 'special_rooms', val: string) => {
+  const toggleArrayField = useCallback((key: 'foundation_types' | 'special_rooms' | 'scope_extras', val: string) => {
     setDraft(prev => {
       const arr = (prev[key] as string[]) || [];
       return { ...prev, [key]: arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val] };
