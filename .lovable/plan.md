@@ -1,30 +1,26 @@
 
 
-# Fix: "Invoices Paid" and "Pending Review" KPI calculations
+# Split "Invoices Paid" KPI into "Paid by You" and "Paid to You"
 
-## Problems
-
-From the screenshot, the dashboard shows:
-- **Invoices Paid: $40,249** — but only $21,249 (INV-IM-HA-0001) + $13,813 (INV-PA-IM-0001) = $35,062 are actually PAID. The $19,000 SUBMITTED invoice is incorrectly included.
-- **Pending Review: $0** — PO-linked invoices with status SUBMITTED are excluded because the filter requires `i.contract_id` to exist (`!i.contract_id` returns true and skips them).
-
-### Root causes
-
-1. **"Invoices Paid" (`totalBilled`)**: The TC calculation at line 568 filters out only `DRAFT` status, so SUBMITTED, APPROVED, and REJECTED invoices are all counted. It should only count `PAID` invoices.
-
-2. **"Pending Review" (`outstandingToPay`)**: Line 504 requires `!i.contract_id` — this skips PO-linked invoices that have no contract. PO invoices submitted to the TC's org should also appear as pending review.
+## Overview
+Replace the single "Invoices Paid" KPI card with two separate cards: one showing invoices you've paid out and one showing invoices paid to you. The grid expands from 4 to 5 columns.
 
 ## Changes
 
-### `src/hooks/useDashboardData.ts`
+### 1. `src/hooks/useDashboardData.ts`
+Add two new fields to the `financials` state:
+- **`paidByYou`**: PAID invoices where your org is `to_org_id` (contract) or `pricing_owner_org_id` (PO) — money you paid out
+- **`paidToYou`**: PAID invoices where your org is `from_org_id` (contract) or `supplier_org_id` (PO) — money you received
 
-1. **Fix `totalBilled` for all roles (TC/GC/FC)**: Change the filter from `i.status === 'DRAFT'` to `i.status !== 'PAID'` so only PAID invoices are summed for "Invoices Paid".
+Compute these for all three roles (TC, GC, FC) alongside the existing `totalBilled` calculation.
 
-2. **Fix `invoicesToPay`**: Include PO-linked invoices where the current org is the pricing owner (`pricing_owner_org_id === currentOrg.id`) and status is SUBMITTED.
+### 2. `src/components/dashboard/DashboardKPIRow.tsx`
+- Update `DashboardKPIRowProps` to include `paidByYou` and `paidToYou` in `financials`
+- Replace the single "Invoices Paid" `KPICard` with two cards:
+  - **"Paid by You"** — red-tinted tag, shows outgoing payments
+  - **"Paid to You"** — green-tinted tag, shows incoming payments
+- Change grid from `lg:grid-cols-4` to `lg:grid-cols-5`
 
-3. **Fix `invoicesToCollect`**: Similarly include PO-linked invoices where the current org is the supplier.
-
-### `src/components/dashboard/DashboardKPIRow.tsx`
-
-No changes needed — it correctly displays whatever values it receives.
+### 3. `src/pages/Dashboard.tsx`
+No changes needed — it already passes the full `financials` object.
 
