@@ -134,21 +134,27 @@ export default function ProjectContractsPage() {
   const [retainages, setRetainages] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
-  // Initialize from existing contracts using to_project_team_id as key
+  // Initialize from existing contracts — match by to_project_team_id or fallback to org_id
   useEffect(() => {
-    if (existingContracts.length > 0) {
-      const initC: Record<string, string> = {};
-      const initR: Record<string, string> = {};
-      for (const c of existingContracts) {
-        if (c.to_project_team_id) {
-          if (c.contract_sum != null) initC[c.to_project_team_id] = String(c.contract_sum);
-          if (c.retainage_percent != null) initR[c.to_project_team_id] = String(c.retainage_percent);
-        }
+    if (existingContracts.length === 0 || team.length === 0) return;
+    const initC: Record<string, string> = {};
+    const initR: Record<string, string> = {};
+    for (const c of existingContracts) {
+      let teamMemberId = c.to_project_team_id;
+      if (!teamMemberId) {
+        const counterpartyOrgId = c.from_org_id === project?.organization_id
+          ? c.to_org_id : c.from_org_id;
+        const match = team.find(m => m.org_id === counterpartyOrgId);
+        teamMemberId = match?.id ?? null;
       }
-      if (Object.keys(initC).length > 0) setContracts(initC);
-      if (Object.keys(initR).length > 0) setRetainages(initR);
+      if (teamMemberId) {
+        if (c.contract_sum != null) initC[teamMemberId] = String(c.contract_sum);
+        if (c.retainage_percent != null) initR[teamMemberId] = String(c.retainage_percent);
+      }
     }
-  }, [existingContracts]);
+    if (Object.keys(initC).length > 0) setContracts(initC);
+    if (Object.keys(initR).length > 0) setRetainages(initR);
+  }, [existingContracts, team, project]);
 
   const onCount = selections.filter(s => s.is_on).length;
 
@@ -205,12 +211,17 @@ export default function ProjectContractsPage() {
         }
 
         // Check for existing contract for this team member
-        const existing = existingContracts.find(c => c.to_project_team_id === member.id);
+        const existing = existingContracts.find(c => {
+          if (c.to_project_team_id === member.id) return true;
+          const counterpartyOrgId = c.from_org_id === project?.organization_id
+            ? c.to_org_id : c.from_org_id;
+          return counterpartyOrgId === member.org_id;
+        });
 
         if (existing) {
           await supabase
             .from('project_contracts')
-            .update({ contract_sum: contractSum, retainage_percent: retainagePercent })
+            .update({ contract_sum: contractSum, retainage_percent: retainagePercent, to_project_team_id: member.id })
             .eq('id', existing.id);
         } else {
           await supabase
