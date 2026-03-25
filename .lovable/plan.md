@@ -1,39 +1,48 @@
 
 
-# Add Running Project Summary to Setup Wizard
+# Add Running Summary to the Project Details Wizard
 
-## What
-Replace the step-only sidebar with a sidebar that also shows a live rolling summary of all data entered so far — project name, type, location, team count — updating as the user fills in each step.
+## Problem
+The `WizardSummaryPanel` was only added to `CreateProjectNew.tsx`. The `ProjectDetailsWizard.tsx` is a separate full-width wizard with a top-only progress bar — it has no sidebar and no summary panel.
+
+## Approach
+Add a compact, sticky summary sidebar to the ProjectDetailsWizard that shows selections made so far (project type, stories, foundation, roof, features) — updating live as the user progresses through steps.
 
 ## Changes
 
-### 1. Create `WizardSummaryPanel` component
-**New file: `src/components/project-wizard-new/WizardSummaryPanel.tsx`**
+### 1. Create `DetailsSummaryPanel` component
+**New file: `src/components/project-wizard-new/DetailsSummaryPanel.tsx`**
 
-A compact card that reads `NewProjectWizardData` and renders filled-in sections:
-- **Project**: name, type, full address (only once basics are filled)
-- **Start Date**: if provided
-- **Team**: count of members added, listed by role (e.g., "2 Trade Contractors, 1 Field Crew")
+Accepts `ProfileDraft` and the selected `ProjectType` name. Renders:
+- **Type**: e.g. "Custom Home"
+- **Scale**: stories count, units, buildings (if applicable)
+- **Structure**: foundation types, roof type (as badges)
+- **Elements**: garage, basement, stairs (only if toggled on)
+- **Features**: deck, pool, elevator, etc. (only if toggled on)
 
-Each section only appears once its data exists (no empty placeholders). Uses muted text and small type to stay unobtrusive.
+Each section only renders when data exists.
 
-### 2. Update `CreateProjectNew.tsx` sidebar
-**File: `src/pages/CreateProjectNew.tsx`**
+### 2. Update `ProjectDetailsWizard.tsx` layout
+Convert from full-width single column to a 12-col grid (same pattern as `CreateProjectNew`):
+- **Left col (3 cols, hidden on mobile)**: sticky card with step nav + `DetailsSummaryPanel`
+- **Right col (9 cols)**: current step content
 
-Add `<WizardSummaryPanel data={data} />` below the existing step nav in the left sidebar column. The step nav stays as-is for navigation; the summary panel sits underneath showing accumulated info.
+The existing top `ProgressBar` component stays on mobile; on desktop, the sidebar replaces it as the primary navigation reference.
 
 ### Layout
 ```text
-┌─────────────────┐  ┌──────────────────────────┐
-│ 1. Basics  ✓    │  │                          │
-│ 2. Team   ●     │  │   [Current Step Form]    │
-│ 3. Review       │  │                          │
-│─────────────────│  │                          │
-│ Project Summary  │  │                          │
-│ Maple Ridge...  │  │                          │
-│ Single Family   │  │                          │
-│ Denver, CO      │  │                          │
-│ Team: 3 members │  │                          │
-└─────────────────┘  └──────────────────────────┘
+Desktop:
+┌──────────────┐  ┌─────────────────────────────┐
+│ Steps 1-5    │  │                             │
+│──────────────│  │   [Current Step Content]    │
+│ Summary      │  │                             │
+│ Custom Home  │  │                             │
+│ 2 stories    │  │                             │
+│ Slab on grade│  │                             │
+│ Truss-gable  │  │                             │
+│ ✓ Garage     │  │                             │
+└──────────────┘  └─────────────────────────────┘
+
+Mobile: keeps current top progress bar, no sidebar
 ```
 
