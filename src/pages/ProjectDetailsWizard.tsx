@@ -520,6 +520,8 @@ export default function ProjectDetailsWizard() {
       </div>
     </div>
   );
+}
+
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
