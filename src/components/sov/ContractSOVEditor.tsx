@@ -270,6 +270,169 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
   }) : [];
 
 
+  const renderSOVItem = (sov: ContractSOV, item: ContractSOVItem, index: number, isLocked: boolean) => {
+    const isEditing = editingItem?.sovId === sov.id && editingItem?.itemId === item.id;
+    const isEditingPct = editingPercent?.sovId === sov.id && editingPercent?.itemId === item.id;
+    const isDragging = draggedItem?.id === item.id;
+    const isDragOver = dragOverIndex?.sovId === sov.id && dragOverIndex?.index === index;
+
+    return (
+      <div
+        key={item.id}
+        draggable={!isEditing && !isEditingPct && !isLocked}
+        onDragStart={(e) => !isLocked && handleDragStart(e, sov.id, item)}
+        onDragOver={(e) => !isLocked && handleDragOver(e, sov.id, index)}
+        onDragLeave={() => setDragOverIndex(null)}
+        onDrop={(e) => !isLocked && handleDrop(e, sov.id, index)}
+        onDragEnd={() => { setDraggedItem(null); setDragOverIndex(null); }}
+        className={`
+          group rounded-lg border bg-card overflow-hidden
+          ${isDragging ? 'opacity-50' : ''}
+          ${isDragOver ? 'border-primary border-2' : 'border-border'}
+          transition-colors
+        `}
+      >
+        <div className={`
+          flex items-center gap-2 p-3
+          ${!isEditing && !isEditingPct ? 'cursor-move hover:bg-muted/50' : ''}
+        `}>
+          <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+          <span className="text-sm text-muted-foreground w-8 flex-shrink-0">{index + 1}.</span>
+
+          {isEditing ? (
+            <div className="flex-1 flex items-center gap-2">
+              <Input
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleSaveEdit();
+                  if (e.key === 'Escape') setEditingItem(null);
+                }}
+                autoFocus
+                className="h-8"
+              />
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSaveEdit}>
+                <Check className="h-4 w-4 text-green-600" />
+              </Button>
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingItem(null)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="flex-1 min-w-0">
+                <span className="text-sm font-medium truncate block">{item.item_name}</span>
+              </div>
+
+              {item.source === 'user' && (
+                <Badge variant="outline" className="text-xs flex-shrink-0">Custom</Badge>
+              )}
+
+              {isEditingPct ? (
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max="100"
+                    value={editingPercentValue}
+                    onChange={(e) => setEditingPercentValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSavePercentEdit();
+                      if (e.key === 'Escape') setEditingPercent(null);
+                    }}
+                    autoFocus
+                    className="h-8 w-20"
+                  />
+                  <span className="text-sm">%</span>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSavePercentEdit}>
+                    <Check className="h-4 w-4 text-green-600" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingPercent(null)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-sm flex-shrink-0">
+                  <span className="text-muted-foreground w-16 text-right tabular-nums">
+                    {item.percent_of_contract?.toFixed(2)}%
+                  </span>
+                  <span className="font-medium w-24 text-right tabular-nums">
+                    {formatCurrency(item.value_amount || 0)}
+                  </span>
+                </div>
+              )}
+
+              {!isLocked && !isFC && (
+                <>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                    onClick={() => handleStartPercentEdit(sov.id, item)}
+                    title="Edit percentage"
+                  >
+                    <Pencil className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
+                    onClick={() => handleStartEdit(sov.id, item)}
+                    title="Edit name"
+                  >
+                    <Pencil className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+
+                  {(item.total_billed_amount || 0) === 0 ? (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="icon" variant="ghost" className="h-8 w-8">
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Line Item</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete "{item.item_name}"?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteItem(sov.id, item.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  ) : (
+                    <Button size="icon" variant="ghost" className="h-8 w-8 cursor-not-allowed opacity-50" disabled title="Has billing history">
+                      <Trash2 className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  )}
+                </>
+              )}
+            </>
+          )}
+        </div>
+
+        {(item.value_amount || 0) > 0 && !isEditing && (
+          <div className="px-3 pb-2">
+            <SOVProgressBar
+              scheduledValue={item.value_amount}
+              billedToDate={item.total_billed_amount || 0}
+              size="sm"
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderSOVCard = (sov: ContractSOV) => {
         const contract = getContractForSOV(sov);
         const items = sovItems[sov.id] || [];
