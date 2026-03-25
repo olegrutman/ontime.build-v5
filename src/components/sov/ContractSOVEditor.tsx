@@ -80,11 +80,17 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
   const toggleSov = (sovId: string) => {
     setExpandedSovs(prev => {
       const next = new Set(prev);
-      if (next.has(sovId)) {
-        next.delete(sovId);
-      } else {
-        next.add(sovId);
-      }
+      if (next.has(sovId)) next.delete(sovId);
+      else next.add(sovId);
+      return next;
+    });
+  };
+
+  const toggleFloor = (floorKey: string) => {
+    setExpandedFloors(prev => {
+      const next = new Set(prev);
+      if (next.has(floorKey)) next.delete(floorKey);
+      else next.add(floorKey);
       return next;
     });
   };
