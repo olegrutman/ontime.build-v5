@@ -15,9 +15,10 @@ interface Props {
   projectId: string;
   tcOrgId: string;
   fcOrgs: { id: string; name: string }[];
+  embedded?: boolean;
 }
 
-export function ScopeSplitCard({ projectId, tcOrgId, fcOrgs }: Props) {
+export function ScopeSplitCard({ projectId, tcOrgId, fcOrgs, embedded }: Props) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -125,6 +126,89 @@ export function ScopeSplitCard({ projectId, tcOrgId, fcOrgs }: Props) {
   };
 
   if (fcOrgs.length === 0) return null;
+
+  if (embedded) {
+    return (
+      <>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Scope Split</p>
+            <div className="flex items-center gap-2 mt-1">
+              <Badge variant="secondary">{activeItems.length} total items</Badge>
+              <span className="text-sm text-muted-foreground">
+                · {fcAssignedCount} assigned to {fcOrgs[0]?.name || 'Field Crew'}
+              </span>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleOpenDialog}>
+            <Layers className="h-3.5 w-3.5 mr-1" /> Split Scope
+          </Button>
+        </div>
+
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent className="max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+            <DialogHeader>
+              <DialogTitle>Split Scope</DialogTitle>
+            </DialogHeader>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Check items to assign to <strong>{fcOrgs[0]?.name || 'Field Crew'}</strong>. Unchecked items stay with your team.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (fcAssignments.size === activeItems.length) {
+                    setFcAssignments(new Set());
+                  } else {
+                    setFcAssignments(new Set(activeItems.map(i => i.id)));
+                  }
+                }}
+              >
+                {fcAssignments.size === activeItems.length ? 'Deselect All' : 'Select All'}
+              </Button>
+            </div>
+            <div className="flex-1 overflow-auto space-y-4 py-2">
+              {(() => {
+                const grouped = new Map<string, typeof activeItems>();
+                for (const item of activeItems) {
+                  const group = grouped.get(item.sectionLabel) || [];
+                  group.push(item);
+                  grouped.set(item.sectionLabel, group);
+                }
+                return Array.from(grouped.entries()).map(([section, sectionItems]) => (
+                  <div key={section}>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">{section}</p>
+                    <div className="space-y-1.5">
+                      {sectionItems.map(item => (
+                        <label key={item.id} className="flex items-center gap-2 py-1 px-2 rounded hover:bg-muted/50 cursor-pointer">
+                          <Checkbox
+                            checked={fcAssignments.has(item.id)}
+                            onCheckedChange={() => toggleItem(item.id)}
+                          />
+                          <span className="text-sm">{item.label}</span>
+                          {fcAssignments.has(item.id) && (
+                            <Badge className="ml-auto text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 border-0">FC</Badge>
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleSave} disabled={saving}>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Save className="h-4 w-4 mr-1" />}
+                Save Assignments
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
 
   return (
     <>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ClipboardList, CheckCircle2, AlertCircle, Pencil, ChevronRight } from 'lucide-react';
+import { ClipboardList, CheckCircle2, AlertCircle, Pencil, ChevronRight, Sparkles, Loader2, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -8,11 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useProjectProfile, useProjectTypes } from '@/hooks/useProjectProfile';
 import { useScopeSections, useScopeItems, useScopeSelections, filterSections, filterItems } from '@/hooks/useScopeWizard';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 import { DownstreamContractsCard } from './DownstreamContractsCard';
-import { ScopeSplitCard } from './ScopeSplitCard';
 
 interface Props {
   projectId: string;
@@ -20,7 +20,10 @@ interface Props {
 
 export function ScopeDetailsTab({ projectId }: Props) {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const qc = useQueryClient();
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  const [generatingDesc, setGeneratingDesc] = useState(false);
   const { userOrgRoles } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProjectProfile(projectId);
   const { data: projectTypes } = useProjectTypes();
@@ -32,14 +35,14 @@ export function ScopeDetailsTab({ projectId }: Props) {
   const currentUserOrgType = userOrgRoles.length > 0 ? userOrgRoles[0].organization?.type : null;
   const isTCOrg = currentUserOrgType === 'TC';
 
-  // Fetch project creator org
+  // Fetch full project data
   const { data: projectInfo } = useQuery({
-    queryKey: ['project_creator_org', projectId],
+    queryKey: ['project_full_info', projectId],
     enabled: !!projectId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('projects')
-        .select('organization_id')
+        .select('organization_id, address, city, state, zip, description')
         .eq('id', projectId)
         .single();
       if (error) throw error;
@@ -48,6 +51,41 @@ export function ScopeDetailsTab({ projectId }: Props) {
   });
 
   const isFromCreatorOrg = projectInfo?.organization_id === currentUserOrgId;
+
+  // Format address
+  const formatAddress = () => {
+    if (!projectInfo) return null;
+    const parts: string[] = [];
+    const addr = projectInfo.address as any;
+    if (addr && typeof addr === 'object') {
+      if (addr.street) parts.push(addr.street);
+      if (addr.line2) parts.push(addr.line2);
+    }
+    const cityState: string[] = [];
+    if (projectInfo.city) cityState.push(projectInfo.city);
+    if (projectInfo.state) cityState.push(projectInfo.state);
+    if (cityState.length) parts.push(cityState.join(', '));
+    if (projectInfo.zip) parts[parts.length - 1] = (parts[parts.length - 1] || '') + ' ' + projectInfo.zip;
+    return parts.length > 0 ? parts.join(', ') : null;
+  };
+
+  // Generate AI description
+  const handleGenerateDescription = async () => {
+    setGeneratingDesc(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-project-description', {
+        body: { project_id: projectId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      qc.invalidateQueries({ queryKey: ['project_full_info', projectId] });
+      toast({ title: '✓ Description generated' });
+    } catch (err: any) {
+      toast({ title: 'Error generating description', description: err.message, variant: 'destructive' });
+    } finally {
+      setGeneratingDesc(false);
+    }
+  };
 
   // Fetch FC orgs on the project (for scope split)
   const { data: fcTeamOrgs = [] } = useQuery({
@@ -70,12 +108,13 @@ export function ScopeDetailsTab({ projectId }: Props) {
     },
   });
 
+  // Fetch contracts with org names
   const { data: contracts } = useQuery({
     queryKey: ['project_contracts_summary', projectId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('project_contracts')
-        .select('id, contract_sum, retainage_percent, from_role, to_role, trade, from_org_id, to_org_id')
+        .select('id, contract_sum, retainage_percent, from_role, to_role, trade, from_org_id, to_org_id, from_org:organizations!project_contracts_from_org_id_fkey(id, name), to_org:organizations!project_contracts_to_org_id_fkey(id, name)')
         .eq('project_id', projectId);
       if (error) throw error;
       return data;
@@ -85,11 +124,11 @@ export function ScopeDetailsTab({ projectId }: Props) {
   // Filter contracts to only those where user's org is a party
   const myContracts = contracts?.filter(c =>
     c.from_org_id === currentUserOrgId || c.to_org_id === currentUserOrgId
-  );
+  ) || [];
 
-  const primaryContract = myContracts?.find(c =>
-    c.trade !== 'Work Order' &&
-    c.trade !== 'Work Order Labor'
+  // Exclude work order contracts
+  const displayContracts = myContracts.filter(c =>
+    c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
   );
 
   const isComplete = profile?.is_complete === true;
@@ -131,7 +170,7 @@ export function ScopeDetailsTab({ projectId }: Props) {
     );
   }
 
-  // State B — setup complete — compute summary data
+  // State B — setup complete
   const visibleSections = sections && profile ? filterSections(sections, profile as any) : [];
   const onSelections = selections?.filter(s => s.is_on) || [];
   const sectionCounts: { slug: string; label: string; count: number }[] = [];
@@ -146,8 +185,7 @@ export function ScopeDetailsTab({ projectId }: Props) {
     }
   }
 
-  const totalContractValue = Number(primaryContract?.contract_sum) || 0;
-  const retainagePercent = Number(primaryContract?.retainage_percent) || 0;
+  const address = formatAddress();
 
   const featureFlags = [
     { key: 'has_garage', label: 'Garage' },
@@ -183,6 +221,34 @@ export function ScopeDetailsTab({ projectId }: Props) {
               <span className="text-sm text-muted-foreground">· {profile.number_of_buildings} buildings</span>
             )}
           </div>
+
+          {/* Address */}
+          {address && (
+            <div className="flex items-start gap-2">
+              <MapPin className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+              <p className="text-sm text-muted-foreground">{address}</p>
+            </div>
+          )}
+
+          {/* AI Description */}
+          {projectInfo?.description ? (
+            <p className="text-sm text-muted-foreground leading-relaxed">{projectInfo.description}</p>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleGenerateDescription}
+              disabled={generatingDesc}
+              className="gap-1.5"
+            >
+              {generatingDesc ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5" />
+              )}
+              {generatingDesc ? 'Generating...' : 'Generate Description'}
+            </Button>
+          )}
 
           <div className="flex flex-wrap gap-1.5">
             {((profile.foundation_types as string[]) || []).map(f => (
@@ -261,45 +327,62 @@ export function ScopeDetailsTab({ projectId }: Props) {
         </Dialog>
       </Card>
 
-      {/* Contract Summary Card */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <CardTitle className="text-base font-semibold">Contract Summary</CardTitle>
-          {isFromCreatorOrg && (
-            <Button variant="ghost" size="sm" onClick={() => navigate(`/project/${projectId}/contracts`)}>
-              <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
-            </Button>
-          )}
-        </CardHeader>
-        <CardContent>
-          {primaryContract ? (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Total Contract Value</span>
-                <span className="font-semibold">${totalContractValue.toLocaleString()}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Retainage</span>
-                <span className="font-semibold">{retainagePercent.toFixed(1)}%</span>
-              </div>
-            </div>
-          ) : (
+      {/* Contract Cards — one per contract with company names */}
+      {displayContracts.length > 0 ? (
+        displayContracts.map(contract => {
+          const isFromOrg = contract.from_org_id === currentUserOrgId;
+          const counterpartyName = isFromOrg
+            ? (contract.to_org as any)?.name || 'Unknown'
+            : (contract.from_org as any)?.name || 'Unknown';
+          const counterpartyRole = isFromOrg ? contract.to_role : contract.from_role;
+          const contractValue = Number(contract.contract_sum) || 0;
+          const retainage = Number(contract.retainage_percent) || 0;
+
+          return (
+            <Card key={contract.id}>
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-base font-semibold">{counterpartyName}</CardTitle>
+                  <Badge variant="outline" className="text-xs">{counterpartyRole}</Badge>
+                </div>
+                {isFromCreatorOrg && (
+                  <Button variant="ghost" size="sm" onClick={() => navigate(`/project/${projectId}/contracts`)}>
+                    <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Contract Value</span>
+                    <span className="font-semibold">${contractValue.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Retainage</span>
+                    <span className="font-semibold">{retainage.toFixed(1)}%</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })
+      ) : (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold">Contract Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="flex items-center gap-2 text-sm text-amber-600">
               <AlertCircle className="h-4 w-4" />
               <span>No contracts configured yet</span>
             </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* TC-only: Downstream FC contracts */}
-      {isTCOrg && currentUserOrgId && (
-        <DownstreamContractsCard projectId={projectId} tcOrgId={currentUserOrgId} />
+          </CardContent>
+        </Card>
       )}
 
-      {/* TC-only: Scope split between TC and FC */}
+      {/* TC-only: Downstream FC contracts + Scope Split */}
       {isTCOrg && currentUserOrgId && (
-        <ScopeSplitCard
+        <DownstreamContractsCard
           projectId={projectId}
           tcOrgId={currentUserOrgId}
           fcOrgs={fcTeamOrgs}
