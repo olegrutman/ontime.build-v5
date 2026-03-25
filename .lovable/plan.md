@@ -1,29 +1,51 @@
 
 
-# Fix Edit Button & Remove Redundant Info
+# Analysis: Scope & Details Page Issues
 
-## Problems
-1. **Edit button on contract cards does nothing** — navigates to `/project/${projectId}/contracts` which has no route (gets caught by `/project/:id/:section` → renders ProjectHome with no matching tab)
-2. **Redundant contract info** — FC contracts show up both as individual contract cards AND inside the "Contracts & Scope" card from `DownstreamContractsCard`
-3. **"Contracts & Scope" card** duplicates contract values already shown in the per-contract cards above
+## Critical Bug Found
 
-## Changes
+### 1. Route ordering — Edit button still broken
+**File: `src/App.tsx` (lines 174-177)**
 
-### 1. Add missing route for contracts page
-**File: `src/App.tsx`**
-- Add route: `/project/:id/contracts` → `ProjectContractsPage` (already imported but never routed)
-- Place it before the catch-all `/project/:id/:section` route
+The `/project/:id/contracts` route is placed AFTER the catch-all `/project/:id/:section`. React Router matches top-to-bottom, so navigating to `/project/xxx/contracts` hits the `:section` wildcard first and renders `ProjectHome` instead of `ProjectContractsPage`. Same issue affects `details-wizard`, `scope-wizard`, `change-orders/:coId`, and `edit` — all are after the catch-all.
 
-### 2. Remove redundant contract display in DownstreamContractsCard
-**File: `src/components/project/DownstreamContractsCard.tsx`**
-- Remove the "Contract Values" input section (FC contract values are already displayed in the per-contract cards and editable via the contracts page)
-- Keep only the Scope Split section since that's unique functionality
-- Rename title to just "Scope Assignments" since it no longer manages contracts
+```text
+Current order (broken):
+  /project/:id           → ProjectHome
+  /project/:id/:section  → ProjectHome  ← catches everything!
+  /project/:id/contracts → ProjectContractsPage  ← never reached
+  /project/:id/details-wizard → ...  ← never reached
+  /project/:id/scope-wizard   → ...  ← never reached
+```
 
-### 3. Make contract cards editable inline (alternative to navigating away)
-**File: `src/components/project/ScopeDetailsTab.tsx`**
-- The Edit button on contract cards will now correctly navigate to `/project/${projectId}/contracts` which renders the full contracts editor page
+**Fix**: Move ALL specific `/project/:id/*` routes BEFORE the catch-all `/project/:id/:section` route.
+
+```text
+Fixed order:
+  /project/:id                         → ProjectHome
+  /project/:id/edit                    → EditProject
+  /project/:id/contracts               → ProjectContractsPage
+  /project/:id/change-orders/:coId     → CODetailPage
+  /project/:id/details-wizard          → ProjectDetailsWizard
+  /project/:id/scope-wizard            → ProjectScopeWizard
+  /project/:id/:section                → ProjectHome  ← catch-all LAST
+```
+
+## Other Findings (all OK)
+
+| Area | Status | Notes |
+|------|--------|-------|
+| Hooks (useScopeWizard, useProjectProfile, useProjectTypes) | OK | Queries are correct, `enabled` guards present |
+| Contract query with org joins | OK | Uses correct FK names for join |
+| Team name fallback (`teamOrgNames`) | OK | Falls back to `invited_org_name` |
+| Edge function (`generate-project-description`) | OK | LOVABLE_API_KEY check, CORS headers, error handling present |
+| `description` column on `projects` | OK | Exists in DB schema |
+| Address formatting | OK | Handles JSONB `address` field + `city`/`state`/`zip` |
+| `DownstreamContractsCard` | OK | Clean pass-through to `ScopeSplitCard` |
+| `ScopeSplitCard` scope assignments | OK | Delete-then-insert pattern, correct queries |
+| FC org filtering | OK | Filters by `role === 'Field Crew'` from team data |
 
 ## Summary
-Add the missing `/project/:id/contracts` route so Edit actually works. Remove duplicated FC contract values from the Contracts & Scope card, keeping only the unique Scope Split feature.
+
+One fix needed: reorder routes in `src/App.tsx` so specific paths come before the `:section` wildcard. This is why the Edit button on contract cards does nothing — it navigates to the right URL but the wrong component renders.
 
