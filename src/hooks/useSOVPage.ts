@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { SOVLine, SOVVersion, ScopeCoverage, SOVPrerequisites } from '@/types/sov';
 
-export function useSOVPage(projectId: string, contractId?: string | null) {
+export function useSOVPage(projectId: string, contractId?: string | null, userOrgId?: string | null) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [generating, setGenerating] = useState(false);
