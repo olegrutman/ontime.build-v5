@@ -1,22 +1,29 @@
 
 
-# Fix: Use Company Names & Remove "Downstream" Label
+# Fix Edit Button & Remove Redundant Info
 
-## Problems (from screenshot)
-1. Contract cards show **"Unknown"** instead of company names — the org join returns null when org hasn't accepted invite yet (only `invited_org_name` exists in `project_team`)
-2. Card title says **"Downstream Contracts & Scope"** — user wants no "downstream" terminology
+## Problems
+1. **Edit button on contract cards does nothing** — navigates to `/project/${projectId}/contracts` which has no route (gets caught by `/project/:id/:section` → renders ProjectHome with no matching tab)
+2. **Redundant contract info** — FC contracts show up both as individual contract cards AND inside the "Contracts & Scope" card from `DownstreamContractsCard`
+3. **"Contracts & Scope" card** duplicates contract values already shown in the per-contract cards above
 
 ## Changes
 
-### 1. `src/components/project/ScopeDetailsTab.tsx`
-- Fix "Unknown" fallback: when `from_org`/`to_org` name is null, look up the counterparty's `invited_org_name` from `project_team` data (already fetched as `fcTeamOrgs`)
-- Also fetch the project's own org name to use as fallback for the current user's side
-- Query `project_team` for all team members to get `invited_org_name` as fallback for any contract party
+### 1. Add missing route for contracts page
+**File: `src/App.tsx`**
+- Add route: `/project/:id/contracts` → `ProjectContractsPage` (already imported but never routed)
+- Place it before the catch-all `/project/:id/:section` route
 
-### 2. `src/components/project/DownstreamContractsCard.tsx`
-- Rename title from `"Downstream Contracts & Scope"` → `"Contracts & Scope"` (or use the FC company name if only one FC)
-- Remove the `DollarSign` icon prefix, keep it clean
+### 2. Remove redundant contract display in DownstreamContractsCard
+**File: `src/components/project/DownstreamContractsCard.tsx`**
+- Remove the "Contract Values" input section (FC contract values are already displayed in the per-contract cards and editable via the contracts page)
+- Keep only the Scope Split section since that's unique functionality
+- Rename title to just "Scope Assignments" since it no longer manages contracts
 
-### Technical detail
-The `Unknown` issue happens because `organizations` table only has rows for orgs that completed signup. Invited-but-not-yet-joined orgs only exist as `invited_org_name` in `project_team`. Fix: join or cross-reference `project_team.invited_org_name` for any org_id that returns null from the organizations join.
+### 3. Make contract cards editable inline (alternative to navigating away)
+**File: `src/components/project/ScopeDetailsTab.tsx`**
+- The Edit button on contract cards will now correctly navigate to `/project/${projectId}/contracts` which renders the full contracts editor page
+
+## Summary
+Add the missing `/project/:id/contracts` route so Edit actually works. Remove duplicated FC contract values from the Contracts & Scope card, keeping only the unique Scope Split feature.
 
