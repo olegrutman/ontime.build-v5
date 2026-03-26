@@ -1,40 +1,24 @@
 
 
-# Add Company Addresses to Invoice Export
+# Conditionally Show Retainage in Invoice Export
 
 ## What
-Include the sender (From) and receiver (To) company addresses in the exported invoice HTML, pulled from the `organizations.address` jsonb field.
-
-## Current State
-- The invoice download edge function already fetches `from_org(name)` and `to_org(name)` via the contract join
-- The `organizations` table has an `address` jsonb column with structure `{street, city, state, zip}`
-- The "From" and "To" info boxes currently show only the company name
+- Hide the "Retainage Withheld" row in the totals section when the contract has no retainage (`retainage_percent` is 0 or null)
+- The "Previously Billed" row already exists and displays correctly — no change needed there
 
 ## Change
 
 ### `supabase/functions/invoice-download/index.ts`
 
-1. **Expand the contract select query** to include address fields from both orgs:
-   ```
-   from_org:organizations!...(name, address, phone)
-   to_org:organizations!...(name, address, phone)
-   ```
+1. **Determine if retainage applies**: Check `invoice.contract?.retainage_percent > 0` (already fetched in the query)
 
-2. **Also handle PO-linked invoices** (no contract) — fetch the PO's buyer/supplier org addresses similarly.
-
-3. **Update the From/To info boxes** in the HTML template to render address lines below the company name:
-   ```html
-   <div class="info-box">
-     <h3>From</h3>
-     <p><span class="value">IMIS, LLC</span></p>
-     <p>123 Main St</p>
-     <p>Denver, CO 80202</p>
-     <p>(303) 555-1234</p>
-   </div>
+2. **Conditionally render the retainage row** (~line 406-409): Wrap the retainage totals row in a conditional so it only appears when retainage is active:
+   ```
+   ${hasRetainage ? `<div class="totals-row retainage">...</div>` : ''}
    ```
 
-4. **Add a helper function** `formatOrgAddress(org)` that builds the address lines from the jsonb, handling missing fields gracefully.
+3. **Also conditionally hide the retainage column in the line items table** if retainage doesn't apply — currently no retainage column exists in the table so this is already fine.
 
 ### Files Changed
-- `supabase/functions/invoice-download/index.ts` — expand org select, render addresses
+- `supabase/functions/invoice-download/index.ts` — conditional retainage row in totals
 
