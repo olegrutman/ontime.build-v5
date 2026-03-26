@@ -1,47 +1,40 @@
 
 
-# Wire Up AI-Powered Floor-Based SOV Generation
+# Add Company Addresses to Invoice Export
 
-## Problem
-The SOV page only shows the old "Create SOVs from Template" button which uses static templates. The new `generate-sov` edge function (AI-powered, floor-based) is built but not connected to the UI.
+## What
+Include the sender (From) and receiver (To) company addresses in the exported invoice HTML, pulled from the `organizations.address` jsonb field.
 
-## Plan
+## Current State
+- The invoice download edge function already fetches `from_org(name)` and `to_org(name)` via the contract join
+- The `organizations` table has an `address` jsonb column with structure `{street, city, state, zip}`
+- The "From" and "To" info boxes currently show only the company name
 
-### 1. Replace "Create SOVs from Template" with "Generate SOV" per contract
+## Change
 
-In `ContractSOVEditor.tsx`, replace the empty-state UI:
+### `supabase/functions/invoice-download/index.ts`
 
-- **Primary action**: "Generate SOV" button that calls the `generate-sov` edge function for each contract individually
-- Add a loading/generating state with a spinner
-- Keep "Upload Your SOV" as secondary option
-- After generation completes, call `refresh()` to reload data
+1. **Expand the contract select query** to include address fields from both orgs:
+   ```
+   from_org:organizations!...(name, address, phone)
+   to_org:organizations!...(name, address, phone)
+   ```
 
-### 2. Add `generateSOV` function to `useContractSOV.ts`
+2. **Also handle PO-linked invoices** (no contract) — fetch the PO's buyer/supplier org addresses similarly.
 
-Add a new function that:
-- Takes a `contractId`
-- Calls `supabase.functions.invoke('generate-sov', { body: { project_id, contract_id } })` (or fetch with auth token)
-- Handles errors (rate limit, payment required, etc.)
-- Calls `fetchData()` on success
-- Shows toast on success/failure
+3. **Update the From/To info boxes** in the HTML template to render address lines below the company name:
+   ```html
+   <div class="info-box">
+     <h3>From</h3>
+     <p><span class="value">IMIS, LLC</span></p>
+     <p>123 Main St</p>
+     <p>Denver, CO 80202</p>
+     <p>(303) 555-1234</p>
+   </div>
+   ```
 
-### 3. Update the empty-state UI
-
-Replace the current confirmation dialog approach with:
-```
-[Sparkles icon] Generate SOV (AI-powered)
-  — calls generate-sov edge function for each contract
-— or —
-[Upload icon] Upload Your SOV
-```
-
-The generate button iterates over `contracts` and calls the edge function for each one sequentially, showing progress.
-
-### 4. Add "Regenerate" option to existing SOV cards
-
-In the SOV card header (when SOV already exists and is not locked), add a `RefreshCw` icon button to regenerate using the edge function, similar to the description regenerate pattern.
+4. **Add a helper function** `formatOrgAddress(org)` that builds the address lines from the jsonb, handling missing fields gracefully.
 
 ### Files Changed
-- `src/hooks/useContractSOV.ts` — add `generateSOV` function
-- `src/components/sov/ContractSOVEditor.tsx` — replace template button with AI generate, add regenerate to existing SOVs
+- `supabase/functions/invoice-download/index.ts` — expand org select, render addresses
 
