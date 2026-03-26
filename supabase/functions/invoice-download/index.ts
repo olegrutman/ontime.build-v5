@@ -25,6 +25,19 @@ function formatDate(dateStr: string): string {
   });
 }
 
+function formatOrgAddress(org: any): string {
+  if (!org) return '';
+  const lines: string[] = [];
+  const addr = org.address;
+  if (addr) {
+    if (addr.street) lines.push(`<p>${addr.street}</p>`);
+    const cityStateZip = [addr.city, addr.state].filter(Boolean).join(', ');
+    if (cityStateZip || addr.zip) lines.push(`<p>${[cityStateZip, addr.zip].filter(Boolean).join(' ')}</p>`);
+  }
+  if (org.phone) lines.push(`<p>${org.phone}</p>`);
+  return lines.join('\n');
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -69,8 +82,8 @@ const handler = async (req: Request): Promise<Response> => {
           to_role,
           contract_sum,
           retainage_percent,
-          from_org:organizations!project_contracts_from_org_id_fkey(name),
-          to_org:organizations!project_contracts_to_org_id_fkey(name)
+      from_org:organizations!project_contracts_from_org_id_fkey(name, address, phone),
+      to_org:organizations!project_contracts_to_org_id_fkey(name, address, phone)
         )
       `)
       .eq("id", invoiceId)
@@ -139,8 +152,12 @@ const handler = async (req: Request): Promise<Response> => {
     // Build project and party info
     const projectName = invoice.project?.name || 'Unknown Project';
     const projectLocation = [invoice.project?.city, invoice.project?.state].filter(Boolean).join(', ');
-    const fromParty = invoice.contract?.from_org?.name || invoice.contract?.from_role || 'N/A';
-    const toParty = invoice.contract?.to_org?.name || invoice.contract?.to_role || 'N/A';
+    const fromOrg = invoice.contract?.from_org;
+    const toOrg = invoice.contract?.to_org;
+    const fromParty = fromOrg?.name || invoice.contract?.from_role || 'N/A';
+    const toParty = toOrg?.name || invoice.contract?.to_role || 'N/A';
+    const fromAddressHtml = formatOrgAddress(fromOrg);
+    const toAddressHtml = formatOrgAddress(toOrg);
 
     const htmlContent = `
 <!DOCTYPE html>
@@ -345,10 +362,12 @@ const handler = async (req: Request): Promise<Response> => {
     <div class="info-box">
       <h3>From</h3>
       <p><span class="value">${fromParty}</span></p>
+      ${fromAddressHtml}
     </div>
     <div class="info-box">
       <h3>To</h3>
       <p><span class="value">${toParty}</span></p>
+      ${toAddressHtml}
     </div>
   </div>
 
