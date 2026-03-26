@@ -403,10 +403,10 @@ const handler = async (req: Request): Promise<Response> => {
         <span class="label">Current Period Subtotal</span>
         <span class="value">${formatCurrency(invoice.subtotal)}</span>
       </div>
-      <div class="totals-row retainage">
+      ${(invoice.contract?.retainage_percent ?? 0) > 0 ? `<div class="totals-row retainage">
         <span class="label">Retainage Withheld</span>
         <span class="value">-${formatCurrency(invoice.retainage_amount)}</span>
-      </div>
+      </div>` : ''}
       <div class="totals-row highlight">
         <span class="label">Total Due This Period</span>
         <span class="value">${formatCurrency(invoice.total_amount)}</span>
