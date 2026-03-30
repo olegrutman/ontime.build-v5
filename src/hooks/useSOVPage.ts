@@ -389,6 +389,8 @@ export function useSOVPage(projectId: string, contractId?: string | null, userOr
     generating,
     generateSOV,
     updateLinePct,
+    updateLineAmount,
+    updateLineName,
     toggleLineLock,
     deleteLine,
     addLine,

@@ -352,7 +352,29 @@ function SOVContractSection({
                                     )}
                                   </td>
                                   <td className="px-3 py-2 text-right font-mono hidden sm:table-cell">
-                                    ${(item.value_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    {canEdit && editingAmountId === item.id ? (
+                                      <Input
+                                        type="number" step="0.01"
+                                        className="w-28 h-7 text-right text-xs ml-auto"
+                                        value={editingAmount}
+                                        onChange={e => setEditingAmount(e.target.value)}
+                                        onBlur={() => handleAmountSave(item.id)}
+                                        onKeyDown={e => e.key === 'Enter' && handleAmountSave(item.id)}
+                                        autoFocus
+                                      />
+                                    ) : (
+                                      <span
+                                        className={cn("cursor-default", canEdit && !item.is_locked && "cursor-pointer hover:text-primary")}
+                                        onClick={() => {
+                                          if (canEdit && !item.is_locked) {
+                                            setEditingAmountId(item.id);
+                                            setEditingAmount((item.value_amount || 0).toFixed(2));
+                                          }
+                                        }}
+                                      >
+                                        ${(item.value_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      </span>
+                                    )}
                                   </td>
                                   <td className="px-3 py-2 text-right text-muted-foreground font-mono hidden lg:table-cell">
                                     ${retainageAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
