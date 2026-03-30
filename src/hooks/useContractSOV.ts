@@ -808,7 +808,7 @@ export function useContractSOV(projectId: string | undefined) {
     }
   }, [projectId, contracts, sovs, currentOrgId, generateItemsFromTemplate, fetchData]);
 
-  // Update item percent (and recalculate value)
+  // Update item percent with auto-redistribution across unlocked lines
   const updateItemPercent = useCallback(async (
     sovId: string,
     itemId: string,
@@ -819,29 +819,78 @@ export function useContractSOV(projectId: string | undefined) {
     
     const contract = contracts.find(c => c.id === sov.contract_id);
     if (!contract) return;
-    
-    const newValue = Math.round((contract.contract_sum * newPercent / 100) * 100) / 100;
-    
+
+    const items = sovItems[sovId] || [];
+    const idx = items.findIndex(i => i.id === itemId);
+    if (idx === -1) return;
+
+    const oldPct = items[idx].percent_of_contract || 0;
+    const delta = newPercent - oldPct;
+    if (Math.abs(delta) < 0.001) return;
+
+    const contractValue = contract.contract_sum;
+    const retainagePct = contract.retainage_percent || 0;
+
+    // Build updates array starting with the edited line
+    const updates: { id: string; pct: number }[] = [{ id: itemId, pct: newPercent }];
+
+    // Get other unlocked lines
+    const unlocked = items.filter((i, j) => j !== idx && !(i as any).is_locked);
+    const unlockTotal = unlocked.reduce((s, i) => s + (i.percent_of_contract || 0), 0);
+
+    // First pass: proportionally redistribute delta
+    let clampedExcess = 0;
+    const rawAdjusted: { id: string; pct: number }[] = [];
+    for (const u of unlocked) {
+      const share = unlockTotal > 0 ? (u.percent_of_contract || 0) / unlockTotal : 1 / unlocked.length;
+      const adjusted = (u.percent_of_contract || 0) - delta * share;
+      if (adjusted < 0) {
+        clampedExcess += Math.abs(adjusted);
+        rawAdjusted.push({ id: u.id, pct: 0 });
+      } else {
+        rawAdjusted.push({ id: u.id, pct: adjusted });
+      }
+    }
+
+    // Second pass: redistribute clamped excess across remaining positive lines
+    if (clampedExcess > 0) {
+      const positiveTotal = rawAdjusted.reduce((s, u) => s + u.pct, 0);
+      for (const u of rawAdjusted) {
+        if (u.pct > 0 && positiveTotal > 0) {
+          u.pct = Math.max(0, u.pct - clampedExcess * (u.pct / positiveTotal));
+        }
+      }
+    }
+    updates.push(...rawAdjusted);
+
+    // Normalize: force last entry to absorb rounding remainder
+    const locked = items.filter((i, j) => j !== idx && (i as any).is_locked);
+    const lockedTotal = locked.reduce((s, i) => s + (i.percent_of_contract || 0), 0);
+    const runningTotal = lockedTotal + updates.slice(0, -1).reduce((s, u) => s + u.pct, 0);
+    if (updates.length > 0) {
+      updates[updates.length - 1].pct = Math.round((100 - runningTotal) * 100) / 100;
+    }
+
     setSaving(true);
     try {
-      const { error } = await supabase
-        .from('project_sov_items')
-        .update({
-          percent_of_contract: newPercent,
-          value_amount: newValue
-        })
-        .eq('id', itemId);
+      const { error } = await supabase.rpc('update_sov_line_percentages', {
+        p_updates: updates,
+        p_contract_value: contractValue,
+        p_retainage_pct: retainagePct,
+      });
       
       if (error) throw error;
       
-      // Update local state
+      // Update local state for all affected items
+      const updateMap = new Map(updates.map(u => [u.id, u.pct]));
       setSovItems(prev => ({
         ...prev,
-        [sovId]: prev[sovId]?.map(item =>
-          item.id === itemId
-            ? { ...item, percent_of_contract: newPercent, value_amount: newValue }
-            : item
-        ) || []
+        [sovId]: prev[sovId]?.map(item => {
+          const newPct = updateMap.get(item.id);
+          if (newPct == null) return item;
+          const newVal = Math.round((contractValue * newPct / 100) * 100) / 100;
+          return { ...item, percent_of_contract: newPct, value_amount: newVal };
+        }) || []
       }));
     } catch (error: any) {
       toast({
@@ -852,7 +901,7 @@ export function useContractSOV(projectId: string | undefined) {
     } finally {
       setSaving(false);
     }
-  }, [sovs, contracts]);
+  }, [sovs, contracts, sovItems]);
 
   // Update item by dollar amount (converts to % and delegates to updateItemPercent)
   const updateItemAmount = useCallback(async (
