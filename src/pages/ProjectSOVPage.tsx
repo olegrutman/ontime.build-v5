@@ -46,6 +46,7 @@ function SOVContractSection({
   const {
     prereqs, prereqsLoading, currentSOV, sovLoading, items, itemsLoading,
     scopeCoverage, versions, generating, generateSOV, updateLinePct,
+    updateLineAmount, updateLineName,
     toggleLineLock, deleteLine, addLine, resetLine, lockSOV,
     totalPct, contractMismatch, coveredCount, totalSections,
   } = useSOVPage(projectId, contractId, userOrgId);
@@ -61,6 +62,10 @@ function SOVContractSection({
   const [newItemSection, setNewItemSection] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingPct, setEditingPct] = useState('');
+  const [editingAmountId, setEditingAmountId] = useState<string | null>(null);
+  const [editingAmount, setEditingAmount] = useState('');
+  const [editingNameId, setEditingNameId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
   const [showVersions, setShowVersions] = useState(false);
 
   const handleAddLine = async () => {
@@ -77,6 +82,19 @@ function SOVContractSection({
     if (isNaN(val) || val < 0) return;
     await updateLinePct(lineId, val);
     setEditingId(null);
+  };
+
+  const handleAmountSave = async (lineId: string) => {
+    const val = parseFloat(editingAmount);
+    if (isNaN(val) || val < 0) return;
+    await updateLineAmount(lineId, val);
+    setEditingAmountId(null);
+  };
+
+  const handleNameSave = async (lineId: string) => {
+    if (!editingName.trim()) return;
+    await updateLineName(lineId, editingName);
+    setEditingNameId(null);
   };
 
   const fromName = contract.from_org?.name || contract.from_role;
@@ -282,7 +300,31 @@ function SOVContractSection({
                                   className={cn("border-b hover:bg-muted/30 transition-colors", isEdited && "border-l-2 border-l-amber-400")}
                                 >
                                   <td className="px-3 py-2 text-muted-foreground">{idx + 1}</td>
-                                  <td className="px-3 py-2 font-medium">{item.item_name}</td>
+                                  <td className="px-3 py-2 font-medium">
+                                    {canEdit && editingNameId === item.id ? (
+                                      <Input
+                                        type="text"
+                                        className="h-7 text-xs"
+                                        value={editingName}
+                                        onChange={e => setEditingName(e.target.value)}
+                                        onBlur={() => handleNameSave(item.id)}
+                                        onKeyDown={e => e.key === 'Enter' && handleNameSave(item.id)}
+                                        autoFocus
+                                      />
+                                    ) : (
+                                      <span
+                                        className={cn(canEdit && "cursor-pointer hover:text-primary")}
+                                        onClick={() => {
+                                          if (canEdit) {
+                                            setEditingNameId(item.id);
+                                            setEditingName(item.item_name);
+                                          }
+                                        }}
+                                      >
+                                        {item.item_name}
+                                      </span>
+                                    )}
+                                  </td>
                                   <td className="px-3 py-2 text-muted-foreground hidden md:table-cell">{item.item_group}</td>
                                   <td className="px-3 py-2 text-right">
                                     {canEdit && editingId === item.id ? (
@@ -310,7 +352,29 @@ function SOVContractSection({
                                     )}
                                   </td>
                                   <td className="px-3 py-2 text-right font-mono hidden sm:table-cell">
-                                    ${(item.value_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    {canEdit && editingAmountId === item.id ? (
+                                      <Input
+                                        type="number" step="0.01"
+                                        className="w-28 h-7 text-right text-xs ml-auto"
+                                        value={editingAmount}
+                                        onChange={e => setEditingAmount(e.target.value)}
+                                        onBlur={() => handleAmountSave(item.id)}
+                                        onKeyDown={e => e.key === 'Enter' && handleAmountSave(item.id)}
+                                        autoFocus
+                                      />
+                                    ) : (
+                                      <span
+                                        className={cn("cursor-default", canEdit && !item.is_locked && "cursor-pointer hover:text-primary")}
+                                        onClick={() => {
+                                          if (canEdit && !item.is_locked) {
+                                            setEditingAmountId(item.id);
+                                            setEditingAmount((item.value_amount || 0).toFixed(2));
+                                          }
+                                        }}
+                                      >
+                                        ${(item.value_amount || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                      </span>
+                                    )}
                                   </td>
                                   <td className="px-3 py-2 text-right text-muted-foreground font-mono hidden lg:table-cell">
                                     ${retainageAmt.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
