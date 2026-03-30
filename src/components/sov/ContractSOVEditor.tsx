@@ -329,7 +329,11 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
           ) : (
             <>
               <div className="flex-1 min-w-0">
-                <span className="text-sm font-medium truncate block">{item.item_name}</span>
+                <span
+                  className={`text-sm font-medium truncate block ${!isLocked && !isFC ? 'cursor-pointer hover:text-primary' : ''}`}
+                  onClick={() => !isLocked && !isFC && handleStartEdit(sov.id, item)}
+                  title={!isLocked && !isFC ? 'Click to edit name' : undefined}
+                >{item.item_name}</span>
               </div>
 
               {item.source === 'user' && (
