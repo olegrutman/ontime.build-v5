@@ -881,17 +881,30 @@ export function useContractSOV(projectId: string | undefined) {
       
       if (error) throw error;
       
-      // Update local state for all affected items
+      // Update local state with remainder-absorption (mirrors RPC logic)
       const updateMap = new Map(updates.map(u => [u.id, u.pct]));
-      setSovItems(prev => ({
-        ...prev,
-        [sovId]: prev[sovId]?.map(item => {
-          const newPct = updateMap.get(item.id);
-          if (newPct == null) return item;
-          const newVal = Math.round((contractValue * newPct / 100) * 100) / 100;
-          return { ...item, percent_of_contract: newPct, value_amount: newVal };
-        }) || []
-      }));
+      setSovItems(prev => {
+        const items = prev[sovId] || [];
+        let runningTotal = 0;
+        const orderedUpdates = updates.map(u => u.id);
+        const lastUpdateId = orderedUpdates[orderedUpdates.length - 1];
+        
+        return {
+          ...prev,
+          [sovId]: items.map(item => {
+            const newPct = updateMap.get(item.id);
+            if (newPct == null) return item;
+            let newVal: number;
+            if (item.id === lastUpdateId) {
+              newVal = Math.round((contractValue - runningTotal) * 100) / 100;
+            } else {
+              newVal = Math.round((contractValue * newPct / 100) * 100) / 100;
+              runningTotal += newVal;
+            }
+            return { ...item, percent_of_contract: newPct, value_amount: newVal };
+          })
+        };
+      });
     } catch (error: any) {
       toast({
         title: 'Error',

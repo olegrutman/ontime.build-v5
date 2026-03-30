@@ -327,9 +327,16 @@ IMPORTANT: Generate SOV lines grouped by floor. Each line must have a floor_labe
     const floorOrder = Object.fromEntries(floorLabels.map((f, i) => [f, i]));
     lines.sort((a, b) => (floorOrder[a.floor_label] ?? 99) - (floorOrder[b.floor_label] ?? 99));
 
+    let runningTotal = 0;
     const sovItems = lines.map((line, idx) => {
-      const value = contractValue * line.percent / 100;
-      const retainage = value * retainagePct / 100;
+      let value: number;
+      if (idx === lines.length - 1) {
+        value = Math.round((contractValue - runningTotal) * 100) / 100;
+      } else {
+        value = Math.round((contractValue * line.percent / 100) * 100) / 100;
+        runningTotal += value;
+      }
+      const retainage = Math.round((value * retainagePct / 100) * 100) / 100;
       return {
         sov_id: newSov.id,
         project_id,
