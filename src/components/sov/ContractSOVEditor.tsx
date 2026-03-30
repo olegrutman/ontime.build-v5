@@ -360,12 +360,42 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
+              ) : isEditingAmt ? (
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <span className="text-muted-foreground w-16 text-right tabular-nums text-sm">
+                    {item.percent_of_contract?.toFixed(2)}%
+                  </span>
+                  <span className="text-sm">$</span>
+                  <Input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={editingAmountValue}
+                    onChange={(e) => setEditingAmountValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveAmountEdit();
+                      if (e.key === 'Escape') setEditingAmount(null);
+                    }}
+                    autoFocus
+                    className="h-8 w-28"
+                  />
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSaveAmountEdit}>
+                    <Check className="h-4 w-4 text-green-600" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingAmount(null)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               ) : (
                 <div className="flex items-center gap-2 text-sm flex-shrink-0">
                   <span className="text-muted-foreground w-16 text-right tabular-nums">
                     {item.percent_of_contract?.toFixed(2)}%
                   </span>
-                  <span className="font-medium w-24 text-right tabular-nums">
+                  <span
+                    className={`font-medium w-24 text-right tabular-nums ${!isLocked && !isFC ? 'cursor-pointer hover:text-primary' : ''}`}
+                    onClick={() => !isLocked && !isFC && handleStartAmountEdit(sov.id, item)}
+                    title={!isLocked && !isFC ? 'Click to edit amount' : undefined}
+                  >
                     {formatCurrency(item.value_amount || 0)}
                   </span>
                 </div>
