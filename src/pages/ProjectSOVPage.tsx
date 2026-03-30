@@ -62,6 +62,10 @@ function SOVContractSection({
   const [newItemSection, setNewItemSection] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingPct, setEditingPct] = useState('');
+  const [editingAmountId, setEditingAmountId] = useState<string | null>(null);
+  const [editingAmount, setEditingAmount] = useState('');
+  const [editingNameId, setEditingNameId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
   const [showVersions, setShowVersions] = useState(false);
 
   const handleAddLine = async () => {
