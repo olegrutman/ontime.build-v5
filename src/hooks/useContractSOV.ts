@@ -854,6 +854,22 @@ export function useContractSOV(projectId: string | undefined) {
     }
   }, [sovs, contracts]);
 
+  // Update item by dollar amount (converts to % and delegates to updateItemPercent)
+  const updateItemAmount = useCallback(async (
+    sovId: string,
+    itemId: string,
+    newAmount: number
+  ) => {
+    const sov = sovs.find(s => s.id === sovId);
+    if (!sov) return;
+    
+    const contract = contracts.find(c => c.id === sov.contract_id);
+    if (!contract || contract.contract_sum <= 0) return;
+    
+    const newPct = Math.round((newAmount / contract.contract_sum) * 10000) / 100;
+    await updateItemPercent(sovId, itemId, newPct);
+  }, [sovs, contracts, updateItemPercent]);
+
   // Update item name
   const updateItemName = useCallback(async (
     sovId: string,
@@ -1171,6 +1187,7 @@ export function useContractSOV(projectId: string | undefined) {
     generateSOV,
     generateAllSOVs,
     updateItemPercent,
+    updateItemAmount,
     updateItemName,
     addItem,
     deleteItem,

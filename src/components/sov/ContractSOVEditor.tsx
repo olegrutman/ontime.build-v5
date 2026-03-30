@@ -49,6 +49,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
     generateSOV,
     generateAllSOVs,
     updateItemPercent,
+    updateItemAmount,
     updateItemName,
     addItem,
     deleteItem,
@@ -67,6 +68,8 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
   const [editingName, setEditingName] = useState('');
   const [editingPercent, setEditingPercent] = useState<{ sovId: string; itemId: string } | null>(null);
   const [editingPercentValue, setEditingPercentValue] = useState('');
+  const [editingAmount, setEditingAmount] = useState<{ sovId: string; itemId: string } | null>(null);
+  const [editingAmountValue, setEditingAmountValue] = useState('');
   const [draggedItem, setDraggedItem] = useState<ContractSOVItem | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<{ sovId: string; index: number } | null>(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -130,6 +133,20 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
     }
     setEditingPercent(null);
     setEditingPercentValue('');
+  };
+
+  const handleStartAmountEdit = (sovId: string, item: ContractSOVItem) => {
+    setEditingAmount({ sovId, itemId: item.id });
+    setEditingAmountValue(String(item.value_amount || 0));
+  };
+
+  const handleSaveAmountEdit = async () => {
+    if (editingAmount) {
+      const amount = parseFloat(editingAmountValue) || 0;
+      await updateItemAmount(editingAmount.sovId, editingAmount.itemId, amount);
+    }
+    setEditingAmount(null);
+    setEditingAmountValue('');
   };
 
   const handleDragStart = (e: React.DragEvent, sovId: string, item: ContractSOVItem) => {
@@ -263,6 +280,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
   const renderSOVItem = (sov: ContractSOV, item: ContractSOVItem, index: number, isLocked: boolean) => {
     const isEditing = editingItem?.sovId === sov.id && editingItem?.itemId === item.id;
     const isEditingPct = editingPercent?.sovId === sov.id && editingPercent?.itemId === item.id;
+    const isEditingAmt = editingAmount?.sovId === sov.id && editingAmount?.itemId === item.id;
     const isDragging = draggedItem?.id === item.id;
     const isDragOver = dragOverIndex?.sovId === sov.id && dragOverIndex?.index === index;
 
@@ -342,12 +360,42 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
+              ) : isEditingAmt ? (
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <span className="text-muted-foreground w-16 text-right tabular-nums text-sm">
+                    {item.percent_of_contract?.toFixed(2)}%
+                  </span>
+                  <span className="text-sm">$</span>
+                  <Input
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={editingAmountValue}
+                    onChange={(e) => setEditingAmountValue(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveAmountEdit();
+                      if (e.key === 'Escape') setEditingAmount(null);
+                    }}
+                    autoFocus
+                    className="h-8 w-28"
+                  />
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleSaveAmountEdit}>
+                    <Check className="h-4 w-4 text-green-600" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingAmount(null)}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               ) : (
                 <div className="flex items-center gap-2 text-sm flex-shrink-0">
                   <span className="text-muted-foreground w-16 text-right tabular-nums">
                     {item.percent_of_contract?.toFixed(2)}%
                   </span>
-                  <span className="font-medium w-24 text-right tabular-nums">
+                  <span
+                    className={`font-medium w-24 text-right tabular-nums ${!isLocked && !isFC ? 'cursor-pointer hover:text-primary' : ''}`}
+                    onClick={() => !isLocked && !isFC && handleStartAmountEdit(sov.id, item)}
+                    title={!isLocked && !isFC ? 'Click to edit amount' : undefined}
+                  >
                     {formatCurrency(item.value_amount || 0)}
                   </span>
                 </div>
