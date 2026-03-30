@@ -1,43 +1,40 @@
 
 
-# Allow Editing SOV Amount (+ Auto-Redistribute Percentages)
+# Fix: Add Dollar Amount Inline Editing to ContractSOVEditor
 
-## What
-Currently users can only edit the **%** column. This adds the ability to also edit the **Value ($)** column and the **Line Item name**. When a user edits the dollar amount, the percentage auto-recalculates based on contract value, and all other unlocked lines redistribute to keep the total at 100%.
+## Problem Found
+The dollar amount editing was implemented in `src/pages/ProjectSOVPage.tsx` (legacy SOV page), but the **actual component in use** is `src/components/sov/ContractSOVEditor.tsx`. This component renders on the project SOV tab via `ProjectHome.tsx`. It currently has name and percentage inline editing but **no dollar amount editing**.
 
-## Changes
+## Test Results
+- **Name editing**: Works — clicking the pencil icon opens an inline input field
+- **Percentage editing**: Works — clicking the pencil icon opens an inline input with confirm/cancel
+- **Dollar amount editing**: Missing — the `$1,960` value is a static, non-clickable span
 
-### 1. `src/hooks/useSOVPage.ts` — Add `updateLineAmount` function
+## Plan
 
-New callback that:
-- Takes `lineId` and `newAmount` (dollar value)
-- Converts to percentage: `newPct = (newAmount / contractValue) * 100`
-- Delegates to existing `updateLinePct(lineId, newPct)` — reuses all redistribution logic
+### 1. `src/hooks/useContractSOV.ts` — Add `updateItemAmount`
 
-Also add `updateLineName` callback:
-- Takes `lineId` and `newName`
-- Updates `item_name` on `project_sov_items` via Supabase
-- Invalidates query cache
+Add a new function that:
+- Takes `sovId`, `itemId`, `newAmount` (dollar value)
+- Looks up the contract value for that SOV
+- Converts amount to percentage: `(newAmount / contractValue) * 100`
+- Delegates to existing `updateItemPercent(sovId, itemId, newPct)` — reuses all redistribution logic
 
-Return both new functions from the hook.
+### 2. `src/components/sov/ContractSOVEditor.tsx` — Make dollar amount clickable
 
-### 2. `src/pages/ProjectSOVPage.tsx` — Editable Value and Name columns
+**Add state** (~line 69):
+- `editingAmount: { sovId: string; itemId: string } | null`
+- `editingAmountValue: string`
 
-**Value column (lines ~312-314):**
-- Add same click-to-edit pattern as % column
-- New state: `editingAmountId`, `editingAmount`
-- On save, call `updateLineAmount(lineId, parsedAmount)`
-- Show inline `<Input type="number">` when editing
+**Add handlers**:
+- `handleStartAmountEdit(sovId, item)` — sets state with current `value_amount`
+- `handleSaveAmountEdit()` — parses value, calls `updateItemAmount`, clears state
 
-**Name column (line ~285):**
-- Add click-to-edit for the item name
-- New state: `editingNameId`, `editingName`
-- On save, call `updateLineName(lineId, newName)`
-
-**% column (existing):**
-- Already works — no changes needed. The existing redistribution logic in `updateLinePct` already auto-adjusts all other unlocked lines to sum to 100%.
+**Modify the dollar amount span** (lines 350-352):
+- When `editingAmount` matches, show an inline `<Input type="number">` with confirm/cancel buttons (same pattern as percent editing)
+- When not editing, make the span clickable (add `onClick` + `cursor-pointer` styling) so clicking the dollar value directly opens the editor — no extra pencil button needed
 
 ### Files Changed
-- `src/hooks/useSOVPage.ts` — add `updateLineAmount`, `updateLineName`
-- `src/pages/ProjectSOVPage.tsx` — editable Value and Name cells
+- `src/hooks/useContractSOV.ts` — add `updateItemAmount`
+- `src/components/sov/ContractSOVEditor.tsx` — dollar amount inline editing
 
