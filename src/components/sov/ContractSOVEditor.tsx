@@ -411,25 +411,6 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
 
               {!isLocked && !isFC && (
                 <>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                    onClick={() => handleStartPercentEdit(sov.id, item)}
-                    title="Edit percentage"
-                  >
-                    <Pencil className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                    onClick={() => handleStartEdit(sov.id, item)}
-                    title="Edit name"
-                  >
-                    <Pencil className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-
                   {(item.total_billed_amount || 0) === 0 ? (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
