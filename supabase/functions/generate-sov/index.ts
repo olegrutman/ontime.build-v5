@@ -300,8 +300,20 @@ IMPORTANT: Generate SOV lines grouped by floor. Each line must have a floor_labe
     }
 
     // Determine version
-    const { data: existingSov } = await admin.from("project_sov").select("id, version").eq("project_id", project_id).eq("contract_id", contract.id).order("version", { ascending: false }).limit(1).maybeSingle();
-    const newVersion = existingSov ? existingSov.version + 1 : 1;
+    // Delete old SOV versions for this contract
+    const { data: oldSovs } = await admin
+      .from("project_sov")
+      .select("id")
+      .eq("project_id", project_id)
+      .eq("contract_id", contract.id);
+
+    if (oldSovs && oldSovs.length > 0) {
+      const oldIds = oldSovs.map((s: any) => s.id);
+      await admin.from("project_sov_items").delete().in("sov_id", oldIds);
+      await admin.from("project_sov").delete().in("id", oldIds);
+    }
+
+    const newVersion = 1;
 
     // Create new SOV record
     const { data: newSov, error: sovErr } = await admin.from("project_sov").insert({
@@ -310,7 +322,7 @@ IMPORTANT: Generate SOV lines grouped by floor. Each line must have a floor_labe
       project_profile_id: profile.id,
       sov_name: `SOV v${newVersion}`,
       version: newVersion,
-      previous_version_id: existingSov?.id || null,
+      previous_version_id: null,
       scope_snapshot: sectionMap,
     }).select("id").single();
 
