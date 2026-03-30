@@ -835,7 +835,7 @@ export function useContractSOV(projectId: string | undefined) {
     const updates: { id: string; pct: number }[] = [{ id: itemId, pct: newPercent }];
 
     // Get other unlocked lines
-    const unlocked = items.filter((i, j) => j !== idx && !i.is_locked);
+    const unlocked = items.filter((i, j) => j !== idx && !(i as any).is_locked);
     const unlockTotal = unlocked.reduce((s, i) => s + (i.percent_of_contract || 0), 0);
 
     // First pass: proportionally redistribute delta
