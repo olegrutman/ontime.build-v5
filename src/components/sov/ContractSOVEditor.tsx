@@ -392,7 +392,11 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-sm flex-shrink-0">
-                  <span className="text-muted-foreground w-16 text-right tabular-nums">
+                  <span
+                    className={`text-muted-foreground w-16 text-right tabular-nums ${!isLocked && !isFC ? 'cursor-pointer hover:text-primary' : ''}`}
+                    onClick={() => !isLocked && !isFC && handleStartPercentEdit(sov.id, item)}
+                    title={!isLocked && !isFC ? 'Click to edit percentage' : undefined}
+                  >
                     {item.percent_of_contract?.toFixed(2)}%
                   </span>
                   <span
