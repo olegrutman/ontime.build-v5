@@ -1,24 +1,43 @@
 
 
-# Conditionally Show Retainage in Invoice Export
+# Allow Editing SOV Amount (+ Auto-Redistribute Percentages)
 
 ## What
-- Hide the "Retainage Withheld" row in the totals section when the contract has no retainage (`retainage_percent` is 0 or null)
-- The "Previously Billed" row already exists and displays correctly — no change needed there
+Currently users can only edit the **%** column. This adds the ability to also edit the **Value ($)** column and the **Line Item name**. When a user edits the dollar amount, the percentage auto-recalculates based on contract value, and all other unlocked lines redistribute to keep the total at 100%.
 
-## Change
+## Changes
 
-### `supabase/functions/invoice-download/index.ts`
+### 1. `src/hooks/useSOVPage.ts` — Add `updateLineAmount` function
 
-1. **Determine if retainage applies**: Check `invoice.contract?.retainage_percent > 0` (already fetched in the query)
+New callback that:
+- Takes `lineId` and `newAmount` (dollar value)
+- Converts to percentage: `newPct = (newAmount / contractValue) * 100`
+- Delegates to existing `updateLinePct(lineId, newPct)` — reuses all redistribution logic
 
-2. **Conditionally render the retainage row** (~line 406-409): Wrap the retainage totals row in a conditional so it only appears when retainage is active:
-   ```
-   ${hasRetainage ? `<div class="totals-row retainage">...</div>` : ''}
-   ```
+Also add `updateLineName` callback:
+- Takes `lineId` and `newName`
+- Updates `item_name` on `project_sov_items` via Supabase
+- Invalidates query cache
 
-3. **Also conditionally hide the retainage column in the line items table** if retainage doesn't apply — currently no retainage column exists in the table so this is already fine.
+Return both new functions from the hook.
+
+### 2. `src/pages/ProjectSOVPage.tsx` — Editable Value and Name columns
+
+**Value column (lines ~312-314):**
+- Add same click-to-edit pattern as % column
+- New state: `editingAmountId`, `editingAmount`
+- On save, call `updateLineAmount(lineId, parsedAmount)`
+- Show inline `<Input type="number">` when editing
+
+**Name column (line ~285):**
+- Add click-to-edit for the item name
+- New state: `editingNameId`, `editingName`
+- On save, call `updateLineName(lineId, newName)`
+
+**% column (existing):**
+- Already works — no changes needed. The existing redistribution logic in `updateLinePct` already auto-adjusts all other unlocked lines to sum to 100%.
 
 ### Files Changed
-- `supabase/functions/invoice-download/index.ts` — conditional retainage row in totals
+- `src/hooks/useSOVPage.ts` — add `updateLineAmount`, `updateLineName`
+- `src/pages/ProjectSOVPage.tsx` — editable Value and Name cells
 
