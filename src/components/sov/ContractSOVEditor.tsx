@@ -135,6 +135,20 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
     setEditingPercentValue('');
   };
 
+  const handleStartAmountEdit = (sovId: string, item: ContractSOVItem) => {
+    setEditingAmount({ sovId, itemId: item.id });
+    setEditingAmountValue(String(item.value_amount || 0));
+  };
+
+  const handleSaveAmountEdit = async () => {
+    if (editingAmount) {
+      const amount = parseFloat(editingAmountValue) || 0;
+      await updateItemAmount(editingAmount.sovId, editingAmount.itemId, amount);
+    }
+    setEditingAmount(null);
+    setEditingAmountValue('');
+  };
+
   const handleDragStart = (e: React.DragEvent, sovId: string, item: ContractSOVItem) => {
     setDraggedItem(item);
     e.dataTransfer.effectAllowed = 'move';
