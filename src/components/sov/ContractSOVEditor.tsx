@@ -329,7 +329,11 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
           ) : (
             <>
               <div className="flex-1 min-w-0">
-                <span className="text-sm font-medium truncate block">{item.item_name}</span>
+                <span
+                  className={`text-sm font-medium truncate block ${!isLocked && !isFC ? 'cursor-pointer hover:text-primary' : ''}`}
+                  onClick={() => !isLocked && !isFC && handleStartEdit(sov.id, item)}
+                  title={!isLocked && !isFC ? 'Click to edit name' : undefined}
+                >{item.item_name}</span>
               </div>
 
               {item.source === 'user' && (
@@ -388,7 +392,11 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                 </div>
               ) : (
                 <div className="flex items-center gap-2 text-sm flex-shrink-0">
-                  <span className="text-muted-foreground w-16 text-right tabular-nums">
+                  <span
+                    className={`text-muted-foreground w-16 text-right tabular-nums ${!isLocked && !isFC ? 'cursor-pointer hover:text-primary' : ''}`}
+                    onClick={() => !isLocked && !isFC && handleStartPercentEdit(sov.id, item)}
+                    title={!isLocked && !isFC ? 'Click to edit percentage' : undefined}
+                  >
                     {item.percent_of_contract?.toFixed(2)}%
                   </span>
                   <span
@@ -403,25 +411,6 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
 
               {!isLocked && !isFC && (
                 <>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                    onClick={() => handleStartPercentEdit(sov.id, item)}
-                    title="Edit percentage"
-                  >
-                    <Pencil className="h-3 w-3 text-muted-foreground" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                    onClick={() => handleStartEdit(sov.id, item)}
-                    title="Edit name"
-                  >
-                    <Pencil className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-
                   {(item.total_billed_amount || 0) === 0 ? (
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
