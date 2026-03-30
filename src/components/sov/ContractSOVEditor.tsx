@@ -49,6 +49,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
     generateSOV,
     generateAllSOVs,
     updateItemPercent,
+    updateItemAmount,
     updateItemName,
     addItem,
     deleteItem,
