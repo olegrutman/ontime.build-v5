@@ -280,6 +280,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
   const renderSOVItem = (sov: ContractSOV, item: ContractSOVItem, index: number, isLocked: boolean) => {
     const isEditing = editingItem?.sovId === sov.id && editingItem?.itemId === item.id;
     const isEditingPct = editingPercent?.sovId === sov.id && editingPercent?.itemId === item.id;
+    const isEditingAmt = editingAmount?.sovId === sov.id && editingAmount?.itemId === item.id;
     const isDragging = draggedItem?.id === item.id;
     const isDragOver = dragOverIndex?.sovId === sov.id && dragOverIndex?.index === index;
 
