@@ -68,6 +68,8 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
   const [editingName, setEditingName] = useState('');
   const [editingPercent, setEditingPercent] = useState<{ sovId: string; itemId: string } | null>(null);
   const [editingPercentValue, setEditingPercentValue] = useState('');
+  const [editingAmount, setEditingAmount] = useState<{ sovId: string; itemId: string } | null>(null);
+  const [editingAmountValue, setEditingAmountValue] = useState('');
   const [draggedItem, setDraggedItem] = useState<ContractSOVItem | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<{ sovId: string; index: number } | null>(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
