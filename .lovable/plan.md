@@ -1,36 +1,20 @@
 
 
-# Delete Old SOV Versions on Regenerate
+# Make SOV % and Name Click-to-Edit (Like Dollar Amount)
 
 ## What
-When regenerating an SOV, the system currently keeps all previous versions visible (v1, v2, v3...), which confuses users. Instead, delete all old versions for that contract before creating the new one, so only the latest version is ever shown.
+Currently, to edit a line item's **percentage** or **name**, the user must click a small pencil icon that appears on hover. The **dollar amount** already supports click-to-edit directly on the text. This change makes percentage and name behave the same way — clicking them directly opens the inline editor.
 
-## Change
+## Changes
 
-### `supabase/functions/generate-sov/index.ts` (~line 302)
+### `src/components/sov/ContractSOVEditor.tsx`
 
-Before creating the new SOV record, delete all existing SOV records and their items for the same project+contract:
+1. **Name text (line ~332)** — Make the item name span clickable when SOV is unlocked. Clicking it calls `handleStartEdit(sov.id, item)` to open the inline name editor. Add `cursor-pointer hover:text-primary` styling (same as dollar amount).
 
-```typescript
-// Delete old SOV versions for this contract
-const { data: oldSovs } = await admin
-  .from("project_sov")
-  .select("id")
-  .eq("project_id", project_id)
-  .eq("contract_id", contract.id);
+2. **Percentage text (line ~391-393)** — Make the percentage span clickable when SOV is unlocked. Clicking it calls `handleStartPercentEdit(sov.id, item)` to open the inline percent editor. Add `cursor-pointer hover:text-primary` styling.
 
-if (oldSovs && oldSovs.length > 0) {
-  const oldIds = oldSovs.map(s => s.id);
-  await admin.from("project_sov_items").delete().in("sov_id", oldIds);
-  await admin.from("project_sov").delete().in("id", oldIds);
-}
-
-// Always version 1 now
-const newVersion = 1;
-```
-
-Also update the insert to set `previous_version_id: null` since there's no previous version anymore, and `sov_name: 'SOV v1'`.
+3. **Remove duplicate pencil buttons (lines ~406-423)** — The two separate pencil icon buttons for editing percent and name become redundant since clicking the values directly opens editors. Remove them to declutter the UI.
 
 ### Files Changed
-- `supabase/functions/generate-sov/index.ts` — delete old versions before creating new one
+- `src/components/sov/ContractSOVEditor.tsx` — click-to-edit on name and %, remove pencil buttons
 
