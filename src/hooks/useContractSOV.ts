@@ -1187,6 +1187,7 @@ export function useContractSOV(projectId: string | undefined) {
     generateSOV,
     generateAllSOVs,
     updateItemPercent,
+    updateItemAmount,
     updateItemName,
     addItem,
     deleteItem,
