@@ -46,6 +46,7 @@ function SOVContractSection({
   const {
     prereqs, prereqsLoading, currentSOV, sovLoading, items, itemsLoading,
     scopeCoverage, versions, generating, generateSOV, updateLinePct,
+    updateLineAmount, updateLineName,
     toggleLineLock, deleteLine, addLine, resetLine, lockSOV,
     totalPct, contractMismatch, coveredCount, totalSections,
   } = useSOVPage(projectId, contractId, userOrgId);
