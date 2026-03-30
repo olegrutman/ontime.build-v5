@@ -300,7 +300,31 @@ function SOVContractSection({
                                   className={cn("border-b hover:bg-muted/30 transition-colors", isEdited && "border-l-2 border-l-amber-400")}
                                 >
                                   <td className="px-3 py-2 text-muted-foreground">{idx + 1}</td>
-                                  <td className="px-3 py-2 font-medium">{item.item_name}</td>
+                                  <td className="px-3 py-2 font-medium">
+                                    {canEdit && editingNameId === item.id ? (
+                                      <Input
+                                        type="text"
+                                        className="h-7 text-xs"
+                                        value={editingName}
+                                        onChange={e => setEditingName(e.target.value)}
+                                        onBlur={() => handleNameSave(item.id)}
+                                        onKeyDown={e => e.key === 'Enter' && handleNameSave(item.id)}
+                                        autoFocus
+                                      />
+                                    ) : (
+                                      <span
+                                        className={cn(canEdit && "cursor-pointer hover:text-primary")}
+                                        onClick={() => {
+                                          if (canEdit) {
+                                            setEditingNameId(item.id);
+                                            setEditingName(item.item_name);
+                                          }
+                                        }}
+                                      >
+                                        {item.item_name}
+                                      </span>
+                                    )}
+                                  </td>
                                   <td className="px-3 py-2 text-muted-foreground hidden md:table-cell">{item.item_group}</td>
                                   <td className="px-3 py-2 text-right">
                                     {canEdit && editingId === item.id ? (
