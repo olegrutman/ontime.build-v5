@@ -1,40 +1,32 @@
 
 
-# Fix: Add Dollar Amount Inline Editing to ContractSOVEditor
+# Fix: Add Auto-Redistribution to ContractSOVEditor
 
-## Problem Found
-The dollar amount editing was implemented in `src/pages/ProjectSOVPage.tsx` (legacy SOV page), but the **actual component in use** is `src/components/sov/ContractSOVEditor.tsx`. This component renders on the project SOV tab via `ProjectHome.tsx`. It currently has name and percentage inline editing but **no dollar amount editing**.
+## Problem
+When editing a percentage or dollar amount in the active SOV editor (`ContractSOVEditor`), only the edited line is updated. **Other lines are not adjusted**, so the total drifts away from 100%. The redistribution logic exists in the legacy `useSOVPage.ts` hook but was never ported to `useContractSOV.ts`.
 
-## Test Results
-- **Name editing**: Works — clicking the pencil icon opens an inline input field
-- **Percentage editing**: Works — clicking the pencil icon opens an inline input with confirm/cancel
-- **Dollar amount editing**: Missing — the `$1,960` value is a static, non-clickable span
+## Root Cause
+`updateItemPercent` in `useContractSOV.ts` (line 812-855) only updates the single item — no redistribution pass runs.
 
-## Plan
+## Fix
 
-### 1. `src/hooks/useContractSOV.ts` — Add `updateItemAmount`
+### `src/hooks/useContractSOV.ts` — Add redistribution to `updateItemPercent`
 
-Add a new function that:
-- Takes `sovId`, `itemId`, `newAmount` (dollar value)
-- Looks up the contract value for that SOV
-- Converts amount to percentage: `(newAmount / contractValue) * 100`
-- Delegates to existing `updateItemPercent(sovId, itemId, newPct)` — reuses all redistribution logic
+After updating the edited line, redistribute the delta across all other unlocked items in the same SOV:
 
-### 2. `src/components/sov/ContractSOVEditor.tsx` — Make dollar amount clickable
+1. Calculate `delta = newPercent - oldPercent`
+2. Get all other unlocked items for that SOV from `sovItems[sovId]`
+3. Proportionally subtract `delta` from each unlocked item (weighted by its current %)
+4. Clamp negatives to 0, redistribute clamped excess to remaining positive lines
+5. Force last unlocked line to absorb rounding remainder so total = 100%
+6. Batch-update all adjusted items via the existing `update_sov_line_percentages` RPC (already used in `useSOVPage.ts`)
+7. Update local state for all affected items
 
-**Add state** (~line 69):
-- `editingAmount: { sovId: string; itemId: string } | null`
-- `editingAmountValue: string`
+This mirrors the proven logic from `useSOVPage.ts` `updateLinePct` (lines 141-180).
 
-**Add handlers**:
-- `handleStartAmountEdit(sovId, item)` — sets state with current `value_amount`
-- `handleSaveAmountEdit()` — parses value, calls `updateItemAmount`, clears state
-
-**Modify the dollar amount span** (lines 350-352):
-- When `editingAmount` matches, show an inline `<Input type="number">` with confirm/cancel buttons (same pattern as percent editing)
-- When not editing, make the span clickable (add `onClick` + `cursor-pointer` styling) so clicking the dollar value directly opens the editor — no extra pencil button needed
+### No UI changes needed
+The `ContractSOVEditor` already has inline editing for %, $, and name. Only the backend logic is broken.
 
 ### Files Changed
-- `src/hooks/useContractSOV.ts` — add `updateItemAmount`
-- `src/components/sov/ContractSOVEditor.tsx` — dollar amount inline editing
+- `src/hooks/useContractSOV.ts` — rewrite `updateItemPercent` to include redistribution
 
