@@ -84,6 +84,19 @@ function SOVContractSection({
     setEditingId(null);
   };
 
+  const handleAmountSave = async (lineId: string) => {
+    const val = parseFloat(editingAmount);
+    if (isNaN(val) || val < 0) return;
+    await updateLineAmount(lineId, val);
+    setEditingAmountId(null);
+  };
+
+  const handleNameSave = async (lineId: string) => {
+    if (!editingName.trim()) return;
+    await updateLineName(lineId, editingName);
+    setEditingNameId(null);
+  };
+
   const fromName = contract.from_org?.name || contract.from_role;
   const toName = contract.to_org?.name || contract.to_role;
   const contractLabel = `${fromName} → ${toName}`;
