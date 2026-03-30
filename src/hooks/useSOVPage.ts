@@ -329,6 +329,21 @@ export function useSOVPage(projectId: string, contractId?: string | null, userOr
     qc.invalidateQueries({ queryKey: ['sov-items', currentSOV.id] });
   }, [items, currentSOV, prereqs, projectId, qc]);
 
+  // Update a line's dollar amount (recalculates % and redistributes)
+  const updateLineAmount = useCallback(async (lineId: string, newAmount: number) => {
+    const contractValue = prereqs?.contractValue || 0;
+    if (contractValue <= 0) return;
+    const newPct = Math.round((newAmount / contractValue) * 10000) / 100;
+    await updateLinePct(lineId, newPct);
+  }, [prereqs, updateLinePct]);
+
+  // Update a line's name
+  const updateLineName = useCallback(async (lineId: string, newName: string) => {
+    if (!currentSOV || !newName.trim()) return;
+    await supabase.from('project_sov_items').update({ item_name: newName.trim() }).eq('id', lineId);
+    qc.invalidateQueries({ queryKey: ['sov-items', currentSOV.id] });
+  }, [currentSOV, qc]);
+
   // Reset a line to AI original
   const resetLine = useCallback(async (lineId: string) => {
     const line = items.find(i => i.id === lineId);
