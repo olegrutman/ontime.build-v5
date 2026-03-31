@@ -350,6 +350,8 @@ export default function ProjectHome() {
                       address={project.address ? `${project.address.street || ''}, ${project.address.city || ''}, ${project.address.state || ''} ${project.address.zip || ''}`.replace(/^,\s*|,\s*$/g, '').trim() : null}
                       financials={financials}
                       onNavigate={handleTabChange}
+                      onResponsibilityChange={setMaterialResponsibility}
+                      onTeamChanged={readiness.recalculate}
                     />
 
                     <div className="lg:hidden space-y-2.5">

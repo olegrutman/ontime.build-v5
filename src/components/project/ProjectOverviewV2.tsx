@@ -23,6 +23,8 @@ interface ProjectOverviewV2Props {
   address?: string | null;
   financials: ProjectFinancials;
   onNavigate: (tab: string) => void;
+  onResponsibilityChange?: (value: string | null) => void;
+  onTeamChanged?: () => void;
 }
 
 /* ─── Pill tabs ─── */
@@ -64,6 +66,8 @@ export function ProjectOverviewV2({
   address,
   financials,
   onNavigate,
+  onResponsibilityChange,
+  onTeamChanged,
 }: ProjectOverviewV2Props) {
   const [activePill, setActivePill] = useState<Pill>('budget');
   const [orderFilter, setOrderFilter] = useState<string>('all');
@@ -330,6 +334,8 @@ export function ProjectOverviewV2({
             projectId={projectId}
             isTCMaterialResponsible={isTCMaterialResponsible}
             isGCMaterialResponsible={isGCMaterialResponsible}
+            onResponsibilityChange={onResponsibilityChange}
+            onTeamChanged={onTeamChanged}
           />
         </div>
 
