@@ -3,7 +3,7 @@ export { ProjectTeamSection } from './ProjectTeamSection';
 export { ProjectScopeSection } from './ProjectScopeSection';
 export { ProjectContractsSection } from './ProjectContractsSection';
 export { ProjectActivitySection } from './ProjectActivitySection';
-export { ProjectFinancialsSectionNew } from './ProjectFinancialsSectionNew';
+
 
 export { PurchaseOrdersTab } from './PurchaseOrdersTab';
 export { MetricStrip } from './MetricStrip';
