@@ -12,8 +12,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { Button } from '@/components/ui/button';
-import { Building2, ClipboardList, FileText, DollarSign, ChevronRight, Check } from 'lucide-react';
+import { Building2, ClipboardList, FileText, DollarSign, Check } from 'lucide-react';
 import type { FramingBuildingType } from '@/types/framingScope';
 
 interface ProjectSetupFlowProps {
@@ -22,7 +21,7 @@ interface ProjectSetupFlowProps {
   projectType?: string;
 }
 
-const BUILDING_TYPE_MAP: Record<string, FramingBuildingType> = {
+const SLUG_TO_BUILDING_TYPE: Record<string, FramingBuildingType> = {
   townhome: 'TOWNHOMES',
   apartment: 'MULTI_FAMILY',
   hotel: 'HOTEL',
@@ -43,6 +42,27 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
   // Check completion states
   const { data: profile } = useProjectProfile(projectId);
   const buildingComplete = !!profile?.is_complete;
+
+  // Derive buildingType from saved profile's project_type_id
+  const { data: projectTypes = [] } = useQuery({
+    queryKey: ['project_types'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('project_types').select('*').order('name');
+      if (error) throw error;
+      return data as any[];
+    },
+  });
+
+  const buildingType: FramingBuildingType = useMemo(() => {
+    if (profile?.project_type_id) {
+      const pt = projectTypes.find((t: any) => t.id === profile.project_type_id);
+      if (pt?.slug && SLUG_TO_BUILDING_TYPE[pt.slug]) {
+        return SLUG_TO_BUILDING_TYPE[pt.slug];
+      }
+    }
+    // Fallback to prop
+    return SLUG_TO_BUILDING_TYPE[projectType || ''] || 'SFR';
+  }, [profile?.project_type_id, projectTypes, projectType]);
 
   const { data: framingScope } = useQuery({
     queryKey: ['framing-scope', projectId],
@@ -85,8 +105,6 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
     else if (buildingComplete) setCurrentPhase('scope');
     else setCurrentPhase('building');
   }, []);
-
-  const buildingType: FramingBuildingType = BUILDING_TYPE_MAP[projectType || ''] || 'SFR';
 
   const handleBuildingComplete = useCallback(() => {
     setCurrentPhase('scope');
@@ -153,7 +171,6 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
   const PHASE_ICONS = { building: Building2, scope: ClipboardList, contracts: FileText, sov: DollarSign };
   const PHASE_LABELS = { building: 'Building', scope: 'Scope', contracts: 'Contracts', sov: 'SOV' };
   const PHASE_ORDER: SetupPhase[] = ['building', 'scope', 'contracts', 'sov'];
-  const phaseIdx = PHASE_ORDER.indexOf(currentPhase);
 
   return (
     <div className="flex flex-col h-full min-h-[calc(100vh-200px)]">
