@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { useFramingScope } from '@/hooks/useFramingScope';
 import { SECTIONS, type FramingBuildingType, type FramingScopeAnswers } from '@/types/framingScope';
 import { MaterialBanner } from './controls/MaterialBanner';
 import { ScopeSummaryPanel } from './ScopeSummaryPanel';
 import { ScopeDocument } from './ScopeDocument';
+import { BuildingProfileSection } from './sections/BuildingProfileSection';
 import { MethodSection } from './sections/MethodSection';
 import { StructureSection } from './sections/StructureSection';
 import { SheathingSection } from './sections/SheathingSection';
@@ -18,7 +19,7 @@ import { DryinSection } from './sections/DryinSection';
 import { CleanupSection } from './sections/CleanupSection';
 import { DT } from '@/lib/design-tokens';
 import { Button } from '@/components/ui/button';
-import { Check, ChevronLeft, ChevronRight, ClipboardList, Loader2, FileText, Package } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, ClipboardList, Loader2, FileText, Package, Building2 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
@@ -29,6 +30,7 @@ interface Props {
   projectName?: string;
   embedded?: boolean;
   onComplete?: () => void;
+  onBuildingTypeChange?: (slug: string) => void;
 }
 
 /* ── Count included / excluded from answers ────────────────────────── */
@@ -38,30 +40,27 @@ function countScope(a: FramingScopeAnswers) {
     if (v === 'yes') inc++;
     else if (v === 'no') exc++;
   };
-  // structure
   check(a.structure.wood_stairs); check(a.structure.elevator_shaft);
   check(a.structure.enclosed_corridors); check(a.structure.balconies);
   check(a.structure.tuck_under_garages);
-  // sheathing
   check(a.sheathing.wall_sheathing_install || (a.sheathing.wall_sheathing_type ? 'yes' : null));
   check(a.sheathing.roof_sheathing); check(a.sheathing.roof_underlayment);
-  // exterior
   check(a.exterior.rough_fascia); check(a.exterior.finished_fascia); check(a.exterior.finished_soffit);
-  // siding
   check(a.siding.siding_in_scope);
-  // blocking
   check(a.blocking.backout);
-  // fire
   check(a.fire.fire_blocking); check(a.fire.demising_walls);
-  // hardware
   check(a.hardware.structural_connectors);
-  // cleanup
   check(a.cleanup.daily_cleanup);
   return { inc, exc };
 }
 
+// Section 0 = Building Profile, then 1-11 = existing scope sections
+// We use -1 internally for Section 0 (building profile) to avoid re-indexing
+const BUILDING_PROFILE_INDEX = -1;
+
 /* ── Nav group definitions ─────────────────────────────────────────── */
 const NAV_GROUPS = [
+  { label: 'BUILDING', sections: [BUILDING_PROFILE_INDEX] },
   { label: 'SETUP', sections: [0, 1] },
   { label: 'SCOPE', sections: [2, 3, 4, 5, 6, 7, 8, 9] },
   { label: 'SCOPE CLOSEOUT', sections: [10] },
@@ -75,7 +74,17 @@ const BUILDING_LABELS: Record<string, string> = {
   COMMERCIAL: 'Commercial',
 };
 
-export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectName, embedded = false, onComplete }: Props) {
+const SLUG_TO_BUILDING_TYPE: Record<string, FramingBuildingType> = {
+  townhome: 'TOWNHOMES',
+  apartment: 'MULTI_FAMILY',
+  hotel: 'HOTEL',
+  commercial: 'COMMERCIAL',
+  custom_home: 'SFR',
+  production_home: 'SFR',
+  mixed_use: 'COMMERCIAL',
+};
+
+export function FramingScopeWizard({ projectId, buildingType: propBuildingType = 'SFR', projectName, embedded = false, onComplete, onBuildingTypeChange }: Props) {
   const {
     answers, setAnswer, currentSection, goToSection,
     scopeComplete, markComplete, editScope,
@@ -85,10 +94,30 @@ export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectNam
   const [started, setStarted] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [showDocument, setShowDocument] = useState(false);
+  const [activeSectionIndex, setActiveSectionIndex] = useState(BUILDING_PROFILE_INDEX);
+  const [derivedBuildingType, setDerivedBuildingType] = useState<FramingBuildingType | null>(null);
   const isMobile = useIsMobile();
 
+  const buildingType = derivedBuildingType || propBuildingType;
   const matResp = answers.method.material_responsibility;
   const { inc, exc } = useMemo(() => countScope(answers), [answers]);
+
+  const handleBuildingTypeChange = useCallback((slug: string) => {
+    const bt = SLUG_TO_BUILDING_TYPE[slug] || 'SFR';
+    setDerivedBuildingType(bt);
+    onBuildingTypeChange?.(slug);
+  }, [onBuildingTypeChange]);
+
+  // Total section count: building profile (1) + scope sections (11) = 12
+  const totalSections = SECTIONS.length + 1;
+  const currentDisplayIndex = activeSectionIndex === BUILDING_PROFILE_INDEX ? 0 : activeSectionIndex + 1;
+  const isLast = activeSectionIndex === SECTIONS.length - 1;
+
+  const navigateTo = useCallback((idx: number) => {
+    setShowDocument(false);
+    setActiveSectionIndex(idx);
+    if (idx >= 0) goToSection(idx);
+  }, [goToSection]);
 
   // Loading
   if (isLoading || !hasLoaded) {
@@ -103,10 +132,7 @@ export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectNam
 
   // Completed scope — in embedded mode, notify parent
   if (scopeComplete && embedded) {
-    // Auto-call onComplete if provided
-    if (onComplete) {
-      onComplete();
-    }
+    if (onComplete) onComplete();
     return (
       <div className="max-w-3xl mx-auto p-6 w-full space-y-4">
         <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-md px-4 py-3 text-sm text-emerald-800">
@@ -152,18 +178,11 @@ export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectNam
             Framing Scope Setup
           </h2>
           <p className="text-sm text-muted-foreground mt-2 mb-6">
-            Define what is and isn't included in your rough framing subcontract.
-            This wizard generates a Division 06100 Scope of Work document.
+            Define your building profile and what is included in your rough framing subcontract.
           </p>
           <Button onClick={() => setStarted(true)} className="px-8">
             Start scope setup
           </Button>
-          <button
-            onClick={() => {/* skip for now */}}
-            className="text-xs text-muted-foreground underline mt-3 hover:text-foreground"
-          >
-            Skip for now
-          </button>
         </div>
       );
     }
@@ -172,6 +191,10 @@ export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectNam
   // Resumed — auto-start
   if (!started && hasExistingRecord) {
     setStarted(true);
+    // If profile already exists, start at section 0 (method) instead of building profile
+    if (activeSectionIndex === BUILDING_PROFILE_INDEX) {
+      setActiveSectionIndex(currentSection);
+    }
   }
 
   const sectionProps = { answers, setAnswer, buildingType, matResp };
@@ -180,7 +203,15 @@ export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectNam
     if (showDocument) {
       return <ScopeDocument answers={answers} matResp={matResp} projectName={projectName} buildingType={buildingType} inc={inc} exc={exc} />;
     }
-    switch (currentSection) {
+    if (activeSectionIndex === BUILDING_PROFILE_INDEX) {
+      return (
+        <BuildingProfileSection
+          projectId={projectId}
+          onBuildingTypeChange={handleBuildingTypeChange}
+        />
+      );
+    }
+    switch (activeSectionIndex) {
       case 0: return <MethodSection {...sectionProps} />;
       case 1: return <StructureSection {...sectionProps} />;
       case 2: return <SheathingSection {...sectionProps} />;
@@ -196,11 +227,9 @@ export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectNam
     }
   };
 
-  const isLast = currentSection === SECTIONS.length - 1;
-
   return (
     <div className={cn("flex flex-col h-full", !embedded && "min-h-[calc(100vh-200px)]")}>
-      {/* Header bar — hidden in embedded mode (parent provides context) */}
+      {/* Header bar */}
       {!embedded && <WizardHeader projectName={projectName} buildingType={buildingType} inc={inc} exc={exc} />}
 
       <div className="flex flex-1 overflow-hidden">
@@ -213,12 +242,37 @@ export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectNam
                   {group.label}
                 </p>
                 {group.sections.map((i) => {
+                  if (i === BUILDING_PROFILE_INDEX) {
+                    const isActive = !showDocument && activeSectionIndex === BUILDING_PROFILE_INDEX;
+                    return (
+                      <button
+                        key="building-profile"
+                        onClick={() => navigateTo(BUILDING_PROFILE_INDEX)}
+                        className={cn(
+                          'flex items-center gap-2 w-full text-left px-3 py-1.5 text-xs transition-all',
+                          isActive
+                            ? 'bg-primary/10 text-primary font-medium'
+                            : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
+                        )}
+                      >
+                        <div className={cn(
+                          'w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0',
+                          activeSectionIndex > BUILDING_PROFILE_INDEX && !isActive
+                            ? 'bg-emerald-500 text-white'
+                            : isActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                        )}>
+                          {activeSectionIndex > BUILDING_PROFILE_INDEX && !isActive ? <Check className="w-2.5 h-2.5" /> : <Building2 className="w-2.5 h-2.5" />}
+                        </div>
+                        <span className="truncate">Building Profile</span>
+                      </button>
+                    );
+                  }
                   const s = SECTIONS[i];
-                  const isActive = !showDocument && i === currentSection;
+                  const isActive = !showDocument && i === activeSectionIndex;
                   return (
                     <button
                       key={s.id}
-                      onClick={() => { setShowDocument(false); goToSection(i); }}
+                      onClick={() => navigateTo(i)}
                       className={cn(
                         'flex items-center gap-2 w-full text-left px-3 py-1.5 text-xs transition-all',
                         isActive
@@ -228,9 +282,9 @@ export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectNam
                     >
                       <div className={cn(
                         'w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold shrink-0',
-                        i < currentSection ? 'bg-emerald-500 text-white' : isActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
+                        i < activeSectionIndex ? 'bg-emerald-500 text-white' : isActive ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'
                       )}>
-                        {i < currentSection ? <Check className="w-2.5 h-2.5" /> : Number(s.id)}
+                        {i < activeSectionIndex ? <Check className="w-2.5 h-2.5" /> : Number(s.id)}
                       </div>
                       <span className="truncate">{s.label}</span>
                     </button>
@@ -262,24 +316,24 @@ export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectNam
           {isMobile && (
             <div className="px-4 py-2 border-b border-border flex items-center justify-between">
               <span className="text-xs text-muted-foreground">
-                {showDocument ? 'Scope Document' : `Section ${currentSection + 1} of ${SECTIONS.length}`}
+                {showDocument ? 'Scope Document' : `Section ${currentDisplayIndex + 1} of ${totalSections}`}
               </span>
               <button onClick={() => setSummaryOpen(true)} className="text-xs text-primary font-medium">Preview scope</button>
             </div>
           )}
 
           {/* Resume banner */}
-          {hasExistingRecord && !showDocument && (
+          {hasExistingRecord && !showDocument && activeSectionIndex >= 0 && (
             <div className="px-6 pt-3">
               <div className="bg-blue-500/10 border border-blue-500/20 rounded-md px-3 py-1.5 text-xs text-blue-800">
-                Scope in progress — {currentSection + 1} of {SECTIONS.length} sections
+                Scope in progress — section {currentDisplayIndex + 1} of {totalSections}
               </div>
             </div>
           )}
 
           <div className="max-w-[680px] mx-auto px-6 py-4">
-            {!showDocument && currentSection > 0 && (
-              <MaterialBanner matResp={matResp} onEdit={() => goToSection(0)} />
+            {!showDocument && activeSectionIndex > 0 && (
+              <MaterialBanner matResp={matResp} onEdit={() => navigateTo(0)} />
             )}
 
             {renderSection()}
@@ -290,20 +344,20 @@ export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectNam
                 <Button
                   variant="ghost"
                   size="sm"
-                  disabled={currentSection === 0}
-                  onClick={() => goToSection(currentSection - 1)}
+                  disabled={activeSectionIndex === BUILDING_PROFILE_INDEX}
+                  onClick={() => navigateTo(activeSectionIndex === 0 ? BUILDING_PROFILE_INDEX : activeSectionIndex - 1)}
                 >
                   <ChevronLeft className="w-4 h-4 mr-1" /> Back
                 </Button>
 
                 <div className="flex items-center gap-2">
                   {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
-                  {isLast ? (
+                  {isLast && activeSectionIndex === SECTIONS.length - 1 ? (
                     <Button size="sm" onClick={markComplete}>
                       Complete & Generate Document
                     </Button>
                   ) : (
-                    <Button size="sm" onClick={() => goToSection(currentSection + 1)}>
+                    <Button size="sm" onClick={() => navigateTo(activeSectionIndex === BUILDING_PROFILE_INDEX ? 0 : activeSectionIndex + 1)}>
                       Next <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
                   )}

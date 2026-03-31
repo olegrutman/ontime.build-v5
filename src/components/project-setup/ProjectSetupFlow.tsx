@@ -2,8 +2,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { DT } from '@/lib/design-tokens';
-import { SetupSidebar, type SetupPhase, type SetupProgress } from './SetupSidebar';
-import { PhaseBuilding } from './PhaseBuilding';
+import { ProjectInfoCard } from './ProjectInfoCard';
 import { PhaseContracts } from './PhaseContracts';
 import { PhaseSOV } from './PhaseSOV';
 import { FramingScopeWizard } from '@/components/framing-scope/FramingScopeWizard';
@@ -11,8 +10,8 @@ import { useProjectProfile } from '@/hooks/useProjectProfile';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { Building2, ClipboardList, FileText, DollarSign, Check } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Lock, Check, ClipboardList, FileText, DollarSign } from 'lucide-react';
 import type { FramingBuildingType } from '@/types/framingScope';
 
 interface ProjectSetupFlowProps {
@@ -34,35 +33,16 @@ const SLUG_TO_BUILDING_TYPE: Record<string, FramingBuildingType> = {
 export function ProjectSetupFlow({ projectId, projectName, projectType }: ProjectSetupFlowProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const isMobile = useIsMobile();
 
-  const [currentPhase, setCurrentPhase] = useState<SetupPhase>('building');
-  const [currentStep, setCurrentStep] = useState<string>('basics');
+  const [buildingTypeSlug, setBuildingTypeSlug] = useState<string>(projectType || '');
 
   // Check completion states
   const { data: profile } = useProjectProfile(projectId);
   const buildingComplete = !!profile?.is_complete;
 
-  // Derive buildingType from saved profile's project_type_id
-  const { data: projectTypes = [] } = useQuery({
-    queryKey: ['project_types'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('project_types').select('*').order('name');
-      if (error) throw error;
-      return data as any[];
-    },
-  });
-
   const buildingType: FramingBuildingType = useMemo(() => {
-    if (profile?.project_type_id) {
-      const pt = projectTypes.find((t: any) => t.id === profile.project_type_id);
-      if (pt?.slug && SLUG_TO_BUILDING_TYPE[pt.slug]) {
-        return SLUG_TO_BUILDING_TYPE[pt.slug];
-      }
-    }
-    // Fallback to prop
-    return SLUG_TO_BUILDING_TYPE[projectType || ''] || 'SFR';
-  }, [profile?.project_type_id, projectTypes, projectType]);
+    return SLUG_TO_BUILDING_TYPE[buildingTypeSlug] || 'SFR';
+  }, [buildingTypeSlug]);
 
   const { data: framingScope } = useQuery({
     queryKey: ['framing-scope', projectId],
@@ -91,31 +71,9 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
   });
   const contractsComplete = contracts.some(c => (c.contract_sum || 0) > 0);
 
-  const progress: SetupProgress = useMemo(() => ({
-    buildingComplete,
-    scopeComplete,
-    contractsComplete,
-    sovComplete: false,
-  }), [buildingComplete, scopeComplete, contractsComplete]);
-
-  // Auto-advance to furthest incomplete phase on mount
-  useEffect(() => {
-    if (contractsComplete) setCurrentPhase('sov');
-    else if (scopeComplete) setCurrentPhase('contracts');
-    else if (buildingComplete) setCurrentPhase('scope');
-    else setCurrentPhase('building');
-  }, []);
-
-  const handleBuildingComplete = useCallback(() => {
-    setCurrentPhase('scope');
-  }, []);
-
-  const handleScopeComplete = useCallback(() => {
-    setCurrentPhase('contracts');
-  }, []);
-
   const handleContractsComplete = useCallback(() => {
-    setCurrentPhase('sov');
+    // Scroll to SOV card
+    document.getElementById('sov-card')?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
   const handleSOVComplete = useCallback(async () => {
@@ -128,96 +86,115 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
     }
   }, [projectId, navigate, toast]);
 
-  const renderPhase = () => {
-    switch (currentPhase) {
-      case 'building':
-        return (
-          <PhaseBuilding
-            projectId={projectId}
-            onComplete={handleBuildingComplete}
-            onStepChange={setCurrentStep}
-          />
-        );
-      case 'scope':
-        return (
-          <FramingScopeWizard
-            projectId={projectId}
-            buildingType={buildingType}
-            projectName={projectName}
-            embedded
-            onComplete={handleScopeComplete}
-          />
-        );
-      case 'contracts':
-        return (
-          <PhaseContracts
-            projectId={projectId}
-            onComplete={handleContractsComplete}
-            onStepChange={setCurrentStep}
-          />
-        );
-      case 'sov':
-        return (
-          <PhaseSOV
-            projectId={projectId}
-            onComplete={handleSOVComplete}
-            onStepChange={setCurrentStep}
-          />
-        );
-    }
-  };
-
-  // Mobile phase switcher
-  const PHASE_ICONS = { building: Building2, scope: ClipboardList, contracts: FileText, sov: DollarSign };
-  const PHASE_LABELS = { building: 'Building', scope: 'Scope', contracts: 'Contracts', sov: 'SOV' };
-  const PHASE_ORDER: SetupPhase[] = ['building', 'scope', 'contracts', 'sov'];
-
   return (
-    <div className="flex flex-col h-full min-h-[calc(100vh-200px)]">
-      {/* Mobile phase bar */}
-      {isMobile && (
-        <div className="border-b border-border px-4 py-2 flex items-center gap-1 overflow-x-auto bg-card">
-          {PHASE_ORDER.map((phase, i) => {
-            const Icon = PHASE_ICONS[phase];
-            const isComplete = progress[`${phase}Complete` as keyof SetupProgress];
-            const isCurrent = phase === currentPhase;
-            const unlocked = i === 0 || progress[`${PHASE_ORDER[i - 1]}Complete` as keyof SetupProgress];
-            return (
-              <button
-                key={phase}
-                onClick={() => unlocked && setCurrentPhase(phase)}
-                disabled={!unlocked}
-                className={cn(
-                  'flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all whitespace-nowrap',
-                  isCurrent ? 'bg-primary/10 text-primary' : isComplete ? 'text-emerald-600' : unlocked ? 'text-muted-foreground' : 'text-muted-foreground/40',
-                )}
-              >
-                {isComplete ? (
-                  <Check className="w-3 h-3" />
-                ) : (
-                  <Icon className="w-3 h-3" />
-                )}
-                {PHASE_LABELS[phase]}
-              </button>
-            );
-          })}
-        </div>
-      )}
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      {/* ── Project Info Card ─────────────────────────────────── */}
+      <ProjectInfoCard projectId={projectId} projectName={projectName} />
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Desktop sidebar */}
-        <SetupSidebar
-          currentPhase={currentPhase}
-          currentStep={currentStep}
-          progress={progress}
-          onPhaseSelect={setCurrentPhase}
+      {/* ── Framing Scope Wizard Card ─────────────────────────── */}
+      <Card className="border border-border overflow-hidden">
+        <div className="border-b border-border bg-muted/30 px-4 py-3 flex items-center gap-3">
+          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+            <ClipboardList className="w-3.5 h-3.5 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-heading text-sm font-bold" style={DT.heading}>Framing Scope</h3>
+            <p className="text-[10px] text-muted-foreground">Building profile + scope of work definitions</p>
+          </div>
+          {scopeComplete && (
+            <span className="ml-auto px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-500/15 text-emerald-700 border border-emerald-500/30 flex items-center gap-1">
+              <Check className="w-3 h-3" /> Complete
+            </span>
+          )}
+        </div>
+        <FramingScopeWizard
+          projectId={projectId}
+          buildingType={buildingType}
+          projectName={projectName}
+          embedded
+          onBuildingTypeChange={setBuildingTypeSlug}
+          onComplete={() => {
+            document.getElementById('contracts-card')?.scrollIntoView({ behavior: 'smooth' });
+          }}
         />
+      </Card>
 
-        {/* Main content */}
-        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
-          {renderPhase()}
+      {/* ── Contracts Card ────────────────────────────────────── */}
+      <Card id="contracts-card" className={cn("border border-border overflow-hidden", !scopeComplete && "opacity-60")}>
+        <div className="border-b border-border bg-muted/30 px-4 py-3 flex items-center gap-3">
+          <div className={cn(
+            "w-7 h-7 rounded-full flex items-center justify-center shrink-0",
+            scopeComplete ? "bg-primary/10" : "bg-muted/50"
+          )}>
+            {scopeComplete ? (
+              <FileText className="w-3.5 h-3.5 text-primary" />
+            ) : (
+              <Lock className="w-3 h-3 text-muted-foreground" />
+            )}
+          </div>
+          <div>
+            <h3 className="font-heading text-sm font-bold" style={DT.heading}>Contracts</h3>
+            <p className="text-[10px] text-muted-foreground">
+              {scopeComplete ? 'Contract sums and retainage per party' : 'Complete framing scope first'}
+            </p>
+          </div>
+          {contractsComplete && (
+            <span className="ml-auto px-2 py-0.5 text-[10px] font-semibold rounded-full bg-emerald-500/15 text-emerald-700 border border-emerald-500/30 flex items-center gap-1">
+              <Check className="w-3 h-3" /> Saved
+            </span>
+          )}
         </div>
-      </div>
+        {scopeComplete ? (
+          <CardContent className="p-0">
+            <PhaseContracts
+              projectId={projectId}
+              onComplete={handleContractsComplete}
+              onStepChange={() => {}}
+            />
+          </CardContent>
+        ) : (
+          <CardContent className="py-8 text-center">
+            <Lock className="w-6 h-6 text-muted-foreground/50 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">Complete the framing scope to unlock contracts.</p>
+          </CardContent>
+        )}
+      </Card>
+
+      {/* ── SOV Card ──────────────────────────────────────────── */}
+      <Card id="sov-card" className={cn("border border-border overflow-hidden", !contractsComplete && "opacity-60")}>
+        <div className="border-b border-border bg-muted/30 px-4 py-3 flex items-center gap-3">
+          <div className={cn(
+            "w-7 h-7 rounded-full flex items-center justify-center shrink-0",
+            contractsComplete ? "bg-primary/10" : "bg-muted/50"
+          )}>
+            {contractsComplete ? (
+              <DollarSign className="w-3.5 h-3.5 text-primary" />
+            ) : (
+              <Lock className="w-3 h-3 text-muted-foreground" />
+            )}
+          </div>
+          <div>
+            <h3 className="font-heading text-sm font-bold" style={DT.heading}>Schedule of Values</h3>
+            <p className="text-[10px] text-muted-foreground">
+              {contractsComplete ? 'Generate, review, and activate' : 'Save contracts first'}
+            </p>
+          </div>
+        </div>
+        {contractsComplete ? (
+          <CardContent className="p-0">
+            <PhaseSOV
+              projectId={projectId}
+              onComplete={handleSOVComplete}
+              onStepChange={() => {}}
+            />
+          </CardContent>
+        ) : (
+          <CardContent className="py-8 text-center">
+            <Lock className="w-6 h-6 text-muted-foreground/50 mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">Save contract amounts to unlock SOV generation.</p>
+          </CardContent>
+        )}
+      </Card>
     </div>
   );
 }
