@@ -1,15 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { DT } from '@/lib/design-tokens';
-import { ChevronRight, DollarSign, FileCheck } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 
 interface TeamMember {
   id: string;
@@ -187,53 +183,53 @@ export function PhaseContracts({ projectId, onComplete, onStepChange }: PhaseCon
   });
 
   return (
-    <div className="space-y-6 max-w-[680px] mx-auto">
-      <div>
-        <h2 className="text-lg font-bold font-heading" style={DT.heading}>Contract Setup</h2>
-        <p className="text-xs text-muted-foreground mt-1">
-          Enter contract sums and retainage for each party.
-        </p>
-      </div>
+    <div className="space-y-4 px-5 py-5">
+      {filteredTeam.length === 0 ? (
+        <div className="text-center py-6">
+          <p className="text-sm text-muted-foreground">
+            No team members found. Add team members from the project overview first.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/* Column headers */}
+          <div className="flex items-center gap-4 pb-2 border-b border-border">
+            <div className="flex-1 min-w-0">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Party</span>
+            </div>
+            <div className="w-40">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Contract Amount</span>
+            </div>
+            <div className="w-24">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Retainage %</span>
+            </div>
+          </div>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-primary" /> Contract Amounts
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {filteredTeam.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              No team members found. Add team members from the project overview first.
-            </p>
-          )}
           {filteredTeam.map(m => (
             <div key={m.id} className="flex items-center gap-4">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{m.invited_org_name || 'Unknown'}</p>
-                <p className="text-xs text-muted-foreground">{m.role}</p>
+                <p className="text-[11px] text-muted-foreground">{m.role}</p>
               </div>
               <div className="w-40">
-                <Label className="sr-only">Contract amount</Label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
                   <Input
                     type="number" placeholder="0.00"
                     value={contracts[m.id] ?? ''}
                     onChange={e => setContracts(p => ({ ...p, [m.id]: e.target.value }))}
-                    className="pl-7"
+                    className="pl-7 h-9"
                     disabled={!isFromCreatorOrg && m.role === 'General Contractor'}
                   />
                 </div>
               </div>
               <div className="w-24">
-                <Label className="sr-only">Retainage %</Label>
                 <div className="relative">
                   <Input
                     type="number" placeholder="0" step="0.5" min="0" max="100"
                     value={retainages[m.id] ?? ''}
                     onChange={e => setRetainages(p => ({ ...p, [m.id]: e.target.value }))}
-                    className="pr-7"
+                    className="pr-7 h-9"
                     disabled={!isFromCreatorOrg && m.role === 'General Contractor'}
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">%</span>
@@ -241,8 +237,8 @@ export function PhaseContracts({ projectId, onComplete, onStepChange }: PhaseCon
               </div>
             </div>
           ))}
-        </CardContent>
-      </Card>
+        </>
+      )}
 
       <div className="flex justify-end pt-4 border-t border-border">
         <Button onClick={handleSave} disabled={saving || !hasAtLeastOneContract} className="min-h-[44px]">

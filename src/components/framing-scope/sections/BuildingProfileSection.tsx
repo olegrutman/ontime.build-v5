@@ -192,7 +192,7 @@ export function BuildingProfileSection({ projectId, onBuildingTypeChange, onProf
       {/* Project Type */}
       <div>
         <h2 className="font-heading text-lg font-bold tracking-tight" style={DT.heading}>
-          0. Building Profile
+          Building Profile
         </h2>
         <p className="text-xs text-muted-foreground mt-1">
           Define the physical building — this drives which scope questions appear below.
