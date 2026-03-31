@@ -354,7 +354,7 @@ export default function PurchaseOrders() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           {/* PO List */}
           <div className="md:col-span-1 space-y-4">
-            <h2 className="text-lg font-semibold">Orders</h2>
+            <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>Orders</p>
             {orders.length === 0 ? (
               <Card>
                 <CardContent className="py-8 text-center text-muted-foreground">
