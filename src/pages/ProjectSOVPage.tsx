@@ -197,8 +197,8 @@ function SOVContractSection({
                 </div>
                 {!prereqs.hasProfile && (
                   <div className="flex items-center justify-between p-2 rounded-lg bg-muted border text-sm">
-                    <span>Complete the Project Details Wizard</span>
-                    <Button size="sm" variant="outline" onClick={() => navigate(`/project/${projectId}/details-wizard`)}>Set up</Button>
+                     <span>Complete the Project Setup</span>
+                     <Button size="sm" variant="outline" onClick={() => navigate(`/project/${projectId}/setup`)}>Set up</Button>
                   </div>
                 )}
                 {!prereqs.hasScope && (
