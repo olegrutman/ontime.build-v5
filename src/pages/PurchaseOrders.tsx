@@ -354,36 +354,34 @@ export default function PurchaseOrders() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           {/* PO List */}
           <div className="md:col-span-1 space-y-4">
-            <h2 className="text-lg font-semibold">Orders</h2>
+            <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>Orders</p>
             {orders.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
+              <div className="bg-card border border-border rounded-lg py-8 text-center text-muted-foreground">
                   <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No purchase orders yet</p>
-                </CardContent>
-              </Card>
+              </div>
             ) : (
               orders.map(po => (
-                <Card 
+                <div
                   key={po.id}
-                  className={`cursor-pointer transition-colors ${selectedPO?.id === po.id ? 'border-primary' : ''}`}
+                  className={`relative cursor-pointer bg-card border border-border rounded-lg transition-all hover:shadow-md animate-fade-in ${selectedPO?.id === po.id ? 'ring-2 ring-primary' : ''}`}
                   onClick={() => fetchPODetails(po.id)}
                 >
-                  <CardHeader className="pb-2">
+                  <div className="px-3.5 py-3">
                     <div className="flex items-start justify-between">
                       <div>
-                        <CardTitle className="text-base font-mono">{po.po_number}</CardTitle>
-                        <CardDescription className="truncate">{po.po_name}</CardDescription>
+                        <p className="text-sm font-medium" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{po.po_number}</p>
+                        <p className="text-xs text-muted-foreground truncate">{po.po_name}</p>
                       </div>
                       <Badge className={getStatusBadgeClass(po.status as POStatus)}>
                         {PO_STATUS_LABELS[po.status as POStatus]}
                       </Badge>
                     </div>
-                    <CardDescription className="text-xs">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {po.supplier?.name} • {po.project?.name || po.work_item?.title}
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
+                    </p>
+                  </div>
+                </div>
               ))
             )}
           </div>
@@ -391,12 +389,12 @@ export default function PurchaseOrders() {
           {/* PO Details */}
           <div className="md:col-span-2">
             {selectedPO ? (
-              <Card>
-                <CardHeader>
+              <div className="bg-card border border-border rounded-lg">
+                <div className="px-3.5 py-3.5">
                   <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle className="font-mono">{selectedPO.po_number}</CardTitle>
-                      <CardDescription>{selectedPO.po_name}</CardDescription>
+                      <p className="text-base font-medium" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{selectedPO.po_number}</p>
+                      <p className="text-sm text-muted-foreground">{selectedPO.po_name}</p>
                     </div>
                     <div className="flex gap-2">
                       {selectedPO.status === 'ACTIVE' && (
@@ -442,8 +440,8 @@ export default function PurchaseOrders() {
                       )}
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent>
+                </div>
+                <div className="px-3.5 pb-3.5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 p-4 bg-muted/30 rounded-lg text-sm">
                     <div>
                       <span className="text-muted-foreground">Supplier:</span>
@@ -511,15 +509,13 @@ export default function PurchaseOrders() {
                       <p className="text-sm text-muted-foreground">{selectedPO.notes}</p>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ) : (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
+              <div className="bg-card border border-border rounded-lg py-12 text-center text-muted-foreground">
                   <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>Select a purchase order to view details</p>
-                </CardContent>
-              </Card>
+              </div>
             )}
           </div>
         </div>

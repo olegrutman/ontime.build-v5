@@ -19,7 +19,7 @@ function RowList({ rows, dividerBefore }: { rows: Row[]; dividerBefore?: number 
       {rows.map((row, i) => (
         <div key={i} className={cn("flex items-center justify-between", dividerBefore != null && i === dividerBefore && "border-t pt-2")}>
           <span className={cn("text-sm", row.bold ? "font-medium text-foreground" : "text-muted-foreground")}>{row.label}</span>
-          <span className={cn("tabular-nums", row.bold ? "text-lg font-bold" : "text-sm font-semibold", colorClass(row.color))}>
+          <span className={cn("tabular-nums", row.bold ? "text-lg font-bold" : "text-sm font-semibold", colorClass(row.color))} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
             {row.value}
           </span>
         </div>

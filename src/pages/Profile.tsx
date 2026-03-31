@@ -188,9 +188,9 @@ export default function Profile() {
 
   return (
     <AppLayout>
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-5">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-xl font-bold flex items-center gap-2" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
             Profile
             {userOrgRoles[0]?.is_admin && (
               <Badge variant="default" className="text-xs">
@@ -199,19 +199,19 @@ export default function Profile() {
               </Badge>
             )}
           </h1>
-          <p className="text-muted-foreground">Manage your personal info, organization, and pricing defaults.</p>
+          <p className="text-sm text-muted-foreground">Manage your personal info, organization, and pricing defaults.</p>
         </div>
 
         {/* Section 1: Personal Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Personal Information
-            </CardTitle>
-            <CardDescription>Your contact details and preferences</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-1">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Personal Information</p>
+            </div>
+            <p className="text-xs text-muted-foreground ml-6">Your contact details and preferences</p>
+          </div>
+          <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>First Name</Label>
@@ -305,22 +305,22 @@ export default function Profile() {
                 Save Personal Info
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Personal Hourly Rate */}
         <HourlyRateSetting />
 
         {/* Section 2: Organization Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5" />
-              Organization Information
-            </CardTitle>
-            <CardDescription>Your company details</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Building2 className="h-4 w-4 text-muted-foreground" />
+              <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Organization Information</p>
+            </div>
+            <p className="text-xs text-muted-foreground ml-6">Your company details</p>
+          </div>
+          <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Organization Name</Label>
@@ -480,19 +480,19 @@ export default function Profile() {
                 Save Organization
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Section 3: Pricing Defaults (hidden for GC users) */}
-        {organization?.type !== 'GC' && <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Pricing Defaults
-            </CardTitle>
-            <CardDescription>Pre-fill values for change orders and estimates</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        {organization?.type !== 'GC' && <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-1">
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Pricing Defaults</p>
+            </div>
+            <p className="text-xs text-muted-foreground ml-6">Pre-fill values for change orders and estimates</p>
+          </div>
+          <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Default Hourly Rate</Label>
@@ -592,8 +592,8 @@ export default function Profile() {
                 Save Pricing Defaults
               </Button>
             </div>
-          </CardContent>
-        </Card>}
+          </div>
+        </div>}
       </div>
     </AppLayout>
   );

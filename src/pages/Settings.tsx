@@ -67,22 +67,22 @@ export default function Settings() {
 
   return (
     <AppLayout>
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-5">
         <div>
-          <h1 className="text-2xl font-bold">Settings</h1>
-          <p className="text-muted-foreground">Security, notifications, and account management.</p>
+          <h1 className="text-xl font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>Settings</h1>
+          <p className="text-sm text-muted-foreground">Security, notifications, and account management.</p>
         </div>
 
         {/* Security */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lock className="h-5 w-5" />
-              Security
-            </CardTitle>
-            <CardDescription>Change your password</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Lock className="h-4 w-4 text-muted-foreground" />
+              <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Security</p>
+            </div>
+            <p className="text-xs text-muted-foreground ml-6">Change your password</p>
+          </div>
+          <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Current Password</Label>
@@ -135,19 +135,19 @@ export default function Settings() {
                 Change Password
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Notifications */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              Notifications
-            </CardTitle>
-            <CardDescription>Control how you receive updates per event type</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
+        <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Bell className="h-4 w-4 text-muted-foreground" />
+              <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Notifications</p>
+            </div>
+            <p className="text-xs text-muted-foreground ml-6">Control how you receive updates per event type</p>
+          </div>
+          <div className="space-y-6">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Delivery Channels</p>
               <div className="space-y-3">
@@ -247,19 +247,19 @@ export default function Settings() {
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Danger Zone */}
-        <Card className="border-destructive/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="h-5 w-5" />
-              Danger Zone
-            </CardTitle>
-            <CardDescription>Irreversible actions</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className="bg-card border border-border rounded-lg border-destructive/50 px-3.5 py-3.5">
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-1">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              <p className="text-[0.7rem] uppercase tracking-[0.4px] text-destructive font-medium">Danger Zone</p>
+            </div>
+            <p className="text-xs text-muted-foreground ml-6">Irreversible actions</p>
+          </div>
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Sign Out</p>
@@ -312,8 +312,8 @@ export default function Settings() {
                 </AlertDialogContent>
               </AlertDialog>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </AppLayout>
   );

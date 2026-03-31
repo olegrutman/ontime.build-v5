@@ -112,7 +112,7 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
             <button onClick={() => { setEditValue(ownerContractValue || 0); setEditing(true); }} className="p-0.5 hover:bg-accent rounded transition-colors">
               <Pencil className="h-3 w-3 text-muted-foreground" />
             </button>
-            <span className={cn("text-sm font-semibold tabular-nums", !hasOwner && 'text-amber-600 dark:text-amber-400')}>
+             <span className={cn("text-sm font-semibold tabular-nums", !hasOwner && 'text-amber-600 dark:text-amber-400')} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
               {hasOwner ? fmt(ownerContractValue) : 'Not set'}
             </span>
           </div>
@@ -120,13 +120,13 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
 
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Current Contract Total</span>
-          <span className="text-sm font-semibold tabular-nums">{fmt(currentTotal)}</span>
+          <span className="text-sm font-semibold tabular-nums" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(currentTotal)}</span>
         </div>
 
         {hasOwner && (
           <div className="border-t pt-2.5 flex items-center justify-between">
             <span className="text-sm font-medium">GC Profit</span>
-            <span className={cn("text-lg font-bold tabular-nums", gcProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
+            <span className={cn("text-lg font-bold tabular-nums", gcProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
               {fmt(gcProfit)}
             </span>
           </div>

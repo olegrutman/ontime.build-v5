@@ -21,7 +21,7 @@ export function SupplierReceivables({ buckets, velocity, oldestDays }: Props) {
           Receivables
         </h3>
         <div className="flex items-baseline gap-2 mt-1">
-          <span className="font-heading text-[1.5rem] font-black text-foreground leading-none">
+          <span className="font-heading text-[1.5rem] font-black text-foreground leading-none" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
             {formatCurrency(totalOutstanding)}
           </span>
           <span className="text-[0.68rem] text-muted-foreground">outstanding</span>
@@ -38,7 +38,7 @@ export function SupplierReceivables({ buckets, velocity, oldestDays }: Props) {
                 <span className={`text-[0.68rem] font-semibold ${bucketTextColors[i]}`}>
                   {bucket.count} inv
                 </span>
-                <span className="text-[0.72rem] font-bold text-foreground">
+                <span className="text-[0.72rem] font-bold text-foreground" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
                   {formatCurrency(bucket.amount)}
                 </span>
               </div>

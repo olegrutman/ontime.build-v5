@@ -178,21 +178,21 @@ export default function OrgTeam() {
       <div className="space-y-6 max-w-3xl">
         {/* Org Header */}
         <div>
-          <h1 className="text-2xl font-bold text-foreground">{currentOrg?.name}</h1>
+          <h1 className="text-xl font-bold text-foreground" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>{currentOrg?.name}</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Manage your organization's team members and invitations
           </p>
         </div>
 
         {/* Organization Settings */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Organization Settings
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">
+          <div className="mb-3">
+            <div className="flex items-center gap-2">
+              <Settings className="h-4 w-4 text-muted-foreground" />
+              <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Organization Settings</p>
+            </div>
+          </div>
+          <div>
             <div className="flex items-center justify-between">
               <div>
                 <Label htmlFor="allow-join">Allow team members to join via search</Label>
@@ -206,19 +206,19 @@ export default function OrgTeam() {
                 onCheckedChange={handleToggleJoinRequests}
               />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Join Requests */}
         {joinRequests.length > 0 && (
-          <Card className="border-l-4 border-l-amber-500">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <UserPlus className="h-4 w-4" />
-                Join Requests ({joinRequests.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <div className="bg-card border border-border rounded-lg border-l-4 border-l-amber-500 px-3.5 py-3.5">
+            <div className="mb-3">
+              <div className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-muted-foreground" />
+                <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Join Requests ({joinRequests.length})</p>
+              </div>
+            </div>
+            <div className="space-y-3">
               {joinRequests.map((req) => (
                 <div
                   key={req.id}
@@ -255,19 +255,19 @@ export default function OrgTeam() {
                   </div>
                 </div>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* Current Members */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Members ({members.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">
+          <div className="mb-3">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Members ({members.length})</p>
+            </div>
+          </div>
+          <div className="space-y-3">
             {members.map((m) => {
               const isSelf = m.user_id === user?.id;
               const showDropdown = !isSelf && allowedRoles.length > 1 && canManageTeam;
@@ -328,18 +328,18 @@ export default function OrgTeam() {
             {members.length === 0 && (
               <p className="text-sm text-muted-foreground">No members found.</p>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Invite New Member */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Mail className="h-4 w-4" />
-              Invite New Member
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">
+          <div className="mb-3">
+            <div className="flex items-center gap-2">
+              <Mail className="h-4 w-4 text-muted-foreground" />
+              <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Invite New Member</p>
+            </div>
+          </div>
+          <div>
             <div className="flex flex-col sm:flex-row gap-3">
               <Input
                 type="email"
@@ -369,19 +369,19 @@ export default function OrgTeam() {
                 {sending ? 'Sending…' : 'Send Invite'}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Pending Invitations */}
         {pendingInvites.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Clock className="h-4 w-4" />
-                Pending Invitations ({pendingInvites.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">
+            <div className="mb-3">
+              <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Pending Invitations ({pendingInvites.length})</p>
+              </div>
+            </div>
+            <div className="space-y-3">
               {pendingInvites.map((inv) => (
                 <div
                   key={inv.id}
@@ -406,8 +406,8 @@ export default function OrgTeam() {
                   </Button>
                 </div>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
       </div>
 
