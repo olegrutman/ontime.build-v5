@@ -67,10 +67,10 @@ export default function Settings() {
 
   return (
     <AppLayout>
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-5">
         <div>
-          <h1 className="text-2xl font-bold">Settings</h1>
-          <p className="text-muted-foreground">Security, notifications, and account management.</p>
+          <h1 className="text-xl font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>Settings</h1>
+          <p className="text-sm text-muted-foreground">Security, notifications, and account management.</p>
         </div>
 
         {/* Security */}
