@@ -211,14 +211,14 @@ export default function OrgTeam() {
 
         {/* Join Requests */}
         {joinRequests.length > 0 && (
-          <Card className="border-l-4 border-l-amber-500">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <UserPlus className="h-4 w-4" />
-                Join Requests ({joinRequests.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <div className="bg-card border border-border rounded-lg border-l-4 border-l-amber-500 px-3.5 py-3.5">
+            <div className="mb-3">
+              <div className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-muted-foreground" />
+                <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Join Requests ({joinRequests.length})</p>
+              </div>
+            </div>
+            <div className="space-y-3">
               {joinRequests.map((req) => (
                 <div
                   key={req.id}
