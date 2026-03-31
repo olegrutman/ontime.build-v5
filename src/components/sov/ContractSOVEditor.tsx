@@ -24,6 +24,7 @@ import { useContractSOV, ContractSOV, ContractSOVItem, ProjectContract, getContr
 import { SOVProgressBar } from './SOVProgressBar';
 import { RequireOrgType } from '@/components/auth/RequirePermission';
 import { useAuth } from '@/hooks/useAuth';
+import { DT } from '@/lib/design-tokens';
 
 interface ContractSOVEditorProps {
   projectId: string;
@@ -366,7 +367,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                 </div>
               ) : isEditingAmt ? (
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <span className="text-muted-foreground w-16 text-right tabular-nums text-sm">
+              <span className="text-muted-foreground w-16 text-right tabular-nums text-sm" style={DT.mono}>
                     {item.percent_of_contract?.toFixed(2)}%
                   </span>
                   <span className="text-sm">$</span>
@@ -394,6 +395,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                 <div className="flex items-center gap-2 text-sm flex-shrink-0">
                   <span
                     className={`text-muted-foreground w-16 text-right tabular-nums ${!isLocked && !isFC ? 'cursor-pointer hover:text-primary' : ''}`}
+                    style={DT.mono}
                     onClick={() => !isLocked && !isFC && handleStartPercentEdit(sov.id, item)}
                     title={!isLocked && !isFC ? 'Click to edit percentage' : undefined}
                   >
@@ -401,6 +403,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                   </span>
                   <span
                     className={`font-medium w-24 text-right tabular-nums ${!isLocked && !isFC ? 'cursor-pointer hover:text-primary' : ''}`}
+                    style={DT.mono}
                     onClick={() => !isLocked && !isFC && handleStartAmountEdit(sov.id, item)}
                     title={!isLocked && !isFC ? 'Click to edit amount' : undefined}
                   >
@@ -477,9 +480,9 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
         const isEffectivelyLocked = sov.is_locked || hasBilling;
 
         return (
-          <Card key={sov.id} data-sasha-card="Contract SOV">
+          <div key={sov.id} className="border border-border rounded-lg bg-card overflow-hidden" data-sasha-card="Contract SOV">
             <Collapsible open={isExpanded} onOpenChange={() => toggleSov(sov.id)}>
-              <CardHeader className="pb-3">
+              <div className="px-5 py-3.5 pb-3">
                 <CollapsibleTrigger asChild>
                   <div className="flex items-start sm:items-center justify-between cursor-pointer gap-2 flex-wrap">
                     <div className="flex items-start sm:items-center gap-2 sm:gap-3 min-w-0 flex-1">
@@ -490,14 +493,14 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                       )}
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <CardTitle className="text-base line-clamp-2">{sov.sov_name || 'Unnamed SOV'}</CardTitle>
+                          <span className="text-sm font-bold line-clamp-2" style={DT.heading}>{sov.sov_name || 'Unnamed SOV'}</span>
                           <Badge variant={isWorkOrderSOV ? "outline" : "secondary"} className="text-xs shrink-0">
                             {sovSourceLabel}
                           </Badge>
                         </div>
-                        <CardDescription className="tabular-nums">
+                        <p className="text-xs text-muted-foreground tabular-nums" style={DT.mono}>
                           {formatCurrency(contract?.contract_sum || 0)} • {items.length} item{items.length !== 1 ? 's' : ''}
-                        </CardDescription>
+                        </p>
         {totals.totalValue > 0 && (
                           <div className="mt-2 w-48">
                             <SOVProgressBar
@@ -691,10 +694,10 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                     </div>
                   </div>
                 </CollapsibleTrigger>
-              </CardHeader>
+              </div>
 
               <CollapsibleContent>
-                <CardContent className="pt-0">
+                <div className="px-5 pb-5 pt-0">
                   {/* Billing Active notice */}
                   {hasBilling && (
                     <Alert className="mb-4 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30">
@@ -849,36 +852,29 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                       )}
                     </div>
                   )}
-                </CardContent>
+                </div>
               </CollapsibleContent>
             </Collapsible>
-          </Card>
+          </div>
         );
   };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Schedule of Values</h2>
-        <Badge variant="outline">{sovs.length} Contract{sovs.length > 1 ? 's' : ''}</Badge>
-      </div>
-
-      {/* TC-specific layout: GC→TC on top, TC→FC below */}
+      {/* TC-specific layout: Upstream (revenue) on top, Downstream (costs) below */}
       {isTC ? (
         <>
-          {/* GC → TC Contracts (revenue) */}
           {gcToTcSovs.length > 0 && (
             <>
-              <h3 className="text-base font-medium text-muted-foreground">GC → TC Contracts</h3>
+              <h3 className="text-sm font-bold text-muted-foreground" style={DT.heading}>Upstream Contracts (Revenue)</h3>
               {gcToTcSovs.map(sov => renderSOVCard(sov))}
             </>
           )}
 
-          {/* TC → FC Contracts (costs) */}
           {tcToFcSovs.length > 0 && (
             <>
               <div className="border-t pt-4 mt-2">
-                <h3 className="text-base font-medium text-muted-foreground">TC → FC Contracts</h3>
+                <h3 className="text-sm font-bold text-muted-foreground" style={DT.heading}>Downstream Contracts (Costs)</h3>
               </div>
               {tcToFcSovs.map(sov => renderSOVCard(sov))}
             </>
@@ -886,13 +882,9 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
         </>
       ) : (
         <>
-          {/* Non-TC: original layout */}
-          {/* Main Contract Billing Summary */}
-
-          {/* Main Contracts Section */}
           {contractSovs.length > 0 && (
             <>
-              <h3 className="text-base font-medium text-muted-foreground">Main Contracts</h3>
+              <h3 className="text-sm font-bold text-muted-foreground" style={DT.heading}>Main Contracts</h3>
               {contractSovs.map(sov => renderSOVCard(sov))}
             </>
           )}

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { useFramingScope } from '@/hooks/useFramingScope';
 import { SECTIONS, type FramingBuildingType, type FramingScopeAnswers } from '@/types/framingScope';
@@ -97,7 +97,18 @@ export function FramingScopeWizard({ projectId, buildingType: propBuildingType =
   const [showFullScope, setShowFullScope] = useState(false);
   const [activeSectionIndex, setActiveSectionIndex] = useState(BUILDING_PROFILE_INDEX);
   const [derivedBuildingType, setDerivedBuildingType] = useState<FramingBuildingType | null>(null);
+  const [completeFired, setCompleteFired] = useState(false);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
   const isMobile = useIsMobile();
+
+  // Fire onComplete via effect instead of during render
+  useEffect(() => {
+    if (scopeComplete && embedded && !completeFired) {
+      setCompleteFired(true);
+      onCompleteRef.current?.();
+    }
+  }, [scopeComplete, embedded, completeFired]);
 
   const buildingType = derivedBuildingType || propBuildingType;
   const matResp = answers.method.material_responsibility;
@@ -131,9 +142,11 @@ export function FramingScopeWizard({ projectId, buildingType: propBuildingType =
     );
   }
 
+
+
+
   // Completed scope — in embedded mode, show summary card with expandable full scope
   if (scopeComplete && embedded) {
-    if (onComplete) onComplete();
     return (
       <div className="p-5 w-full space-y-4">
         <div className="flex items-center justify-between gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-md px-4 py-3">
