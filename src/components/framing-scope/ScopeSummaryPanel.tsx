@@ -38,8 +38,9 @@ export function ScopeSummaryPanel({ answers, matResp, compact }: Props) {
   const matLabel = matResp === 'LABOR_ONLY' ? 'Labor only' : matResp === 'FURNISH_INSTALL' ? 'Furnish & install' : matResp === 'SPLIT' ? 'Split responsibility' : null;
 
   return (
-    <div className="space-y-1">
-      <h3 className={cn(DT.sectionHeader, 'mb-3')}>Scope Summary</h3>
+    <div className={cn(compact ? '' : 'space-y-1')}>
+      {!compact && <h3 className={cn(DT.sectionHeader, 'mb-3')}>Scope Summary</h3>}
+      <div className={cn(compact ? 'grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2' : '')}>
 
       <SummaryGroup label="FRAMING METHOD" items={[
         { text: methodLabel || '—', included: !!methodLabel },
