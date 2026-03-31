@@ -135,8 +135,8 @@ export default function Settings() {
                 Change Password
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Notifications */}
         <Card>
