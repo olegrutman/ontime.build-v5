@@ -4,10 +4,7 @@ import { Upload, Package, FileSpreadsheet, AlertCircle, AlertTriangle, Loader2, 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { AppSidebar } from '@/components/layout/AppSidebar';
-import { TopBar } from '@/components/layout/TopBar';
-import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
+import { AppLayout } from '@/components/layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -365,61 +362,35 @@ export default function SupplierInventory() {
     return Object.values(skuCounts).filter(count => count > 1).length;
   }, [csvPreview]);
 
-  const defaultOpen = useDefaultSidebarOpen();
-
   if (authLoading || (!isSupplier && !isDesignatedOnly && loading)) {
     return (
-      <SidebarProvider defaultOpen={defaultOpen}>
-        <div className="min-h-screen flex w-full">
-          <AppSidebar />
-          <SidebarInset className="flex flex-col flex-1">
-            <TopBar title="My Inventory" />
-            <main className="flex-1 overflow-auto container mx-auto px-4 py-6">
-              <Skeleton className="h-64 w-full" />
-            </main>
-          </SidebarInset>
-        </div>
-      </SidebarProvider>
+      <AppLayout title="My Inventory">
+        <Skeleton className="h-64 w-full" />
+      </AppLayout>
     );
   }
 
   if (isDesignatedOnly && !isSupplier) {
     return (
-      <SidebarProvider defaultOpen={defaultOpen}>
-        <div className="min-h-screen flex w-full">
-          <AppSidebar />
-          <SidebarInset className="flex flex-col flex-1 bg-background">
-            <TopBar title="Product Catalog" />
-            <main className="flex-1 overflow-auto">
-              <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 pb-20">
-                <Card>
-                  <CardContent className="py-12 text-center space-y-3">
-                    <AlertCircle className="h-10 w-10 mx-auto text-muted-foreground" />
-                    <h2 className="text-lg font-semibold">Read-Only Access</h2>
-                    <p className="text-muted-foreground max-w-md mx-auto">
-                      You have supplier access to specific projects but cannot edit the product catalog. 
-                      Visit your assigned projects to manage purchase orders and estimates.
-                    </p>
-                    <Button variant="outline" onClick={() => navigate('/dashboard')}>Go to Dashboard</Button>
-                  </CardContent>
-                </Card>
-              </div>
-            </main>
-          </SidebarInset>
-        </div>
-      </SidebarProvider>
+      <AppLayout title="Product Catalog">
+        <Card>
+          <CardContent className="py-12 text-center space-y-3">
+            <AlertCircle className="h-10 w-10 mx-auto text-muted-foreground" />
+            <h2 className="text-lg font-semibold">Read-Only Access</h2>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              You have supplier access to specific projects but cannot edit the product catalog. 
+              Visit your assigned projects to manage purchase orders and estimates.
+            </p>
+            <Button variant="outline" onClick={() => navigate('/dashboard')}>Go to Dashboard</Button>
+          </CardContent>
+        </Card>
+      </AppLayout>
     );
   }
 
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar />
-         <SidebarInset className="flex flex-col flex-1 bg-background">
-          <TopBar title="My Product Catalog" />
-          <main className="flex-1 overflow-auto">
-            <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 pb-20 space-y-6">
-            {/* Header */}
+    <AppLayout title="My Product Catalog">
+      <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-bold">Product Catalog</h1>
@@ -727,10 +698,7 @@ export default function SupplierInventory() {
               item={editItem}
               onSaved={fetchCatalogItems}
             />
-            </div>
-          </main>
-        </SidebarInset>
       </div>
-    </SidebarProvider>
+    </AppLayout>
   );
 }

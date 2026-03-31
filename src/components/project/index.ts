@@ -4,7 +4,7 @@ export { ProjectScopeSection } from './ProjectScopeSection';
 export { ProjectContractsSection } from './ProjectContractsSection';
 export { ProjectActivitySection } from './ProjectActivitySection';
 export { ProjectFinancialsSectionNew } from './ProjectFinancialsSectionNew';
-export { ProjectTopBar } from './ProjectTopBar';
+
 export { PurchaseOrdersTab } from './PurchaseOrdersTab';
 export { MetricStrip } from './MetricStrip';
 export { AttentionBanner } from './AttentionBanner';
@@ -12,7 +12,7 @@ export { AttentionBanner } from './AttentionBanner';
 export { SupplierContractsSection } from './SupplierContractsSection';
 export { SupplierFinancialsSummaryCard } from './SupplierFinancialsSummaryCard';
 export { SupplierEstimatesSection } from './SupplierEstimatesSection';
-export { MobileProjectHeader } from './MobileProjectHeader';
+
 export { OperationalSummary } from './OperationalSummary';
 export { ProjectEstimatesReview } from './ProjectEstimatesReview';
 export { ProjectReadinessCard } from './ProjectReadinessCard';

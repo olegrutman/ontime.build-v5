@@ -3,9 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ArrowLeft, Calendar, MapPin, Plus } from 'lucide-react';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { AppSidebar } from '@/components/layout/AppSidebar';
-import { BottomNav } from '@/components/layout/BottomNav';
+import { AppLayout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,7 +14,6 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
 import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useCORealtime } from '@/hooks/useCORealtime';
 import { useProjectFCOrgs } from '@/hooks/useProjectFCOrgs';
@@ -62,7 +59,7 @@ function fmtCurrency(value: number) {
 export function CODetailPage() {
   const { id: projectId, coId } = useParams<{ id: string; coId: string }>();
   const navigate = useNavigate();
-  const defaultOpen = useDefaultSidebarOpen();
+  // removed useDefaultSidebarOpen
   const { currentRole, user, userOrgRoles } = useAuth();
 
   const {
@@ -164,38 +161,26 @@ export function CODetailPage() {
 
   if (isLoading) {
     return (
-      <SidebarProvider defaultOpen={defaultOpen}>
-        <div className="flex min-h-screen w-full">
-          <AppSidebar />
-          <SidebarInset>
-            <div className="p-6 space-y-4">
-              <Skeleton className="h-8 w-72" />
-              <Skeleton className="h-48 w-full" />
-              <Skeleton className="h-40 w-full" />
-            </div>
-          </SidebarInset>
-          <BottomNav />
+      <AppLayout title="Change Order">
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-72" />
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-40 w-full" />
         </div>
-      </SidebarProvider>
+      </AppLayout>
     );
   }
 
   if (!co) {
     return (
-      <SidebarProvider defaultOpen={defaultOpen}>
-        <div className="flex min-h-screen w-full">
-          <AppSidebar />
-          <SidebarInset>
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
-              <p className="text-lg font-medium text-foreground">Change order not found</p>
-              <Button variant="outline" onClick={() => navigate(-1)}>
-                Go back
-              </Button>
-            </div>
-          </SidebarInset>
-          <BottomNav />
+      <AppLayout title="Change Order">
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <p className="text-lg font-medium text-foreground">Change order not found</p>
+          <Button variant="outline" onClick={() => navigate(-1)}>
+            Go back
+          </Button>
         </div>
-      </SidebarProvider>
+      </AppLayout>
     );
   }
 
@@ -225,10 +210,7 @@ export function CODetailPage() {
   }
 
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset>
+    <AppLayout title="Change Order">
           <div className="pb-20 md:pb-6">
             <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
               <div className="px-4 md:px-6 py-4 space-y-3">
@@ -545,10 +527,7 @@ export function CODetailPage() {
               </aside>
             </div>
           </div>
-        </SidebarInset>
-        <BottomNav />
-      </div>
-    </SidebarProvider>
+    </AppLayout>
   );
 }
 
