@@ -389,12 +389,12 @@ export default function PurchaseOrders() {
           {/* PO Details */}
           <div className="md:col-span-2">
             {selectedPO ? (
-              <Card>
-                <CardHeader>
+              <div className="bg-card border border-border rounded-lg">
+                <div className="px-3.5 py-3.5">
                   <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle className="font-mono">{selectedPO.po_number}</CardTitle>
-                      <CardDescription>{selectedPO.po_name}</CardDescription>
+                      <p className="text-base font-medium" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{selectedPO.po_number}</p>
+                      <p className="text-sm text-muted-foreground">{selectedPO.po_name}</p>
                     </div>
                     <div className="flex gap-2">
                       {selectedPO.status === 'ACTIVE' && (
