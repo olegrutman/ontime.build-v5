@@ -484,15 +484,15 @@ export default function Profile() {
         </div>
 
         {/* Section 3: Pricing Defaults (hidden for GC users) */}
-        {organization?.type !== 'GC' && <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Pricing Defaults
-            </CardTitle>
-            <CardDescription>Pre-fill values for change orders and estimates</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        {organization?.type !== 'GC' && <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-1">
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Pricing Defaults</p>
+            </div>
+            <p className="text-xs text-muted-foreground ml-6">Pre-fill values for change orders and estimates</p>
+          </div>
+          <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Default Hourly Rate</Label>
