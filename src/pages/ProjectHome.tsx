@@ -27,8 +27,8 @@ import {
   ProfitCard,
   MaterialMarkupEditor,
   CriticalScheduleCard,
-  ScopeDetailsTab,
 } from '@/components/project';
+import { FramingScopeWizard } from '@/components/framing-scope/FramingScopeWizard';
 import { ProjectIconRail } from '@/components/project/ProjectIconRail';
 import { ProjectBottomNav } from '@/components/project/ProjectBottomNav';
 import { ContractHeroCard } from '@/components/project/ContractHeroCard';
@@ -359,11 +359,18 @@ export default function ProjectHome() {
               </>
             )}
 
-            {activeTab === 'scope' && (
-              <ScopeDetailsTab projectId={id!} />
-            )}
-            {activeTab === 'scope-details' && (
-              <ScopeDetailsTab projectId={id!} />
+            {(activeTab === 'scope' || activeTab === 'scope-details') && (
+              <FramingScopeWizard
+                projectId={id!}
+                buildingType={
+                  project?.project_type === 'townhome' ? 'TOWNHOMES'
+                    : project?.project_type === 'apartment' ? 'MULTI_FAMILY'
+                    : project?.project_type === 'hotel' ? 'HOTEL'
+                    : project?.project_type === 'commercial' ? 'COMMERCIAL'
+                    : 'SFR'
+                }
+                projectName={project?.name}
+              />
             )}
 
             {activeTab === 'sov' && (
