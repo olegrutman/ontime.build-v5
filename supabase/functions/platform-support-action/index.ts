@@ -751,14 +751,104 @@ Deno.serve(async (req) => {
         }
         snapshotBefore = { name: projData.name, status: projData.status, created_by: projData.created_by };
 
-        // Clean up notifications referencing this project
-        await adminClient
-          .from("notifications")
-          .delete()
-          .eq("entity_type", "project")
-          .eq("entity_id", project_id);
+        // Clean up dependent records that don't cascade on delete
+        // 1. Change orders and their dependents
+        const { data: coRows } = await adminClient
+          .from("change_orders")
+          .select("id")
+          .eq("project_id", project_id);
+        const coIds = (coRows || []).map((c: any) => c.id);
+        if (coIds.length > 0) {
+          await adminClient.from("co_activity").delete().in("co_id", coIds);
+          await adminClient.from("co_nte_log").delete().in("co_id", coIds);
+          await adminClient.from("co_equipment_items").delete().in("co_id", coIds);
+          await adminClient.from("co_material_items").delete().in("co_id", coIds);
+          // co_line_items and co_labor_entries
+          const { data: lineRows } = await adminClient.from("co_line_items").select("id").in("co_id", coIds);
+          const lineIds = (lineRows || []).map((l: any) => l.id);
+          if (lineIds.length > 0) {
+            await adminClient.from("co_labor_entries").delete().in("co_line_item_id", lineIds);
+          }
+          await adminClient.from("co_line_items").delete().in("co_id", coIds);
+          await adminClient.from("co_combined_members").delete().in("combined_co_id", coIds);
+          await adminClient.from("co_combined_members").delete().in("member_co_id", coIds);
+          await adminClient.from("change_order_collaborators").delete().in("co_id", coIds);
+          await adminClient.from("change_orders").delete().in("id", coIds);
+        }
 
-        // Delete the project — FKs cascade everything else
+        // 2. CO activity by project_id (some reference project directly)
+        await adminClient.from("co_activity").delete().eq("project_id", project_id);
+
+        // 3. Invoices and line items
+        const { data: invRows } = await adminClient.from("invoices").select("id").eq("project_id", project_id);
+        const invIds = (invRows || []).map((i: any) => i.id);
+        if (invIds.length > 0) {
+          await adminClient.from("invoice_line_items").delete().in("invoice_id", invIds);
+          await adminClient.from("invoices").delete().in("id", invIds);
+        }
+
+        // 4. Purchase orders
+        const { data: poRows } = await adminClient.from("purchase_orders").select("id").eq("project_id", project_id);
+        const poIds = (poRows || []).map((p: any) => p.id);
+        if (poIds.length > 0) {
+          await adminClient.from("purchase_order_items").delete().in("po_id", poIds);
+          await adminClient.from("purchase_orders").delete().in("id", poIds);
+        }
+
+        // 5. SOV items and SOV
+        const { data: sovRows } = await adminClient.from("project_sov").select("id").eq("project_id", project_id);
+        const sovIds = (sovRows || []).map((s: any) => s.id);
+        if (sovIds.length > 0) {
+          await adminClient.from("project_sov_items").delete().in("sov_id", sovIds);
+          await adminClient.from("project_sov").delete().in("id", sovIds);
+        }
+
+        // 6. Other project-level tables
+        await adminClient.from("project_contracts").delete().eq("project_id", project_id);
+        await adminClient.from("project_team").delete().eq("project_id", project_id);
+        await adminClient.from("project_invites").delete().eq("project_id", project_id);
+        await adminClient.from("project_participants").delete().eq("project_id", project_id);
+        await adminClient.from("project_activity").delete().eq("project_id", project_id);
+        await adminClient.from("actual_cost_entries").delete().eq("project_id", project_id);
+        await adminClient.from("field_captures").delete().eq("project_id", project_id);
+        await adminClient.from("notifications").delete().eq("entity_type", "project").eq("entity_id", project_id);
+
+        // 7. Daily logs
+        const { data: logRows } = await adminClient.from("daily_logs").select("id").eq("project_id", project_id);
+        const logIds = (logRows || []).map((l: any) => l.id);
+        if (logIds.length > 0) {
+          await adminClient.from("daily_log_manpower").delete().in("log_id", logIds);
+          await adminClient.from("daily_log_delays").delete().in("log_id", logIds);
+          await adminClient.from("daily_log_deliveries").delete().in("log_id", logIds);
+          await adminClient.from("daily_log_photos").delete().in("log_id", logIds);
+          await adminClient.from("daily_logs").delete().in("id", logIds);
+        }
+
+        // 8. Contract scope
+        await adminClient.from("contract_scope_details").delete().in("selection_id",
+          ((await adminClient.from("contract_scope_selections").select("id").eq("project_id", project_id)).data || []).map((s: any) => s.id)
+        );
+        await adminClient.from("contract_scope_selections").delete().eq("project_id", project_id);
+        await adminClient.from("contract_scope_exclusions").delete().eq("project_id", project_id);
+
+        // 9. Estimates
+        await adminClient.from("estimate_catalog_mapping").delete().eq("project_id", project_id);
+        await adminClient.from("project_designated_suppliers").delete().eq("project_id", project_id);
+        const { data: seRows } = await adminClient.from("supplier_estimates").select("id").eq("project_id", project_id);
+        const seIds = (seRows || []).map((s: any) => s.id);
+        if (seIds.length > 0) {
+          await adminClient.from("estimate_line_items").delete().in("estimate_id", seIds);
+          await adminClient.from("estimate_pdf_uploads").delete().in("estimate_id", seIds);
+          await adminClient.from("supplier_estimates").delete().in("id", seIds);
+        }
+        const { data: peRows } = await adminClient.from("project_estimates").select("id").eq("project_id", project_id);
+        const peIds = (peRows || []).map((p: any) => p.id);
+        if (peIds.length > 0) {
+          await adminClient.from("estimate_packs").delete().in("estimate_id", peIds);
+          await adminClient.from("project_estimates").delete().in("id", peIds);
+        }
+
+        // Now delete the project itself
         const { error: delProjErr } = await adminClient
           .from("projects")
           .delete()
