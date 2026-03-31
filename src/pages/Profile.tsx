@@ -305,8 +305,8 @@ export default function Profile() {
                 Save Personal Info
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Personal Hourly Rate */}
         <HourlyRateSetting />
