@@ -251,15 +251,15 @@ export default function Settings() {
         </div>
 
         {/* Danger Zone */}
-        <Card className="border-destructive/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="h-5 w-5" />
-              Danger Zone
-            </CardTitle>
-            <CardDescription>Irreversible actions</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className="bg-card border border-border rounded-lg border-destructive/50 px-3.5 py-3.5">
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-1">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+              <p className="text-[0.7rem] uppercase tracking-[0.4px] text-destructive font-medium">Danger Zone</p>
+            </div>
+            <p className="text-xs text-muted-foreground ml-6">Irreversible actions</p>
+          </div>
+          <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Sign Out</p>
