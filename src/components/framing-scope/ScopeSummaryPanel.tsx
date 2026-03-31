@@ -95,6 +95,7 @@ export function ScopeSummaryPanel({ answers, matResp, compact }: Props) {
         { text: 'Daily cleanup', included: yn(a.cleanup.daily_cleanup) },
         { text: a.cleanup.warranty ? `Warranty: ${a.cleanup.warranty}` : 'Warranty', included: !!a.cleanup.warranty },
       ]} />
+      </div>
     </div>
   );
 }
