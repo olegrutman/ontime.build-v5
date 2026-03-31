@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, X, Loader2 } from 'lucide-react';
+import { Check, X, Loader2, FileText, Wrench, Truck, GitBranch } from 'lucide-react';
 import { useProjectInvite } from '@/hooks/useProjectInvite';
 
 interface AttentionItem {
@@ -25,22 +25,28 @@ interface Props {
   onRefresh?: () => void;
 }
 
-const typeConfig: Record<string, { emoji: string; borderColor: string; badge: string; badgeStyle: string }> = {
+const typeConfig: Record<string, { icon: React.ElementType; borderColor: string; iconBg: string; iconColor: string; badge: string; badgeStyle: string }> = {
   invoice: {
-    emoji: '💰',
+    icon: FileText,
     borderColor: 'border-l-red-500',
+    iconBg: 'bg-red-50',
+    iconColor: 'text-red-600',
     badge: 'Review',
     badgeStyle: 'bg-red-50 text-red-700',
   },
   invite: {
-    emoji: '📨',
+    icon: GitBranch,
     borderColor: 'border-l-blue-500',
+    iconBg: 'bg-blue-50',
+    iconColor: 'text-blue-600',
     badge: 'Respond',
     badgeStyle: 'bg-blue-50 text-blue-700',
   },
   sent_invite: {
-    emoji: '📤',
+    icon: Truck,
     borderColor: 'border-l-amber-500',
+    iconBg: 'bg-amber-50',
+    iconColor: 'text-amber-600',
     badge: 'Awaiting',
     badgeStyle: 'bg-amber-50 text-amber-700',
   },
@@ -87,7 +93,7 @@ export function DashboardNeedsAttentionCard({ attentionItems, pendingInvites, on
   return (
     <div className="bg-card border border-border rounded-lg">
       <div className="flex items-center justify-between px-4 py-3">
-        <h3 className="font-heading text-[1rem] font-bold text-foreground">Needs Attention</h3>
+        <h3 className="card-section-title">Needs Attention</h3>
         {allItems.length > 0 && (
           <span className="text-[0.68rem] font-semibold bg-red-50 text-red-700 px-2 py-0.5 rounded-full">
             {allItems.length}
@@ -95,15 +101,16 @@ export function DashboardNeedsAttentionCard({ attentionItems, pendingInvites, on
         )}
       </div>
 
-      <div className="px-3.5 md:px-[14px] pb-3 space-y-[5px]">
+      <div className="px-3.5 pb-3 space-y-[5px]">
         {allItems.length === 0 ? (
-          <div className="text-center py-8 md:py-6">
+          <div className="text-center py-8">
             <span className="text-[1.8rem]">🎉</span>
             <p className="text-[0.82rem] text-muted-foreground mt-1">All caught up</p>
           </div>
         ) : (
-          allItems.slice(0, 5).map(item => {
+          allItems.slice(0, 5).map((item, i) => {
             const config = typeConfig[item.type];
+            const IconComp = config.icon;
             const isIncomingInvite = item.type === 'invite';
             const isProcessing = processingId === item.id;
 
@@ -111,13 +118,15 @@ export function DashboardNeedsAttentionCard({ attentionItems, pendingInvites, on
               return (
                 <div
                   key={item.id}
-                  className={`w-full bg-card border border-border rounded-md border-l-[3px] md:border-l-[2.5px] ${config.borderColor} px-3 md:px-[10px] py-2.5 md:py-[9px] flex items-center gap-2.5 md:gap-2`}
-                  style={{ minHeight: '56px' }}
+                  className={`w-full bg-card border border-border rounded-md border-l-[3px] ${config.borderColor} px-3 py-2.5 flex items-center gap-2.5 opacity-0 animate-[fadeUp_400ms_ease-out_forwards]`}
+                  style={{ animationDelay: `${300 + i * 50}ms`, minHeight: '56px' }}
                 >
-                  <span className="text-base md:text-sm flex-shrink-0">{config.emoji}</span>
+                  <div className={`w-8 h-8 rounded-lg ${config.iconBg} flex items-center justify-center shrink-0`}>
+                    <IconComp className={`h-4 w-4 ${config.iconColor}`} />
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[0.82rem] md:text-[0.78rem] font-semibold text-foreground truncate">{item.title}</div>
-                    <div className="text-[0.72rem] md:text-[0.67rem] text-muted-foreground truncate">{item.subtitle}</div>
+                    <div className="text-[0.82rem] font-semibold text-foreground truncate">{item.title}</div>
+                    <div className="text-[0.72rem] text-muted-foreground truncate">{item.subtitle}</div>
                   </div>
                   <div className="flex gap-1.5 flex-shrink-0">
                     <button
@@ -144,15 +153,17 @@ export function DashboardNeedsAttentionCard({ attentionItems, pendingInvites, on
               <button
                 key={item.id}
                 onClick={item.onClick}
-                className={`w-full text-left bg-card border border-border rounded-md border-l-[3px] md:border-l-[2.5px] ${config.borderColor} px-3 md:px-[10px] py-2.5 md:py-[9px] hover:bg-accent hover:translate-x-px transition-all flex items-center gap-2.5 md:gap-2`}
-                style={{ minHeight: '56px' }}
+                className={`w-full text-left bg-card border border-border rounded-md border-l-[3px] ${config.borderColor} px-3 py-2.5 hover:bg-accent/50 hover:translate-x-px transition-all flex items-center gap-2.5 opacity-0 animate-[fadeUp_400ms_ease-out_forwards]`}
+                style={{ animationDelay: `${300 + i * 50}ms`, minHeight: '56px' }}
               >
-                <span className="text-base md:text-sm flex-shrink-0">{config.emoji}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[0.82rem] md:text-[0.78rem] font-semibold text-foreground truncate">{item.title}</div>
-                  <div className="text-[0.72rem] md:text-[0.67rem] text-muted-foreground truncate">{item.subtitle}</div>
+                <div className={`w-8 h-8 rounded-lg ${config.iconBg} flex items-center justify-center shrink-0`}>
+                  <IconComp className={`h-4 w-4 ${config.iconColor}`} />
                 </div>
-                <span className={`text-[0.68rem] md:text-[0.63rem] font-bold px-[7px] py-[2px] rounded-md flex-shrink-0 ${config.badgeStyle}`}>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[0.82rem] font-semibold text-foreground truncate">{item.title}</div>
+                  <div className="text-[0.72rem] text-muted-foreground truncate">{item.subtitle}</div>
+                </div>
+                <span className={`text-[0.68rem] font-bold px-[7px] py-[2px] rounded-md flex-shrink-0 ${config.badgeStyle}`}>
                   {config.badge}
                 </span>
               </button>
