@@ -367,11 +367,11 @@ export default function PurchaseOrders() {
                   className={`relative cursor-pointer bg-card border border-border rounded-lg transition-all hover:shadow-md animate-fade-in ${selectedPO?.id === po.id ? 'ring-2 ring-primary' : ''}`}
                   onClick={() => fetchPODetails(po.id)}
                 >
-                  <CardHeader className="pb-2">
+                  <div className="px-3.5 py-3">
                     <div className="flex items-start justify-between">
                       <div>
-                        <CardTitle className="text-base font-mono">{po.po_number}</CardTitle>
-                        <CardDescription className="truncate">{po.po_name}</CardDescription>
+                        <p className="text-sm font-medium" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{po.po_number}</p>
+                        <p className="text-xs text-muted-foreground truncate">{po.po_name}</p>
                       </div>
                       <Badge className={getStatusBadgeClass(po.status as POStatus)}>
                         {PO_STATUS_LABELS[po.status as POStatus]}
