@@ -126,7 +126,7 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
         {hasOwner && (
           <div className="border-t pt-2.5 flex items-center justify-between">
             <span className="text-sm font-medium">GC Profit</span>
-            <span className={cn("text-lg font-bold tabular-nums", gcProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')}>
+            <span className={cn("text-lg font-bold tabular-nums", gcProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive')} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
               {fmt(gcProfit)}
             </span>
           </div>
