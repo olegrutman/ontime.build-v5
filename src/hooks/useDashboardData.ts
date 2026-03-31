@@ -387,6 +387,8 @@ export function useDashboardData(): DashboardData {
         allInvoicesResult,
         remindersResult,
         recentInvoicesResult,
+        recentCOsResult,
+        recentPOsResult,
       ] = await Promise.all([
         projectIds.length > 0
           ? supabase
@@ -418,6 +420,25 @@ export function useDashboardData(): DashboardData {
               .in('project_id', projectIds)
               .order('created_at', { ascending: false })
               .limit(40)
+          : Promise.resolve({ data: [] }),
+        // Recent change orders
+        projectIds.length > 0
+          ? supabase
+              .from('change_orders')
+              .select('id, co_number, title, status, created_at, project_id, org_id')
+              .in('project_id', projectIds)
+              .order('created_at', { ascending: false })
+              .limit(20)
+          : Promise.resolve({ data: [] }),
+        // Recent purchase orders
+        projectIds.length > 0
+          ? supabase
+              .from('purchase_orders')
+              .select('id, po_number, po_name, status, po_total, created_at, project_id')
+              .in('project_id', projectIds)
+              .eq('organization_id', currentOrg.id)
+              .order('created_at', { ascending: false })
+              .limit(20)
           : Promise.resolve({ data: [] }),
       ]);
 
