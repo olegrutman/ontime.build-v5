@@ -59,7 +59,7 @@ function fmtCurrency(value: number) {
 export function CODetailPage() {
   const { id: projectId, coId } = useParams<{ id: string; coId: string }>();
   const navigate = useNavigate();
-  const defaultOpen = useDefaultSidebarOpen();
+  // removed useDefaultSidebarOpen
   const { currentRole, user, userOrgRoles } = useAuth();
 
   const {
