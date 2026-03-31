@@ -54,6 +54,7 @@ export interface ExteriorAnswers {
   rough_fascia_items: string[];
   finished_fascia: YesNoNa;
   finished_fascia_material: string | null;
+  soffit_nailer: YesNoNa;
   finished_soffit: YesNoNa;
   finished_soffit_material: string | null;
   vented_soffit: YesNoNa;
