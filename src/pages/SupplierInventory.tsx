@@ -4,10 +4,7 @@ import { Upload, Package, FileSpreadsheet, AlertCircle, AlertTriangle, Loader2, 
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { AppSidebar } from '@/components/layout/AppSidebar';
-import { TopBar } from '@/components/layout/TopBar';
-import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
+import { AppLayout } from '@/components/layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
