@@ -4,9 +4,12 @@ import { formatDistanceToNow } from 'date-fns';
 interface RecentDoc {
   id: string;
   type: string;
-  label: string;
+  title: string;
+  status: string;
+  amount: number | null;
+  created_at: string;
   projectName: string;
-  updatedAt: string;
+  projectId: string;
 }
 
 interface DashboardActivityFeedProps {
