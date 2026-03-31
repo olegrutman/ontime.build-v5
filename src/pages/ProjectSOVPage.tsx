@@ -542,63 +542,44 @@ export default function ProjectSOVPage() {
   }
 
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar />
-        <SidebarInset className="flex flex-col flex-1 bg-background">
-          {/* Sticky back bar */}
-          <div className="sticky top-0 z-50 bg-card border-b px-4 py-2 flex items-center gap-3">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate(`/project/${projectId}/overview`)}
-              className="shrink-0"
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back to Overview
-            </Button>
-            <span className="text-sm text-muted-foreground truncate">{project?.name}</span>
-          </div>
+    <AppLayout title="Schedule of Values" subtitle={project?.name}>
+      <div className="space-y-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => navigate(`/project/${projectId}/overview`)}
+          className="shrink-0"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Back to Overview
+        </Button>
 
-          {/* Header */}
-          <header className="sticky top-[49px] z-40 border-b bg-card backdrop-blur">
-            <div className="flex items-center gap-3 px-4 h-14">
-              <h1 className="text-lg font-semibold font-heading truncate">Schedule of Values</h1>
-            </div>
-          </header>
-
-          <main className="flex-1 overflow-auto pb-24 lg:pb-6">
-            <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 space-y-4">
-              {(() => {
-                const visibleContracts = allContracts.filter(c =>
-                  c.from_org_id === userOrgId || c.to_org_id === userOrgId
-                );
-                if (visibleContracts.length === 0) return (
-                  <Card>
-                    <CardContent className="p-6 text-center text-muted-foreground">
-                      <p className="text-sm">No contracts found for this project.</p>
-                      <Button size="sm" variant="outline" className="mt-3" onClick={() => navigate(`/project/${projectId}/contracts`)}>
-                        Create Contract
-                      </Button>
-                    </CardContent>
-                  </Card>
-                );
-                return visibleContracts.map(contract => (
-                  <SOVContractSection
-                    key={contract.id}
-                    projectId={projectId!}
-                    contractId={contract.id}
-                    contract={contract}
-                    userOrgId={userOrgId}
-                  />
-                ));
-              })()}
-            </div>
-          </main>
-        </SidebarInset>
-        <BottomNav />
+        {(() => {
+          const visibleContracts = allContracts.filter(c =>
+            c.from_org_id === userOrgId || c.to_org_id === userOrgId
+          );
+          if (visibleContracts.length === 0) return (
+            <Card>
+              <CardContent className="p-6 text-center text-muted-foreground">
+                <p className="text-sm">No contracts found for this project.</p>
+                <Button size="sm" variant="outline" className="mt-3" onClick={() => navigate(`/project/${projectId}/contracts`)}>
+                  Create Contract
+                </Button>
+              </CardContent>
+            </Card>
+          );
+          return visibleContracts.map(contract => (
+            <SOVContractSection
+              key={contract.id}
+              projectId={projectId!}
+              contractId={contract.id}
+              contract={contract}
+              userOrgId={userOrgId}
+            />
+          ));
+        })()}
       </div>
-    </SidebarProvider>
+    </AppLayout>
   );
 }
 
