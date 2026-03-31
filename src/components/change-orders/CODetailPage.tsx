@@ -161,19 +161,13 @@ export function CODetailPage() {
 
   if (isLoading) {
     return (
-      <SidebarProvider defaultOpen={defaultOpen}>
-        <div className="flex min-h-screen w-full">
-          <AppSidebar />
-          <SidebarInset>
-            <div className="p-6 space-y-4">
-              <Skeleton className="h-8 w-72" />
-              <Skeleton className="h-48 w-full" />
-              <Skeleton className="h-40 w-full" />
-            </div>
-          </SidebarInset>
-          <BottomNav />
+      <AppLayout title="Change Order">
+        <div className="space-y-4">
+          <Skeleton className="h-8 w-72" />
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-40 w-full" />
         </div>
-      </SidebarProvider>
+      </AppLayout>
     );
   }
 
