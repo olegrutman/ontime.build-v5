@@ -406,8 +406,8 @@ export default function OrgTeam() {
                   </Button>
                 </div>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
       </div>
 
