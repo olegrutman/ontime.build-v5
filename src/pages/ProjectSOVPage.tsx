@@ -504,7 +504,7 @@ export default function ProjectSOVPage() {
   const navigate = useNavigate();
   const { user, userOrgRoles } = useAuth();
   const userOrgId = userOrgRoles[0]?.organization_id || null;
-  const defaultOpen = useDefaultSidebarOpen();
+  // removed useDefaultSidebarOpen
 
   // Fetch project info
   const { data: project } = useQuery({
