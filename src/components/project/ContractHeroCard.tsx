@@ -222,6 +222,7 @@ export function ContractHeroCard({ financials, projectId }: ContractHeroCardProp
           </div>
         );
       })()}
+      </div>
     </div>
   );
 }
