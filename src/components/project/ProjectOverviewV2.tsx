@@ -334,6 +334,8 @@ export function ProjectOverviewV2({
             projectId={projectId}
             isTCMaterialResponsible={isTCMaterialResponsible}
             isGCMaterialResponsible={isGCMaterialResponsible}
+            onResponsibilityChange={onResponsibilityChange}
+            onTeamChanged={onTeamChanged}
           />
         </div>
 
