@@ -57,12 +57,6 @@ const barStyles = {
 function KPICard({ label, value, tag, tagColor, subText, barPercent, barColor, delay }: KPICardProps) {
   const animatedValue = useCountUp(value, 900, delay);
   const [barWidth, setBarWidth] = useState(0);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const t = setTimeout(() => setVisible(true), delay);
-    return () => clearTimeout(t);
-  }, [delay]);
 
   useEffect(() => {
     const t = setTimeout(() => setBarWidth(barPercent), 300 + delay);
@@ -71,11 +65,11 @@ function KPICard({ label, value, tag, tagColor, subText, barPercent, barColor, d
 
   return (
     <div
-      className={`bg-card border border-border rounded-lg px-3.5 md:px-4 py-3.5 md:py-[18px] transition-all duration-300 hover:-translate-y-px hover:shadow-md ${
-        visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2.5'
-      }`}
-      style={{ transitionDelay: `${delay}ms` }}
+      className={`bg-card border border-border rounded-lg px-3.5 md:px-4 py-3.5 md:py-[18px] relative overflow-hidden transition-all duration-300 hover:-translate-y-px hover:shadow-md animate-fade-up`}
+      style={{ animationDelay: `${delay}ms` }}
     >
+      {/* Bottom accent line */}
+      <div className={`absolute bottom-0 left-0 right-0 h-[2px] ${barStyles[barColor]}`} />
       <div className="text-[0.7rem] md:text-[0.72rem] uppercase tracking-[0.4px] md:tracking-[0.5px] text-muted-foreground mb-2">
         {label}
       </div>
