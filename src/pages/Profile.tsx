@@ -188,9 +188,9 @@ export default function Profile() {
 
   return (
     <AppLayout>
-      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="max-w-3xl mx-auto space-y-5">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-xl font-bold flex items-center gap-2" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
             Profile
             {userOrgRoles[0]?.is_admin && (
               <Badge variant="default" className="text-xs">
@@ -199,7 +199,7 @@ export default function Profile() {
               </Badge>
             )}
           </h1>
-          <p className="text-muted-foreground">Manage your personal info, organization, and pricing defaults.</p>
+          <p className="text-sm text-muted-foreground">Manage your personal info, organization, and pricing defaults.</p>
         </div>
 
         {/* Section 1: Personal Information */}
