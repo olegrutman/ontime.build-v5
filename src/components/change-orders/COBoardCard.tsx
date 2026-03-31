@@ -114,7 +114,7 @@ export function COBoardCard({ co, isActive, onClick }: COBoardCardProps) {
           )}
         </div>
 
-        <h4 className="text-sm font-medium text-foreground line-clamp-2 leading-snug">
+        <h4 className="text-sm font-medium text-foreground line-clamp-2 leading-snug" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
           {title}
         </h4>
 
