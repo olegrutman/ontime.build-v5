@@ -81,13 +81,22 @@ export function OverviewTeamCard({ projectId, isTCMaterialResponsible, isGCMater
         </div>
       )}
 
-      {materialLabel && (
-        <div className="flex items-center gap-1.5 pt-1 border-t border-border">
-          <Package className="w-3.5 h-3.5 text-muted-foreground" />
-          <span className="text-[10px] text-muted-foreground">Materials:</span>
-          <span className="text-[10px] font-semibold text-foreground">{materialLabel}</span>
-        </div>
-      )}
+      {materialLabel && (() => {
+        const responsibleRole = isTCMaterialResponsible ? 'Trade Contractor' : 'General Contractor';
+        const responsibleOrg = members.find(m => m.role === responsibleRole);
+        const dotColor = ROLE_DOTS[responsibleRole] || 'bg-muted-foreground';
+        return (
+          <div className="flex items-center gap-2 pt-1.5 border-t border-border">
+            <Package className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-[10px] text-muted-foreground">Materials:</span>
+            <span className={cn('w-2 h-2 rounded-full shrink-0', dotColor)} />
+            <span className="text-[10px] font-semibold text-foreground truncate">
+              {responsibleOrg?.org_name || materialLabel}
+            </span>
+            <span className="text-[10px] text-muted-foreground">({materialLabel})</span>
+          </div>
+        );
+      })()}
     </div>
   );
 }
