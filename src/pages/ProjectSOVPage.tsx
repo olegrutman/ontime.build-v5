@@ -532,17 +532,12 @@ export default function ProjectSOVPage() {
 
   if (contractsLoading) {
     return (
-      <SidebarProvider defaultOpen={defaultOpen}>
-        <div className="min-h-screen flex w-full">
-          <AppSidebar />
-          <SidebarInset className="flex flex-col flex-1">
-            <div className="p-6 space-y-4">
-              <Skeleton className="h-10 w-64" />
-              <Skeleton className="h-96 w-full" />
-            </div>
-          </SidebarInset>
+      <AppLayout title="Schedule of Values">
+        <div className="space-y-4">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-96 w-full" />
         </div>
-      </SidebarProvider>
+      </AppLayout>
     );
   }
 
