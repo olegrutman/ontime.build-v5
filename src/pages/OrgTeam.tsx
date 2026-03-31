@@ -255,8 +255,8 @@ export default function OrgTeam() {
                   </div>
                 </div>
               ))}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
 
         {/* Current Members */}
