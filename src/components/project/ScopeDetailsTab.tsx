@@ -168,7 +168,7 @@ export function ScopeDetailsTab({ projectId }: Props) {
             </div>
           </div>
           <Button
-            onClick={() => navigate(`/project/${projectId}/details-wizard`)}
+             onClick={() => navigate(`/project/${projectId}/setup`)}
             className="bg-amber-500 hover:bg-amber-600 text-white shrink-0"
           >
             Get Started
