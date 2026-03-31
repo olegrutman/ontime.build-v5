@@ -168,12 +168,6 @@ export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectNam
       );
     }
   }
-        >
-          Skip for now
-        </button>
-      </div>
-    );
-  }
 
   // Resumed — auto-start
   if (!started && hasExistingRecord) {
