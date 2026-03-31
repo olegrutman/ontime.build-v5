@@ -692,10 +692,10 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                     </div>
                   </div>
                 </CollapsibleTrigger>
-              </CardHeader>
+              </div>
 
               <CollapsibleContent>
-                <CardContent className="pt-0">
+                <div className="px-5 pb-5 pt-0">
                   {/* Billing Active notice */}
                   {hasBilling && (
                     <Alert className="mb-4 border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/30">
