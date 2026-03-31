@@ -210,10 +210,7 @@ export function CODetailPage() {
   }
 
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
-      <div className="flex min-h-screen w-full">
-        <AppSidebar />
-        <SidebarInset>
+    <AppLayout title="Change Order">
           <div className="pb-20 md:pb-6">
             <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
               <div className="px-4 md:px-6 py-4 space-y-3">
