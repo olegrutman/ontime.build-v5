@@ -250,6 +250,7 @@ export default function Dashboard() {
 
           {/* Right column */}
           <div className="space-y-2.5">
+            <DashboardActivityFeed docs={recentDocs} />
             <DashboardBudgetCard
               financials={financials}
               billing={{ pendingAmount: orgType === 'GC' ? billing.outstandingToPay : billing.outstandingToCollect }}
