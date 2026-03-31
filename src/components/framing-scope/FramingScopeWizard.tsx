@@ -142,16 +142,8 @@ export function FramingScopeWizard({ projectId, buildingType: propBuildingType =
     );
   }
 
-  // Fire onComplete via effect instead of during render
-  const onCompleteRef = useRef(onComplete);
-  onCompleteRef.current = onComplete;
-  const [completeFired, setCompleteFired] = useState(false);
-  useEffect(() => {
-    if (scopeComplete && embedded && !completeFired) {
-      setCompleteFired(true);
-      onCompleteRef.current?.();
-    }
-  }, [scopeComplete, embedded, completeFired]);
+
+
 
   // Completed scope — in embedded mode, show summary card with expandable full scope
   if (scopeComplete && embedded) {
