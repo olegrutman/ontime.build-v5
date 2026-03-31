@@ -199,9 +199,9 @@ export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectNam
   const isLast = currentSection === SECTIONS.length - 1;
 
   return (
-    <div className="flex flex-col h-full min-h-[calc(100vh-200px)]">
-      {/* Header bar */}
-      <WizardHeader projectName={projectName} buildingType={buildingType} inc={inc} exc={exc} />
+    <div className={cn("flex flex-col h-full", !embedded && "min-h-[calc(100vh-200px)]")}>
+      {/* Header bar — hidden in embedded mode (parent provides context) */}
+      {!embedded && <WizardHeader projectName={projectName} buildingType={buildingType} inc={inc} exc={exc} />}
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left nav — desktop */}

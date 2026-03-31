@@ -29,6 +29,7 @@ import {
   CriticalScheduleCard,
 } from '@/components/project';
 import { FramingScopeWizard } from '@/components/framing-scope/FramingScopeWizard';
+import { ProjectSetupFlow } from '@/components/project-setup/ProjectSetupFlow';
 import { ProjectIconRail } from '@/components/project/ProjectIconRail';
 import { ProjectBottomNav } from '@/components/project/ProjectBottomNav';
 import { ContractHeroCard } from '@/components/project/ContractHeroCard';
