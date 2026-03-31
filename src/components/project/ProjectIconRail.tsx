@@ -28,9 +28,7 @@ interface RailItem {
 
 const GROUP_1: RailItem[] = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard, route: 'overview' },
-  { key: 'setup', label: 'Project Setup', icon: Settings2, route: 'setup' },
-  
-  { key: 'sov', label: 'SOV', icon: DollarSign, route: 'sov', featureKey: 'sov_contracts', hideForSupplier: true },
+  { key: 'setup', label: 'Project Info', icon: Settings2, route: 'setup' },
 ];
 
 const GROUP_2: RailItem[] = [
