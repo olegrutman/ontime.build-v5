@@ -35,7 +35,7 @@ import { ProjectBottomNav } from '@/components/project/ProjectBottomNav';
 
 import { BillingCashCard } from '@/components/project/BillingCashCard';
 import { UrgentTasksCard } from '@/components/project/UrgentTasksCard';
-import { TeamMembersCard } from '@/components/project/TeamMembersCard';
+
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
 import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
 import { PendingInviteCard } from '@/components/project/PendingInviteCard';
@@ -354,9 +354,6 @@ export default function ProjectHome() {
                       onTeamChanged={readiness.recalculate}
                     />
 
-                    <div className="lg:hidden space-y-2.5">
-                      <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} onTeamChanged={readiness.recalculate} />
-                    </div>
                   </div>
                 )}
               </>
