@@ -394,16 +394,28 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
   useEffect(() => { fetchData(); }, [projectId, user, isSupplier, supplierOrgId]);
 
   // Derived
-  const upstreamContract = contracts.find(c =>
+  // Filter out placeholder/stale contracts — prefer ones with a non-null trade and non-zero sum
+  const pickBest = (candidates: typeof contracts) => {
+    if (candidates.length === 0) return undefined;
+    const withTrade = candidates.filter(c => c.trade != null);
+    const pool = withTrade.length > 0 ? withTrade : candidates;
+    // Prefer the one with the highest contract_sum (the "real" one)
+    return pool.reduce((best, c) => (c.contract_sum || 0) > (best.contract_sum || 0) ? c : best, pool[0]);
+  };
+
+  const upstreamCandidates = contracts.filter(c =>
     ((c.from_role === 'General Contractor' && c.to_role === 'Trade Contractor') ||
      (c.to_role === 'General Contractor' && c.from_role === 'Trade Contractor')) &&
     c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
   );
-  const downstreamContract = contracts.find(c =>
+  const upstreamContract = pickBest(upstreamCandidates);
+
+  const downstreamCandidates = contracts.filter(c =>
     ((c.from_role === 'Trade Contractor' && c.to_role === 'Field Crew') ||
      (c.to_role === 'Trade Contractor' && c.from_role === 'Field Crew')) &&
     c.trade !== 'Work Order' && c.trade !== 'Work Order Labor'
   );
+  const downstreamContract = pickBest(downstreamCandidates);
 
   const primaryContract = viewerRole === 'Field Crew' ? downstreamContract : upstreamContract;
   const contractValue = primaryContract?.contract_sum || 0;
