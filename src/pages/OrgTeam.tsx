@@ -328,8 +328,8 @@ export default function OrgTeam() {
             {members.length === 0 && (
               <p className="text-sm text-muted-foreground">No members found.</p>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Invite New Member */}
         <Card>
