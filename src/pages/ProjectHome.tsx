@@ -27,8 +27,8 @@ import {
   ProfitCard,
   MaterialMarkupEditor,
   CriticalScheduleCard,
-  ScopeDetailsTab,
 } from '@/components/project';
+import { FramingScopeWizard } from '@/components/framing-scope/FramingScopeWizard';
 import { ProjectIconRail } from '@/components/project/ProjectIconRail';
 import { ProjectBottomNav } from '@/components/project/ProjectBottomNav';
 import { ContractHeroCard } from '@/components/project/ContractHeroCard';
