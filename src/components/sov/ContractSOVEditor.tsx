@@ -850,10 +850,10 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                       )}
                     </div>
                   )}
-                </CardContent>
+                </div>
               </CollapsibleContent>
             </Collapsible>
-          </Card>
+          </div>
         );
   };
 
