@@ -57,12 +57,6 @@ const barStyles = {
 function KPICard({ label, value, tag, tagColor, subText, barPercent, barColor, delay }: KPICardProps) {
   const animatedValue = useCountUp(value, 900, delay);
   const [barWidth, setBarWidth] = useState(0);
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const t = setTimeout(() => setVisible(true), delay);
-    return () => clearTimeout(t);
-  }, [delay]);
 
   useEffect(() => {
     const t = setTimeout(() => setBarWidth(barPercent), 300 + delay);
