@@ -65,7 +65,7 @@ interface FinancialSummary {
 
 export interface RecentDoc {
   id: string;
-  type: 'invoice';
+  type: 'invoice' | 'change_order' | 'purchase_order';
   title: string;
   status: string;
   amount: number | null;
