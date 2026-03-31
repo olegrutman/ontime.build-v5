@@ -14,7 +14,6 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
 import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useCORealtime } from '@/hooks/useCORealtime';
 import { useProjectFCOrgs } from '@/hooks/useProjectFCOrgs';
