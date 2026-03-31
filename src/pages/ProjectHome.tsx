@@ -319,7 +319,7 @@ export default function ProjectHome() {
                     {showSetupBanner && (
                       <div
                         className="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors"
-                        onClick={() => navigate(`/project/${id}/details-wizard`)}
+                        onClick={() => navigate(`/project/${id}/setup`)}
                       >
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">

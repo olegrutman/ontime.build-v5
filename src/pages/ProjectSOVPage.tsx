@@ -197,14 +197,14 @@ function SOVContractSection({
                 </div>
                 {!prereqs.hasProfile && (
                   <div className="flex items-center justify-between p-2 rounded-lg bg-muted border text-sm">
-                    <span>Complete the Project Details Wizard</span>
-                    <Button size="sm" variant="outline" onClick={() => navigate(`/project/${projectId}/details-wizard`)}>Set up</Button>
+                     <span>Complete the Project Setup</span>
+                     <Button size="sm" variant="outline" onClick={() => navigate(`/project/${projectId}/setup`)}>Set up</Button>
                   </div>
                 )}
                 {!prereqs.hasScope && (
                   <div className="flex items-center justify-between p-2 rounded-lg bg-muted border text-sm">
-                    <span>Complete the Scope Wizard</span>
-                    <Button size="sm" variant="outline" onClick={() => navigate(`/project/${projectId}/scope-wizard`)}>Set up</Button>
+                     <span>Complete the Scope Setup</span>
+                     <Button size="sm" variant="outline" onClick={() => navigate(`/project/${projectId}/setup`)}>Set up</Button>
                   </div>
                 )}
                 {!prereqs.hasContract && (
@@ -221,8 +221,8 @@ function SOVContractSection({
               <CardContent className="pt-0">
                 {/* Status strip */}
                 <div className="flex items-center gap-3 mb-3 overflow-x-auto text-xs">
-                  <StatusChip ok={prereqs.hasProfile} label={prereqs.profileSummary || 'Profile ready'} link={`/project/${projectId}/details-wizard`} />
-                  <StatusChip ok={prereqs.hasScope} label={`Scope — ${prereqs.scopeCount} items`} link={`/project/${projectId}/scope-wizard`} />
+                   <StatusChip ok={prereqs.hasProfile} label={prereqs.profileSummary || 'Profile ready'} link={`/project/${projectId}/setup`} />
+                   <StatusChip ok={prereqs.hasScope} label={`Scope — ${prereqs.scopeCount} items`} link={`/project/${projectId}/setup`} />
                   <StatusChip ok={prereqs.hasContract} label={`$${(prereqs.contractValue || 0).toLocaleString()} · ${prereqs.retainagePct}% ret.`} link={`/project/${projectId}/contracts`} />
                 </div>
 

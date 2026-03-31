@@ -168,7 +168,7 @@ export function ScopeDetailsTab({ projectId }: Props) {
             </div>
           </div>
           <Button
-            onClick={() => navigate(`/project/${projectId}/details-wizard`)}
+             onClick={() => navigate(`/project/${projectId}/setup`)}
             className="bg-amber-500 hover:bg-amber-600 text-white shrink-0"
           >
             Get Started
@@ -220,7 +220,7 @@ export function ScopeDetailsTab({ projectId }: Props) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="text-base font-semibold">Project Profile</CardTitle>
-          <Button variant="ghost" size="sm" onClick={() => navigate(`/project/${projectId}/details-wizard`)}>
+           <Button variant="ghost" size="sm" onClick={() => navigate(`/project/${projectId}/setup`)}>
             <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
           </Button>
         </CardHeader>
@@ -284,7 +284,7 @@ export function ScopeDetailsTab({ projectId }: Props) {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-3">
           <CardTitle className="text-base font-semibold">Scope Summary</CardTitle>
-          <Button variant="ghost" size="sm" onClick={() => navigate(`/project/${projectId}/scope-wizard`)}>
+           <Button variant="ghost" size="sm" onClick={() => navigate(`/project/${projectId}/setup`)}>
             <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
           </Button>
         </CardHeader>
