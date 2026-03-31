@@ -206,8 +206,8 @@ export default function OrgTeam() {
                 onCheckedChange={handleToggleJoinRequests}
               />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Join Requests */}
         {joinRequests.length > 0 && (
