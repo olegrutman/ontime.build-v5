@@ -209,6 +209,10 @@ function AppRoutes() {
             <Route path="/platform/logs" element={<RequirePlatformRole><PlatformLogs /></RequirePlatformRole>} />
             <Route path="/platform/plans" element={<RequirePlatformRole><PlatformPlans /></RequirePlatformRole>} />
 
+            {/* Demo V2 — standalone prototype */}
+            <Route path="/demo-v2" element={<DemoV2Dashboard />} />
+            <Route path="/demo-v2/project/:id" element={<DemoV2ProjectOverview />} />
+
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
