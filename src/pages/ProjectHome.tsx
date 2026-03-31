@@ -369,11 +369,6 @@ export default function ProjectHome() {
             )}
 
 
-            {activeTab === 'sov' && (
-              <FeatureGate feature="sov_contracts">
-                <ContractSOVEditor projectId={id!} />
-              </FeatureGate>
-            )}
 
             {activeTab === 'rfis' && (
               isInDemoMode ? <DemoRFIsTab /> : <RFIsTab projectId={id!} />
