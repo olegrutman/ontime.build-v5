@@ -36,7 +36,7 @@ export default function Financials() {
 
   return (
     <AppLayout title="Financials">
-      <div className="p-4 sm:p-6 space-y-6 max-w-4xl">
+      <div className="p-4 sm:p-6 space-y-5 max-w-4xl">
         <div className="max-w-2xl">
           <DashboardFinancialCard
             role={billing.role}

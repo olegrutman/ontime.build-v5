@@ -57,12 +57,12 @@ export default function PartnerDirectory() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'organizations' | 'people')}>
-          <TabsList>
-            <TabsTrigger value="organizations" className="gap-1.5">
+          <TabsList className="bg-muted/50 p-1 rounded-full">
+            <TabsTrigger value="organizations" className="gap-1.5 rounded-full text-xs px-4">
               <Building2 className="h-3.5 w-3.5" />
               Organizations
             </TabsTrigger>
-            <TabsTrigger value="people" className="gap-1.5">
+            <TabsTrigger value="people" className="gap-1.5 rounded-full text-xs px-4">
               <Users className="h-3.5 w-3.5" />
               People
             </TabsTrigger>
