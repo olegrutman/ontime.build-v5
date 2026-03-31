@@ -478,9 +478,9 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
         const isEffectivelyLocked = sov.is_locked || hasBilling;
 
         return (
-          <Card key={sov.id} data-sasha-card="Contract SOV">
+          <div key={sov.id} className="border border-border rounded-lg bg-card overflow-hidden" data-sasha-card="Contract SOV">
             <Collapsible open={isExpanded} onOpenChange={() => toggleSov(sov.id)}>
-              <CardHeader className="pb-3">
+              <div className="px-5 py-3.5 pb-3">
                 <CollapsibleTrigger asChild>
                   <div className="flex items-start sm:items-center justify-between cursor-pointer gap-2 flex-wrap">
                     <div className="flex items-start sm:items-center gap-2 sm:gap-3 min-w-0 flex-1">
