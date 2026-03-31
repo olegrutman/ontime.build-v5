@@ -491,7 +491,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                       )}
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <CardTitle className="text-base line-clamp-2">{sov.sov_name || 'Unnamed SOV'}</CardTitle>
+                          <span className="text-sm font-bold line-clamp-2" style={DT.heading}>{sov.sov_name || 'Unnamed SOV'}</span>
                           <Badge variant={isWorkOrderSOV ? "outline" : "secondary"} className="text-xs shrink-0">
                             {sovSourceLabel}
                           </Badge>
