@@ -12,6 +12,7 @@ import {
   RotateCcw,
   CalendarDays,
   PenLine,
+  Settings2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFeatureEnabled } from '@/components/auth/FeatureGate';
