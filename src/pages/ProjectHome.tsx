@@ -38,6 +38,7 @@ import { TeamMembersCard } from '@/components/project/TeamMembersCard';
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
 import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
 import { PendingInviteCard } from '@/components/project/PendingInviteCard';
+import { ProjectOverviewV2 } from '@/components/project/ProjectOverviewV2';
 
 import { InvoicesTab } from '@/components/invoices';
 import { ReturnsTab } from '@/components/returns';
@@ -336,49 +337,20 @@ export default function ProjectHome() {
                       <ProjectReadinessCard readiness={readiness} />
                     )}
 
-                    {/* Mobile attention banner */}
                     <div className="lg:hidden">
                       <AttentionBanner projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
                     </div>
 
-                    {/* Main grid: left content + right sidebar */}
-                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-2.5">
-                      {/* LEFT COLUMN */}
-                      <div className="space-y-2.5">
-                        <ContractHeroCard financials={financials} projectId={id!} />
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                          <BillingCashCard financials={financials} />
-                          <ProfitCard financials={financials} projectId={id!} />
-                        </div>
-                        <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
-                        {projectSupplierOrgId && (
-                          <MaterialsBudgetStatusCard
-                            projectId={id!}
-                            supplierOrgId={projectSupplierOrgId}
-                            financials={financials}
-                          />
-                        )}
-                        {estimateRows && estimateRows.length > 0 && (
-                          <SupplierEstimateCatalog estimates={estimateRows} hidePricing={currentOrg?.type === 'TC' && materialResponsibility === 'GC'} />
-                        )}
-                        <CriticalScheduleCard projectId={id!} onNavigate={handleTabChange} />
-                        <MaterialMarkupEditor financials={financials} projectId={id!} projectStatus={projectStatus} />
-                        <CollapsibleOperations
-                          projectId={id!}
-                          projectType={project.project_type}
-                          financials={financials}
-                          onNavigate={handleTabChange}
-                        />
-                      </div>
+                    <ProjectOverviewV2
+                      projectId={id!}
+                      projectName={project.name}
+                      projectStatus={projectStatus}
+                      projectType={project.project_type}
+                      address={project.address ? `${project.address.street || ''}, ${project.address.city || ''}, ${project.address.state || ''} ${project.address.zip || ''}`.replace(/^,\s*|,\s*$/g, '').trim() : null}
+                      financials={financials}
+                      onNavigate={handleTabChange}
+                    />
 
-                      {/* RIGHT SIDEBAR — desktop only */}
-                      <div className="hidden lg:flex flex-col gap-2.5">
-                        <UrgentTasksCard projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
-                        <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} onTeamChanged={readiness.recalculate} />
-                      </div>
-                    </div>
-
-                    {/* Mobile: team + urgent below */}
                     <div className="lg:hidden space-y-2.5">
                       <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} onTeamChanged={readiness.recalculate} />
                     </div>
