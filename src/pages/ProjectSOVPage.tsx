@@ -210,7 +210,7 @@ function SOVContractSection({
                 {!prereqs.hasContract && (
                   <div className="flex items-center justify-between p-2 rounded-lg bg-muted border text-sm">
                     <span>Create a contract with a value</span>
-                    <Button size="sm" variant="outline" onClick={() => navigate(`/project/${projectId}/contracts`)}>Set up</Button>
+                    <Button size="sm" variant="outline" onClick={() => navigate(`/project/${projectId}/setup`)}>Set up</Button>
                   </div>
                 )}
               </CardContent>
