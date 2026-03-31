@@ -40,21 +40,15 @@ export function PhaseSOV({ projectId, onComplete, onStepChange }: PhaseSOVProps)
   }
 
   return (
-    <div className="space-y-6 max-w-full mx-auto">
-      <div className="max-w-[680px] mx-auto">
-        <h2 className="text-lg font-bold font-heading" style={DT.heading}>
-          Schedule of Values
-        </h2>
-        <p className="text-xs text-muted-foreground mt-1">
-          Generate, review, and lock the SOV for each contract. Total contract value:{' '}
-          <span className="font-semibold" style={DT.mono}>${totalValue.toLocaleString()}</span>
-        </p>
+    <div className="space-y-5 px-5 py-5">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span>Total contract value:</span>
+        <span className="font-semibold text-foreground" style={DT.mono}>${totalValue.toLocaleString()}</span>
       </div>
 
-      {/* Render the existing SOV editor which handles generation/editing per contract */}
       <ContractSOVEditor projectId={projectId} />
 
-      <div className="max-w-[680px] mx-auto flex justify-end pt-4 border-t border-border">
+      <div className="flex justify-end pt-4 border-t border-border">
         <Button onClick={onComplete} className="min-h-[44px]">
           <CheckCircle2 className="w-4 h-4 mr-1" />
           Finish Setup & Activate Project
