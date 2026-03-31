@@ -35,8 +35,8 @@ export function SupplierOpenOrders({ pos }: Props) {
               className="w-full text-left px-4 py-2.5 hover:bg-accent transition-colors flex items-center gap-3"
             >
               <div className="min-w-0 flex-1">
-                <div className="text-[0.78rem] font-semibold text-foreground truncate">
-                  {po.poNumber}
+                 <div className="text-[0.78rem] font-semibold text-foreground truncate" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                   {po.poNumber}
                 </div>
                 <div className="text-[0.67rem] text-muted-foreground truncate">
                   {po.projectName} · {po.poName}
