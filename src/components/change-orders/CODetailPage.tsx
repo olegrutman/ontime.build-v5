@@ -527,10 +527,7 @@ export function CODetailPage() {
               </aside>
             </div>
           </div>
-        </SidebarInset>
-        <BottomNav />
-      </div>
-    </SidebarProvider>
+    </AppLayout>
   );
 }
 
