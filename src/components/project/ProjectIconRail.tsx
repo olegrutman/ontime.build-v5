@@ -12,6 +12,7 @@ import {
   RotateCcw,
   CalendarDays,
   PenLine,
+  Settings2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFeatureEnabled } from '@/components/auth/FeatureGate';
@@ -27,6 +28,7 @@ interface RailItem {
 
 const GROUP_1: RailItem[] = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard, route: 'overview' },
+  { key: 'setup', label: 'Project Setup', icon: Settings2, route: 'setup' },
   { key: 'scope', label: 'Framing Scope', icon: ClipboardList, route: 'scope' },
   { key: 'sov', label: 'SOV', icon: DollarSign, route: 'sov', featureKey: 'sov_contracts', hideForSupplier: true },
 ];

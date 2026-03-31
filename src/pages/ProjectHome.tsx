@@ -29,6 +29,7 @@ import {
   CriticalScheduleCard,
 } from '@/components/project';
 import { FramingScopeWizard } from '@/components/framing-scope/FramingScopeWizard';
+import { ProjectSetupFlow } from '@/components/project-setup/ProjectSetupFlow';
 import { ProjectIconRail } from '@/components/project/ProjectIconRail';
 import { ProjectBottomNav } from '@/components/project/ProjectBottomNav';
 import { ContractHeroCard } from '@/components/project/ContractHeroCard';
@@ -357,6 +358,14 @@ export default function ProjectHome() {
                   </div>
                 )}
               </>
+            )}
+
+            {activeTab === 'setup' && (
+              <ProjectSetupFlow
+                projectId={id!}
+                projectName={project?.name}
+                projectType={project?.project_type}
+              />
             )}
 
             {(activeTab === 'scope' || activeTab === 'scope-details') && (

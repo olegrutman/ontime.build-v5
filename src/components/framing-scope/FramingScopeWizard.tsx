@@ -27,6 +27,8 @@ interface Props {
   projectId: string;
   buildingType?: FramingBuildingType;
   projectName?: string;
+  embedded?: boolean;
+  onComplete?: () => void;
 }
 
 /* ── Count included / excluded from answers ────────────────────────── */
@@ -73,7 +75,7 @@ const BUILDING_LABELS: Record<string, string> = {
   COMMERCIAL: 'Commercial',
 };
 
-export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectName }: Props) {
+export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectName, embedded = false, onComplete }: Props) {
   const {
     answers, setAnswer, currentSection, goToSection,
     scopeComplete, markComplete, editScope,
@@ -99,7 +101,26 @@ export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectNam
     );
   }
 
-  // Completed scope — show document
+  // Completed scope — in embedded mode, notify parent
+  if (scopeComplete && embedded) {
+    // Auto-call onComplete if provided
+    if (onComplete) {
+      onComplete();
+    }
+    return (
+      <div className="max-w-3xl mx-auto p-6 w-full space-y-4">
+        <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-md px-4 py-3 text-sm text-emerald-800">
+          <Check className="w-4 h-4" />
+          Framing scope is complete. Proceed to the next phase.
+        </div>
+        <Button variant="outline" size="sm" onClick={editScope}>
+          Edit scope
+        </Button>
+      </div>
+    );
+  }
+
+  // Completed scope — show document (standalone mode)
   if (scopeComplete) {
     return (
       <div className="flex flex-col h-full min-h-[calc(100vh-200px)]">
@@ -117,31 +138,35 @@ export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectNam
     );
   }
 
-  // First visit — landing
+  // First visit — landing (skip in embedded mode, auto-start)
   if (!started && !hasExistingRecord) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 px-6 text-center max-w-md mx-auto">
-        <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-          <ClipboardList className="w-7 h-7 text-primary" />
+    if (embedded) {
+      setStarted(true);
+    } else {
+      return (
+        <div className="flex flex-col items-center justify-center py-16 px-6 text-center max-w-md mx-auto">
+          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <ClipboardList className="w-7 h-7 text-primary" />
+          </div>
+          <h2 className="font-heading text-xl font-bold" style={DT.heading}>
+            Framing Scope Setup
+          </h2>
+          <p className="text-sm text-muted-foreground mt-2 mb-6">
+            Define what is and isn't included in your rough framing subcontract.
+            This wizard generates a Division 06100 Scope of Work document.
+          </p>
+          <Button onClick={() => setStarted(true)} className="px-8">
+            Start scope setup
+          </Button>
+          <button
+            onClick={() => {/* skip for now */}}
+            className="text-xs text-muted-foreground underline mt-3 hover:text-foreground"
+          >
+            Skip for now
+          </button>
         </div>
-        <h2 className="font-heading text-xl font-bold" style={DT.heading}>
-          Framing Scope Setup
-        </h2>
-        <p className="text-sm text-muted-foreground mt-2 mb-6">
-          Define what is and isn't included in your rough framing subcontract.
-          This wizard generates a Division 06100 Scope of Work document.
-        </p>
-        <Button onClick={() => setStarted(true)} className="px-8">
-          Start scope setup
-        </Button>
-        <button
-          onClick={() => {/* skip for now */}}
-          className="text-xs text-muted-foreground underline mt-3 hover:text-foreground"
-        >
-          Skip for now
-        </button>
-      </div>
-    );
+      );
+    }
   }
 
   // Resumed — auto-start
@@ -174,9 +199,9 @@ export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectNam
   const isLast = currentSection === SECTIONS.length - 1;
 
   return (
-    <div className="flex flex-col h-full min-h-[calc(100vh-200px)]">
-      {/* Header bar */}
-      <WizardHeader projectName={projectName} buildingType={buildingType} inc={inc} exc={exc} />
+    <div className={cn("flex flex-col h-full", !embedded && "min-h-[calc(100vh-200px)]")}>
+      {/* Header bar — hidden in embedded mode (parent provides context) */}
+      {!embedded && <WizardHeader projectName={projectName} buildingType={buildingType} inc={inc} exc={exc} />}
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left nav — desktop */}

@@ -14,6 +14,7 @@ import {
   CalendarDays,
   PenLine,
   Camera,
+  Settings2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
@@ -43,6 +44,7 @@ interface MoreItem {
 }
 
 const MORE_ITEMS: MoreItem[] = [
+  { label: 'Project Setup', icon: Settings2, route: 'setup' },
   { label: 'Framing Scope', icon: ClipboardList, route: 'scope' },
   { label: 'SOV', icon: DollarSign, route: 'sov', featureKey: 'sov_contracts', hideForSupplier: true },
   { label: 'RFIs', icon: MessageSquareMore, route: 'rfis' },
