@@ -26,7 +26,7 @@ const TYPE_COLORS: Record<string, string> = {
 function getInitials(label: string): string {
   const parts = label.split(/[-\s]/);
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-  return label.slice(0, 2).toUpperCase();
+  return title.slice(0, 2).toUpperCase();
 }
 
 export function DashboardActivityFeed({ docs }: DashboardActivityFeedProps) {
