@@ -24,6 +24,7 @@ import { useContractSOV, ContractSOV, ContractSOVItem, ProjectContract, getContr
 import { SOVProgressBar } from './SOVProgressBar';
 import { RequireOrgType } from '@/components/auth/RequirePermission';
 import { useAuth } from '@/hooks/useAuth';
+import { DT } from '@/lib/design-tokens';
 
 interface ContractSOVEditorProps {
   projectId: string;
