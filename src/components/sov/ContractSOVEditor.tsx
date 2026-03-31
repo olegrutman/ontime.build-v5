@@ -500,7 +500,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                         </div>
                         <p className="text-xs text-muted-foreground tabular-nums" style={DT.mono}>
                           {formatCurrency(contract?.contract_sum || 0)} • {items.length} item{items.length !== 1 ? 's' : ''}
-                        </CardDescription>
+                        </p>
         {totals.totalValue > 0 && (
                           <div className="mt-2 w-48">
                             <SOVProgressBar

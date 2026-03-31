@@ -102,6 +102,14 @@ export function FramingScopeWizard({ projectId, buildingType: propBuildingType =
   onCompleteRef.current = onComplete;
   const isMobile = useIsMobile();
 
+  // Fire onComplete via effect instead of during render
+  useEffect(() => {
+    if (scopeComplete && embedded && !completeFired) {
+      setCompleteFired(true);
+      onCompleteRef.current?.();
+    }
+  }, [scopeComplete, embedded, completeFired]);
+
   const buildingType = derivedBuildingType || propBuildingType;
   const matResp = answers.method.material_responsibility;
   const { inc, exc } = useMemo(() => countScope(answers), [answers]);
