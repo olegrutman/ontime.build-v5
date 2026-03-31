@@ -101,7 +101,26 @@ export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectNam
     );
   }
 
-  // Completed scope — show document
+  // Completed scope — in embedded mode, notify parent
+  if (scopeComplete && embedded) {
+    // Auto-call onComplete if provided
+    if (onComplete) {
+      onComplete();
+    }
+    return (
+      <div className="max-w-3xl mx-auto p-6 w-full space-y-4">
+        <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-md px-4 py-3 text-sm text-emerald-800">
+          <Check className="w-4 h-4" />
+          Framing scope is complete. Proceed to the next phase.
+        </div>
+        <Button variant="outline" size="sm" onClick={editScope}>
+          Edit scope
+        </Button>
+      </div>
+    );
+  }
+
+  // Completed scope — show document (standalone mode)
   if (scopeComplete) {
     return (
       <div className="flex flex-col h-full min-h-[calc(100vh-200px)]">
