@@ -1,81 +1,50 @@
 
 
-# Redesign Project Overview to Match Demo-V2 (Light Theme)
+# Unified Recent Documents Card with Type Filters
 
 ## What Changes
-Transform the project overview tab from its current flat card layout into the demo-v2 pattern: hero card with KPI tiles and progress bar, pill segment tabs (Budget/Orders/Field), SVG donut chart, colored budget breakdown with progress bars, and live activity feed — all on light surfaces using real data.
+The dashboard's "Recent Invoices" card becomes a **"Recent Documents"** card showing invoices, change orders, and purchase orders in one unified feed. Filter pills let users toggle between All / Invoices / Change Orders / POs. Items are sorted by most recent first, with attention-needing items (submitted, pending approval) surfaced prominently.
 
-## Layout Structure
+## Data Layer — `useDashboardData.ts`
 
-```text
-┌─────────────────────────────────────┬──────────────────────┐
-│  Hero Card (project color gradient) │  SVG Donut Chart     │
-│  Phase • Name • Location • Status   │  (budget breakdown)  │
-│  [Contract] [Paid] [Pending] tiles  │                      │
-│  Progress bar (animated)            │  Activity Feed       │
-│                                     │  (real Supabase data)│
-│  [Budget] [Orders] [Field] pills    │                      │
-│                                     │                      │
-│  Tab content:                       │                      │
-│  - Budget: colored progress lines   │                      │
-│  - Orders: 3px left-border items    │                      │
-│  - Field: checkbox task list        │                      │
-└─────────────────────────────────────┴──────────────────────┘
-```
+### Expand `RecentDoc` type
+- Change `type` from `'invoice'` to `'invoice' | 'change_order' | 'purchase_order'`
 
-Mobile: single column, right panel below.
+### Fetch change orders and POs alongside invoices
+In the existing parallel query block (around line 414), add two more queries:
+- `change_orders` table: `id, co_number, title, status, amount, created_at, project_id` for `projectIds`, ordered by `created_at desc`, limit 20
+- `purchase_orders` table: `id, po_number, po_name, status, po_total, created_at, project_id` for `projectIds` where `organization_id = currentOrg.id`, ordered by `created_at desc`, limit 20
 
-## Implementation Steps
+### Build unified list
+After the existing invoice doc-building loop (line 474-502), add similar loops for COs and POs:
+- COs: type `'change_order'`, title from `co_number` or `title`, status, amount
+- POs: type `'purchase_order'`, title from `po_number` or `po_name`, status, amount from `po_total`
 
-### 1. Create `ProjectOverviewV2.tsx`
-New component that replaces the current overview content inside `ProjectHome.tsx` (lines 316-385). Contains:
+Sort all together by `created_at desc`, take top 15.
 
-- **Hero card**: Light surface (`bg-card`) with subtle `radial-gradient` using project accent color at 8% opacity. Barlow Condensed heading, phase tag, location, status badge. 3 KPI tiles (Contract, Paid, Pending) from `financials`. Animated progress bar.
-- **Pill tabs**: `budget | orders | field` — same pattern as demo-v2 but on light surface (`bg-muted/50` inactive, `bg-primary text-primary-foreground` active).
-- **Budget tab**: Remaining/Total summary card + SOV/budget line items with colored progress bars. Data from `financials` (billedToDate, totalPaid, upstream contract). Each line clickable → opens BottomSheet.
-- **Orders tab**: Filter pills (All/PO/WO/INV/CO) + list of recent invoices, POs, COs from existing Supabase queries. 3px left-border per status color. Click → BottomSheet.
-- **Field tab**: Daily log tasks or schedule items from existing hooks. Checkbox toggle pattern.
+## UI — `DashboardRecentDocs.tsx`
 
-### 2. Create `ProjectBudgetRingChart.tsx`
-Light-theme SVG donut chart (port of `demo-v2/BudgetRingChart.tsx`):
-- Takes real data: Paid, Pending, Remaining from `financials`
-- Colors: green (paid), amber (pending), navy (remaining)
-- Animated stroke-dashoffset on mount
-- Legend below with IBM Plex Mono values
+### Add filter pills
+Row of rounded-full pills below the header: `All` | `Invoices` | `Change Orders` | `POs`
+- Active pill: `bg-primary text-primary-foreground`
+- Inactive: `bg-muted/50 text-muted-foreground`
+- Filter the displayed list by `doc.type`
 
-### 3. Create `ProjectActivityFeedSidebar.tsx`
-Right-column activity feed using real data from `project_activity` table (same query pattern as `ProjectActivitySection.tsx`):
-- Avatar initials circle, name, description, chip label, relative timestamp
-- Light theme: `bg-card` surface, `text-foreground`, subtle chip backgrounds
-- Limited to 8 most recent items
+### Update type labels and badge styles
+Add entries for `change_order` and `purchase_order`:
+- Change Order: amber badge
+- Purchase Order: green badge
 
-### 4. Update `ProjectHome.tsx` overview section
-Replace lines 316-385 (the current overview content block) with `<ProjectOverviewV2>` component, passing `financials`, `projectId`, project data, and navigation handler. Keep all existing setup banner, readiness card, and mobile attention banner logic above it.
+### Update click navigation
+- Invoices → `/project/{id}/invoices`
+- Change Orders → `/project/{id}/change-orders`
+- Purchase Orders → `/project/{id}/purchase-orders` (or `/purchase-orders`)
 
-### 5. Wire BottomSheet
-Import existing `BottomSheet` from `src/components/app-shell/BottomSheet.tsx`. Open on budget line or order item click with meta tiles.
-
-## Data Sources (all existing — no new queries needed)
-- `financials` hook → contract values, paid, pending, billing data
-- `project_activity` table → activity feed
-- `invoices` + `purchase_orders` tables → orders tab
-- Project object → name, status, location, phase
-
-## Typography
-- Hero heading: `Barlow Condensed`, `text-[28px] font-bold`
-- KPI tile values: `IBM Plex Mono`
-- Section headers: `text-[0.7rem] uppercase tracking-[0.4px]`
-- Currency: `IBM Plex Mono`
-
-## Files Created
-- `src/components/project/ProjectOverviewV2.tsx` — main overview layout
-- `src/components/project/ProjectBudgetRingChart.tsx` — SVG donut
-- `src/components/project/ProjectActivityFeedSidebar.tsx` — right column feed
+### Attention indicator
+Items with statuses like `SUBMITTED`, `PENDING_APPROVAL` get a subtle left amber border (3px) to visually flag items needing action.
 
 ## Files Modified
-- `src/pages/ProjectHome.tsx` — swap overview content to use `ProjectOverviewV2`
-
-## Files NOT Changed
-- All existing cards (`ContractHeroCard`, `BillingCashCard`, `ProfitCard`, etc.) — preserved but no longer rendered in default overview (moved into pill tab content or kept as optional)
-- Navigation, auth, hooks, database — untouched
+- `src/hooks/useDashboardData.ts` — expand queries and RecentDoc type
+- `src/components/dashboard/DashboardRecentDocs.tsx` — add filter pills, new type labels, navigation routes
+- `src/components/dashboard/DashboardActivityFeed.tsx` — already handles multiple types, no change needed
 
