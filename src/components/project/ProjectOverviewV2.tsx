@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { cn, formatCurrency as fmt } from '@/lib/utils';
+import { useCountUp } from '@/hooks/useCountUp';
 import { DT } from '@/lib/design-tokens';
 import { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import { ProjectBudgetRingChart } from './ProjectBudgetRingChart';
