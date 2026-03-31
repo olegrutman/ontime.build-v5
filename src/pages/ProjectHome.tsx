@@ -38,6 +38,7 @@ import { TeamMembersCard } from '@/components/project/TeamMembersCard';
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
 import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
 import { PendingInviteCard } from '@/components/project/PendingInviteCard';
+import { ProjectOverviewV2 } from '@/components/project/ProjectOverviewV2';
 
 import { InvoicesTab } from '@/components/invoices';
 import { ReturnsTab } from '@/components/returns';
