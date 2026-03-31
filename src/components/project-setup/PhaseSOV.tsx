@@ -7,11 +7,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { ContractSOVEditor } from '@/components/sov';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { ContractSOVEditor } from '@/components/sov';
-import { Skeleton } from '@/components/ui/skeleton';
 
 interface PhaseSOVProps {
   projectId: string;
