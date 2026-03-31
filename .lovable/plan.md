@@ -1,26 +1,43 @@
 
 
-# Show Material Responsibility in Team Card
+# Align Project Overview Page Fonts & Styles with Dashboard
 
 ## Problem
-The team card currently shows "Materials: TC" or "Materials: GC" as a generic label. It should show the **actual organization name** responsible for materials (e.g., "Materials: Acme Contractors").
+The overview page uses different typography and card styling than the dashboard. Dashboard uses `font-heading` (Barlow Condensed) for large numbers, count-up animations, bottom accent bars on KPI cards, and specific tag/badge patterns. The overview page uses plain `text-[28px] font-bold` and simpler card styling.
 
-## Change
+## Changes — `src/components/project/ProjectOverviewV2.tsx`
 
-**File: `src/components/project/OverviewTeamCard.tsx`**
+### 1. Hero Card Typography
+- Project name: add `font-heading` class (Barlow Condensed) — replace inline `style={DT.heading}` with the Tailwind class used on dashboard
+- KPI tile values: switch from `text-base font-semibold` + `style={DT.mono}` to `font-heading text-[1.5rem] font-black tracking-tight` matching dashboard KPICard pattern
+- Add count-up animation to KPI tile values (reuse the `useCountUp` hook from DashboardKPIRow or extract it to a shared util)
 
-Update the material responsibility section (lines 84-90) to:
-1. Find the team member whose role matches the responsible party (TC or GC)
-2. Display their org name instead of just "TC"/"GC"
-3. Make the indicator more prominent — use a colored badge style with the Package icon, matching the role dot color of the responsible org
+### 2. KPI Tiles — Match Dashboard KPICard Pattern
+- Add bottom accent line (`absolute bottom-0 left-0 right-0 h-[2px]`) with color per tile (blue for Contract, emerald for Paid, amber for Pending)
+- Add tag pill (percentage badge) like dashboard cards show
+- Add sub-text line below the value
+- Add `hover:-translate-y-px hover:shadow-md` interaction
+- Use `animate-fade-up` with staggered delays
 
-```text
-Before:  📦 Materials: TC
-After:   📦 Materials: Acme Contractors (TC)  ← with role-colored accent
-```
+### 3. Section Headers
+- Already using `DT.sectionHeader` — keep as-is
 
-The `members` array already has `role` and `org_name` — just match the responsible role to find the org name. If neither flag is set, hide the section entirely (already handled).
+### 4. Budget Rows
+- Values should use `font-heading` for amounts instead of `DT.mono` to match dashboard's number style
+- Progress bars already match
+
+### 5. Card Wrappers (Right Column)
+- Already using `DT.cardWrapper` — consistent
+
+### 6. Extract `useCountUp` to Shared Utility
+- Move the `useCountUp` hook from `DashboardKPIRow.tsx` to `src/hooks/useCountUp.ts`
+- Import it in both `DashboardKPIRow` and `ProjectOverviewV2`
 
 ## Files Modified
-- `src/components/project/OverviewTeamCard.tsx` — update material label to show org name
+- `src/hooks/useCountUp.ts` — new shared hook (extracted from DashboardKPIRow)
+- `src/components/project/ProjectOverviewV2.tsx` — restyle hero, KPI tiles, typography
+- `src/components/dashboard/DashboardKPIRow.tsx` — import useCountUp from shared location
+
+## Files NOT Changed
+- Database, hooks, edge functions, navigation — untouched
 
