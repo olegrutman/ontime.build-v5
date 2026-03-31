@@ -509,8 +509,8 @@ export default function PurchaseOrders() {
                       <p className="text-sm text-muted-foreground">{selectedPO.notes}</p>
                     </div>
                   )}
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ) : (
               <Card>
                 <CardContent className="py-12 text-center text-muted-foreground">
