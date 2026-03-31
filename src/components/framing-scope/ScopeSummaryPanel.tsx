@@ -6,6 +6,7 @@ import { Check } from 'lucide-react';
 interface Props {
   answers: FramingScopeAnswers;
   matResp: MaterialResponsibility | null;
+  compact?: boolean;
 }
 
 function yn(v: string | null | undefined): boolean { return v === 'yes'; }
