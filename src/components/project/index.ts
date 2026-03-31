@@ -4,7 +4,7 @@ export { ProjectScopeSection } from './ProjectScopeSection';
 export { ProjectContractsSection } from './ProjectContractsSection';
 export { ProjectActivitySection } from './ProjectActivitySection';
 export { ProjectFinancialsSectionNew } from './ProjectFinancialsSectionNew';
-export { ProjectTopBar } from './ProjectTopBar';
+
 export { PurchaseOrdersTab } from './PurchaseOrdersTab';
 export { MetricStrip } from './MetricStrip';
 export { AttentionBanner } from './AttentionBanner';
