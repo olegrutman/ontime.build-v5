@@ -1,70 +1,64 @@
 
 
-# Project Info Page — Full Design Audit & Fix
+# Consolidate Contract Input to Project Info Page Only
 
-## Issues Found
+## What's Changing
 
-### Visual Inconsistencies
-1. **ProjectInfoCard**: Uses `p-5` padding, `text-base` heading — doesn't have the shared `CardHeader2` treatment other cards get
-2. **Framing Scope card**: Has 3-panel layout (200px nav + content + 240px summary) creating massive empty space when scope is complete — the summary panel fills poorly. When editing, the `max-w-[680px]` inner content leaves whitespace on wide screens
-3. **Contracts card**: Uses raw `px-5 py-5` padding, no `DT.mono` on currency, `text-sm` for names — different font treatment than SOV
-4. **SOV card**: `ContractSOVEditor` renders its own `<Card>` with `CardHeader`/`CardTitle` (large `text-xl` heading, generic card styling) — nested card-in-card since `ProjectSetupFlow` already wraps it in a `<Card>`. Also uses `text-xl font-semibold` heading vs `text-sm font-bold` Barlow Condensed everywhere else
-5. **Typography mismatch**: SOV uses default font stack (`text-xl font-semibold`), contracts use default `text-sm font-medium`, info card uses `DT.heading` — no consistency
-6. **Currency formatting**: Contracts shows raw `$` prefix + Input, SOV uses `Intl.NumberFormat`, PhaseSOV header uses `toLocaleString()` — three different approaches
+The contract input in the Project Info page (`PhaseContracts.tsx`) becomes the **single place** to create and edit contract values. All other redundant contract editing UI and standalone pages get removed.
 
-### Bugs Found
-1. **forwardRef warning**: `CleanupSection` is a function component receiving refs — console error on every render
-2. **`onComplete` called on every render**: Line 136 of `FramingScopeWizard.tsx` calls `onComplete()` inside the render body when `scopeComplete && embedded` — this triggers on every re-render, causing unnecessary scroll-to-contracts calls
-3. **SOV heading says "Schedule of Values"** (line 862) redundant with the `CardHeader2` that already says "Schedule of Values" — double heading
-4. **SOV section labels still say "GC → TC"** and "TC → FC" (lines 872, 881) — abbreviations not full names, inconsistent with the overview page fix
+## Audit Results — Places Found
 
-### Active Step Logic
-5. **Step 1 is never "done"**: `activeStep` starts at 1 and jumps to 3 when scope is complete — step 1 (Project Info) never shows a green checkmark. It should always be considered complete since the project already exists.
+| Location | What it does | Action |
+|----------|-------------|--------|
+| `PhaseContracts.tsx` (Project Info) | Contract input form | **KEEP — single source** |
+| `ProjectContractsPage.tsx` | Standalone `/project/:id/contracts` page — duplicate form | **DELETE file** |
+| `ContractHeroCard.tsx` | Inline contract edit on overview hero card | **DELETE file** (dead code — imported but never rendered) |
+| `ProjectFinancialsSectionNew.tsx` | Inline contract edit + create in financials section | **DELETE file** (dead code — never rendered) |
+| `ProfitCard.tsx` | Inline owner contract editing | **DELETE file** (dead code — never rendered) |
+| `ScopeDetailsTab.tsx` | Read-only contract display + "Edit" button → `/contracts` | **Update** — change "Edit" button to navigate to `/project/:id/setup` (scrolls to contracts card) |
+| `OverviewContractsSection.tsx` | Read-only contract cards on overview | **KEEP** — read-only display, but update "View SOV" link to navigate to setup page |
+| `AddTeamMemberDialog.tsx` | Creates contract rows with `contract_sum: 0` | **KEEP** — this is initialization, not editing |
+| `ProjectSOVPage.tsx` | "Set up" button → `/contracts` | **Update** — redirect to `/project/:id/setup` |
+| `ProjectScopeWizard.tsx` | Navigates to `/contracts` after save | **Update** — redirect to setup |
+| `ContractScopeWizard.tsx` | Navigates to `/contracts` | **Update** — redirect to setup |
+| `App.tsx` | Route for `/project/:id/contracts` | **Remove route** |
+| `ProjectHome.tsx` | Imports `ContractHeroCard` | **Remove unused import** |
 
-## Plan
+## Changes by File
 
-### 1. `ProjectSetupFlow.tsx` — Unified card styling + fix step logic
-- Fix `activeStep`: start at 2 minimum (project info is always complete) → `scopeComplete ? (contractsComplete ? 4 : 3) : 2`
-- Make all four cards use the same `CardHeader2` component (ProjectInfoCard currently doesn't)
-- Add `DT.heading` font to all card title text consistently
+### Delete Files (dead code)
+- `src/pages/ProjectContractsPage.tsx`
+- `src/components/project/ContractHeroCard.tsx`
+- `src/components/project/ProjectFinancialsSectionNew.tsx`
+- `src/components/project/ProfitCard.tsx`
 
-### 2. `ProjectInfoCard.tsx` — Match card header pattern
-- Replace current standalone layout with `CardHeader2`-style header (icon + title + subtitle)
-- Keep inline edit functionality
-- Use `DT.heading` for name, `DT.mono` for any data values
-- Add consistent `px-5 py-5` content padding
+### `src/App.tsx`
+- Remove lazy import for `ProjectContractsPage`
+- Remove the `/project/:id/contracts` route
 
-### 3. `FramingScopeWizard.tsx` — Fix render-time side effect + empty space
-- Move `onComplete()` call from render body into a `useEffect` guarded by `scopeComplete`
-- When in embedded complete state, remove the 3-panel layout (no left nav, no right summary) — just show the summary card at full width within the card content area
+### `src/pages/ProjectHome.tsx`
+- Remove `ContractHeroCard` import
 
-### 4. `PhaseContracts.tsx` — Match typography
-- Add `DT.mono` to currency display and column headers
-- Add `DT.heading` to party names
-- Use consistent `text-xs` for column headers matching the design system's `sectionHeader` token
+### `src/components/project/ScopeDetailsTab.tsx`
+- Change "Edit" button from `navigate('/project/:id/contracts')` to `navigate('/project/:id/setup')` so it goes to Project Info page
 
-### 5. `PhaseSOV.tsx` — Remove redundant heading
-- Add `DT.mono` to total contract value display (already partially there)
-- Keep clean
+### `src/pages/ProjectSOVPage.tsx`
+- Change "Set up" / "Create Contract" buttons from `/contracts` to `/project/:id/setup`
 
-### 6. `ContractSOVEditor.tsx` — Remove nested card + fix abbreviations
-- Remove the outer `<h2>Schedule of Values</h2>` heading (redundant with parent `CardHeader2`)
-- Remove wrapping `<Card>` from `renderSOVCard` — use a `div` with `border rounded-lg` instead to avoid card-in-card nesting
-- Replace `"GC → TC Contracts"` / `"TC → FC Contracts"` section labels with org names or descriptive labels like "Upstream Contracts" / "Downstream Contracts"
-- Apply `DT.mono` to all currency values
-- Apply `DT.heading` to SOV names and section headers
+### `src/pages/ProjectScopeWizard.tsx`
+- Change post-save navigation from `/contracts` to `/setup`
 
-### 7. `CleanupSection.tsx` — Fix forwardRef warning
-- Wrap with `React.forwardRef` or ensure parent doesn't pass ref
+### `src/pages/ContractScopeWizard.tsx`
+- Change navigation references from `/contracts` to `/setup`
 
-## Files Modified
-| File | Change |
-|------|--------|
-| `ProjectSetupFlow.tsx` | Fix activeStep logic, consistent card wrapper for step 1 |
-| `ProjectInfoCard.tsx` | Redesign to match CardHeader2 pattern with DT fonts |
-| `FramingScopeWizard.tsx` | Fix onComplete side effect, clean embedded complete layout |
-| `PhaseContracts.tsx` | DT.mono on currency, DT.heading on names, consistent sizing |
-| `PhaseSOV.tsx` | Minor font consistency |
-| `ContractSOVEditor.tsx` | Remove nested cards, remove duplicate heading, fix GC/TC labels, apply DT fonts |
-| `CleanupSection.tsx` | Add forwardRef to fix console warning |
+### `src/components/sasha/SashaBubble.tsx`
+- Update any contract-related navigation to point to setup page
+
+## What's NOT Changed
+- `project_contracts` database table — unchanged, still the single DB table
+- `AddTeamMemberDialog.tsx` — keeps creating `contract_sum: 0` rows (initialization)
+- Invoice system — reads contracts, doesn't edit them
+- SOV system — reads contract values, doesn't edit them
+- `OverviewContractsSection.tsx` — read-only display stays
+- `useProjectFinancials` hook — still reads from `project_contracts`
 
