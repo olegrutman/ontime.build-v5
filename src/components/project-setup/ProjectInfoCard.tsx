@@ -31,6 +31,15 @@ export function ProjectInfoCard({ projectId, projectName }: ProjectInfoCardProps
     },
   });
 
+  // Sync name state when query data loads
+  const resolvedName = project?.name || projectName || '';
+  useState(() => { /* init only */ });
+  // Keep name in sync with DB when not actively editing
+  const displayName = project?.name || projectName || 'Untitled Project';
+  if (!editing && name !== resolvedName && resolvedName) {
+    setName(resolvedName);
+  }
+
   const { data: profile } = useQuery({
     queryKey: ['project_profile', projectId],
     enabled: !!projectId,
@@ -59,8 +68,10 @@ export function ProjectInfoCard({ projectId, projectName }: ProjectInfoCardProps
     },
   });
 
-  const displayName = project?.name || projectName || 'Untitled Project';
-  const address = [project?.address, project?.city, project?.state].filter(Boolean).join(', ');
+  // Extract street from address JSON object
+  const addressObj = project?.address as any;
+  const street = typeof addressObj === 'string' ? addressObj : addressObj?.street || '';
+  const address = [street, project?.city, project?.state].filter(Boolean).join(', ');
 
   const handleSave = async () => {
     if (!name.trim()) return;
