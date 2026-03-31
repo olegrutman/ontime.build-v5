@@ -312,8 +312,8 @@ export default function Settings() {
                 </AlertDialogContent>
               </AlertDialog>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </AppLayout>
   );
