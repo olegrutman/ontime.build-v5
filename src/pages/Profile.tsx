@@ -480,8 +480,8 @@ export default function Profile() {
                 Save Organization
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Section 3: Pricing Defaults (hidden for GC users) */}
         {organization?.type !== 'GC' && <Card>
