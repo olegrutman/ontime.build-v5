@@ -1,77 +1,60 @@
 
 
-# Consolidate Setup into Cards + Expanded Scope Wizard
+# Framing Scope Summary Card with Expandable Full Scope
 
 ## What Changes
 
-The current 4-phase wizard (Building → Scope → Contracts → SOV) gets replaced with a **single page layout using cards**:
+When the framing scope is marked complete (in the embedded setup flow), instead of showing just a green "Complete" banner, display a **summary card** showing key scope highlights. Clicking it expands to show the full `ScopeDocument`.
+
+## Current Behavior
+Lines 134-147 of `FramingScopeWizard.tsx`: when `scopeComplete && embedded`, it shows a minimal green banner + "Edit scope" button. The rich `ScopeSummaryPanel` and `ScopeDocument` are not shown.
+
+## New Behavior
 
 ```text
 ┌─────────────────────────────────────────────┐
-│  PROJECT INFO CARD (read-only summary)      │
-│  Name • Type • Address                      │
-│  Edit button → inline edit                  │
+│  ✓ Framing Scope Complete                   │
+│                                             │
+│  FRAMING METHOD          BUILDING FEATURES  │
+│  ✓ Stick framing         ✓ Wood stairs      │
+│  ✓ Labor only            ✓ Balconies        │
+│                                             │
+│  EXTERIOR SKIN           OPENINGS           │
+│  ✓ Wall sheathing        ✓ Windows: GFCI    │
+│  ✓ Roof sheathing                           │
+│                                             │
+│  [View Full Scope]  [Edit Scope]            │
 └─────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────┐
-│  FRAMING SCOPE WIZARD (expandable card)     │
-│  Section 0: Building Profile (NEW)          │
-│    → stories, foundation, floor/roof system │
-│    → garage, features (feeds scope gates)   │
-│  Section 1-11: Existing scope sections      │
-│    → Method, Structure, Sheathing...        │
-└─────────────────────────────────────────────┘
+ ▼ Clicking "View Full Scope" expands:
 
 ┌─────────────────────────────────────────────┐
-│  CONTRACTS CARD                             │
-│  Contract sums + retainage per team member  │
-│  Unlocks after scope is complete            │
-└─────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────┐
-│  SOV CARD                                   │
-│  Auto-generated, review + activate          │
-│  Unlocks after contracts saved              │
+│  Division 06100 — Rough Carpentry Scope...  │
+│  (full ScopeDocument component)             │
+│  [Collapse]  [Edit Scope]                   │
 └─────────────────────────────────────────────┘
 ```
 
-## Key Design Decisions
+## Implementation
 
-### Project Info Card
-- Shows project name, type (from `project_profiles.project_type_id`), and address from `projects` table
-- Small "Edit" link for inline editing — no wizard step needed
-- Always visible at top
+### File: `src/components/framing-scope/FramingScopeWizard.tsx`
 
-### Building Profile Moves INTO Framing Scope
-- The physical building questions (project type, stories, units, buildings, foundation, floor system, roof system, garage) become a **new "Building Profile" section at the start** of the FramingScopeWizard — effectively Section 0
-- This replaces `PhaseBuilding` entirely — no separate phase
-- The building type selection here drives all scope gates (elevator, corridors, etc.)
-- Saving building profile also saves to `project_profiles` (same as before)
+Replace the minimal completed-state block (lines 134-147) with:
+- A scope summary card using `ScopeSummaryPanel` rendered in a 2-column grid layout
+- Include/exclude count badges
+- "View Full Scope" button that toggles showing `ScopeDocument` below
+- "Edit Scope" button (existing behavior)
+- Use `useState` for the expand/collapse toggle
 
-### Contracts & SOV Stay as Cards
-- `PhaseContracts` content renders inside a card on the same page
-- `PhaseSOV` content renders inside a card below contracts
-- Both show locked/disabled state until prerequisites met
+### File: `src/components/framing-scope/ScopeSummaryPanel.tsx`
 
-### No More Phase Navigation
-- Remove `SetupSidebar` phase-level navigation
-- The scope wizard has its own internal section nav (already built)
-- The page is a vertical scroll of cards
+Add an optional `compact` prop that renders summary groups in a 2-column CSS grid instead of a single column, for better use of horizontal space in the card layout.
 
 ## Files Modified
-
-| File | Change |
-|------|--------|
-| `ProjectSetupFlow.tsx` | Replace phase-switching layout with vertical card layout: Info Card → Scope Wizard Card → Contracts Card → SOV Card. Remove phase state machine. |
-| `FramingScopeWizard.tsx` | Add Section 0 "Building Profile" that renders the building questions (type, stories, foundation, etc.) before Section 1. Save to `project_profiles`. Update section indexing. |
-| `framingScope.ts` (types) | Add `SECTIONS` entry for building profile at index 0 |
-| `useFramingScope.ts` | Track building profile completion as part of scope progress |
-| `PhaseBuilding.tsx` | Delete or reduce to just the project info card component |
-| `SetupSidebar.tsx` | Remove (no longer needed — scope wizard has its own nav) |
+- `FramingScopeWizard.tsx` — replace embedded complete state with summary card + expandable full scope
+- `ScopeSummaryPanel.tsx` — add `compact` grid layout prop
 
 ## Files NOT Changed
-- 11 scope section components — unchanged
-- Database schema — unchanged
-- PhaseContracts, PhaseSOV — reused as card content
-- Hooks, navigation, routing — minimal changes
+- `ScopeDocument.tsx` — reused as-is
+- Types, hooks, database — untouched
 
