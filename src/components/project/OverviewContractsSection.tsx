@@ -11,15 +11,17 @@ interface Props {
 export function OverviewContractsSection({ financials, onNavigate }: Props) {
   const { viewerRole, upstreamContract, downstreamContract } = financials;
 
-  const rows: { label: string; counterparty: string | null; sum: number; retainage: number }[] = [];
+  const rows: { fromName: string; toName: string; fromRole: string; toRole: string; sum: number; retainage: number }[] = [];
 
   if (viewerRole === 'Trade Contractor' || viewerRole === 'Field Crew') {
     if (upstreamContract) {
+      const fromRole = viewerRole === 'Field Crew' ? 'TC' : 'GC';
+      const toRole = viewerRole === 'Field Crew' ? 'FC' : 'TC';
       rows.push({
-        label: viewerRole === 'Field Crew' ? 'TC → You (FC)' : 'GC → You (TC)',
-        counterparty: viewerRole === 'Field Crew'
-          ? upstreamContract.from_org_name || 'Trade Contractor'
-          : upstreamContract.from_org_name || 'General Contractor',
+        fromName: upstreamContract.from_org_name || (viewerRole === 'Field Crew' ? 'Trade Contractor' : 'General Contractor'),
+        toName: upstreamContract.to_org_name || 'Your Company',
+        fromRole,
+        toRole,
         sum: upstreamContract.contract_sum,
         retainage: upstreamContract.retainage_percent,
       });
@@ -29,8 +31,10 @@ export function OverviewContractsSection({ financials, onNavigate }: Props) {
   if (viewerRole === 'General Contractor') {
     if (upstreamContract) {
       rows.push({
-        label: 'You (GC) → TC',
-        counterparty: upstreamContract.to_org_name || 'Trade Contractor',
+        fromName: upstreamContract.from_org_name || 'Your Company',
+        toName: upstreamContract.to_org_name || 'Trade Contractor',
+        fromRole: 'GC',
+        toRole: 'TC',
         sum: upstreamContract.contract_sum,
         retainage: upstreamContract.retainage_percent,
       });
@@ -39,8 +43,10 @@ export function OverviewContractsSection({ financials, onNavigate }: Props) {
 
   if (viewerRole === 'Trade Contractor' && downstreamContract) {
     rows.push({
-      label: 'You (TC) → FC',
-      counterparty: downstreamContract.to_org_name || 'Field Crew',
+      fromName: downstreamContract.from_org_name || 'Your Company',
+      toName: downstreamContract.to_org_name || 'Field Crew',
+      fromRole: 'TC',
+      toRole: 'FC',
       sum: downstreamContract.contract_sum,
       retainage: downstreamContract.retainage_percent,
     });
@@ -61,9 +67,15 @@ export function OverviewContractsSection({ financials, onNavigate }: Props) {
           >
             <div className="flex items-center gap-2 mb-1.5">
               <FileText className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">{row.label}</span>
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">Contract</span>
             </div>
-            <p className="text-xs text-foreground font-medium truncate">{row.counterparty}</p>
+            <p className="text-xs text-foreground font-medium truncate">
+              {row.fromName}
+              <span className="text-[10px] text-muted-foreground ml-1">({row.fromRole})</span>
+              <span className="text-muted-foreground mx-1">→</span>
+              {row.toName}
+              <span className="text-[10px] text-muted-foreground ml-1">({row.toRole})</span>
+            </p>
             <div className="flex items-center justify-between mt-1.5">
               <span className="text-sm font-semibold text-foreground" style={DT.mono}>{fmt(row.sum)}</span>
               <span className="text-[10px] text-muted-foreground">Ret. {row.retainage}%</span>

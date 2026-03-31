@@ -93,7 +93,7 @@ export function OverviewTeamCard({ projectId, isTCMaterialResponsible, isGCMater
             <span className="text-[10px] font-semibold text-foreground truncate">
               {responsibleOrg?.org_name || materialLabel}
             </span>
-            <span className="text-[10px] text-muted-foreground">({materialLabel})</span>
+            <span className="text-[10px] text-muted-foreground">({isTCMaterialResponsible ? 'Trade Contractor' : 'General Contractor'})</span>
           </div>
         );
       })()}
