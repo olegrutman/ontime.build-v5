@@ -14,6 +14,7 @@ import {
   CalendarDays,
   PenLine,
   Camera,
+  Settings2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
