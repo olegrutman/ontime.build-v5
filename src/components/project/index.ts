@@ -20,7 +20,7 @@ export { SupplierEstimateVsOrdersCard } from './SupplierEstimateVsOrdersCard';
 export { SupplierOperationalSummary } from './SupplierOperationalSummary';
 export { DesignateSupplierDialog } from './DesignateSupplierDialog';
 export { BudgetTracking } from './BudgetTracking';
-export { ContractHeroCard } from './ContractHeroCard';
+
 export { BillingCashCard } from './BillingCashCard';
 export { UrgentTasksCard } from './UrgentTasksCard';
 export { TeamMembersCard } from './TeamMembersCard';
