@@ -592,8 +592,8 @@ export default function Profile() {
                 Save Pricing Defaults
               </Button>
             </div>
-          </CardContent>
-        </Card>}
+          </div>
+        </div>}
       </div>
     </AppLayout>
   );
