@@ -33,6 +33,29 @@ const PILL_ICONS: Record<Pill, React.ElementType> = { budget: TrendingUp, orders
 /* ─── Order filter pills ─── */
 const ORDER_FILTERS = ['all', 'INV', 'PO', 'CO'] as const;
 
+/* ─── KPI Tile (uses hook at top level) ─── */
+function OverviewKpiTile({ icon: Icon, label, value, accentBg, accentText, barColor, pct, delay }: {
+  icon: React.ElementType; label: string; value: number; accentBg: string; accentText: string; barColor: string; pct: string; delay: number;
+}) {
+  const animatedVal = useCountUp(value, 900, delay);
+  return (
+    <div
+      className="rounded-lg bg-background/60 border border-border/60 px-3 py-2.5 relative overflow-hidden transition-all duration-300 hover:-translate-y-px hover:shadow-md animate-fade-in"
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <div className={`absolute bottom-0 left-0 right-0 h-[2px] ${barColor}`} />
+      <div className="flex items-center gap-1.5 mb-1">
+        <div className={cn('w-5 h-5 rounded flex items-center justify-center', accentBg, accentText)}>
+          <Icon className="w-3 h-3" />
+        </div>
+        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</span>
+        <span className={cn('ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded-full', accentBg, accentText)}>{pct}</span>
+      </div>
+      <p className="font-heading text-[1.5rem] font-black tracking-tight text-foreground leading-none">{fmt(animatedVal)}</p>
+    </div>
+  );
+}
+
 export function ProjectOverviewV2({
   projectId,
   projectName,
