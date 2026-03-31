@@ -65,7 +65,7 @@ interface FinancialSummary {
 
 export interface RecentDoc {
   id: string;
-  type: 'invoice';
+  type: 'invoice' | 'change_order' | 'purchase_order';
   title: string;
   status: string;
   amount: number | null;
@@ -387,6 +387,8 @@ export function useDashboardData(): DashboardData {
         allInvoicesResult,
         remindersResult,
         recentInvoicesResult,
+        recentCOsResult,
+        recentPOsResult,
       ] = await Promise.all([
         projectIds.length > 0
           ? supabase
@@ -418,6 +420,25 @@ export function useDashboardData(): DashboardData {
               .in('project_id', projectIds)
               .order('created_at', { ascending: false })
               .limit(40)
+          : Promise.resolve({ data: [] }),
+        // Recent change orders
+        projectIds.length > 0
+          ? supabase
+              .from('change_orders')
+              .select('id, co_number, title, status, created_at, project_id, org_id')
+              .in('project_id', projectIds)
+              .order('created_at', { ascending: false })
+              .limit(20)
+          : Promise.resolve({ data: [] }),
+        // Recent purchase orders
+        projectIds.length > 0
+          ? supabase
+              .from('purchase_orders')
+              .select('id, po_number, po_name, status, po_total, created_at, project_id')
+              .in('project_id', projectIds)
+              .eq('organization_id', currentOrg.id)
+              .order('created_at', { ascending: false })
+              .limit(20)
           : Promise.resolve({ data: [] }),
       ]);
 
@@ -501,8 +522,40 @@ export function useDashboardData(): DashboardData {
         });
       });
 
+      // Add change orders to recent docs
+      const recentCOs = (recentCOsResult.data || []) as any[];
+      recentCOs.forEach((co: any) => {
+        const proj = allProjects.find(p => p.id === co.project_id);
+        recentDocsList.push({
+          id: co.id,
+          type: 'change_order',
+          title: co.co_number || co.title || 'Change Order',
+          status: co.status,
+          amount: null,
+          created_at: co.created_at,
+          projectName: proj?.name || 'Unknown',
+          projectId: co.project_id,
+        });
+      });
+
+      // Add purchase orders to recent docs
+      const recentPOs = (recentPOsResult.data || []) as any[];
+      recentPOs.forEach((po: any) => {
+        const proj = allProjects.find(p => p.id === po.project_id);
+        recentDocsList.push({
+          id: po.id,
+          type: 'purchase_order',
+          title: po.po_number || po.po_name || 'Purchase Order',
+          status: po.status,
+          amount: po.po_total ?? null,
+          created_at: po.created_at,
+          projectName: proj?.name || 'Unknown',
+          projectId: po.project_id,
+        });
+      });
+
       recentDocsList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      setRecentDocs(recentDocsList.slice(0, 10));
+      setRecentDocs(recentDocsList.slice(0, 15));
 
       // contractDetailMap already built above — reuse it
 
