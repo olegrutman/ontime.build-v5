@@ -101,7 +101,7 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
       {/* ── Progress Header ───────────────────────────────────── */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="font-heading text-lg font-bold" style={DT.heading}>Project Setup</h1>
+          <h1 className="font-heading text-lg font-bold" style={DT.heading}>Project Info</h1>
           <span className="text-xs text-muted-foreground" style={DT.mono}>
             Step {activeStep} of {STEPS.length}
           </span>
