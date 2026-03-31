@@ -91,36 +91,22 @@ function RailIcon({
         onMouseLeave={() => setHovered(false)}
         className={cn(
           'w-8 h-8 rounded-lg flex items-center justify-center transition-colors',
-          isActive && 'bg-[#F5A623]',
-          !isActive && hovered && 'bg-white/10',
+          isActive && 'bg-primary',
+          !isActive && hovered && 'bg-muted/50',
         )}
         aria-label={item.label}
       >
         <Icon
-          className="w-[15px] h-[15px]"
+          className={cn(
+            'w-[15px] h-[15px]',
+            isActive ? 'text-primary-foreground' : hovered ? 'text-foreground' : 'text-muted-foreground'
+          )}
           strokeWidth={1.8}
-          style={{
-            color: isActive
-              ? '#0D1F3C'
-              : hovered
-                ? 'rgba(255,255,255,0.7)'
-                : 'rgba(255,255,255,0.45)',
-          }}
         />
       </button>
       {/* Tooltip */}
       {tooltipVisible && (
-        <div
-          className="absolute left-full ml-2 z-50 whitespace-nowrap pointer-events-none"
-          style={{
-            backgroundColor: '#0D1F3C',
-            color: '#fff',
-            fontSize: '10px',
-            padding: '4px 8px',
-            borderRadius: '4px',
-          }}
-        >
-          {/* Left arrow */}
+        <div className="absolute left-full ml-2 z-50 whitespace-nowrap pointer-events-none bg-foreground text-background text-[10px] px-2 py-1 rounded">
           <div
             className="absolute top-1/2 -translate-y-1/2 -left-1"
             style={{
@@ -128,7 +114,7 @@ function RailIcon({
               height: 0,
               borderTop: '4px solid transparent',
               borderBottom: '4px solid transparent',
-              borderRight: '4px solid #0D1F3C',
+              borderRight: '4px solid hsl(var(--foreground))',
             }}
           />
           {item.label}
@@ -173,12 +159,9 @@ export function ProjectIconRail({ isSupplier = false }: ProjectIconRailProps) {
   const { id } = useParams<{ id: string }>();
   const [showExpanded, setShowExpanded] = useState(false);
 
-  // Determine active section from route
   const pathParts = location.pathname.split('/');
-  // /project/:id/:section
   const activeSection = pathParts[3] || 'overview';
 
-  // First-time onboarding
   useEffect(() => {
     const key = 'project-rail-onboarded';
     if (!localStorage.getItem(key)) {
@@ -194,14 +177,7 @@ export function ProjectIconRail({ isSupplier = false }: ProjectIconRailProps) {
   if (!id) return null;
 
   return (
-    <div
-      className="hidden md:flex flex-col items-center py-3 gap-1.5 flex-shrink-0"
-      style={{
-        width: '44px',
-        backgroundColor: '#162E52',
-        borderRight: '1px solid rgba(255,255,255,0.06)',
-      }}
-    >
+    <div className="hidden md:flex flex-col items-center py-3 gap-1.5 flex-shrink-0 w-[44px] bg-muted/30 border-r border-border">
       {ALL_GROUPS.map((group, gi) => {
         const items = group.filter(item => {
           if (item.hideForSupplier && isSupplier) return false;
@@ -212,13 +188,7 @@ export function ProjectIconRail({ isSupplier = false }: ProjectIconRailProps) {
           <div key={gi}>
             {gi > 0 && (
               <div className="flex justify-center my-1">
-                <div
-                  style={{
-                    width: '26px',
-                    height: '1px',
-                    backgroundColor: 'rgba(255,255,255,0.08)',
-                  }}
-                />
+                <div className="w-[26px] h-px bg-border" />
               </div>
             )}
             <div className="flex flex-col items-center gap-1.5">

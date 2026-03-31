@@ -14,14 +14,9 @@ import { getDemoProjectById } from '@/data/demoData';
 import { DemoProjectOverview, DemoPurchaseOrdersTab, DemoInvoicesTab, DemoSOVTab, DemoRFIsTab } from '@/components/demo';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useDefaultSidebarOpen } from '@/hooks/use-sidebar-default';
 
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
-import { AppSidebar } from '@/components/layout/AppSidebar';
-import { BottomNav } from '@/components/layout/BottomNav';
+import { ProjectShell } from '@/components/app-shell/ProjectShell';
 import { 
-  ProjectTopBar,
-  MobileProjectHeader,
   PurchaseOrdersTab,
   AttentionBanner,
   SupplierEstimatesSection,
@@ -146,17 +141,14 @@ export default function ProjectHome() {
 
   const changeOrdersEnabled = useFeatureEnabled('change_orders');
 
-  // Derive active tab from route section param
   const activeTab = section || 'overview';
 
-  // Redirect /project/:id to /project/:id/overview
   useEffect(() => {
     if (id && !section) {
       navigate(`/project/${id}/overview`, { replace: true });
     }
   }, [id, section, navigate]);
 
-  // Navigation helper — replaces old handleTabChange
   const handleTabChange = (tab: string) => {
     if (tab === 'sov') {
       navigate(`/project/${id}/sov`);
@@ -166,14 +158,12 @@ export default function ProjectHome() {
     setTabResetKey(prev => prev + 1);
   };
 
-  // Sync local project status when auto-activation completes
   useEffect(() => {
     if (readiness.isActive && project && project.status !== 'active') {
       setProject({ ...project, status: 'active' });
     }
   }, [readiness.isActive, project]);
 
-  // Resolve supplier org for GC/TC materials card
   const { data: projectSupplierOrgId } = useQuery({
     queryKey: ['project-supplier-participant', id],
     queryFn: async () => {
@@ -191,7 +181,6 @@ export default function ProjectHome() {
   });
   const { data: estimateRows } = useProjectEstimateRows(id || '', projectSupplierOrgId ?? null);
 
-  // Redirect legacy work-orders tab
   useEffect(() => {
     if (activeTab !== 'work-orders') return;
     navigate(`/project/${id}/${changeOrdersEnabled ? 'change-orders' : 'overview'}`, { replace: true });
@@ -261,259 +250,222 @@ export default function ProjectHome() {
     fetchProject();
   }, [id, navigate, isInDemoMode, user, userOrgRoles]);
 
-  const defaultOpen = useDefaultSidebarOpen();
-
+  // Loading state
   if (loading) {
     return (
-      <SidebarProvider defaultOpen={defaultOpen}>
-        <div className="min-h-screen flex w-full">
-          <AppSidebar />
-          <SidebarInset className="flex flex-col flex-1">
-            <div className="sticky top-0 z-40 border-b bg-card backdrop-blur px-4 py-3">
-              <Skeleton className="h-8 w-64" />
-            </div>
-            <main className="flex-1 overflow-auto container mx-auto px-4 py-6 space-y-6">
+      <ProjectShell projectName="Loading…" projectId={id || ''} projectStatus="draft">
+        <div className="flex flex-1 overflow-hidden">
+          <main className="flex-1 overflow-auto">
+            <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-6">
               <div className="grid gap-4 md:grid-cols-4">
                 {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}
               </div>
               <Skeleton className="h-96 w-full" />
-            </main>
-          </SidebarInset>
-          <BottomNav />
+            </div>
+          </main>
         </div>
-      </SidebarProvider>
+      </ProjectShell>
     );
   }
 
   if (pendingInvite) {
     return (
-      <SidebarProvider defaultOpen={defaultOpen}>
-        <div className="min-h-screen flex w-full">
-          <AppSidebar />
-          <SidebarInset className="flex flex-col flex-1">
-            <div className="flex items-center justify-center min-h-[50vh]">
-              <PendingInviteCard projectId={id!} />
-            </div>
-          </SidebarInset>
+      <ProjectShell projectName="Pending Invite" projectId={id || ''} projectStatus="draft">
+        <div className="flex items-center justify-center flex-1 min-h-[50vh]">
+          <PendingInviteCard projectId={id!} />
         </div>
-      </SidebarProvider>
+      </ProjectShell>
     );
   }
 
   if (!project) {
     return (
-      <SidebarProvider defaultOpen={defaultOpen}>
-        <div className="min-h-screen flex w-full">
-          <AppSidebar />
-          <SidebarInset className="flex flex-col flex-1">
-            <div className="flex items-center justify-center min-h-[50vh]">
-              <p className="text-muted-foreground">Project not found</p>
-            </div>
-          </SidebarInset>
+      <ProjectShell projectName="Not Found" projectId={id || ''} projectStatus="draft">
+        <div className="flex items-center justify-center flex-1 min-h-[50vh]">
+          <p className="text-muted-foreground">Project not found</p>
         </div>
-      </SidebarProvider>
+      </ProjectShell>
     );
   }
 
   const projectStatus = project.status || 'draft';
 
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar />
-        <SidebarInset className="flex flex-col flex-1 bg-background">
-          <MobileProjectHeader
-            projectName={project.name}
-            projectId={id!}
-            projectStatus={projectStatus}
-            onStatusChange={handleStatusChange}
-          />
-          <div className="hidden lg:block">
-            <ProjectTopBar
-              projectName={project.name}
-              projectId={id!}
-              projectStatus={projectStatus}
-              onStatusChange={handleStatusChange}
-              isSupplier={isSupplier}
-            />
-          </div>
+    <ProjectShell
+      projectName={project.name}
+      projectId={id!}
+      projectStatus={projectStatus}
+      onStatusChange={handleStatusChange}
+    >
+      {/* Icon rail + content layout */}
+      <div className="flex flex-1 overflow-hidden">
+        <ProjectIconRail isSupplier={isSupplier} />
+        <main className="flex-1 overflow-auto">
+          <div className={cn(
+            "max-w-7xl mx-auto w-full pb-24 lg:pb-6",
+            activeTab === 'overview' ? 'px-3 sm:px-6 py-4 sm:py-6' : 'px-3 sm:px-6 py-4 sm:py-6 space-y-6'
+          )}>
+            {/* Overview Tab */}
+            {activeTab === 'overview' && (
+              <>
+                {isInDemoMode ? (
+                  <DemoProjectOverview onNavigate={handleTabChange} />
+                ) : isSupplier && supplierOrgId ? (
+                  <SupplierMaterialsOverview projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
+                ) : (
+                  <div className="space-y-2.5">
+                    {showSetupBanner && (
+                      <div
+                        className="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors"
+                        onClick={() => navigate(`/project/${id}/details-wizard`)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                            <ClipboardList className="h-5 w-5 text-amber-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm">Define Scope & Details</p>
+                            <p className="text-xs text-muted-foreground">Set up project type, structure, and scope of work</p>
+                          </div>
+                          <ChevronDown className="h-4 w-4 text-muted-foreground -rotate-90" />
+                        </div>
+                      </div>
+                    )}
 
-          {/* Icon rail + content layout */}
-          <div className="flex flex-1 overflow-hidden">
-            <ProjectIconRail isSupplier={isSupplier} />
-            <main className="flex-1 overflow-auto">
-              <div className={cn(
-                "max-w-7xl mx-auto w-full pb-24 lg:pb-6",
-                activeTab === 'overview' ? 'px-3 sm:px-6 py-4 sm:py-6' : 'px-3 sm:px-6 py-4 sm:py-6 space-y-6'
-              )}>
-                {/* Overview Tab */}
-                {activeTab === 'overview' && (
-                  <>
-                    {isInDemoMode ? (
-                      <DemoProjectOverview onNavigate={handleTabChange} />
-                    ) : isSupplier && supplierOrgId ? (
-                      <SupplierMaterialsOverview projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
-                    ) : (
+                    {(project.status === 'setup' || project.status === 'draft') && !isFC && (
+                      <ProjectReadinessCard readiness={readiness} />
+                    )}
+
+                    {/* Mobile attention banner */}
+                    <div className="lg:hidden">
+                      <AttentionBanner projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
+                    </div>
+
+                    {/* Main grid: left content + right sidebar */}
+                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-2.5">
+                      {/* LEFT COLUMN */}
                       <div className="space-y-2.5">
-                        {showSetupBanner && (
-                          <div
-                            className="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors"
-                            onClick={() => navigate(`/project/${id}/details-wizard`)}
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                                <ClipboardList className="h-5 w-5 text-amber-600" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="font-semibold text-sm">Define Scope & Details</p>
-                                <p className="text-xs text-muted-foreground">Set up project type, structure, and scope of work</p>
-                              </div>
-                              <ChevronDown className="h-4 w-4 text-muted-foreground -rotate-90" />
-                            </div>
-                          </div>
+                        <ContractHeroCard financials={financials} projectId={id!} />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                          <BillingCashCard financials={financials} />
+                          <ProfitCard financials={financials} projectId={id!} />
+                        </div>
+                        <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
+                        {projectSupplierOrgId && (
+                          <MaterialsBudgetStatusCard
+                            projectId={id!}
+                            supplierOrgId={projectSupplierOrgId}
+                            financials={financials}
+                          />
                         )}
-
-                        {(project.status === 'setup' || project.status === 'draft') && !isFC && (
-                          <ProjectReadinessCard readiness={readiness} />
+                        {estimateRows && estimateRows.length > 0 && (
+                          <SupplierEstimateCatalog estimates={estimateRows} hidePricing={currentOrg?.type === 'TC' && materialResponsibility === 'GC'} />
                         )}
-
-                        {/* Mobile attention banner */}
-                        <div className="lg:hidden">
-                          <AttentionBanner projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
-                        </div>
-
-                        {/* Main grid: left content + right sidebar */}
-                        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-2.5">
-                          {/* LEFT COLUMN */}
-                          <div className="space-y-2.5">
-                            <ContractHeroCard financials={financials} projectId={id!} />
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                              <BillingCashCard financials={financials} />
-                              <ProfitCard financials={financials} projectId={id!} />
-                            </div>
-                            <BudgetTracking financials={financials} projectId={id!} onNavigate={handleTabChange} />
-                            {projectSupplierOrgId && (
-                              <MaterialsBudgetStatusCard
-                                projectId={id!}
-                                supplierOrgId={projectSupplierOrgId}
-                                financials={financials}
-                              />
-                            )}
-                            {estimateRows && estimateRows.length > 0 && (
-                              <SupplierEstimateCatalog estimates={estimateRows} hidePricing={currentOrg?.type === 'TC' && materialResponsibility === 'GC'} />
-                            )}
-                            <CriticalScheduleCard projectId={id!} onNavigate={handleTabChange} />
-                            <MaterialMarkupEditor financials={financials} projectId={id!} projectStatus={projectStatus} />
-                            <CollapsibleOperations
-                              projectId={id!}
-                              projectType={project.project_type}
-                              financials={financials}
-                              onNavigate={handleTabChange}
-                            />
-                          </div>
-
-                          {/* RIGHT SIDEBAR — desktop only */}
-                          <div className="hidden lg:flex flex-col gap-2.5">
-                            <UrgentTasksCard projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
-                            <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} onTeamChanged={readiness.recalculate} />
-                          </div>
-                        </div>
-
-                        {/* Mobile: team + urgent below */}
-                        <div className="lg:hidden space-y-2.5">
-                          <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} onTeamChanged={readiness.recalculate} />
-                        </div>
+                        <CriticalScheduleCard projectId={id!} onNavigate={handleTabChange} />
+                        <MaterialMarkupEditor financials={financials} projectId={id!} projectStatus={projectStatus} />
+                        <CollapsibleOperations
+                          projectId={id!}
+                          projectType={project.project_type}
+                          financials={financials}
+                          onNavigate={handleTabChange}
+                        />
                       </div>
-                    )}
-                  </>
-                )}
 
-                {activeTab === 'scope' && (
-                  <ScopeDetailsTab projectId={id!} />
-                )}
-                {/* Backwards compat: old scope-details route */}
-                {activeTab === 'scope-details' && (
-                  <ScopeDetailsTab projectId={id!} />
-                )}
-
-                {activeTab === 'sov' && (
-                  <FeatureGate feature="sov_contracts">
-                    <ContractSOVEditor projectId={id!} />
-                  </FeatureGate>
-                )}
-
-                {activeTab === 'rfis' && (
-                  isInDemoMode ? <DemoRFIsTab /> : <RFIsTab projectId={id!} />
-                )}
-                {activeTab === 'estimates' && isSupplier && supplierOrgId && (
-                  <FeatureGate feature="supplier_estimates">
-                    <SupplierEstimatesSection projectId={id!} projectName={project?.name} supplierOrgId={supplierOrgId} />
-                  </FeatureGate>
-                )}
-                {activeTab === 'estimates' && !isSupplier && (
-                  <FeatureGate feature="supplier_estimates">
-                    {materialResponsibility && (
-                      (currentOrg?.type === 'GC' && materialResponsibility === 'TC') ||
-                      (currentOrg?.type !== 'GC' && materialResponsibility === 'GC')
-                    ) ? (
-                      <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
-                        Materials are managed by the {materialResponsibility === 'GC' ? 'General Contractor' : 'Trade Contractor'} on this project.
+                      {/* RIGHT SIDEBAR — desktop only */}
+                      <div className="hidden lg:flex flex-col gap-2.5">
+                        <UrgentTasksCard projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
+                        <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} onTeamChanged={readiness.recalculate} />
                       </div>
-                    ) : (
-                      <ProjectEstimatesReview projectId={id!} />
-                    )}
-                  </FeatureGate>
+                    </div>
+
+                    {/* Mobile: team + urgent below */}
+                    <div className="lg:hidden space-y-2.5">
+                      <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} onTeamChanged={readiness.recalculate} />
+                    </div>
+                  </div>
                 )}
-                {activeTab === 'invoices' && (
-                  <FeatureGate feature="invoicing">
-                    {isInDemoMode
-                      ? <DemoInvoicesTab projectId={id!} />
-                      : <InvoicesTab key={`invoices-${tabResetKey}-${realtimeKey}`} projectId={id!} retainagePercent={project.retainage_percent || 0} projectStatus={projectStatus} />
-                    }
-                  </FeatureGate>
+              </>
+            )}
+
+            {activeTab === 'scope' && (
+              <ScopeDetailsTab projectId={id!} />
+            )}
+            {activeTab === 'scope-details' && (
+              <ScopeDetailsTab projectId={id!} />
+            )}
+
+            {activeTab === 'sov' && (
+              <FeatureGate feature="sov_contracts">
+                <ContractSOVEditor projectId={id!} />
+              </FeatureGate>
+            )}
+
+            {activeTab === 'rfis' && (
+              isInDemoMode ? <DemoRFIsTab /> : <RFIsTab projectId={id!} />
+            )}
+            {activeTab === 'estimates' && isSupplier && supplierOrgId && (
+              <FeatureGate feature="supplier_estimates">
+                <SupplierEstimatesSection projectId={id!} projectName={project?.name} supplierOrgId={supplierOrgId} />
+              </FeatureGate>
+            )}
+            {activeTab === 'estimates' && !isSupplier && (
+              <FeatureGate feature="supplier_estimates">
+                {materialResponsibility && (
+                  (currentOrg?.type === 'GC' && materialResponsibility === 'TC') ||
+                  (currentOrg?.type !== 'GC' && materialResponsibility === 'GC')
+                ) ? (
+                  <div className="flex items-center justify-center py-12 text-muted-foreground text-sm">
+                    Materials are managed by the {materialResponsibility === 'GC' ? 'General Contractor' : 'Trade Contractor'} on this project.
+                  </div>
+                ) : (
+                  <ProjectEstimatesReview projectId={id!} />
                 )}
-                {activeTab === 'purchase-orders' && (
-                  <FeatureGate feature="purchase_orders">
-                    {isInDemoMode
-                      ? <DemoPurchaseOrdersTab projectId={id!} />
-                      : <PurchaseOrdersTab key={`po-${tabResetKey}-${realtimeKey}`} projectId={id!} projectName={project?.name} projectStatus={projectStatus}
-                          projectAddress={project?.address ? `${project.address.street || ''}, ${project.address.city || ''}, ${project.address.state || ''} ${project.address.zip || ''}`.replace(/^,\s*|,\s*$/g, '').trim() : ''} />
-                    }
-                  </FeatureGate>
-                )}
-                {activeTab === 'schedule' && (
-                  <FeatureGate feature="schedule_gantt">
-                    <ScheduleTab projectId={id!} />
-                  </FeatureGate>
-                )}
-                {activeTab === 'daily-log' && (
-                  <FeatureGate feature="daily_logs">
-                    <DailyLogPanel projectId={id!} />
-                  </FeatureGate>
-                )}
-                {activeTab === 'returns' && (
-                  <FeatureGate feature="returns_tracking">
-                    <ReturnsTab projectId={id!} />
-                  </FeatureGate>
-                )}
-                {activeTab === 'change-orders' && (
-                  <FeatureGate feature="change_orders">
-                    <COListPage projectId={id!} />
-                  </FeatureGate>
-                )}
-              </div>
-            </main>
+              </FeatureGate>
+            )}
+            {activeTab === 'invoices' && (
+              <FeatureGate feature="invoicing">
+                {isInDemoMode
+                  ? <DemoInvoicesTab projectId={id!} />
+                  : <InvoicesTab key={`invoices-${tabResetKey}-${realtimeKey}`} projectId={id!} retainagePercent={project.retainage_percent || 0} projectStatus={projectStatus} />
+                }
+              </FeatureGate>
+            )}
+            {activeTab === 'purchase-orders' && (
+              <FeatureGate feature="purchase_orders">
+                {isInDemoMode
+                  ? <DemoPurchaseOrdersTab projectId={id!} />
+                  : <PurchaseOrdersTab key={`po-${tabResetKey}-${realtimeKey}`} projectId={id!} projectName={project?.name} projectStatus={projectStatus}
+                      projectAddress={project?.address ? `${project.address.street || ''}, ${project.address.city || ''}, ${project.address.state || ''} ${project.address.zip || ''}`.replace(/^,\s*|,\s*$/g, '').trim() : ''} />
+                }
+              </FeatureGate>
+            )}
+            {activeTab === 'schedule' && (
+              <FeatureGate feature="schedule_gantt">
+                <ScheduleTab projectId={id!} />
+              </FeatureGate>
+            )}
+            {activeTab === 'daily-log' && (
+              <FeatureGate feature="daily_logs">
+                <DailyLogPanel projectId={id!} />
+              </FeatureGate>
+            )}
+            {activeTab === 'returns' && (
+              <FeatureGate feature="returns_tracking">
+                <ReturnsTab projectId={id!} />
+              </FeatureGate>
+            )}
+            {activeTab === 'change-orders' && (
+              <FeatureGate feature="change_orders">
+                <COListPage projectId={id!} />
+              </FeatureGate>
+            )}
           </div>
-        </SidebarInset>
-        {/* Mobile: project-specific bottom nav on project pages */}
-        <div className="md:hidden">
-          <ProjectBottomNav isSupplier={isSupplier} />
-        </div>
-        {/* Dashboard bottom nav hidden on project pages on mobile, visible on desktop (not needed but BottomNav has lg:hidden) */}
-        <div className="hidden">
-          {/* BottomNav is hidden on project pages — ProjectBottomNav handles mobile */}
-        </div>
+        </main>
       </div>
-    </SidebarProvider>
+      {/* Mobile: project-specific bottom nav */}
+      <div className="md:hidden">
+        <ProjectBottomNav isSupplier={isSupplier} />
+      </div>
+    </ProjectShell>
   );
 }
