@@ -2,6 +2,17 @@ import { useEffect, useState } from 'react';
 import { formatCurrency } from '@/lib/utils';
 import { useCountUp } from '@/hooks/useCountUp';
 
+interface KPICardProps {
+  label: string;
+  value: number;
+  tag: string;
+  tagColor: 'green' | 'red' | 'yellow' | 'neutral';
+  subText: string;
+  barPercent: number;
+  barColor: 'primary' | 'green' | 'yellow' | 'navy';
+  delay: number;
+}
+
 const tagStyles = {
   green: 'bg-emerald-50 text-emerald-700',
   red: 'bg-red-50 text-red-700',
