@@ -1,103 +1,57 @@
 
 
-# Unified Project Setup Pipeline
+# Bug & Redundancy Analysis: Project Setup Pipeline
 
-## What This Does
-Merges Project Creation, Building Profile (Details Wizard), Framing Scope (11-section wizard), and Contract Setup into one continuous guided flow. Each phase feeds the next. The SOV is auto-generated from the completed scope + contract values.
+## Critical Redundancies Found
 
-## Current State (what exists)
-- `CreateProjectNew` — basics only (name, type, address, team)
-- `ProjectDetailsWizard` — building profile (stories, foundation, framing, features) → saves to `project_profiles`
-- `FramingScopeWizard` — 11-section scope → saves to `project_framing_scope`
-- `ProjectContractsPage` — contract sums, retainage, material responsibility → saves to `project_contracts`
-- `ProjectSOVPage` — SOV generation/editing → saves to `sov_lines`
+### 1. Building Features Asked TWICE
+**PhaseBuilding** (Phase 1) asks about: stairs, balcony, corridors, elevator, garage, foundation, framing system, floor system, roof system, stories, units, buildings.
 
-These are all separate pages with no guided connection.
+**FramingScopeWizard Section 2 (StructureSection)** asks about: stairs, elevator shaft, corridors, breezeways, balconies, tuck-under garages, patios, community spaces — with child panels for each.
 
-## New Flow: 4 Phases in One Shell
+**FramingScopeWizard Section 1 (MethodSection)** asks about framing method (stick/panelized/hybrid) — which PhaseBuilding also asks as "Framing System."
 
-```text
-Phase 1: PROJECT & BUILDING          Phase 2: FRAMING SCOPE
-┌──────────────────────────┐         ┌──────────────────────────┐
-│ 1a. Basics (name/addr)   │         │ All 11 sections          │
-│ 1b. Team (GC, FC, Supp)  │  ───►   │ (existing wizard,        │
-│ 1c. Building Profile     │         │  pre-filled from 1c)     │
-│     (type, stories,      │         │                          │
-│      features, structure) │         │                          │
-└──────────────────────────┘         └──────────────────────────┘
-           │                                    │
-           ▼                                    ▼
-Phase 3: CONTRACTS                   Phase 4: SOV & FINISH
-┌──────────────────────────┐         ┌──────────────────────────┐
-│ 3a. Upstream contract    │         │ Auto-generate SOV from   │
-│     (GC→TC: sum, ret%)   │  ───►   │ scope + contract value   │
-│ 3b. Downstream contracts │         │ Review, adjust, lock     │
-│     (TC→FC: sum, scope)  │         │ Activate project         │
-│ 3c. Material resp.       │         └──────────────────────────┘
-│ 3d. Supplier assignments │
-└──────────────────────────┘
-```
+The user answers stairs, balcony, corridors, elevator, garage, and framing method **in both Phase 1 and Phase 2**. These are not even synced — they save to different tables (`project_profiles` vs `project_framing_scope`).
 
-## Key Design Decisions
+### 2. Old Scope Fields Still in `project_profiles`
+The `ProjectProfile` type still has 20+ `scope_*` fields from the old wizard: `scope_windows_install`, `scope_siding`, `scope_wrb`, `scope_backout`, `scope_soffit_fascia`, `scope_exterior_trim`, etc. These are now fully handled by `project_framing_scope`. PhaseBuilding's `emptyDraft()` initializes all of them, but nothing reads them anymore.
 
-### Phase 1c replaces ProjectDetailsWizard
-The building profile questions (type, stories, foundation, framing system, garage, stairs, elevator, etc.) move INTO the unified flow as sub-steps within Phase 1. This data feeds directly into Phase 2 (the framing scope wizard already consumes `buildingType`).
+### 3. `buildingType` Not Derived from Phase 1 Data
+`ProjectSetupFlow` derives `buildingType` from `projectType` prop (passed from `ProjectHome`), but **PhaseBuilding** saves a `project_type_id` to `project_profiles`. After the user picks a type in Phase 1, the scope wizard doesn't re-read it — it still uses the prop that was set at page load.
 
-### Phase 2 is the existing FramingScopeWizard
-No rebuild needed — it already works. It just gets embedded as Phase 2 of the unified shell instead of being a standalone tab. The `buildingType` and `matResp` are now pre-seeded from Phase 1 and Phase 3 respectively.
+### 4. Material Responsibility in Wrong Phase
+The plan said Phase 3 (Contracts) would handle material responsibility, but it's actually asked in Phase 2 Section 1 (MethodSection). PhaseContracts doesn't ask about or display material responsibility at all. This isn't necessarily a bug but contradicts the stated data flow.
 
-### Phase 3: Contracts are inline
-Instead of a separate contracts page, contract setup becomes Phase 3:
-- **Upstream** (who's paying you): GC contract sum, retainage %, material responsibility
-- **Downstream** (who you're paying): FC contracts with scope assignments
-- Material responsibility answer from here flows BACK to update Phase 2 scope display (already stored in `project_framing_scope.answers.method.material_responsibility`)
+---
 
-### Phase 4: SOV auto-generation
-Once scope is done and contract values are set, the SOV generates automatically using existing engine logic. User reviews and locks.
+## Fix Plan
 
-## Implementation
+### Remove duplicate questions from PhaseBuilding
+Strip PhaseBuilding down to **building definition only** — the physical structure, not scope. Keep: project type, stories, units, buildings, foundation, floor system, roof system. **Remove**: framing system (asked in scope Section 1), balcony toggle (asked in scope Section 2), corridors (asked in scope Section 2). These are scope questions, not building definition.
 
-### New unified shell component
-**`src/components/project-setup/ProjectSetupFlow.tsx`** — orchestrates all 4 phases with a persistent sidebar showing progress across all phases.
+### Seed FramingScopeWizard from PhaseBuilding data
+When Phase 2 loads, pre-populate scope Section 2 answers from `project_profiles` data:
+- `has_garage` → `structure.tuck_under_garages` default
+- `has_stairs` → `structure.wood_stairs` default  
+- `has_elevator` → `structure.elevator_shaft` default
+- `has_balcony` → `structure.balconies` default
+- `has_corridors` → `structure.enclosed_corridors` default
 
-### Phase navigation
-- Left sidebar shows all 4 phases with sub-steps
-- User can jump back to any completed phase
-- Phase 2 (scope) only unlocks after Phase 1c (building profile) is saved
-- Phase 3 (contracts) only unlocks after Phase 2 is complete (scope_complete = true)
-- Phase 4 (SOV) only unlocks after Phase 3 has at least one contract with a sum > 0
+This way the user sees pre-filled toggles (not blank), but can still customize the scope detail (child panels).
 
-### Data flow connections
-- Phase 1c building type → Phase 2 `buildingType` prop
-- Phase 1b team members → Phase 3 contract counterparties
-- Phase 3 material responsibility → Phase 2 `matResp` (bidirectional — if user set it in scope first, it pre-fills in contracts)
-- Phase 2 scope answers + Phase 3 contract sum → Phase 4 SOV generation input
+### Remove dead `scope_*` fields from PhaseBuilding's emptyDraft
+Stop initializing the 20+ `scope_*` fields that nothing reads. Keep the `ProfileDraft` type but stop setting scope fields in the setup flow.
 
-### Routing
-- New projects: `/project/new` → unified flow (replaces `CreateProjectNew`)
-- Existing projects in setup status: `/project/:id/setup` → resumes at the furthest incomplete phase
-- Active projects: individual tabs remain for editing scope, contracts, SOV separately
+### Fix buildingType derivation
+After PhaseBuilding saves, re-derive `buildingType` from the saved `project_type_id` instead of the static prop. Use the profile query data that's already fetched.
 
-### Files to create
-- `src/components/project-setup/ProjectSetupFlow.tsx` — main shell with phase navigation
-- `src/components/project-setup/PhaseBuilding.tsx` — combines basics + team + building profile
-- `src/components/project-setup/PhaseContracts.tsx` — upstream/downstream contract setup
-- `src/components/project-setup/PhaseSOV.tsx` — SOV generation review
-- `src/components/project-setup/SetupSidebar.tsx` — persistent progress sidebar
+## Files Modified
+- `src/components/project-setup/PhaseBuilding.tsx` — remove framing system, balcony, corridor questions; remove dead scope field initialization
+- `src/components/project-setup/ProjectSetupFlow.tsx` — derive buildingType from saved profile instead of static prop
+- `src/hooks/useFramingScope.ts` — accept initial defaults from profile data to pre-seed Section 2 answers
 
-### Files to modify
-- `src/pages/ProjectHome.tsx` — for setup-status projects, render `ProjectSetupFlow` instead of tabs
-- `src/components/framing-scope/FramingScopeWizard.tsx` — add `embedded` mode prop (hides its own header/nav when inside the unified flow, uses parent's navigation)
-- `src/App.tsx` — add `/project/:id/setup` route
-- Navigation components — "Setup" link for projects in setup status
-
-### Files NOT changed
-- All 11 framing scope section components — reused as-is
-- Database tables — no schema changes needed
-- Hooks (`useFramingScope`, `useProjectProfile`) — reused as-is
-- SOV generation engine — reused as-is
-
-## What stays separate
-- For **active** projects (status != setup), the existing individual tabs (Scope, Contracts, SOV) remain for editing
-- The unified flow is specifically for **project setup** — getting from zero to "ready to build"
+## Files NOT Changed
+- FramingScopeWizard sections — keep as-is, they are the source of truth for scope
+- Database — no schema changes
+- PhaseContracts, PhaseSOV — untouched
 
