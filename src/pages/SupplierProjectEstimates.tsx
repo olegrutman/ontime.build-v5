@@ -393,6 +393,10 @@ export default function SupplierProjectEstimates() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const filteredEstimates = selectedProjectId === 'all'
+    ? estimates
+    : estimates.filter(e => e.project_id === selectedProjectId);
+
   if (authLoading) {
     return (
       <AppLayout title="My Estimates">
