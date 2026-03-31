@@ -59,11 +59,11 @@ export function RFIsTab({ projectId }: RFIsTabProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <Tabs value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-          <TabsList>
-            <TabsTrigger value="ALL">All ({rfis.length})</TabsTrigger>
-            <TabsTrigger value="OPEN">Open ({rfis.filter((r) => r.status === 'OPEN').length})</TabsTrigger>
-            <TabsTrigger value="ANSWERED">Answered ({rfis.filter((r) => r.status === 'ANSWERED').length})</TabsTrigger>
-            <TabsTrigger value="CLOSED">Closed ({rfis.filter((r) => r.status === 'CLOSED').length})</TabsTrigger>
+          <TabsList className="bg-muted/50 p-1 rounded-full">
+            <TabsTrigger value="ALL" className="rounded-full text-xs px-3">All ({rfis.length})</TabsTrigger>
+            <TabsTrigger value="OPEN" className="rounded-full text-xs px-3">Open ({rfis.filter((r) => r.status === 'OPEN').length})</TabsTrigger>
+            <TabsTrigger value="ANSWERED" className="rounded-full text-xs px-3">Answered ({rfis.filter((r) => r.status === 'ANSWERED').length})</TabsTrigger>
+            <TabsTrigger value="CLOSED" className="rounded-full text-xs px-3">Closed ({rfis.filter((r) => r.status === 'CLOSED').length})</TabsTrigger>
           </TabsList>
         </Tabs>
         {canCreate && (
