@@ -356,12 +356,10 @@ export default function PurchaseOrders() {
           <div className="md:col-span-1 space-y-4">
             <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>Orders</p>
             {orders.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
+              <div className="bg-card border border-border rounded-lg py-8 text-center text-muted-foreground">
                   <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No purchase orders yet</p>
-                </CardContent>
-              </Card>
+              </div>
             ) : (
               orders.map(po => (
                 <Card 
