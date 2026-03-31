@@ -2752,6 +2752,47 @@ export type Database = {
           },
         ]
       }
+      project_framing_scope: {
+        Row: {
+          answers: Json
+          created_at: string | null
+          current_section: number
+          generated_at: string | null
+          id: string
+          project_id: string
+          scope_complete: boolean
+          updated_at: string | null
+        }
+        Insert: {
+          answers?: Json
+          created_at?: string | null
+          current_section?: number
+          generated_at?: string | null
+          id?: string
+          project_id: string
+          scope_complete?: boolean
+          updated_at?: string | null
+        }
+        Update: {
+          answers?: Json
+          created_at?: string | null
+          current_section?: number
+          generated_at?: string | null
+          id?: string
+          project_id?: string
+          scope_complete?: boolean
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_framing_scope_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: true
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_guests: {
         Row: {
           accepted_at: string | null
