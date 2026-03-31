@@ -377,11 +377,11 @@ export default function PurchaseOrders() {
                         {PO_STATUS_LABELS[po.status as POStatus]}
                       </Badge>
                     </div>
-                    <CardDescription className="text-xs">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {po.supplier?.name} • {po.project?.name || po.work_item?.title}
-                    </CardDescription>
-                  </CardHeader>
-                </Card>
+                    </p>
+                  </div>
+                </div>
               ))
             )}
           </div>
