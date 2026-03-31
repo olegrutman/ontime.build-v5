@@ -1,81 +1,78 @@
 
 
-# Redesign: Apply Demo-V2 Design Language to Production App (Light Theme)
+# Restyle Production App Content to Match Demo-V2 (Light Theme)
 
-## What I Understand
+## The Gap
+The Phase 1-4 migration only swapped the **navigation chrome** (sidebar → context bar, command palette, bottom nav). The actual **page content** — cards, KPIs, project lists, attention items — still uses generic shadcn/ui card styling. Demo-v2 has distinct visual patterns that were never ported.
 
-You want to **replace the current sidebar + top bar layout** with the demo-v2 navigation pattern (slim context bar, command palette, mobile bottom nav, bottom sheets) across the **real production app** — keeping all existing functionality, real data, auth, SOV editing, etc. The visual theme should be **light** (white/light gray surfaces) instead of the dark navy used in demo-v2. Navy and amber remain as accent colors.
+## Key Visual Differences
 
-This is a **large migration** — 20+ pages use `AppLayout`. I recommend doing it in phases so nothing breaks. Here is Phase 1 covering the global shell and the Dashboard.
+| Element | Demo-V2 | Current Production |
+|---|---|---|
+| KPI Cards | 2px bottom accent, compact, animated counter | Has accent + counter (already migrated) |
+| Project List | Expandable accordion cards with color dots, progress bars, stat tiles | Flat row list with status dots, no expand |
+| Urgent Items | 3px left border, icon tile, monospace amounts, status badge | Emoji-based, similar border but different feel |
+| Activity Feed | Right sidebar with avatar circles, timestamped | No activity feed on dashboard |
+| Layout | Two-column: content left, activity/portfolio right | Two-column but right has budget/reminders |
+| Project Detail | Hero card with radial gradient, segment pill tabs, SVG donut chart | Standard cards, icon rail nav |
+| Bottom Sheets | Framer-motion spring sheet for actionable items | Not implemented |
+| Typography | Barlow Condensed headings, IBM Plex Mono for $, consistent sizing | Mixed, some Barlow Condensed |
 
----
+## Plan — Bring Demo-V2 Visual Language to Production Content
 
-## Phase 1: Global Layout Shell + Dashboard
+### 1. Restyle `DashboardProjectList.tsx`
+- Replace flat row layout with **expandable accordion cards** matching `demo-v2/ProjectCard.tsx`
+- Color dot + project name + phase tag + contract value + % complete
+- Thin progress bar with animated width on mount
+- Expand reveals 4 stat tiles (Contract, Paid, Pending, Status) + action buttons (View Project, Orders, Budget)
+- Keep existing status filter tabs, dropdown actions, and real data bindings
+- Use light surfaces: `bg-card border border-border rounded-lg` instead of `bg-[#0D1F3C]`
 
-### 1. Create Light-Theme Versions of Demo-V2 Components
+### 2. Restyle `DashboardNeedsAttentionCard.tsx`
+- Replace emoji indicators with **colored icon tiles** (FileText, Wrench, Truck, GitBranch)
+- IBM Plex Mono for dollar amounts
+- Colored status badges with subtle background
+- 3px left border matching item type color
+- Keep existing invite accept/decline functionality
 
-New folder: `src/components/app-shell/`
+### 3. Add Activity Feed to Dashboard Right Column
+- Create `src/components/dashboard/DashboardActivityFeed.tsx`
+- Light-theme version of `demo-v2/ActivityFeed.tsx`
+- Query real recent activity from Supabase (project updates, invoice changes, etc.) or show recent docs transformed into feed format
+- Avatar initials circle, bold name, description, relative timestamp
 
-- **`ContextBar.tsx`** — Same structure as demo-v2 but light: `bg-white/80 backdrop-blur-xl border-b border-border`. Navy text, amber logo. Breadcrumbs from route context. Integrated ⌘K button + user avatar dropdown (with Profile, Settings, Sign Out — pulled from current TopBar/Sidebar logic).
+### 4. Add Bottom Sheet for Actionable Items
+- Create `src/components/app-shell/BottomSheet.tsx` — light-theme fork of `demo-v2/BottomSheet.tsx`
+- Uses framer-motion (already installed), white surface, navy text
+- Wire up to attention items on dashboard and order/invoice items on project pages
 
-- **`CommandPalette.tsx`** — Fork of demo-v2 version but queries **real data** (projects from Supabase, routes for navigation). Light surfaces (`bg-white`), navy text. Same scale+opacity animation.
+### 5. Restyle Project Overview Hero Card
+- Update `ContractHeroCard.tsx` with radial gradient background using project accent color
+- Add animated progress bar, Barlow Condensed heading, 3 KPI mini-tiles
+- Match demo-v2's hero card pattern but on light surfaces
 
-- **`MobileBottomNav.tsx`** — Light version: `bg-white border-t border-border`. 5 items: Home, Partners, Reminders, RFIs, More. Amber active state. Same items as current BottomNav but styled to match.
+### 6. Add Segment Pill Tabs to Project Detail
+- Create a pill-style tab switcher for project sub-sections (currently handled by icon rail)
+- Visible on mobile as horizontal scrollable pills above content
+- Works alongside the existing icon rail on desktop
 
-- **`AppShell.tsx`** — New layout wrapper replacing `AppLayout`. No sidebar. Structure:
-  ```
-  ContextBar (fixed top, 52px)
-  main (pt-[52px], pb-24 on mobile)
-    max-w-[1400px] centered content
-  MobileBottomNav (fixed bottom, mobile only)
-  CommandPalette (overlay)
-  ```
+### 7. Typography & Spacing Polish
+- Ensure all dollar amounts use `font-family: 'IBM Plex Mono'`
+- Section headers: `text-[11px] uppercase tracking-wider text-muted-foreground font-medium`
+- Consistent `fadeUp` stagger animation on card lists
+- Card spacing: `gap-2` or `gap-3` matching demo-v2 density
 
-### 2. Update `AppLayout.tsx`
+### Files Changed
+- `src/components/dashboard/DashboardProjectList.tsx` — accordion card restyle
+- `src/components/dashboard/DashboardNeedsAttentionCard.tsx` — icon tile + monospace restyle
+- `src/components/dashboard/DashboardActivityFeed.tsx` — new, real-data activity feed
+- `src/components/app-shell/BottomSheet.tsx` — new, light-theme bottom sheet
+- `src/components/project/ContractHeroCard.tsx` — radial gradient hero restyle
+- `src/pages/Dashboard.tsx` — swap DashboardRecentDocs for ActivityFeed in right column
+- `src/index.css` — any missing animation keyframes
 
-Replace the sidebar-based layout with `AppShell`. The component keeps the same props interface (`title`, `showNewButton`, etc.) so **all 20+ pages continue working unchanged**. Internally it renders:
-- `ContextBar` with breadcrumb derived from `title` prop + route
-- `CommandPalette` with real project data
-- Content area (children)
-- `MobileBottomNav`
-
-The old `AppSidebar`, `TopBar`, and `BottomNav` components remain in the codebase but are no longer imported.
-
-### 3. Light Theme Color Adjustments
-
-All demo-v2 components used hardcoded dark colors (`bg-[#0D1F3C]`, `text-white/40`). The new app-shell versions use Tailwind theme tokens instead:
-- Cards: `bg-card border border-border rounded-lg`
-- Text: `text-foreground`, `text-muted-foreground`
-- Subtle backgrounds: `bg-muted/30` or `bg-accent`
-- Accent highlights: `text-primary` (amber), `bg-primary`
-- The existing CSS variables in `index.css` already define a light theme — we use those.
-
-### 4. Dashboard Enhancements
-
-Update `DashboardKPIRow` to use the animated counter pattern from demo-v2's `KpiCard` (ease-out cubic, 1.1s) with the 2px colored bottom accent line — but on light card surfaces.
-
-Add `fadeUp` stagger animation to project list and attention items (CSS keyframe already exists from demo-v2).
-
-### Files Created
-- `src/components/app-shell/ContextBar.tsx`
-- `src/components/app-shell/CommandPalette.tsx`
-- `src/components/app-shell/MobileBottomNav.tsx`
-- `src/components/app-shell/AppShell.tsx`
-
-### Files Modified
-- `src/components/layout/AppLayout.tsx` — swap internals to use AppShell
-- `src/components/dashboard/DashboardKPIRow.tsx` — add counter animation + accent line
-- `src/index.css` — add `fadeUp` keyframe globally
-
-### Files NOT Modified
-- All page components (Dashboard, ProjectHome, Partners, RFIs, etc.) — they keep rendering inside `AppLayout` as before
-- `AppSidebar.tsx`, `TopBar.tsx`, `BottomNav.tsx` — kept but unused (safe rollback)
-- No database or edge function changes
-
----
-
-## Future Phases (not in this plan)
-- Phase 2: Project detail pages — master-detail split, segment tabs, bottom sheets for actionable items
-- Phase 3: Bottom sheet pattern for invoices, POs, work orders across all pages
-- Phase 4: Remove old layout components entirely
+### Files NOT Changed
+- Navigation components (already migrated)
+- Database, edge functions, auth
+- Existing hooks and data fetching logic
 
