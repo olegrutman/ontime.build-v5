@@ -354,9 +354,6 @@ export default function ProjectHome() {
                       onTeamChanged={readiness.recalculate}
                     />
 
-                    <div className="lg:hidden space-y-2.5">
-                      <TeamMembersCard projectId={id!} onResponsibilityChange={setMaterialResponsibility} onTeamChanged={readiness.recalculate} />
-                    </div>
                   </div>
                 )}
               </>
