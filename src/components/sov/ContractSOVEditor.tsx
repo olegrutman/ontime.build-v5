@@ -496,7 +496,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                             {sovSourceLabel}
                           </Badge>
                         </div>
-                        <CardDescription className="tabular-nums">
+                        <p className="text-xs text-muted-foreground tabular-nums" style={DT.mono}>
                           {formatCurrency(contract?.contract_sum || 0)} • {items.length} item{items.length !== 1 ? 's' : ''}
                         </CardDescription>
         {totals.totalValue > 0 && (
