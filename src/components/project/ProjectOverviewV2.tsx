@@ -107,7 +107,7 @@ export function ProjectOverviewV2({
             <div className="flex items-start justify-between">
               <div>
                 <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">{projectType}</span>
-                <h1 className="text-[28px] font-bold leading-tight text-foreground" style={DT.heading}>{projectName}</h1>
+                <h1 className="font-heading text-[28px] font-black leading-tight tracking-tight text-foreground">{projectName}</h1>
                 {address && <p className="text-xs text-muted-foreground mt-0.5">{address}</p>}
               </div>
               <span className={cn(
