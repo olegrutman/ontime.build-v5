@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { cn, formatCurrency as fmt } from '@/lib/utils';
+import { useCountUp } from '@/hooks/useCountUp';
 import { DT } from '@/lib/design-tokens';
 import { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import { ProjectBudgetRingChart } from './ProjectBudgetRingChart';
@@ -31,6 +32,29 @@ const PILL_ICONS: Record<Pill, React.ElementType> = { budget: TrendingUp, orders
 
 /* ─── Order filter pills ─── */
 const ORDER_FILTERS = ['all', 'INV', 'PO', 'CO'] as const;
+
+/* ─── KPI Tile (uses hook at top level) ─── */
+function OverviewKpiTile({ icon: Icon, label, value, accentBg, accentText, barColor, pct, delay }: {
+  icon: React.ElementType; label: string; value: number; accentBg: string; accentText: string; barColor: string; pct: string; delay: number;
+}) {
+  const animatedVal = useCountUp(value, 900, delay);
+  return (
+    <div
+      className="rounded-lg bg-background/60 border border-border/60 px-3 py-2.5 relative overflow-hidden transition-all duration-300 hover:-translate-y-px hover:shadow-md animate-fade-in"
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <div className={`absolute bottom-0 left-0 right-0 h-[2px] ${barColor}`} />
+      <div className="flex items-center gap-1.5 mb-1">
+        <div className={cn('w-5 h-5 rounded flex items-center justify-center', accentBg, accentText)}>
+          <Icon className="w-3 h-3" />
+        </div>
+        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</span>
+        <span className={cn('ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded-full', accentBg, accentText)}>{pct}</span>
+      </div>
+      <p className="font-heading text-[1.5rem] font-black tracking-tight text-foreground leading-none">{fmt(animatedVal)}</p>
+    </div>
+  );
+}
 
 export function ProjectOverviewV2({
   projectId,
@@ -106,7 +130,7 @@ export function ProjectOverviewV2({
             <div className="flex items-start justify-between">
               <div>
                 <span className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">{projectType}</span>
-                <h1 className="text-[28px] font-bold leading-tight text-foreground" style={DT.heading}>{projectName}</h1>
+                <h1 className="font-heading text-[28px] font-black leading-tight tracking-tight text-foreground">{projectName}</h1>
                 {address && <p className="text-xs text-muted-foreground mt-0.5">{address}</p>}
               </div>
               <span className={cn(
@@ -121,21 +145,9 @@ export function ProjectOverviewV2({
 
             {/* KPI Tiles */}
             <div className="grid grid-cols-3 gap-2">
-              {[
-                { icon: DollarSign, label: 'Contract', value: contractValue, accent: 'bg-blue-50 text-blue-600' },
-                { icon: CreditCard, label: 'Paid', value: paid, accent: 'bg-emerald-50 text-emerald-600' },
-                { icon: Clock, label: 'Pending', value: Math.max(0, pending), accent: 'bg-amber-50 text-amber-600' },
-              ].map(tile => (
-                <div key={tile.label} className="rounded-lg bg-background/60 border border-border/60 px-3 py-2.5">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <div className={cn('w-5 h-5 rounded flex items-center justify-center', tile.accent)}>
-                      <tile.icon className="w-3 h-3" />
-                    </div>
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{tile.label}</span>
-                  </div>
-                  <p className="text-base font-semibold text-foreground" style={DT.mono}>{fmt(tile.value)}</p>
-                </div>
-              ))}
+              <OverviewKpiTile icon={DollarSign} label="Contract" value={contractValue} accentBg="bg-blue-50" accentText="text-blue-600" barColor="bg-primary" pct="100%" delay={0} />
+              <OverviewKpiTile icon={CreditCard} label="Paid" value={paid} accentBg="bg-emerald-50" accentText="text-emerald-600" barColor="bg-emerald-500" pct={contractValue > 0 ? `${Math.round((paid / contractValue) * 100)}%` : '0%'} delay={40} />
+              <OverviewKpiTile icon={Clock} label="Pending" value={Math.max(0, pending)} accentBg="bg-amber-50" accentText="text-amber-600" barColor="bg-amber-500" pct={contractValue > 0 ? `${Math.round((Math.max(0, pending) / contractValue) * 100)}%` : '0%'} delay={80} />
             </div>
 
             {/* Progress bar */}
@@ -199,7 +211,7 @@ export function ProjectOverviewV2({
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs text-foreground font-medium">{row.label}</span>
-                  <span className="text-xs font-semibold" style={DT.mono}>{fmt(row.value)}</span>
+                  <span className="font-heading text-sm font-black tracking-tight">{fmt(row.value)}</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                   <div
