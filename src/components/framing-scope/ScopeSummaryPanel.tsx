@@ -6,6 +6,7 @@ import { Check } from 'lucide-react';
 interface Props {
   answers: FramingScopeAnswers;
   matResp: MaterialResponsibility | null;
+  compact?: boolean;
 }
 
 function yn(v: string | null | undefined): boolean { return v === 'yes'; }
@@ -28,7 +29,7 @@ function SummaryGroup({ label, items }: { label: string; items: { text: string; 
   );
 }
 
-export function ScopeSummaryPanel({ answers, matResp }: Props) {
+export function ScopeSummaryPanel({ answers, matResp, compact }: Props) {
   const a = answers;
 
   const methodLabel = a.method.framing_method
@@ -37,8 +38,9 @@ export function ScopeSummaryPanel({ answers, matResp }: Props) {
   const matLabel = matResp === 'LABOR_ONLY' ? 'Labor only' : matResp === 'FURNISH_INSTALL' ? 'Furnish & install' : matResp === 'SPLIT' ? 'Split responsibility' : null;
 
   return (
-    <div className="space-y-1">
-      <h3 className={cn(DT.sectionHeader, 'mb-3')}>Scope Summary</h3>
+    <div className={cn(compact ? '' : 'space-y-1')}>
+      {!compact && <h3 className={cn(DT.sectionHeader, 'mb-3')}>Scope Summary</h3>}
+      <div className={cn(compact ? 'grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2' : '')}>
 
       <SummaryGroup label="FRAMING METHOD" items={[
         { text: methodLabel || '—', included: !!methodLabel },
@@ -93,6 +95,7 @@ export function ScopeSummaryPanel({ answers, matResp }: Props) {
         { text: 'Daily cleanup', included: yn(a.cleanup.daily_cleanup) },
         { text: a.cleanup.warranty ? `Warranty: ${a.cleanup.warranty}` : 'Warranty', included: !!a.cleanup.warranty },
       ]} />
+      </div>
     </div>
   );
 }

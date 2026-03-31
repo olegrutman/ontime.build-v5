@@ -94,6 +94,7 @@ export function FramingScopeWizard({ projectId, buildingType: propBuildingType =
   const [started, setStarted] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [showDocument, setShowDocument] = useState(false);
+  const [showFullScope, setShowFullScope] = useState(false);
   const [activeSectionIndex, setActiveSectionIndex] = useState(BUILDING_PROFILE_INDEX);
   const [derivedBuildingType, setDerivedBuildingType] = useState<FramingBuildingType | null>(null);
   const isMobile = useIsMobile();
@@ -130,18 +131,43 @@ export function FramingScopeWizard({ projectId, buildingType: propBuildingType =
     );
   }
 
-  // Completed scope — in embedded mode, notify parent
+  // Completed scope — in embedded mode, show summary card with expandable full scope
   if (scopeComplete && embedded) {
     if (onComplete) onComplete();
     return (
       <div className="max-w-3xl mx-auto p-6 w-full space-y-4">
-        <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-md px-4 py-3 text-sm text-emerald-800">
-          <Check className="w-4 h-4" />
-          Framing scope is complete. Proceed to the next phase.
+        <div className="flex items-center justify-between gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-md px-4 py-3">
+          <div className="flex items-center gap-2 text-sm text-emerald-800 font-medium">
+            <Check className="w-4 h-4" />
+            Framing Scope Complete
+          </div>
+          <div className="flex items-center gap-1 text-xs">
+            <span className="bg-emerald-500/20 text-emerald-800 px-2 py-0.5 rounded-full font-medium">{inc} included</span>
+            <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-medium">{exc} excluded</span>
+          </div>
         </div>
-        <Button variant="outline" size="sm" onClick={editScope}>
-          Edit scope
-        </Button>
+
+        <ScopeSummaryPanel answers={answers} matResp={matResp} compact />
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFullScope(prev => !prev)}
+          >
+            <FileText className="w-3.5 h-3.5 mr-1.5" />
+            {showFullScope ? 'Collapse' : 'View Full Scope'}
+          </Button>
+          <Button variant="outline" size="sm" onClick={editScope}>
+            Edit Scope
+          </Button>
+        </div>
+
+        {showFullScope && (
+          <div className="border rounded-lg p-6 bg-card mt-2">
+            <ScopeDocument answers={answers} matResp={matResp} projectName={projectName} buildingType={buildingType} inc={inc} exc={exc} />
+          </div>
+        )}
       </div>
     );
   }
