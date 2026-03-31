@@ -395,6 +395,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                 <div className="flex items-center gap-2 text-sm flex-shrink-0">
                   <span
                     className={`text-muted-foreground w-16 text-right tabular-nums ${!isLocked && !isFC ? 'cursor-pointer hover:text-primary' : ''}`}
+                    style={DT.mono}
                     onClick={() => !isLocked && !isFC && handleStartPercentEdit(sov.id, item)}
                     title={!isLocked && !isFC ? 'Click to edit percentage' : undefined}
                   >
@@ -402,6 +403,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                   </span>
                   <span
                     className={`font-medium w-24 text-right tabular-nums ${!isLocked && !isFC ? 'cursor-pointer hover:text-primary' : ''}`}
+                    style={DT.mono}
                     onClick={() => !isLocked && !isFC && handleStartAmountEdit(sov.id, item)}
                     title={!isLocked && !isFC ? 'Click to edit amount' : undefined}
                   >

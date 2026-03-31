@@ -78,8 +78,8 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
   });
   const contractsComplete = contracts.some(c => (c.contract_sum || 0) > 0);
 
-  // Compute active step for progress
-  const activeStep = contractsComplete ? 4 : scopeComplete ? 3 : 1;
+  // Compute active step for progress — step 1 (project info) is always complete
+  const activeStep = contractsComplete ? 4 : scopeComplete ? 3 : 2;
   const progressPercent = ((activeStep) / STEPS.length) * 100;
 
   const handleContractsComplete = useCallback(() => {

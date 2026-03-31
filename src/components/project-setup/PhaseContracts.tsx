@@ -196,20 +196,20 @@ export function PhaseContracts({ projectId, onComplete, onStepChange }: PhaseCon
           {/* Column headers */}
           <div className="flex items-center gap-4 pb-2 border-b border-border">
             <div className="flex-1 min-w-0">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Party</span>
+              <span className={DT.sectionHeader}>Party</span>
             </div>
             <div className="w-40">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Contract Amount</span>
+              <span className={DT.sectionHeader}>Contract Amount</span>
             </div>
             <div className="w-24">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Retainage %</span>
+              <span className={DT.sectionHeader}>Retainage %</span>
             </div>
           </div>
 
           {filteredTeam.map(m => (
             <div key={m.id} className="flex items-center gap-4">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{m.invited_org_name || 'Unknown'}</p>
+                <p className="text-sm font-bold truncate" style={DT.heading}>{m.invited_org_name || 'Unknown'}</p>
                 <p className="text-[11px] text-muted-foreground">{m.role}</p>
               </div>
               <div className="w-40">

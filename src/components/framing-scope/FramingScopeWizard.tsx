@@ -131,9 +131,19 @@ export function FramingScopeWizard({ projectId, buildingType: propBuildingType =
     );
   }
 
+  // Fire onComplete via effect instead of during render
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+  const [completeFired, setCompleteFired] = useState(false);
+  useEffect(() => {
+    if (scopeComplete && embedded && !completeFired) {
+      setCompleteFired(true);
+      onCompleteRef.current?.();
+    }
+  }, [scopeComplete, embedded, completeFired]);
+
   // Completed scope — in embedded mode, show summary card with expandable full scope
   if (scopeComplete && embedded) {
-    if (onComplete) onComplete();
     return (
       <div className="p-5 w-full space-y-4">
         <div className="flex items-center justify-between gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-md px-4 py-3">
