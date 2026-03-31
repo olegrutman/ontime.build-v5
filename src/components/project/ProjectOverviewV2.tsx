@@ -4,6 +4,9 @@ import { DT } from '@/lib/design-tokens';
 import { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import { ProjectBudgetRingChart } from './ProjectBudgetRingChart';
 import { ProjectActivityFeedSidebar } from './ProjectActivityFeedSidebar';
+import { OverviewContractsSection } from './OverviewContractsSection';
+import { OverviewTeamCard } from './OverviewTeamCard';
+import { OverviewProfitCard } from './OverviewProfitCard';
 import { BottomSheet } from '@/components/app-shell/BottomSheet';
 import { STATUS_ACCENTS } from '@/lib/design-tokens';
 import {
@@ -44,25 +47,36 @@ export function ProjectOverviewV2({
     open: false, title: '', meta: [],
   });
 
+  const { viewerRole, isTCMaterialResponsible, isGCMaterialResponsible } = financials;
+
+  // Material visibility: TC only sees materials if they're responsible; GC always sees; FC never sees materials
+  const showMaterials = viewerRole === 'General Contractor'
+    ? true
+    : viewerRole === 'Trade Contractor'
+      ? isTCMaterialResponsible
+      : false; // FC and Supplier don't see material data
+
   const contractValue = financials.upstreamContract?.contract_sum ?? 0;
   const paid = financials.totalPaid;
   const pending = financials.billedToDate - paid;
   const remaining = Math.max(0, contractValue - financials.billedToDate);
   const progressPct = contractValue > 0 ? Math.min(100, (financials.billedToDate / contractValue) * 100) : 0;
 
-  /* Budget breakdown rows */
+  /* Budget breakdown rows — material-aware */
   const budgetRows = useMemo(() => {
     const rows = [
       { label: 'Billed to Date', value: financials.billedToDate, color: 'hsl(var(--chart-2))', pct: contractValue > 0 ? (financials.billedToDate / contractValue) * 100 : 0 },
       { label: 'Paid to Date', value: paid, color: 'hsl(var(--chart-1))', pct: contractValue > 0 ? (paid / contractValue) * 100 : 0 },
-      { label: 'Material Ordered', value: financials.materialOrdered, color: 'hsl(var(--chart-4))', pct: contractValue > 0 ? (financials.materialOrdered / contractValue) * 100 : 0 },
-      { label: 'Retainage Held', value: financials.retainageAmount, color: 'hsl(var(--chart-3))', pct: contractValue > 0 ? (financials.retainageAmount / contractValue) * 100 : 0 },
     ];
+    if (showMaterials) {
+      rows.push({ label: 'Material Ordered', value: financials.materialOrdered, color: 'hsl(var(--chart-4))', pct: contractValue > 0 ? (financials.materialOrdered / contractValue) * 100 : 0 });
+    }
+    rows.push({ label: 'Retainage Held', value: financials.retainageAmount, color: 'hsl(var(--chart-3))', pct: contractValue > 0 ? (financials.retainageAmount / contractValue) * 100 : 0 });
     if (financials.actualLaborCost > 0) {
       rows.push({ label: 'Labor Cost', value: financials.actualLaborCost, color: 'hsl(var(--chart-5))', pct: contractValue > 0 ? (financials.actualLaborCost / contractValue) * 100 : 0 });
     }
     return rows;
-  }, [financials, contractValue, paid]);
+  }, [financials, contractValue, paid, showMaterials]);
 
   /* Filtered order items */
   const orderItems = useMemo(() => {
@@ -139,6 +153,9 @@ export function ProjectOverviewV2({
             </div>
           </div>
         </div>
+
+        {/* Contracts Section */}
+        <OverviewContractsSection financials={financials} onNavigate={onNavigate} />
 
         {/* Pill tabs */}
         <div className="flex items-center gap-1 bg-muted/50 rounded-lg p-1 w-fit">
@@ -234,7 +251,7 @@ export function ProjectOverviewV2({
                     });
                   }}
                 >
-                  <div className="flex" >
+                  <div className="flex">
                     <div className="w-[3px] shrink-0" style={{ backgroundColor: STATUS_ACCENTS[item.status as keyof typeof STATUS_ACCENTS] || '#6B7280' }} />
                     <div className="flex items-center justify-between flex-1 px-4 py-3">
                       <div className="flex items-center gap-2">
@@ -258,10 +275,12 @@ export function ProjectOverviewV2({
               ))
             )}
 
-            {/* Quick links */}
+            {/* Quick links — material-aware */}
             <div className="flex gap-2 pt-1">
               <button onClick={() => onNavigate('invoices')} className="text-[10px] text-primary font-medium hover:underline">View All Invoices →</button>
-              <button onClick={() => onNavigate('purchase-orders')} className="text-[10px] text-primary font-medium hover:underline">View All POs →</button>
+              {showMaterials && (
+                <button onClick={() => onNavigate('purchase-orders')} className="text-[10px] text-primary font-medium hover:underline">View All POs →</button>
+              )}
             </div>
           </div>
         )}
@@ -293,10 +312,24 @@ export function ProjectOverviewV2({
 
       {/* ─── RIGHT COLUMN ─── */}
       <div className="space-y-4">
+        {/* Team card */}
+        <div className={cn(DT.cardWrapper, DT.cardPadding)}>
+          <OverviewTeamCard
+            projectId={projectId}
+            isTCMaterialResponsible={isTCMaterialResponsible}
+            isGCMaterialResponsible={isGCMaterialResponsible}
+          />
+        </div>
+
         {/* Donut chart */}
         <div className={cn(DT.cardWrapper, DT.cardPadding)}>
           <p className={cn(DT.sectionHeader, 'mb-3')}>Budget Breakdown</p>
           <ProjectBudgetRingChart paid={paid} pending={Math.max(0, pending)} remaining={remaining} />
+        </div>
+
+        {/* Profit Position */}
+        <div className={cn(DT.cardWrapper, DT.cardPadding)}>
+          <OverviewProfitCard projectId={projectId} financials={financials} />
         </div>
 
         {/* Activity feed */}
