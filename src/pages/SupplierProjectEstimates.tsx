@@ -393,36 +393,16 @@ export default function SupplierProjectEstimates() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const filteredEstimates = selectedProjectId === 'all'
-    ? estimates
-    : estimates.filter(e => e.project_id === selectedProjectId);
-
-  const defaultOpen = useDefaultSidebarOpen();
-
   if (authLoading) {
     return (
-      <SidebarProvider defaultOpen={defaultOpen}>
-        <div className="min-h-screen flex w-full">
-          <AppSidebar />
-          <SidebarInset className="flex flex-col flex-1">
-            <TopBar title="My Estimates" />
-            <main className="flex-1 overflow-auto container mx-auto px-4 py-6">
-              <Skeleton className="h-64 w-full" />
-            </main>
-          </SidebarInset>
-        </div>
-      </SidebarProvider>
+      <AppLayout title="My Estimates">
+        <Skeleton className="h-64 w-full" />
+      </AppLayout>
     );
   }
 
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar />
-         <SidebarInset className="flex flex-col flex-1 bg-background">
-          <TopBar title="Project Estimates" />
-          <main className="flex-1 overflow-auto">
-            <div className="max-w-7xl mx-auto w-full p-4 sm:p-6 pb-20 space-y-6">
+    <AppLayout title="Project Estimates">
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
