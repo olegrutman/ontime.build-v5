@@ -27,6 +27,8 @@ interface Props {
   projectId: string;
   buildingType?: FramingBuildingType;
   projectName?: string;
+  embedded?: boolean;
+  onComplete?: () => void;
 }
 
 /* ── Count included / excluded from answers ────────────────────────── */
