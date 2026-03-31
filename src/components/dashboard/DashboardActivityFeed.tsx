@@ -23,8 +23,8 @@ const TYPE_COLORS: Record<string, string> = {
   change_order: 'bg-amber-100 text-amber-700',
 };
 
-function getInitials(label: string): string {
-  const parts = label.split(/[-\s]/);
+function getInitials(title: string): string {
+  const parts = title.split(/[-\s]/);
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
   return title.slice(0, 2).toUpperCase();
 }
@@ -42,7 +42,7 @@ export function DashboardActivityFeed({ docs }: DashboardActivityFeedProps) {
       <div className="px-3.5 pb-3 space-y-1">
         {items.map((item, i) => {
           const chipStyle = TYPE_COLORS[item.type] || 'bg-muted text-muted-foreground';
-          const timeAgo = formatDistanceToNow(new Date(item.updatedAt), { addSuffix: true });
+          const timeAgo = formatDistanceToNow(new Date(item.created_at), { addSuffix: true });
 
           return (
             <div
@@ -51,11 +51,11 @@ export function DashboardActivityFeed({ docs }: DashboardActivityFeedProps) {
               style={{ animationDelay: `${400 + i * 50}ms` }}
             >
               <div className="w-7 h-7 rounded-full bg-accent flex items-center justify-center shrink-0 mt-0.5">
-                <span className="text-[9px] font-bold text-muted-foreground">{getInitials(item.label)}</span>
+                <span className="text-[9px] font-bold text-muted-foreground">{getInitials(item.title)}</span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs text-muted-foreground">
-                  <span className="font-semibold text-foreground">{item.label}</span>{' '}
+                  <span className="font-semibold text-foreground">{item.title}</span>{' '}
                   updated in {item.projectName}
                 </p>
                 <div className="flex items-center gap-2 mt-1">
