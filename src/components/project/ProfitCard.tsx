@@ -120,7 +120,7 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
 
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">Current Contract Total</span>
-          <span className="text-sm font-semibold tabular-nums">{fmt(currentTotal)}</span>
+          <span className="text-sm font-semibold tabular-nums" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{fmt(currentTotal)}</span>
         </div>
 
         {hasOwner && (
