@@ -259,7 +259,7 @@ export default function ProjectContractsPage() {
       <div className="sticky top-0 z-30 bg-card border-b px-4 py-3">
         <div className="max-w-3xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <Link to={`/project/${projectId}/scope-wizard`}>
+             <Link to={`/project/${projectId}/setup`}>
               <Button variant="ghost" size="icon"><ChevronLeft className="w-4 h-4" /></Button>
             </Link>
             <h1 className="text-lg font-bold font-heading">Contracts</h1>
