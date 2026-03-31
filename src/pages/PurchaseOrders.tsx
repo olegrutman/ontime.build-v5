@@ -512,12 +512,10 @@ export default function PurchaseOrders() {
                 </div>
               </div>
             ) : (
-              <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
+              <div className="bg-card border border-border rounded-lg py-12 text-center text-muted-foreground">
                   <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>Select a purchase order to view details</p>
-                </CardContent>
-              </Card>
+              </div>
             )}
           </div>
         </div>
