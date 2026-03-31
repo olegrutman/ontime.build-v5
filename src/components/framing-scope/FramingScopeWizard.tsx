@@ -138,26 +138,36 @@ export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectNam
     );
   }
 
-  // First visit — landing
+  // First visit — landing (skip in embedded mode, auto-start)
   if (!started && !hasExistingRecord) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 px-6 text-center max-w-md mx-auto">
-        <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-          <ClipboardList className="w-7 h-7 text-primary" />
+    if (embedded) {
+      setStarted(true);
+    } else {
+      return (
+        <div className="flex flex-col items-center justify-center py-16 px-6 text-center max-w-md mx-auto">
+          <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <ClipboardList className="w-7 h-7 text-primary" />
+          </div>
+          <h2 className="font-heading text-xl font-bold" style={DT.heading}>
+            Framing Scope Setup
+          </h2>
+          <p className="text-sm text-muted-foreground mt-2 mb-6">
+            Define what is and isn't included in your rough framing subcontract.
+            This wizard generates a Division 06100 Scope of Work document.
+          </p>
+          <Button onClick={() => setStarted(true)} className="px-8">
+            Start scope setup
+          </Button>
+          <button
+            onClick={() => {/* skip for now */}}
+            className="text-xs text-muted-foreground underline mt-3 hover:text-foreground"
+          >
+            Skip for now
+          </button>
         </div>
-        <h2 className="font-heading text-xl font-bold" style={DT.heading}>
-          Framing Scope Setup
-        </h2>
-        <p className="text-sm text-muted-foreground mt-2 mb-6">
-          Define what is and isn't included in your rough framing subcontract.
-          This wizard generates a Division 06100 Scope of Work document.
-        </p>
-        <Button onClick={() => setStarted(true)} className="px-8">
-          Start scope setup
-        </Button>
-        <button
-          onClick={() => {/* skip for now */}}
-          className="text-xs text-muted-foreground underline mt-3 hover:text-foreground"
+      );
+    }
+  }
         >
           Skip for now
         </button>
