@@ -223,7 +223,7 @@ function SOVContractSection({
                 <div className="flex items-center gap-3 mb-3 overflow-x-auto text-xs">
                    <StatusChip ok={prereqs.hasProfile} label={prereqs.profileSummary || 'Profile ready'} link={`/project/${projectId}/setup`} />
                    <StatusChip ok={prereqs.hasScope} label={`Scope — ${prereqs.scopeCount} items`} link={`/project/${projectId}/setup`} />
-                  <StatusChip ok={prereqs.hasContract} label={`$${(prereqs.contractValue || 0).toLocaleString()} · ${prereqs.retainagePct}% ret.`} link={`/project/${projectId}/contracts`} />
+                  <StatusChip ok={prereqs.hasContract} label={`$${(prereqs.contractValue || 0).toLocaleString()} · ${prereqs.retainagePct}% ret.`} link={`/project/${projectId}/setup`} />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
