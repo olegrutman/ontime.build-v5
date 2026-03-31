@@ -122,30 +122,9 @@ export function ProjectOverviewV2({
 
             {/* KPI Tiles */}
             <div className="grid grid-cols-3 gap-2">
-              {[
-                { icon: DollarSign, label: 'Contract', value: contractValue, accentBg: 'bg-blue-50', accentText: 'text-blue-600', barColor: 'bg-primary', pct: '100%', delay: 0 },
-                { icon: CreditCard, label: 'Paid', value: paid, accentBg: 'bg-emerald-50', accentText: 'text-emerald-600', barColor: 'bg-emerald-500', pct: contractValue > 0 ? `${Math.round((paid / contractValue) * 100)}%` : '0%', delay: 40 },
-                { icon: Clock, label: 'Pending', value: Math.max(0, pending), accentBg: 'bg-amber-50', accentText: 'text-amber-600', barColor: 'bg-amber-500', pct: contractValue > 0 ? `${Math.round((Math.max(0, pending) / contractValue) * 100)}%` : '0%', delay: 80 },
-              ].map(tile => {
-                const animatedVal = useCountUp(tile.value, 900, tile.delay);
-                return (
-                  <div
-                    key={tile.label}
-                    className="rounded-lg bg-background/60 border border-border/60 px-3 py-2.5 relative overflow-hidden transition-all duration-300 hover:-translate-y-px hover:shadow-md animate-fade-in"
-                    style={{ animationDelay: `${tile.delay}ms` }}
-                  >
-                    <div className={`absolute bottom-0 left-0 right-0 h-[2px] ${tile.barColor}`} />
-                    <div className="flex items-center gap-1.5 mb-1">
-                      <div className={cn('w-5 h-5 rounded flex items-center justify-center', tile.accentBg, tile.accentText)}>
-                        <tile.icon className="w-3 h-3" />
-                      </div>
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wide">{tile.label}</span>
-                      <span className={cn('ml-auto text-[9px] font-semibold px-1.5 py-0.5 rounded-full', tile.accentBg, tile.accentText)}>{tile.pct}</span>
-                    </div>
-                    <p className="font-heading text-[1.5rem] font-black tracking-tight text-foreground leading-none">{fmt(animatedVal)}</p>
-                  </div>
-                );
-              })}
+              <OverviewKpiTile icon={DollarSign} label="Contract" value={contractValue} accentBg="bg-blue-50" accentText="text-blue-600" barColor="bg-primary" pct="100%" delay={0} />
+              <OverviewKpiTile icon={CreditCard} label="Paid" value={paid} accentBg="bg-emerald-50" accentText="text-emerald-600" barColor="bg-emerald-500" pct={contractValue > 0 ? `${Math.round((paid / contractValue) * 100)}%` : '0%'} delay={40} />
+              <OverviewKpiTile icon={Clock} label="Pending" value={Math.max(0, pending)} accentBg="bg-amber-50" accentText="text-amber-600" barColor="bg-amber-500" pct={contractValue > 0 ? `${Math.round((Math.max(0, pending) / contractValue) * 100)}%` : '0%'} delay={80} />
             </div>
 
             {/* Progress bar */}
