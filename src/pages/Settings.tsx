@@ -247,8 +247,8 @@ export default function Settings() {
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Danger Zone */}
         <Card className="border-destructive/50">
