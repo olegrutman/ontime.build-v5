@@ -112,7 +112,7 @@ export function ProfitCard({ financials, projectId }: ProfitCardProps) {
             <button onClick={() => { setEditValue(ownerContractValue || 0); setEditing(true); }} className="p-0.5 hover:bg-accent rounded transition-colors">
               <Pencil className="h-3 w-3 text-muted-foreground" />
             </button>
-            <span className={cn("text-sm font-semibold tabular-nums", !hasOwner && 'text-amber-600 dark:text-amber-400')}>
+             <span className={cn("text-sm font-semibold tabular-nums", !hasOwner && 'text-amber-600 dark:text-amber-400')} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
               {hasOwner ? fmt(ownerContractValue) : 'Not set'}
             </span>
           </div>
