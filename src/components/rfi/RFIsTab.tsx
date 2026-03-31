@@ -80,7 +80,11 @@ export function RFIsTab({ projectId }: RFIsTabProps) {
         </div>
       ) : (
         <div className="space-y-2">
-          {filtered.map((rfi) => <RFICard key={rfi.id} rfi={rfi} onClick={() => handleCardClick(rfi)} />)}
+          {filtered.map((rfi, i) => (
+            <div key={rfi.id} className="animate-fade-in" style={{ animationDelay: `${i * 50}ms` }}>
+              <RFICard rfi={rfi} onClick={() => handleCardClick(rfi)} />
+            </div>
+          ))}
         </div>
       )}
 
