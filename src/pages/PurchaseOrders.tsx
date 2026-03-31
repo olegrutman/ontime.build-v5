@@ -440,8 +440,8 @@ export default function PurchaseOrders() {
                       )}
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent>
+                </div>
+                <div className="px-3.5 pb-3.5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 p-4 bg-muted/30 rounded-lg text-sm">
                     <div>
                       <span className="text-muted-foreground">Supplier:</span>
