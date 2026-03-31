@@ -17,18 +17,19 @@ export function OverviewProfitCard({ projectId, financials }: Props) {
 
   let rows: { label: string; value: number }[] = [];
   let profit = 0;
-  let profitLabel = 'Profit';
+  let profitLabel = 'Your Profit';
 
   if (viewerRole === 'General Contractor') {
     const ownerVal = ownerContractValue ?? 0;
     if (ownerVal === 0 && contractSum === 0) return null;
     profit = ownerVal - contractSum;
-    profitLabel = 'GC Profit';
+    profitLabel = 'Your Profit';
     rows = [
       { label: 'Owner Contract', value: ownerVal },
-      { label: 'Current Contract', value: contractSum },
+      { label: upstreamContract?.to_org_name || 'Trade Contractor', value: contractSum },
     ];
   } else if (viewerRole === 'Trade Contractor') {
+    const fcName = downstreamContract?.to_org_name || 'Field Crew';
     const fcContractSum = downstreamContract?.contract_sum ?? 0;
     const laborMargin = contractSum - fcContractSum - totalActualCost;
 
@@ -46,15 +47,15 @@ export function OverviewProfitCard({ projectId, financials }: Props) {
       profit = laborMargin;
       profitLabel = 'Labor Margin';
       rows = [
-        { label: 'Revenue (Contract)', value: contractSum },
-        { label: 'FC Contract', value: fcContractSum },
+        { label: upstreamContract?.from_org_name || 'Revenue (Contract)', value: contractSum },
+        { label: `${fcName} Contract`, value: fcContractSum },
         ...(totalActualCost > 0 ? [{ label: 'Actual Costs', value: -totalActualCost }] : []),
       ];
     }
   } else if (viewerRole === 'Field Crew') {
     if (contractSum === 0 && totalActualCost === 0) return null;
     profit = contractSum - totalActualCost;
-    profitLabel = 'FC Profit';
+    profitLabel = 'Your Profit';
     rows = [
       { label: 'Contract', value: contractSum },
       { label: 'Actual Cost', value: -totalActualCost },
