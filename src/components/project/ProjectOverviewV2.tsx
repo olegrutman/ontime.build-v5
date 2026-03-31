@@ -209,7 +209,7 @@ export function ProjectOverviewV2({
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-xs text-foreground font-medium">{row.label}</span>
-                  <span className="text-xs font-semibold" style={DT.mono}>{fmt(row.value)}</span>
+                  <span className="font-heading text-sm font-black tracking-tight">{fmt(row.value)}</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                   <div
