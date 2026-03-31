@@ -97,6 +97,9 @@ export function FramingScopeWizard({ projectId, buildingType: propBuildingType =
   const [showFullScope, setShowFullScope] = useState(false);
   const [activeSectionIndex, setActiveSectionIndex] = useState(BUILDING_PROFILE_INDEX);
   const [derivedBuildingType, setDerivedBuildingType] = useState<FramingBuildingType | null>(null);
+  const [completeFired, setCompleteFired] = useState(false);
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
   const isMobile = useIsMobile();
 
   const buildingType = derivedBuildingType || propBuildingType;
