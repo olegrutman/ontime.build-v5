@@ -698,7 +698,7 @@ export default function SupplierInventory() {
               item={editItem}
               onSaved={fetchCatalogItems}
             />
-            </div>
+      </div>
     </AppLayout>
   );
 }
