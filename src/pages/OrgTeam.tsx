@@ -185,14 +185,14 @@ export default function OrgTeam() {
         </div>
 
         {/* Organization Settings */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Organization Settings
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+        <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">
+          <div className="mb-3">
+            <div className="flex items-center gap-2">
+              <Settings className="h-4 w-4 text-muted-foreground" />
+              <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Organization Settings</p>
+            </div>
+          </div>
+          <div>
             <div className="flex items-center justify-between">
               <div>
                 <Label htmlFor="allow-join">Allow team members to join via search</Label>
