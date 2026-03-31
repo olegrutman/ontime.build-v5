@@ -173,20 +173,14 @@ export function CODetailPage() {
 
   if (!co) {
     return (
-      <SidebarProvider defaultOpen={defaultOpen}>
-        <div className="flex min-h-screen w-full">
-          <AppSidebar />
-          <SidebarInset>
-            <div className="flex flex-col items-center justify-center py-20 gap-4">
-              <p className="text-lg font-medium text-foreground">Change order not found</p>
-              <Button variant="outline" onClick={() => navigate(-1)}>
-                Go back
-              </Button>
-            </div>
-          </SidebarInset>
-          <BottomNav />
+      <AppLayout title="Change Order">
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <p className="text-lg font-medium text-foreground">Change order not found</p>
+          <Button variant="outline" onClick={() => navigate(-1)}>
+            Go back
+          </Button>
         </div>
-      </SidebarProvider>
+      </AppLayout>
     );
   }
 
