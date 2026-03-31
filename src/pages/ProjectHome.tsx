@@ -24,7 +24,7 @@ import {
   SupplierMaterialsOverview,
   BudgetTracking,
   MaterialsBudgetStatusCard,
-  ProfitCard,
+  
   MaterialMarkupEditor,
   CriticalScheduleCard,
 } from '@/components/project';

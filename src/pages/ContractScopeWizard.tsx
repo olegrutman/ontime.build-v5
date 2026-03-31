@@ -83,7 +83,7 @@ export default function ContractScopeWizard() {
 
   const handleBack = () => {
     if (step > 0) setStep(step - 1);
-    else navigate(`/project/${projectId}/contracts`);
+    else navigate(`/project/${projectId}/setup`);
   };
 
   if (isLoading) {

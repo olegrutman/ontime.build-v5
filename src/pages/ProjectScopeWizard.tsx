@@ -82,7 +82,7 @@ export default function ProjectScopeWizard() {
       const items = Object.entries(toggles).map(([scope_item_id, is_on]) => ({ scope_item_id, is_on }));
       await saveMutation.mutateAsync({ profileId: profile.id, items });
       toast({ title: 'Scope saved', description: 'Opening Contracts...' });
-      navigate(`/project/${projectId}/contracts`);
+      navigate(`/project/${projectId}/setup`);
     } catch (e: any) {
       toast({ title: 'Error', description: e.message, variant: 'destructive' });
     }

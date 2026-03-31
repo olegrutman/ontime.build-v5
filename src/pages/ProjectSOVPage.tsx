@@ -560,7 +560,7 @@ export default function ProjectSOVPage() {
             <Card>
               <CardContent className="p-6 text-center text-muted-foreground">
                 <p className="text-sm">No contracts found for this project.</p>
-                <Button size="sm" variant="outline" className="mt-3" onClick={() => navigate(`/project/${projectId}/contracts`)}>
+                <Button size="sm" variant="outline" className="mt-3" onClick={() => navigate(`/project/${projectId}/setup`)}>
                   Create Contract
                 </Button>
               </CardContent>

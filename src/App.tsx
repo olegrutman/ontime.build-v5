@@ -172,7 +172,7 @@ function AppRoutes() {
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
             <Route path="/create-project" element={<RequireAuth><CreateProjectNew /></RequireAuth>} />
             <Route path="/project/:id/edit" element={<RequireAuth><EditProject /></RequireAuth>} />
-            <Route path="/project/:id/contracts" element={<RequireAuth><ProjectContractsPage /></RequireAuth>} />
+            <Route path="/project/:id/contracts" element={<RequireAuth><Navigate to="../setup" replace /></RequireAuth>} />
             <Route path="/project/:id/change-orders/:coId" element={<RequireAuth><CODetailPage /></RequireAuth>} />
             {/* Legacy wizard routes — redirect to unified setup flow */}
             <Route path="/project/:id/details-wizard" element={<RequireAuth><Navigate to="../setup" replace /></RequireAuth>} />
