@@ -29,7 +29,7 @@ function SummaryGroup({ label, items }: { label: string; items: { text: string; 
   );
 }
 
-export function ScopeSummaryPanel({ answers, matResp }: Props) {
+export function ScopeSummaryPanel({ answers, matResp, compact }: Props) {
   const a = answers;
 
   const methodLabel = a.method.framing_method
