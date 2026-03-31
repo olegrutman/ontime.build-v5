@@ -43,7 +43,7 @@ interface MoreItem {
 }
 
 const MORE_ITEMS: MoreItem[] = [
-  { label: 'Scope & Details', icon: ClipboardList, route: 'scope' },
+  { label: 'Framing Scope', icon: ClipboardList, route: 'scope' },
   { label: 'SOV', icon: DollarSign, route: 'sov', featureKey: 'sov_contracts', hideForSupplier: true },
   { label: 'RFIs', icon: MessageSquareMore, route: 'rfis' },
   { label: 'Estimates', icon: FileText, route: 'estimates', featureKey: 'supplier_estimates' },
