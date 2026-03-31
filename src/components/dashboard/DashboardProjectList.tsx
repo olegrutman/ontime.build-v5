@@ -1,8 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, Plus, MoreVertical, HardHat, Truck, ChevronRight } from 'lucide-react';
+import { Plus, MoreVertical, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,14 +12,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn, formatCurrency } from '@/lib/utils';
 import type { ProjectStatusFilter } from './StatusMenu';
 
-const STATUS_LABELS: Record<ProjectStatusFilter, string> = {
-  setup: 'Setup',
-  active: 'Active',
-  on_hold: 'On Hold',
-  completed: 'Completed',
-  archived: 'Archived',
-};
-
 const STATUS_DOT_COLORS: Record<string, string> = {
   setup: 'bg-violet-500',
   draft: 'bg-violet-500',
@@ -30,13 +21,12 @@ const STATUS_DOT_COLORS: Record<string, string> = {
   archived: 'bg-muted-foreground',
 };
 
-const STATUS_BADGE_STYLES: Record<string, string> = {
-  setup: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
-  draft: 'bg-violet-100 text-violet-800 dark:bg-violet-900/30 dark:text-violet-300',
-  active: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-  on_hold: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-  completed: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-  archived: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
+const STATUS_LABELS: Record<ProjectStatusFilter, string> = {
+  setup: 'Setup',
+  active: 'Active',
+  on_hold: 'On Hold',
+  completed: 'Completed',
+  archived: 'Archived',
 };
 
 interface Project {
@@ -71,6 +61,143 @@ const filters: { key: ProjectStatusFilter; label: string }[] = [
   { key: 'archived', label: 'Archived' },
 ];
 
+function ProjectAccordionCard({
+  project,
+  index,
+  onNavigate,
+  onArchive,
+  onUnarchive,
+  onStatusChange,
+}: {
+  project: Project;
+  index: number;
+  onNavigate: (id: string) => void;
+  onArchive: (id: string) => void;
+  onUnarchive: (id: string) => void;
+  onStatusChange: (id: string, status: 'active' | 'on_hold' | 'completed') => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [barWidth, setBarWidth] = useState(0);
+  const mounted = useRef(false);
+
+  const percent = project.pendingActions > 0 ? Math.min(project.pendingActions * 20, 100) : 0;
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      mounted.current = true;
+      setBarWidth(percent);
+    }, 200 + index * 60);
+    return () => clearTimeout(t);
+  }, [percent, index]);
+
+  const dotColor = STATUS_DOT_COLORS[project.status] || 'bg-muted-foreground';
+
+  return (
+    <div
+      className="bg-card border border-border rounded-lg overflow-hidden opacity-0 animate-[fadeUp_400ms_ease-out_forwards]"
+      style={{ animationDelay: `${200 + index * 50}ms` }}
+    >
+      <button
+        onClick={() => setExpanded(e => !e)}
+        className="w-full flex items-center gap-3 p-3.5 text-left hover:bg-accent/50 transition-colors"
+      >
+        <span className={cn('w-2.5 h-2.5 rounded-full shrink-0', dotColor)} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-foreground text-sm font-semibold truncate" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+              {project.name}
+            </span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+              {project.project_type}
+            </span>
+          </div>
+          <div className="flex items-center gap-3 mt-1">
+            <span className="text-muted-foreground text-xs" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+              {project.contractValue != null ? formatCurrency(project.contractValue) : '—'}
+            </span>
+            <span className="text-muted-foreground/60 text-xs capitalize">{project.status.replace(/_/g, ' ')}</span>
+          </div>
+        </div>
+        <ChevronDown
+          className={cn('w-4 h-4 text-muted-foreground transition-transform duration-300', expanded && 'rotate-180')}
+        />
+      </button>
+
+      {/* Progress bar */}
+      <div className="h-[2px] bg-border mx-3.5">
+        <div
+          className="h-full rounded-full transition-all duration-[1200ms] ease-out bg-primary"
+          style={{ width: `${barWidth}%` }}
+        />
+      </div>
+
+      {/* Expanded content */}
+      <div
+        className="overflow-hidden transition-all duration-[380ms]"
+        style={{
+          maxHeight: expanded ? '260px' : '0',
+          transitionTimingFunction: 'cubic-bezier(.22,1,.36,1)',
+        }}
+      >
+        <div className="p-3.5 pt-3">
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            {[
+              { label: 'Contract', value: project.contractValue != null ? formatCurrency(project.contractValue) : '—' },
+              { label: 'Type', value: project.project_type },
+              { label: 'Pending', value: `${project.pendingActions} items` },
+              { label: 'Status', value: project.status.replace(/_/g, ' ') },
+            ].map((tile, i) => (
+              <div key={i} className="bg-accent/50 rounded px-2.5 py-2">
+                <p className="text-[9px] uppercase tracking-wider text-muted-foreground">{tile.label}</p>
+                <p className="text-foreground text-sm font-medium mt-0.5 capitalize" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                  {tile.value}
+                </p>
+              </div>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={(e) => { e.stopPropagation(); onNavigate(project.id); }}
+              className="flex-1 py-2 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-colors"
+            >
+              View Project
+            </button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="px-3 py-2 rounded-md bg-accent text-muted-foreground text-xs font-medium hover:bg-accent/80 transition-colors"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreVertical className="h-3.5 w-3.5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                {project.status === 'archived' ? (
+                  <DropdownMenuItem onClick={() => onUnarchive(project.id)}>Unarchive</DropdownMenuItem>
+                ) : (
+                  <>
+                    {project.status !== 'active' && (
+                      <DropdownMenuItem onClick={() => onStatusChange(project.id, 'active')}>Set Active</DropdownMenuItem>
+                    )}
+                    {project.status !== 'on_hold' && (
+                      <DropdownMenuItem onClick={() => onStatusChange(project.id, 'on_hold')}>Put On Hold</DropdownMenuItem>
+                    )}
+                    {project.status !== 'completed' && (
+                      <DropdownMenuItem onClick={() => onStatusChange(project.id, 'completed')}>Mark Completed</DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={() => onArchive(project.id)} className="text-destructive">Archive</DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DashboardProjectList({
   projects,
   statusFilter,
@@ -94,18 +221,11 @@ export function DashboardProjectList({
 
   const canCreateProject = orgType === 'GC' || orgType === 'TC';
 
-  const emptyIcons: Record<string, React.ReactNode> = {
-    GC: <Briefcase className="h-8 w-8 text-muted-foreground" />,
-    TC: <Briefcase className="h-8 w-8 text-muted-foreground" />,
-    FC: <HardHat className="h-8 w-8 text-muted-foreground" />,
-    SUPPLIER: <Truck className="h-8 w-8 text-muted-foreground" />,
-  };
-
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3">
-        <h3 className="font-heading text-[1rem] font-bold text-foreground">Projects</h3>
+        <h3 className="card-section-title">Projects</h3>
         <span className="text-[0.72rem] text-muted-foreground">{filteredProjects.length} items</span>
       </div>
 
@@ -136,133 +256,33 @@ export function DashboardProjectList({
       {/* Content */}
       {loading ? (
         <div className="px-4 pb-4 space-y-3">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-14 w-full" />
-          ))}
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-14 w-full" />)}
         </div>
       ) : filteredProjects.length === 0 ? (
         <div className="px-4 py-8 text-center">
           <span className="text-[1.8rem]">📋</span>
           <p className="text-[0.82rem] text-muted-foreground mt-1">
-            {statusFilter === 'active'
-              ? 'No active projects yet'
-              : `No ${STATUS_LABELS[statusFilter].toLowerCase()} projects`}
+            {statusFilter === 'active' ? 'No active projects yet' : `No ${STATUS_LABELS[statusFilter].toLowerCase()} projects`}
           </p>
           {statusFilter === 'active' && canCreateProject && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/create-project')}
-              className="mt-3 h-9 text-xs"
-            >
+            <Button variant="outline" size="sm" onClick={() => navigate('/create-project')} className="mt-3 h-9 text-xs">
               <Plus className="mr-1.5 h-3.5 w-3.5" />
               Create Project
             </Button>
           )}
         </div>
       ) : (
-        <div className="divide-y divide-border">
+        <div className="px-3.5 pb-3.5 space-y-2">
           {filteredProjects.map((project, index) => (
-            <div
+            <ProjectAccordionCard
               key={project.id}
-              className={cn(
-                "px-4 py-3.5 border-l-[3px] border-l-transparent hover:border-l-primary hover:bg-accent/60 transition-all cursor-pointer flex items-center gap-3 group",
-                index % 2 === 0 ? "bg-muted/40" : "bg-card"
-              )}
-              style={{ minHeight: '56px' }}
-              onClick={() => navigate(`/project/${project.id}`)}
-            >
-              {/* Status dot */}
-              <span
-                className={cn(
-                  'w-2 h-2 rounded-full shrink-0',
-                  STATUS_DOT_COLORS[project.status] || 'bg-muted-foreground'
-                )}
-              />
-
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-[0.82rem] font-semibold text-foreground truncate">
-                    {project.name}
-                  </span>
-                  {project.pendingActions > 0 && (
-                    <Badge className="text-[0.58rem] px-1.5 py-0 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 shrink-0">
-                      {project.pendingActions} pending
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[0.68rem] text-muted-foreground truncate">
-                    {project.project_type}
-                  </span>
-                  {project.userRole && (
-                    <Badge className="text-[0.58rem] px-1.5 py-0 bg-secondary text-secondary-foreground shrink-0">
-                      {project.userRole}
-                    </Badge>
-                  )}
-                  <Badge
-                    className={cn(
-                      'text-[0.58rem] px-1.5 py-0 capitalize shrink-0',
-                      STATUS_BADGE_STYLES[project.status] || STATUS_BADGE_STYLES.active
-                    )}
-                  >
-                    {project.status.replace(/_/g, ' ')}
-                  </Badge>
-                </div>
-              </div>
-
-              {/* Contract value */}
-              <span className="hidden sm:inline text-[0.82rem] font-semibold text-foreground shrink-0">
-                {project.contractValue != null ? formatCurrency(project.contractValue) : '—'}
-              </span>
-
-              {/* Chevron indicator */}
-              <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
-
-              {/* Actions menu */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className="p-1.5 rounded hover:bg-accent opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <MoreVertical className="h-3.5 w-3.5 text-muted-foreground" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                  {project.status === 'archived' ? (
-                    <DropdownMenuItem onClick={() => onUnarchive(project.id)}>
-                      Unarchive
-                    </DropdownMenuItem>
-                  ) : (
-                    <>
-                      {project.status !== 'active' && (
-                        <DropdownMenuItem onClick={() => onStatusChange(project.id, 'active')}>
-                          Set Active
-                        </DropdownMenuItem>
-                      )}
-                      {project.status !== 'on_hold' && (
-                        <DropdownMenuItem onClick={() => onStatusChange(project.id, 'on_hold')}>
-                          Put On Hold
-                        </DropdownMenuItem>
-                      )}
-                      {project.status !== 'completed' && (
-                        <DropdownMenuItem onClick={() => onStatusChange(project.id, 'completed')}>
-                          Mark Completed
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuItem
-                        onClick={() => onArchive(project.id)}
-                        className="text-destructive"
-                      >
-                        Archive
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+              project={project}
+              index={index}
+              onNavigate={(id) => navigate(`/project/${id}`)}
+              onArchive={onArchive}
+              onUnarchive={onUnarchive}
+              onStatusChange={onStatusChange}
+            />
           ))}
         </div>
       )}
