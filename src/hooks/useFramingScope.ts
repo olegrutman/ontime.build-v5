@@ -3,12 +3,34 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { FramingScopeAnswers, createDefaultAnswers } from '@/types/framingScope';
 
+/** Maps profile building features → scope Section 2 defaults */
+function seedStructureFromProfile(
+  answers: FramingScopeAnswers,
+  profile: { has_stairs?: boolean; has_elevator?: boolean; has_corridors?: boolean; has_balcony?: boolean; has_garage?: boolean } | null,
+): FramingScopeAnswers {
+  if (!profile) return answers;
+  const s = answers.structure;
+  // Only seed if the scope value is still null (user hasn't touched it)
+  return {
+    ...answers,
+    structure: {
+      ...s,
+      wood_stairs: s.wood_stairs ?? (profile.has_stairs ? 'yes' : null),
+      elevator_shaft: s.elevator_shaft ?? (profile.has_elevator ? 'yes' : null),
+      enclosed_corridors: s.enclosed_corridors ?? (profile.has_corridors ? 'yes' : null),
+      balconies: s.balconies ?? (profile.has_balcony ? 'yes' : null),
+      tuck_under_garages: s.tuck_under_garages ?? (profile.has_garage ? 'yes' : null),
+    },
+  };
+}
+
 export function useFramingScope(projectId: string | undefined) {
   const qc = useQueryClient();
   const [answers, setAnswersState] = useState<FramingScopeAnswers>(createDefaultAnswers());
   const [currentSection, setCurrentSection] = useState(0);
   const [scopeComplete, setScopeComplete] = useState(false);
   const [hasLoaded, setHasLoaded] = useState(false);
+  const seededRef = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
 
   // Load from DB
@@ -19,6 +41,21 @@ export function useFramingScope(projectId: string | undefined) {
       const { data, error } = await supabase
         .from('project_framing_scope' as any)
         .select('*')
+        .eq('project_id', projectId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as any;
+    },
+  });
+
+  // Load profile for seeding
+  const { data: profile } = useQuery({
+    queryKey: ['project_profile', projectId],
+    enabled: !!projectId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('project_profiles')
+        .select('has_stairs, has_elevator, has_corridors, has_balcony, has_garage')
         .eq('project_id', projectId!)
         .maybeSingle();
       if (error) throw error;
@@ -38,6 +75,14 @@ export function useFramingScope(projectId: string | undefined) {
       setHasLoaded(true);
     }
   }, [dbRow, isLoading]);
+
+  // Seed structure defaults from profile (only once, only for new records)
+  useEffect(() => {
+    if (hasLoaded && !dbRow && profile && !seededRef.current) {
+      seededRef.current = true;
+      setAnswersState(prev => seedStructureFromProfile(prev, profile));
+    }
+  }, [hasLoaded, dbRow, profile]);
 
   // Upsert mutation
   const saveMutation = useMutation({

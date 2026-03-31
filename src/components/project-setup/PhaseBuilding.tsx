@@ -3,16 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { DT } from '@/lib/design-tokens';
-import { ChevronRight, Minus, Plus, Check, Building2 } from 'lucide-react';
+import { ChevronRight, Minus, Plus } from 'lucide-react';
 import {
-  FOUNDATION_OPTIONS, FRAMING_SYSTEM_OPTIONS,
-  FLOOR_SYSTEM_OPTIONS, ROOF_SYSTEM_OPTIONS, STRUCTURE_TYPE_OPTIONS,
-  GARAGE_OPTIONS, CORRIDOR_OPTIONS, ROOF_PITCH_OPTIONS,
+  FOUNDATION_OPTIONS, FLOOR_SYSTEM_OPTIONS, ROOF_SYSTEM_OPTIONS,
+  GARAGE_OPTIONS, ROOF_PITCH_OPTIONS,
   BASEMENT_SUBTYPE_OPTIONS, GARAGE_CAR_COUNT_OPTIONS,
   getSmartDefaults,
   type ProfileDraft, type ProjectType,
@@ -87,15 +84,16 @@ function emptyDraft(projectId: string): ProfileDraft {
     has_balcony: false, has_deck: false, has_covered_porch: false,
     deck_porch_type: null, entry_type: 'Standard',
     special_rooms: [], stories_per_unit: null, garage_car_count: null,
+    // Dead scope fields — kept for type compat, not shown in UI
     scope_windows_install: false, scope_windows_type: null,
     scope_patio_doors: false, scope_patio_door_type: null,
     scope_siding: false, scope_siding_type: null, scope_siding_level: null,
     scope_exterior_trim: false, scope_exterior_trim_type: null,
     scope_soffit_fascia: false, scope_fascia_type: null, scope_soffit_type: null,
     scope_backout: false,
-    scope_backout_blocking: true, scope_backout_blocking_items: [],
-    scope_backout_shimming: true, scope_backout_stud_repair: true,
-    scope_backout_nailer_plates: true, scope_backout_pickup_framing: true,
+    scope_backout_blocking: false, scope_backout_blocking_items: [],
+    scope_backout_shimming: false, scope_backout_stud_repair: false,
+    scope_backout_nailer_plates: false, scope_backout_pickup_framing: false,
     scope_decks_railings: false, scope_deck_type: null, scope_railings: false,
     scope_garage_framing: false, scope_garage_trim_openings: false,
     scope_wrb: false, scope_wrb_type: null, scope_sheathing: false,
@@ -143,7 +141,7 @@ export function PhaseBuilding({ projectId, onComplete, onStepChange }: PhaseBuil
     setDraft(prev => ({ ...prev, [key]: val }));
   }, []);
 
-  const toggleArrayField = useCallback((key: 'foundation_types' | 'special_rooms' | 'scope_extras' | 'scope_backout_blocking_items', val: string) => {
+  const toggleArrayField = useCallback((key: 'foundation_types' | 'special_rooms', val: string) => {
     setDraft(prev => {
       const arr = (prev[key] as string[]) || [];
       return { ...prev, [key]: arr.includes(val) ? arr.filter(v => v !== val) : [...arr, val] };
@@ -214,7 +212,7 @@ export function PhaseBuilding({ projectId, onComplete, onStepChange }: PhaseBuil
         })}
       </div>
 
-      {/* Step 2: Building Structure */}
+      {/* Step 2: Building Structure — physical definition only */}
       {draft.project_type_id && (
         <>
           <div className="border-t border-border pt-6">
@@ -222,7 +220,7 @@ export function PhaseBuilding({ projectId, onComplete, onStepChange }: PhaseBuil
               Building Structure
             </h2>
             <p className="text-xs text-muted-foreground mt-1">
-              Define what the building is — not what's in scope.
+              Define the physical building — scope details come in the next phase.
             </p>
           </div>
 
@@ -287,21 +285,6 @@ export function PhaseBuilding({ projectId, onComplete, onStepChange }: PhaseBuil
             )}
           </FieldSection>
 
-          {/* Framing */}
-          {(isSingleFamily || isMultiFamily) && (
-            <FieldSection label="Framing System">
-              <ChipSelect options={FRAMING_SYSTEM_OPTIONS} selected={draft.framing_system}
-                onToggle={v => update('framing_system', draft.framing_system === v ? null : v)} />
-            </FieldSection>
-          )}
-
-          {isHotelCommercial && (
-            <FieldSection label="Structure Type">
-              <ChipSelect options={STRUCTURE_TYPE_OPTIONS} selected={draft.structure_type}
-                onToggle={v => update('structure_type', draft.structure_type === v ? null : v)} />
-            </FieldSection>
-          )}
-
           {/* Floor System */}
           <FieldSection label="Floor System">
             <ChipSelect options={FLOOR_SYSTEM_OPTIONS} selected={draft.floor_system}
@@ -321,7 +304,7 @@ export function PhaseBuilding({ projectId, onComplete, onStepChange }: PhaseBuil
               }} />
           </FieldSection>
 
-          {/* Garage */}
+          {/* Garage — SFR only (scope details for tuck-under handled in scope wizard) */}
           {isSingleFamily && (
             <FieldSection label="Garage">
               <ChipSelect options={GARAGE_OPTIONS} selected={
@@ -344,27 +327,6 @@ export function PhaseBuilding({ projectId, onComplete, onStepChange }: PhaseBuil
                     onToggle={v => update('garage_car_count', Number(v))} />
                 </div>
               )}
-            </FieldSection>
-          )}
-
-          {/* Corridors */}
-          {isMultiFamily && (
-            <FieldSection label="Corridors">
-              <ChipSelect options={CORRIDOR_OPTIONS} selected={draft.corridor_type}
-                onToggle={v => {
-                  update('corridor_type', v);
-                  update('has_corridors', v !== 'None');
-                }} />
-            </FieldSection>
-          )}
-
-          {/* Balcony */}
-          {(isSingleFamily || isMultiFamily) && (
-            <FieldSection label="Balcony">
-              <div className="flex items-center gap-3">
-                <Switch checked={draft.has_balcony} onCheckedChange={v => update('has_balcony', v)} />
-                <span className="text-sm">{draft.has_balcony ? 'Yes' : 'No'}</span>
-              </div>
             </FieldSection>
           )}
 
