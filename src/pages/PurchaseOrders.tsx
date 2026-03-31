@@ -362,9 +362,9 @@ export default function PurchaseOrders() {
               </div>
             ) : (
               orders.map(po => (
-                <Card 
+                <div
                   key={po.id}
-                  className={`cursor-pointer transition-colors ${selectedPO?.id === po.id ? 'border-primary' : ''}`}
+                  className={`relative cursor-pointer bg-card border border-border rounded-lg transition-all hover:shadow-md animate-fade-in ${selectedPO?.id === po.id ? 'ring-2 ring-primary' : ''}`}
                   onClick={() => fetchPODetails(po.id)}
                 >
                   <CardHeader className="pb-2">
