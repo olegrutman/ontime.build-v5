@@ -61,6 +61,8 @@ const ProjectContractsPage = lazy(() => import("./pages/ProjectContractsPage"));
 // Note: ProjectContractsPage is a standalone editor page (like EditProject), not a ProjectHome tab
 const ProjectSOVPage = lazy(() => import("./pages/ProjectSOVPage"));
 const ContractScopeWizard = lazy(() => import("./pages/ContractScopeWizard"));
+const DemoV2Dashboard = lazy(() => import("./pages/DemoV2Dashboard"));
+const DemoV2ProjectOverview = lazy(() => import("./pages/DemoV2ProjectOverview"));
 
 // Platform Admin pages
 const PlatformDashboard = lazy(() => import("./pages/platform/PlatformDashboard"));
@@ -206,6 +208,10 @@ function AppRoutes() {
             <Route path="/platform/projects/:projectId" element={<RequirePlatformRole><PlatformProjectDetail /></RequirePlatformRole>} />
             <Route path="/platform/logs" element={<RequirePlatformRole><PlatformLogs /></RequirePlatformRole>} />
             <Route path="/platform/plans" element={<RequirePlatformRole><PlatformPlans /></RequirePlatformRole>} />
+
+            {/* Demo V2 — standalone prototype */}
+            <Route path="/demo-v2" element={<DemoV2Dashboard />} />
+            <Route path="/demo-v2/project/:id" element={<DemoV2ProjectOverview />} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
