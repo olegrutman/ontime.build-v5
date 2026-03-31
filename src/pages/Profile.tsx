@@ -203,15 +203,15 @@ export default function Profile() {
         </div>
 
         {/* Section 1: Personal Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <User className="h-5 w-5" />
-              Personal Information
-            </CardTitle>
-            <CardDescription>Your contact details and preferences</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-1">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Personal Information</p>
+            </div>
+            <p className="text-xs text-muted-foreground ml-6">Your contact details and preferences</p>
+          </div>
+          <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>First Name</Label>
