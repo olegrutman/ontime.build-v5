@@ -1,78 +1,122 @@
 
 
-# Restyle Production App Content to Match Demo-V2 (Light Theme)
+# Apply Demo-V2 Design Language Across All Pages
 
-## The Gap
-The Phase 1-4 migration only swapped the **navigation chrome** (sidebar → context bar, command palette, bottom nav). The actual **page content** — cards, KPIs, project lists, attention items — still uses generic shadcn/ui card styling. Demo-v2 has distinct visual patterns that were never ported.
+## What This Covers
+Systematically restyle every remaining page and component to match the demo-v2 visual language: consistent typography (Barlow Condensed headings, IBM Plex Mono for $ and IDs), compact card styling, section headers, animated progress bars, 3px left accents, colored icon tiles, and fadeUp stagger animations — all on light surfaces.
 
-## Key Visual Differences
+## Batch 1: Shared Design Tokens + Card Components
 
-| Element | Demo-V2 | Current Production |
-|---|---|---|
-| KPI Cards | 2px bottom accent, compact, animated counter | Has accent + counter (already migrated) |
-| Project List | Expandable accordion cards with color dots, progress bars, stat tiles | Flat row list with status dots, no expand |
-| Urgent Items | 3px left border, icon tile, monospace amounts, status badge | Emoji-based, similar border but different feel |
-| Activity Feed | Right sidebar with avatar circles, timestamped | No activity feed on dashboard |
-| Layout | Two-column: content left, activity/portfolio right | Two-column but right has budget/reminders |
-| Project Detail | Hero card with radial gradient, segment pill tabs, SVG donut chart | Standard cards, icon rail nav |
-| Bottom Sheets | Framer-motion spring sheet for actionable items | Not implemented |
-| Typography | Barlow Condensed headings, IBM Plex Mono for $, consistent sizing | Mixed, some Barlow Condensed |
+### Create `src/lib/design-tokens.ts`
+Reusable constants and utility classes for the design system:
+- Section header class: `text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium`
+- Card wrapper class: `bg-card border border-border rounded-lg`
+- Currency font style: `fontFamily: "'IBM Plex Mono', monospace"`
+- Heading font style: `fontFamily: "'Barlow Condensed', sans-serif"`
+- Standard card padding: `px-3.5 py-3.5`
 
-## Plan — Bring Demo-V2 Visual Language to Production Content
+### Restyle `RFICard.tsx`
+- Remove shadcn Card wrapper, use raw div with `bg-card border border-border rounded-lg`
+- Add 3px left border colored by priority (red=urgent, amber=high, blue=normal)
+- RFI number in IBM Plex Mono
+- fadeUp animation with stagger index
 
-### 1. Restyle `DashboardProjectList.tsx`
-- Replace flat row layout with **expandable accordion cards** matching `demo-v2/ProjectCard.tsx`
-- Color dot + project name + phase tag + contract value + % complete
-- Thin progress bar with animated width on mount
-- Expand reveals 4 stat tiles (Contract, Paid, Pending, Status) + action buttons (View Project, Orders, Budget)
-- Keep existing status filter tabs, dropdown actions, and real data bindings
-- Use light surfaces: `bg-card border border-border rounded-lg` instead of `bg-[#0D1F3C]`
+### Restyle `InvoiceCard.tsx`
+- Same card pattern: 3px left border colored by status (blue=draft, amber=submitted, green=approved, red=rejected)
+- Dollar amounts in IBM Plex Mono
+- Invoice number in IBM Plex Mono
+- Remove heavy icon tile, use compact layout matching demo-v2 density
 
-### 2. Restyle `DashboardNeedsAttentionCard.tsx`
-- Replace emoji indicators with **colored icon tiles** (FileText, Wrench, Truck, GitBranch)
-- IBM Plex Mono for dollar amounts
-- Colored status badges with subtle background
-- 3px left border matching item type color
-- Keep existing invite accept/decline functionality
+### Restyle `COBoardCard.tsx`
+- Already has 3px left stripe and progress bar — mostly aligned
+- Add IBM Plex Mono to CO number and currency
+- Add Barlow Condensed to title
+- Ensure fadeUp stagger on grid render
 
-### 3. Add Activity Feed to Dashboard Right Column
-- Create `src/components/dashboard/DashboardActivityFeed.tsx`
-- Light-theme version of `demo-v2/ActivityFeed.tsx`
-- Query real recent activity from Supabase (project updates, invoice changes, etc.) or show recent docs transformed into feed format
-- Avatar initials circle, bold name, description, relative timestamp
+## Batch 2: Standalone Pages
 
-### 4. Add Bottom Sheet for Actionable Items
-- Create `src/components/app-shell/BottomSheet.tsx` — light-theme fork of `demo-v2/BottomSheet.tsx`
-- Uses framer-motion (already installed), white surface, navy text
-- Wire up to attention items on dashboard and order/invoice items on project pages
+### `PurchaseOrders.tsx`
+- Replace `Card`/`CardHeader`/`CardContent` with flat `bg-card border border-border rounded-lg` divs
+- Section header pattern for "Orders" heading
+- PO numbers in IBM Plex Mono, amounts in IBM Plex Mono
+- Status badges use the demo-v2 subtle background pattern
+- Master-detail split: left list gets compact row styling with 3px left accent
 
-### 5. Restyle Project Overview Hero Card
-- Update `ContractHeroCard.tsx` with radial gradient background using project accent color
-- Add animated progress bar, Barlow Condensed heading, 3 KPI mini-tiles
-- Match demo-v2's hero card pattern but on light surfaces
+### `PartnerDirectory.tsx`
+- Section header for "Partner Directory"
+- Organization/people cards use compact row layout with avatar initials circle
+- Search input with subtle border, no heavy Card wrapper
+- Tab pills use the same rounded-full pill pattern as CO filter pills
 
-### 6. Add Segment Pill Tabs to Project Detail
-- Create a pill-style tab switcher for project sub-sections (currently handled by icon rail)
-- Visible on mobile as horizontal scrollable pills above content
-- Works alongside the existing icon rail on desktop
+### `Profile.tsx`
+- Replace Card sections with flat `bg-card border border-border rounded-lg` panels
+- Section labels use uppercase tracking pattern
+- Form inputs keep existing functionality, just tighter spacing (gap-2.5)
+- Save buttons: primary amber
 
-### 7. Typography & Spacing Polish
-- Ensure all dollar amounts use `font-family: 'IBM Plex Mono'`
-- Section headers: `text-[11px] uppercase tracking-wider text-muted-foreground font-medium`
-- Consistent `fadeUp` stagger animation on card lists
-- Card spacing: `gap-2` or `gap-3` matching demo-v2 density
+### `Settings.tsx`
+- Same flat panel pattern as Profile
+- Section headers uppercase
+- Toggle/switch rows with consistent spacing
 
-### Files Changed
-- `src/components/dashboard/DashboardProjectList.tsx` — accordion card restyle
-- `src/components/dashboard/DashboardNeedsAttentionCard.tsx` — icon tile + monospace restyle
-- `src/components/dashboard/DashboardActivityFeed.tsx` — new, real-data activity feed
-- `src/components/app-shell/BottomSheet.tsx` — new, light-theme bottom sheet
-- `src/components/project/ContractHeroCard.tsx` — radial gradient hero restyle
-- `src/pages/Dashboard.tsx` — swap DashboardRecentDocs for ActivityFeed in right column
-- `src/index.css` — any missing animation keyframes
+### `OrgTeam.tsx`
+- Member list as compact rows with avatar initials, role badge
+- Invite section with subtle border panel
+- Join requests with 3px left amber border
 
-### Files NOT Changed
-- Navigation components (already migrated)
-- Database, edge functions, auth
-- Existing hooks and data fetching logic
+### `Financials.tsx`
+- Financial card and trend charts keep existing data but apply section header pattern
+- Dollar values in IBM Plex Mono
+- Headings in Barlow Condensed
+
+### `Reminders.tsx`
+- Already uses RemindersTile — add section header, fadeUp animation
+
+### `RFIs.tsx` (standalone page)
+- Project selector uses compact design
+- Section header pattern
+
+## Batch 3: Project Sub-Tab Components
+
+### `InvoicesTab.tsx`
+- Tab filter pills use rounded-full pattern (same as CO filter pills)
+- Grid of invoice cards gets fadeUp stagger
+- Empty state: centered with section header typography
+
+### `RFIsTab.tsx`
+- Same pill filter pattern for status tabs
+- Card grid with fadeUp stagger
+
+### `COListPage.tsx`
+- Already has filter pills — ensure they match the demo-v2 rounded-full pattern (they already do)
+- KPI row: add IBM Plex Mono to dollar values, Barlow Condensed to numbers
+- Ensure fadeUp on card grid
+
+### Project Overview Cards
+- `UrgentTasksCard.tsx`: 3px left border items with icon tiles, section header
+- `BillingCashCard.tsx`: IBM Plex Mono for all amounts, section header pattern
+- `TeamMembersCard.tsx`: Avatar initials circles, compact rows
+- `ProfitCard.tsx`: IBM Plex Mono values, Barlow Condensed heading
+- `BudgetTracking.tsx`: Progress bars with animated width, section headers
+
+## Batch 4: Supplier Dashboard Components
+
+### `SupplierKPIStrip.tsx`
+- Already well-styled — add 2px bottom accent line to match GC dashboard KPIs
+
+### `SupplierActionQueue.tsx`, `SupplierOpenOrders.tsx`, `SupplierProjectList.tsx`, `SupplierDeliverySchedule.tsx`, `SupplierReceivables.tsx`
+- Ensure consistent section header pattern (already close)
+- Dollar amounts → IBM Plex Mono
+- Status badges → subtle background pattern
+- Add fadeUp stagger to list items
+
+## Files Changed
+~25 component files restyled. No database, edge function, or hook changes. All changes are CSS/className and inline style updates preserving existing functionality.
+
+## Implementation Order
+1. Design tokens file
+2. Batch 1 (card components) — affects all pages
+3. Batch 2 (standalone pages)
+4. Batch 3 (project sub-tabs)
+5. Batch 4 (supplier dashboard)
 
