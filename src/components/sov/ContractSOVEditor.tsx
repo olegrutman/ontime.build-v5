@@ -858,27 +858,20 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Schedule of Values</h2>
-        <Badge variant="outline">{sovs.length} Contract{sovs.length > 1 ? 's' : ''}</Badge>
-      </div>
-
-      {/* TC-specific layout: GC→TC on top, TC→FC below */}
+      {/* TC-specific layout: Upstream (revenue) on top, Downstream (costs) below */}
       {isTC ? (
         <>
-          {/* GC → TC Contracts (revenue) */}
           {gcToTcSovs.length > 0 && (
             <>
-              <h3 className="text-base font-medium text-muted-foreground">GC → TC Contracts</h3>
+              <h3 className="text-sm font-bold text-muted-foreground" style={DT.heading}>Upstream Contracts (Revenue)</h3>
               {gcToTcSovs.map(sov => renderSOVCard(sov))}
             </>
           )}
 
-          {/* TC → FC Contracts (costs) */}
           {tcToFcSovs.length > 0 && (
             <>
               <div className="border-t pt-4 mt-2">
-                <h3 className="text-base font-medium text-muted-foreground">TC → FC Contracts</h3>
+                <h3 className="text-sm font-bold text-muted-foreground" style={DT.heading}>Downstream Contracts (Costs)</h3>
               </div>
               {tcToFcSovs.map(sov => renderSOVCard(sov))}
             </>
@@ -886,13 +879,9 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
         </>
       ) : (
         <>
-          {/* Non-TC: original layout */}
-          {/* Main Contract Billing Summary */}
-
-          {/* Main Contracts Section */}
           {contractSovs.length > 0 && (
             <>
-              <h3 className="text-base font-medium text-muted-foreground">Main Contracts</h3>
+              <h3 className="text-sm font-bold text-muted-foreground" style={DT.heading}>Main Contracts</h3>
               {contractSovs.map(sov => renderSOVCard(sov))}
             </>
           )}
