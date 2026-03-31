@@ -1,41 +1,77 @@
 
 
-# Eliminate Redundant Wizards — Single Unified Flow
+# Consolidate Setup into Cards + Expanded Scope Wizard
 
-## Problem
-Three separate wizards exist with overlapping questions:
-1. **ProjectDetailsWizard** (889 lines, 10 steps) — building profile + scope toggles
-2. **ProjectScopeWizard** — old generic on/off scope toggles
-3. **FramingScopeWizard** — the new 11-section wizard that already covers everything
+## What Changes
 
-"Define Scope & Details" on the overview page sends users to Wizard #1, which then chains to Wizard #2. Both are now redundant because the **ProjectSetupFlow** (PhaseBuilding + FramingScopeWizard) already handles all of this better.
+The current 4-phase wizard (Building → Scope → Contracts → SOV) gets replaced with a **single page layout using cards**:
 
-## Solution
-Remove the two old wizards from routing and redirect all entry points to the unified **ProjectSetupFlow** (the `setup` tab).
+```text
+┌─────────────────────────────────────────────┐
+│  PROJECT INFO CARD (read-only summary)      │
+│  Name • Type • Address                      │
+│  Edit button → inline edit                  │
+└─────────────────────────────────────────────┘
 
-## Changes
+┌─────────────────────────────────────────────┐
+│  FRAMING SCOPE WIZARD (expandable card)     │
+│  Section 0: Building Profile (NEW)          │
+│    → stories, foundation, floor/roof system │
+│    → garage, features (feeds scope gates)   │
+│  Section 1-11: Existing scope sections      │
+│    → Method, Structure, Sheathing...        │
+└─────────────────────────────────────────────┘
 
-### 1. Update entry points to point to setup flow
-**`src/pages/ProjectHome.tsx`** — Change the "Define Scope & Details" banner from navigating to `/project/:id/details-wizard` to switching to the `setup` tab directly (or navigating to `/project/:id/setup` if preferred).
+┌─────────────────────────────────────────────┐
+│  CONTRACTS CARD                             │
+│  Contract sums + retainage per team member  │
+│  Unlocks after scope is complete            │
+└─────────────────────────────────────────────┘
 
-**`src/components/project/ScopeDetailsTab.tsx`** — Change "Edit Profile" and "Edit Scope" buttons to navigate to the setup flow instead of the old wizards.
+┌─────────────────────────────────────────────┐
+│  SOV CARD                                   │
+│  Auto-generated, review + activate          │
+│  Unlocks after contracts saved              │
+└─────────────────────────────────────────────┘
+```
 
-### 2. Remove old wizard routes from App.tsx
-**`src/App.tsx`** — Remove the routes for `/project/:id/details-wizard` and `/project/:id/scope-wizard`. Add redirects so any bookmarked URLs go to the setup flow.
+## Key Design Decisions
 
-### 3. Remove old contracts page back-nav references
-**`src/pages/ProjectContractsPage.tsx`** — Update "Back to Scope" navigation to point to the setup flow instead of `/scope-wizard`.
+### Project Info Card
+- Shows project name, type (from `project_profiles.project_type_id`), and address from `projects` table
+- Small "Edit" link for inline editing — no wizard step needed
+- Always visible at top
 
-### 4. Keep old files but stop routing to them
-`ProjectDetailsWizard.tsx` and `ProjectScopeWizard.tsx` remain in the codebase (safe cleanup later) but are no longer reachable via routes.
+### Building Profile Moves INTO Framing Scope
+- The physical building questions (project type, stories, units, buildings, foundation, floor system, roof system, garage) become a **new "Building Profile" section at the start** of the FramingScopeWizard — effectively Section 0
+- This replaces `PhaseBuilding` entirely — no separate phase
+- The building type selection here drives all scope gates (elevator, corridors, etc.)
+- Saving building profile also saves to `project_profiles` (same as before)
+
+### Contracts & SOV Stay as Cards
+- `PhaseContracts` content renders inside a card on the same page
+- `PhaseSOV` content renders inside a card below contracts
+- Both show locked/disabled state until prerequisites met
+
+### No More Phase Navigation
+- Remove `SetupSidebar` phase-level navigation
+- The scope wizard has its own internal section nav (already built)
+- The page is a vertical scroll of cards
 
 ## Files Modified
-- `src/App.tsx` — remove/redirect old wizard routes
-- `src/pages/ProjectHome.tsx` — "Define Scope & Details" → setup tab
-- `src/components/project/ScopeDetailsTab.tsx` — edit buttons → setup flow
-- `src/pages/ProjectContractsPage.tsx` — back navigation → setup flow
+
+| File | Change |
+|------|--------|
+| `ProjectSetupFlow.tsx` | Replace phase-switching layout with vertical card layout: Info Card → Scope Wizard Card → Contracts Card → SOV Card. Remove phase state machine. |
+| `FramingScopeWizard.tsx` | Add Section 0 "Building Profile" that renders the building questions (type, stories, foundation, etc.) before Section 1. Save to `project_profiles`. Update section indexing. |
+| `framingScope.ts` (types) | Add `SECTIONS` entry for building profile at index 0 |
+| `useFramingScope.ts` | Track building profile completion as part of scope progress |
+| `PhaseBuilding.tsx` | Delete or reduce to just the project info card component |
+| `SetupSidebar.tsx` | Remove (no longer needed — scope wizard has its own nav) |
 
 ## Files NOT Changed
-- ProjectSetupFlow, PhaseBuilding, FramingScopeWizard — already correct
-- Database, hooks, types — untouched
+- 11 scope section components — unchanged
+- Database schema — unchanged
+- PhaseContracts, PhaseSOV — reused as card content
+- Hooks, navigation, routing — minimal changes
 
