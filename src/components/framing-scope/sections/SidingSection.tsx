@@ -116,6 +116,46 @@ export function SidingSection({ answers, setAnswer, buildingType, matResp }: Pro
 
           <YesNoRow label="Belly band, water table, or horizontal band trim?" subtitle="Common at floor lines in multifamily" value={sd.belly_band} onChange={v => setAnswer('siding.belly_band', v)} />
 
+          {sd.siding_types.length > 1 && sd.elevation_selections.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">Siding type per elevation</p>
+              <p className="text-xs text-muted-foreground mb-2">Assign which siding type applies to each elevation face</p>
+              <div className="rounded-md border border-border overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Elevation</th>
+                      <th className="px-3 py-1.5 text-left font-medium text-muted-foreground">Siding Type</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sd.elevation_selections.map(elev => (
+                      <tr key={elev} className="border-t border-border/50">
+                        <td className="px-3 py-1.5 font-medium text-foreground">{elev.replace('_', ' ')}</td>
+                        <td className="px-3 py-1.5">
+                          <select
+                            className="w-full bg-card border border-border rounded px-2 py-1 text-xs text-foreground"
+                            value={sd.elevation_siding_map[elev] || ''}
+                            onChange={e => {
+                              const next = { ...sd.elevation_siding_map, [elev]: e.target.value };
+                              setAnswer('siding.elevation_siding_map', next);
+                            }}
+                          >
+                            <option value="">— Select —</option>
+                            {sd.siding_types.map(st => {
+                              const opt = SIDING_TYPES.find(s => s.value === st);
+                              return <option key={st} value={st}>{opt?.label || st}</option>;
+                            })}
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {!isLaborOnly && (
             <ScopeCheckboxGroup
               label="Siding accessories"
@@ -130,6 +170,12 @@ export function SidingSection({ answers, setAnswer, buildingType, matResp }: Pro
               onChange={v => setAnswer('siding.siding_accessories', v)}
             />
           )}
+
+          <div className="mt-3 p-3 rounded-md bg-muted/40 border border-border/50">
+            <p className="text-xs text-muted-foreground italic">
+              <span className="font-medium text-foreground not-italic">Installation note:</span> All siding shall be installed per manufacturer's published installation instructions, including fastener patterns, weather-lap requirements, and minimum clearances. Framing contractor is responsible for correct nailing schedules and flashing integration.
+            </p>
+          </div>
         </>
       )}
     </div>
