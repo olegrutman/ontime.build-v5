@@ -56,8 +56,6 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Install = lazy(() => import("./pages/Install"));
 const CODetailPage = lazy(() => import("./pages/CODetail"));
 // Legacy wizards — routes redirect to setup flow, lazy imports removed
-const ProjectContractsPage = lazy(() => import("./pages/ProjectContractsPage"));
-// Note: ProjectContractsPage is a standalone editor page (like EditProject), not a ProjectHome tab
 const ProjectSOVPage = lazy(() => import("./pages/ProjectSOVPage"));
 const ContractScopeWizard = lazy(() => import("./pages/ContractScopeWizard"));
 const DemoV2Dashboard = lazy(() => import("./pages/DemoV2Dashboard"));
