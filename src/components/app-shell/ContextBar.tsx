@@ -37,7 +37,7 @@ export function ContextBar({ breadcrumbs, onCommandPalette, showNewButton, onNew
   return (
     <header className="fixed top-0 inset-x-0 z-50 h-[52px] flex items-center justify-between px-4 bg-card/80 backdrop-blur-xl border-b border-border">
       {/* Left — Logo */}
-      <div className="flex items-center gap-2 min-w-[120px]">
+      <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 min-w-[120px] hover:opacity-80 transition-opacity">
         <img src="/ontime-logo.png" alt="OnTime" className="w-7 h-7 shrink-0" />
         <span
           className="text-foreground text-sm font-semibold hidden sm:block"
@@ -45,7 +45,7 @@ export function ContextBar({ breadcrumbs, onCommandPalette, showNewButton, onNew
         >
           ONTIME
         </span>
-      </div>
+      </button>
 
       {/* Center — Breadcrumbs */}
       <nav className="flex items-center gap-1 text-sm">
