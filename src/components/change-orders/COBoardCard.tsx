@@ -149,7 +149,7 @@ export function COBoardCard({ co, isActive, onClick }: COBoardCardProps) {
               </span>
             ))}
           </div>
-          <span className="text-xs font-mono font-medium text-foreground">
+          <span className="text-xs font-medium text-foreground" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
             {fmtCurrency(co.tc_submitted_price ?? 0)}
           </span>
         </div>
