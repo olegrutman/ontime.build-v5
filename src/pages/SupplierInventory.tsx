@@ -699,9 +699,6 @@ export default function SupplierInventory() {
               onSaved={fetchCatalogItems}
             />
             </div>
-          </main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+    </AppLayout>
   );
 }
