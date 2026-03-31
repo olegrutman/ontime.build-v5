@@ -11,8 +11,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import {
   ArrowLeft, CheckCircle2, AlertTriangle, Lock, Unlock, Trash2, Plus,
   RotateCcw, Loader2, FileSpreadsheet, History, Sparkles, ChevronDown,
