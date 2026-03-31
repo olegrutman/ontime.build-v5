@@ -360,6 +360,14 @@ export default function ProjectHome() {
               </>
             )}
 
+            {activeTab === 'setup' && (
+              <ProjectSetupFlow
+                projectId={id!}
+                projectName={project?.name}
+                projectType={project?.project_type}
+              />
+            )}
+
             {(activeTab === 'scope' || activeTab === 'scope-details') && (
               <FramingScopeWizard
                 projectId={id!}
