@@ -66,6 +66,8 @@ export function ProjectOverviewV2({
   address,
   financials,
   onNavigate,
+  onResponsibilityChange,
+  onTeamChanged,
 }: ProjectOverviewV2Props) {
   const [activePill, setActivePill] = useState<Pill>('budget');
   const [orderFilter, setOrderFilter] = useState<string>('all');
