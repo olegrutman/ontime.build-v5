@@ -367,7 +367,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                 </div>
               ) : isEditingAmt ? (
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <span className="text-muted-foreground w-16 text-right tabular-nums text-sm">
+              <span className="text-muted-foreground w-16 text-right tabular-nums text-sm" style={DT.mono}>
                     {item.percent_of_contract?.toFixed(2)}%
                   </span>
                   <span className="text-sm">$</span>
