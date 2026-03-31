@@ -45,7 +45,7 @@ export function SupplierOpenOrders({ pos }: Props) {
               <span className={`text-[0.6rem] font-bold px-1.5 py-0.5 rounded flex-shrink-0 ${statusStyles[po.status] || 'bg-accent text-muted-foreground'}`}>
                 {po.status}
               </span>
-              <span className="text-[0.72rem] font-semibold text-foreground flex-shrink-0">
+              <span className="text-[0.72rem] font-semibold text-foreground flex-shrink-0" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
                 {formatCurrency(po.total)}
               </span>
             </button>

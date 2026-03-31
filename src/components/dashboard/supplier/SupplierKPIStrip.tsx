@@ -53,7 +53,7 @@ function KPICard({ label, value, tag, tagColor, subText, delay }: KPICardProps) 
         {label}
       </div>
       <div className="flex items-center justify-between mb-1">
-        <span className="font-heading text-[2rem] font-black tracking-tight text-foreground leading-none">
+        <span className="font-heading text-[2rem] font-black tracking-tight text-foreground leading-none" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
           {formatCurrency(animatedValue)}
         </span>
         {tag && (

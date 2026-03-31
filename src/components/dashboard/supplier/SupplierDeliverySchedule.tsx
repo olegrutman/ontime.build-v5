@@ -67,7 +67,7 @@ export function SupplierDeliverySchedule({ days, rows }: Props) {
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
                 {row.poTotal != null && (
-                  <span className="text-[0.72rem] font-semibold text-foreground">
+                  <span className="text-[0.72rem] font-semibold text-foreground" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
                     {formatCurrency(row.poTotal)}
                   </span>
                 )}

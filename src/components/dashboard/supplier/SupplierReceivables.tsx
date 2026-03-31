@@ -38,7 +38,7 @@ export function SupplierReceivables({ buckets, velocity, oldestDays }: Props) {
                 <span className={`text-[0.68rem] font-semibold ${bucketTextColors[i]}`}>
                   {bucket.count} inv
                 </span>
-                <span className="text-[0.72rem] font-bold text-foreground">
+                <span className="text-[0.72rem] font-bold text-foreground" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
                   {formatCurrency(bucket.amount)}
                 </span>
               </div>
