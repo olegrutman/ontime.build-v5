@@ -75,7 +75,7 @@ const BUILDING_LABELS: Record<string, string> = {
   COMMERCIAL: 'Commercial',
 };
 
-export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectName }: Props) {
+export function FramingScopeWizard({ projectId, buildingType = 'SFR', projectName, embedded = false, onComplete }: Props) {
   const {
     answers, setAnswer, currentSection, goToSection,
     scopeComplete, markComplete, editScope,
