@@ -1,50 +1,81 @@
 
 
-# Build Linear-Style Demo Prototype at `/demo-v2`
+# Redesign: Apply Demo-V2 Design Language to Production App (Light Theme)
 
-## Overview
-A self-contained demo route with hardcoded mock data showcasing the new navigation paradigm — no sidebar, no top nav, just a slim context bar + command palette. Two views: Dashboard and Project Overview. No changes to existing pages.
+## What I Understand
 
-## New Files to Create
+You want to **replace the current sidebar + top bar layout** with the demo-v2 navigation pattern (slim context bar, command palette, mobile bottom nav, bottom sheets) across the **real production app** — keeping all existing functionality, real data, auth, SOV editing, etc. The visual theme should be **light** (white/light gray surfaces) instead of the dark navy used in demo-v2. Navy and amber remain as accent colors.
 
-### Core Components
-1. **`src/components/demo-v2/ContextBar.tsx`** — 52px frosted glass bar. Logo left, breadcrumb center, ⌘K button + avatar right. `backdrop-filter: blur(16px)` on navy/80%.
+This is a **large migration** — 20+ pages use `AppLayout`. I recommend doing it in phases so nothing breaks. Here is Phase 1 covering the global shell and the Dashboard.
 
-2. **`src/components/demo-v2/CommandPalette.tsx`** — ⌘K / Ctrl+K overlay modal. Search input + grouped results (Projects, Orders, Invoices, Crew). Scale+opacity entrance animation (180ms). Keyboard navigation.
+---
 
-3. **`src/components/demo-v2/BottomSheet.tsx`** — Framer-motion bottom sheet. Props: title, amount, 4 meta tiles, action buttons (Approve/Edit/Dismiss). `translateY(100%) → 0` with spring easing, 380ms. Backdrop overlay.
+## Phase 1: Global Layout Shell + Dashboard
 
-4. **`src/components/demo-v2/KpiCard.tsx`** — Stat card with 2px colored bottom accent. Animated counter on mount (ease-out cubic, 1.1s). Props: label, value, accent color, icon, subtitle.
+### 1. Create Light-Theme Versions of Demo-V2 Components
 
-5. **`src/components/demo-v2/ProjectCard.tsx`** — Expandable accordion card. Color dot, name, phase tag, contract value, % complete, thin progress bar. Expand reveals 4 stat tiles + action buttons. `max-height 0→260px`, 380ms cubic-bezier.
+New folder: `src/components/app-shell/`
 
-6. **`src/components/demo-v2/UrgentItem.tsx`** — Row with 3px colored left border, icon tile, title/subtitle, amount (IBM Plex Mono), status badge. Tap opens BottomSheet.
+- **`ContextBar.tsx`** — Same structure as demo-v2 but light: `bg-white/80 backdrop-blur-xl border-b border-border`. Navy text, amber logo. Breadcrumbs from route context. Integrated ⌘K button + user avatar dropdown (with Profile, Settings, Sign Out — pulled from current TopBar/Sidebar logic).
 
-7. **`src/components/demo-v2/ActivityFeed.tsx`** — Scrollable timestamped events list. Avatar initials circle, bold name, description, colored chip.
+- **`CommandPalette.tsx`** — Fork of demo-v2 version but queries **real data** (projects from Supabase, routes for navigation). Light surfaces (`bg-white`), navy text. Same scale+opacity animation.
 
-8. **`src/components/demo-v2/BudgetRingChart.tsx`** — SVG donut chart with stroke-dashoffset animation (staggered 200/400/600ms). Legend below.
+- **`MobileBottomNav.tsx`** — Light version: `bg-white border-t border-border`. 5 items: Home, Partners, Reminders, RFIs, More. Amber active state. Same items as current BottomNav but styled to match.
 
-9. **`src/components/demo-v2/MobileBottomNav.tsx`** — Fixed bottom bar, navy bg, 5 items: Home, Orders, Invoices, Crew, Search. Hidden ≥900px.
+- **`AppShell.tsx`** — New layout wrapper replacing `AppLayout`. No sidebar. Structure:
+  ```
+  ContextBar (fixed top, 52px)
+  main (pt-[52px], pb-24 on mobile)
+    max-w-[1400px] centered content
+  MobileBottomNav (fixed bottom, mobile only)
+  CommandPalette (overlay)
+  ```
 
-10. **`src/components/demo-v2/mockData.ts`** — All hardcoded data: 5 projects, 5 orders, KPI values, activity feed entries, budget line items, field tasks.
+### 2. Update `AppLayout.tsx`
 
-### Pages
-11. **`src/pages/DemoV2Dashboard.tsx`** — Dashboard view. ContextBar, 4 KPI cards (2-col mobile / 4-col desktop), "Your Projects" section with expandable ProjectCards, "Needs Attention" list, desktop right panel with ActivityFeed + mini portfolio list. FadeUp stagger animation (50ms per item).
+Replace the sidebar-based layout with `AppShell`. The component keeps the same props interface (`title`, `showNewButton`, etc.) so **all 20+ pages continue working unchanged**. Internally it renders:
+- `ContextBar` with breadcrumb derived from `title` prop + route
+- `CommandPalette` with real project data
+- Content area (children)
+- `MobileBottomNav`
 
-12. **`src/pages/DemoV2ProjectOverview.tsx`** — Project detail view. Back button in ContextBar, breadcrumb trail, project hero card (navy bg, frosted radial gradient, 3 KPI tiles, progress bar), pill-style segment tabs (Budget / Orders / Field), master-detail split on desktop (340px left + right feed/chart panel), stacks on mobile.
+The old `AppSidebar`, `TopBar`, and `BottomNav` components remain in the codebase but are no longer imported.
 
-### Routing
-13. **`src/App.tsx`** — Add two routes: `/demo-v2` → DemoV2Dashboard, `/demo-v2/project/:id` → DemoV2ProjectOverview. No layout wrapper (these pages own their full layout).
+### 3. Light Theme Color Adjustments
 
-## Design Tokens
-- Navy: `#0D1F3C`, Amber: `#F5A623`
-- Fonts: Import Barlow Condensed + IBM Plex Mono from Google Fonts (Barlow already available)
-- Context bar: 52px height, `bg-[#0D1F3C]/80 backdrop-blur-xl`
-- Progress bars: `transition-all duration-[1200ms] ease-out delay-200`
-- All cards: `fadeUp` stagger with `animation-delay: ${index * 50}ms`
+All demo-v2 components used hardcoded dark colors (`bg-[#0D1F3C]`, `text-white/40`). The new app-shell versions use Tailwind theme tokens instead:
+- Cards: `bg-card border border-border rounded-lg`
+- Text: `text-foreground`, `text-muted-foreground`
+- Subtle backgrounds: `bg-muted/30` or `bg-accent`
+- Accent highlights: `text-primary` (amber), `bg-primary`
+- The existing CSS variables in `index.css` already define a light theme — we use those.
 
-## What This Does NOT Touch
-- No changes to existing `AppLayout`, `AppSidebar`, `TopBar`, `BottomNav`
-- No changes to existing pages, hooks, or database queries
-- Completely isolated under `/demo-v2` route
+### 4. Dashboard Enhancements
+
+Update `DashboardKPIRow` to use the animated counter pattern from demo-v2's `KpiCard` (ease-out cubic, 1.1s) with the 2px colored bottom accent line — but on light card surfaces.
+
+Add `fadeUp` stagger animation to project list and attention items (CSS keyframe already exists from demo-v2).
+
+### Files Created
+- `src/components/app-shell/ContextBar.tsx`
+- `src/components/app-shell/CommandPalette.tsx`
+- `src/components/app-shell/MobileBottomNav.tsx`
+- `src/components/app-shell/AppShell.tsx`
+
+### Files Modified
+- `src/components/layout/AppLayout.tsx` — swap internals to use AppShell
+- `src/components/dashboard/DashboardKPIRow.tsx` — add counter animation + accent line
+- `src/index.css` — add `fadeUp` keyframe globally
+
+### Files NOT Modified
+- All page components (Dashboard, ProjectHome, Partners, RFIs, etc.) — they keep rendering inside `AppLayout` as before
+- `AppSidebar.tsx`, `TopBar.tsx`, `BottomNav.tsx` — kept but unused (safe rollback)
+- No database or edge function changes
+
+---
+
+## Future Phases (not in this plan)
+- Phase 2: Project detail pages — master-detail split, segment tabs, bottom sheets for actionable items
+- Phase 3: Bottom sheet pattern for invoices, POs, work orders across all pages
+- Phase 4: Remove old layout components entirely
 
