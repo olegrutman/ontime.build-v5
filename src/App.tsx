@@ -56,8 +56,6 @@ const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Install = lazy(() => import("./pages/Install"));
 const CODetailPage = lazy(() => import("./pages/CODetail"));
 // Legacy wizards — routes redirect to setup flow, lazy imports removed
-const ProjectContractsPage = lazy(() => import("./pages/ProjectContractsPage"));
-// Note: ProjectContractsPage is a standalone editor page (like EditProject), not a ProjectHome tab
 const ProjectSOVPage = lazy(() => import("./pages/ProjectSOVPage"));
 const ContractScopeWizard = lazy(() => import("./pages/ContractScopeWizard"));
 const DemoV2Dashboard = lazy(() => import("./pages/DemoV2Dashboard"));
@@ -174,7 +172,7 @@ function AppRoutes() {
             <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
             <Route path="/create-project" element={<RequireAuth><CreateProjectNew /></RequireAuth>} />
             <Route path="/project/:id/edit" element={<RequireAuth><EditProject /></RequireAuth>} />
-            <Route path="/project/:id/contracts" element={<RequireAuth><ProjectContractsPage /></RequireAuth>} />
+            <Route path="/project/:id/contracts" element={<RequireAuth><Navigate to="../setup" replace /></RequireAuth>} />
             <Route path="/project/:id/change-orders/:coId" element={<RequireAuth><CODetailPage /></RequireAuth>} />
             {/* Legacy wizard routes — redirect to unified setup flow */}
             <Route path="/project/:id/details-wizard" element={<RequireAuth><Navigate to="../setup" replace /></RequireAuth>} />

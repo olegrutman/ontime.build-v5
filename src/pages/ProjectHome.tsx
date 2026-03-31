@@ -24,7 +24,7 @@ import {
   SupplierMaterialsOverview,
   BudgetTracking,
   MaterialsBudgetStatusCard,
-  ProfitCard,
+  
   MaterialMarkupEditor,
   CriticalScheduleCard,
 } from '@/components/project';
@@ -32,7 +32,7 @@ import {
 import { ProjectSetupFlow } from '@/components/project-setup/ProjectSetupFlow';
 import { ProjectIconRail } from '@/components/project/ProjectIconRail';
 import { ProjectBottomNav } from '@/components/project/ProjectBottomNav';
-import { ContractHeroCard } from '@/components/project/ContractHeroCard';
+
 import { BillingCashCard } from '@/components/project/BillingCashCard';
 import { UrgentTasksCard } from '@/components/project/UrgentTasksCard';
 import { TeamMembersCard } from '@/components/project/TeamMembersCard';

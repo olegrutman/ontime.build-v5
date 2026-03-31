@@ -70,7 +70,7 @@ export default function ContractScopeWizard() {
         exclusions,
       });
       toast({ title: 'Scope saved', description: 'Contract scope has been saved.' });
-      navigate(`/project/${projectId}/contracts`);
+      navigate(`/project/${projectId}/setup`);
     } catch (e: any) {
       toast({ title: 'Error', description: e.message, variant: 'destructive' });
     }
@@ -83,7 +83,7 @@ export default function ContractScopeWizard() {
 
   const handleBack = () => {
     if (step > 0) setStep(step - 1);
-    else navigate(`/project/${projectId}/contracts`);
+    else navigate(`/project/${projectId}/setup`);
   };
 
   if (isLoading) {

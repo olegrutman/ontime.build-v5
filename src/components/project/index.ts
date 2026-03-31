@@ -3,7 +3,7 @@ export { ProjectTeamSection } from './ProjectTeamSection';
 export { ProjectScopeSection } from './ProjectScopeSection';
 export { ProjectContractsSection } from './ProjectContractsSection';
 export { ProjectActivitySection } from './ProjectActivitySection';
-export { ProjectFinancialsSectionNew } from './ProjectFinancialsSectionNew';
+
 
 export { PurchaseOrdersTab } from './PurchaseOrdersTab';
 export { MetricStrip } from './MetricStrip';
@@ -20,7 +20,7 @@ export { SupplierEstimateVsOrdersCard } from './SupplierEstimateVsOrdersCard';
 export { SupplierOperationalSummary } from './SupplierOperationalSummary';
 export { DesignateSupplierDialog } from './DesignateSupplierDialog';
 export { BudgetTracking } from './BudgetTracking';
-export { ContractHeroCard } from './ContractHeroCard';
+
 export { BillingCashCard } from './BillingCashCard';
 export { UrgentTasksCard } from './UrgentTasksCard';
 export { TeamMembersCard } from './TeamMembersCard';
@@ -29,7 +29,7 @@ export { SupplierMaterialsChart } from './SupplierMaterialsChart';
 export { SupplierMaterialsOverview } from './SupplierMaterialsOverview';
 export { MaterialsBudgetStatusCard } from './MaterialsBudgetStatusCard';
 export { MaterialsBudgetDrawer } from './MaterialsBudgetDrawer';
-export { ProfitCard } from './ProfitCard';
+
 export { MaterialMarkupEditor } from './MaterialMarkupEditor';
 export { CriticalScheduleCard } from './CriticalScheduleCard';
 export { ScopeDetailsTab } from './ScopeDetailsTab';

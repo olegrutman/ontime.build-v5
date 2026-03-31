@@ -210,7 +210,7 @@ function SOVContractSection({
                 {!prereqs.hasContract && (
                   <div className="flex items-center justify-between p-2 rounded-lg bg-muted border text-sm">
                     <span>Create a contract with a value</span>
-                    <Button size="sm" variant="outline" onClick={() => navigate(`/project/${projectId}/contracts`)}>Set up</Button>
+                    <Button size="sm" variant="outline" onClick={() => navigate(`/project/${projectId}/setup`)}>Set up</Button>
                   </div>
                 )}
               </CardContent>
@@ -223,7 +223,7 @@ function SOVContractSection({
                 <div className="flex items-center gap-3 mb-3 overflow-x-auto text-xs">
                    <StatusChip ok={prereqs.hasProfile} label={prereqs.profileSummary || 'Profile ready'} link={`/project/${projectId}/setup`} />
                    <StatusChip ok={prereqs.hasScope} label={`Scope — ${prereqs.scopeCount} items`} link={`/project/${projectId}/setup`} />
-                  <StatusChip ok={prereqs.hasContract} label={`$${(prereqs.contractValue || 0).toLocaleString()} · ${prereqs.retainagePct}% ret.`} link={`/project/${projectId}/contracts`} />
+                  <StatusChip ok={prereqs.hasContract} label={`$${(prereqs.contractValue || 0).toLocaleString()} · ${prereqs.retainagePct}% ret.`} link={`/project/${projectId}/setup`} />
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4">
@@ -560,7 +560,7 @@ export default function ProjectSOVPage() {
             <Card>
               <CardContent className="p-6 text-center text-muted-foreground">
                 <p className="text-sm">No contracts found for this project.</p>
-                <Button size="sm" variant="outline" className="mt-3" onClick={() => navigate(`/project/${projectId}/contracts`)}>
+                <Button size="sm" variant="outline" className="mt-3" onClick={() => navigate(`/project/${projectId}/setup`)}>
                   Create Contract
                 </Button>
               </CardContent>
