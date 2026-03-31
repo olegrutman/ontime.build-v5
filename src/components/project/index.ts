@@ -12,7 +12,7 @@ export { AttentionBanner } from './AttentionBanner';
 export { SupplierContractsSection } from './SupplierContractsSection';
 export { SupplierFinancialsSummaryCard } from './SupplierFinancialsSummaryCard';
 export { SupplierEstimatesSection } from './SupplierEstimatesSection';
-export { MobileProjectHeader } from './MobileProjectHeader';
+
 export { OperationalSummary } from './OperationalSummary';
 export { ProjectEstimatesReview } from './ProjectEstimatesReview';
 export { ProjectReadinessCard } from './ProjectReadinessCard';
