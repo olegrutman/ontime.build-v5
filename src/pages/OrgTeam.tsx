@@ -369,8 +369,8 @@ export default function OrgTeam() {
                 {sending ? 'Sending…' : 'Send Invite'}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Pending Invitations */}
         {pendingInvites.length > 0 && (
