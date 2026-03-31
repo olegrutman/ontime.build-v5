@@ -23,6 +23,8 @@ interface ProjectOverviewV2Props {
   address?: string | null;
   financials: ProjectFinancials;
   onNavigate: (tab: string) => void;
+  onResponsibilityChange?: (value: string | null) => void;
+  onTeamChanged?: () => void;
 }
 
 /* ─── Pill tabs ─── */
