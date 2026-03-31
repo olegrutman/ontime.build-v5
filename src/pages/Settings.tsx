@@ -139,15 +139,15 @@ export default function Settings() {
         </div>
 
         {/* Notifications */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              Notifications
-            </CardTitle>
-            <CardDescription>Control how you receive updates per event type</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
+        <div className="bg-card border border-border rounded-lg px-3.5 py-3.5">
+          <div className="mb-4">
+            <div className="flex items-center gap-2 mb-1">
+              <Bell className="h-4 w-4 text-muted-foreground" />
+              <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Notifications</p>
+            </div>
+            <p className="text-xs text-muted-foreground ml-6">Control how you receive updates per event type</p>
+          </div>
+          <div className="space-y-6">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Delivery Channels</p>
               <div className="space-y-3">
