@@ -31,7 +31,7 @@ export function FireSection({ answers, setAnswer, buildingType }: Props) {
       {showDraftStops(buildingType) && (
         <YesNoRow
           label="Draft stops in attic and floor cavities?"
-          subtitle="IBC requires draft stops dividing attic into max 3,000 sqft compartments"
+          subtitle="IBC requires draft stops dividing attic into max 3,000 sqft compartments (residential) or 1,000 sqft (hotel/hospitality)"
           value={f.draft_stops}
           onChange={v => setAnswer('fire.draft_stops', v)}
         />

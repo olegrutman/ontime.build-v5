@@ -65,6 +65,8 @@ export function ExteriorSection({ answers, setAnswer, matResp }: Props) {
         )}
       </ChildPanel>
 
+      <YesNoRow label="Soffit nailer framing in scope?" subtitle="Rough framing for soffit panel attachment — separate from finished panels" value={e.soffit_nailer} onChange={v => setAnswer('exterior.soffit_nailer', v)} />
+
       <YesNoRow label="Do you install finished soffit panels?" value={e.finished_soffit} onChange={v => setAnswer('exterior.finished_soffit', v)} />
       <ChildPanel parentValue={e.finished_soffit}>
         {isLaborOnly ? (
@@ -72,8 +74,9 @@ export function ExteriorSection({ answers, setAnswer, matResp }: Props) {
         ) : (
           <ScopeRadioGroup label="Finished soffit material" options={SOFFIT_MATERIALS} value={e.finished_soffit_material} onChange={v => setAnswer('exterior.finished_soffit_material', v)} />
         )}
-        <YesNoRow label="Vented soffit at eaves for attic ventilation?" value={e.vented_soffit} onChange={v => setAnswer('exterior.vented_soffit', v)} />
       </ChildPanel>
+
+      <YesNoRow label="Vented soffit at eaves for attic ventilation?" subtitle="Separate scope/inspection item from soffit panel material" value={e.vented_soffit} onChange={v => setAnswer('exterior.vented_soffit', v)} />
 
       <YesNoRow label="Frieze boards at top of wall / below soffit?" value={e.frieze_boards} onChange={v => setAnswer('exterior.frieze_boards', v)} />
       <ChildPanel parentValue={e.frieze_boards}>

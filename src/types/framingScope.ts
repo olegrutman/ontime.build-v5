@@ -54,6 +54,7 @@ export interface ExteriorAnswers {
   rough_fascia_items: string[];
   finished_fascia: YesNoNa;
   finished_fascia_material: string | null;
+  soffit_nailer: YesNoNa;
   finished_soffit: YesNoNa;
   finished_soffit_material: string | null;
   vented_soffit: YesNoNa;
@@ -174,7 +175,7 @@ export function createDefaultAnswers(): FramingScopeAnswers {
     method: { material_responsibility: null, framing_method: null, lumber_grade: null, mobilization: null, mobilization_percent: null },
     structure: { wood_stairs: null, stairs_items: [], elevator_shaft: null, elevator_items: [], enclosed_corridors: null, open_breezeways: null, community_spaces: null, balconies: null, balcony_type: null, balcony_items: [], ground_patios: null, tuck_under_garages: null, garage_items: [] },
     sheathing: { wall_sheathing_install: null, wall_sheathing_type: null, wrb_install: null, wrb_type: null, wrb_tape_seams: null, roof_sheathing: null, roof_underlayment: null, roof_underlayment_type: null },
-    exterior: { rough_fascia: null, rough_fascia_items: [], finished_fascia: null, finished_fascia_material: null, finished_soffit: null, finished_soffit_material: null, vented_soffit: null, frieze_boards: null, frieze_material: null, eave_window_trim: null },
+    exterior: { rough_fascia: null, rough_fascia_items: [], finished_fascia: null, finished_fascia_material: null, soffit_nailer: null, finished_soffit: null, finished_soffit_material: null, vented_soffit: null, frieze_boards: null, frieze_material: null, eave_window_trim: null },
     siding: { siding_in_scope: null, siding_types: [], elevations_mode: null, elevation_selections: [], elevation_siding_map: {}, window_trim: null, window_trim_material: null, head_flashing: null, sill_pan: null, corner_treatment: null, corner_material: null, belly_band: null, siding_accessories: [] },
     openings: { window_mode: null, window_pan_flashing: null, window_head_flashing: null, window_foam_seal: null, ext_door_mode: null, door_hardware: null, patio_doors: null, patio_door_mode: null, overhead_doors: null, overhead_door_type: null, elevation_variance: null },
     blocking: { residential_standard: {}, residential_optional: {}, commercial_items: {}, backout: null, backout_pricing: null },
