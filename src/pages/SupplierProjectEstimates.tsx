@@ -689,10 +689,6 @@ export default function SupplierProjectEstimates() {
                 fetchEstimates();
               }}
             />
-            </div>
-          </main>
-        </SidebarInset>
-      </div>
-    </SidebarProvider>
+    </AppLayout>
   );
 }
