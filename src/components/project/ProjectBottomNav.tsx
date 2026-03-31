@@ -61,7 +61,7 @@ function MoreItemRow({ item, isActive, onNavigate }: { item: MoreItem; isActive:
       onClick={() => onNavigate(item.route)}
       className={cn(
         'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors min-h-[44px] w-full text-left',
-        isActive ? 'text-[#F5A623] bg-[#F5A623]/10' : 'text-foreground hover:bg-muted'
+        isActive ? 'text-primary bg-primary/10' : 'text-foreground hover:bg-muted/30'
       )}
     >
       <Icon className="w-5 h-5" />
@@ -99,14 +99,10 @@ export function ProjectBottomNav({ isSupplier = false }: ProjectBottomNavProps) 
   return (
     <>
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
-        style={{
-          backgroundColor: '#0D1F3C',
-          borderTop: '1px solid rgba(255,255,255,0.08)',
-          paddingBottom: 'max(0px, env(safe-area-inset-bottom))',
-        }}
+        className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-card border-t border-border"
+        style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}
       >
-        <div className="flex items-stretch justify-around" style={{ height: '56px' }}>
+        <div className="flex items-stretch justify-around h-[56px]">
           {PRIMARY_ITEMS.map((item) => {
             const active = activeSection === item.route;
             const Icon = item.icon;
@@ -114,11 +110,10 @@ export function ProjectBottomNav({ isSupplier = false }: ProjectBottomNavProps) 
               <button
                 key={item.label}
                 onClick={() => handleNavigate(item.route)}
-                className="flex flex-col items-center justify-center gap-0.5 flex-1 transition-colors"
-                style={{
-                  color: active ? '#F5A623' : 'rgba(255,255,255,0.35)',
-                  minHeight: '56px',
-                }}
+                className={cn(
+                  'flex flex-col items-center justify-center gap-0.5 flex-1 transition-colors min-h-[56px]',
+                  active ? 'text-primary' : 'text-muted-foreground'
+                )}
               >
                 <Icon className="w-5 h-5" />
                 <span className="text-[9px] font-semibold">{item.label}</span>
@@ -129,23 +124,21 @@ export function ProjectBottomNav({ isSupplier = false }: ProjectBottomNavProps) 
           {fieldCaptureEnabled && (
             <button
               onClick={() => setCaptureOpen(true)}
-              className="flex flex-col items-center justify-center gap-0.5 flex-1 transition-colors"
-              style={{ color: '#F5A623', minHeight: '56px' }}
+              className="flex flex-col items-center justify-center gap-0.5 flex-1 transition-colors text-primary min-h-[56px]"
             >
-              <div className="w-8 h-8 rounded-full bg-[#F5A623] flex items-center justify-center">
-                <Camera className="w-4 h-4" style={{ color: '#0D1F3C' }} />
+              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
+                <Camera className="w-4 h-4 text-primary-foreground" />
               </div>
-              <span className="text-[8px] font-bold" style={{ color: '#F5A623' }}>Capture</span>
+              <span className="text-[8px] font-bold text-primary">Capture</span>
             </button>
           )}
           {/* More */}
           <button
             onClick={() => setMoreOpen(true)}
-            className="flex flex-col items-center justify-center gap-0.5 flex-1 transition-colors"
-            style={{
-              color: moreIsActive ? '#F5A623' : 'rgba(255,255,255,0.35)',
-              minHeight: '56px',
-            }}
+            className={cn(
+              'flex flex-col items-center justify-center gap-0.5 flex-1 transition-colors min-h-[56px]',
+              moreIsActive ? 'text-primary' : 'text-muted-foreground'
+            )}
           >
             <Menu className="w-5 h-5" />
             <span className="text-[9px] font-semibold">More</span>
