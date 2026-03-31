@@ -28,7 +28,7 @@ import {
   MaterialMarkupEditor,
   CriticalScheduleCard,
 } from '@/components/project';
-import { FramingScopeWizard } from '@/components/framing-scope/FramingScopeWizard';
+
 import { ProjectSetupFlow } from '@/components/project-setup/ProjectSetupFlow';
 import { ProjectIconRail } from '@/components/project/ProjectIconRail';
 import { ProjectBottomNav } from '@/components/project/ProjectBottomNav';
@@ -368,19 +368,6 @@ export default function ProjectHome() {
               />
             )}
 
-            {(activeTab === 'scope' || activeTab === 'scope-details') && (
-              <FramingScopeWizard
-                projectId={id!}
-                buildingType={
-                  project?.project_type === 'townhome' ? 'TOWNHOMES'
-                    : project?.project_type === 'apartment' ? 'MULTI_FAMILY'
-                    : project?.project_type === 'hotel' ? 'HOTEL'
-                    : project?.project_type === 'commercial' ? 'COMMERCIAL'
-                    : 'SFR'
-                }
-                projectName={project?.name}
-              />
-            )}
 
             {activeTab === 'sov' && (
               <FeatureGate feature="sov_contracts">
