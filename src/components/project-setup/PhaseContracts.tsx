@@ -143,16 +143,27 @@ export function PhaseContracts({ projectId, onComplete, onStepChange }: PhaseCon
           fromRole = 'Field Crew'; toRole = 'Trade Contractor';
         }
 
-        const existing = existingContracts.find(c => {
+        // Find ALL matching contracts for this team member (may have duplicates)
+        const allMatching = existingContracts.filter(c => {
           if (c.to_project_team_id === member.id) return true;
           const counterpartyOrgId = c.from_org_id === project?.organization_id ? c.to_org_id : c.from_org_id;
           return counterpartyOrgId === member.org_id;
         });
 
-        if (existing) {
+        if (allMatching.length > 0) {
+          // Update the first match
+          const primary = allMatching[0];
           await supabase.from('project_contracts')
-            .update({ contract_sum: contractSum, retainage_percent: retainagePercent, to_project_team_id: member.id })
-            .eq('id', existing.id);
+            .update({ contract_sum: contractSum, retainage_percent: retainagePercent, to_project_team_id: member.id, trade: member.role })
+            .eq('id', primary.id);
+
+          // Delete any duplicates (self-heal)
+          if (allMatching.length > 1) {
+            const extraIds = allMatching.slice(1).map(c => c.id);
+            await supabase.from('project_contracts')
+              .delete()
+              .in('id', extraIds);
+          }
         } else {
           await supabase.from('project_contracts').insert({
             project_id: projectId,

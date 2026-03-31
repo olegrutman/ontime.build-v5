@@ -332,31 +332,41 @@ export function AddTeamMemberDialog({
           (currentOrgType === 'GC') ||
           (currentOrgType === 'TC' && selectedRole === 'Field Crew');
 
-        const contractPayload = isCreatorUpstream ? {
-          // Invitee is worker, creator is payer
-          project_id: projectId,
-          from_org_id: selectedResult.org_id,
-          from_role: selectedRole,
-          to_org_id: currentOrgId,
-          to_role: creatorRoleLabel,
-          trade: selectedTrade || null,
-          contract_sum: 0,
-          retainage_percent: 0,
-          created_by_user_id: user.id,
-        } : {
-          // Creator is worker, invitee is payer (e.g., TC inviting GC)
-          project_id: projectId,
-          from_org_id: currentOrgId,
-          from_role: creatorRoleLabel,
-          to_org_id: selectedResult.org_id,
-          to_role: selectedRole,
-          trade: selectedTrade || null,
-          contract_sum: 0,
-          retainage_percent: 0,
-          created_by_user_id: user.id,
-        };
+        // Check if a contract already exists for this org pair
+        const { data: existingContract } = await supabase
+          .from('project_contracts')
+          .select('id')
+          .eq('project_id', projectId)
+          .or(`and(from_org_id.eq.${selectedResult.org_id},to_org_id.eq.${currentOrgId}),and(from_org_id.eq.${currentOrgId},to_org_id.eq.${selectedResult.org_id})`)
+          .limit(1);
 
-        await supabase.from('project_contracts').insert(contractPayload);
+        if (!existingContract || existingContract.length === 0) {
+          const contractPayload = isCreatorUpstream ? {
+            project_id: projectId,
+            from_org_id: selectedResult.org_id,
+            from_role: selectedRole,
+            to_org_id: currentOrgId,
+            to_role: creatorRoleLabel,
+            trade: selectedTrade || null,
+            contract_sum: 0,
+            retainage_percent: 0,
+            created_by_user_id: user.id,
+            to_project_team_id: teamData.id,
+          } : {
+            project_id: projectId,
+            from_org_id: currentOrgId,
+            from_role: creatorRoleLabel,
+            to_org_id: selectedResult.org_id,
+            to_role: selectedRole,
+            trade: selectedTrade || null,
+            contract_sum: 0,
+            retainage_percent: 0,
+            created_by_user_id: user.id,
+            to_project_team_id: teamData.id,
+          };
+
+          await supabase.from('project_contracts').insert(contractPayload);
+        }
       }
 
       // Log activity

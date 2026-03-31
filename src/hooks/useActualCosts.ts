@@ -111,15 +111,12 @@ export function useProjectActualCosts(projectId: string | undefined) {
     queryKey: ['actual-costs-project-total', projectId],
     enabled: !!projectId && !!orgId,
     queryFn: async () => {
-      // Get project-level entries
       const { data: projectEntries, error: e1 } = await supabase
         .from('actual_cost_entries')
         .select('total_amount')
-        .eq('project_id', projectId!)
-        .is('change_order_id', null);
+        .eq('project_id', projectId!);
       if (e1) throw e1;
 
-      // WO-level entries removed (change_order_projects table dropped)
       const sum = (projectEntries ?? [])
         .reduce((s, e) => s + ((e as any).total_amount || 0), 0);
       return sum;
