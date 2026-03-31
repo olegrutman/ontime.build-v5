@@ -17,6 +17,7 @@ interface Breadcrumb {
   onClick?: () => void;
 }
 
+
 interface ContextBarProps {
   breadcrumbs: Breadcrumb[];
   onCommandPalette: () => void;

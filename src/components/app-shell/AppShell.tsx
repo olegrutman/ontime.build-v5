@@ -37,12 +37,13 @@ export function AppShell({
   }, []);
 
   // Build breadcrumbs from title + route
-  const breadcrumbs = [{ label: 'Home', onClick: () => window.location.assign('/dashboard') }];
+  const breadcrumbs: { label: string; onClick?: () => void }[] = [
+    { label: 'Home', onClick: () => window.location.assign('/dashboard') },
+  ];
 
   if (title && title !== 'Dashboard') {
     breadcrumbs.push({ label: title });
   } else if (title === 'Dashboard') {
-    // Replace "Home" with "Dashboard" as final
     breadcrumbs[0] = { label: 'Dashboard' };
   }
 
