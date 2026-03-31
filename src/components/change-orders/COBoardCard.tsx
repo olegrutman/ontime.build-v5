@@ -104,7 +104,7 @@ export function COBoardCard({ co, isActive, onClick }: COBoardCardProps) {
 
       <div className="pl-3 pr-3 pt-3 pb-2.5 space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] font-mono text-muted-foreground truncate">
+          <span className="text-[11px] text-muted-foreground truncate" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
             {co.co_number ?? '—'}
           </span>
           {co.pricing_type && (
