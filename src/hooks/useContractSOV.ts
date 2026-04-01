@@ -1195,7 +1195,7 @@ export function useContractSOV(projectId: string | undefined) {
     } finally {
       setSaving(false);
     }
-  }, [sovs, getSOVTotals]);
+  }, [sovs, getSOVTotals, queryClient, projectId]);
 
   // Check if an SOV has billing activity (submitted/approved/paid invoices)
   const hasBillingActivity = useCallback((sovId: string): boolean => {
