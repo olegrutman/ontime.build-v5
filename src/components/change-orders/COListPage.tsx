@@ -20,6 +20,7 @@ type FilterKey = 'all' | 'my_action' | 'in_progress' | 'approved_filter';
 
 export function COListPage({ projectId }: COListPageProps) {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { userOrgRoles } = useAuth();
   const { changeOrders, isLoading } = useChangeOrders(projectId);
 
