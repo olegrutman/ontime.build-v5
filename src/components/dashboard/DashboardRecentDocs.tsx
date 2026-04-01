@@ -148,7 +148,7 @@ export function DashboardRecentDocs({ docs }: Props) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map(doc => (
+            {displayed.map(doc => (
               <tr
                 key={doc.id}
                 className={`border-b border-border cursor-pointer hover:bg-accent/50 transition-colors ${
