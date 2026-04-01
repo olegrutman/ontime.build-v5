@@ -118,6 +118,31 @@ export interface HardwareAnswers {
   fasteners: YesNoNa;
 }
 
+export interface SteelAnswers {
+  steel_columns: YesNoNa;
+  steel_column_type: string | null;
+  steel_beams: YesNoNa;
+  beam_type: string | null;
+  moment_frames: YesNoNa;
+  moment_frame_connections: string | null;
+  steel_posts: YesNoNa;
+  post_base_plates: YesNoNa;
+  lintels: YesNoNa;
+  lintel_type: string | null;
+  steel_decking: YesNoNa;
+  decking_gauge: string | null;
+  shear_plates: YesNoNa;
+  embed_plates: YesNoNa;
+  steel_stairs: YesNoNa;
+  steel_railings: YesNoNa;
+  erection_method: string | null;
+  torque_bolting: YesNoNa;
+  welding_onsite: YesNoNa;
+  fireproofing: YesNoNa;
+  fireproofing_type: string | null;
+  touch_up_paint: YesNoNa;
+}
+
 export interface DryinAnswers {
   hoisting: string | null;
   temp_tarps: YesNoNa;
@@ -137,6 +162,7 @@ export interface CleanupAnswers {
 export interface FramingScopeAnswers {
   method: MethodAnswers;
   structure: StructureAnswers;
+  steel: SteelAnswers;
   sheathing: SheathingAnswers;
   exterior: ExteriorAnswers;
   siding: SidingAnswers;
