@@ -324,7 +324,7 @@ export function CODetailLayout({ coId, projectId, onClose }: CODetailLayoutProps
           <COHeaderStrip co={co} role={role} myOrgName={myOrgName} />
 
           {/* KPI strip */}
-          <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} />
+          <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0} hasEquipment={co.equipment_needed || equipment.length > 0} />
 
           {/* Hero block */}
           <COHeroBlock
