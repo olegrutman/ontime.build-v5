@@ -60,8 +60,22 @@ export function OverviewTeamCard({ projectId, isTCMaterialResponsible, isGCMater
   const [isDesignateOpen, setIsDesignateOpen] = useState(false);
 
   const currentOrgId = userOrgRoles[0]?.organization?.id;
-  const creatorOrgType = userOrgRoles[0]?.organization?.type ?? null;
-  const isGcOrTc = creatorOrgType === 'GC' || creatorOrgType === 'TC';
+
+  // Fetch the project creator's org type to determine permissions (not the viewer's)
+  const [projectCreatorOrgType, setProjectCreatorOrgType] = useState<string | null>(null);
+  useEffect(() => {
+    const fetchCreatorOrg = async () => {
+      const { data: proj } = await supabase
+        .from('projects').select('organization_id').eq('id', projectId).single();
+      if (proj?.organization_id) {
+        const { data: org } = await supabase
+          .from('organizations').select('type').eq('id', proj.organization_id).single();
+        setProjectCreatorOrgType(org?.type ?? null);
+      }
+    };
+    fetchCreatorOrg();
+  }, [projectId]);
+  const isGcOrTc = projectCreatorOrgType === 'GC' || projectCreatorOrgType === 'TC';
 
   useEffect(() => {
     const fetchMembers = async () => {
