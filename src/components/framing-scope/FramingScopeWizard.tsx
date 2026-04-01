@@ -44,6 +44,10 @@ function countScope(a: FramingScopeAnswers) {
   check(a.structure.wood_stairs); check(a.structure.elevator_shaft);
   check(a.structure.enclosed_corridors); check(a.structure.balconies);
   check(a.structure.tuck_under_garages);
+  // Steel
+  check(a.steel?.steel_columns); check(a.steel?.steel_beams);
+  check(a.steel?.moment_frames); check(a.steel?.steel_decking);
+  check(a.steel?.fireproofing);
   check(a.sheathing.wall_sheathing_install || (a.sheathing.wall_sheathing_type ? 'yes' : null));
   check(a.sheathing.roof_sheathing); check(a.sheathing.roof_underlayment);
   check(a.exterior.rough_fascia); check(a.exterior.finished_fascia); check(a.exterior.finished_soffit);
