@@ -6,12 +6,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SupportActionDialog } from '@/components/platform/SupportActionDialog';
+import { PlatformScopeEditor } from '@/components/platform/PlatformScopeEditor';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupportAction } from '@/hooks/useSupportAction';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { CheckCircle, DollarSign, FileText, ClipboardList, ShoppingCart, Package, Trash2, Wrench, GitBranch } from 'lucide-react';
+import { CheckCircle, DollarSign, FileText, ClipboardList, ShoppingCart, Package, Trash2, Wrench, GitBranch, Settings } from 'lucide-react';
 
 interface ProjectData {
   id: string;
