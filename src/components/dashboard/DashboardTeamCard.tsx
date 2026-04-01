@@ -25,7 +25,7 @@ export function DashboardTeamCard() {
       // Step 1: get org roles
       const { data: roles, error: rolesErr } = await supabase
         .from('user_org_roles')
-        .select('id, user_id, role, is_admin, job_title')
+        .select('id, user_id, role, is_admin')
         .eq('organization_id', orgId)
         .limit(6);
 
@@ -38,14 +38,14 @@ export function DashboardTeamCard() {
       const userIds = roles.map((r) => r.user_id);
       const { data: profiles, error: profErr } = await supabase
         .from('profiles')
-        .select('user_id, first_name, last_name')
+        .select('user_id, first_name, last_name, job_title')
         .in('user_id', userIds);
 
       if (profErr) {
         console.error('DashboardTeamCard: profiles query error', profErr);
       }
 
-      const profileMap = new Map<string, { first_name: string | null; last_name: string | null }>();
+      const profileMap = new Map<string, { first_name: string | null; last_name: string | null; job_title: string | null }>();
       for (const p of profiles || []) {
         profileMap.set(p.user_id, p);
       }
@@ -57,7 +57,7 @@ export function DashboardTeamCard() {
             id: d.id,
             firstName: prof?.first_name || '',
             lastName: prof?.last_name || '',
-            jobTitle: d.job_title,
+            jobTitle: prof?.job_title || null,
             role: d.role,
             isAdmin: d.is_admin,
           };
