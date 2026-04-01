@@ -1,12 +1,16 @@
 import { cn } from '@/lib/utils';
 import type { FramingScopeAnswers, MaterialResponsibility } from '@/types/framingScope';
 import { DT } from '@/lib/design-tokens';
-import { Check } from 'lucide-react';
+import { Check, Sparkles, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface Props {
   answers: FramingScopeAnswers;
   matResp: MaterialResponsibility | null;
   compact?: boolean;
+  aiSummary?: string | null;
+  onGenerateSummary?: () => void;
+  isGenerating?: boolean;
 }
 
 function yn(v: string | null | undefined): boolean { return v === 'yes'; }
@@ -29,7 +33,7 @@ function SummaryGroup({ label, items }: { label: string; items: { text: string; 
   );
 }
 
-export function ScopeSummaryPanel({ answers, matResp, compact }: Props) {
+export function ScopeSummaryPanel({ answers, matResp, compact, aiSummary, onGenerateSummary, isGenerating }: Props) {
   const a = answers;
 
   const methodLabel = a.method.framing_method
@@ -40,6 +44,57 @@ export function ScopeSummaryPanel({ answers, matResp, compact }: Props) {
   return (
     <div className={cn(compact ? '' : 'space-y-1')}>
       {!compact && <h3 className={cn(DT.sectionHeader, 'mb-3')}>Scope Summary</h3>}
+
+      {/* AI Summary Section */}
+      {compact && (onGenerateSummary || aiSummary) && (
+        <div className="mb-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] font-bold uppercase tracking-[0.5px] text-primary flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3" />
+              AI Scope Summary
+            </p>
+            {onGenerateSummary && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onGenerateSummary}
+                disabled={isGenerating}
+                className="h-6 px-2 text-[10px] text-primary hover:text-primary"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                    Generating…
+                  </>
+                ) : aiSummary ? (
+                  <>
+                    <Sparkles className="w-3 h-3 mr-1" />
+                    Regenerate
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3 h-3 mr-1" />
+                    Generate Summary
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+          {isGenerating && !aiSummary ? (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground py-2">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Generating scope summary…
+            </div>
+          ) : aiSummary ? (
+            <p className="text-sm text-foreground leading-relaxed">{aiSummary}</p>
+          ) : (
+            <p className="text-xs text-muted-foreground italic">
+              Click "Generate Summary" to create an AI-powered plain-English description of your framing scope.
+            </p>
+          )}
+        </div>
+      )}
+
       <div className={cn(compact ? 'grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-2' : '')}>
 
       <SummaryGroup label="FRAMING METHOD" items={[

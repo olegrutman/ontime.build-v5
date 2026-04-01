@@ -24,6 +24,8 @@ import { Check, ChevronLeft, ChevronRight, ClipboardList, Loader2, FileText, Pac
 import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Props {
   projectId: string;
@@ -103,9 +105,12 @@ export function FramingScopeWizard({ projectId, buildingType: propBuildingType =
   const [activeSectionIndex, setActiveSectionIndex] = useState(BUILDING_PROFILE_INDEX);
   const [derivedBuildingType, setDerivedBuildingType] = useState<FramingBuildingType | null>(null);
   const [completeFired, setCompleteFired] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
   const isMobile = useIsMobile();
+  const { toast } = useToast();
 
   // Fire onComplete via effect instead of during render
   useEffect(() => {
@@ -114,6 +119,37 @@ export function FramingScopeWizard({ projectId, buildingType: propBuildingType =
       onCompleteRef.current?.();
     }
   }, [scopeComplete, embedded, completeFired]);
+
+  // Load AI summary from DB when scope is complete
+  useEffect(() => {
+    if (!scopeComplete || !projectId) return;
+    supabase
+      .from('project_framing_scope' as any)
+      .select('ai_summary')
+      .eq('project_id', projectId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if ((data as any)?.ai_summary) setAiSummary((data as any).ai_summary);
+      });
+  }, [scopeComplete, projectId]);
+
+  const handleGenerateSummary = useCallback(async () => {
+    setIsGeneratingSummary(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-framing-scope-summary', {
+        body: { project_id: projectId },
+      });
+      if (error) throw error;
+      if (data?.summary) {
+        setAiSummary(data.summary);
+        toast({ title: 'Summary generated' });
+      }
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message || 'Failed to generate summary', variant: 'destructive' });
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  }, [projectId, toast]);
 
   const buildingType = derivedBuildingType || propBuildingType;
   const matResp = answers.method.material_responsibility;
@@ -165,7 +201,7 @@ export function FramingScopeWizard({ projectId, buildingType: propBuildingType =
           </div>
         </div>
 
-        <ScopeSummaryPanel answers={answers} matResp={matResp} compact />
+        <ScopeSummaryPanel answers={answers} matResp={matResp} compact aiSummary={aiSummary} onGenerateSummary={handleGenerateSummary} isGenerating={isGeneratingSummary} />
 
         <div className="flex items-center gap-2">
           <Button

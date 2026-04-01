@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.generate-project-description]
 verify_jwt = false
+
+[functions.generate-framing-scope-summary]
+verify_jwt = false

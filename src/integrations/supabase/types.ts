@@ -2754,6 +2754,7 @@ export type Database = {
       }
       project_framing_scope: {
         Row: {
+          ai_summary: string | null
           answers: Json
           created_at: string | null
           current_section: number
@@ -2764,6 +2765,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          ai_summary?: string | null
           answers?: Json
           created_at?: string | null
           current_section?: number
@@ -2774,6 +2776,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          ai_summary?: string | null
           answers?: Json
           created_at?: string | null
           current_section?: number
