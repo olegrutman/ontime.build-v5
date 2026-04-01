@@ -107,6 +107,8 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
   const [supplierInvoiceOpen, setSupplierInvoiceOpen] = useState(false);
   const [hasTCtoGCContract, setHasTCtoGCContract] = useState(false);
   const [alreadyInvoiced, setAlreadyInvoiced] = useState(false);
+  const [emailPromptOpen, setEmailPromptOpen] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
 
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
