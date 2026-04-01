@@ -256,7 +256,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
       }
 
       if (!supplierEmail) {
-        toast.error('No supplier email found. Please set up supplier contact.');
+        setEmailPromptOpen(true);
         setActionLoading(false);
         return;
       }
