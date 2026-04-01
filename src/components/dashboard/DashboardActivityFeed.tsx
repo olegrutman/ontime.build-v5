@@ -33,43 +33,53 @@ function getInitials(title: string): string {
 
 export function DashboardActivityFeed({ docs }: DashboardActivityFeedProps) {
   const items = useMemo(() => docs.slice(0, 8), [docs]);
+  const [open, setOpen] = useState(false);
 
   if (items.length === 0) return null;
 
   return (
-    <div className="bg-card border border-border rounded-lg">
-      <div className="flex items-center justify-between px-4 py-3">
-        <h3 className="card-section-title">Recent Activity</h3>
-      </div>
-      <div className="px-3.5 pb-3 space-y-1">
-        {items.map((item, i) => {
-          const chipStyle = TYPE_COLORS[item.type] || 'bg-muted text-muted-foreground';
-          const timeAgo = formatDistanceToNow(new Date(item.created_at), { addSuffix: true });
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <div className="bg-card border border-border rounded-lg">
+        <CollapsibleTrigger asChild>
+          <button className="flex items-center justify-between px-4 py-3 w-full text-left hover:bg-accent/30 transition-colors rounded-t-lg">
+            <h3 className="card-section-title">Recent Activity</h3>
+            {open ? (
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            )}
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="px-3.5 pb-3 space-y-1">
+            {items.map((item, i) => {
+              const chipStyle = TYPE_COLORS[item.type] || 'bg-muted text-muted-foreground';
+              const timeAgo = formatDistanceToNow(new Date(item.created_at), { addSuffix: true });
 
-          return (
-            <div
-              key={item.id}
-              className="flex items-start gap-2.5 px-1 py-2 opacity-0 animate-[fadeUp_400ms_ease-out_forwards]"
-              style={{ animationDelay: `${400 + i * 50}ms` }}
-            >
-              <div className="w-7 h-7 rounded-full bg-accent flex items-center justify-center shrink-0 mt-0.5">
-                <span className="text-[9px] font-bold text-muted-foreground">{getInitials(item.title)}</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-muted-foreground">
-                  <span className="font-semibold text-foreground">{item.title}</span>{' '}
-                  updated in {item.projectName}
-                </p>
-                <div className="flex items-center gap-2 mt-1">
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${chipStyle}`}>
-                    {item.type.replace(/_/g, ' ')}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground/50">{timeAgo}</span>
+              return (
+                <div
+                  key={item.id}
+                  className="flex items-start gap-2.5 px-1 py-2 opacity-0 animate-[fadeUp_400ms_ease-out_forwards]"
+                  style={{ animationDelay: `${400 + i * 50}ms` }}
+                >
+                  <div className="w-7 h-7 rounded-full bg-accent flex items-center justify-center shrink-0 mt-0.5">
+                    <span className="text-[9px] font-bold text-muted-foreground">{getInitials(item.title)}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-semibold text-foreground">{item.title}</span>{' '}
+                      updated in {item.projectName}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-medium ${chipStyle}`}>
+                        {item.type.replace(/_/g, ' ')}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground/50">{timeAgo}</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          );
-        })}
+              );
+            })}
           </div>
         </CollapsibleContent>
       </div>
