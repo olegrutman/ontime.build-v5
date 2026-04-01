@@ -948,6 +948,16 @@ export default function PlatformProjectDetail() {
         }}
         loading={actionLoading}
       />
+      </TabsContent>
+
+        <TabsContent value="setup">
+          <PlatformScopeEditor
+            projectId={projectId!}
+            projectStatus={project.status}
+            onRefresh={fetchData}
+          />
+        </TabsContent>
+      </Tabs>
     </PlatformLayout>
   );
 }
