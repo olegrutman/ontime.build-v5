@@ -26,17 +26,36 @@ export function DashboardPartnersCard() {
   useEffect(() => {
     if (!orgId) return;
     (async () => {
-      const { data } = await supabase
-        .from('project_participants')
-        .select('organization_id, project_id, organizations!project_participants_organization_id_fkey(name, type)')
-        .neq('organization_id', orgId)
-        .eq('invite_status', 'ACCEPTED');
+      // Step 1: Get my projects
+      const { data: myProjects, error: projErr } = await supabase
+        .from('project_team')
+        .select('project_id')
+        .eq('org_id', orgId)
+        .eq('status', 'Accepted');
 
-      if (!data) return;
+      if (projErr || !myProjects?.length) {
+        console.error('DashboardPartnersCard: projects query error', projErr);
+        return;
+      }
+
+      const projectIds = myProjects.map((p) => p.project_id);
+
+      // Step 2: Get other orgs on those projects
+      const { data: teamMembers, error: teamErr } = await supabase
+        .from('project_team')
+        .select('org_id, project_id, organizations!inner(id, name, type)')
+        .in('project_id', projectIds)
+        .neq('org_id', orgId)
+        .eq('status', 'Accepted');
+
+      if (teamErr || !teamMembers) {
+        console.error('DashboardPartnersCard: team query error', teamErr);
+        return;
+      }
 
       const map = new Map<string, Partner>();
-      for (const row of data as any[]) {
-        const id = row.organization_id;
+      for (const row of teamMembers as any[]) {
+        const id = row.org_id;
         if (!id) continue;
         const existing = map.get(id);
         if (existing) {

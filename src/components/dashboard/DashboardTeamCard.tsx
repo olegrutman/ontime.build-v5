@@ -22,23 +22,47 @@ export function DashboardTeamCard() {
   useEffect(() => {
     if (!orgId) return;
     (async () => {
-      const { data } = await supabase
+      // Step 1: get org roles
+      const { data: roles, error: rolesErr } = await supabase
         .from('user_org_roles')
-        .select('id, role, is_admin, job_title, profiles!user_org_roles_user_id_fkey(first_name, last_name)')
+        .select('id, user_id, role, is_admin, job_title')
         .eq('organization_id', orgId)
         .limit(6);
-      if (data) {
-        setMembers(
-          data.map((d: any) => ({
+
+      if (rolesErr || !roles?.length) {
+        console.error('DashboardTeamCard: roles query error', rolesErr);
+        return;
+      }
+
+      // Step 2: get profiles for those user_ids
+      const userIds = roles.map((r) => r.user_id);
+      const { data: profiles, error: profErr } = await supabase
+        .from('profiles')
+        .select('user_id, first_name, last_name')
+        .in('user_id', userIds);
+
+      if (profErr) {
+        console.error('DashboardTeamCard: profiles query error', profErr);
+      }
+
+      const profileMap = new Map<string, { first_name: string | null; last_name: string | null }>();
+      for (const p of profiles || []) {
+        profileMap.set(p.user_id, p);
+      }
+
+      setMembers(
+        roles.map((d) => {
+          const prof = profileMap.get(d.user_id);
+          return {
             id: d.id,
-            firstName: d.profiles?.first_name || '',
-            lastName: d.profiles?.last_name || '',
+            firstName: prof?.first_name || '',
+            lastName: prof?.last_name || '',
             jobTitle: d.job_title,
             role: d.role,
             isAdmin: d.is_admin,
-          }))
-        );
-      }
+          };
+        })
+      );
     })();
   }, [orgId]);
 
