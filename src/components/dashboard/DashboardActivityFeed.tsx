@@ -70,7 +70,9 @@ export function DashboardActivityFeed({ docs }: DashboardActivityFeedProps) {
             </div>
           );
         })}
+          </div>
+        </CollapsibleContent>
       </div>
-    </div>
+    </Collapsible>
   );
 }

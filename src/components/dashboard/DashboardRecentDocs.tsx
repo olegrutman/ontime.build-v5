@@ -180,6 +180,17 @@ export function DashboardRecentDocs({ docs }: Props) {
           </tbody>
         </table>
       )}
+
+      {filtered.length > 3 && (
+        <div className="px-4 py-2 border-t border-border">
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-[0.72rem] text-primary hover:underline font-medium w-full text-center"
+          >
+            {expanded ? 'Show less' : `Show all (${filtered.length})`}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
