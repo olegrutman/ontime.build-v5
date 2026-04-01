@@ -1,4 +1,5 @@
 import { ChevronRight, Search, Plus, User, Users, Settings, LogOut } from 'lucide-react';
+import { OntimeLogo } from '@/components/ui/OntimeLogo';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { NotificationSheet } from '@/components/notifications';
