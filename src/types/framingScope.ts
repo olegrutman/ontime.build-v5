@@ -217,6 +217,7 @@ export function createDefaultAnswers(): FramingScopeAnswers {
 // ── Building-type visibility helpers ─────────────────────────────────
 const MULTI_TYPES: FramingBuildingType[] = ['MULTI_FAMILY', 'HOTEL'];
 const RESIDENTIAL: FramingBuildingType[] = ['SFR', 'TOWNHOMES', 'MULTI_FAMILY', 'HOTEL'];
+const MULTI_COMMERCIAL: FramingBuildingType[] = ['MULTI_FAMILY', 'HOTEL', 'COMMERCIAL'];
 
 export function showElevator(bt: FramingBuildingType) { return MULTI_TYPES.includes(bt); }
 export function showCorridors(bt: FramingBuildingType) { return MULTI_TYPES.includes(bt); }
@@ -229,3 +230,12 @@ export function showCorridorFireWalls(bt: FramingBuildingType) { return MULTI_TY
 export function showDraftStops(bt: FramingBuildingType) { return MULTI_TYPES.includes(bt) || bt === 'COMMERCIAL'; }
 export function isResidential(bt: FramingBuildingType) { return RESIDENTIAL.includes(bt); }
 export function isCommercial(bt: FramingBuildingType) { return bt === 'COMMERCIAL'; }
+
+// Steel visibility
+export function showMomentFrames(bt: FramingBuildingType) { return MULTI_COMMERCIAL.includes(bt); }
+export function showSteelDecking(bt: FramingBuildingType) { return MULTI_COMMERCIAL.includes(bt); }
+export function showShearPlates(bt: FramingBuildingType) { return bt !== 'SFR'; }
+export function showSteelStairs(bt: FramingBuildingType) { return bt !== 'SFR'; }
+export function showErectionMethod(bt: FramingBuildingType) { return MULTI_COMMERCIAL.includes(bt); }
+export function showWelding(bt: FramingBuildingType) { return MULTI_COMMERCIAL.includes(bt); }
+export function showFireproofing(bt: FramingBuildingType) { return MULTI_COMMERCIAL.includes(bt); }
