@@ -190,13 +190,6 @@ export function COListPage({ projectId }: COListPageProps) {
 
       <COWizard open={wizardOpen} onOpenChange={setWizardOpen} projectId={projectId} />
 
-      {selectedCoId && !isMobile && (
-        <COSlideOver
-          coId={selectedCoId}
-          projectId={projectId}
-          onClose={() => setSelectedCoId(null)}
-        />
-      )}
     </div>
   );
 }
