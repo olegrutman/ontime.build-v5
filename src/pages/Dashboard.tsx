@@ -258,6 +258,8 @@ export default function Dashboard() {
               activeProjectName={activeProject?.name || null}
               activeProjectId={activeProject?.id || null}
             />
+            <DashboardTeamCard />
+            <DashboardPartnersCard />
             <DashboardActivityFeed docs={recentDocs} />
             <DashboardNeedsAttentionCard
               attentionItems={attentionItems}
@@ -272,8 +274,6 @@ export default function Dashboard() {
               }}
               onAdd={() => setAddReminderOpen(true)}
             />
-            <DashboardTeamCard />
-            <DashboardPartnersCard />
           </div>
         </div>
       </div>
