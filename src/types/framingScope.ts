@@ -184,15 +184,16 @@ export interface SectionDef {
 export const SECTIONS: SectionDef[] = [
   { id: '1', label: 'Method & Materials', key: 'method' },
   { id: '2', label: 'Building Features', key: 'structure' },
-  { id: '3', label: 'Sheathing & WRB', key: 'sheathing' },
-  { id: '4', label: 'Fascia, Soffit & Trim', key: 'exterior' },
-  { id: '5', label: 'Siding & Cladding', key: 'siding' },
-  { id: '6', label: 'Openings', key: 'openings' },
-  { id: '7', label: 'Blocking & Backing', key: 'blocking' },
-  { id: '8', label: 'Fire & Smoke', key: 'fire' },
-  { id: '9', label: 'Hardware & Connectors', key: 'hardware' },
-  { id: '10', label: 'Dry-in & Hoisting', key: 'dryin' },
-  { id: '11', label: 'Cleanup & Warranty', key: 'cleanup' },
+  { id: '3', label: 'Structural Steel', key: 'steel' },
+  { id: '4', label: 'Sheathing & WRB', key: 'sheathing' },
+  { id: '5', label: 'Fascia, Soffit & Trim', key: 'exterior' },
+  { id: '6', label: 'Siding & Cladding', key: 'siding' },
+  { id: '7', label: 'Openings', key: 'openings' },
+  { id: '8', label: 'Blocking & Backing', key: 'blocking' },
+  { id: '9', label: 'Fire & Smoke', key: 'fire' },
+  { id: '10', label: 'Hardware & Connectors', key: 'hardware' },
+  { id: '11', label: 'Dry-in & Hoisting', key: 'dryin' },
+  { id: '12', label: 'Cleanup & Warranty', key: 'cleanup' },
 ];
 
 // ── Default answers factory ──────────────────────────────────────────
