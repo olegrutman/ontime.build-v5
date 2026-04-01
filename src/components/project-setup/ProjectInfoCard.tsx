@@ -33,12 +33,14 @@ export function ProjectInfoCard({ projectId, projectName }: ProjectInfoCardProps
 
   // Sync name state when query data loads
   const resolvedName = project?.name || projectName || '';
-  useState(() => { /* init only */ });
-  // Keep name in sync with DB when not actively editing
   const displayName = project?.name || projectName || 'Untitled Project';
-  if (!editing && name !== resolvedName && resolvedName) {
-    setName(resolvedName);
-  }
+
+  // Keep name in sync with DB when not actively editing (moved to useEffect to avoid setState during render)
+  React.useEffect(() => {
+    if (!editing && resolvedName && name !== resolvedName) {
+      setName(resolvedName);
+    }
+  }, [editing, resolvedName]);
 
   const { data: profile } = useQuery({
     queryKey: ['project_profile', projectId],
