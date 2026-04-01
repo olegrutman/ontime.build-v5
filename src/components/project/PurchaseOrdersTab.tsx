@@ -19,6 +19,7 @@ import { ViewMode, ViewSwitcher } from '@/components/ui/view-switcher';
 import { toast } from 'sonner';
 import { POActionBar, POCard, PODetail, POTableView } from '@/components/purchase-orders';
 import { POWizardV2 } from '@/components/po-wizard-v2';
+import { SupplierEmailPrompt } from '@/components/purchase-orders/SupplierEmailPrompt';
 import { PurchaseOrder, POStatus } from '@/types/purchaseOrder';
 import { POWizardV2Data, POWizardV2LineItem } from '@/types/poWizardV2';
 
