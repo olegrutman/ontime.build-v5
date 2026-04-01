@@ -49,6 +49,7 @@ import { POStatusBadge } from './POStatusBadge';
 import { POActivityTimeline } from './POActivityTimeline';
 import { CreateInvoiceFromPO } from './CreateInvoiceFromPO';
 import { CreateSupplierInvoiceFromPO } from './CreateSupplierInvoiceFromPO';
+import { SupplierEmailPrompt } from './SupplierEmailPrompt';
 import { PurchaseOrder, POLineItem, POStatus } from '@/types/purchaseOrder';
 
 interface PODetailProps {
@@ -106,6 +107,8 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
   const [supplierInvoiceOpen, setSupplierInvoiceOpen] = useState(false);
   const [hasTCtoGCContract, setHasTCtoGCContract] = useState(false);
   const [alreadyInvoiced, setAlreadyInvoiced] = useState(false);
+  const [emailPromptOpen, setEmailPromptOpen] = useState(false);
+  const [emailSending, setEmailSending] = useState(false);
 
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
@@ -253,7 +256,7 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
       }
 
       if (!supplierEmail) {
-        toast.error('No supplier email found. Please set up supplier contact.');
+        setEmailPromptOpen(true);
         setActionLoading(false);
         return;
       }
@@ -1043,6 +1046,38 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
         }}
       />
 
+      <SupplierEmailPrompt
+        open={emailPromptOpen}
+        onClose={() => setEmailPromptOpen(false)}
+        onSubmit={async (email) => {
+          setEmailSending(true);
+          try {
+            if (po?.project?.id) {
+              await supabase
+                .from('project_designated_suppliers')
+                .update({ po_email: email })
+                .eq('project_id', po.project.id)
+                .neq('status', 'removed');
+            }
+
+            const { error: sendErr } = await supabase.functions.invoke('send-po', {
+              body: { po_id: poId, supplier_email: email },
+            });
+            if (sendErr) throw sendErr;
+
+            toast.success('PO submitted and sent to supplier');
+            fetchPO();
+            onUpdate();
+          } catch (err) {
+            console.error('Error sending PO:', err);
+            toast.error('Failed to send PO');
+          } finally {
+            setEmailSending(false);
+            setEmailPromptOpen(false);
+          }
+        }}
+        isLoading={emailSending}
+      />
     </div>
   );
 }

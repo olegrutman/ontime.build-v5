@@ -13,17 +13,28 @@ export function OverviewContractsSection({ financials, onNavigate }: Props) {
 
   const rows: { fromName: string; toName: string; fromRole: string; toRole: string; sum: number; retainage: number }[] = [];
 
-  if (viewerRole === 'Trade Contractor' || viewerRole === 'Field Crew') {
+  if (viewerRole === 'Trade Contractor') {
     if (upstreamContract) {
-      const fromRole = viewerRole === 'Field Crew' ? 'TC' : 'GC';
-      const toRole = viewerRole === 'Field Crew' ? 'FC' : 'TC';
       rows.push({
-        fromName: upstreamContract.from_org_name || (viewerRole === 'Field Crew' ? 'Trade Contractor' : 'General Contractor'),
+        fromName: upstreamContract.from_org_name || 'General Contractor',
         toName: upstreamContract.to_org_name || 'Your Company',
-        fromRole,
-        toRole,
+        fromRole: 'GC',
+        toRole: 'TC',
         sum: upstreamContract.contract_sum,
         retainage: upstreamContract.retainage_percent,
+      });
+    }
+  }
+
+  if (viewerRole === 'Field Crew') {
+    if (downstreamContract) {
+      rows.push({
+        fromName: downstreamContract.from_org_name || 'Trade Contractor',
+        toName: downstreamContract.to_org_name || 'Your Company',
+        fromRole: 'TC',
+        toRole: 'FC',
+        sum: downstreamContract.contract_sum,
+        retainage: downstreamContract.retainage_percent,
       });
     }
   }

@@ -1,8 +1,11 @@
+import { useState } from 'react';
 import { cn, formatCurrency as fmt } from '@/lib/utils';
 import { DT } from '@/lib/design-tokens';
 import { ProjectFinancials } from '@/hooks/useProjectFinancials';
 import { useProjectActualCosts } from '@/hooks/useActualCosts';
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Pencil, Check, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
 
 interface Props {
   projectId: string;
@@ -11,23 +14,36 @@ interface Props {
 
 export function OverviewProfitCard({ projectId, financials }: Props) {
   const { totalActualCost } = useProjectActualCosts(projectId);
-  const { viewerRole, upstreamContract, downstreamContract, ownerContractValue, isTCMaterialResponsible, materialOrdered, materialMarkupType, materialMarkupValue } = financials;
+  const { viewerRole, upstreamContract, downstreamContract, ownerContractValue, isTCMaterialResponsible, materialOrdered, materialMarkupType, materialMarkupValue, updateOwnerContract } = financials;
+  const { toast } = useToast();
+
+  const [editingOwner, setEditingOwner] = useState(false);
+  const [ownerEditValue, setOwnerEditValue] = useState(0);
+  const [savingOwner, setSavingOwner] = useState(false);
 
   const contractSum = upstreamContract?.contract_sum ?? 0;
 
-  let rows: { label: string; value: number }[] = [];
+  let rows: { label: string; value: number; editable?: boolean }[] = [];
   let profit = 0;
   let profitLabel = 'Your Profit';
 
   if (viewerRole === 'General Contractor') {
     const ownerVal = ownerContractValue ?? 0;
-    if (ownerVal === 0 && contractSum === 0) return null;
-    profit = ownerVal - contractSum;
+    if (ownerVal === 0 && contractSum === 0) {
+      // Show editor even when both are 0 so GC can set owner contract
+      rows = [
+        { label: 'Owner Contract', value: ownerVal, editable: true },
+        { label: upstreamContract?.to_org_name || 'Trade Contractor', value: contractSum },
+      ];
+      profit = 0;
+    } else {
+      profit = ownerVal - contractSum;
+      rows = [
+        { label: 'Owner Contract', value: ownerVal, editable: true },
+        { label: upstreamContract?.to_org_name || 'Trade Contractor', value: contractSum },
+      ];
+    }
     profitLabel = 'Your Profit';
-    rows = [
-      { label: 'Owner Contract', value: ownerVal },
-      { label: upstreamContract?.to_org_name || 'Trade Contractor', value: contractSum },
-    ];
   } else if (viewerRole === 'Trade Contractor') {
     const fcName = downstreamContract?.to_org_name || 'Field Crew';
     const fcContractSum = downstreamContract?.contract_sum ?? 0;
@@ -69,6 +85,28 @@ export function OverviewProfitCard({ projectId, financials }: Props) {
   const isZero = profit === 0;
   const TrendIcon = isPositive ? TrendingUp : isZero ? Minus : TrendingDown;
 
+  const handleStartEditOwner = () => {
+    setOwnerEditValue(ownerContractValue ?? 0);
+    setEditingOwner(true);
+  };
+
+  const handleSaveOwner = async () => {
+    if (!upstreamContract?.id) return;
+    setSavingOwner(true);
+    const ok = await updateOwnerContract(upstreamContract.id, ownerEditValue);
+    setSavingOwner(false);
+    if (ok) {
+      toast({ title: 'Owner contract updated' });
+      setEditingOwner(false);
+    } else {
+      toast({ title: 'Failed to update', variant: 'destructive' });
+    }
+  };
+
+  // Show card for GC even with zero values so they can enter owner contract
+  const showCard = viewerRole === 'General Contractor' || rows.length > 0;
+  if (!showCard) return null;
+
   return (
     <div className="space-y-2">
       <p className={DT.sectionHeader}>Profit Position</p>
@@ -77,7 +115,38 @@ export function OverviewProfitCard({ projectId, financials }: Props) {
         {rows.map((r, i) => (
           <div key={i} className="flex items-center justify-between text-xs animate-fade-in" style={{ animationDelay: `${i * 40}ms` }}>
             <span className="text-muted-foreground">{r.label}</span>
-            <span className="font-medium" style={DT.mono}>{fmt(Math.abs(r.value))}</span>
+            <div className="flex items-center gap-1">
+              {r.editable && viewerRole === 'General Contractor' ? (
+                editingOwner ? (
+                  <div className="flex items-center gap-1">
+                    <Input
+                      type="number"
+                      value={ownerEditValue}
+                      onChange={(e) => setOwnerEditValue(Number(e.target.value))}
+                      className="h-6 w-24 text-xs px-1.5"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveOwner();
+                        if (e.key === 'Escape') setEditingOwner(false);
+                      }}
+                    />
+                    <button onClick={handleSaveOwner} disabled={savingOwner} className="text-emerald-600 hover:text-emerald-700">
+                      <Check className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => setEditingOwner(false)} className="text-muted-foreground hover:text-foreground">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={handleStartEditOwner} className="flex items-center gap-1 group">
+                    <span className="font-medium" style={DT.mono}>{fmt(Math.abs(r.value))}</span>
+                    <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </button>
+                )
+              ) : (
+                <span className="font-medium" style={DT.mono}>{fmt(Math.abs(r.value))}</span>
+              )}
+            </div>
           </div>
         ))}
       </div>

@@ -19,6 +19,7 @@ import { ViewMode, ViewSwitcher } from '@/components/ui/view-switcher';
 import { toast } from 'sonner';
 import { POActionBar, POCard, PODetail, POTableView } from '@/components/purchase-orders';
 import { POWizardV2 } from '@/components/po-wizard-v2';
+import { SupplierEmailPrompt } from '@/components/purchase-orders/SupplierEmailPrompt';
 import { PurchaseOrder, POStatus } from '@/types/purchaseOrder';
 import { POWizardV2Data, POWizardV2LineItem } from '@/types/poWizardV2';
 
@@ -56,6 +57,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const [editInitialData, setEditInitialData] = useState<Partial<POWizardV2Data> | null>(null);
   const [materialResponsibility, setMaterialResponsibility] = useState<string | null>(null);
   const [poRequiresApproval, setPORequiresApproval] = useState(true);
+  const [emailPromptOpen, setEmailPromptOpen] = useState(false);
+  const [pendingPOForEmail, setPendingPOForEmail] = useState<{ poId: string; poNumber: string; projectId: string } | null>(null);
+  const [emailSending, setEmailSending] = useState(false);
 
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
@@ -408,7 +412,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
         }
 
         if (!supplierEmail) {
-          toast.warning(`PO ${poNumber} created as draft — no supplier email found to send.`);
+          toast.info(`PO ${poNumber} created. Please provide supplier email to send.`);
+          setPendingPOForEmail({ poId: newPO.id, poNumber, projectId: data.project_id });
+          setEmailPromptOpen(true);
         } else {
           const { error: sendError } = await supabase.functions.invoke('send-po', {
             body: { po_id: newPO.id, supplier_email: supplierEmail },
@@ -877,6 +883,46 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           hidePricing={hidePricing}
         />
       )}
+
+      <SupplierEmailPrompt
+        open={emailPromptOpen}
+        onClose={() => {
+          setEmailPromptOpen(false);
+          setPendingPOForEmail(null);
+        }}
+        onSubmit={async (email) => {
+          if (!pendingPOForEmail) return;
+          setEmailSending(true);
+          try {
+            // Save email for future POs
+            await supabase
+              .from('project_designated_suppliers')
+              .update({ po_email: email })
+              .eq('project_id', pendingPOForEmail.projectId)
+              .neq('status', 'removed');
+
+            // Send the PO
+            const { error } = await supabase.functions.invoke('send-po', {
+              body: { po_id: pendingPOForEmail.poId, supplier_email: email },
+            });
+
+            if (error) {
+              toast.warning(`PO ${pendingPOForEmail.poNumber} — email send failed.`);
+            } else {
+              toast.success(`PO ${pendingPOForEmail.poNumber} sent to ${email}`);
+            }
+          } catch (err) {
+            console.error('Error sending PO:', err);
+            toast.error('Failed to send PO');
+          } finally {
+            setEmailSending(false);
+            setEmailPromptOpen(false);
+            setPendingPOForEmail(null);
+            fetchPurchaseOrders();
+          }
+        }}
+        isLoading={emailSending}
+      />
     </>
   );
 }
