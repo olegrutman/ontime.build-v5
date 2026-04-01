@@ -1,44 +1,54 @@
 
 
-# Fix: My Team and My Partners Cards Not Visible on Dashboard
+# Fix: Contract Label Swaps, Broken Navigation, and Missing SOV Tab
 
-## Root Cause
+## Issues Found
 
-Two issues:
+| # | Bug | Location |
+|---|-----|----------|
+| 1 | Contract role labels (GC/TC) are swapped — org names show next to wrong role abbreviation | `OverviewContractsSection.tsx` |
+| 2 | `getContractDisplayName()` displays `TO → FROM` instead of `FROM → TO` | `useContractSOV.ts` line 143 |
+| 3 | Clicking contract card navigates to `sov` tab but no content renders (blank page) | `ProjectHome.tsx` — missing `activeTab === 'sov'` block |
+| 4 | SOV tab missing from desktop icon rail sidebar | `ProjectIconRail.tsx` — no SOV entry |
 
-1. **Cards are below the fold** — They render after Budget, Activity, Needs Attention, and Reminders in the right column, pushing them off-screen.
+## Root Causes
 
-2. **Partners query uses wrong table** — `DashboardPartnersCard` queries `project_participants` but the app's partner logic (see `usePartnerDirectory.ts`) uses `project_team` table. The `project_participants` query likely returns data that doesn't include partners from the current user's shared projects — it fetches ALL non-self participants globally rather than scoping to shared projects first. The existing `usePartnerDirectory.ts` hook already solves this correctly by first getting the user's projects from `project_team`, then finding other orgs on those projects.
+**Labels (Bug 1)**: `OverviewContractsSection` hardcodes `fromRole: 'GC', toRole: 'TC'` regardless of the actual `from_role`/`to_role` values on the contract record. The upstream contract filter in `useProjectFinancials` accepts both `GC→TC` and `TC→GC` orderings, so the contract could have either direction. The fix is to read `from_role`/`to_role` from the contract itself.
 
-3. **Team card foreign key hint may fail** — The query uses `profiles!user_org_roles_user_id_fkey` which may not match the actual FK constraint name, causing a silent PostgREST error.
+**Display name (Bug 2)**: `getContractDisplayName` returns `${to} → ${from}` which is backwards.
 
-## Fix
+**Navigation (Bugs 3-4)**: SOV exists as a standalone page (`ProjectSOVPage`) but was never integrated into the `ProjectHome` tab system. No render block exists and it's not in the icon rail.
 
-### 1. Reorder right column — move Team & Partners higher
-**File**: `src/pages/Dashboard.tsx`
+## Fixes
 
-New order:
+### 1. `OverviewContractsSection.tsx` — Use actual contract roles
+Instead of hardcoding `fromRole: 'GC'`, read from the contract data:
+```tsx
+fromRole: upstreamContract.from_role === 'General Contractor' ? 'GC' : 
+          upstreamContract.from_role === 'Trade Contractor' ? 'TC' : 'FC',
 ```
-Budget → Team → Partners → Activity (collapsed) → Needs Attention → Reminders
+Apply the same pattern for all rows.
+
+### 2. `useContractSOV.ts` — Fix display name direction
+Line 143: Change `${to} → ${from}` to `${from} → ${to}`.
+
+### 3. `ProjectHome.tsx` — Add SOV tab rendering
+Add a block for `activeTab === 'sov'`:
+```tsx
+{activeTab === 'sov' && (
+  <ContractSOVEditor projectId={id!} />
+)}
 ```
+`ContractSOVEditor` is already imported on line 46.
 
-### 2. Fix Partners card query — use `project_team` table
-**File**: `src/components/dashboard/DashboardPartnersCard.tsx`
-
-Replace `project_participants` query with the same approach as `usePartnerDirectory.ts`:
-- First fetch the user's projects from `project_team` where `org_id = currentOrgId` and `status = 'Accepted'`
-- Then fetch other orgs on those same projects from `project_team` where `org_id != currentOrgId`
-- Join with `organizations` to get name and type
-
-### 3. Fix Team card query — remove fragile FK hint
-**File**: `src/components/dashboard/DashboardTeamCard.tsx`
-
-Replace the FK-hinted join with a simpler two-step approach or use the correct FK name. Also add error logging so silent failures are visible.
+### 4. `ProjectIconRail.tsx` — Add SOV to sidebar
+Add SOV entry to GROUP_2 (between Setup and Change Orders) with `DollarSign` icon and `featureKey: 'sov_contracts'`.
 
 ## Files Modified
 | File | Change |
 |------|--------|
-| `src/pages/Dashboard.tsx` | Reorder right column: Team + Partners above Activity |
-| `src/components/dashboard/DashboardPartnersCard.tsx` | Rewrite query to use `project_team` table (matching `usePartnerDirectory.ts` pattern) |
-| `src/components/dashboard/DashboardTeamCard.tsx` | Fix FK hint or use two-step query; add error logging |
+| `src/components/project/OverviewContractsSection.tsx` | Read `from_role`/`to_role` from contract data instead of hardcoding |
+| `src/hooks/useContractSOV.ts` | Fix `getContractDisplayName` — swap `${to} → ${from}` to `${from} → ${to}` |
+| `src/pages/ProjectHome.tsx` | Add `activeTab === 'sov'` render block using existing `ContractSOVEditor` |
+| `src/components/project/ProjectIconRail.tsx` | Add SOV item to icon rail GROUP_2 |
 
