@@ -67,7 +67,7 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
   const scopeComplete = !!framingScope?.scope_complete;
 
   const { data: contracts = [] } = useQuery({
-    queryKey: ['project_contracts', projectId],
+    queryKey: ['project_contracts_exists_check', projectId],
     enabled: !!projectId,
     queryFn: async () => {
       const { data, error } = await supabase
