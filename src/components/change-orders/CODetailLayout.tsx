@@ -28,6 +28,8 @@ import { COLineItemRow } from './COLineItemRow';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COActivityFeed } from './COActivityFeed';
+import { COStatusActions } from './COStatusActions';
+import { AddScopeItemButton } from './AddScopeItemButton';
 import { CO_STATUS_LABELS } from '@/types/changeOrder';
 import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
 
@@ -91,6 +93,8 @@ export function CODetailLayout({ coId, projectId, onClose }: CODetailLayoutProps
     else navigate(`/project/${projectId}/change-orders`);
   }
 
+  
+
   function handleHeroAction(action: string) {
     switch (action) {
       case 'scroll_scope':
@@ -102,13 +106,27 @@ export function CODetailLayout({ coId, projectId, onClose }: CODetailLayoutProps
       case 'scroll_pricing':
         pricingRef.current?.scrollIntoView({ behavior: 'smooth' });
         break;
+      case 'scroll_fc':
+        scopeRef.current?.scrollIntoView({ behavior: 'smooth' });
+        break;
       case 'log_hours':
         setShowHourEntry(true);
         break;
-      default:
-        // Actions like approve, reject, submit, etc. are handled by COStatusActions
-        // For now scroll to top where actions live
+      case 'approve':
+      case 'reject':
+      case 'submit':
+      case 'share':
+      case 'close_for_pricing':
+      case 'request_fc':
+      case 'submit_to_tc':
+      case 'use_fc_base':
+      case 'need_material':
+      case 'saw_damage':
+      case 'budget_impact':
+        // Scroll to sidebar where COStatusActions lives
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        break;
+      default:
         break;
     }
   }
@@ -151,10 +169,21 @@ export function CODetailLayout({ coId, projectId, onClose }: CODetailLayoutProps
     <>
       {/* Scope & Labor */}
       <div ref={scopeRef} className="bg-card border border-border rounded-lg overflow-hidden">
-        <div className="px-3.5 py-3 border-b border-border">
+        <div className="px-3.5 py-3 border-b border-border flex items-center justify-between">
           <h3 className="text-[0.7rem] uppercase tracking-[0.04em] font-semibold text-muted-foreground" style={DT.heading}>
             📋 Scope & Labor
           </h3>
+          {canEdit && !nteBlocked && co && (
+            <AddScopeItemButton
+              coId={co.id}
+              orgId={myOrgId}
+              projectId={projectId}
+              role={role}
+              co={co}
+              collaborators={collaborators}
+              onAdded={refreshDetail}
+            />
+          )}
         </div>
         <div>
           {lineItems.length === 0 ? (
@@ -295,7 +324,7 @@ export function CODetailLayout({ coId, projectId, onClose }: CODetailLayoutProps
           <COHeaderStrip co={co} role={role} myOrgName={myOrgName} />
 
           {/* KPI strip */}
-          <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} />
+          <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0} hasEquipment={co.equipment_needed || equipment.length > 0} />
 
           {/* Hero block */}
           <COHeroBlock

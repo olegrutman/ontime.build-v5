@@ -7,6 +7,8 @@ interface COKPIStripProps {
   isTC: boolean;
   isFC: boolean;
   financials: COFinancials;
+  hasMaterials?: boolean;
+  hasEquipment?: boolean;
 }
 
 interface KPITile {
@@ -22,27 +24,35 @@ function fmtCurrency(value: number) {
 }
 
 function getTiles(props: COKPIStripProps): KPITile[] {
-  const { isGC, isTC, isFC, financials } = props;
+  const { isGC, isTC, isFC, financials, hasMaterials = true, hasEquipment = true } = props;
   const totalToApprove = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
 
   if (isGC) {
-    return [
+    const tiles: KPITile[] = [
       { label: 'Labor billed', value: fmtCurrency(financials.tcBillableToGC), color: '#3B82F6' },
-      { label: 'Materials', value: fmtCurrency(financials.materialsTotal), color: '#10B981' },
-      { label: 'Equipment', value: fmtCurrency(financials.equipmentTotal), color: '#8B5CF6' },
-      { label: 'Total to approve', value: fmtCurrency(totalToApprove), color: '#F5A623' },
     ];
+    if (hasMaterials || financials.materialsTotal > 0) {
+      tiles.push({ label: 'Materials', value: fmtCurrency(financials.materialsTotal), color: '#10B981' });
+    }
+    if (hasEquipment || financials.equipmentTotal > 0) {
+      tiles.push({ label: 'Equipment', value: fmtCurrency(financials.equipmentTotal), color: '#8B5CF6' });
+    }
+    tiles.push({ label: 'Total to approve', value: fmtCurrency(totalToApprove), color: '#F5A623' });
+    return tiles;
   }
 
   if (isTC) {
     const tcMat = financials.materialsTotal;
     const tcEq = financials.equipmentTotal;
-    return [
+    const tiles: KPITile[] = [
       { label: 'FC cost', value: fmtCurrency(financials.fcLaborTotal), color: '#F59E0B' },
       { label: 'My billable', value: fmtCurrency(financials.tcBillableToGC), color: '#3B82F6' },
-      { label: 'Mat + Equip', value: fmtCurrency(tcMat + tcEq), color: '#10B981' },
-      { label: 'Total to GC', value: fmtCurrency(financials.grandTotal), color: '#F5A623' },
     ];
+    if (hasMaterials || hasEquipment || tcMat + tcEq > 0) {
+      tiles.push({ label: 'Mat + Equip', value: fmtCurrency(tcMat + tcEq), color: '#10B981' });
+    }
+    tiles.push({ label: 'Total to GC', value: fmtCurrency(financials.grandTotal), color: '#F5A623' });
+    return tiles;
   }
 
   // FC
