@@ -108,7 +108,7 @@ export function DashboardRecentDocs({ docs }: Props) {
         </div>
       ) : isMobile ? (
         <div className="divide-y divide-border">
-          {filtered.map(doc => (
+          {displayed.map(doc => (
             <div
               key={doc.id}
               className={`px-4 py-3 cursor-pointer hover:bg-accent/50 transition-colors ${
