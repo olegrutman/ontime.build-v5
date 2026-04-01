@@ -11,53 +11,32 @@ interface Props {
 export function OverviewContractsSection({ financials, onNavigate }: Props) {
   const { viewerRole, upstreamContract, downstreamContract } = financials;
 
+  const roleAbbrev = (role: string) => {
+    if (role === 'General Contractor') return 'GC';
+    if (role === 'Trade Contractor') return 'TC';
+    if (role === 'Field Crew') return 'FC';
+    return role;
+  };
+
   const rows: { fromName: string; toName: string; fromRole: string; toRole: string; sum: number; retainage: number }[] = [];
 
-  if (viewerRole === 'Trade Contractor') {
-    if (upstreamContract) {
-      rows.push({
-        fromName: upstreamContract.from_org_name || 'General Contractor',
-        toName: upstreamContract.to_org_name || 'Your Company',
-        fromRole: 'GC',
-        toRole: 'TC',
-        sum: upstreamContract.contract_sum,
-        retainage: upstreamContract.retainage_percent,
-      });
-    }
-  }
-
-  if (viewerRole === 'Field Crew') {
-    if (downstreamContract) {
-      rows.push({
-        fromName: downstreamContract.from_org_name || 'Trade Contractor',
-        toName: downstreamContract.to_org_name || 'Your Company',
-        fromRole: 'TC',
-        toRole: 'FC',
-        sum: downstreamContract.contract_sum,
-        retainage: downstreamContract.retainage_percent,
-      });
-    }
-  }
-
-  if (viewerRole === 'General Contractor') {
-    if (upstreamContract) {
-      rows.push({
-        fromName: upstreamContract.from_org_name || 'Your Company',
-        toName: upstreamContract.to_org_name || 'Trade Contractor',
-        fromRole: 'GC',
-        toRole: 'TC',
-        sum: upstreamContract.contract_sum,
-        retainage: upstreamContract.retainage_percent,
-      });
-    }
-  }
-
-  if (viewerRole === 'Trade Contractor' && downstreamContract) {
+  if (upstreamContract) {
     rows.push({
-      fromName: downstreamContract.from_org_name || 'Your Company',
-      toName: downstreamContract.to_org_name || 'Field Crew',
-      fromRole: 'TC',
-      toRole: 'FC',
+      fromName: upstreamContract.from_org_name || upstreamContract.from_role || 'Unknown',
+      toName: upstreamContract.to_org_name || upstreamContract.to_role || 'Unknown',
+      fromRole: roleAbbrev(upstreamContract.from_role),
+      toRole: roleAbbrev(upstreamContract.to_role),
+      sum: upstreamContract.contract_sum,
+      retainage: upstreamContract.retainage_percent,
+    });
+  }
+
+  if (downstreamContract) {
+    rows.push({
+      fromName: downstreamContract.from_org_name || downstreamContract.from_role || 'Unknown',
+      toName: downstreamContract.to_org_name || downstreamContract.to_role || 'Unknown',
+      fromRole: roleAbbrev(downstreamContract.from_role),
+      toRole: roleAbbrev(downstreamContract.to_role),
       sum: downstreamContract.contract_sum,
       retainage: downstreamContract.retainage_percent,
     });
