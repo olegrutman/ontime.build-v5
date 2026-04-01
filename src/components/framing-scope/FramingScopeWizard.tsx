@@ -201,7 +201,7 @@ export function FramingScopeWizard({ projectId, buildingType: propBuildingType =
           </div>
         </div>
 
-        <ScopeSummaryPanel answers={answers} matResp={matResp} compact />
+        <ScopeSummaryPanel answers={answers} matResp={matResp} compact aiSummary={aiSummary} onGenerateSummary={handleGenerateSummary} isGenerating={isGeneratingSummary} />
 
         <div className="flex items-center gap-2">
           <Button
