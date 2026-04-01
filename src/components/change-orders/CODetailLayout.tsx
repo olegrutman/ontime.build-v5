@@ -93,7 +93,7 @@ export function CODetailLayout({ coId, projectId, onClose }: CODetailLayoutProps
     else navigate(`/project/${projectId}/change-orders`);
   }
 
-  const statusActionsRef = useRef<{ triggerAction: (action: string) => void } | null>(null);
+  
 
   function handleHeroAction(action: string) {
     switch (action) {
