@@ -338,9 +338,7 @@ export default function ProjectHome() {
                       <ProjectReadinessCard readiness={readiness} />
                     )}
 
-                    <div className="lg:hidden">
-                      <AttentionBanner projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
-                    </div>
+                    <AttentionBanner projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
 
                     <ProjectOverviewV2
                       projectId={id!}
