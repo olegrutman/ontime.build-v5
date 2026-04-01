@@ -62,9 +62,9 @@ const BUILDING_PROFILE_INDEX = -1;
 /* ── Nav group definitions ─────────────────────────────────────────── */
 const NAV_GROUPS = [
   { label: 'BUILDING', sections: [BUILDING_PROFILE_INDEX] },
-  { label: 'SETUP', sections: [0, 1] },
-  { label: 'SCOPE', sections: [2, 3, 4, 5, 6, 7, 8, 9] },
-  { label: 'SCOPE CLOSEOUT', sections: [10] },
+  { label: 'SETUP', sections: [0, 1, 2] },
+  { label: 'SCOPE', sections: [3, 4, 5, 6, 7, 8, 9, 10] },
+  { label: 'SCOPE CLOSEOUT', sections: [11] },
 ];
 
 const BUILDING_LABELS: Record<string, string> = {
