@@ -28,9 +28,9 @@ interface ProjectOverviewV2Props {
 }
 
 /* ─── Pill tabs ─── */
-const PILLS = ['budget', 'orders', 'field'] as const;
+const PILLS = ['budget', 'actions', 'field'] as const;
 type Pill = typeof PILLS[number];
-const PILL_ICONS: Record<Pill, React.ElementType> = { budget: TrendingUp, orders: Package, field: HardHat };
+const PILL_ICONS: Record<Pill, React.ElementType> = { budget: TrendingUp, actions: Package, field: HardHat };
 
 /* ─── Order filter pills ─── */
 const ORDER_FILTERS = ['all', 'INV', 'PO', 'CO'] as const;
