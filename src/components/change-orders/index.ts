@@ -10,7 +10,7 @@ export { COActivityFeed }    from './COActivityFeed';
 export { HourlyRateSetting } from './HourlyRateSetting';
 export { COBoard }           from './COBoard';
 export { COBoardCard }       from './COBoardCard';
-export { COSlideOver }       from './COSlideOver';
+
 export { CORoleBanner }      from './CORoleBanner';
 export { COHeroBlock }       from './COHeroBlock';
 export { COKPIStrip }        from './COKPIStrip';

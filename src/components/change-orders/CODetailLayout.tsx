@@ -35,7 +35,6 @@ interface CODetailLayoutProps {
   coId: string;
   projectId: string;
   onClose?: () => void;
-  isSlideOver?: boolean;
 }
 
 const STATUS_BADGE: Record<COStatus, string> = {
@@ -49,7 +48,7 @@ const STATUS_BADGE: Record<COStatus, string> = {
   contracted: 'bg-secondary text-secondary-foreground',
 };
 
-export function CODetailLayout({ coId, projectId, onClose, isSlideOver }: CODetailLayoutProps) {
+export function CODetailLayout({ coId, projectId, onClose }: CODetailLayoutProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -265,7 +264,7 @@ export function CODetailLayout({ coId, projectId, onClose, isSlideOver }: CODeta
   );
 
   return (
-    <div className={cn('flex flex-col', isSlideOver ? 'h-full' : 'min-h-screen bg-background')}>
+    <div className="flex flex-col min-h-screen bg-background">
       {/* Topbar */}
       <header className="sticky top-0 z-20 bg-background/95 backdrop-blur border-b border-border">
         <div className="flex items-center justify-between gap-3 px-4 py-2.5">
