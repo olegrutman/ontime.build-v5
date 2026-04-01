@@ -310,6 +310,15 @@ export default function PlatformProjectDetail() {
         { label: project.name },
       ]}
     >
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="mb-6">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="setup" className="flex items-center gap-1">
+            <Settings className="h-3.5 w-3.5" /> Setup Review
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview">
       {/* Summary */}
       <Card className="mb-6">
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
