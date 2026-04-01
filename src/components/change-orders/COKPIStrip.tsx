@@ -7,6 +7,8 @@ interface COKPIStripProps {
   isTC: boolean;
   isFC: boolean;
   financials: COFinancials;
+  hasMaterials?: boolean;
+  hasEquipment?: boolean;
 }
 
 interface KPITile {
