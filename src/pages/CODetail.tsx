@@ -1,13 +1,8 @@
-import { useIsMobile } from '@/hooks/use-mobile';
-import { CODetailPage } from '@/components/change-orders/CODetailPage';
-import { COJobTicket } from '@/components/change-orders/COJobTicket';
+import { useParams } from 'react-router-dom';
+import { CODetailLayout } from '@/components/change-orders/CODetailLayout';
 
 export default function CODetail() {
-  const isMobile = useIsMobile();
-
-  if (isMobile) {
-    return <COJobTicket />;
-  }
-
-  return <CODetailPage />;
+  const { id: projectId, coId } = useParams<{ id: string; coId: string }>();
+  if (!projectId || !coId) return null;
+  return <CODetailLayout coId={coId} projectId={projectId} />;
 }

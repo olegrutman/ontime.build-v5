@@ -9,6 +9,8 @@ import { COWizard } from './wizard/COWizard';
 import { COBoardCard } from './COBoardCard';
 import { FCHomeScreen } from './FCHomeScreen';
 import { useCORoleContext } from '@/hooks/useCORoleContext';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { COSlideOver } from './COSlideOver';
 
 interface COListPageProps {
   projectId: string;
@@ -18,6 +20,7 @@ type FilterKey = 'all' | 'my_action' | 'in_progress' | 'approved_filter';
 
 export function COListPage({ projectId }: COListPageProps) {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { userOrgRoles } = useAuth();
   const { changeOrders, isLoading } = useChangeOrders(projectId);
 
@@ -27,9 +30,14 @@ export function COListPage({ projectId }: COListPageProps) {
 
   const [wizardOpen, setWizardOpen] = useState(false);
   const [filter, setFilter] = useState<FilterKey>('all');
+  const [selectedCoId, setSelectedCoId] = useState<string | null>(null);
 
   function handleCardClick(id: string) {
-    navigate(`/project/${projectId}/change-orders/${id}`);
+    if (isMobile) {
+      navigate(`/project/${projectId}/change-orders/${id}`);
+    } else {
+      setSelectedCoId(id);
+    }
   }
 
   const orgId = userOrgRoles?.[0]?.organization_id ?? null;
@@ -187,6 +195,14 @@ export function COListPage({ projectId }: COListPageProps) {
       )}
 
       <COWizard open={wizardOpen} onOpenChange={setWizardOpen} projectId={projectId} />
+
+      {selectedCoId && !isMobile && (
+        <COSlideOver
+          coId={selectedCoId}
+          projectId={projectId}
+          onClose={() => setSelectedCoId(null)}
+        />
+      )}
     </div>
   );
 }
