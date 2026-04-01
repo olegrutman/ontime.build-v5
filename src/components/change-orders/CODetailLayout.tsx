@@ -49,7 +49,7 @@ const STATUS_BADGE: Record<COStatus, string> = {
   contracted: 'bg-secondary text-secondary-foreground',
 };
 
-export function CODetailLayout({ coId, projectId, onClose }: CODetailLayoutProps) {
+export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
