@@ -9,6 +9,8 @@ import { COWizard } from './wizard/COWizard';
 import { COBoardCard } from './COBoardCard';
 import { FCHomeScreen } from './FCHomeScreen';
 import { useCORoleContext } from '@/hooks/useCORoleContext';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { COSlideOver } from './COSlideOver';
 
 interface COListPageProps {
   projectId: string;
