@@ -93,6 +93,8 @@ export function CODetailLayout({ coId, projectId, onClose }: CODetailLayoutProps
     else navigate(`/project/${projectId}/change-orders`);
   }
 
+  const statusActionsRef = useRef<{ triggerAction: (action: string) => void } | null>(null);
+
   function handleHeroAction(action: string) {
     switch (action) {
       case 'scroll_scope':
@@ -104,13 +106,27 @@ export function CODetailLayout({ coId, projectId, onClose }: CODetailLayoutProps
       case 'scroll_pricing':
         pricingRef.current?.scrollIntoView({ behavior: 'smooth' });
         break;
+      case 'scroll_fc':
+        scopeRef.current?.scrollIntoView({ behavior: 'smooth' });
+        break;
       case 'log_hours':
         setShowHourEntry(true);
         break;
-      default:
-        // Actions like approve, reject, submit, etc. are handled by COStatusActions
-        // For now scroll to top where actions live
+      case 'approve':
+      case 'reject':
+      case 'submit':
+      case 'share':
+      case 'close_for_pricing':
+      case 'request_fc':
+      case 'submit_to_tc':
+      case 'use_fc_base':
+      case 'need_material':
+      case 'saw_damage':
+      case 'budget_impact':
+        // Scroll to sidebar where COStatusActions lives
         window.scrollTo({ top: 0, behavior: 'smooth' });
+        break;
+      default:
         break;
     }
   }
