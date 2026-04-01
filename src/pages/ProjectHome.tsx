@@ -152,11 +152,11 @@ export default function ProjectHome() {
   }, [id, section, navigate]);
 
   const handleTabChange = (tab: string) => {
-    if (tab === 'sov') {
-      navigate(`/project/${id}/sov`);
-      return;
-    }
-    navigate(`/project/${id}/${tab}`);
+    // Support query params like "invoices?highlight=abc" or "purchase-orders?po=abc"
+    const [tabName, query] = tab.split('?');
+    const finalTab = tabName === 'sov' ? 'sov' : tabName;
+    const queryString = query ? `?${query}` : '';
+    navigate(`/project/${id}/${finalTab}${queryString}`);
     setTabResetKey(prev => prev + 1);
   };
 

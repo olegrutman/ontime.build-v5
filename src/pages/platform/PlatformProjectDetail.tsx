@@ -6,12 +6,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SupportActionDialog } from '@/components/platform/SupportActionDialog';
+import { PlatformScopeEditor } from '@/components/platform/PlatformScopeEditor';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupportAction } from '@/hooks/useSupportAction';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
-import { CheckCircle, DollarSign, FileText, ClipboardList, ShoppingCart, Package, Trash2, Wrench, GitBranch } from 'lucide-react';
+import { CheckCircle, DollarSign, FileText, ClipboardList, ShoppingCart, Package, Trash2, Wrench, GitBranch, Settings } from 'lucide-react';
 
 interface ProjectData {
   id: string;
@@ -308,6 +310,15 @@ export default function PlatformProjectDetail() {
         { label: project.name },
       ]}
     >
+      <Tabs defaultValue="overview" className="w-full">
+        <TabsList className="mb-6">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="setup" className="flex items-center gap-1">
+            <Settings className="h-3.5 w-3.5" /> Setup Review
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview">
       {/* Summary */}
       <Card className="mb-6">
         <CardHeader className="pb-3 flex flex-row items-center justify-between">
@@ -937,6 +948,16 @@ export default function PlatformProjectDetail() {
         }}
         loading={actionLoading}
       />
+      </TabsContent>
+
+        <TabsContent value="setup">
+          <PlatformScopeEditor
+            projectId={projectId!}
+            projectStatus={project.status}
+            onRefresh={fetchData}
+          />
+        </TabsContent>
+      </Tabs>
     </PlatformLayout>
   );
 }

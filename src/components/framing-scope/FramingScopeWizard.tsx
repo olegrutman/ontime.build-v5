@@ -8,6 +8,7 @@ import { ScopeDocument } from './ScopeDocument';
 import { BuildingProfileSection } from './sections/BuildingProfileSection';
 import { MethodSection } from './sections/MethodSection';
 import { StructureSection } from './sections/StructureSection';
+import { SteelSection } from './sections/SteelSection';
 import { SheathingSection } from './sections/SheathingSection';
 import { ExteriorSection } from './sections/ExteriorSection';
 import { SidingSection } from './sections/SidingSection';
@@ -43,6 +44,10 @@ function countScope(a: FramingScopeAnswers) {
   check(a.structure.wood_stairs); check(a.structure.elevator_shaft);
   check(a.structure.enclosed_corridors); check(a.structure.balconies);
   check(a.structure.tuck_under_garages);
+  // Steel
+  check(a.steel?.steel_columns); check(a.steel?.steel_beams);
+  check(a.steel?.moment_frames); check(a.steel?.steel_decking);
+  check(a.steel?.fireproofing);
   check(a.sheathing.wall_sheathing_install || (a.sheathing.wall_sheathing_type ? 'yes' : null));
   check(a.sheathing.roof_sheathing); check(a.sheathing.roof_underlayment);
   check(a.exterior.rough_fascia); check(a.exterior.finished_fascia); check(a.exterior.finished_soffit);
@@ -61,9 +66,9 @@ const BUILDING_PROFILE_INDEX = -1;
 /* ── Nav group definitions ─────────────────────────────────────────── */
 const NAV_GROUPS = [
   { label: 'BUILDING', sections: [BUILDING_PROFILE_INDEX] },
-  { label: 'SETUP', sections: [0, 1] },
-  { label: 'SCOPE', sections: [2, 3, 4, 5, 6, 7, 8, 9] },
-  { label: 'SCOPE CLOSEOUT', sections: [10] },
+  { label: 'SETUP', sections: [0, 1, 2] },
+  { label: 'SCOPE', sections: [3, 4, 5, 6, 7, 8, 9, 10] },
+  { label: 'SCOPE CLOSEOUT', sections: [11] },
 ];
 
 const BUILDING_LABELS: Record<string, string> = {
@@ -253,15 +258,16 @@ export function FramingScopeWizard({ projectId, buildingType: propBuildingType =
     switch (activeSectionIndex) {
       case 0: return <MethodSection {...sectionProps} />;
       case 1: return <StructureSection {...sectionProps} />;
-      case 2: return <SheathingSection {...sectionProps} />;
-      case 3: return <ExteriorSection {...sectionProps} />;
-      case 4: return <SidingSection {...sectionProps} />;
-      case 5: return <OpeningsSection {...sectionProps} />;
-      case 6: return <BlockingSection {...sectionProps} />;
-      case 7: return <FireSection {...sectionProps} />;
-      case 8: return <HardwareSection {...sectionProps} />;
-      case 9: return <DryinSection {...sectionProps} />;
-      case 10: return <CleanupSection {...sectionProps} />;
+      case 2: return <SteelSection {...sectionProps} />;
+      case 3: return <SheathingSection {...sectionProps} />;
+      case 4: return <ExteriorSection {...sectionProps} />;
+      case 5: return <SidingSection {...sectionProps} />;
+      case 6: return <OpeningsSection {...sectionProps} />;
+      case 7: return <BlockingSection {...sectionProps} />;
+      case 8: return <FireSection {...sectionProps} />;
+      case 9: return <HardwareSection {...sectionProps} />;
+      case 10: return <DryinSection {...sectionProps} />;
+      case 11: return <CleanupSection {...sectionProps} />;
       default: return null;
     }
   };
