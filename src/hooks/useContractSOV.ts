@@ -1175,6 +1175,11 @@ export function useContractSOV(projectId: string | undefined) {
           : s
       ));
       
+      // Invalidate related queries so PhaseSOV and readiness checks get fresh data
+      queryClient.invalidateQueries({ queryKey: ['project_sovs_lock_check', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project_sovs', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project_readiness', projectId] });
+      
       toast({
         title: lock ? 'SOV Locked' : 'SOV Unlocked',
         description: lock
