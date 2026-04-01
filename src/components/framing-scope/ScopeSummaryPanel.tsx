@@ -56,6 +56,14 @@ export function ScopeSummaryPanel({ answers, matResp, compact }: Props) {
         { text: 'Tuck-under garages', included: yn(a.structure.tuck_under_garages) },
       ]} />
 
+      <SummaryGroup label="STRUCTURAL STEEL" items={[
+        { text: 'Steel columns', included: yn(a.steel?.steel_columns) },
+        { text: 'Steel beams', included: yn(a.steel?.steel_beams) },
+        { text: 'Moment frames', included: yn(a.steel?.moment_frames) },
+        { text: 'Steel decking', included: yn(a.steel?.steel_decking) },
+        { text: 'Fireproofing', included: yn(a.steel?.fireproofing) },
+      ]} />
+
       <SummaryGroup label="EXTERIOR SKIN" items={[
         { text: a.sheathing.wall_sheathing_type || 'Wall sheathing', included: yn(a.sheathing.wall_sheathing_install) || !!a.sheathing.wall_sheathing_type },
         { text: 'Roof sheathing', included: yn(a.sheathing.roof_sheathing) },

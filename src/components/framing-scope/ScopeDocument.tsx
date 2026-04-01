@@ -148,8 +148,24 @@ export function ScopeDocument({ answers, matResp, projectName, buildingType, inc
         <DocLine label="Tuck-under garages" included={yn(a.structure.tuck_under_garages)} badge={yn(a.structure.tuck_under_garages) ? 'INCLUDED' : 'EXCLUDED'} />
       </DocSection>
 
-      {/* Section 3 */}
-      <DocSection title="3. Sheathing & WRB">
+      {/* Section 3 — Structural Steel */}
+      <DocSection title="3. Structural Steel">
+        <DocLine label="Steel columns" detail={yn(a.steel?.steel_columns) && a.steel?.steel_column_type ? a.steel.steel_column_type.replace(/_/g, ' ') : undefined} included={yn(a.steel?.steel_columns)} badge={yn(a.steel?.steel_columns) ? 'INCLUDED' : 'EXCLUDED'} />
+        <DocLine label="Steel beams" detail={yn(a.steel?.steel_beams) && a.steel?.beam_type ? a.steel.beam_type.replace(/_/g, ' ') : undefined} included={yn(a.steel?.steel_beams)} badge={yn(a.steel?.steel_beams) ? 'INCLUDED' : 'EXCLUDED'} />
+        <DocLine label="Steel posts" included={yn(a.steel?.steel_posts)} badge={yn(a.steel?.steel_posts) ? 'INCLUDED' : 'EXCLUDED'} />
+        <DocLine label="Lintels" detail={yn(a.steel?.lintels) && a.steel?.lintel_type ? a.steel.lintel_type.replace(/_/g, ' ') : undefined} included={yn(a.steel?.lintels)} badge={yn(a.steel?.lintels) ? 'INCLUDED' : 'EXCLUDED'} />
+        {yn(a.steel?.moment_frames) && <DocLine label="Moment frames" detail={a.steel?.moment_frame_connections?.replace(/_/g, ' ') || undefined} included badge="INCLUDED" />}
+        {yn(a.steel?.steel_decking) && <DocLine label="Steel decking" detail={a.steel?.decking_gauge || undefined} included badge="INCLUDED" />}
+        {yn(a.steel?.shear_plates) && <DocLine label="Shear / transfer plates" included badge="INCLUDED" />}
+        {yn(a.steel?.embed_plates) && <DocLine label="Embed plates" included badge="INCLUDED" />}
+        {yn(a.steel?.steel_stairs) && <DocLine label="Steel stairs" included badge="INCLUDED" />}
+        {yn(a.steel?.steel_railings) && <DocLine label="Steel railings" included badge="INCLUDED" />}
+        {yn(a.steel?.fireproofing) && <DocLine label="Fireproofing" detail={a.steel?.fireproofing_type?.replace(/_/g, ' ') || undefined} included badge="INCLUDED" />}
+        {yn(a.steel?.touch_up_paint) && <DocLine label="Touch-up paint" included badge="INCLUDED" />}
+      </DocSection>
+
+      {/* Section 4 */}
+      <DocSection title="4. Sheathing & WRB">
         <DocLine
           label={`Wall sheathing${a.sheathing.wall_sheathing_type ? ': ' + a.sheathing.wall_sheathing_type : ''}`}
           detail={matResp === 'LABOR_ONLY' ? 'GC-furnished, contractor-installed' : undefined}
