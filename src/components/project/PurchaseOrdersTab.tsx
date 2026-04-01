@@ -57,6 +57,9 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
   const [editInitialData, setEditInitialData] = useState<Partial<POWizardV2Data> | null>(null);
   const [materialResponsibility, setMaterialResponsibility] = useState<string | null>(null);
   const [poRequiresApproval, setPORequiresApproval] = useState(true);
+  const [emailPromptOpen, setEmailPromptOpen] = useState(false);
+  const [pendingPOForEmail, setPendingPOForEmail] = useState<{ poId: string; poNumber: string; projectId: string } | null>(null);
+  const [emailSending, setEmailSending] = useState(false);
 
   const currentOrgId = userOrgRoles[0]?.organization_id;
   const currentOrgType = userOrgRoles[0]?.organization?.type;
