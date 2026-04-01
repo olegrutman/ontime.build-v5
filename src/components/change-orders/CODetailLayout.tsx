@@ -36,7 +36,6 @@ import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
 interface CODetailLayoutProps {
   coId: string;
   projectId: string;
-  onClose?: () => void;
 }
 
 const STATUS_BADGE: Record<COStatus, string> = {
@@ -50,7 +49,7 @@ const STATUS_BADGE: Record<COStatus, string> = {
   contracted: 'bg-secondary text-secondary-foreground',
 };
 
-export function CODetailLayout({ coId, projectId, onClose }: CODetailLayoutProps) {
+export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -89,8 +88,7 @@ export function CODetailLayout({ coId, projectId, onClose }: CODetailLayoutProps
   }
 
   function handleBack() {
-    if (onClose) onClose();
-    else navigate(`/project/${projectId}/change-orders`);
+    navigate(`/project/${projectId}/change-orders`);
   }
 
   
