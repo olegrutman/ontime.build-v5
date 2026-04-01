@@ -170,7 +170,7 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
         if (fcContract) {
           const hasFCContractSum = fcContract.contract_sum != null && fcContract.contract_sum > 0;
           items.push({ key: 'fc_contract_sum', label: 'Contract sum with FC entered', complete: hasFCContractSum });
-          items.push({ key: 'fc_sov', label: 'SOV for FC contract created', complete: hasSovForContract(fcContract.id) });
+          items.push({ key: 'fc_sov', label: 'SOV for FC contract created & locked', complete: hasLockedSovForContract(fcContract.id) });
         }
 
         items.push({ key: 'material_resp', label: 'Material responsibility selected', complete: hasMaterialResp });
