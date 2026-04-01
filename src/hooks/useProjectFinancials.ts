@@ -374,10 +374,15 @@ export function useProjectFinancials(projectId: string, isSupplier?: boolean, su
       setMaterialMarkupType((primaryC as any)?.material_markup_type ?? null);
       setMaterialMarkupValue((primaryC as any)?.material_markup_value ?? null);
 
-      // Total paid to FC from invoices (TC view)
+      // Total paid to FC from invoices (TC view) — only downstream contract invoices
       if (detectedRole === 'Trade Contractor') {
-        const paidInvoices = allInvoices.filter(i => i.status === 'PAID');
-        setTotalPaidToFC(paidInvoices.reduce((s, i) => s + (i.total_amount || 0), 0));
+        const downstreamIds = new Set(
+          contractsWithNames
+            .filter(c => c.to_org_id && orgIds.includes(c.to_org_id) && c.from_role === 'Field Crew')
+            .map(c => c.id)
+        );
+        const paidDownstream = allInvoices.filter(i => i.status === 'PAID' && i.contract_id && downstreamIds.has(i.contract_id));
+        setTotalPaidToFC(paidDownstream.reduce((s, i) => s + (i.total_amount || 0), 0));
       }
 
       // FC participants

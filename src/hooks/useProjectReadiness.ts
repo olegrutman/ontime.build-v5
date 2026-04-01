@@ -43,7 +43,7 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
       ] = await Promise.all([
         supabase.from('projects').select('status, created_by_org_id, organization_id').eq('id', projectId).single(),
         supabase.from('project_contracts').select('id, contract_sum, material_responsibility, from_org_id, to_org_id, from_role, to_role, status').eq('project_id', projectId),
-        supabase.from('project_sov').select('id, contract_id').eq('project_id', projectId),
+        supabase.from('project_sov').select('id, contract_id, is_locked').eq('project_id', projectId),
         supabase.from('project_participants').select('id, role, invite_status, no_estimate_confirmed, organization_id, organizations:organization_id(name, type)').eq('project_id', projectId),
         supabase.from('supplier_estimates').select('id, supplier_org_id, status').eq('project_id', projectId),
         supabase.from('project_designated_suppliers').select('id, status').eq('project_id', projectId).limit(1),
@@ -99,8 +99,9 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
       const gcContract = contracts.find(c => c.to_role === 'General Contractor' || c.from_role === 'General Contractor');
       const fcContract = contracts.find(c => c.to_role === 'Field Crew' || c.from_role === 'Field Crew');
 
-      // Helper: check SOV exists for a contract
+      // Helper: check SOV exists AND is locked for a contract
       const hasSovForContract = (contractId: string) => sovs.some(s => s.contract_id === contractId);
+      const hasLockedSovForContract = (contractId: string) => sovs.some(s => s.contract_id === contractId && (s as any).is_locked === true);
 
       // Helper: check participant acceptance by role
       const getParticipantsByRole = (role: string) => participants.filter(p => p.role === role);
@@ -163,13 +164,13 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
         if (gcContract) {
           const hasGCContractSum = gcContract.contract_sum != null && gcContract.contract_sum > 0;
           items.push({ key: 'gc_contract_sum', label: 'Contract sum with GC entered', complete: hasGCContractSum });
-          items.push({ key: 'gc_sov', label: 'SOV for GC contract created', complete: hasSovForContract(gcContract.id) });
+          items.push({ key: 'gc_sov', label: 'SOV for GC contract created & locked', complete: hasLockedSovForContract(gcContract.id) });
         }
 
         if (fcContract) {
           const hasFCContractSum = fcContract.contract_sum != null && fcContract.contract_sum > 0;
           items.push({ key: 'fc_contract_sum', label: 'Contract sum with FC entered', complete: hasFCContractSum });
-          items.push({ key: 'fc_sov', label: 'SOV for FC contract created', complete: hasSovForContract(fcContract.id) });
+          items.push({ key: 'fc_sov', label: 'SOV for FC contract created & locked', complete: hasLockedSovForContract(fcContract.id) });
         }
 
         items.push({ key: 'material_resp', label: 'Material responsibility selected', complete: hasMaterialResp });
@@ -228,8 +229,8 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
           });
         }
 
-        const hasSov = sovs.length > 0;
-        items.push({ key: 'sov', label: 'Schedule of Values created', complete: hasSov });
+        const hasLockedSov = sovs.some(s => (s as any).is_locked === true);
+        items.push({ key: 'sov', label: 'Schedule of Values created & locked', complete: hasLockedSov });
 
         items.push({ key: 'material_resp', label: 'Material responsibility selected', complete: hasMaterialResp });
 

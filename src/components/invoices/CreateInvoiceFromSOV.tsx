@@ -361,6 +361,12 @@ export function CreateInvoiceFromSOV({
   const handleSubmit = async () => {
     if (!user || !selectedContract || !selectedSOV) return;
 
+    // Block invoice creation if SOV is not locked
+    if (!selectedSOV.is_locked) {
+      toast.error('SOV must be locked before creating invoices');
+      return;
+    }
+
     if (!hasSelectedItems) {
       toast.error('Please select at least one SOV item to bill');
       return;
