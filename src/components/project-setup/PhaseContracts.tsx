@@ -120,6 +120,11 @@ export function PhaseContracts({ projectId, onComplete, onStepChange }: PhaseCon
     if (!projectId || !user || !creatorRole || !project) return;
     setSaving(true);
     try {
+      // Fetch fresh contracts directly from DB to avoid stale cache issues
+      const { data: freshContracts } = await supabase
+        .from('project_contracts').select('*').eq('project_id', projectId);
+      const currentContracts = freshContracts ?? [];
+
       for (const member of filteredTeam) {
         const valueStr = contracts[member.id];
         if (!valueStr) continue;
@@ -144,7 +149,7 @@ export function PhaseContracts({ projectId, onComplete, onStepChange }: PhaseCon
         }
 
         // Find ALL matching contracts for this team member (may have duplicates)
-        const allMatching = existingContracts.filter(c => {
+        const allMatching = currentContracts.filter(c => {
           if (c.to_project_team_id === member.id) return true;
           const counterpartyOrgId = c.from_org_id === project?.organization_id ? c.to_org_id : c.from_org_id;
           return counterpartyOrgId === member.org_id;
