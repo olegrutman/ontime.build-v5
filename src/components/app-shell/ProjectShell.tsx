@@ -108,7 +108,7 @@ export function ProjectShell({
       <header className="fixed top-0 inset-x-0 z-50 h-[52px] flex items-center justify-between px-3 sm:px-4 bg-card/80 backdrop-blur-xl border-b border-border">
         {/* Left — Logo + Breadcrumbs */}
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <img src="/ontime-logo.png" alt="OnTime" className="w-7 h-7 shrink-0" />
+          <OntimeLogo className="w-7 h-7" />
           <span
             className="text-foreground text-sm font-semibold hidden sm:block shrink-0"
             style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
