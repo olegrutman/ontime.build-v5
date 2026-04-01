@@ -1046,6 +1046,38 @@ export function PODetail({ poId, projectId, onBack, onUpdate, hidePricingOverrid
         }}
       />
 
+      <SupplierEmailPrompt
+        open={emailPromptOpen}
+        onClose={() => setEmailPromptOpen(false)}
+        onSubmit={async (email) => {
+          setEmailSending(true);
+          try {
+            if (po?.project?.id) {
+              await supabase
+                .from('project_designated_suppliers')
+                .update({ po_email: email })
+                .eq('project_id', po.project.id)
+                .neq('status', 'removed');
+            }
+
+            const { error: sendErr } = await supabase.functions.invoke('send-po', {
+              body: { po_id: poId, supplier_email: email },
+            });
+            if (sendErr) throw sendErr;
+
+            toast.success('PO submitted and sent to supplier');
+            fetchPO();
+            onUpdate();
+          } catch (err) {
+            console.error('Error sending PO:', err);
+            toast.error('Failed to send PO');
+          } finally {
+            setEmailSending(false);
+            setEmailPromptOpen(false);
+          }
+        }}
+        isLoading={emailSending}
+      />
     </div>
   );
 }
