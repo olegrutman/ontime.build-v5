@@ -1,0 +1,1 @@
+ALTER TABLE public.project_framing_scope ADD COLUMN IF NOT EXISTS ai_summary text;
