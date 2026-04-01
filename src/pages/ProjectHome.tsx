@@ -139,7 +139,7 @@ export default function ProjectHome() {
   const readiness = useProjectReadiness(id);
   const { data: projectProfile } = useProjectProfile(id);
   const { data: scopeSelections } = useScopeSelections(id);
-  const showSetupBanner = !projectProfile || !scopeSelections || scopeSelections.length === 0;
+  const showSetupBanner = (project?.status === 'setup' || project?.status === 'draft') && (!projectProfile || !scopeSelections || scopeSelections.length === 0);
 
   const changeOrdersEnabled = useFeatureEnabled('change_orders');
 
