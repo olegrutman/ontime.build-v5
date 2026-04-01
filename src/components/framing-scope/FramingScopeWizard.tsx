@@ -120,6 +120,37 @@ export function FramingScopeWizard({ projectId, buildingType: propBuildingType =
     }
   }, [scopeComplete, embedded, completeFired]);
 
+  // Load AI summary from DB when scope is complete
+  useEffect(() => {
+    if (!scopeComplete || !projectId) return;
+    supabase
+      .from('project_framing_scope' as any)
+      .select('ai_summary')
+      .eq('project_id', projectId)
+      .maybeSingle()
+      .then(({ data }) => {
+        if ((data as any)?.ai_summary) setAiSummary((data as any).ai_summary);
+      });
+  }, [scopeComplete, projectId]);
+
+  const handleGenerateSummary = useCallback(async () => {
+    setIsGeneratingSummary(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-framing-scope-summary', {
+        body: { project_id: projectId },
+      });
+      if (error) throw error;
+      if (data?.summary) {
+        setAiSummary(data.summary);
+        toast({ title: 'Summary generated' });
+      }
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message || 'Failed to generate summary', variant: 'destructive' });
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  }, [projectId, toast]);
+
   const buildingType = derivedBuildingType || propBuildingType;
   const matResp = answers.method.material_responsibility;
   const { inc, exc } = useMemo(() => countScope(answers), [answers]);
