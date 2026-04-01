@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useQueryClient } from '@tanstack/react-query';
 
 // Helper: create schedule tasks for a list of newly-created SOV items
 export async function createScheduleItemsFromSOVItems(
@@ -343,6 +344,7 @@ export async function getExistingSOVItems(projectId: string): Promise<{item_name
 
 export function useContractSOV(projectId: string | undefined) {
   const { userOrgRoles, user } = useAuth();
+  const queryClient = useQueryClient();
   const currentOrgId = userOrgRoles[0]?.organization?.id;
   
   const [contracts, setContracts] = useState<ProjectContract[]>([]);
@@ -1173,6 +1175,11 @@ export function useContractSOV(projectId: string | undefined) {
           : s
       ));
       
+      // Invalidate related queries so PhaseSOV and readiness checks get fresh data
+      queryClient.invalidateQueries({ queryKey: ['project_sovs_lock_check', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project_sovs', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project_readiness', projectId] });
+      
       toast({
         title: lock ? 'SOV Locked' : 'SOV Unlocked',
         description: lock
@@ -1188,7 +1195,7 @@ export function useContractSOV(projectId: string | undefined) {
     } finally {
       setSaving(false);
     }
-  }, [sovs, getSOVTotals]);
+  }, [sovs, getSOVTotals, queryClient, projectId]);
 
   // Check if an SOV has billing activity (submitted/approved/paid invoices)
   const hasBillingActivity = useCallback((sovId: string): boolean => {
