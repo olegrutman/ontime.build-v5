@@ -98,7 +98,7 @@ export function COBoardCard({ co, isActive, onClick }: COBoardCardProps) {
       onClick={() => onClick(co.id)}
     >
       <div
-        className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-lg"
+        className="absolute left-0 right-0 top-0 h-[3px] rounded-t-lg"
         style={{ backgroundColor: stripe }}
       />
 

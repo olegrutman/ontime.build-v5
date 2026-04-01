@@ -24,14 +24,12 @@ function getAlertConfig(props: COContextualAlertProps): AlertConfig | null {
   const { co, isGC, isTC, isFC, tcName, fcCollabName, financials, onUseFCBase } = props;
   const status = co.status;
 
-  // FC alerts
   if (isFC) {
     if (['draft', 'shared', 'work_in_progress', 'closed_for_pricing'].includes(status)) {
-      const name = tcName ?? 'TC';
       return {
         bg: 'bg-amber-50 dark:bg-amber-950/30',
         border: 'border-amber-200 dark:border-amber-800',
-        text: `${name} is waiting on your hours to price this CO`,
+        text: `${tcName ?? 'TC'} is waiting on your hours to price this CO`,
       };
     }
     if (status === 'submitted') {
@@ -44,7 +42,6 @@ function getAlertConfig(props: COContextualAlertProps): AlertConfig | null {
     return null;
   }
 
-  // TC alerts
   if (isTC) {
     if (status === 'closed_for_pricing' && financials && financials.fcTotalHours > 0) {
       return {
@@ -71,17 +68,13 @@ function getAlertConfig(props: COContextualAlertProps): AlertConfig | null {
     return null;
   }
 
-  // GC alerts
   if (isGC) {
     if (status === 'submitted') {
-      const submittedAgo = co.submitted_at
-        ? getTimeAgo(co.submitted_at)
-        : '';
-      const name = tcName ?? 'TC';
+      const submittedAgo = co.submitted_at ? getTimeAgo(co.submitted_at) : '';
       return {
         bg: 'bg-primary/8 dark:bg-primary/15',
         border: 'border-primary/30',
-        text: `${name} submitted for approval${submittedAgo ? ` ${submittedAgo}` : ''}`,
+        text: `${tcName ?? 'TC'} submitted for approval${submittedAgo ? ` ${submittedAgo}` : ''}`,
       };
     }
     if (status === 'work_in_progress') {
@@ -111,12 +104,15 @@ export function COContextualAlert(props: COContextualAlertProps) {
   if (!config) return null;
 
   return (
-    <div className={cn('rounded-lg border px-3 py-2.5 text-xs leading-relaxed flex items-center justify-between gap-2', config.bg, config.border)}>
+    <div className={cn(
+      'rounded-full border px-4 py-2 text-xs leading-relaxed flex items-center justify-between gap-2',
+      config.bg, config.border,
+    )}>
       <span>{config.text}</span>
       {config.action && (
         <Button
           size="sm"
-          className="h-7 px-3 text-xs shrink-0"
+          className="h-6 px-3 text-[0.65rem] rounded-full shrink-0"
           onClick={config.action.onClick}
         >
           {config.action.label}

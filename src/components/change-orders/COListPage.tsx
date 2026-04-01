@@ -143,22 +143,23 @@ export function COListPage({ projectId }: COListPageProps) {
 
         {/* Stats row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="co-light-kpi">
-            <p className="co-light-kpi-label">Total CO value</p>
-            <p className="co-light-kpi-value">${stats.totalValue.toLocaleString()}</p>
-          </div>
-          <div className="co-light-kpi">
-            <p className="co-light-kpi-label">Pending approval</p>
-            <p className="co-light-kpi-value">{stats.pendingApproval}</p>
-          </div>
-          <div className="co-light-kpi">
-            <p className="co-light-kpi-label">Awaiting pricing</p>
-            <p className="co-light-kpi-value">{stats.awaitingPricing}</p>
-          </div>
-          <div className="co-light-kpi">
-            <p className="co-light-kpi-label">Approved & billable</p>
-            <p className="co-light-kpi-value">${stats.approvedBillableValue.toLocaleString()}</p>
-          </div>
+          {[
+            { label: 'Total CO value', value: `$${stats.totalValue.toLocaleString()}`, color: '#F5A623' },
+            { label: 'Pending approval', value: String(stats.pendingApproval), color: '#F59E0B' },
+            { label: 'Awaiting pricing', value: String(stats.awaitingPricing), color: '#3B82F6' },
+            { label: 'Approved & billable', value: `$${stats.approvedBillableValue.toLocaleString()}`, color: '#10B981' },
+          ].map(tile => (
+            <div
+              key={tile.label}
+              className="bg-card rounded-lg px-3 py-2.5 border border-border"
+              style={{ borderTopWidth: '3px', borderTopColor: tile.color }}
+            >
+              <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground font-medium">{tile.label}</p>
+              <p className="text-foreground leading-none mt-1" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '1.25rem', fontWeight: 900 }}>
+                {tile.value}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -173,7 +174,7 @@ export function COListPage({ projectId }: COListPageProps) {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
+        <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
           {filteredCOs.map(co => (
             <COBoardCard
               key={co.id}

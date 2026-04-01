@@ -21,6 +21,7 @@ const TAB_ACTIVITY: Record<string, string> = {
   'line-items': 'reviewing scope',
   activity: 'viewing activity',
   details: 'viewing details',
+  detail: 'viewing details',
 };
 
 interface COWhosHereProps {
@@ -67,7 +68,6 @@ export function COWhosHere({ coId, role, activeTab }: COWhosHereProps) {
     };
   }, [coId, user?.id]);
 
-  // Update tracked tab when it changes
   useEffect(() => {
     const ch = channelRef.current;
     if (!ch || !user) return;
@@ -84,7 +84,7 @@ export function COWhosHere({ coId, role, activeTab }: COWhosHereProps) {
   const activityText = activityUser?.activeTab ? TAB_ACTIVITY[activityUser.activeTab] : null;
 
   return (
-    <div className="flex items-center gap-2 px-4 py-2 bg-primary/5 border-b border-border text-xs">
+    <div className="flex items-center gap-2 px-4 py-1.5 text-xs" style={{ background: 'hsl(153 60% 95%)' }}>
       <span className="relative flex h-2 w-2 shrink-0">
         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
         <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
