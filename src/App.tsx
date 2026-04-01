@@ -71,6 +71,7 @@ const PlatformProjects = lazy(() => import("./pages/platform/PlatformProjects"))
 const PlatformProjectDetail = lazy(() => import("./pages/platform/PlatformProjectDetail"));
 const PlatformLogs = lazy(() => import("./pages/platform/PlatformLogs"));
 const PlatformPlans = lazy(() => import("./pages/platform/PlatformPlans"));
+const PlatformSetup = lazy(() => import("./pages/platform/PlatformSetup"));
 
 
 // 4. Route protection wrapper
@@ -206,6 +207,7 @@ function AppRoutes() {
             <Route path="/platform/projects/:projectId" element={<RequirePlatformRole><PlatformProjectDetail /></RequirePlatformRole>} />
             <Route path="/platform/logs" element={<RequirePlatformRole><PlatformLogs /></RequirePlatformRole>} />
             <Route path="/platform/plans" element={<RequirePlatformRole><PlatformPlans /></RequirePlatformRole>} />
+            <Route path="/platform/setup" element={<RequirePlatformRole><PlatformSetup /></RequirePlatformRole>} />
 
             {/* Demo V2 — standalone prototype */}
             <Route path="/demo-v2" element={<DemoV2Dashboard />} />

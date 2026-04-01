@@ -2313,6 +2313,30 @@ export type Database = {
           },
         ]
       }
+      platform_settings: {
+        Row: {
+          id: string
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: Json
+        }
+        Insert: {
+          id?: string
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Update: {
+          id?: string
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: Json
+        }
+        Relationships: []
+      }
       platform_users: {
         Row: {
           created_at: string
@@ -5625,6 +5649,7 @@ export type Database = {
       }
       is_gc_or_tc_pm: { Args: { _user_id: string }; Returns: boolean }
       is_gc_pm: { Args: { _user_id: string }; Returns: boolean }
+      is_platform_staff: { Args: { _user_id: string }; Returns: boolean }
       is_platform_user: { Args: { _user_id: string }; Returns: boolean }
       is_pm_role: { Args: { _user_id: string }; Returns: boolean }
       is_supplier_for_purchase_order: {
