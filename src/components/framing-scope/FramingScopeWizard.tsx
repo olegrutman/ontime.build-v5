@@ -105,9 +105,12 @@ export function FramingScopeWizard({ projectId, buildingType: propBuildingType =
   const [activeSectionIndex, setActiveSectionIndex] = useState(BUILDING_PROFILE_INDEX);
   const [derivedBuildingType, setDerivedBuildingType] = useState<FramingBuildingType | null>(null);
   const [completeFired, setCompleteFired] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
   const isMobile = useIsMobile();
+  const { toast } = useToast();
 
   // Fire onComplete via effect instead of during render
   useEffect(() => {
