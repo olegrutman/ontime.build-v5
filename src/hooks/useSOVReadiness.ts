@@ -47,7 +47,7 @@ export function useSOVReadiness(
           .eq('project_id', projectId),
         supabase
           .from('project_sov')
-          .select('id, contract_id')
+          .select('id, contract_id, is_locked')
           .eq('project_id', projectId),
       ]);
 
