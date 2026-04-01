@@ -435,11 +435,16 @@ export function POWizardV2({
 
       {/* Screen content with entry animation */}
       <div className="flex-1 min-h-0 overflow-y-auto wz-body" key={screen}>
-        {screen === 'header' && (
+        {screen === 'header' && loadingSuppliers && (
+          <div className="flex items-center justify-center h-full py-20">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+        {screen === 'header' && !loadingSuppliers && (
           <HeaderScreen
             data={formData}
             suppliers={suppliers}
-            loadingSuppliers={loadingSuppliers}
+            loadingSuppliers={false}
             onChange={handleChange}
             onNext={handleAdvanceToItems}
             canAdvance={canAdvanceFromHeader}
