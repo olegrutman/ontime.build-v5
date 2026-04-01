@@ -99,8 +99,9 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
       const gcContract = contracts.find(c => c.to_role === 'General Contractor' || c.from_role === 'General Contractor');
       const fcContract = contracts.find(c => c.to_role === 'Field Crew' || c.from_role === 'Field Crew');
 
-      // Helper: check SOV exists for a contract
+      // Helper: check SOV exists AND is locked for a contract
       const hasSovForContract = (contractId: string) => sovs.some(s => s.contract_id === contractId);
+      const hasLockedSovForContract = (contractId: string) => sovs.some(s => s.contract_id === contractId && (s as any).is_locked === true);
 
       // Helper: check participant acceptance by role
       const getParticipantsByRole = (role: string) => participants.filter(p => p.role === role);
