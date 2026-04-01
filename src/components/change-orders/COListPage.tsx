@@ -30,14 +30,8 @@ export function COListPage({ projectId }: COListPageProps) {
 
   const [wizardOpen, setWizardOpen] = useState(false);
   const [filter, setFilter] = useState<FilterKey>('all');
-  const [selectedCoId, setSelectedCoId] = useState<string | null>(null);
-
   function handleCardClick(id: string) {
-    if (isMobile) {
-      navigate(`/project/${projectId}/change-orders/${id}`);
-    } else {
-      setSelectedCoId(id);
-    }
+    navigate(`/project/${projectId}/change-orders/${id}`);
   }
 
   const orgId = userOrgRoles?.[0]?.organization_id ?? null;
