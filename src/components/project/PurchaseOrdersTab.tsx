@@ -415,6 +415,7 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           toast.info(`PO ${poNumber} created. Please provide supplier email to send.`);
           setPendingPOForEmail({ poId: newPO.id, poNumber, projectId: data.project_id });
           setEmailPromptOpen(true);
+        } else {
           const { error: sendError } = await supabase.functions.invoke('send-po', {
             body: { po_id: newPO.id, supplier_email: supplierEmail },
           });
