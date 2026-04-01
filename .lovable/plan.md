@@ -1,54 +1,59 @@
 
 
-# Fix: Contract Label Swaps, Broken Navigation, and Missing SOV Tab
+# AI-Generated Framing Scope Summary
 
-## Issues Found
+## What
+Add an AI-generated plain-English summary paragraph to the completed framing scope view. Instead of just showing checkmarks, the system will call an edge function that reads the framing scope answers and produces a professional, easy-to-read narrative describing what's included and excluded.
 
-| # | Bug | Location |
-|---|-----|----------|
-| 1 | Contract role labels (GC/TC) are swapped — org names show next to wrong role abbreviation | `OverviewContractsSection.tsx` |
-| 2 | `getContractDisplayName()` displays `TO → FROM` instead of `FROM → TO` | `useContractSOV.ts` line 143 |
-| 3 | Clicking contract card navigates to `sov` tab but no content renders (blank page) | `ProjectHome.tsx` — missing `activeTab === 'sov'` block |
-| 4 | SOV tab missing from desktop icon rail sidebar | `ProjectIconRail.tsx` — no SOV entry |
+## Approach
 
-## Root Causes
+### 1. Create new edge function: `generate-framing-scope-summary`
+Follows the same pattern as the existing `generate-scope-description` function:
+- Accepts `project_id`
+- Reads `project_framing_scope.answers` + `projects.name` + `project_profiles` for building type
+- Converts the JSON answers into structured text (method, features, steel, sheathing, siding, openings, blocking, fire, hardware, cleanup)
+- Calls Lovable AI (Gemini 2.5 Flash) with a construction-specific system prompt:
+  - "Write a clear, professional 4-6 sentence scope summary for a framing subcontract. Cover framing method, material responsibility, what structural features are included, exterior skin scope, openings approach, and any notable exclusions. Use plain English a field superintendent would understand. No bullet points."
+- Saves result to `project_framing_scope.ai_summary` (new JSONB column)
+- Returns the summary text
 
-**Labels (Bug 1)**: `OverviewContractsSection` hardcodes `fromRole: 'GC', toRole: 'TC'` regardless of the actual `from_role`/`to_role` values on the contract record. The upstream contract filter in `useProjectFinancials` accepts both `GC→TC` and `TC→GC` orderings, so the contract could have either direction. The fix is to read `from_role`/`to_role` from the contract itself.
+### 2. DB migration
+Add `ai_summary text` column to `project_framing_scope` table.
 
-**Display name (Bug 2)**: `getContractDisplayName` returns `${to} → ${from}` which is backwards.
+### 3. Update `ScopeSummaryPanel.tsx`
+- Add optional `aiSummary` and `onGenerateSummary` props
+- When in compact mode (embedded completed view), show the AI summary paragraph above the checklist grid
+- Add a "Generate Summary" / "Regenerate" button (sparkle icon)
+- Loading state while generating
 
-**Navigation (Bugs 3-4)**: SOV exists as a standalone page (`ProjectSOVPage`) but was never integrated into the `ProjectHome` tab system. No render block exists and it's not in the icon rail.
+### 4. Update `FramingScopeWizard.tsx`
+- In the completed/embedded view (line 154-190), fetch `ai_summary` from the DB row
+- Wire up the generate button to call the edge function
+- Pass `aiSummary` and handler to `ScopeSummaryPanel`
 
-## Fixes
-
-### 1. `OverviewContractsSection.tsx` — Use actual contract roles
-Instead of hardcoding `fromRole: 'GC'`, read from the contract data:
-```tsx
-fromRole: upstreamContract.from_role === 'General Contractor' ? 'GC' : 
-          upstreamContract.from_role === 'Trade Contractor' ? 'TC' : 'FC',
+## Layout (compact completed view)
+```text
+┌─────────────────────────────────────────────────┐
+│ ✓ Framing Scope Complete     11 included  ...   │
+├─────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────┐ │
+│ │ AI Summary                    ✨ Regenerate │ │
+│ │ "This panelized framing subcontract covers  │ │
+│ │  labor-only installation of..."             │ │
+│ └─────────────────────────────────────────────┘ │
+│                                                 │
+│ FRAMING METHOD    BUILDING FEATURES   EXT SKIN  │
+│ ✓ Panelized       ✓ Wood stairs      ✓ Wall... │
+│ ✓ Labor only      ✓ Tuck-under       ✓ Roof... │
+│ ...                                             │
+└─────────────────────────────────────────────────┘
 ```
-Apply the same pattern for all rows.
-
-### 2. `useContractSOV.ts` — Fix display name direction
-Line 143: Change `${to} → ${from}` to `${from} → ${to}`.
-
-### 3. `ProjectHome.tsx` — Add SOV tab rendering
-Add a block for `activeTab === 'sov'`:
-```tsx
-{activeTab === 'sov' && (
-  <ContractSOVEditor projectId={id!} />
-)}
-```
-`ContractSOVEditor` is already imported on line 46.
-
-### 4. `ProjectIconRail.tsx` — Add SOV to sidebar
-Add SOV entry to GROUP_2 (between Setup and Change Orders) with `DollarSign` icon and `featureKey: 'sov_contracts'`.
 
 ## Files Modified
 | File | Change |
 |------|--------|
-| `src/components/project/OverviewContractsSection.tsx` | Read `from_role`/`to_role` from contract data instead of hardcoding |
-| `src/hooks/useContractSOV.ts` | Fix `getContractDisplayName` — swap `${to} → ${from}` to `${from} → ${to}` |
-| `src/pages/ProjectHome.tsx` | Add `activeTab === 'sov'` render block using existing `ContractSOVEditor` |
-| `src/components/project/ProjectIconRail.tsx` | Add SOV item to icon rail GROUP_2 |
+| `supabase/functions/generate-framing-scope-summary/index.ts` | **New** — edge function |
+| DB migration | Add `ai_summary text` to `project_framing_scope` |
+| `src/components/framing-scope/ScopeSummaryPanel.tsx` | Add AI summary display + generate button |
+| `src/components/framing-scope/FramingScopeWizard.tsx` | Wire up AI summary fetch and generation |
 
