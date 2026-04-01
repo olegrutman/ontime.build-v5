@@ -88,8 +88,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
   }
 
   function handleBack() {
-    if (onClose) onClose();
-    else navigate(`/project/${projectId}/change-orders`);
+    navigate(`/project/${projectId}/change-orders`);
   }
 
   
