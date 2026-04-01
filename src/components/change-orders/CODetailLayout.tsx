@@ -35,7 +35,6 @@ interface CODetailLayoutProps {
   coId: string;
   projectId: string;
   onClose?: () => void;
-  isSlideOver?: boolean;
 }
 
 const STATUS_BADGE: Record<COStatus, string> = {
