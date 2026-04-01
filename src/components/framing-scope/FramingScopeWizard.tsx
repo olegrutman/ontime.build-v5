@@ -24,6 +24,8 @@ import { Check, ChevronLeft, ChevronRight, ClipboardList, Loader2, FileText, Pac
 import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Drawer, DrawerContent, DrawerTitle } from '@/components/ui/drawer';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Props {
   projectId: string;
