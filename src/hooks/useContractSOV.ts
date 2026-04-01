@@ -1157,14 +1157,15 @@ export function useContractSOV(projectId: string | undefined) {
     
     setSaving(true);
     try {
-      const { error } = await supabase
+      const { error, count } = await supabase
         .from('project_sov')
         .update({
           is_locked: lock,
           locked_at: lock ? new Date().toISOString() : null,
           locked_by: lock ? (await supabase.auth.getUser()).data.user?.id : null
         })
-        .eq('id', sovId);
+        .eq('id', sovId)
+        .select();
       
       if (error) throw error;
       
