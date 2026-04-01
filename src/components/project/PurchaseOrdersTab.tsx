@@ -883,6 +883,46 @@ export function PurchaseOrdersTab({ projectId, projectName, projectAddress, proj
           hidePricing={hidePricing}
         />
       )}
+
+      <SupplierEmailPrompt
+        open={emailPromptOpen}
+        onClose={() => {
+          setEmailPromptOpen(false);
+          setPendingPOForEmail(null);
+        }}
+        onSubmit={async (email) => {
+          if (!pendingPOForEmail) return;
+          setEmailSending(true);
+          try {
+            // Save email for future POs
+            await supabase
+              .from('project_designated_suppliers')
+              .update({ po_email: email })
+              .eq('project_id', pendingPOForEmail.projectId)
+              .neq('status', 'removed');
+
+            // Send the PO
+            const { error } = await supabase.functions.invoke('send-po', {
+              body: { po_id: pendingPOForEmail.poId, supplier_email: email },
+            });
+
+            if (error) {
+              toast.warning(`PO ${pendingPOForEmail.poNumber} — email send failed.`);
+            } else {
+              toast.success(`PO ${pendingPOForEmail.poNumber} sent to ${email}`);
+            }
+          } catch (err) {
+            console.error('Error sending PO:', err);
+            toast.error('Failed to send PO');
+          } finally {
+            setEmailSending(false);
+            setEmailPromptOpen(false);
+            setPendingPOForEmail(null);
+            fetchPurchaseOrders();
+          }
+        }}
+        isLoading={emailSending}
+      />
     </>
   );
 }
