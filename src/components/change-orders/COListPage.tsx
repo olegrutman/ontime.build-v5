@@ -174,7 +174,7 @@ export function COListPage({ projectId }: COListPageProps) {
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2.5">
+        <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}>
           {filteredCOs.map(co => (
             <COBoardCard
               key={co.id}
