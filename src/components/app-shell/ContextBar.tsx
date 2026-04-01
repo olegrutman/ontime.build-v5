@@ -40,11 +40,8 @@ export function ContextBar({ breadcrumbs, onCommandPalette, showNewButton, onNew
       {/* Left — Logo */}
       <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 min-w-[120px] hover:opacity-80 transition-opacity">
         <OntimeLogo className="w-7 h-7" />
-        <span
-          className="text-foreground text-sm font-semibold hidden sm:block"
-          style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
-        >
-          ONTIME
+        <span className="hidden sm:inline font-heading text-[1.1rem] font-extrabold tracking-[-0.3px] text-foreground leading-none">
+          Ontime<span className="text-primary">.build</span>
         </span>
       </button>
 
