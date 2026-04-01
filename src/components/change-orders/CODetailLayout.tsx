@@ -28,6 +28,8 @@ import { COLineItemRow } from './COLineItemRow';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COActivityFeed } from './COActivityFeed';
+import { COStatusActions } from './COStatusActions';
+import { AddScopeItemButton } from './AddScopeItemButton';
 import { CO_STATUS_LABELS } from '@/types/changeOrder';
 import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
 
