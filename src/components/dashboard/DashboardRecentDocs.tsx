@@ -56,8 +56,10 @@ export function DashboardRecentDocs({ docs }: Props) {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [filter, setFilter] = useState<DocFilter>('all');
+  const [expanded, setExpanded] = useState(false);
 
   const filtered = filter === 'all' ? docs : docs.filter(d => d.type === filter);
+  const displayed = expanded ? filtered : filtered.slice(0, 3);
 
   const handleRowClick = (doc: RecentDoc) => {
     switch (doc.type) {
@@ -106,7 +108,7 @@ export function DashboardRecentDocs({ docs }: Props) {
         </div>
       ) : isMobile ? (
         <div className="divide-y divide-border">
-          {filtered.map(doc => (
+          {displayed.map(doc => (
             <div
               key={doc.id}
               className={`px-4 py-3 cursor-pointer hover:bg-accent/50 transition-colors ${
@@ -146,7 +148,7 @@ export function DashboardRecentDocs({ docs }: Props) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map(doc => (
+            {displayed.map(doc => (
               <tr
                 key={doc.id}
                 className={`border-b border-border cursor-pointer hover:bg-accent/50 transition-colors ${
@@ -177,6 +179,17 @@ export function DashboardRecentDocs({ docs }: Props) {
             ))}
           </tbody>
         </table>
+      )}
+
+      {filtered.length > 3 && (
+        <div className="px-4 py-2 border-t border-border">
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="text-[0.72rem] text-primary hover:underline font-medium w-full text-center"
+          >
+            {expanded ? 'Show less' : `Show all (${filtered.length})`}
+          </button>
+        </div>
       )}
     </div>
   );

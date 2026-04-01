@@ -26,6 +26,8 @@ import type { ProjectStatusFilter } from '@/components/dashboard/StatusMenu';
 import { DashboardBudgetCard } from '@/components/dashboard/DashboardBudgetCard';
 import { DashboardNeedsAttentionCard } from '@/components/dashboard/DashboardNeedsAttentionCard';
 import { RemindersTile } from '@/components/dashboard/RemindersTile';
+import { DashboardTeamCard } from '@/components/dashboard/DashboardTeamCard';
+import { DashboardPartnersCard } from '@/components/dashboard/DashboardPartnersCard';
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -250,13 +252,13 @@ export default function Dashboard() {
 
           {/* Right column */}
           <div className="space-y-2.5">
-            <DashboardActivityFeed docs={recentDocs} />
             <DashboardBudgetCard
               financials={financials}
               billing={{ pendingAmount: orgType === 'GC' ? billing.outstandingToPay : billing.outstandingToCollect }}
               activeProjectName={activeProject?.name || null}
               activeProjectId={activeProject?.id || null}
             />
+            <DashboardActivityFeed docs={recentDocs} />
             <DashboardNeedsAttentionCard
               attentionItems={attentionItems}
               pendingInvites={pendingInvites}
@@ -270,6 +272,8 @@ export default function Dashboard() {
               }}
               onAdd={() => setAddReminderOpen(true)}
             />
+            <DashboardTeamCard />
+            <DashboardPartnersCard />
           </div>
         </div>
       </div>
