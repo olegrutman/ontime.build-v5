@@ -56,8 +56,10 @@ export function DashboardRecentDocs({ docs }: Props) {
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const [filter, setFilter] = useState<DocFilter>('all');
+  const [expanded, setExpanded] = useState(false);
 
   const filtered = filter === 'all' ? docs : docs.filter(d => d.type === filter);
+  const displayed = expanded ? filtered : filtered.slice(0, 3);
 
   const handleRowClick = (doc: RecentDoc) => {
     switch (doc.type) {
