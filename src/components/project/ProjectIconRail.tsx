@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   LayoutDashboard,
-  
   AlertTriangle,
   MessageSquareMore,
   FileText,
@@ -12,6 +11,7 @@ import {
   CalendarDays,
   PenLine,
   Settings2,
+  DollarSign,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useFeatureEnabled } from '@/components/auth/FeatureGate';

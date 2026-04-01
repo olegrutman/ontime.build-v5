@@ -421,6 +421,11 @@ export default function ProjectHome() {
                 <ReturnsTab projectId={id!} />
               </FeatureGate>
             )}
+            {activeTab === 'sov' && (
+              <FeatureGate feature="sov_contracts">
+                <ContractSOVEditor projectId={id!} />
+              </FeatureGate>
+            )}
             {activeTab === 'change-orders' && (
               <FeatureGate feature="change_orders">
                 <COListPage projectId={id!} />
