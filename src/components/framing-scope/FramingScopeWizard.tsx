@@ -8,6 +8,7 @@ import { ScopeDocument } from './ScopeDocument';
 import { BuildingProfileSection } from './sections/BuildingProfileSection';
 import { MethodSection } from './sections/MethodSection';
 import { StructureSection } from './sections/StructureSection';
+import { SteelSection } from './sections/SteelSection';
 import { SheathingSection } from './sections/SheathingSection';
 import { ExteriorSection } from './sections/ExteriorSection';
 import { SidingSection } from './sections/SidingSection';
