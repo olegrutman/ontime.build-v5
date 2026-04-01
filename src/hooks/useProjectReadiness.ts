@@ -229,8 +229,8 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
           });
         }
 
-        const hasSov = sovs.length > 0;
-        items.push({ key: 'sov', label: 'Schedule of Values created', complete: hasSov });
+        const hasLockedSov = sovs.some(s => (s as any).is_locked === true);
+        items.push({ key: 'sov', label: 'Schedule of Values created & locked', complete: hasLockedSov });
 
         items.push({ key: 'material_resp', label: 'Material responsibility selected', complete: hasMaterialResp });
 
