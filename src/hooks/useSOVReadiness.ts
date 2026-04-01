@@ -96,20 +96,22 @@ export function useSOVReadiness(
       };
     }
 
-    // Check which contracts have SOVs (only need to exist, not be locked)
-    const contractsWithSOVs = new Set(sovs.map(s => s.contract_id).filter(Boolean));
-    const contractsWithoutSOVs = primaryContracts.filter(c => !contractsWithSOVs.has(c.id));
-    const pendingContracts = contractsWithoutSOVs.length;
+    // Check which contracts have LOCKED SOVs
+    const contractsWithLockedSOVs = new Set(
+      sovs.filter(s => (s as any).is_locked === true).map(s => s.contract_id).filter(Boolean)
+    );
+    const contractsWithoutLockedSOVs = primaryContracts.filter(c => !contractsWithLockedSOVs.has(c.id));
+    const pendingContracts = contractsWithoutLockedSOVs.length;
 
-    // Ready if all primary contracts have SOVs created
+    // Ready if all primary contracts have locked SOVs
     const isReady = pendingContracts === 0;
 
     // Generate message
     let message = '';
     if (isReady) {
-      message = 'All SOVs are created.';
+      message = 'All SOVs are locked and ready.';
     } else {
-      message = `Create SOVs for ${pendingContracts} contract${pendingContracts > 1 ? 's' : ''} before creating work orders.`;
+      message = `Lock SOVs for ${pendingContracts} contract${pendingContracts > 1 ? 's' : ''} before creating invoices.`;
     }
 
     return {
