@@ -207,6 +207,7 @@ function AppRoutes() {
             <Route path="/platform/projects/:projectId" element={<RequirePlatformRole><PlatformProjectDetail /></RequirePlatformRole>} />
             <Route path="/platform/logs" element={<RequirePlatformRole><PlatformLogs /></RequirePlatformRole>} />
             <Route path="/platform/plans" element={<RequirePlatformRole><PlatformPlans /></RequirePlatformRole>} />
+            <Route path="/platform/setup" element={<RequirePlatformRole><PlatformSetup /></RequirePlatformRole>} />
 
             {/* Demo V2 — standalone prototype */}
             <Route path="/demo-v2" element={<DemoV2Dashboard />} />
