@@ -254,15 +254,16 @@ export function FramingScopeWizard({ projectId, buildingType: propBuildingType =
     switch (activeSectionIndex) {
       case 0: return <MethodSection {...sectionProps} />;
       case 1: return <StructureSection {...sectionProps} />;
-      case 2: return <SheathingSection {...sectionProps} />;
-      case 3: return <ExteriorSection {...sectionProps} />;
-      case 4: return <SidingSection {...sectionProps} />;
-      case 5: return <OpeningsSection {...sectionProps} />;
-      case 6: return <BlockingSection {...sectionProps} />;
-      case 7: return <FireSection {...sectionProps} />;
-      case 8: return <HardwareSection {...sectionProps} />;
-      case 9: return <DryinSection {...sectionProps} />;
-      case 10: return <CleanupSection {...sectionProps} />;
+      case 2: return <SteelSection {...sectionProps} />;
+      case 3: return <SheathingSection {...sectionProps} />;
+      case 4: return <ExteriorSection {...sectionProps} />;
+      case 5: return <SidingSection {...sectionProps} />;
+      case 6: return <OpeningsSection {...sectionProps} />;
+      case 7: return <BlockingSection {...sectionProps} />;
+      case 8: return <FireSection {...sectionProps} />;
+      case 9: return <HardwareSection {...sectionProps} />;
+      case 10: return <DryinSection {...sectionProps} />;
+      case 11: return <CleanupSection {...sectionProps} />;
       default: return null;
     }
   };

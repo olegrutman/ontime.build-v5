@@ -228,8 +228,8 @@ export function ProjectOverviewV2({
           </div>
         )}
 
-        {/* ─── Orders Tab ─── */}
-        {activePill === 'orders' && (
+        {/* ─── Actions Tab ─── */}
+        {activePill === 'actions' && (
           <div className="space-y-2">
             {/* Filter pills */}
             <div className="flex gap-1">
@@ -248,7 +248,7 @@ export function ProjectOverviewV2({
             </div>
 
             {orderItems.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-6 text-center">No orders to display</p>
+              <p className="text-xs text-muted-foreground py-6 text-center">No actions to display</p>
             ) : (
               orderItems.map((item, i) => (
                 <button
@@ -256,15 +256,13 @@ export function ProjectOverviewV2({
                   className="w-full text-left bg-card border border-border rounded-lg overflow-hidden hover:bg-accent/30 transition-colors animate-fade-in"
                   style={{ animationDelay: `${i * 50}ms` }}
                   onClick={() => {
-                    setSheet({
-                      open: true,
-                      title: item.label,
-                      amount: fmt(item.amount),
-                      meta: [
-                        { label: 'Status', value: item.status },
-                        { label: 'Date', value: new Date(item.date).toLocaleDateString() },
-                      ],
-                    });
+                    if (item.type === 'INV') {
+                      onNavigate(`invoices?highlight=${item.id}`);
+                    } else if (item.type === 'PO') {
+                      onNavigate(`purchase-orders?po=${item.id}`);
+                    } else if (item.type === 'CO') {
+                      onNavigate(`change-orders?co=${item.id}`);
+                    }
                   }}
                 >
                   <div className="flex">
