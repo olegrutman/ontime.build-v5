@@ -169,10 +169,21 @@ export function CODetailLayout({ coId, projectId, onClose }: CODetailLayoutProps
     <>
       {/* Scope & Labor */}
       <div ref={scopeRef} className="bg-card border border-border rounded-lg overflow-hidden">
-        <div className="px-3.5 py-3 border-b border-border">
+        <div className="px-3.5 py-3 border-b border-border flex items-center justify-between">
           <h3 className="text-[0.7rem] uppercase tracking-[0.04em] font-semibold text-muted-foreground" style={DT.heading}>
             📋 Scope & Labor
           </h3>
+          {canEdit && !nteBlocked && co && (
+            <AddScopeItemButton
+              coId={co.id}
+              orgId={myOrgId}
+              projectId={projectId}
+              role={role}
+              co={co}
+              collaborators={collaborators}
+              onAdded={refreshDetail}
+            />
+          )}
         </div>
         <div>
           {lineItems.length === 0 ? (
