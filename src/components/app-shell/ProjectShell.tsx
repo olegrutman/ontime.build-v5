@@ -109,11 +109,8 @@ export function ProjectShell({
         {/* Left — Logo + Breadcrumbs */}
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <OntimeLogo className="w-7 h-7" />
-          <span
-            className="text-foreground text-sm font-semibold hidden sm:block shrink-0"
-            style={{ fontFamily: "'Barlow Condensed', sans-serif" }}
-          >
-            ONTIME
+          <span className="hidden sm:inline font-heading text-[1.1rem] font-extrabold tracking-[-0.3px] text-foreground leading-none shrink-0">
+            Ontime<span className="text-primary">.build</span>
           </span>
 
           {/* Breadcrumbs */}
