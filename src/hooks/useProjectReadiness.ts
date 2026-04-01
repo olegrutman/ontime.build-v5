@@ -164,7 +164,7 @@ export function useProjectReadiness(projectId: string | undefined): ProjectReadi
         if (gcContract) {
           const hasGCContractSum = gcContract.contract_sum != null && gcContract.contract_sum > 0;
           items.push({ key: 'gc_contract_sum', label: 'Contract sum with GC entered', complete: hasGCContractSum });
-          items.push({ key: 'gc_sov', label: 'SOV for GC contract created', complete: hasSovForContract(gcContract.id) });
+          items.push({ key: 'gc_sov', label: 'SOV for GC contract created & locked', complete: hasLockedSovForContract(gcContract.id) });
         }
 
         if (fcContract) {
