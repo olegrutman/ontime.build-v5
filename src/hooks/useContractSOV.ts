@@ -344,6 +344,7 @@ export async function getExistingSOVItems(projectId: string): Promise<{item_name
 
 export function useContractSOV(projectId: string | undefined) {
   const { userOrgRoles, user } = useAuth();
+  const queryClient = useQueryClient();
   const currentOrgId = userOrgRoles[0]?.organization?.id;
   
   const [contracts, setContracts] = useState<ProjectContract[]>([]);
