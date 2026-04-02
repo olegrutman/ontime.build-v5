@@ -1,25 +1,40 @@
 
 
-# Fix: Make Data Manager Tables Readable
+# Make Data Manager Full Width
 
 ## Problem
-All text in the data table cells is truncated — inputs are too narrow and columns are cramped, making it impossible to read values like "Foundation" or "Exterior sheathing."
+The Data Manager is inside a `max-w-3xl` container (768px), cramming wide tables into a narrow column. The settings cards above it are fine at that width, but data tables need the full page width.
 
-## Fix
+## Changes
 
-### 1. `DataTableShell.tsx` — Add horizontal scroll wrapper
-Wrap the table in an `overflow-x-auto` container with `min-w-[900px]` on the table so columns get enough room and the user can scroll horizontally if needed.
+### `src/pages/platform/PlatformSetup.tsx`
+Move `<PlatformDataManager />` **outside** the `max-w-3xl` wrapper so it stretches to the full content area width.
 
-### 2. `EditableCell.tsx` — Widen inputs
-Change default input className from `h-8 text-xs` to `h-8 text-xs min-w-[120px]` for text inputs and `h-8 text-xs min-w-[80px]` for number inputs. This prevents columns from collapsing to near-zero width.
+```
+Before:
+<div className="space-y-6 max-w-3xl">
+  {/* General card */}
+  {/* Defaults card */}
+  {/* Branding card */}
+  <PlatformDataManager />    ← trapped in narrow container
+</div>
 
-### 3. `ScopeSectionsTable.tsx` — Give Description column more room
-Pass `className="h-8 text-xs min-w-[200px]"` to the Description cell's `EditableCell` so longer descriptions are visible.
+After:
+<div className="space-y-6">
+  <div className="max-w-3xl space-y-6">
+    {/* General card */}
+    {/* Defaults card */}
+    {/* Branding card */}
+  </div>
+  <PlatformDataManager />    ← full width
+</div>
+```
 
-### Files Modified
+### `src/components/platform/data-tables/DataTableShell.tsx`
+Remove the `min-w-[900px]` on the table — with full width available, the table should use natural column sizing and only scroll if truly needed on smaller screens.
+
 | File | Change |
 |------|--------|
-| `DataTableShell.tsx` | Add `overflow-x-auto` wrapper, `min-w` on table |
-| `EditableCell.tsx` | Add `min-w` defaults for text vs number inputs |
-| `ScopeSectionsTable.tsx` | Wider Description cell |
+| `PlatformSetup.tsx` | Restructure wrapper so Data Manager is outside `max-w-3xl` |
+| `DataTableShell.tsx` | Remove forced `min-w-[900px]`, keep `overflow-x-auto` as fallback |
 
