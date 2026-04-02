@@ -160,7 +160,7 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
         )}
       </div>
 
-      <QuickLogWizard
+      <COWizard
         open={wizardOpen}
         onOpenChange={setWizardOpen}
         projectId={projectId}
