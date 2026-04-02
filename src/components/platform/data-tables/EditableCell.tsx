@@ -35,9 +35,11 @@ export function EditableCell({ value, type, options, onChange, className }: Edit
     );
   }
 
+  const defaultClass = type === 'number' ? 'h-8 text-xs min-w-[80px]' : 'h-8 text-xs min-w-[120px]';
+
   return (
     <Input
-      className={className ?? 'h-8 text-xs'}
+      className={className ?? defaultClass}
       type={type === 'number' ? 'number' : 'text'}
       value={local ?? ''}
       onChange={(e) => setLocal(type === 'number' ? Number(e.target.value) : e.target.value)}

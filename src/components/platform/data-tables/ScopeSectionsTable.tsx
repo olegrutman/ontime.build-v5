@@ -22,7 +22,7 @@ export function ScopeSectionsTable() {
           <TableCell><EditableCell value={row.display_order} type="number" onChange={(v) => updateRow.mutate({ id: row.id, changes: { display_order: v } })} /></TableCell>
           <TableCell><EditableCell value={row.always_visible} type="boolean" onChange={(v) => updateRow.mutate({ id: row.id, changes: { always_visible: v } })} /></TableCell>
           <TableCell><EditableCell value={row.required_feature} type="text" onChange={(v) => updateRow.mutate({ id: row.id, changes: { required_feature: v || null } })} /></TableCell>
-          <TableCell><EditableCell value={row.description} type="text" onChange={(v) => updateRow.mutate({ id: row.id, changes: { description: v || null } })} /></TableCell>
+          <TableCell><EditableCell value={row.description} type="text" className="h-8 text-xs min-w-[200px]" onChange={(v) => updateRow.mutate({ id: row.id, changes: { description: v || null } })} /></TableCell>
           <TableCell><RowActions onDelete={() => deleteRow.mutate(row.id)} /></TableCell>
         </TableRow>
       ))}
