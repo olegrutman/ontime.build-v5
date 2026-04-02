@@ -14,7 +14,6 @@ interface COKPIStripProps {
 interface KPITile {
   label: string;
   value: string;
-  sub?: string;
   color: string;
 }
 
@@ -29,7 +28,7 @@ function getTiles(props: COKPIStripProps): KPITile[] {
 
   if (isGC) {
     const tiles: KPITile[] = [
-      { label: 'Labor billed', value: fmtCurrency(financials.tcBillableToGC), color: '#3B82F6' },
+      { label: 'Labor billed', value: fmtCurrency(financials.tcBillableToGC), color: 'hsl(var(--primary))' },
     ];
     if (hasMaterials || financials.materialsTotal > 0) {
       tiles.push({ label: 'Materials', value: fmtCurrency(financials.materialsTotal), color: '#10B981' });
@@ -42,23 +41,21 @@ function getTiles(props: COKPIStripProps): KPITile[] {
   }
 
   if (isTC) {
-    const tcMat = financials.materialsTotal;
-    const tcEq = financials.equipmentTotal;
-    const tiles: KPITile[] = [
+    return [
       { label: 'FC cost', value: fmtCurrency(financials.fcLaborTotal), color: '#F59E0B' },
-      { label: 'My billable', value: fmtCurrency(financials.tcBillableToGC), color: '#3B82F6' },
+      { label: 'My billable', value: fmtCurrency(financials.tcBillableToGC), color: 'hsl(var(--primary))' },
+      { label: 'Mat + Equip', value: fmtCurrency(financials.materialsTotal + financials.equipmentTotal), color: '#10B981' },
+      { label: 'Total to GC', value: fmtCurrency(financials.grandTotal), color: '#F5A623' },
     ];
-    if (hasMaterials || hasEquipment || tcMat + tcEq > 0) {
-      tiles.push({ label: 'Mat + Equip', value: fmtCurrency(tcMat + tcEq), color: '#10B981' });
-    }
-    tiles.push({ label: 'Total to GC', value: fmtCurrency(financials.grandTotal), color: '#F5A623' });
-    return tiles;
   }
 
   // FC
+  const fcMargin = financials.fcLaborTotal - financials.actualCostTotal;
   return [
-    { label: 'My hours logged', value: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hrs` : '—', color: '#F5A623' },
-    { label: 'Status', value: props.co.status === 'submitted' ? 'Submitted' : 'Active', color: '#3B82F6' },
+    { label: 'Hours logged', value: financials.fcTotalHours > 0 ? `${financials.fcTotalHours} hrs` : '—', color: '#F5A623' },
+    { label: 'Billed to TC', value: fmtCurrency(financials.fcLaborTotal), color: 'hsl(var(--primary))' },
+    { label: 'Actual cost', value: financials.actualCostTotal > 0 ? fmtCurrency(financials.actualCostTotal) : '—', color: '#EF4444' },
+    { label: 'Margin', value: financials.actualCostTotal > 0 ? fmtCurrency(fcMargin) : '—', color: fcMargin >= 0 ? '#10B981' : '#EF4444' },
   ];
 }
 
@@ -82,9 +79,6 @@ export function COKPIStrip(props: COKPIStripProps) {
           >
             {tile.value}
           </p>
-          {tile.sub && (
-            <p className="text-[0.55rem] text-muted-foreground mt-0.5">{tile.sub}</p>
-          )}
         </div>
       ))}
     </div>
