@@ -288,7 +288,7 @@ export interface NewCOEquipmentItem {
 
 export type COCollaboratorType = 'FC';
 
-export type COCollaboratorStatus = 'active' | 'completed' | 'removed';
+export type COCollaboratorStatus = 'invited' | 'active' | 'completed' | 'rejected' | 'removed';
 
 export interface COCollaborator {
   id: string;

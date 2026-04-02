@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ChevronDown, ChevronUp, Plus, EyeOff } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ChevronDown, ChevronUp, Plus, EyeOff, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { LaborEntryForm } from './LaborEntryForm';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import type { COLineItem, COLaborEntry, COCreatedByRole, COReasonCode } from '@/types/changeOrder';
@@ -27,19 +30,9 @@ function fmt(n: number) {
 }
 
 export function COLineItemRow({
-  item,
-  laborEntries,
-  role,
-  isGC,
-  isTC,
-  isFC,
-  coId,
-  orgId,
-  pricingType,
-  nteCap,
-  nteUsed = 0,
-  canAddLabor,
-  onRefresh,
+  item, laborEntries, role, isGC, isTC, isFC,
+  coId, orgId, pricingType, nteCap, nteUsed = 0,
+  canAddLabor, onRefresh,
 }: COLineItemRowProps) {
   const [expanded, setExpanded] = useState(false);
   const [showLaborForm, setShowLaborForm] = useState(false);
@@ -61,6 +54,66 @@ export function COLineItemRow({
   const hasEntries = visibleBillable.length > 0 || tcDownstreamCosts.length > 0;
 
   const enteredByRole = isFC ? 'FC' as const : 'TC' as const;
+  const showGCApproval = isGC && (pricingType === 'tm' || pricingType === 'nte');
+
+  async function handleGCApproval(entryId: string, approved: boolean) {
+    try {
+      const { error } = await supabase
+        .from('co_labor_entries')
+        .update({
+          gc_approved: approved,
+          gc_approved_at: approved ? new Date().toISOString() : null,
+        })
+        .eq('id', entryId);
+      if (error) throw error;
+      onRefresh();
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to update approval');
+    }
+  }
+
+  function renderEntry(entry: COLaborEntry, showApproval: boolean, muted = false) {
+    const gcApproved = (entry as any).gc_approved;
+    return (
+      <div key={entry.id} className={cn(
+        'flex items-center justify-between text-xs rounded px-2.5 py-1.5',
+        muted ? 'bg-muted/10' : 'bg-muted/20',
+      )}>
+        <div className="flex items-center gap-1.5 min-w-0">
+          {showApproval && (
+            <Checkbox
+              checked={!!gcApproved}
+              onCheckedChange={(checked) => handleGCApproval(entry.id, !!checked)}
+              className="h-3.5 w-3.5"
+            />
+          )}
+          {!showApproval && (isTC || isFC) && gcApproved !== undefined && (
+            <span className={cn(
+              'shrink-0',
+              gcApproved ? 'text-emerald-500' : 'text-muted-foreground/40',
+            )}>
+              <CheckCircle className="h-3 w-3" />
+            </span>
+          )}
+          <span className="inline-flex items-center rounded px-1 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground">
+            {entry.entered_by_role}
+          </span>
+          <span className={cn('truncate', muted ? 'text-muted-foreground' : 'text-muted-foreground')}>
+            {entry.entry_date} ·{' '}
+            {entry.pricing_mode === 'lump_sum'
+              ? 'lump sum'
+              : `${entry.hours ?? 0} hrs${
+                  !isGC && entry.hourly_rate ? ` @ $${entry.hourly_rate}/hr` : ''
+                }`}
+            {entry.description ? ` · ${entry.description}` : ''}
+          </span>
+        </div>
+        <span className={cn('font-medium shrink-0 ml-2', muted ? 'text-muted-foreground' : 'text-foreground')}>
+          ${fmt(entry.line_total ?? 0)}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div className="border-b border-border last:border-b-0">
@@ -80,7 +133,10 @@ export function COLineItemRow({
             {item.reason && (
               <span
                 className="inline-block px-1.5 py-0 rounded text-[10px] font-semibold"
-                style={{ backgroundColor: CO_REASON_COLORS[item.reason as COReasonCode].bg, color: CO_REASON_COLORS[item.reason as COReasonCode].text }}
+                style={{
+                  backgroundColor: CO_REASON_COLORS[item.reason as COReasonCode]?.bg,
+                  color: CO_REASON_COLORS[item.reason as COReasonCode]?.text,
+                }}
               >
                 {CO_REASON_LABELS[item.reason as COReasonCode]}
               </span>
@@ -91,26 +147,24 @@ export function COLineItemRow({
           )}
           {item.location_tag && (
             <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
-              <span className="inline-block w-2.5 h-2.5">📍</span>
-              {item.location_tag}
+              📍 {item.location_tag}
             </p>
           )}
           {!expanded && hasEntries && (
             <p className="text-[10px] text-muted-foreground mt-0.5">
-              {visibleBillable.length + tcDownstreamCosts.length} entr{visibleBillable.length + tcDownstreamCosts.length === 1 ? 'y' : 'ies'}
+              {visibleBillable.length + tcDownstreamCosts.length} entr{(visibleBillable.length + tcDownstreamCosts.length) === 1 ? 'y' : 'ies'}
+              {showGCApproval && (() => {
+                const approved = visibleBillable.filter(e => (e as any).gc_approved).length;
+                return approved > 0 ? ` · ${approved} approved` : '';
+              })()}
             </p>
           )}
         </div>
-
         <div className="flex items-center gap-2 shrink-0">
           {totalForRole > 0 && (
-            <span className="text-sm font-medium text-foreground">
-              ${fmt(totalForRole)}
-            </span>
+            <span className="text-sm font-medium text-foreground">${fmt(totalForRole)}</span>
           )}
-          {expanded
-            ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
-            : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
         </div>
       </button>
 
@@ -120,72 +174,31 @@ export function COLineItemRow({
             <p className="text-xs text-muted-foreground py-1">No labor entries yet</p>
           )}
 
-          {visibleBillable.map(entry => (
-            <div key={entry.id} className="flex items-center justify-between text-xs bg-muted/20 rounded px-2.5 py-1.5">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className="inline-flex items-center rounded px-1 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground">
-                  {entry.entered_by_role}
-                </span>
-                <span className="text-muted-foreground truncate">
-                  {entry.entry_date} ·{' '}
-                  {entry.pricing_mode === 'lump_sum'
-                    ? 'lump sum'
-                    : `${entry.hours ?? 0} hrs${
-                        !isGC && entry.hourly_rate
-                          ? ` @ $${entry.hourly_rate}/hr`
-                          : ''
-                      }`}
-                  {entry.description ? ` · ${entry.description}` : ''}
-                </span>
-              </div>
-              <span className="font-medium text-foreground shrink-0 ml-2">
-                ${fmt(entry.line_total ?? 0)}
-              </span>
-            </div>
-          ))}
+          {visibleBillable.map(entry => renderEntry(entry, showGCApproval))}
 
+          {/* TC sees FC downstream costs */}
           {isTC && tcDownstreamCosts.length > 0 && (
             <div className="mt-2 space-y-1 border-t border-border pt-2">
               <div className="flex items-center justify-between text-xs font-medium px-2.5">
                 <span className="text-muted-foreground">FC cost to TC</span>
                 <span className="text-muted-foreground">${fmt(fcTotal)}</span>
               </div>
-              {tcDownstreamCosts.map(entry => (
-                <div key={entry.id} className="flex items-center justify-between text-xs bg-muted/10 rounded px-2.5 py-1.5">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="inline-flex items-center rounded px-1 py-0.5 text-[10px] font-medium bg-muted text-muted-foreground">
-                      {entry.entered_by_role}
-                    </span>
-                    <span className="text-muted-foreground truncate">
-                      {entry.entry_date} ·{' '}
-                      {entry.pricing_mode === 'lump_sum'
-                        ? 'lump sum'
-                        : `${entry.hours ?? 0} hrs${entry.hourly_rate ? ` @ $${entry.hourly_rate}/hr` : ''}`}
-                      {entry.description ? ` · ${entry.description}` : ''}
-                    </span>
-                  </div>
-                  <span className="font-medium text-muted-foreground shrink-0 ml-2">
-                    ${fmt(entry.line_total ?? 0)}
-                  </span>
-                </div>
-              ))}
+              {tcDownstreamCosts.map(entry => renderEntry(entry, false, true))}
             </div>
           )}
 
+          {/* FC actual costs */}
           {isFC && actualCosts.length > 0 && (
             <div className="mt-2 space-y-1 border-t border-border pt-2">
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <EyeOff className="h-3 w-3" />
-                Actual costs — private
+                <EyeOff className="h-3 w-3" /> Actual costs — private
               </div>
               {actualCosts.map(entry => (
                 <div key={entry.id} className="flex items-center justify-between text-xs px-2.5 py-1">
                   <span className="text-muted-foreground truncate">
                     {entry.entry_date} · {entry.description ?? 'Cost entry'}
                   </span>
-                  <span className="font-medium text-foreground shrink-0 ml-2">
-                    ${fmt(entry.line_total ?? 0)}
-                  </span>
+                  <span className="font-medium text-foreground shrink-0 ml-2">${fmt(entry.line_total ?? 0)}</span>
                 </div>
               ))}
               <div className="flex items-center justify-between text-xs font-medium px-2.5">
@@ -195,17 +208,28 @@ export function COLineItemRow({
               {fcTotal > 0 && actualTotal > 0 && (
                 <div className="flex items-center justify-between text-xs px-2.5">
                   <span className="text-muted-foreground">Margin</span>
-                  <span className={cn(
-                    'font-medium',
-                    fcTotal - actualTotal > 0 ? 'co-light-success-text' : 'text-destructive'
-                  )}>
-                    ${fmt(fcTotal - actualTotal)}{' '}
-                    ({fcTotal > 0
-                      ? (((fcTotal - actualTotal) / fcTotal) * 100).toFixed(1)
-                      : '0.0'}%)
+                  <span className={cn('font-medium', fcTotal - actualTotal > 0 ? 'text-emerald-600' : 'text-destructive')}>
+                    ${fmt(fcTotal - actualTotal)} ({((fcTotal - actualTotal) / fcTotal * 100).toFixed(1)}%)
                   </span>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* TC actual costs */}
+          {isTC && actualCosts.length > 0 && (
+            <div className="mt-2 space-y-1 border-t border-border pt-2">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <EyeOff className="h-3 w-3" /> Actual costs — private
+              </div>
+              {actualCosts.map(entry => (
+                <div key={entry.id} className="flex items-center justify-between text-xs px-2.5 py-1">
+                  <span className="text-muted-foreground truncate">
+                    {entry.entry_date} · {entry.description ?? 'Cost entry'}
+                  </span>
+                  <span className="font-medium text-foreground shrink-0 ml-2">${fmt(entry.line_total ?? 0)}</span>
+                </div>
+              ))}
             </div>
           )}
 
@@ -220,7 +244,7 @@ export function COLineItemRow({
                 <Plus className="h-3 w-3" />
                 {pricingType === 'fixed' ? 'Add pricing' : 'Log hours'}
               </Button>
-              {isFC && (
+              {(isFC || isTC) && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -242,12 +266,11 @@ export function COLineItemRow({
                 orgId={orgId}
                 enteredByRole={enteredByRole}
                 pricingType={pricingType}
+                isTC={isTC}
+                isFC={isFC}
                 nteCap={nteCap}
                 nteUsed={nteUsed}
-                onSaved={() => {
-                  setShowLaborForm(false);
-                  onRefresh();
-                }}
+                onSaved={() => { setShowLaborForm(false); onRefresh(); }}
                 onCancel={() => setShowLaborForm(false)}
               />
             </div>
@@ -261,11 +284,10 @@ export function COLineItemRow({
                 orgId={orgId}
                 enteredByRole={enteredByRole}
                 pricingType={pricingType}
+                isTC={isTC}
+                isFC={isFC}
                 isActualCost
-                onSaved={() => {
-                  setShowActualForm(false);
-                  onRefresh();
-                }}
+                onSaved={() => { setShowActualForm(false); onRefresh(); }}
                 onCancel={() => setShowActualForm(false)}
               />
             </div>

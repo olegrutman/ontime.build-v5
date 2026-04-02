@@ -4,6 +4,9 @@ import { CONTEPanel } from './CONTEPanel';
 import { FCPricingToggleCard } from './FCPricingToggleCard';
 import { FCInputRequestCard } from './FCInputRequestCard';
 import { COStatusActions } from './COStatusActions';
+import { COBudgetTracker } from './COBudgetTracker';
+import { COProfitabilityCard } from './COProfitabilityCard';
+import { COSOVPanel } from './COSOVPanel';
 import type { ChangeOrder, COFinancials, COCollaborator, COFCOrgOption, COCreatedByRole } from '@/types/changeOrder';
 import type { UseMutationResult } from '@tanstack/react-query';
 import type { CONTELogEntry } from '@/types/changeOrder';
@@ -68,18 +71,22 @@ export function COSidebar(props: COSidebarProps) {
     onRefresh,
   } = props;
 
+  const totalApprovedSpend = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
+
   return (
     <div className="space-y-3">
+      {/* GC Budget Tracker */}
+      <COBudgetTracker
+        gcBudget={(co as any).gc_budget ?? null}
+        totalApprovedSpend={totalApprovedSpend}
+        isGC={isGC}
+      />
+
       {/* Actions */}
       <COStatusActions
-        co={co}
-        isGC={isGC}
-        isTC={isTC}
-        isFC={isFC}
-        currentOrgId={myOrgId}
-        projectId={projectId}
-        financials={financials}
-        collaborators={collaborators}
+        co={co} isGC={isGC} isTC={isTC} isFC={isFC}
+        currentOrgId={myOrgId} projectId={projectId}
+        financials={financials} collaborators={collaborators}
         onRefresh={onRefresh}
       />
 
@@ -93,7 +100,7 @@ export function COSidebar(props: COSidebarProps) {
               {(co.materials_needed || financials.materialsTotal > 0) && <FinRow label="Materials" value={financials.materialsTotal} />}
               {(co.equipment_needed || financials.equipmentTotal > 0) && <FinRow label="Equipment" value={financials.equipmentTotal} />}
               <div className="border-t border-border mx-3.5 pt-1.5 mt-1.5">
-                <FinRow label="Total billed" value={financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal} bold />
+                <FinRow label="Total billed" value={totalApprovedSpend} bold />
               </div>
             </>
           )}
@@ -119,25 +126,24 @@ export function COSidebar(props: COSidebarProps) {
         </div>
       </div>
 
+      {/* Profitability — TC and FC only */}
+      <COProfitabilityCard isTC={isTC} isFC={isFC} financials={financials} />
+
+      {/* SOV Panel — GC and TC */}
+      <COSOVPanel coId={co.id} isGC={isGC} isTC={isTC} isFC={isFC} myOrgId={myOrgId} />
+
       {/* FC Pricing Toggle */}
       {isTC && collaborators.length > 0 && (
         <FCPricingToggleCard
-          co={co}
-          financials={financials}
-          myOrgId={myOrgId}
-          onRefresh={onRefresh}
-          fcCollabName={fcCollabName}
-          gcSideName="GC"
+          co={co} financials={financials} myOrgId={myOrgId}
+          onRefresh={onRefresh} fcCollabName={fcCollabName} gcSideName="GC"
         />
       )}
 
       {/* FC Input */}
       <FCInputRequestCard
-        canRequest={canRequestFCInput}
-        canComplete={canCompleteFCInput}
-        options={fcOrgOptions}
-        collaborators={collaborators}
-        acting={false}
+        canRequest={canRequestFCInput} canComplete={canCompleteFCInput}
+        options={fcOrgOptions} collaborators={collaborators} acting={false}
         onRequest={async (orgId) => { await requestFCInput.mutateAsync(orgId); onRefresh(); }}
         onComplete={async () => { await completeFCInput.mutateAsync(); onRefresh(); }}
       />
@@ -145,12 +151,8 @@ export function COSidebar(props: COSidebarProps) {
       {/* NTE */}
       {co.pricing_type === 'nte' && co.nte_cap && (
         <CONTEPanel
-          co={co}
-          nteLog={nteLog}
-          usedAmount={financials.laborTotal}
-          isGC={isGC}
-          isTC={isTC}
-          isFC={isFC}
+          co={co} nteLog={nteLog} usedAmount={financials.laborTotal}
+          isGC={isGC} isTC={isTC} isFC={isFC}
           requestNTEIncrease={requestNTEIncrease}
           approveNTEIncrease={approveNTEIncrease}
           rejectNTEIncrease={rejectNTEIncrease}

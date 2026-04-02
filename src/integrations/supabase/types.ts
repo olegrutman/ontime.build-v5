@@ -195,6 +195,7 @@ export type Database = {
       }
       change_order_collaborators: {
         Row: {
+          accepted_at: string | null
           co_id: string
           collaborator_type: string
           completed_at: string | null
@@ -203,10 +204,12 @@ export type Database = {
           id: string
           invited_by_user_id: string
           organization_id: string
+          rejected_at: string | null
           status: string
           updated_at: string
         }
         Insert: {
+          accepted_at?: string | null
           co_id: string
           collaborator_type?: string
           completed_at?: string | null
@@ -215,10 +218,12 @@ export type Database = {
           id?: string
           invited_by_user_id: string
           organization_id: string
+          rejected_at?: string | null
           status?: string
           updated_at?: string
         }
         Update: {
+          accepted_at?: string | null
           co_id?: string
           collaborator_type?: string
           completed_at?: string | null
@@ -227,6 +232,7 @@ export type Database = {
           id?: string
           invited_by_user_id?: string
           organization_id?: string
+          rejected_at?: string | null
           status?: string
           updated_at?: string
         }
@@ -266,6 +272,8 @@ export type Database = {
           approved_at: string | null
           assigned_to_org_id: string | null
           closed_for_pricing_at: string | null
+          co_equipment_responsible_override: string | null
+          co_material_responsible_override: string | null
           co_number: string | null
           combined_at: string | null
           combined_co_id: string | null
@@ -280,6 +288,7 @@ export type Database = {
           equipment_responsible: string | null
           fc_input_needed: boolean
           fc_pricing_submitted_at: string | null
+          gc_budget: number | null
           id: string
           location_tag: string | null
           materials_needed: boolean
@@ -310,6 +319,8 @@ export type Database = {
           approved_at?: string | null
           assigned_to_org_id?: string | null
           closed_for_pricing_at?: string | null
+          co_equipment_responsible_override?: string | null
+          co_material_responsible_override?: string | null
           co_number?: string | null
           combined_at?: string | null
           combined_co_id?: string | null
@@ -324,6 +335,7 @@ export type Database = {
           equipment_responsible?: string | null
           fc_input_needed?: boolean
           fc_pricing_submitted_at?: string | null
+          gc_budget?: number | null
           id?: string
           location_tag?: string | null
           materials_needed?: boolean
@@ -354,6 +366,8 @@ export type Database = {
           approved_at?: string | null
           assigned_to_org_id?: string | null
           closed_for_pricing_at?: string | null
+          co_equipment_responsible_override?: string | null
+          co_material_responsible_override?: string | null
           co_number?: string | null
           combined_at?: string | null
           combined_co_id?: string | null
@@ -368,6 +382,7 @@ export type Database = {
           equipment_responsible?: string | null
           fc_input_needed?: boolean
           fc_pricing_submitted_at?: string | null
+          gc_budget?: number | null
           id?: string
           location_tag?: string | null
           materials_needed?: boolean
@@ -602,6 +617,8 @@ export type Database = {
           description: string | null
           entered_by_role: string
           entry_date: string
+          gc_approved: boolean
+          gc_approved_at: string | null
           hourly_rate: number | null
           hours: number | null
           id: string
@@ -619,6 +636,8 @@ export type Database = {
           description?: string | null
           entered_by_role: string
           entry_date?: string
+          gc_approved?: boolean
+          gc_approved_at?: string | null
           hourly_rate?: number | null
           hours?: number | null
           id?: string
@@ -636,6 +655,8 @@ export type Database = {
           description?: string | null
           entered_by_role?: string
           entry_date?: string
+          gc_approved?: boolean
+          gc_approved_at?: string | null
           hourly_rate?: number | null
           hours?: number | null
           id?: string
@@ -884,6 +905,57 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      co_sov_items: {
+        Row: {
+          amount: number
+          approved_at: string | null
+          co_id: string
+          created_at: string
+          id: string
+          invoice_id: string | null
+          line_item_name: string
+          org_id: string
+          status: string
+        }
+        Insert: {
+          amount?: number
+          approved_at?: string | null
+          co_id: string
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          line_item_name: string
+          org_id: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          approved_at?: string | null
+          co_id?: string
+          created_at?: string
+          id?: string
+          invoice_id?: string | null
+          line_item_name?: string
+          org_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_sov_items_co_id_fkey"
+            columns: ["co_id"]
+            isOneToOne: false
+            referencedRelation: "change_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "co_sov_items_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -5413,6 +5485,7 @@ export type Database = {
       complete_fc_change_order_input: {
         Args: { _co_id: string }
         Returns: {
+          accepted_at: string | null
           co_id: string
           collaborator_type: string
           completed_at: string | null
@@ -5421,6 +5494,7 @@ export type Database = {
           id: string
           invited_by_user_id: string
           organization_id: string
+          rejected_at: string | null
           status: string
           updated_at: string
         }
@@ -5509,6 +5583,8 @@ export type Database = {
           approved_at: string | null
           assigned_to_org_id: string | null
           closed_for_pricing_at: string | null
+          co_equipment_responsible_override: string | null
+          co_material_responsible_override: string | null
           co_number: string | null
           combined_at: string | null
           combined_co_id: string | null
@@ -5523,6 +5599,7 @@ export type Database = {
           equipment_responsible: string | null
           fc_input_needed: boolean
           fc_pricing_submitted_at: string | null
+          gc_budget: number | null
           id: string
           location_tag: string | null
           materials_needed: boolean
@@ -5694,6 +5771,7 @@ export type Database = {
       request_fc_change_order_input: {
         Args: { _co_id: string; _fc_org_id: string }
         Returns: {
+          accepted_at: string | null
           co_id: string
           collaborator_type: string
           completed_at: string | null
@@ -5702,6 +5780,7 @@ export type Database = {
           id: string
           invited_by_user_id: string
           organization_id: string
+          rejected_at: string | null
           status: string
           updated_at: string
         }
