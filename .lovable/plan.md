@@ -1,62 +1,81 @@
 
 
-# Platform Setup Page — System-Wide Settings
+# Platform Data Manager — Edit Setup Questions & Lists
 
-## What This Is
+## What It Is
+A new "Data Manager" section on the `/platform/setup` page that gives platform owners full CRUD control over the 6 reference tables that drive project setup. Currently these are read-only seed data with no UI to manage them.
 
-A new `/platform/setup` page accessible from the platform sidebar. It gives platform owners a single place to manage system-wide defaults that apply across all organizations and projects — things like default plan assignment, platform branding, email settings, and global toggles.
+## Tables Managed
 
-Currently none of these settings exist in the codebase, so this page will introduce a new `platform_settings` table and a UI to read/write key-value pairs.
+| Tab Label | Table | Key Columns | Row Count |
+|-----------|-------|-------------|-----------|
+| Project Types | `project_types` | name, slug, flags, defaults | 7 |
+| Scope Sections | `scope_sections` | slug, label, display_order, required_feature | 17 |
+| Scope Items | `scope_items` | label, section_id, item_type, default_on, display_order, filters | 134 |
+| Contract Categories | `contract_scope_categories` | slug, label, display_order | 13 |
+| Trades | `trades` | name + any other columns | 15 |
+| SOV Templates | `sov_templates` | template_key + columns | 6 |
 
-## Database
+## Database Changes (Migration)
 
-**New table: `platform_settings`**
-- `id` (uuid, PK)
-- `key` (text, unique) — e.g. `default_plan_id`, `platform_name`, `support_email`, `require_email_verification`, `allow_public_signup`, `maintenance_mode`
-- `value` (jsonb) — stores the setting value (string, boolean, number, etc.)
-- `updated_at` (timestamptz)
-- `updated_by` (uuid, references auth.users)
+Add INSERT, UPDATE, DELETE RLS policies on all 6 tables, gated by `is_platform_staff(auth.uid())`. The existing SELECT policies remain unchanged.
 
-RLS: Only platform users with PLATFORM_OWNER or PLATFORM_ADMIN role can read/write.
+```sql
+-- Example pattern for each table:
+CREATE POLICY "Platform staff can insert" ON public.scope_items
+  FOR INSERT TO authenticated WITH CHECK (public.is_platform_staff(auth.uid()));
+CREATE POLICY "Platform staff can update" ON public.scope_items
+  FOR UPDATE TO authenticated USING (public.is_platform_staff(auth.uid()));
+CREATE POLICY "Platform staff can delete" ON public.scope_items
+  FOR DELETE TO authenticated USING (public.is_platform_staff(auth.uid()));
+```
+
+Repeat for all 6 tables.
 
 ## New Files
 
 | File | Purpose |
 |------|---------|
-| `src/pages/platform/PlatformSetup.tsx` | Page component with grouped settings cards |
-| `src/hooks/usePlatformSettings.ts` | React Query hooks to fetch/upsert platform_settings |
+| `src/components/platform/PlatformDataManager.tsx` | Tabbed container with 6 tabs |
+| `src/components/platform/data-tables/ProjectTypesTable.tsx` | Editable table for project_types |
+| `src/components/platform/data-tables/ScopeSectionsTable.tsx` | Editable table for scope_sections |
+| `src/components/platform/data-tables/ScopeItemsTable.tsx` | Editable table with section filter dropdown |
+| `src/components/platform/data-tables/ContractCategoriesTable.tsx` | Editable table for contract_scope_categories |
+| `src/components/platform/data-tables/TradesTable.tsx` | Editable table for trades |
+| `src/components/platform/data-tables/SOVTemplatesTable.tsx` | Editable table for sov_templates |
+| `src/hooks/usePlatformDataTables.ts` | Generic CRUD hooks for platform reference tables |
 
-## Settings Groups (UI Cards)
+## UI Design
 
-**General**
-- Platform Name (text input)
-- Support Email (text input)
-- Maintenance Mode (toggle) — shows banner to all users when on
+Each tab renders:
+1. **Header row** — table name, description, "Add Row" button
+2. **Data grid** — one row per record, inline-editable cells:
+   - Text fields: click to edit
+   - Booleans: toggle switches
+   - Arrays (like `excluded_project_types`): multi-select chips
+   - `display_order`: drag handle or up/down arrows
+   - Foreign keys (like `section_id` on scope_items): dropdown selector showing parent label
+3. **Row actions** — Save (per-row) and Delete (with confirmation dialog)
+4. **Section filter** on Scope Items tab — dropdown to filter by parent scope_section
 
-**Defaults**
-- Default Subscription Plan (dropdown from existing plans)
-- Auto-confirm Email Signups (toggle)
-- Allow Public Signup (toggle)
-
-**Branding**
-- Primary Color (color picker or hex input)
-- Logo URL (text input)
-
-Each card has an inline "Save" button that upserts the changed keys.
-
-## Wiring
-
-- Add route `/platform/setup` in `App.tsx` wrapped in `RequirePlatformRole`
-- Add nav item `{ to: '/platform/setup', icon: Settings, label: 'Setup' }` to `PlatformSidebar.tsx` NAV_ITEMS (before Support Logs)
-- Page uses `PlatformLayout` with breadcrumbs like all other platform pages
-
-## Files Modified
+## Modified Files
 
 | File | Change |
 |------|--------|
-| `src/App.tsx` | Add `/platform/setup` route |
-| `src/components/platform/PlatformSidebar.tsx` | Add Setup nav item |
-| `src/pages/platform/PlatformSetup.tsx` | New page |
-| `src/hooks/usePlatformSettings.ts` | New hooks |
-| Migration | Create `platform_settings` table with RLS |
+| `src/pages/platform/PlatformSetup.tsx` | Add `<PlatformDataManager />` below existing settings cards |
+| Migration SQL | Add write RLS policies on 6 tables |
+
+## How the CRUD Hook Works
+
+A single generic hook pattern:
+```typescript
+function usePlatformTable<T>(tableName: string) {
+  // useQuery: SELECT * ORDER BY display_order/name
+  // useInsert: INSERT with defaults
+  // useUpdate: UPDATE by id
+  // useDelete: DELETE by id (with FK safety check)
+}
+```
+
+Each table component calls this hook with its table name and renders the appropriate columns.
 
