@@ -10,6 +10,7 @@ import { Loader2, Globe, Palette, Settings2 } from 'lucide-react';
 import { usePlatformSettings, useUpsertPlatformSetting } from '@/hooks/usePlatformSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { PlatformDataManager } from '@/components/platform/PlatformDataManager';
 
 function usePlans() {
   return useQuery({
@@ -233,6 +234,9 @@ export default function PlatformSetup() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Data Manager */}
+        <PlatformDataManager />
       </div>
     </PlatformLayout>
   );
