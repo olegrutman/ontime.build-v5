@@ -13,6 +13,7 @@ import { useChangeOrderDetail } from '@/hooks/useChangeOrderDetail';
 import { useCORealtime } from '@/hooks/useCORealtime';
 import { useProjectFCOrgs } from '@/hooks/useProjectFCOrgs';
 import { useCORoleContext } from '@/hooks/useCORoleContext';
+import { useCOResponsibility } from '@/hooks/useCOResponsibility';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -28,7 +29,8 @@ import { COLineItemRow } from './COLineItemRow';
 import { COMaterialsPanel } from './COMaterialsPanel';
 import { COEquipmentPanel } from './COEquipmentPanel';
 import { COActivityFeed } from './COActivityFeed';
-import { COStatusActions } from './COStatusActions';
+import { COAcceptBanner } from './COAcceptBanner';
+import { COTeamCard } from './COTeamCard';
 import { AddScopeItemButton } from './AddScopeItemButton';
 import { CO_STATUS_LABELS } from '@/types/changeOrder';
 import type { COStatus, COFCOrgOption } from '@/types/changeOrder';
@@ -78,6 +80,13 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     pricingType, collaboratorOrgIds, currentCollaborator, fcCollabName,
   } = useCORoleContext(co ?? null, collaborators, financials);
 
+  const responsibility = useCOResponsibility(
+    co?.id,
+    projectId,
+    (co as any)?.co_material_responsible_override,
+    (co as any)?.co_equipment_responsible_override,
+  );
+
   const fcOrgOptions: COFCOrgOption[] = projectFCOrgs.filter(
     o => !collaboratorOrgIds.has(o.id) || o.id === currentCollaborator?.organization_id
   );
@@ -91,41 +100,14 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     navigate(`/project/${projectId}/change-orders`);
   }
 
-  
-
   function handleHeroAction(action: string) {
     switch (action) {
-      case 'scroll_scope':
-        scopeRef.current?.scrollIntoView({ behavior: 'smooth' });
-        break;
-      case 'scroll_materials':
-        materialsRef.current?.scrollIntoView({ behavior: 'smooth' });
-        break;
-      case 'scroll_pricing':
-        pricingRef.current?.scrollIntoView({ behavior: 'smooth' });
-        break;
-      case 'scroll_fc':
-        scopeRef.current?.scrollIntoView({ behavior: 'smooth' });
-        break;
-      case 'log_hours':
-        setShowHourEntry(true);
-        break;
-      case 'approve':
-      case 'reject':
-      case 'submit':
-      case 'share':
-      case 'close_for_pricing':
-      case 'request_fc':
-      case 'submit_to_tc':
-      case 'use_fc_base':
-      case 'need_material':
-      case 'saw_damage':
-      case 'budget_impact':
-        // Scroll to sidebar where COStatusActions lives
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-        break;
-      default:
-        break;
+      case 'scroll_scope': scopeRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
+      case 'scroll_materials': materialsRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
+      case 'scroll_pricing': pricingRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
+      case 'scroll_fc': scopeRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
+      case 'log_hours': setShowHourEntry(true); break;
+      default: window.scrollTo({ top: 0, behavior: 'smooth' }); break;
     }
   }
 
@@ -134,21 +116,15 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
     setSendingComment(true);
     try {
       await supabase.from('co_activity').insert({
-        co_id: co.id,
-        project_id: projectId,
-        actor_user_id: user.id,
-        actor_role: role,
-        action: 'comment',
-        detail: comment.trim(),
+        co_id: co.id, project_id: projectId,
+        actor_user_id: user.id, actor_role: role,
+        action: 'comment', detail: comment.trim(),
       });
       setComment('');
       toast.success('Comment added');
       refreshDetail();
-    } catch {
-      toast.error('Failed to add comment');
-    } finally {
-      setSendingComment(false);
-    }
+    } catch { toast.error('Failed to add comment'); }
+    finally { setSendingComment(false); }
   }
 
   if (isLoading || !co) {
@@ -165,6 +141,9 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
   const mainContent = (
     <>
+      {/* Team Card */}
+      <COTeamCard co={co} collaborators={collaborators} />
+
       {/* Scope & Labor */}
       <div ref={scopeRef} className="bg-card border border-border rounded-lg overflow-hidden">
         <div className="px-3.5 py-3 border-b border-border flex items-center justify-between">
@@ -173,13 +152,8 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           </h3>
           {canEdit && !nteBlocked && co && (
             <AddScopeItemButton
-              coId={co.id}
-              orgId={myOrgId}
-              projectId={projectId}
-              role={role}
-              co={co}
-              collaborators={collaborators}
-              onAdded={refreshDetail}
+              coId={co.id} orgId={myOrgId} projectId={projectId}
+              role={role} co={co} collaborators={collaborators} onAdded={refreshDetail}
             />
           )}
         </div>
@@ -189,18 +163,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           ) : (
             lineItems.map(item => (
               <COLineItemRow
-                key={item.id}
-                item={item}
+                key={item.id} item={item}
                 laborEntries={laborEntries.filter(e => e.co_line_item_id === item.id)}
-                role={role}
-                isGC={isGC}
-                isTC={isTC}
-                isFC={isFC}
-                coId={co.id}
-                orgId={myOrgId}
-                pricingType={pricingType}
-                nteCap={co.nte_cap}
-                nteUsed={financials.laborTotal}
+                role={role} isGC={isGC} isTC={isTC} isFC={isFC}
+                coId={co.id} orgId={myOrgId} pricingType={pricingType}
+                nteCap={co.nte_cap} nteUsed={financials.laborTotal}
                 canAddLabor={canEdit && (isTC || isFC) && !nteBlocked}
                 onRefresh={refreshDetail}
               />
@@ -213,18 +180,12 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       {(co.materials_needed || materials.length > 0) && (
         <div ref={materialsRef}>
           <COMaterialsPanel
-            coId={co.id}
-            orgId={myOrgId}
-            projectId={projectId}
-            coTitle={displayTitle}
-            materials={materials}
-            isTC={isTC}
-            isGC={isGC}
-            isFC={isFC}
+            coId={co.id} orgId={myOrgId} projectId={projectId}
+            coTitle={displayTitle} materials={materials}
+            isTC={isTC} isGC={isGC} isFC={isFC}
             materialsOnSite={co.materials_on_site}
             materialsResponsible={co.materials_responsible}
-            canEdit={canEdit}
-            onRefresh={refreshDetail}
+            canEdit={canEdit} onRefresh={refreshDetail}
           />
         </div>
       )}
@@ -232,15 +193,10 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       {/* Equipment */}
       {(co.equipment_needed || equipment.length > 0) && (
         <COEquipmentPanel
-          coId={co.id}
-          orgId={myOrgId}
-          equipment={equipment}
-          isTC={isTC}
-          isGC={isGC}
-          isFC={isFC}
+          coId={co.id} orgId={myOrgId} equipment={equipment}
+          isTC={isTC} isGC={isGC} isFC={isFC}
           equipmentResponsible={co.equipment_responsible}
-          canEdit={canEdit}
-          onRefresh={refreshDetail}
+          canEdit={canEdit} onRefresh={refreshDetail}
         />
       )}
 
@@ -254,7 +210,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
         <div className="px-3.5 py-2">
           <COActivityFeed activity={activity} />
         </div>
-        {/* Comment bar */}
         <div className="border-t border-border px-3.5 py-3">
           <div className="flex items-center gap-2">
             <span className={cn(
@@ -264,24 +219,11 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               {role.charAt(0)}
             </span>
             <Textarea
-              value={comment}
-              onChange={e => setComment(e.target.value)}
-              placeholder="Add a note…"
-              className="min-h-[36px] h-9 resize-none text-sm flex-1"
-              rows={1}
-              onKeyDown={e => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendComment();
-                }
-              }}
+              value={comment} onChange={e => setComment(e.target.value)}
+              placeholder="Add a note…" className="min-h-[36px] h-9 resize-none text-sm flex-1" rows={1}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendComment(); } }}
             />
-            <Button
-              size="sm"
-              disabled={!comment.trim() || sendingComment}
-              onClick={handleSendComment}
-              className="h-9"
-            >
+            <Button size="sm" disabled={!comment.trim() || sendingComment} onClick={handleSendComment} className="h-9">
               <Send className="h-3 w-3" />
             </Button>
           </div>
@@ -289,6 +231,15 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       </div>
     </>
   );
+
+  const sidebarProps = {
+    co, isGC, isTC, isFC, role, myOrgId, projectId,
+    financials, collaborators, fcOrgOptions, fcCollabName,
+    canEdit, canRequestFCInput, canCompleteFCInput,
+    nteLog, requestFCInput, completeFCInput,
+    requestNTEIncrease, approveNTEIncrease, rejectNTEIncrease,
+    onRefresh: refreshDetail,
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -304,13 +255,16 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
               <span className="font-medium text-foreground">{co.co_number ?? displayTitle}</span>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Badge variant="outline" className={cn('text-[11px]', STATUS_BADGE[status])}>
-              {CO_STATUS_LABELS[status]}
-            </Badge>
-          </div>
+          <Badge variant="outline" className={cn('text-[11px]', STATUS_BADGE[status])}>
+            {CO_STATUS_LABELS[status]}
+          </Badge>
         </div>
       </header>
+
+      {/* Accept Banner */}
+      <div className="max-w-6xl mx-auto w-full px-4 pt-2">
+        <COAcceptBanner co={co} projectId={projectId} myOrgId={myOrgId} collaborators={collaborators} onRefresh={refreshDetail} />
+      </div>
 
       {/* Who's Here */}
       <COWhosHere coId={coId} role={role} activeTab="detail" />
@@ -318,122 +272,35 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       {/* Scrollable body */}
       <div className="flex-1 overflow-y-auto pb-24 md:pb-4">
         <div className="max-w-6xl mx-auto px-4 py-4 space-y-4">
-          {/* Header strip */}
           <COHeaderStrip co={co} role={role} myOrgName={myOrgName} />
-
-          {/* KPI strip */}
           <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0} hasEquipment={co.equipment_needed || equipment.length > 0} />
+          <COHeroBlock co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} fcCollabName={fcCollabName} onAction={handleHeroAction} />
 
-          {/* Hero block */}
-          <COHeroBlock
-            co={co}
-            isGC={isGC}
-            isTC={isTC}
-            isFC={isFC}
-            financials={financials}
-            fcCollabName={fcCollabName}
-            onAction={handleHeroAction}
-          />
-
-          {/* FC Hour Entry (inline, shown when hero "Log hours" tapped) */}
           {isFC && showHourEntry && firstLineItem && canEdit && !nteBlocked && (
             <COHourEntryInline
-              coId={co.id}
-              lineItemId={firstLineItem.id}
-              orgId={myOrgId}
-              pricingType={pricingType}
-              nteCap={co.nte_cap}
-              nteUsed={financials.laborTotal}
+              coId={co.id} lineItemId={firstLineItem.id} orgId={myOrgId}
+              pricingType={pricingType} nteCap={co.nte_cap} nteUsed={financials.laborTotal}
               onSaved={() => { setShowHourEntry(false); refreshDetail(); }}
             />
           )}
 
-          {/* Contextual alert */}
-          <COContextualAlert
-            co={co}
-            isGC={isGC}
-            isTC={isTC}
-            isFC={isFC}
-            fcCollabName={fcCollabName}
-            financials={financials}
-          />
+          <COContextualAlert co={co} isGC={isGC} isTC={isTC} isFC={isFC} fcCollabName={fcCollabName} financials={financials} />
 
           {/* Two-column layout */}
           <div className="flex gap-4">
-            {/* Left: main content */}
-            <div className="flex-1 min-w-0 space-y-3" ref={pricingRef}>
-              {mainContent}
-            </div>
-
-            {/* Right sidebar — desktop only */}
+            <div className="flex-1 min-w-0 space-y-3" ref={pricingRef}>{mainContent}</div>
             {!isMobile && (
               <div className="w-[300px] shrink-0 space-y-3">
-                <COSidebar
-                  co={co}
-                  isGC={isGC}
-                  isTC={isTC}
-                  isFC={isFC}
-                  role={role}
-                  myOrgId={myOrgId}
-                  projectId={projectId}
-                  financials={financials}
-                  collaborators={collaborators}
-                  fcOrgOptions={fcOrgOptions}
-                  fcCollabName={fcCollabName}
-                  canEdit={canEdit}
-                  canRequestFCInput={canRequestFCInput}
-                  canCompleteFCInput={canCompleteFCInput}
-                  nteLog={nteLog}
-                  requestFCInput={requestFCInput}
-                  completeFCInput={completeFCInput}
-                  requestNTEIncrease={requestNTEIncrease}
-                  approveNTEIncrease={approveNTEIncrease}
-                  rejectNTEIncrease={rejectNTEIncrease}
-                  onRefresh={refreshDetail}
-                />
+                <COSidebar {...sidebarProps} />
               </div>
             )}
           </div>
 
-          {/* Mobile: sidebar content stacks below */}
-          {isMobile && (
-            <COSidebar
-              co={co}
-              isGC={isGC}
-              isTC={isTC}
-              isFC={isFC}
-              role={role}
-              myOrgId={myOrgId}
-              projectId={projectId}
-              financials={financials}
-              collaborators={collaborators}
-              fcOrgOptions={fcOrgOptions}
-              fcCollabName={fcCollabName}
-              canEdit={canEdit}
-              canRequestFCInput={canRequestFCInput}
-              canCompleteFCInput={canCompleteFCInput}
-              nteLog={nteLog}
-              requestFCInput={requestFCInput}
-              completeFCInput={completeFCInput}
-              requestNTEIncrease={requestNTEIncrease}
-              approveNTEIncrease={approveNTEIncrease}
-              rejectNTEIncrease={rejectNTEIncrease}
-              onRefresh={refreshDetail}
-            />
-          )}
+          {isMobile && <COSidebar {...sidebarProps} />}
         </div>
       </div>
 
-      {/* Sticky footer — mobile only */}
-      <COStickyFooter
-        status={status}
-        isGC={isGC}
-        isTC={isTC}
-        isFC={isFC}
-        financials={financials}
-        fcCollabName={fcCollabName}
-        onAction={handleHeroAction}
-      />
+      <COStickyFooter status={status} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} fcCollabName={fcCollabName} onAction={handleHeroAction} />
     </div>
   );
 }
