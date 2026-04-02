@@ -4,7 +4,7 @@ import { AlertTriangle, Clock, Package, Zap, ChevronRight, MapPin } from 'lucide
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
-import { QuickLogWizard } from './wizard/QuickLogWizard';
+import { COWizard } from './wizard/COWizard';
 import { CO_STATUS_LABELS } from '@/types/changeOrder';
 import type { COReasonCode, COStatus } from '@/types/changeOrder';
 
@@ -160,7 +160,7 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
         )}
       </div>
 
-      <QuickLogWizard
+      <COWizard
         open={wizardOpen}
         onOpenChange={setWizardOpen}
         projectId={projectId}
