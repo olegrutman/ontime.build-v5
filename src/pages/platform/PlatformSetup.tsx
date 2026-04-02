@@ -69,7 +69,8 @@ export default function PlatformSetup() {
 
   return (
     <PlatformLayout title="Setup" breadcrumbs={[{ label: 'Setup' }]}>
-      <div className="space-y-6 max-w-3xl">
+      <div className="space-y-6">
+        <div className="max-w-3xl space-y-6">
         {/* General */}
         <Card>
           <CardHeader>
@@ -234,7 +235,6 @@ export default function PlatformSetup() {
             </Button>
           </CardContent>
         </Card>
-
         </div>
 
         {/* Data Manager */}
