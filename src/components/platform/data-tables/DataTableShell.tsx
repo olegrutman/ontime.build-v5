@@ -35,7 +35,7 @@ export function DataTableShell({ title, description, isLoading, headers, onAdd, 
         </div>
       ) : (
         <div className="border rounded-md overflow-x-auto">
-          <Table className="min-w-[900px]">
+          <Table>
             <TableHeader>
               <TableRow>
                 {headers.map((h) => (

@@ -235,6 +235,8 @@ export default function PlatformSetup() {
           </CardContent>
         </Card>
 
+        </div>
+
         {/* Data Manager */}
         <PlatformDataManager />
       </div>
