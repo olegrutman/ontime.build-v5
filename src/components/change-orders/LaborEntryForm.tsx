@@ -119,7 +119,6 @@ export function LaborEntryForm({
         hours: mode === 'hourly' ? hoursValue : null,
         hourly_rate: mode === 'hourly' ? rateValue : null,
         lump_sum: mode === 'lump_sum' ? lumpSumValue : null,
-        line_total: computedTotal,
         description: description.trim() || null,
         is_actual_cost: isActualCost,
       });
