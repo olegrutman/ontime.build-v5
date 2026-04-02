@@ -21,10 +21,12 @@ interface AddScopeItemButtonProps {
 }
 
 const EMPTY_WIZARD: COWizardData = {
+  reason: null,
+  locationTag: '',
   selectedItems: [],
-  scopeDescription: '',
   pricingType: 'fixed',
   nteCap: '',
+  gcBudget: '',
   assignedToOrgId: '',
   fcOrgId: '',
   fcInputNeeded: false,
@@ -34,8 +36,7 @@ const EMPTY_WIZARD: COWizardData = {
   materialsResponsible: null,
   equipmentResponsible: null,
   shareDraftNow: false,
-  locationTag: '',
-  reason: null,
+  quickHours: null,
 };
 
 export function AddScopeItemButton({ coId, orgId, projectId, role, co, collaborators, onAdded }: AddScopeItemButtonProps) {

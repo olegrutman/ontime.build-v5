@@ -78,7 +78,6 @@ export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
     };
     onChange({
       selectedItems: [...data.selectedItems, newItem],
-      scopeDescription: data.scopeDescription || [...data.selectedItems, newItem].map(i => i.item_name).join(', '),
     });
   }
 
