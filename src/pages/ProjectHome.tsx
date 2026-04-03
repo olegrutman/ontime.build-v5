@@ -290,6 +290,9 @@ export default function ProjectHome() {
             "max-w-7xl mx-auto w-full pb-24 lg:pb-6",
             activeTab === 'overview' ? 'px-3 sm:px-6 py-4 sm:py-6' : 'px-3 sm:px-6 py-4 sm:py-6 space-y-6'
           )}>
+            {/* Sticky Tab Bar */}
+            <ProjectTabBar activeTab={activeTab} onTabChange={handleTabChange} isSupplier={isSupplier} />
+
             {/* Overview Tab */}
             {activeTab === 'overview' && (
               <>
@@ -298,7 +301,14 @@ export default function ProjectHome() {
                 ) : isSupplier && supplierOrgId ? (
                   <SupplierMaterialsOverview projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
                 ) : (
-                  <div className="space-y-6">
+                  <div className="space-y-6 mt-6">
+                    {/* Dark Project Header */}
+                    <ProjectDarkHeader
+                      name={project.name}
+                      address={formattedAddress}
+                      status={projectStatus}
+                      healthLabel={projectStatus === 'active' ? healthLabel : undefined}
+                    />
                     {showSetupBanner && (
                       <div
                         className="rounded-3xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors"
