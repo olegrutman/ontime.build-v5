@@ -21,7 +21,7 @@ interface LaborEntryFormProps {
   isFC?: boolean;
   isActualCost?: boolean;
   onSaved: () => void;
-  onCancel: () => void;
+  onCancel?: () => void;
   nteCap?: number | null;
   nteUsed?: number;
 }
@@ -47,7 +47,6 @@ export function LaborEntryForm({
   const [saving, setSaving] = useState(false);
   const [showNTEWarn, setShowNTEWarn] = useState(false);
 
-  // Load rate from profile
   useEffect(() => {
     let cancelled = false;
     async function loadRate() {
@@ -87,9 +86,22 @@ export function LaborEntryForm({
 
   const canSave = !validationMessage;
 
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const dateLabel = entryDate === todayStr
+    ? `Today, ${format(new Date(), 'MMM d')}`
+    : format(new Date(entryDate + 'T12:00:00'), 'EEE, MMM d');
+
   function handleQuickHour(h: number) {
     setHours(String(h));
     setMode('hourly');
+  }
+
+  function resetForm() {
+    setHours('');
+    setLumpSum('');
+    setDescription('');
+    setShowNTEWarn(false);
+    setEntryDate(format(new Date(), 'yyyy-MM-dd'));
   }
 
   async function attemptSave() {
@@ -155,7 +167,8 @@ export function LaborEntryForm({
         }
       }
 
-      toast.success('Labor entry saved');
+      toast.success('Entry saved');
+      resetForm();
       onSaved();
     } catch (err: any) {
       toast.error(err?.message ?? 'Failed to save');
@@ -165,163 +178,231 @@ export function LaborEntryForm({
     }
   }
 
+  const roleColor = isFC ? 'hsl(var(--amber))' : isTC ? 'hsl(142 71% 45%)' : 'hsl(var(--primary))';
+
   return (
-    <div className="space-y-3 p-3 rounded-lg border border-border bg-muted/20">
-      {isActualCost && (
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1.5">
-          <EyeOff className="h-3 w-3" />
-          Actual cost — private, not visible to others
-        </div>
-      )}
-
-      {/* FC quick-pick pills */}
-      {isFC && !isActualCost && mode === 'hourly' && (
-        <div className="flex gap-2">
-          {QUICK_HOURS.map(h => (
-            <button
-              key={h}
-              type="button"
-              onClick={() => handleQuickHour(h)}
-              className={cn(
-                'flex-1 py-2 rounded-lg text-sm font-semibold border-2 transition-all',
-                hoursValue === h
-                  ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-border text-muted-foreground hover:border-primary/30',
-              )}
-            >
-              {h}h
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Mode toggle */}
-      <div className="flex gap-1.5">
-        <button
-          type="button"
-          onClick={() => setMode('hourly')}
-          className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
-            mode === 'hourly' ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/40',
+    <div
+      className="rounded-xl overflow-hidden border-2 border-primary/20 bg-card"
+      style={{ borderLeftWidth: 4, borderLeftColor: roleColor }}
+    >
+      {/* Header */}
+      <div className="px-4 py-2.5 bg-muted/40 border-b border-border flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          {isActualCost ? (
+            <EyeOff className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <DollarSign className="h-4 w-4" style={{ color: roleColor }} />
           )}
-        >
-          <Clock className="h-3 w-3" /> Hourly
-        </button>
-        <button
-          type="button"
-          onClick={() => setMode('lump_sum')}
-          className={cn(
-            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
-            mode === 'lump_sum' ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:border-primary/40',
-          )}
-        >
-          <DollarSign className="h-3 w-3" /> Lump sum
-        </button>
-      </div>
-
-      {/* Fields */}
-      <div className={cn('grid gap-2', isTC && mode === 'hourly' ? 'grid-cols-3' : 'grid-cols-2')}>
-        <div>
-          <Label className="text-xs">Date</Label>
-          <Input type="date" value={entryDate} onChange={e => setEntryDate(e.target.value)} className="h-8 text-sm" />
+          <span className="text-xs font-bold uppercase tracking-wider" style={{ color: isActualCost ? undefined : roleColor }}>
+            {isActualCost ? 'Log Actual Cost (Private)' : 'Enter Pricing'}
+          </span>
         </div>
-
-        {mode === 'hourly' ? (
-          <>
-            <div>
-              <Label className="text-xs">Hours</Label>
-              <Input type="number" step="0.25" min="0" value={hours} onChange={e => setHours(e.target.value)} className="h-8 text-sm" />
-            </div>
-            {isTC && (
-              <div>
-                <Label className="text-xs">Rate ($/hr)</Label>
-                <div className="relative">
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
-                  <Input type="number" step="0.01" min="0" value={rate} onChange={e => setRate(e.target.value)} className="h-8 text-sm pl-6" />
-                </div>
-              </div>
-            )}
-            {isFC && (
-              <div className="col-span-2">
-                <div className="flex items-baseline gap-1">
-                  <Label className="text-xs">Rate ($/hr)</Label>
-                  <span className="text-[10px] text-muted-foreground">from your profile</span>
-                </div>
-                <div className="relative">
-                  <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
-                  <Input type="number" step="0.01" min="0" value={rate} onChange={e => setRate(e.target.value)} className="h-8 text-sm pl-6" />
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <div>
-            <Label className="text-xs">Amount</Label>
-            <div className="relative">
-              <span className="absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">$</span>
-              <Input type="number" step="0.01" min="0" value={lumpSum} onChange={e => setLumpSum(e.target.value)} className="h-8 text-sm pl-6" />
-            </div>
-          </div>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            ✕
+          </button>
         )}
       </div>
 
-      {/* TC markup */}
-      {isTC && !isActualCost && (
-        <div>
-          <Label className="text-xs">Markup %</Label>
-          <Input type="number" step="0.5" min="0" value={markup} onChange={e => setMarkup(e.target.value)} className="h-8 text-sm w-24" placeholder="0" />
-        </div>
-      )}
-
-      <div>
-        <Label className="text-xs">Description (optional)</Label>
-        <Textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="What work was done…" rows={2} className="text-sm resize-none" />
-      </div>
-
-      {validationMessage && (
-        <div className="rounded border border-border bg-background px-2 py-1.5 text-[11px] text-muted-foreground">
-          {validationMessage}
-        </div>
-      )}
-
-      {/* Live total */}
-      {computedTotal > 0 && (
-        <div className="flex items-center justify-between text-sm bg-muted/30 rounded px-2 py-1.5">
-          <span className="text-muted-foreground text-xs">
-            Entry total
-            {markupAmount > 0 && ` (incl. ${markupPct}% markup)`}
-          </span>
-          <span className="font-semibold text-foreground">
-            ${computedTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-          </span>
-        </div>
-      )}
-
-      {/* NTE warning */}
-      {showNTEWarn && ntePercent !== null && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-2">
-          <p className="text-xs font-medium text-destructive">NTE cap warning</p>
-          <p className="text-xs text-destructive/80">
-            This entry will bring you to <span className="font-semibold">{ntePercent.toFixed(1)}%</span> of the ${nteCap?.toLocaleString('en-US', { minimumFractionDigits: 2 })} cap.
-          </p>
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" className="flex-1 text-xs h-7" onClick={() => setShowNTEWarn(false)}>Cancel</Button>
-            <Button size="sm" variant="destructive" className="flex-1 text-xs h-7" onClick={attemptSave} disabled={saving}>
-              {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Log anyway'}
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {!showNTEWarn && (
+      <div className="p-4 space-y-4">
+        {/* Mode toggle — larger pills */}
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={onCancel} disabled={saving}>Cancel</Button>
-          <Button size="sm" className="flex-1 h-8 text-xs gap-1" onClick={attemptSave} disabled={!canSave || saving}>
-            {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
-            Save entry
-          </Button>
+          <button
+            type="button"
+            onClick={() => setMode('hourly')}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold border-2 transition-all min-h-[48px]',
+              mode === 'hourly'
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border bg-muted/30 text-muted-foreground hover:border-primary/40',
+            )}
+          >
+            <Clock className="h-4 w-4" /> Hourly
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('lump_sum')}
+            className={cn(
+              'flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold border-2 transition-all min-h-[48px]',
+              mode === 'lump_sum'
+                ? 'border-primary bg-primary text-primary-foreground'
+                : 'border-border bg-muted/30 text-muted-foreground hover:border-primary/40',
+            )}
+          >
+            <DollarSign className="h-4 w-4" /> Lump Sum
+          </button>
         </div>
-      )}
+
+        {/* Quick-pick hours — visible for all roles in hourly mode */}
+        {!isActualCost && mode === 'hourly' && (
+          <div className="flex gap-2">
+            {QUICK_HOURS.map(h => (
+              <button
+                key={h}
+                type="button"
+                onClick={() => handleQuickHour(h)}
+                className={cn(
+                  'flex-1 py-3 rounded-xl text-sm font-bold border-2 transition-all min-h-[48px]',
+                  hoursValue === h
+                    ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                    : 'border-border bg-background text-muted-foreground hover:border-primary/30 hover:bg-muted/20',
+                )}
+              >
+                {h}h
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Date — friendly label with hidden picker */}
+        <div>
+          <Label className="text-xs font-medium text-muted-foreground mb-1 block">Date</Label>
+          <button
+            type="button"
+            onClick={() => {
+              const input = document.getElementById(`labor-date-${lineItemId}`) as HTMLInputElement;
+              input?.showPicker?.();
+            }}
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-border bg-background text-sm font-medium min-h-[44px] hover:border-primary/30 transition-colors"
+          >
+            <span>{dateLabel}</span>
+            <span className="text-muted-foreground">▾</span>
+          </button>
+          <input
+            id={`labor-date-${lineItemId}`}
+            type="date"
+            value={entryDate}
+            onChange={e => setEntryDate(e.target.value)}
+            className="sr-only"
+          />
+        </div>
+
+        {/* Fields — stacked vertically */}
+        {mode === 'hourly' ? (
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs font-medium text-muted-foreground mb-1 block">Hours</Label>
+              <Input
+                type="number"
+                step="0.25"
+                min="0"
+                value={hours}
+                onChange={e => setHours(e.target.value)}
+                placeholder="0"
+                className="h-11 text-base font-semibold"
+              />
+            </div>
+            <div>
+              <div className="flex items-baseline gap-1 mb-1">
+                <Label className="text-xs font-medium text-muted-foreground">Rate ($/hr)</Label>
+                {isFC && <span className="text-[10px] text-muted-foreground">from your profile</span>}
+              </div>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium">$</span>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={rate}
+                  onChange={e => setRate(e.target.value)}
+                  className="h-11 text-base font-semibold pl-7"
+                />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <Label className="text-xs font-medium text-muted-foreground mb-1 block">Amount</Label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium">$</span>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={lumpSum}
+                onChange={e => setLumpSum(e.target.value)}
+                placeholder="0.00"
+                className="h-11 text-base font-semibold pl-7"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* TC markup */}
+        {isTC && !isActualCost && (
+          <div>
+            <Label className="text-xs font-medium text-muted-foreground mb-1 block">Markup %</Label>
+            <Input
+              type="number"
+              step="0.5"
+              min="0"
+              value={markup}
+              onChange={e => setMarkup(e.target.value)}
+              className="h-11 text-base font-semibold w-32"
+              placeholder="0"
+            />
+          </div>
+        )}
+
+        {/* Description */}
+        <div>
+          <Label className="text-xs font-medium text-muted-foreground mb-1 block">Notes (optional)</Label>
+          <Textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            placeholder="What work was done…"
+            rows={2}
+            className="text-sm resize-none"
+          />
+        </div>
+
+        {/* Live total bar */}
+        {computedTotal > 0 && (
+          <div className="flex items-center justify-between rounded-xl px-4 py-3 bg-primary/5 border border-primary/15">
+            <span className="text-xs font-medium text-muted-foreground">
+              Entry total
+              {markupAmount > 0 && ` (incl. ${markupPct}% markup)`}
+            </span>
+            <span className="text-lg font-bold text-primary">
+              ${computedTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
+        )}
+
+        {/* NTE warning */}
+        {showNTEWarn && ntePercent !== null && (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-3">
+            <p className="text-sm font-semibold text-destructive">NTE cap warning</p>
+            <p className="text-xs text-destructive/80">
+              This entry will bring you to <span className="font-semibold">{ntePercent.toFixed(1)}%</span> of the ${nteCap?.toLocaleString('en-US', { minimumFractionDigits: 2 })} cap.
+            </p>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1 h-10" onClick={() => setShowNTEWarn(false)}>Cancel</Button>
+              <Button variant="destructive" className="flex-1 h-10" onClick={attemptSave} disabled={saving}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Log anyway'}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Save button — full-width prominent */}
+        {!showNTEWarn && (
+          <Button
+            onClick={attemptSave}
+            disabled={!canSave || saving}
+            className="w-full h-12 text-sm font-bold gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            {computedTotal > 0
+              ? `Save — $${computedTotal.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+              : 'Save Entry'}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

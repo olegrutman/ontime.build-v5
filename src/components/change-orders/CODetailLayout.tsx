@@ -63,7 +63,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
   const [comment, setComment] = useState('');
   const [sendingComment, setSendingComment] = useState(false);
-  const [showHourEntry, setShowHourEntry] = useState(false);
+  
 
   const {
     co, collaborators, lineItems, laborEntries, materials, equipment,
@@ -106,7 +106,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       case 'scroll_materials': materialsRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
       case 'scroll_pricing': pricingRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
       case 'scroll_fc': scopeRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
-      case 'log_hours': setShowHourEntry(true); break;
+      case 'log_hours': scopeRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
       default: window.scrollTo({ top: 0, behavior: 'smooth' }); break;
     }
   }
@@ -276,13 +276,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0} hasEquipment={co.equipment_needed || equipment.length > 0} />
           <COHeroBlock co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} fcCollabName={fcCollabName} onAction={handleHeroAction} />
 
-          {isFC && showHourEntry && firstLineItem && canEdit && !nteBlocked && (
-            <COHourEntryInline
-              coId={co.id} lineItemId={firstLineItem.id} orgId={myOrgId}
-              pricingType={pricingType} nteCap={co.nte_cap} nteUsed={financials.laborTotal}
-              onSaved={() => { setShowHourEntry(false); refreshDetail(); }}
-            />
-          )}
 
           <COContextualAlert co={co} isGC={isGC} isTC={isTC} isFC={isFC} fcCollabName={fcCollabName} financials={financials} />
 
