@@ -53,7 +53,7 @@ export function COLineItemRow({
   const visibleBillable = isGC ? tcBillable : isFC ? fcBillable : tcBillable;
   const tcDownstreamCosts = isTC ? fcBillable : [];
   const totalForRole = isGC ? tcTotal : isFC ? fcTotal : tcTotal;
-  const entryCount = visibleBillable.length + tcDownstreamCosts.length;
+  const entryCount = visibleBillable.length;
 
   const enteredByRole = isFC ? 'FC' as const : 'TC' as const;
   const showGCApproval = isGC && (pricingType === 'tm' || pricingType === 'nte');
@@ -222,7 +222,7 @@ export function COLineItemRow({
       )}
 
       {/* Entry history — collapsible */}
-      {entryCount > 0 && (
+      {(entryCount > 0 || tcDownstreamCosts.length > 0) && (
         <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
           <CollapsibleTrigger asChild>
             <button
@@ -232,6 +232,9 @@ export function COLineItemRow({
               <ChevronDown className={cn('h-3 w-3 transition-transform', historyOpen && 'rotate-180')} />
               <span className="font-medium">
                 {entryCount} entr{entryCount === 1 ? 'y' : 'ies'} logged — ${fmt(totalForRole)}
+                {tcDownstreamCosts.length > 0 && (
+                  <span className="text-muted-foreground/70"> + {tcDownstreamCosts.length} FC entr{tcDownstreamCosts.length === 1 ? 'y' : 'ies'} — ${fmt(fcTotal)}</span>
+                )}
               </span>
               {showGCApproval && (() => {
                 const approved = visibleBillable.filter(e => (e as any).gc_approved).length;

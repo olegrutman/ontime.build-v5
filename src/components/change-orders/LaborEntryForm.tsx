@@ -49,20 +49,25 @@ export function LaborEntryForm({
 
   useEffect(() => {
     let cancelled = false;
-    async function loadRate() {
-      if (!user) return;
-      const { data } = await supabase
-        .from('profiles')
-        .select('hourly_rate')
-        .eq('user_id', user.id)
-        .single();
-      if (!cancelled && data?.hourly_rate) {
-        setRate(String(data.hourly_rate));
-      }
+    async function loadDefaults() {
+      if (!user || !orgId) return;
+      // Load from org_settings first (authoritative), fallback to profile
+      const [orgRes, profileRes] = await Promise.all([
+        supabase.from('org_settings').select('default_hourly_rate, labor_markup_percent').eq('organization_id', orgId).maybeSingle(),
+        supabase.from('profiles').select('hourly_rate').eq('user_id', user.id).single(),
+      ]);
+      if (cancelled) return;
+      const orgRate = orgRes.data?.default_hourly_rate;
+      const profileRate = profileRes.data?.hourly_rate;
+      if (orgRate) setRate(String(orgRate));
+      else if (profileRate) setRate(String(profileRate));
+
+      const orgMarkup = orgRes.data?.labor_markup_percent;
+      if (orgMarkup && isTC) setMarkup(String(orgMarkup));
     }
-    loadRate();
+    loadDefaults();
     return () => { cancelled = true; };
-  }, [user]);
+  }, [user, orgId, isTC]);
 
   const hoursValue = parseFloat(hours) || 0;
   const rateValue = parseFloat(rate) || 0;
