@@ -18,9 +18,10 @@ import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
 import { PendingInvitesPanel } from '@/components/dashboard/PendingInvitesPanel';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { useProfile } from '@/hooks/useProfile';
-import { PortfolioHealthHero } from '@/components/dashboard/PortfolioHealthHero';
+import { DashboardBusinessSnapshot } from '@/components/dashboard/DashboardBusinessSnapshot';
 import { DashboardKPIs } from '@/components/dashboard/DashboardKPIs';
 import { DashboardAttentionList } from '@/components/dashboard/DashboardAttentionList';
+import { DashboardMaterialsHealth } from '@/components/dashboard/DashboardMaterialsHealth';
 import { ProjectSnapshotList } from '@/components/dashboard/ProjectSnapshotList';
 import { DashboardActionQueue } from '@/components/dashboard/DashboardActionQueue';
 import { RemindersTile } from '@/components/dashboard/RemindersTile';
@@ -125,9 +126,9 @@ export default function Dashboard() {
     return (
       <AppLayout title="Dashboard">
         <div className="p-4 sm:p-6 space-y-6">
-          <Skeleton className="h-24 w-full rounded-xl" />
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
-            {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
+          <Skeleton className="h-24 w-full rounded-3xl" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28 rounded-3xl" />)}
           </div>
         </div>
       </AppLayout>
@@ -138,7 +139,7 @@ export default function Dashboard() {
     return (
       <AppLayout title="Dashboard">
         <div className="p-6">
-          <Card className="max-w-md mx-auto rounded-xl">
+          <Card className="max-w-md mx-auto rounded-3xl">
             <CardContent className="p-6 text-center">
               <h2 className="text-lg font-semibold mb-2">Welcome to Ontime.Build</h2>
               <p className="text-muted-foreground mb-4">Please sign in to access your projects.</p>
@@ -154,7 +155,7 @@ export default function Dashboard() {
     return (
       <AppLayout title="Dashboard">
         <div className="p-6">
-          <Card className="max-w-md mx-auto rounded-xl">
+          <Card className="max-w-md mx-auto rounded-3xl">
             <CardContent className="p-6 text-center">
               <h2 className="text-lg font-semibold mb-2">Account Setup Incomplete</h2>
               <p className="text-muted-foreground mb-4">Your account is not linked to an organization.</p>
@@ -181,7 +182,7 @@ export default function Dashboard() {
 
   return (
     <AppLayout title="Dashboard">
-      <div className="space-y-3">
+      <div className="space-y-6">
         {showOnboarding && (
           <OnboardingChecklist
             profileComplete={profileComplete}
@@ -205,40 +206,53 @@ export default function Dashboard() {
           <PendingInvitesPanel invites={pendingInvites} onRefresh={refetch} />
         )}
 
-        {/* Portfolio Health Hero */}
-        <PortfolioHealthHero
-          statusCounts={statusCounts}
-          attentionCount={attentionItems.length + pendingInvites.length}
-          orgName={currentOrg?.name}
-        />
-
         {/* KPI Row */}
         <DashboardKPIs financials={financials} orgType={orgType} />
 
-        {/* Attention Items */}
-        <DashboardAttentionList
-          attentionItems={attentionItems}
-          pendingInvitesCount={pendingInvites.length}
-        />
+        {/* Main 8/4 Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+          {/* Left column — 8 cols */}
+          <div className="xl:col-span-8 space-y-6">
+            {/* Projects needing attention */}
+            <DashboardAttentionList
+              attentionItems={attentionItems}
+              pendingInvitesCount={pendingInvites.length}
+            />
 
-        {/* Two-column grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-3">
-          {/* Left column — Projects */}
-          <ProjectSnapshotList
-            projects={projects}
-            statusFilter={statusFilter}
-            onStatusFilterChange={setStatusFilter}
-            statusCounts={statusCounts}
-            loading={loading}
-            canCreate={canCreateProject}
-            onCreateProject={() => navigate('/create-project')}
-            orgType={orgType}
-            orgId={orgId}
-          />
+            {/* Two-col: Materials Health + Action Queue */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <DashboardMaterialsHealth
+                estimate={financials.totalRevenue}
+                ordered={financials.paidByYou}
+                forecast={financials.totalRevenue * 1.04}
+              />
+              <DashboardActionQueue docs={recentDocs} />
+            </div>
 
-          {/* Right column — Activity + Reminders */}
-          <div className="space-y-3">
-            <DashboardActionQueue docs={recentDocs} />
+            {/* Projects list */}
+            <ProjectSnapshotList
+              projects={projects}
+              statusFilter={statusFilter}
+              onStatusFilterChange={setStatusFilter}
+              statusCounts={statusCounts}
+              loading={loading}
+              canCreate={canCreateProject}
+              onCreateProject={() => navigate('/create-project')}
+              orgType={orgType}
+              orgId={orgId}
+            />
+          </div>
+
+          {/* Right column — 4 cols */}
+          <div className="xl:col-span-4 space-y-6">
+            {/* Business Snapshot */}
+            <DashboardBusinessSnapshot
+              statusCounts={statusCounts}
+              attentionCount={attentionItems.length + pendingInvites.length}
+              billing={billing}
+            />
+
+            {/* Reminders */}
             <RemindersTile
               reminders={reminders.map(r => ({ ...r, completed: false }))}
               onComplete={async (id) => {
