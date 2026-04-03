@@ -1,15 +1,14 @@
 export { StatusMenu, type ProjectStatusFilter } from './StatusMenu';
 export { RemindersTile, type Reminder } from './RemindersTile';
 export { AddReminderDialog } from './AddReminderDialog';
-export { ProjectRow } from './ProjectRow';
-export { ProjectQuickOverview } from './ProjectQuickOverview';
 export { PendingInvitesPanel } from './PendingInvitesPanel';
 export { ArchiveProjectDialog } from './ArchiveProjectDialog';
 export { CompleteProjectDialog } from './CompleteProjectDialog';
-export { DashboardFinancialCard } from './DashboardFinancialCard';
 export { DashboardProjectList } from './DashboardProjectList';
-export { DashboardWelcome } from './DashboardWelcome';
-export { DashboardKPIRow } from './DashboardKPIRow';
-export { DashboardRecentDocs } from './DashboardRecentDocs';
-export { DashboardBudgetCard } from './DashboardBudgetCard';
-export { DashboardNeedsAttentionCard } from './DashboardNeedsAttentionCard';
+
+// New redesigned components
+export { PortfolioHealthHero } from './PortfolioHealthHero';
+export { DashboardKPIs } from './DashboardKPIs';
+export { DashboardAttentionList } from './DashboardAttentionList';
+export { ProjectSnapshotList } from './ProjectSnapshotList';
+export { DashboardActionQueue } from './DashboardActionQueue';
