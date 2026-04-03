@@ -281,10 +281,10 @@ export default function ProjectHome() {
                 ) : isSupplier && supplierOrgId ? (
                   <SupplierMaterialsOverview projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-6">
                     {showSetupBanner && (
                       <div
-                        className="rounded-xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors"
+                        className="rounded-3xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors"
                         onClick={() => navigate(`/project/${id}/setup`)}
                       >
                         <div className="flex items-center gap-3">
@@ -309,24 +309,35 @@ export default function ProjectHome() {
                     {/* Health Banner */}
                     <ProjectHealthBanner financials={financials} projectStatus={projectStatus} />
 
-                    {/* Financial Command Row */}
+                    {/* Financial Command Row — 5 KPIs */}
                     <ProjectFinancialCommand financials={financials} />
 
-                    {/* Materials Command Center */}
-                    {showMaterials && (
-                      <MaterialsCommandCenter financials={financials} />
-                    )}
+                    {/* 8/4 Grid */}
+                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                      {/* Left column — 8 cols */}
+                      <div className="xl:col-span-8 space-y-6">
+                        {/* Materials Command Center */}
+                        {showMaterials && (
+                          <MaterialsCommandCenter financials={financials} />
+                        )}
 
-                    {/* CO Impact */}
-                    <COImpactCard financials={financials} />
-
-                    {/* Two-column: actions + billing */}
-                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-3">
-                      <div className="space-y-3">
-                        <BillingCashCard financials={financials} />
+                        {/* PO Summary */}
+                        <ProjectPOSummary projectId={id!} />
                       </div>
-                      <div className="space-y-3">
+
+                      {/* Right column — 4 cols */}
+                      <div className="xl:col-span-4 space-y-6">
+                        {/* CO Impact */}
+                        <COImpactCard financials={financials} />
+
+                        {/* Team Card */}
+                        <ProjectOverviewTeamCard projectId={id!} />
+
+                        {/* Action Queue */}
                         <ProjectActionQueue financials={financials} projectId={id!} onNavigate={handleTabChange} />
+
+                        {/* Billing */}
+                        <BillingCashCard financials={financials} />
                       </div>
                     </div>
                   </div>
