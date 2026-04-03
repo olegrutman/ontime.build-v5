@@ -25,6 +25,8 @@ import { DashboardMaterialsHealth } from '@/components/dashboard/DashboardMateri
 import { ProjectSnapshotList } from '@/components/dashboard/ProjectSnapshotList';
 import { DashboardActionQueue } from '@/components/dashboard/DashboardActionQueue';
 import { RemindersTile } from '@/components/dashboard/RemindersTile';
+import { DashboardWelcome } from '@/components/dashboard/DashboardWelcome';
+import { DashboardSidebar } from '@/components/app-shell/DashboardSidebar';
 import type { ProjectStatusFilter } from '@/components/dashboard/StatusMenu';
 
 export default function Dashboard() {
