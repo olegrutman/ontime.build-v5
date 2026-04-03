@@ -117,8 +117,8 @@ export function LaborEntryForm({
         entry_date: entryDate,
         pricing_mode: mode,
         hours: mode === 'hourly' ? hoursValue : null,
-        hourly_rate: mode === 'hourly' ? rateValue : null,
-        lump_sum: mode === 'lump_sum' ? lumpSumValue : null,
+        hourly_rate: mode === 'hourly' ? (rateValue + (isTC && markupPct > 0 ? rateValue * (markupPct / 100) : 0)) : null,
+        lump_sum: mode === 'lump_sum' ? (lumpSumValue + (isTC && markupPct > 0 ? lumpSumValue * (markupPct / 100) : 0)) : null,
         description: description.trim() || null,
         is_actual_cost: isActualCost,
       });

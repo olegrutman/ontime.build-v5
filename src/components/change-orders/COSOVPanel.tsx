@@ -46,8 +46,7 @@ export function COSOVPanel({ coId, isGC, isTC, isFC, myOrgId }: COSOVPanelProps)
     },
   });
 
-  // FC sees only their org's items
-  const visibleItems = isFC ? items.filter(i => i.org_id === myOrgId) : items;
+  const visibleItems = items;
 
   if (visibleItems.length === 0) return null;
 

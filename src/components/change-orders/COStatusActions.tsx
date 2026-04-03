@@ -257,7 +257,7 @@ export function COStatusActions({
         await approveCO.mutateAsync(co.id);
         toast.success('CO approved');
         await logActivity('approved', undefined, financials?.grandTotal || undefined);
-        await notifyOrg(co.assigned_to_org_id, 'CHANGE_APPROVED', financials?.grandTotal || undefined);
+        await notifyAllCOParties('CHANGE_APPROVED', financials?.grandTotal || undefined);
       }
 
       setApproveOpen(false);
@@ -277,7 +277,7 @@ export function COStatusActions({
       await rejectCO.mutateAsync({ coId: co.id, note: rejectNote.trim() });
       toast.success('CO rejected');
       await logActivity('rejected', rejectNote.trim());
-      await notifyOrg(co.assigned_to_org_id, 'CHANGE_REJECTED');
+      await notifyAllCOParties('CHANGE_REJECTED');
       setRejectOpen(false);
       setRejectNote('');
       onRefresh();
@@ -351,7 +351,7 @@ export function COStatusActions({
   /* GC can close for pricing (Flow 1) */
   const canCloseForPricing = isGC && (status === 'work_in_progress') && (co.org_id === currentOrgId || co.created_by_user_id === user?.id);
   /* TC/FC submit for approval — include 'rejected' (C3) */
-  const canSubmit = (isTC || isFC) && !isCollaborator && (status === 'draft' || status === 'shared' || status === 'closed_for_pricing' || status === 'rejected');
+  const canSubmit = (isTC || isFC) && !isCollaborator && (status === 'draft' || status === 'shared' || status === 'closed_for_pricing' || status === 'rejected') && !!co.assigned_to_org_id;
   /* FC collaborator can submit pricing independently (M4) */
   const canSubmitFCPricing = isFC && isCollaborator && status === 'closed_for_pricing';
   const canRecall = (isTC || isFC) && !isCollaborator && status === 'submitted';
