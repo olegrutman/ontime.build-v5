@@ -271,6 +271,7 @@ export default function Dashboard() {
               orgType={orgType}
               orgId={orgId}
             />
+            </div>
           </div>
 
           {/* Right column — 4 cols */}
