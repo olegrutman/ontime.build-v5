@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { ChevronDown } from 'lucide-react';
 
 interface AttentionItem {
   id: string;
@@ -17,10 +19,10 @@ interface DashboardAttentionListProps {
 export function DashboardAttentionList({ attentionItems, pendingInvitesCount }: DashboardAttentionListProps) {
   const navigate = useNavigate();
   const totalCount = attentionItems.length + pendingInvitesCount;
+  const [expanded, setExpanded] = useState(false);
 
   if (totalCount === 0) return null;
 
-  // Group items by project for risk-style display
   const byProject = new Map<string, { projectName: string; projectId: string; issues: string[]; tag: string }>();
   attentionItems.forEach((item) => {
     const existing = byProject.get(item.projectId);
@@ -37,12 +39,13 @@ export function DashboardAttentionList({ attentionItems, pendingInvitesCount }: 
     }
   });
 
-  // Upgrade to "At Risk" if 2+ issues
   byProject.forEach((val) => {
     if (val.issues.length >= 2) val.tag = 'At Risk';
   });
 
-  const projectItems = Array.from(byProject.values()).slice(0, 6);
+  const allItems = Array.from(byProject.values());
+  const visibleItems = expanded ? allItems : allItems.slice(0, 3);
+  const hasMore = allItems.length > 3;
 
   return (
     <div className="rounded-3xl bg-card border border-border/60 shadow-sm overflow-hidden">
@@ -59,7 +62,7 @@ export function DashboardAttentionList({ attentionItems, pendingInvitesCount }: 
         </button>
       </div>
       <div className="divide-y divide-border/40">
-        {projectItems.map((item) => (
+        {visibleItems.map((item) => (
           <button
             key={item.projectId}
             onClick={() => navigate(`/project/${item.projectId}/overview`)}
@@ -78,6 +81,15 @@ export function DashboardAttentionList({ attentionItems, pendingInvitesCount }: 
           </button>
         ))}
       </div>
+      {hasMore && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="w-full p-3 text-sm text-primary font-medium hover:bg-accent/30 transition-colors flex items-center justify-center gap-1"
+        >
+          {expanded ? 'Show less' : `Show all (${allItems.length})`}
+          <ChevronDown className={cn('w-4 h-4 transition-transform', expanded && 'rotate-180')} />
+        </button>
+      )}
     </div>
   );
 }

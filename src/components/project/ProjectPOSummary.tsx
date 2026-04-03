@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency, cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ChevronDown } from 'lucide-react';
 
 interface ProjectPOSummaryProps {
   projectId: string;
@@ -26,6 +28,7 @@ const STATUS_BADGE: Record<string, string> = {
 export function ProjectPOSummary({ projectId }: ProjectPOSummaryProps) {
   const [pos, setPOs] = useState<PORow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     const fetchPOs = async () => {
@@ -34,7 +37,7 @@ export function ProjectPOSummary({ projectId }: ProjectPOSummaryProps) {
         .select('id, po_number, po_name, status, po_total')
         .eq('project_id', projectId)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(20);
       setPOs(data || []);
       setLoading(false);
     };
@@ -43,6 +46,9 @@ export function ProjectPOSummary({ projectId }: ProjectPOSummaryProps) {
 
   if (loading) return <Skeleton className="h-48 rounded-3xl" />;
   if (pos.length === 0) return null;
+
+  const visiblePOs = expanded ? pos : pos.slice(0, 3);
+  const hasMore = pos.length > 3;
 
   return (
     <div className="rounded-3xl border border-border/60 shadow-sm overflow-hidden">
@@ -61,7 +67,7 @@ export function ProjectPOSummary({ projectId }: ProjectPOSummaryProps) {
             </tr>
           </thead>
           <tbody className="divide-y divide-border/40">
-            {pos.map((po) => (
+            {visiblePOs.map((po) => (
               <tr key={po.id}>
                 <td className="px-5 py-4 font-medium">{po.po_number || '—'}</td>
                 <td className="px-5 py-4">{po.po_name || '—'}</td>
@@ -78,6 +84,15 @@ export function ProjectPOSummary({ projectId }: ProjectPOSummaryProps) {
           </tbody>
         </table>
       </div>
+      {hasMore && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="w-full p-3 text-sm text-primary font-medium hover:bg-accent/30 transition-colors flex items-center justify-center gap-1 border-t border-border/40"
+        >
+          {expanded ? 'Show less' : `Show all (${pos.length})`}
+          <ChevronDown className={cn('w-4 h-4 transition-transform', expanded && 'rotate-180')} />
+        </button>
+      )}
     </div>
   );
 }

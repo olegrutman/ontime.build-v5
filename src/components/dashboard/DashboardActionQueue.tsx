@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { formatDistanceToNow } from 'date-fns';
-import { cn, formatCurrency } from '@/lib/utils';
+import { ChevronDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface RecentDoc {
   id: string;
@@ -19,9 +20,13 @@ interface DashboardActionQueueProps {
 
 export function DashboardActionQueue({ docs }: DashboardActionQueueProps) {
   const navigate = useNavigate();
-  const items = docs.slice(0, 5);
+  const allItems = docs.slice(0, 8);
+  const [expanded, setExpanded] = useState(false);
 
-  if (items.length === 0) return null;
+  if (allItems.length === 0) return null;
+
+  const visibleItems = expanded ? allItems : allItems.slice(0, 3);
+  const hasMore = allItems.length > 3;
 
   const tabMap: Record<string, string> = {
     invoice: 'invoices',
@@ -36,7 +41,7 @@ export function DashboardActionQueue({ docs }: DashboardActionQueueProps) {
         <p className="text-sm text-muted-foreground">Only the next things that move money or schedule</p>
       </div>
       <div className="p-4 space-y-3">
-        {items.map((item) => {
+        {visibleItems.map((item) => {
           const tab = tabMap[item.type] || 'overview';
           return (
             <button
@@ -50,6 +55,15 @@ export function DashboardActionQueue({ docs }: DashboardActionQueueProps) {
           );
         })}
       </div>
+      {hasMore && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="w-full p-3 text-sm text-primary font-medium hover:bg-accent/30 transition-colors flex items-center justify-center gap-1 border-t border-border/40"
+        >
+          {expanded ? 'Show less' : `Show all (${allItems.length})`}
+          <ChevronDown className={cn('w-4 h-4 transition-transform', expanded && 'rotate-180')} />
+        </button>
+      )}
     </div>
   );
 }
