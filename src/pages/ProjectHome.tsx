@@ -45,6 +45,8 @@ import { COImpactCard } from '@/components/project/COImpactCard';
 import { ProjectActionQueue } from '@/components/project/ProjectActionQueue';
 import { ProjectOverviewTeamCard } from '@/components/project/ProjectOverviewTeamCard';
 import { ProjectPOSummary } from '@/components/project/ProjectPOSummary';
+import { ProjectDarkHeader } from '@/components/project/ProjectDarkHeader';
+import { ProjectTabBar } from '@/components/project/ProjectTabBar';
 
 import { InvoicesTab } from '@/components/invoices';
 import { ReturnsTab } from '@/components/returns';
