@@ -257,7 +257,7 @@ export function COStatusActions({
         await approveCO.mutateAsync(co.id);
         toast.success('CO approved');
         await logActivity('approved', undefined, financials?.grandTotal || undefined);
-        await notifyOrg(co.assigned_to_org_id, 'CHANGE_APPROVED', financials?.grandTotal || undefined);
+        await notifyAllCOParties('CHANGE_APPROVED', financials?.grandTotal || undefined);
       }
 
       setApproveOpen(false);
