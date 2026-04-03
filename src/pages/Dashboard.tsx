@@ -259,6 +259,7 @@ export default function Dashboard() {
             </div>
 
             {/* Projects list */}
+            <div id="projects-list">
             <ProjectSnapshotList
               projects={projects}
               statusFilter={statusFilter}

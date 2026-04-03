@@ -55,7 +55,7 @@ export function DashboardAttentionList({ attentionItems, pendingInvitesCount }: 
           <p className="text-sm text-muted-foreground">The jobs most likely to hurt your margin or schedule first</p>
         </div>
         <button
-          onClick={() => navigate('/dashboard')}
+          onClick={() => document.getElementById('projects-list')?.scrollIntoView({ behavior: 'smooth' })}
           className="text-sm text-primary font-medium hover:underline shrink-0"
         >
           See all projects
