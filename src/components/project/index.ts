@@ -34,9 +34,11 @@ export { ScopeDetailsTab } from './ScopeDetailsTab';
 export { ProjectIconRail } from './ProjectIconRail';
 export { ProjectBottomNav } from './ProjectBottomNav';
 
-// New redesigned components
+// Redesigned overview components
 export { ProjectHealthBanner } from './ProjectHealthBanner';
 export { ProjectFinancialCommand } from './ProjectFinancialCommand';
 export { MaterialsCommandCenter } from './MaterialsCommandCenter';
 export { COImpactCard } from './COImpactCard';
 export { ProjectActionQueue } from './ProjectActionQueue';
+export { ProjectOverviewTeamCard } from './ProjectOverviewTeamCard';
+export { ProjectPOSummary } from './ProjectPOSummary';
