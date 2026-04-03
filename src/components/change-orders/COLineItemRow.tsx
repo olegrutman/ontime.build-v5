@@ -222,7 +222,7 @@ export function COLineItemRow({
       )}
 
       {/* Entry history — collapsible */}
-      {entryCount > 0 && (
+      {(entryCount > 0 || tcDownstreamCosts.length > 0) && (
         <Collapsible open={historyOpen} onOpenChange={setHistoryOpen}>
           <CollapsibleTrigger asChild>
             <button
