@@ -182,9 +182,27 @@ export default function Dashboard() {
   const teamInvited = !isOrgAdmin || (userOrgRoles.length > 1) || soleMember;
   const projectCreated = projects.length > 0;
 
+  const pendingCOCount = recentDocs.filter(d => d.type === 'change_order' && ['draft', 'shared', 'submitted'].includes(d.status)).length;
+  const openPOCount = recentDocs.filter(d => d.type === 'purchase_order' && !['DELIVERED', 'CANCELLED'].includes(d.status)).length;
+
   return (
-    <AppLayout title="Dashboard">
-      <div className="space-y-6">
+    <AppLayout
+      title="Dashboard"
+      showNewButton={canCreateProject}
+      onNewClick={() => navigate('/create-project')}
+      newButtonLabel="New Project"
+    >
+      <div className="flex gap-0">
+        <DashboardSidebar />
+        <div className="flex-1 min-w-0 space-y-6 px-0">
+
+        {/* Greeting */}
+        <DashboardWelcome
+          firstName={profile?.first_name || null}
+          attentionCount={attentionItems.length + pendingInvites.length}
+          activeProjects={statusCounts.active}
+        />
+
         {showOnboarding && (
           <OnboardingChecklist
             profileComplete={profileComplete}
