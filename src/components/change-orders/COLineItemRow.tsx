@@ -37,6 +37,7 @@ export function COLineItemRow({
 }: COLineItemRowProps) {
   const [showActualForm, setShowActualForm] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
 
   const billable = laborEntries.filter(e => !e.is_actual_cost);
   const myRole = isFC ? 'FC' : isTC ? 'TC' : null;
