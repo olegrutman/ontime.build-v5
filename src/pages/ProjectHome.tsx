@@ -45,6 +45,8 @@ import { COImpactCard } from '@/components/project/COImpactCard';
 import { ProjectActionQueue } from '@/components/project/ProjectActionQueue';
 import { ProjectOverviewTeamCard } from '@/components/project/ProjectOverviewTeamCard';
 import { ProjectPOSummary } from '@/components/project/ProjectPOSummary';
+import { ProjectDarkHeader } from '@/components/project/ProjectDarkHeader';
+import { ProjectTabBar } from '@/components/project/ProjectTabBar';
 
 import { InvoicesTab } from '@/components/invoices';
 import { ReturnsTab } from '@/components/returns';
@@ -259,6 +261,21 @@ export default function ProjectHome() {
   const projectStatus = project.status || 'draft';
   const showMaterials = financials.isGCMaterialResponsible || financials.isTCMaterialResponsible;
 
+  // Compute health label for dark header
+  const healthReasons: string[] = [];
+  if (showMaterials && financials.materialEstimateTotal && financials.materialOrdered > financials.materialEstimateTotal) {
+    healthReasons.push('material');
+  }
+  if (financials.outstanding > 0 && financials.billedToDate > 0 && (financials.outstanding / financials.billedToDate) * 100 > 50) {
+    healthReasons.push('billing');
+  }
+  if (financials.materialOrderedPending > 0) healthReasons.push('delivery');
+  const healthLabel = healthReasons.length >= 2 ? 'at_risk' as const : healthReasons.length === 1 ? 'watch' as const : 'healthy' as const;
+
+  const formattedAddress = project.address
+    ? [project.address.street, project.address.city, project.address.state, project.address.zip].filter(Boolean).join(', ')
+    : null;
+
   return (
     <ProjectShell
       projectName={project.name}
@@ -273,6 +290,9 @@ export default function ProjectHome() {
             "max-w-7xl mx-auto w-full pb-24 lg:pb-6",
             activeTab === 'overview' ? 'px-3 sm:px-6 py-4 sm:py-6' : 'px-3 sm:px-6 py-4 sm:py-6 space-y-6'
           )}>
+            {/* Sticky Tab Bar */}
+            <ProjectTabBar activeTab={activeTab} onTabChange={handleTabChange} isSupplier={isSupplier} />
+
             {/* Overview Tab */}
             {activeTab === 'overview' && (
               <>
@@ -281,7 +301,14 @@ export default function ProjectHome() {
                 ) : isSupplier && supplierOrgId ? (
                   <SupplierMaterialsOverview projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
                 ) : (
-                  <div className="space-y-6">
+                  <div className="space-y-6 mt-6">
+                    {/* Dark Project Header */}
+                    <ProjectDarkHeader
+                      name={project.name}
+                      address={formattedAddress}
+                      status={projectStatus}
+                      healthLabel={projectStatus === 'active' ? healthLabel : undefined}
+                    />
                     {showSetupBanner && (
                       <div
                         className="rounded-3xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors"

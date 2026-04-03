@@ -25,6 +25,8 @@ import { DashboardMaterialsHealth } from '@/components/dashboard/DashboardMateri
 import { ProjectSnapshotList } from '@/components/dashboard/ProjectSnapshotList';
 import { DashboardActionQueue } from '@/components/dashboard/DashboardActionQueue';
 import { RemindersTile } from '@/components/dashboard/RemindersTile';
+import { DashboardWelcome } from '@/components/dashboard/DashboardWelcome';
+import { DashboardSidebar } from '@/components/app-shell/DashboardSidebar';
 import type { ProjectStatusFilter } from '@/components/dashboard/StatusMenu';
 
 export default function Dashboard() {
@@ -180,9 +182,27 @@ export default function Dashboard() {
   const teamInvited = !isOrgAdmin || (userOrgRoles.length > 1) || soleMember;
   const projectCreated = projects.length > 0;
 
+  const pendingCOCount = recentDocs.filter(d => d.type === 'change_order' && ['draft', 'shared', 'submitted'].includes(d.status)).length;
+  const openPOCount = recentDocs.filter(d => d.type === 'purchase_order' && !['DELIVERED', 'CANCELLED'].includes(d.status)).length;
+
   return (
-    <AppLayout title="Dashboard">
-      <div className="space-y-6">
+    <AppLayout
+      title="Dashboard"
+      showNewButton={canCreateProject}
+      onNewClick={() => navigate('/create-project')}
+      newButtonLabel="New Project"
+    >
+      <div className="flex gap-0">
+        <DashboardSidebar />
+        <div className="flex-1 min-w-0 space-y-6 px-0">
+
+        {/* Greeting */}
+        <DashboardWelcome
+          firstName={profile?.first_name || null}
+          attentionCount={attentionItems.length + pendingInvites.length}
+          activeProjects={statusCounts.active}
+        />
+
         {showOnboarding && (
           <OnboardingChecklist
             profileComplete={profileComplete}
@@ -205,6 +225,15 @@ export default function Dashboard() {
         {pendingInvites.length > 0 && (
           <PendingInvitesPanel invites={pendingInvites} onRefresh={refetch} />
         )}
+
+        {/* Business Snapshot — Hero */}
+        <DashboardBusinessSnapshot
+          statusCounts={statusCounts}
+          attentionCount={attentionItems.length + pendingInvites.length}
+          billing={billing}
+          pendingCOCount={pendingCOCount}
+          openPOCount={openPOCount}
+        />
 
         {/* KPI Row */}
         <DashboardKPIs financials={financials} orgType={orgType} />
@@ -245,13 +274,6 @@ export default function Dashboard() {
 
           {/* Right column — 4 cols */}
           <div className="xl:col-span-4 space-y-6">
-            {/* Business Snapshot */}
-            <DashboardBusinessSnapshot
-              statusCounts={statusCounts}
-              attentionCount={attentionItems.length + pendingInvites.length}
-              billing={billing}
-            />
-
             {/* Reminders */}
             <RemindersTile
               reminders={reminders.map(r => ({ ...r, completed: false }))}
@@ -262,6 +284,7 @@ export default function Dashboard() {
               onAdd={() => setAddReminderOpen(true)}
             />
           </div>
+        </div>
         </div>
       </div>
 

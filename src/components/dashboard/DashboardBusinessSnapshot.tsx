@@ -16,7 +16,7 @@ interface DashboardBusinessSnapshotProps {
   openPOCount?: number;
 }
 
-export function DashboardBusinessSnapshot({ statusCounts, attentionCount, billing }: DashboardBusinessSnapshotProps) {
+export function DashboardBusinessSnapshot({ statusCounts, attentionCount, billing, pendingCOCount = 0, openPOCount = 0 }: DashboardBusinessSnapshotProps) {
   const totalActive = statusCounts.active + statusCounts.setup;
   const riskCount = attentionCount > 2 ? attentionCount : 0;
   const watchCount = attentionCount > 0 && attentionCount <= 2 ? attentionCount : 0;
@@ -24,8 +24,8 @@ export function DashboardBusinessSnapshot({ statusCounts, attentionCount, billin
 
   const stats = [
     { label: 'Unapproved invoices', value: billing.invoicesReceived },
-    { label: 'Pending COs', value: 0 },
-    { label: 'Open POs', value: 0 },
+    { label: 'Pending COs', value: pendingCOCount },
+    { label: 'Open POs', value: openPOCount },
   ];
 
   return (

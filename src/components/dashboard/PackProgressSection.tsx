@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { ChevronDown } from 'lucide-react';
 
 interface Pack {
   name: string;
@@ -25,14 +27,19 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 export function PackProgressSection({ packs }: PackProgressSectionProps) {
+  const [expanded, setExpanded] = useState(false);
+
   if (packs.length === 0) return null;
+
+  const visiblePacks = expanded ? packs : packs.slice(0, 3);
+  const hasMore = packs.length > 3;
 
   return (
     <div className="rounded-3xl bg-card border border-border/60 shadow-sm p-5">
       <h3 className="text-lg font-semibold tracking-tight">Pack progress</h3>
       <p className="text-sm text-muted-foreground">Ordered packs are also your schedule signal</p>
       <div className="mt-4 space-y-3">
-        {packs.map((pack) => {
+        {visiblePacks.map((pack) => {
           const config = STATUS_CONFIG[pack.status] || STATUS_CONFIG.partial;
           const badge = STATUS_BADGE[pack.status] || STATUS_BADGE.partial;
           return (
@@ -54,6 +61,15 @@ export function PackProgressSection({ packs }: PackProgressSectionProps) {
           );
         })}
       </div>
+      {hasMore && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="w-full mt-3 p-2 text-sm text-primary font-medium hover:bg-accent/30 transition-colors flex items-center justify-center gap-1 rounded-xl"
+        >
+          {expanded ? 'Show less' : `Show all (${packs.length})`}
+          <ChevronDown className={cn('w-4 h-4 transition-transform', expanded && 'rotate-180')} />
+        </button>
+      )}
     </div>
   );
 }
