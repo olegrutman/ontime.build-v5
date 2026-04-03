@@ -43,6 +43,8 @@ import { ProjectFinancialCommand } from '@/components/project/ProjectFinancialCo
 import { MaterialsCommandCenter } from '@/components/project/MaterialsCommandCenter';
 import { COImpactCard } from '@/components/project/COImpactCard';
 import { ProjectActionQueue } from '@/components/project/ProjectActionQueue';
+import { ProjectOverviewTeamCard } from '@/components/project/ProjectOverviewTeamCard';
+import { ProjectPOSummary } from '@/components/project/ProjectPOSummary';
 
 import { InvoicesTab } from '@/components/invoices';
 import { ReturnsTab } from '@/components/returns';
