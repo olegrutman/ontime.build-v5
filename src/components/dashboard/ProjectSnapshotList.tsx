@@ -65,8 +65,8 @@ export function ProjectSnapshotList({
         <h3 className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Projects</h3>
         <div className="flex items-center gap-2">
           <StatusMenu
-            value={statusFilter}
-            onChange={onStatusFilterChange}
+            currentFilter={statusFilter}
+            onFilterChange={onStatusFilterChange}
             counts={statusCounts}
           />
           {canCreate && (
