@@ -39,7 +39,9 @@ export function COLineItemRow({
   const [showActualForm, setShowActualForm] = useState(false);
 
   const billable = laborEntries.filter(e => !e.is_actual_cost);
-  const actualCosts = laborEntries.filter(e => e.is_actual_cost);
+  // Bug 5: Filter actual costs by current user's role — FC sees only FC costs, TC sees only TC costs
+  const myRole = isFC ? 'FC' : isTC ? 'TC' : null;
+  const actualCosts = laborEntries.filter(e => e.is_actual_cost && e.entered_by_role === myRole);
 
   const fcBillable = billable.filter(e => e.entered_by_role === 'FC');
   const tcBillable = billable.filter(e => e.entered_by_role === 'TC');

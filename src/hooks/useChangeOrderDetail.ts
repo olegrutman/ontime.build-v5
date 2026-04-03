@@ -205,6 +205,8 @@ export function useChangeOrderDetail(coId: string | null) {
     tcBillableToGC,
     grandTotal,
     actualCostTotal,
+    tcActualCostTotal,
+    fcActualCostTotal,
     profitMargin,
     nteUsedPercent,
   };
