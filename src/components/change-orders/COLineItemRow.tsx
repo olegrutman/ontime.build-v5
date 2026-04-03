@@ -53,7 +53,7 @@ export function COLineItemRow({
   const visibleBillable = isGC ? tcBillable : isFC ? fcBillable : tcBillable;
   const tcDownstreamCosts = isTC ? fcBillable : [];
   const totalForRole = isGC ? tcTotal : isFC ? fcTotal : tcTotal;
-  const entryCount = visibleBillable.length + tcDownstreamCosts.length;
+  const entryCount = visibleBillable.length;
 
   const enteredByRole = isFC ? 'FC' as const : 'TC' as const;
   const showGCApproval = isGC && (pricingType === 'tm' || pricingType === 'nte');
