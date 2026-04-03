@@ -176,13 +176,19 @@ export function useChangeOrderDetail(coId: string | null) {
   const equipmentCost = equipment.reduce((sum, item) => sum + (item.cost ?? 0), 0);
   const equipmentMarkup = equipment.reduce((sum, item) => sum + (item.markup_amount ?? 0), 0);
   const equipmentTotal = equipment.reduce((sum, item) => sum + (item.billed_amount ?? 0), 0);
+  // Bug 1: When toggle is OFF, use laborTotal (TC+FC combined), not just tcLaborTotal
   const tcBillableToGC = co?.use_fc_pricing_base && co?.tc_submitted_price && co.tc_submitted_price > 0
     ? co.tc_submitted_price
-    : tcLaborTotal;
-  const grandTotal = laborTotal + materialsTotal + equipmentTotal;
+    : laborTotal;
+  // Bug 2: grandTotal uses tcBillableToGC to avoid double-counting when FC pricing is base
+  const grandTotal = tcBillableToGC + materialsTotal + equipmentTotal;
   const actualCostTotal = actualCostEntries.reduce((sum, entry) => sum + (entry.line_total ?? 0), 0);
+  // Bug 4: Split actual costs by role for privacy
+  const tcActualCostTotal = actualCostEntries.filter(e => e.entered_by_role === 'TC').reduce((s, e) => s + (e.line_total ?? 0), 0);
+  const fcActualCostTotal = actualCostEntries.filter(e => e.entered_by_role === 'FC').reduce((s, e) => s + (e.line_total ?? 0), 0);
   const profitMargin = grandTotal > 0 ? ((grandTotal - actualCostTotal) / grandTotal) * 100 : null;
-  const nteUsedPercent = co?.nte_cap && co.nte_cap > 0 ? (grandTotal / co.nte_cap) * 100 : 0;
+  // Bug 3: NTE tracks labor spend only, not materials/equipment
+  const nteUsedPercent = co?.nte_cap && co.nte_cap > 0 ? (laborTotal / co.nte_cap) * 100 : 0;
 
   const financials: COFinancials = {
     laborTotal,
