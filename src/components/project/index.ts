@@ -4,16 +4,14 @@ export { ProjectScopeSection } from './ProjectScopeSection';
 export { ProjectContractsSection } from './ProjectContractsSection';
 export { ProjectActivitySection } from './ProjectActivitySection';
 
-
 export { PurchaseOrdersTab } from './PurchaseOrdersTab';
-export { MetricStrip } from './MetricStrip';
 export { AttentionBanner } from './AttentionBanner';
+
 // Supplier-specific components
 export { SupplierContractsSection } from './SupplierContractsSection';
 export { SupplierFinancialsSummaryCard } from './SupplierFinancialsSummaryCard';
 export { SupplierEstimatesSection } from './SupplierEstimatesSection';
 
-export { OperationalSummary } from './OperationalSummary';
 export { ProjectEstimatesReview } from './ProjectEstimatesReview';
 export { ProjectReadinessCard } from './ProjectReadinessCard';
 export { SupplierEstimateVsOrdersCard } from './SupplierEstimateVsOrdersCard';
@@ -35,3 +33,10 @@ export { CriticalScheduleCard } from './CriticalScheduleCard';
 export { ScopeDetailsTab } from './ScopeDetailsTab';
 export { ProjectIconRail } from './ProjectIconRail';
 export { ProjectBottomNav } from './ProjectBottomNav';
+
+// New redesigned components
+export { ProjectHealthBanner } from './ProjectHealthBanner';
+export { ProjectFinancialCommand } from './ProjectFinancialCommand';
+export { MaterialsCommandCenter } from './MaterialsCommandCenter';
+export { COImpactCard } from './COImpactCard';
+export { ProjectActionQueue } from './ProjectActionQueue';
