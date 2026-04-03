@@ -106,7 +106,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
       case 'scroll_materials': materialsRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
       case 'scroll_pricing': pricingRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
       case 'scroll_fc': scopeRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
-      case 'log_hours': setShowHourEntry(true); break;
+      case 'log_hours': scopeRef.current?.scrollIntoView({ behavior: 'smooth' }); break;
       default: window.scrollTo({ top: 0, behavior: 'smooth' }); break;
     }
   }
