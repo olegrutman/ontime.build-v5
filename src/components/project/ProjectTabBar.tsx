@@ -24,8 +24,8 @@ interface ProjectTabBarProps {
 }
 
 function TabItem({ tab, active, onClick }: { tab: Tab; active: boolean; onClick: () => void }) {
-  const enabled = useFeatureEnabled(tab.featureKey as any ?? '__always_on__');
-  if (tab.featureKey && !enabled) return null;
+  const enabled = tab.featureKey ? useFeatureEnabled(tab.featureKey as any) : true;
+  if (!enabled) return null;
 
   return (
     <button
