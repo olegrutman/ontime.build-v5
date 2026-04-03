@@ -1,129 +1,94 @@
 
 
-# Dashboard + Project Overview Redesign — Matching Mockup
+# Dashboard & Project Overview — Refinement Plan
 
-## What the mockup shows
+## What I see in the mockup screenshots vs current code
 
-The mockup is a single-page layout with two major sections stacked vertically:
+The screenshots show the mockup rendering with:
+1. A **top bar** with "PORTFOLIO DASHBOARD" label + personalized greeting ("Good morning, Oleg") + search + orange "+ New" button
+2. A **dark project header** on overview with project name, address, health/status badges
+3. A **sticky tab bar** (Overview, Change Orders, Invoices, Purchase Orders, Returns, Schedule, Daily Log) with orange underline on active tab
+4. **Health banner** with reason cards in a 2x2 grid
+5. **5 financial KPIs** in a 2-column then single-column layout
+6. **Materials Command Center** with 6 stat tiles + 3 alert tiles
+7. **Pack Progress** with progress bars and status labels
+8. **Action Queue** with "Go" links
 
-**Dashboard (top half):**
-- 4 KPI cards in a row (`rounded-3xl`, white bg, large numbers, subtitle text)
-- 8/4 column split: left has "Projects needing attention" card + 2-col grid (Materials Health with bar chart + Action queue), right has dark navy "Business snapshot" card + Pack Progress card
-- Clean `rounded-3xl` cards everywhere, `shadow-sm`, slate color palette
+## What is currently missing or wrong
 
-**Project Overview (bottom half):**
-- Dark header (`bg-slate-950`) with project name, address, health badge
-- Sticky tab bar below header
-- Amber health banner with reason cards in a 4-col grid
-- 5 financial KPI cards in a row
-- 8/4 split: left has Materials Command Center (6-col stat grid + 3-col alert tiles) + PO table; right has CO Impact + Pack Progress with progress bars + Action Queue
+### Dashboard (`Dashboard.tsx`)
+1. **No personalized greeting** — the mockup shows "Good morning, Oleg" prominently at the top. `DashboardWelcome` component exists but is NOT rendered in current Dashboard.tsx
+2. **No "+ New" project button** in the top bar — `AppLayout` supports `showNewButton`/`onNewClick` props but Dashboard doesn't pass them
+3. **Business Snapshot card is in right sidebar** — mockup shows it at the TOP before KPIs as the hero section. Currently it's buried in the right column below the main grid
+4. **No sidebar navigation** — mockup shows a dark navy sidebar with nav items (Dashboard, Projects, Work Orders, Invoices, POs, Returns, Documents, Settings). Current app uses only a top context bar + mobile bottom nav
+5. **No Pack Progress on dashboard** — `PackProgressSection` exists but is never rendered on the dashboard (no data source wired)
+6. **Materials Health uses fake data** — `DashboardMaterialsHealth` receives `financials.totalRevenue` as estimate and `financials.paidByYou` as ordered, which are NOT material figures. Should aggregate real material data from projects
+7. **DashboardBusinessSnapshot missing pending CO and open PO counts** — currently hardcoded to 0
 
-## What needs to change
+### Project Overview (`ProjectHome.tsx`)
+8. **No dark project header** — mockup shows `bg-slate-950` dark section with project name, address, health badge, status badge. Current overview jumps straight to health banner
+9. **No sticky tab bar** — mockup shows a text-based sticky tab bar below the dark header. Current implementation uses the `ProjectIconRail` (icon-only sidebar on desktop) which is different from the mockup
+10. **Materials Command Center doesn't use real pack data** — `MaterialsCommandCenter` uses `useProjectFinancials` which has basic material totals but NO pack-level breakdown, no unmatched items, no packs-not-started count. The rich logic exists in `useSupplierMaterialsOverview` but is only used for the supplier view
+11. **Pack Progress not shown on overview** — `PackProgressSection` is available but not rendered in the project overview layout
+12. **Items not collapsible** — when lists get long (POs, packs, action queue, attention items), there's no show-more/collapse behavior
+13. **PO Summary is a table** — works fine on desktop but mockup suggests card-based for mobile; current table lacks mobile card fallback
 
-### Dashboard changes:
-1. **PortfolioHealthHero** → Redesign as a dark navy sidebar card ("Business snapshot") with active project count + risk breakdown + key counts (unapproved invoices, pending COs, open POs)
-2. **DashboardKPIs** → Update card style to `rounded-3xl` with larger padding and bigger numbers
-3. **DashboardAttentionList** → Redesign as "Projects needing attention" with project-level risk items (name, issue description, At Risk/Watch badge)
-4. **DashboardMaterialsHealth** → New component: Materials Health card with bar chart + Estimate/Ordered/Forecast mini-stats + Watch badge
-5. **DashboardActionQueue** → Restyle as "Needs action today" with `rounded-2xl` action items
-6. **Layout** → Switch to 8/4 grid with dark snapshot card on right
+## Implementation approach
 
-### Project Overview changes:
-1. **Project header** → Dark `bg-slate-950` section with name, address, health badge, status badge
-2. **ProjectHealthBanner** → Amber card with reason tiles in a responsive grid (not bullet list)
-3. **ProjectFinancialCommand** → Expand to 5 KPIs (add "Approved CO Adds" + "Revised Contract")
-4. **MaterialsCommandCenter** → Expand with 6 stat tiles (add Returns/Credits + Forecast Final) + 3 alert tiles (Packs not started, Unmatched materials, Unconfirmed deliveries)
-5. **COImpactCard** → Expand to show 4 line items (Revenue, Cost, Margin, Pending Exposure)
-6. Add **PackProgressSection** on right column with progress bars
-7. Add **ProjectPOSummary** — inline table/card view of POs on overview tab
-8. Add **OverviewTeamCard** back on the project overview (use existing `TeamMembersCard` or a streamlined read-only version)
+### A. Dashboard changes
 
-### New components to create:
-| Component | Location |
-|-----------|----------|
-| `DashboardMaterialsHealth.tsx` | `src/components/dashboard/` |
-| `DashboardBusinessSnapshot.tsx` | `src/components/dashboard/` |
-| `PackProgressSection.tsx` | `src/components/project/` |
-| `ProjectPOSummary.tsx` | `src/components/project/` |
-| `ProjectOverviewTeamCard.tsx` | `src/components/project/` |
+1. **Add greeting header** — render `DashboardWelcome` at the top of the dashboard with user's first name from `profile`. Show "PORTFOLIO DASHBOARD" as an uppercase label above
+2. **Pass `showNewButton` + `onNewClick` to AppLayout** — enables "+ New" button in ContextBar for project creation
+3. **Move Business Snapshot to top** — place `DashboardBusinessSnapshot` as the first major element after KPIs (or above them as a hero). Wire `pendingCOCount` and `openPOCount` from `useDashboardData` (need to add these counts to the hook or compute from `recentDocs`)
+4. **Add desktop sidebar** — create `DashboardSidebar.tsx` with dark navy styling matching mockup: nav items for Dashboard, Projects, Invoices, Purchase Orders, Returns, Settings. Collapsible to icon-only on medium screens. Hidden on mobile (bottom nav handles it). Update `AppShell` to render sidebar when on dashboard route
+5. **Wire real material data** — `useDashboardData` should aggregate `materialEstimateTotal`, `materialOrdered`, `materialDelivered` across projects. If not available, we pass the hook data we have and clearly label approximations
 
-### Existing components to restyle:
-- `PortfolioHealthHero` → Remove (replaced by BusinessSnapshot)
-- `DashboardKPIs` → `rounded-3xl`, larger padding
-- `DashboardAttentionList` → Project-level risk items with badges
-- `DashboardActionQueue` → "Needs action today" style
-- `ProjectHealthBanner` → Reason grid cards instead of bullet list
-- `ProjectFinancialCommand` → 5 KPIs, `rounded-3xl`
-- `MaterialsCommandCenter` → 6+3 tile layout
-- `COImpactCard` → 4 rows (revenue/cost/margin/pending)
+### B. Project Overview changes
 
-### Dashboard.tsx layout update:
-```
-<DashboardKPIs />                     {/* 4-col row */}
-<div grid 8/4>
-  <div>                               {/* left 8-col */}
-    <DashboardAttentionList />         {/* "Projects needing attention" */}
-    <div grid 2-col>
-      <DashboardMaterialsHealth />     {/* chart + stats */}
-      <DashboardActionQueue />         {/* "Needs action today" */}
-    </div>
-  </div>
-  <div>                               {/* right 4-col */}
-    <DashboardBusinessSnapshot />      {/* dark navy card */}
-    <PackProgressSection />            {/* dashboard-level packs */}
-  </div>
-</div>
-```
+6. **Add dark project header** — create `ProjectDarkHeader.tsx` rendered at the top of overview tab with project name, formatted address, health badge, status badge. Uses `bg-slate-950 text-white`
+7. **Add sticky text tab bar** — create `ProjectTabBar.tsx` that renders below the dark header as a horizontally scrollable text-based tab strip with orange underline on active. Sticky below the context bar (top-16). This replaces visual navigation on the overview page while keeping `ProjectIconRail` for other tabs
+8. **Enhance MaterialsCommandCenter** — use `useSupplierMaterialsOverview` data when supplier org is available to get: pack comparisons, unmatched items, packs not started, forecast. For non-supplier views, compute from PO data similarly. Add pack-level rows showing which packs are ordered and which are over budget
+9. **Add PackProgressSection to overview** — fetch pack data from estimate items + PO status, compute pack statuses (delivered/ordered/not_ordered/partial), render with progress bars in the right column
+10. **Collapsible lists** — add "show more" toggle to any list section with >3 items (PO table, pack progress, action queue, attention list). Default to showing 3 items with a "Show all (N)" button
 
-### ProjectHome.tsx overview layout update:
-```
-<ProjectDarkHeader />                  {/* dark project header */}
-<StickyTabBar />                       {/* already exists via ProjectIconRail */}
-<ProjectHealthBanner />                {/* amber banner with reason grid */}
-<ProjectFinancialCommand />            {/* 5 KPIs */}
-<div grid 8/4>
-  <div>
-    <MaterialsCommandCenter />         {/* expanded 6+3 */}
-    <ProjectPOSummary />               {/* PO table/cards */}
-  </div>
-  <div>
-    <COImpactCard />                   {/* 4 rows */}
-    <PackProgressSection />            {/* with progress bars */}
-    <ProjectOverviewTeamCard />        {/* team card */}
-    <ProjectActionQueue />
-  </div>
-</div>
-```
+### C. Shared components
 
-### Visual tokens (matching mockup):
-- Cards: `rounded-3xl bg-white border border-slate-200 shadow-sm`
-- Inner cards/tiles: `rounded-2xl bg-slate-50 border border-slate-200`
-- Section titles: `text-lg font-semibold tracking-tight` (not uppercase)
-- Subtitles: `text-sm text-slate-500`
-- KPI numbers: `text-3xl font-semibold tracking-tight`
-- Status badges: `rounded-full px-3 py-1 text-xs font-semibold`
-- Dark cards: `bg-[#0f172a] text-white rounded-3xl`
-- Health banner: `rounded-3xl bg-amber-50 border border-amber-200`
+11. **DashboardSidebar.tsx** — dark navy sidebar for desktop. Items: Dashboard, Projects, Invoices, Purchase Orders, Returns, Documents, Settings. Each item navigates to the appropriate route. Collapsible icon-only on `lg`, expanded on `xl`. Mobile: hidden (use existing `MobileBottomNav`)
 
-### Team card on overview:
-Create a lightweight `ProjectOverviewTeamCard` that:
-- Fetches `project_team` with org names (reuse pattern from `TeamMembersCard`)
-- Shows role dot + org name + role abbreviation per row
-- Shows material responsibility indicator
-- Shows designated supplier
-- Links to full team management
-- Fits in the right sidebar column
+## Files to create
+| File | Purpose |
+|------|---------|
+| `src/components/app-shell/DashboardSidebar.tsx` | Desktop sidebar navigation (dark navy) |
+| `src/components/project/ProjectDarkHeader.tsx` | Dark header for project overview |
+| `src/components/project/ProjectTabBar.tsx` | Sticky text tab bar for project overview |
 
-### Hooks reused (no changes):
-- `useDashboardData` — all dashboard data
-- `useProjectFinancials` — all project financial data
-- `useProjectReadiness` — setup status
-- All existing business logic stays intact
+## Files to modify
+| File | Changes |
+|------|---------|
+| `Dashboard.tsx` | Add greeting, pass showNewButton, move BusinessSnapshot to top, render sidebar layout |
+| `AppShell.tsx` | Optionally render sidebar on dashboard pages |
+| `DashboardBusinessSnapshot.tsx` | Wire `pendingCOCount` and `openPOCount` props (already has them but they're unused) |
+| `MaterialsCommandCenter.tsx` | Accept optional pack data, show pack-level breakdown, unmatched items, packs not started from real hooks |
+| `ProjectHome.tsx` | Add dark header + sticky tab bar to overview, add PackProgressSection, wire enhanced MaterialsCommandCenter |
+| `DashboardAttentionList.tsx` | Collapse to 3 items with "Show all" toggle |
+| `DashboardActionQueue.tsx` | Collapse to 3 items with "Show all" toggle |
+| `ProjectPOSummary.tsx` | Collapse to 3 rows with "Show all" toggle |
+| `PackProgressSection.tsx` | Collapse to 3 packs with "Show all" toggle |
 
-### Implementation order:
-1. Restyle existing components (KPIs, health banner, materials, CO impact, attention list, action queue)
-2. Create new components (BusinessSnapshot, MaterialsHealth, PackProgress, POSummary, OverviewTeamCard)
-3. Update Dashboard.tsx layout
-4. Update ProjectHome.tsx layout + add dark header
-5. Verify responsive behavior
+## Hook reuse
+- `useDashboardData` — all dashboard data (may add CO/PO counts)
+- `useProjectFinancials` — project-level financials
+- `useSupplierMaterialsOverview` — rich pack/material data (reuse for MaterialsCommandCenter)
+- `useProjectEstimateRows` — estimate pack data
+- `useProfile` — for greeting first name
+- `useAuth` — roles, permissions
+
+## Implementation order
+1. Add greeting + "+ New" button to dashboard
+2. Create `DashboardSidebar` + integrate into `AppShell`
+3. Move BusinessSnapshot to top, wire CO/PO counts
+4. Create `ProjectDarkHeader` + `ProjectTabBar` for overview
+5. Enhance `MaterialsCommandCenter` with pack data from hooks
+6. Add `PackProgressSection` to project overview with real data
+7. Add collapse/expand to all list components (>3 items)
 
