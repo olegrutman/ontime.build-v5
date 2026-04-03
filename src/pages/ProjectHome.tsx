@@ -321,7 +321,7 @@ export default function ProjectHome() {
                     {/* Two-column: actions + billing */}
                     <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-3">
                       <div className="space-y-3">
-                        <BillingCashCard financials={financials} onNavigate={handleTabChange} />
+                        <BillingCashCard financials={financials} />
                       </div>
                       <div className="space-y-3">
                         <ProjectActionQueue financials={financials} projectId={id!} onNavigate={handleTabChange} />
