@@ -226,15 +226,6 @@ export default function Dashboard() {
           <PendingInvitesPanel invites={pendingInvites} onRefresh={refetch} />
         )}
 
-        {/* Business Snapshot — Hero */}
-        <DashboardBusinessSnapshot
-          statusCounts={statusCounts}
-          attentionCount={attentionItems.length + pendingInvites.length}
-          billing={billing}
-          pendingCOCount={pendingCOCount}
-          openPOCount={openPOCount}
-        />
-
         {/* KPI Row */}
         <DashboardKPIs financials={financials} orgType={orgType} />
 
@@ -276,6 +267,13 @@ export default function Dashboard() {
 
           {/* Right column — 4 cols */}
           <div className="xl:col-span-4 space-y-6">
+            <DashboardBusinessSnapshot
+              statusCounts={statusCounts}
+              attentionCount={attentionItems.length + pendingInvites.length}
+              billing={billing}
+              pendingCOCount={pendingCOCount}
+              openPOCount={openPOCount}
+            />
             {/* Reminders */}
             <RemindersTile
               reminders={reminders.map(r => ({ ...r, completed: false }))}
