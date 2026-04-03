@@ -251,14 +251,15 @@ export default function Dashboard() {
             {/* Two-col: Materials Health + Action Queue */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <DashboardMaterialsHealth
-                estimate={financials.totalRevenue}
+                estimate={financials.totalCosts}
                 ordered={financials.paidByYou}
-                forecast={financials.totalRevenue * 1.04}
+                forecast={financials.totalCosts * 1.04}
               />
               <DashboardActionQueue docs={recentDocs} />
             </div>
 
             {/* Projects list */}
+            <div id="projects-list">
             <ProjectSnapshotList
               projects={projects}
               statusFilter={statusFilter}
@@ -270,6 +271,7 @@ export default function Dashboard() {
               orgType={orgType}
               orgId={orgId}
             />
+            </div>
           </div>
 
           {/* Right column — 4 cols */}
