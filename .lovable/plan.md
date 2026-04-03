@@ -1,195 +1,134 @@
 
 
-# CO Feature Rebuild — Full Implementation Plan
+# CO System Audit — Bugs Found
 
-This is a structured rewrite of the Change Order system. Every file listed below will be replaced entirely — not patched. The build follows the exact 11-step sequence specified.
-
----
-
-## Phase 1: Schema Migrations
-
-**New columns on `change_orders`:**
-- `gc_budget` numeric nullable
-- `co_material_responsible_override` text nullable
-- `co_equipment_responsible_override` text nullable
-
-**New columns on `co_labor_entries`:**
-- `gc_approved` boolean default false
-- `gc_approved_at` timestamptz nullable
-
-**New columns on `change_order_collaborators`:**
-- `accepted_at` timestamptz nullable
-- `rejected_at` timestamptz nullable
-
-**New table `co_sov_items`:**
-- id uuid PK, co_id uuid FK, org_id uuid FK, line_item_name text, amount numeric, status text default 'pending', created_at timestamptz, approved_at timestamptz nullable, invoice_id uuid nullable
-- RLS: authenticated users can read rows where org_id matches their org; platform staff and org members can write
+After reviewing all CO formulas, permissions, and role logic across the codebase, here are the issues discovered:
 
 ---
 
-## Phase 2: COAcceptBanner + Accept/Reject Flow
+## Bug 1: `tcBillableToGC` formula double-counts or ignores TC labor
 
-**New file:** `src/components/change-orders/COAcceptBanner.tsx`
-- Reads `change_order_collaborators` for current user's org where status = 'invited'
-- Shows banner: "[Org name] invited you to this CO"
-- Accept button: updates collaborator status to 'active', sets `accepted_at`
-- Decline button: updates to 'rejected', sets `rejected_at`, redirects to CO list
-- Sends notification via `sendCONotification` on accept/reject
+**File:** `useChangeOrderDetail.ts` line 179-181
 
-**Modification to wizard submit logic (Phase 3):** When GC creates CO with `assigned_to_org_id`, auto-insert a `change_order_collaborators` row with status 'invited'. Same when TC assigns FC.
+When `use_fc_pricing_base` is ON and `tc_submitted_price > 0`, `tcBillableToGC` uses the snapshot price. But when it's OFF, it falls back to `tcLaborTotal` — which only includes TC-entered labor entries. If a CO has **only FC entries** (no TC entries) and the toggle is OFF, `tcBillableToGC = 0` even though work was done. The GC KPI "Labor billed" shows $0.
+
+**Fix:** When toggle is OFF, `tcBillableToGC` should be `laborTotal` (TC + FC combined), not just `tcLaborTotal`.
 
 ---
 
-## Phase 3: Unified COWizard Rewrite
+## Bug 2: `grandTotal` always sums TC + FC labor, causing inflated totals
 
-**Files replaced:** `COWizard.tsx`, `StepConfig.tsx` (deleted), `StepCatalog.tsx` (deleted), `StepReview.tsx` (deleted), `QuickLogWizard.tsx` (deleted)
+**File:** `useChangeOrderDetail.ts` line 182
 
-**New structure — 4 steps:**
+`grandTotal = laborTotal + materialsTotal + equipmentTotal` where `laborTotal = tcLaborTotal + fcLaborTotal`. This double-counts when FC pricing is used as TC's base — the TC submitted price already incorporates FC hours. The GC sees an inflated grand total.
 
-| Step | Name | Content |
-|------|------|---------|
-| 1 | Why | Reason picker cards (same as QuickLogWizard's REASON_CARDS + full list). All roles see same UI. |
-| 2 | Where | VisualLocationPicker component (already exists, unchanged). "Same as last time" shortcut. |
-| 3 | How | **Role-specific content:** GC: pricing type, TC assignment dropdown, gc_budget input, material/equipment responsibility toggles. TC: pricing type, FC org selector, scope item picker (catalog browser). FC: scope item picker + quick-pick hour pills (2h/4h/8h/custom). |
-| 4 | Team | All participants list with notification status. Confirm/Create button. |
-
-- QuickLogWizard is consolidated — FC uses same wizard, just sees FC-specific How step
-- Catalog browser logic from StepCatalog moves into the How step (stripped of location/reason sub-phases)
-- Submit logic creates `change_order_collaborators` rows with status 'invited' for assigned orgs
+**Fix:** `grandTotal` should use `tcBillableToGC` (not raw `laborTotal`) when calculating the total visible to GC. Alternatively, compute separate role-specific grand totals.
 
 ---
 
-## Phase 4: COTeamCard
+## Bug 3: `nteUsedPercent` uses `grandTotal` instead of `laborTotal`
 
-**New file:** `src/components/change-orders/COTeamCard.tsx`
-- Fetches orgs involved: CO creator org, assigned_to_org, collaborator orgs
-- Each member shows: color-coded role avatar (GC=blue, TC=green, FC=amber), org name, role label, status pill (Owner/Active/Pending accept/Notified)
-- Tap opens contact drawer (simple sheet with org info)
+**File:** `useChangeOrderDetail.ts` line 185
 
----
+NTE caps track labor spend, but `nteUsedPercent` divides `grandTotal` (which includes materials + equipment) by `nte_cap`. This inflates the NTE percentage and can block labor entry prematurely.
 
-## Phase 5: COMaterialResponsibilityToggle + useCOResponsibility
-
-**New hook:** `src/hooks/useCOResponsibility.ts`
-- Priority: co_material_responsible_override → project_contracts.material_responsibility → default 'TC'
-- Same for equipment
-- Returns `{ materialResponsible, equipmentResponsible, isOverridden, setOverride }`
-
-**New component:** `src/components/change-orders/COMaterialResponsibilityToggle.tsx`
-- Inline toggle in materials/equipment panel headers
-- Shows current responsibility with override indicator
-- GC/TC can toggle; writes to `co_material_responsible_override` / `co_equipment_responsible_override`
+**Fix:** Use `laborTotal` for NTE percentage, not `grandTotal`.
 
 ---
 
-## Phase 6: GC Approval Checkmarks + LaborEntryForm Rewrite
+## Bug 4: TC profitability costs include `actualCostTotal` from ALL roles
 
-**COLineItemRow.tsx rewrite:**
-- When CO is T&M or NTE and viewer is GC: each labor entry row shows a checkbox
-- Checking sets `gc_approved = true`, `gc_approved_at = now()` on that entry
-- TC sees approved vs pending status. FC sees own entry approval status only
-- TC can log their own internal labor separately from FC pass-through
+**File:** `COProfitabilityCard.tsx` line 26
 
-**LaborEntryForm.tsx rewrite:**
-- **TC version:** Hourly mode: hours + rate + markup side by side with live total. Lump sum: amount + markup. Private actual cost section at bottom with margin calculation.
-- **FC version:** Quick-pick hour pills (2h/4h/8h/10h/custom) lead. Fixed-price COs show lump sum. Private actual cost section at bottom with margin.
-- Neither role enters the other's rate
+TC costs = `fcLaborTotal + actualCostTotal`. But `actualCostTotal` aggregates actual-cost entries from both TC and FC. If FC logs private actual costs, those appear in TC's profitability card — leaking private data.
+
+**Fix:** Split actual costs by role: TC profitability should use only TC actual-cost entries, FC profitability only FC actual-cost entries.
 
 ---
 
-## Phase 7: COProfitabilityCard
+## Bug 5: FC sees TC actual-cost entries in `COLineItemRow`
 
-**New file:** `src/components/change-orders/COProfitabilityCard.tsx`
-- TC view: revenue to GC - FC cost - own labor cost = margin ($, %)
-- FC view: billed to TC - actual cost = margin ($, %)
-- Hidden from GC
-- Feeds from private actual cost entries in `co_labor_entries`
+**File:** `COLineItemRow.tsx` lines 191-217 and 220-234
 
----
+The `actualCosts` array is unfiltered by role — it includes all `is_actual_cost` entries regardless of `entered_by_role`. An FC user can see TC's private actual cost entries, and vice versa.
 
-## Phase 8: COBudgetTracker
-
-**New file:** `src/components/change-orders/COBudgetTracker.tsx`
-- GC only
-- Shows `gc_budget` vs total approved spend
-- Progress bar with color thresholds (green < 80%, amber 80-95%, red > 95%)
-- Separate from NTE — this is GC's internal target
+**Fix:** Filter `actualCosts` by the current user's role: FC sees only `entered_by_role === 'FC'` actual costs, TC sees only `entered_by_role === 'TC'` actual costs.
 
 ---
 
-## Phase 9: COSOVPanel
+## Bug 6: GC can see actual-cost entries in labor list
 
-**New file:** `src/components/change-orders/COSOVPanel.tsx`
-- Sidebar component
-- One row per scope line item: name, dollar amount, status pill (Pending/Approved/Invoiced)
-- Status driven by `co_sov_items` table
-- TC can generate invoice for approved items
-- GC sees invoice status
-- FC sees their SOV lines only
+**File:** `COLineItemRow.tsx` line 51
+
+`visibleBillable = isGC ? tcBillable : ...` correctly filters billable entries, but actual-cost entries are only guarded by `isFC` and `isTC` checks in the render. However, the labor entries query returns ALL entries (including actual costs) to all participants via RLS `can_access_change_order`. GC doesn't render actual costs in the UI, but the data is still fetched and available in the client.
+
+**Fix:** Either add RLS to hide `is_actual_cost` entries from non-owning orgs (preferred), or filter them out in the query.
 
 ---
 
-## Phase 10: CODetailLayout Rewrite
+## Bug 7: `COSOVPanel` renders for FC despite early return
 
-**Full replacement of `CODetailLayout.tsx` assembling all new components:**
+**File:** `COSOVPanel.tsx` line 33 vs 50
 
-```text
-+--------------------------------------------------+
-| Top bar (sticky): CO#, title, status, back       |
-+--------------------------------------------------+
-| COAcceptBanner (if not accepted)                  |
-| COWhosHere                                        |
-+--------------------------------------------------+
-| MAIN CONTENT (left)     | SIDEBAR (right, 300px) |
-|                         |                         |
-| COHeaderStrip           | COBudgetTracker (GC)    |
-| COKPIStrip              | Financials card         |
-| COHeroBlock             | COProfitabilityCard     |
-| COTeamCard              | COSOVPanel              |
-| Scope & Labor           | COStatusActions         |
-| COMaterialsPanel        | FCInputRequestCard      |
-| COEquipmentPanel        | FCPricingToggleCard     |
-| Activity + comments     | CONTEPanel              |
-+--------------------------------------------------+
-```
+Line 33: `if (!isGC && !isTC) return null;` — FC users should never see this panel. But line 50 has an FC-specific filter `isFC ? items.filter(...)`, which is dead code. This is not a runtime bug but indicates confused logic — if the early return is removed later, FC would see SOV items.
 
-Mobile: sidebar stacks below main content.
+**Fix:** Remove the dead `isFC` branch on line 50.
 
 ---
 
-## Phase 11: COSidebar Rewrite
+## Bug 8: `useCOResponsibility` updates wrong column names
 
-**Full replacement of `COSidebar.tsx`** to render sidebar components in the order above. Composed of the new components built in phases 7-9 plus existing ones.
+**File:** `useCOResponsibility.ts` lines 63-64
 
----
+The mutation patches `co_material_responsible_override` and `co_equipment_responsible_override`, but the CO table columns are `co_material_responsible_override` and `co_equipment_responsible_override`. Need to verify column names match exactly.
 
-## COKPIStrip Rewrite (included in Phase 10)
-
-- **FC:** hours logged, billed to TC, actual cost (private), margin
-- **TC:** FC cost, own billable, materials+equipment, total to GC
-- **GC:** labor billed, materials, equipment, total to approve
-
-## COHeroBlock Rewrite (included in Phase 10)
-
-- Add FC accept/reject state handling
-- Update card sets for new status combinations
+**Fix:** Confirm column names in the database match the patch keys. (Verified: columns exist as `co_material_responsible_override` and `co_equipment_responsible_override` — this is correct.)
 
 ---
 
-## Files NOT touched (per spec)
+## Bug 9: `canSubmit` allows FC non-collaborator to submit
 
-useChangeOrders.ts, useChangeOrderDetail.ts, useCORoleContext.ts, coNotifications.ts, COActivityFeed.tsx, COWhosHere.tsx, VisualLocationPicker.tsx
+**File:** `COStatusActions.tsx` line 354
+
+`canSubmit = (isTC || isFC) && !isCollaborator && (status === 'draft' || ...)`. An FC who created their own CO (not a collaborator) can submit, but there's no check that the CO has an `assigned_to_org_id`. The submit handler checks this, but the button still renders — confusing UX.
+
+**Fix:** Add `&& !!co.assigned_to_org_id` to `canSubmit` condition, or at minimum for FC-created COs.
+
+---
+
+## Bug 10: GC approval notification goes to wrong org
+
+**File:** `COStatusActions.tsx` line 260
+
+After GC approves, notification is sent to `co.assigned_to_org_id` (the TC). But if the GC IS the `org_id` (creator) and the TC is `assigned_to_org_id`, this is correct. However, FC collaborators are not notified of approval.
+
+**Fix:** Use `notifyAllCOParties` instead of `notifyOrg` for approval/rejection so FC collaborators are informed.
+
+---
+
+## Bug 11: `LaborEntryForm` markup not saved to database
+
+**File:** `LaborEntryForm.tsx` line 112-124
+
+The TC markup percentage is calculated client-side for display but is **never persisted** to the database. The insert only saves `hours`, `hourly_rate`, `lump_sum`. The markup is lost — `line_total` (generated column) only computes `hours * hourly_rate` or `lump_sum`, not including markup.
+
+**Fix:** Either store markup in a dedicated column on `co_labor_entries`, or compute markup at the CO level rather than per-entry.
 
 ---
 
 ## Summary
 
-| Action | Files |
-|--------|-------|
-| Delete | StepConfig.tsx, StepCatalog.tsx, StepReview.tsx, QuickLogWizard.tsx |
-| Full rewrite | COWizard.tsx, CODetailLayout.tsx, COSidebar.tsx, COHeroBlock.tsx, COKPIStrip.tsx, COLineItemRow.tsx, LaborEntryForm.tsx |
-| New files | COAcceptBanner.tsx, COTeamCard.tsx, COSOVPanel.tsx, COBudgetTracker.tsx, COProfitabilityCard.tsx, COMaterialResponsibilityToggle.tsx, useCOResponsibility.ts |
-| Migration | 1 migration with all schema additions |
-
-This is a large rebuild. I will implement it in the exact sequence specified, ensuring each phase produces working UI before moving to the next.
+| # | Severity | Bug |
+|---|----------|-----|
+| 1 | High | `tcBillableToGC` shows $0 when toggle off + only FC entries |
+| 2 | High | `grandTotal` double-counts FC+TC labor |
+| 3 | Medium | NTE % includes materials/equipment |
+| 4 | High | TC profitability leaks FC actual costs |
+| 5 | High | Actual costs visible cross-role in line items |
+| 6 | Medium | GC fetches actual-cost data (data leak) |
+| 7 | Low | Dead FC branch in SOV panel |
+| 8 | N/A | Column names verified correct |
+| 9 | Low | Submit button shows without assigned org |
+| 10 | Medium | FC collaborators not notified on approve/reject |
+| 11 | High | TC markup not persisted to database |
 
