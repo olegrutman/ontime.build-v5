@@ -267,6 +267,13 @@ export default function Dashboard() {
 
           {/* Right column — 4 cols */}
           <div className="xl:col-span-4 space-y-6">
+            <DashboardBusinessSnapshot
+              statusCounts={statusCounts}
+              attentionCount={attentionItems.length + pendingInvites.length}
+              billing={billing}
+              pendingCOCount={pendingCOCount}
+              openPOCount={openPOCount}
+            />
             {/* Reminders */}
             <RemindersTile
               reminders={reminders.map(r => ({ ...r, completed: false }))}
