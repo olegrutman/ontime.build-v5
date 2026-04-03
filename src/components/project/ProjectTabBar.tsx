@@ -24,8 +24,27 @@ interface ProjectTabBarProps {
 }
 
 function TabItem({ tab, active, onClick }: { tab: Tab; active: boolean; onClick: () => void }) {
-  const enabled = useFeatureEnabled(tab.featureKey as any ?? '__always_on__');
-  if (tab.featureKey && !enabled) return null;
+  if (!tab.featureKey) {
+    return (
+      <button
+        onClick={onClick}
+        className={cn(
+          'whitespace-nowrap px-1 pb-2.5 text-sm font-medium border-b-2 transition-colors',
+          active
+            ? 'border-primary text-foreground'
+            : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
+        )}
+      >
+        {tab.label}
+      </button>
+    );
+  }
+  return <FeatureTabItem tab={tab} active={active} onClick={onClick} />;
+}
+
+function FeatureTabItem({ tab, active, onClick }: { tab: Tab; active: boolean; onClick: () => void }) {
+  const enabled = useFeatureEnabled(tab.featureKey as any);
+  if (!enabled) return null;
 
   return (
     <button
