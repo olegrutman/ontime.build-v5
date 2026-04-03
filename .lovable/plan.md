@@ -1,197 +1,129 @@
 
 
-# Major UI/UX Redesign — Dashboard + Project Overview
+# Dashboard + Project Overview Redesign — Matching Mockup
 
-## Summary
-Archive old dashboard/overview UI components, then build a redesigned Dashboard and Project Overview as a construction command center with materials-first design, financial clarity, and role-aware presentation — reusing all existing hooks, calculations, and business logic.
+## What the mockup shows
 
----
+The mockup is a single-page layout with two major sections stacked vertically:
 
-## Phase 1: Archive Old UI Files
+**Dashboard (top half):**
+- 4 KPI cards in a row (`rounded-3xl`, white bg, large numbers, subtitle text)
+- 8/4 column split: left has "Projects needing attention" card + 2-col grid (Materials Health with bar chart + Action queue), right has dark navy "Business snapshot" card + Pack Progress card
+- Clean `rounded-3xl` cards everywhere, `shadow-sm`, slate color palette
 
-### Create archive structure
+**Project Overview (bottom half):**
+- Dark header (`bg-slate-950`) with project name, address, health badge
+- Sticky tab bar below header
+- Amber health banner with reason cards in a 4-col grid
+- 5 financial KPI cards in a row
+- 8/4 split: left has Materials Command Center (6-col stat grid + 3-col alert tiles) + PO table; right has CO Impact + Pack Progress with progress bars + Action Queue
+
+## What needs to change
+
+### Dashboard changes:
+1. **PortfolioHealthHero** → Redesign as a dark navy sidebar card ("Business snapshot") with active project count + risk breakdown + key counts (unapproved invoices, pending COs, open POs)
+2. **DashboardKPIs** → Update card style to `rounded-3xl` with larger padding and bigger numbers
+3. **DashboardAttentionList** → Redesign as "Projects needing attention" with project-level risk items (name, issue description, At Risk/Watch badge)
+4. **DashboardMaterialsHealth** → New component: Materials Health card with bar chart + Estimate/Ordered/Forecast mini-stats + Watch badge
+5. **DashboardActionQueue** → Restyle as "Needs action today" with `rounded-2xl` action items
+6. **Layout** → Switch to 8/4 grid with dark snapshot card on right
+
+### Project Overview changes:
+1. **Project header** → Dark `bg-slate-950` section with name, address, health badge, status badge
+2. **ProjectHealthBanner** → Amber card with reason tiles in a responsive grid (not bullet list)
+3. **ProjectFinancialCommand** → Expand to 5 KPIs (add "Approved CO Adds" + "Revised Contract")
+4. **MaterialsCommandCenter** → Expand with 6 stat tiles (add Returns/Credits + Forecast Final) + 3 alert tiles (Packs not started, Unmatched materials, Unconfirmed deliveries)
+5. **COImpactCard** → Expand to show 4 line items (Revenue, Cost, Margin, Pending Exposure)
+6. Add **PackProgressSection** on right column with progress bars
+7. Add **ProjectPOSummary** — inline table/card view of POs on overview tab
+8. Add **OverviewTeamCard** back on the project overview (use existing `TeamMembersCard` or a streamlined read-only version)
+
+### New components to create:
+| Component | Location |
+|-----------|----------|
+| `DashboardMaterialsHealth.tsx` | `src/components/dashboard/` |
+| `DashboardBusinessSnapshot.tsx` | `src/components/dashboard/` |
+| `PackProgressSection.tsx` | `src/components/project/` |
+| `ProjectPOSummary.tsx` | `src/components/project/` |
+| `ProjectOverviewTeamCard.tsx` | `src/components/project/` |
+
+### Existing components to restyle:
+- `PortfolioHealthHero` → Remove (replaced by BusinessSnapshot)
+- `DashboardKPIs` → `rounded-3xl`, larger padding
+- `DashboardAttentionList` → Project-level risk items with badges
+- `DashboardActionQueue` → "Needs action today" style
+- `ProjectHealthBanner` → Reason grid cards instead of bullet list
+- `ProjectFinancialCommand` → 5 KPIs, `rounded-3xl`
+- `MaterialsCommandCenter` → 6+3 tile layout
+- `COImpactCard` → 4 rows (revenue/cost/margin/pending)
+
+### Dashboard.tsx layout update:
 ```
-src/archive/dashboard/
-src/archive/project-overview/
-```
-
-### Files to archive (move + add header comment)
-
-**Dashboard components → `src/archive/dashboard/`:**
-- `DashboardKPIRow.tsx`
-- `DashboardBudgetCard.tsx`
-- `DashboardNeedsAttentionCard.tsx`
-- `DashboardFinancialCard.tsx`
-- `DashboardQuickStats.tsx`
-- `DashboardWelcome.tsx`
-- `DashboardActivityFeed.tsx`
-- `DashboardRecentDocs.tsx`
-- `DashboardTeamCard.tsx`
-- `DashboardPartnersCard.tsx`
-- `FinancialTrendCharts.tsx`
-- `ProjectRow.tsx`
-- `ProjectQuickOverview.tsx`
-
-**Project overview → `src/archive/project-overview/`:**
-- `ProjectOverviewV2.tsx`
-- `ProjectBudgetRingChart.tsx`
-- `ProjectActivityFeedSidebar.tsx`
-- `OverviewContractsSection.tsx`
-- `OverviewTeamCard.tsx`
-- `OverviewProfitCard.tsx`
-- `MetricStrip.tsx`
-- `OperationalSummary.tsx`
-- `ScopeSplitCard.tsx`
-- `DownstreamContractsCard.tsx`
-
-### Files to KEEP (not archive)
-These have strong business logic or are used across non-overview tabs:
-- All hooks (`useDashboardData`, `useProjectFinancials`, `useSupplierDashboardData`, `useSupplierMaterialsOverview`, etc.)
-- `SupplierDashboard.tsx` + all `supplier/` sub-components (already well-designed)
-- `AttentionBanner.tsx`, `PendingInviteCard.tsx`, `PendingInvitesPanel.tsx`
-- `OnboardingChecklist.tsx`, `OrgInviteBanner.tsx`
-- `AddReminderDialog.tsx`, `ArchiveProjectDialog.tsx`, `CompleteProjectDialog.tsx`
-- `RemindersTile.tsx`, `StatusMenu.tsx`
-- `MaterialsBudgetStatusCard.tsx`, `MaterialsBudgetDrawer.tsx`, `MaterialMarkupEditor.tsx`
-- `BillingCashCard.tsx`, `UrgentTasksCard.tsx`, `BudgetTracking.tsx`
-- `ProjectIconRail.tsx`, `ProjectBottomNav.tsx`, `CriticalScheduleCard.tsx`
-- All PO, invoice, CO, returns, schedule, daily-log tab components
-- App shell components (`AppShell`, `ProjectShell`, `ContextBar`, `BottomSheet`, etc.)
-
-### Update imports
-- Update `src/components/dashboard/index.ts` — remove archived exports
-- Update `src/components/project/index.ts` — remove archived exports
-- Update `Dashboard.tsx` and `ProjectHome.tsx` to import new components (Phase 2)
-
----
-
-## Phase 2: New Dashboard
-
-### Reuse
-- **`useDashboardData`** hook — all data fetching, financials, attention items, reminders, project lists
-- **`useSupplierDashboardData`** hook — supplier dashboard stays as-is (already good)
-- **`SupplierDashboard.tsx`** — keep as-is for supplier role
-- **`OnboardingChecklist`**, **`OrgInviteBanner`**, **`PendingInvitesPanel`** — keep
-- **`AddReminderDialog`**, **`ArchiveProjectDialog`**, **`CompleteProjectDialog`** — keep
-- **`RemindersTile`** — keep, place in right column
-- **`StatusMenu`** — keep for project list filtering
-
-### New components to build
-
-| Component | Purpose |
-|-----------|---------|
-| `PortfolioHealthHero.tsx` | Top banner: active projects count, healthy/watch/risk badges, overall financial pulse |
-| `DashboardKPIs.tsx` | Role-aware KPI cards (Contract In, Cost Out, Margin, Materials Forecast) |
-| `DashboardMaterialsHealth.tsx` | Materials summary: estimate vs ordered vs delivered, variance, packs not started, unconfirmed deliveries. Uses data from `useDashboardData` aggregated across projects |
-| `DashboardAttentionList.tsx` | Consolidated urgent items: risk projects, unapproved invoices, pending COs, unconfirmed deliveries, returns |
-| `ProjectSnapshotList.tsx` | Scannable project cards with health badge, margin, materials variance, open PO count |
-| `DashboardActionQueue.tsx` | Focused next-action cards: approve invoice, confirm delivery, review CO, etc. |
-
-### Dashboard.tsx composition (GC/TC/FC)
-```
-<AppLayout>
-  <OnboardingChecklist />
-  <OrgInviteBanner />
-  <PendingInvitesPanel />
-  <PortfolioHealthHero />
-  <DashboardKPIs />                    {/* role-aware */}
-  <DashboardMaterialsHealth />         {/* if material-responsible */}
-  <DashboardAttentionList />
-  <div grid 1fr|340px>
-    <ProjectSnapshotList />            {/* left */}
-    <div>                              {/* right */}
-      <DashboardActionQueue />
-      <RemindersTile />
+<DashboardKPIs />                     {/* 4-col row */}
+<div grid 8/4>
+  <div>                               {/* left 8-col */}
+    <DashboardAttentionList />         {/* "Projects needing attention" */}
+    <div grid 2-col>
+      <DashboardMaterialsHealth />     {/* chart + stats */}
+      <DashboardActionQueue />         {/* "Needs action today" */}
     </div>
   </div>
-</AppLayout>
-```
-
-### Design tokens
-- Rounded cards (`rounded-xl`), soft shadows (`shadow-sm`)
-- KPI cards: large number (Barlow Condensed 2rem+), plain-language label, subtle accent bar
-- Health badges: green "Healthy" / amber "Watch" / red "At Risk"
-- Mobile: single column stack, cards not tables, sticky header
-
----
-
-## Phase 3: New Project Overview
-
-### Reuse
-- **`useProjectFinancials`** — all financial calculations, role detection, material responsibility
-- **`useProjectReadiness`** — setup/readiness logic
-- **`useProjectEstimateRows`** — estimate data
-- **`useSupplierMaterialsOverview`** — supplier materials (supplier view stays as-is)
-- **`AttentionBanner.tsx`** — keep at top
-- **`ProjectReadinessCard`** — keep for setup status
-- **`MaterialsBudgetStatusCard`** / **`MaterialsBudgetDrawer`** — reuse for materials detail
-- **`BillingCashCard`** / **`UrgentTasksCard`** — reuse or adapt
-- **`ProjectShell`** / **`ProjectIconRail`** / **`ProjectBottomNav`** — keep navigation
-
-### New components to build
-
-| Component | Purpose |
-|-----------|---------|
-| `ProjectHealthBanner.tsx` | Healthy/Watch/Risk with specific reasons (materials over budget, CO negative margin, delivery not confirmed) |
-| `ProjectFinancialCommand.tsx` | Role-aware KPI row: Original Contract, CO Adds, Revised Contract, Est. Cost, Projected Margin |
-| `MaterialsCommandCenter.tsx` | The centerpiece for material users: estimate/ordered/delivered/returns/forecast/variance + packs not started + unmatched + next deliveries |
-| `COImpactCard.tsx` | Approved CO revenue, CO cost, CO margin, pending exposure |
-| `PackProgressSection.tsx` | Pack status cards with progress, ETA, risk indication |
-| `ProjectPOSummary.tsx` | Card-based PO summary (not tables on mobile): PO#, package, amount, status, delivery signal |
-| `ProjectActionQueue.tsx` | Project-specific next actions |
-
-### ProjectHome.tsx overview tab composition
-```
-<AttentionBanner />
-<ProjectReadinessCard />           {/* setup only */}
-<ProjectHealthBanner />
-<ProjectFinancialCommand />        {/* role-aware KPIs */}
-<MaterialsCommandCenter />         {/* if material-responsible */}
-<COImpactCard />
-<div grid 1fr|340px on desktop>
-  <div>
-    <PackProgressSection />
-    <ProjectPOSummary />
-  </div>
-  <div>
-    <ProjectActionQueue />
-    <BillingCashCard />             {/* reused */}
+  <div>                               {/* right 4-col */}
+    <DashboardBusinessSnapshot />      {/* dark navy card */}
+    <PackProgressSection />            {/* dashboard-level packs */}
   </div>
 </div>
 ```
 
-### Tab bar
-Keep existing `ProjectIconRail` (desktop) and `ProjectBottomNav` (mobile). No changes needed — they already handle all tabs.
+### ProjectHome.tsx overview layout update:
+```
+<ProjectDarkHeader />                  {/* dark project header */}
+<StickyTabBar />                       {/* already exists via ProjectIconRail */}
+<ProjectHealthBanner />                {/* amber banner with reason grid */}
+<ProjectFinancialCommand />            {/* 5 KPIs */}
+<div grid 8/4>
+  <div>
+    <MaterialsCommandCenter />         {/* expanded 6+3 */}
+    <ProjectPOSummary />               {/* PO table/cards */}
+  </div>
+  <div>
+    <COImpactCard />                   {/* 4 rows */}
+    <PackProgressSection />            {/* with progress bars */}
+    <ProjectOverviewTeamCard />        {/* team card */}
+    <ProjectActionQueue />
+  </div>
+</div>
+```
 
----
+### Visual tokens (matching mockup):
+- Cards: `rounded-3xl bg-white border border-slate-200 shadow-sm`
+- Inner cards/tiles: `rounded-2xl bg-slate-50 border border-slate-200`
+- Section titles: `text-lg font-semibold tracking-tight` (not uppercase)
+- Subtitles: `text-sm text-slate-500`
+- KPI numbers: `text-3xl font-semibold tracking-tight`
+- Status badges: `rounded-full px-3 py-1 text-xs font-semibold`
+- Dark cards: `bg-[#0f172a] text-white rounded-3xl`
+- Health banner: `rounded-3xl bg-amber-50 border border-amber-200`
 
-## Phase 4: Visual Style
+### Team card on overview:
+Create a lightweight `ProjectOverviewTeamCard` that:
+- Fetches `project_team` with org names (reuse pattern from `TeamMembersCard`)
+- Shows role dot + org name + role abbreviation per row
+- Shows material responsibility indicator
+- Shows designated supplier
+- Links to full team management
+- Fits in the right sidebar column
 
-- **Cards**: `rounded-xl bg-card border border-border/60 shadow-sm`
-- **KPI numbers**: `font-heading text-2xl font-bold` (Barlow Condensed)
-- **Currency**: IBM Plex Mono
-- **Section headers**: `text-xs uppercase tracking-wide text-muted-foreground font-medium`
-- **Health badges**: pill-shaped, green/amber/red with icon
-- **Mobile**: single-column, `pb-24` for bottom nav clearance, no tables — card lists only
-- **Accent**: restrained orange for Ontime brand, status colors for health/risk only
-- **Spacing**: `gap-3` between sections, `p-4` card padding
+### Hooks reused (no changes):
+- `useDashboardData` — all dashboard data
+- `useProjectFinancials` — all project financial data
+- `useProjectReadiness` — setup status
+- All existing business logic stays intact
 
----
-
-## Implementation Order
-
-1. Create archive folders, move files, update imports (Step 1)
-2. Build `PortfolioHealthHero` + `DashboardKPIs` + wire into `Dashboard.tsx`
-3. Build `DashboardMaterialsHealth` + `DashboardAttentionList` + `ProjectSnapshotList` + `DashboardActionQueue`
-4. Build `ProjectHealthBanner` + `ProjectFinancialCommand` + wire into `ProjectHome.tsx`
-5. Build `MaterialsCommandCenter` + `COImpactCard` + `PackProgressSection` + `ProjectPOSummary` + `ProjectActionQueue`
-6. Polish responsive behavior, test all roles
-
-### What stays untouched
-- All hooks and business logic
-- All tab components (invoices, POs, COs, returns, schedule, daily log, SOV)
-- Supplier dashboard (already well-structured)
-- App shell, navigation, routing
-- All dialogs and modals
-- All RLS policies and permissions
+### Implementation order:
+1. Restyle existing components (KPIs, health banner, materials, CO impact, attention list, action queue)
+2. Create new components (BusinessSnapshot, MaterialsHealth, PackProgress, POSummary, OverviewTeamCard)
+3. Update Dashboard.tsx layout
+4. Update ProjectHome.tsx layout + add dark header
+5. Verify responsive behavior
 
