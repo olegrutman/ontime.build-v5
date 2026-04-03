@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronDown, EyeOff, CheckCircle } from 'lucide-react';
@@ -37,6 +37,7 @@ export function COLineItemRow({
 }: COLineItemRowProps) {
   const [showActualForm, setShowActualForm] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
 
   const billable = laborEntries.filter(e => !e.is_actual_cost);
   const myRole = isFC ? 'FC' : isTC ? 'TC' : null;
@@ -151,22 +152,40 @@ export function COLineItemRow({
         </div>
       </div>
 
-      {/* Always-visible labor entry form */}
+      {/* Collapsible labor entry form */}
       {canAddLabor && !showActualForm && (
-        <div className="px-4 pb-3">
-          <LaborEntryForm
-            coId={coId}
-            lineItemId={item.id}
-            orgId={orgId}
-            enteredByRole={enteredByRole}
-            pricingType={pricingType}
-            isTC={isTC}
-            isFC={isFC}
-            nteCap={nteCap}
-            nteUsed={nteUsed}
-            onSaved={onRefresh}
-          />
-        </div>
+        <Collapsible open={formOpen} onOpenChange={setFormOpen}>
+          <CollapsibleTrigger asChild>
+            <button
+              type="button"
+              className={cn(
+                'w-full flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition-colors border-t border-border/50',
+                formOpen
+                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                  : 'bg-muted/30 text-primary hover:bg-muted/50'
+              )}
+            >
+              <ChevronDown className={cn('h-4 w-4 transition-transform', formOpen && 'rotate-180')} />
+              {formOpen ? 'Hide entry form' : '+ Add pricing entry'}
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="px-4 pb-3 pt-1">
+              <LaborEntryForm
+                coId={coId}
+                lineItemId={item.id}
+                orgId={orgId}
+                enteredByRole={enteredByRole}
+                pricingType={pricingType}
+                isTC={isTC}
+                isFC={isFC}
+                nteCap={nteCap}
+                nteUsed={nteUsed}
+                onSaved={onRefresh}
+              />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       )}
 
       {/* Actual cost form (toggle) */}
