@@ -1,36 +1,33 @@
 
 
-# Fix Dashboard Links & Add Missing Sidebar Items
+# Fix Dashboard Layout — Match Mockup
 
-## Bugs Found
+## What's wrong now
+1. **BusinessSnapshot is full-width hero** between greeting and KPIs — pushes everything down, too big
+2. **KPI 4th card wrong** — shows "Collected" (currency) but mockup shows "Materials Forecast" as text status ("Watch" / "On Track" / "Risk")
+3. **Layout order wrong** — BusinessSnapshot should be in the RIGHT sidebar column, not above KPIs
 
-1. **"See all projects" link in `DashboardAttentionList`** points to `/dashboard` (self-link, does nothing). Should scroll down to the `ProjectSnapshotList` section on the same page.
+## What the mockup shows (top to bottom)
+1. Greeting ("Good morning, Oleg")
+2. **4 KPI cards in a row** — Contract In, Cost Out, Projected Margin, Materials Forecast (text)
+3. **8/4 grid**:
+   - Left (8 cols): Attention List → Materials Health + Action Queue (2-col)
+   - Right (4 cols): Business Snapshot (dark card, compact) → Pack Progress
 
-2. **Sidebar is missing key nav items** from the mockup. Currently has: Dashboard, Partners, Reminders, My Team, Settings. Missing: **Invoices** (no standalone route exists), **Purchase Orders** (`/purchase-orders` route exists), **Returns** (no standalone route).
+## Changes
 
-3. **`DashboardMaterialsHealth` uses wrong data** — passes `financials.totalRevenue` as material estimate and `financials.paidByYou` as ordered. These are revenue/payment figures, not material data.
+### 1. Move BusinessSnapshot from hero to right sidebar
+In `Dashboard.tsx`: Remove `<DashboardBusinessSnapshot>` from its current position (line 230-236). Place it as the FIRST item in the right sidebar column (line 278), ABOVE RemindersTile.
 
-4. **Business Snapshot and Materials Health cards are not clickable** — no drill-down navigation.
+### 2. Fix 4th KPI card for TC
+In `DashboardKPIs.tsx` for `orgType === 'TC'`: Replace the 4th card ("Collected") with a "Materials Forecast" text card. Compute variance from material costs: if forecast > estimate by >5% → "Risk", >0% → "Watch", else "On Track". Use `isText=true` and `textValue` props already supported by KPICard.
 
-## Plan
+### 3. Compact BusinessSnapshot styling
+Already compact (p-5, rounded-3xl). No size changes needed — moving it to the 4-col sidebar naturally constrains its width.
 
-### 1. Fix "See all projects" link
-In `DashboardAttentionList.tsx`, change the button from `navigate('/dashboard')` to scroll to the projects section using a ref or anchor ID. Add `id="projects-list"` to the `ProjectSnapshotList` wrapper in `Dashboard.tsx`, then use `document.getElementById('projects-list')?.scrollIntoView({ behavior: 'smooth' })`.
-
-### 2. Add missing sidebar items
-Update `DashboardSidebar.tsx` NAV_ITEMS to include Purchase Orders (`/purchase-orders` with `Package` icon). Skip Invoices and Returns since no standalone routes exist for those yet — adding dead links would be worse than omitting them.
-
-### 3. Fix Materials Health data
-In `Dashboard.tsx`, compute real material totals by summing `materialEstimateTotal` and `materialOrdered` from each project's financials (if available in `useDashboardData`). If not available at the dashboard level, pass the existing data but label it as "Cost" instead of "Estimate" to avoid misleading users. Check `useDashboardData` for what material fields are actually available.
-
-### 4. Make cards clickable
-- Business Snapshot: clicking the active projects count navigates to the projects section (same scroll behavior)
-- Materials Health: no standalone materials page exists, so skip this for now
-
-### Files to modify
+## Files to modify
 | File | Change |
 |------|--------|
-| `DashboardAttentionList.tsx` | Fix "See all projects" to scroll to `#projects-list` |
-| `Dashboard.tsx` | Add `id="projects-list"` to ProjectSnapshotList wrapper, fix MaterialsHealth data props |
-| `DashboardSidebar.tsx` | Add Purchase Orders nav item |
+| `Dashboard.tsx` | Move BusinessSnapshot from hero to right sidebar column |
+| `DashboardKPIs.tsx` | Replace TC 4th card with Materials Forecast text status |
 
