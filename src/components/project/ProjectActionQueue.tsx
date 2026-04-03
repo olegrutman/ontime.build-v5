@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { FileText, Package, Wrench, ChevronRight } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { ProjectFinancials } from '@/hooks/useProjectFinancials';
 
@@ -10,41 +9,40 @@ interface ProjectActionQueueProps {
 }
 
 export function ProjectActionQueue({ financials, projectId, onNavigate }: ProjectActionQueueProps) {
-  const actions: { icon: React.ElementType; label: string; detail: string; color: string; onClick: () => void }[] = [];
+  const actions: { label: string; onClick: () => void }[] = [];
 
-  // Pending invoices
   const pendingInvoices = financials.recentInvoices.filter(i => i.status === 'SUBMITTED');
   if (pendingInvoices.length > 0) {
     actions.push({
-      icon: FileText,
-      label: `${pendingInvoices.length} invoice${pendingInvoices.length > 1 ? 's' : ''} to review`,
-      detail: formatCurrency(pendingInvoices.reduce((s, i) => s + i.total_amount, 0)),
-      color: 'text-amber-600 dark:text-amber-400',
+      label: `Approve ${pendingInvoices.length} invoice${pendingInvoices.length > 1 ? 's' : ''}`,
       onClick: () => onNavigate('invoices'),
+    });
+  }
+
+  if (financials.materialOrderedPending > 0) {
+    actions.push({
+      label: 'Confirm pending delivery date',
+      onClick: () => onNavigate('purchase-orders'),
     });
   }
 
   if (actions.length === 0) return null;
 
   return (
-    <div className="rounded-xl bg-card border border-border/60 shadow-sm overflow-hidden">
-      <div className="px-4 py-3 border-b border-border/40">
-        <h3 className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Action Queue</h3>
-      </div>
-      <div className="divide-y divide-border/40">
-        {actions.map((action, i) => {
-          const Icon = action.icon;
-          return (
-            <button key={i} onClick={action.onClick} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-accent/40 transition-colors text-left">
-              <Icon className={cn('w-4 h-4 shrink-0', action.color)} />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium">{action.label}</p>
-              </div>
-              <span className="text-xs font-semibold text-muted-foreground" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{action.detail}</span>
-              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-            </button>
-          );
-        })}
+    <div className="rounded-3xl border border-border/60 shadow-sm p-5">
+      <h3 className="text-xl font-semibold tracking-tight">Action queue</h3>
+      <p className="text-sm text-muted-foreground">Simple enough for a non-technical user</p>
+      <div className="mt-4 space-y-3">
+        {actions.map((action, i) => (
+          <button
+            key={i}
+            onClick={action.onClick}
+            className="w-full rounded-2xl border border-border/60 px-4 py-3 flex items-center justify-between bg-accent/20 hover:bg-accent/40 transition-colors text-left"
+          >
+            <span className="text-sm font-medium">{action.label}</span>
+            <span className="text-primary text-xs font-semibold">Go</span>
+          </button>
+        ))}
       </div>
     </div>
   );

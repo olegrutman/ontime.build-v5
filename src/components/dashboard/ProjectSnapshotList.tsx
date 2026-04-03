@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatCurrency, cn } from '@/lib/utils';
 import { ChevronRight, Plus } from 'lucide-react';
@@ -48,7 +48,6 @@ export function ProjectSnapshotList({
   loading,
   canCreate,
   onCreateProject,
-  orgType,
 }: ProjectSnapshotListProps) {
   const navigate = useNavigate();
 
@@ -60,9 +59,9 @@ export function ProjectSnapshotList({
   }, [projects, statusFilter]);
 
   return (
-    <div className="rounded-xl bg-card border border-border/60 shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
-        <h3 className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Projects</h3>
+    <div className="rounded-3xl bg-card border border-border/60 shadow-sm overflow-hidden">
+      <div className="flex items-center justify-between p-5 border-b border-border/40">
+        <h3 className="text-lg font-semibold tracking-tight">Projects</h3>
         <div className="flex items-center gap-2">
           <StatusMenu
             currentFilter={statusFilter}
@@ -79,9 +78,9 @@ export function ProjectSnapshotList({
       </div>
 
       {loading ? (
-        <div className="p-4 space-y-3">
+        <div className="p-5 space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 bg-accent/30 rounded-lg animate-pulse" />
+            <div key={i} className="h-16 bg-accent/30 rounded-2xl animate-pulse" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
@@ -94,9 +93,9 @@ export function ProjectSnapshotList({
             <button
               key={project.id}
               onClick={() => navigate(`/project/${project.id}/overview`)}
-              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent/40 transition-colors text-left group"
+              className="w-full flex items-center gap-3 px-5 py-4 hover:bg-accent/40 transition-colors text-left group"
             >
-              <div className={cn('w-2 h-2 rounded-full shrink-0', STATUS_DOT[project.status] || 'bg-muted-foreground')} />
+              <div className={cn('w-2.5 h-2.5 rounded-full shrink-0', STATUS_DOT[project.status] || 'bg-muted-foreground')} />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold truncate group-hover:text-primary transition-colors">{project.name}</p>
                 <p className="text-xs text-muted-foreground mt-0.5">

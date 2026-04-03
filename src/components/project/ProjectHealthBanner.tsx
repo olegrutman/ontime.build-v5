@@ -14,7 +14,8 @@ export function ProjectHealthBanner({ financials, projectStatus }: ProjectHealth
 
   // Material variance check
   if (showMaterials && financials.materialEstimateTotal && financials.materialOrdered > financials.materialEstimateTotal) {
-    reasons.push('Materials forecast over estimate');
+    const pct = Math.round(((financials.materialOrdered - financials.materialEstimateTotal) / financials.materialEstimateTotal) * 100);
+    reasons.push(`Material forecast is ${pct}% over estimate`);
   }
 
   // Check outstanding billing
@@ -23,33 +24,35 @@ export function ProjectHealthBanner({ financials, projectStatus }: ProjectHealth
     if (pct > 50) reasons.push('High outstanding balance');
   }
 
+  // Check pending delivery
+  if (financials.materialOrderedPending > 0) {
+    reasons.push('1 delivery still unconfirmed for next 5 days');
+  }
+
   const isRisk = reasons.length >= 2;
   const isWatch = reasons.length === 1;
-  const isHealthy = reasons.length === 0;
 
-  const label = isRisk ? 'At Risk' : isWatch ? 'Watch' : 'Healthy';
-  const Icon = isRisk ? AlertTriangle : isWatch ? Activity : CheckCircle2;
-  const colorClass = isRisk
-    ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900/40'
-    : isWatch
-    ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/40'
-    : 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/40';
-  const iconColor = isRisk ? 'text-red-600 dark:text-red-400' : isWatch ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400';
+  const label = isRisk ? 'Project health is at risk' : isWatch ? 'Project health is on watch' : 'Project is healthy';
 
   if (projectStatus !== 'active') return null;
+  if (reasons.length === 0) return null;
+
+  const bannerColor = isRisk
+    ? 'bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-900/40'
+    : 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/40';
+  const textColor = isRisk
+    ? 'text-red-900 dark:text-red-300'
+    : 'text-amber-900 dark:text-amber-300';
 
   return (
-    <div className={cn('rounded-xl border p-3 sm:p-4 flex items-start gap-3', colorClass)}>
-      <Icon className={cn('w-5 h-5 shrink-0 mt-0.5', iconColor)} />
-      <div className="min-w-0">
-        <p className={cn('text-sm font-semibold', iconColor)}>{label}</p>
-        {reasons.length > 0 && (
-          <ul className="mt-1 space-y-0.5">
-            {reasons.map((r, i) => (
-              <li key={i} className="text-xs text-muted-foreground">• {r}</li>
-            ))}
-          </ul>
-        )}
+    <div className={cn('rounded-3xl border p-5', bannerColor)}>
+      <p className={cn('text-lg font-semibold', textColor)}>{label}</p>
+      <div className="mt-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+        {reasons.map((r, i) => (
+          <div key={i} className="rounded-2xl bg-white/70 dark:bg-white/5 border border-inherit px-4 py-3 text-sm">
+            {r}
+          </div>
+        ))}
       </div>
     </div>
   );

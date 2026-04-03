@@ -6,9 +6,11 @@ export { ArchiveProjectDialog } from './ArchiveProjectDialog';
 export { CompleteProjectDialog } from './CompleteProjectDialog';
 export { DashboardProjectList } from './DashboardProjectList';
 
-// New redesigned components
-export { PortfolioHealthHero } from './PortfolioHealthHero';
+// Redesigned components
+export { DashboardBusinessSnapshot } from './DashboardBusinessSnapshot';
 export { DashboardKPIs } from './DashboardKPIs';
 export { DashboardAttentionList } from './DashboardAttentionList';
+export { DashboardMaterialsHealth } from './DashboardMaterialsHealth';
 export { ProjectSnapshotList } from './ProjectSnapshotList';
 export { DashboardActionQueue } from './DashboardActionQueue';
+export { PackProgressSection } from './PackProgressSection';

@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, FileText, Mail, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface AttentionItem {
@@ -15,52 +14,69 @@ interface DashboardAttentionListProps {
   pendingInvitesCount: number;
 }
 
-const TYPE_CONFIG = {
-  invoice: { icon: FileText, label: 'Invoice needs review', color: 'text-amber-600 dark:text-amber-400' },
-  invite: { icon: Mail, label: 'Invite pending', color: 'text-blue-600 dark:text-blue-400' },
-  sent_invite: { icon: Mail, label: 'Awaiting response', color: 'text-muted-foreground' },
-};
-
 export function DashboardAttentionList({ attentionItems, pendingInvitesCount }: DashboardAttentionListProps) {
   const navigate = useNavigate();
   const totalCount = attentionItems.length + pendingInvitesCount;
 
   if (totalCount === 0) return null;
 
+  // Group items by project for risk-style display
+  const byProject = new Map<string, { projectName: string; projectId: string; issues: string[]; tag: string }>();
+  attentionItems.forEach((item) => {
+    const existing = byProject.get(item.projectId);
+    const issue = item.type === 'invoice' ? `Invoice ${item.title} needs review` : item.type === 'sent_invite' ? `${item.title} invite pending` : `Invite pending from ${item.title}`;
+    if (existing) {
+      existing.issues.push(issue);
+    } else {
+      byProject.set(item.projectId, {
+        projectName: item.projectName,
+        projectId: item.projectId,
+        issues: [issue],
+        tag: 'Watch',
+      });
+    }
+  });
+
+  // Upgrade to "At Risk" if 2+ issues
+  byProject.forEach((val) => {
+    if (val.issues.length >= 2) val.tag = 'At Risk';
+  });
+
+  const projectItems = Array.from(byProject.values()).slice(0, 6);
+
   return (
-    <div className="rounded-xl bg-card border border-border/60 shadow-sm overflow-hidden">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border/40">
-        <AlertTriangle className="w-4 h-4 text-amber-500" />
-        <h3 className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Needs Attention</h3>
-        <span className="ml-auto text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 px-2 py-0.5 rounded-full">
-          {totalCount}
-        </span>
+    <div className="rounded-3xl bg-card border border-border/60 shadow-sm overflow-hidden">
+      <div className="p-5 border-b border-border/40 flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold tracking-tight">Projects needing attention</h3>
+          <p className="text-sm text-muted-foreground">The jobs most likely to hurt your margin or schedule first</p>
+        </div>
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="text-sm text-primary font-medium hover:underline shrink-0"
+        >
+          See all projects
+        </button>
       </div>
       <div className="divide-y divide-border/40">
-        {attentionItems.slice(0, 6).map((item) => {
-          const config = TYPE_CONFIG[item.type];
-          const Icon = config.icon;
-          return (
-            <button
-              key={item.id}
-              onClick={() => {
-                if (item.type === 'invoice') {
-                  navigate(`/project/${item.projectId}/invoices?highlight=${item.id}`);
-                } else {
-                  navigate(`/project/${item.projectId}/overview`);
-                }
-              }}
-              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-accent/40 transition-colors text-left"
-            >
-              <Icon className={cn('w-4 h-4 shrink-0', config.color)} />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{item.title}</p>
-                <p className="text-xs text-muted-foreground truncate">{config.label} · {item.projectName}</p>
-              </div>
-              <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
-            </button>
-          );
-        })}
+        {projectItems.map((item) => (
+          <button
+            key={item.projectId}
+            onClick={() => navigate(`/project/${item.projectId}/overview`)}
+            className="w-full p-5 flex items-start justify-between gap-4 hover:bg-accent/40 transition-colors text-left"
+          >
+            <div className="min-w-0">
+              <p className="font-semibold">{item.projectName}</p>
+              <p className="text-sm text-muted-foreground mt-1">{item.issues.join(' · ')}</p>
+            </div>
+            <span className={cn(
+              'rounded-full px-3 py-1 text-xs font-semibold shrink-0',
+              item.tag === 'At Risk' ? 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400' : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
+            )}>
+              {item.tag}
+            </span>
+          </button>
+        ))}
       </div>
     </div>
   );
