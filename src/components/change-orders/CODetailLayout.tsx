@@ -276,13 +276,6 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
           <COKPIStrip co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} hasMaterials={co.materials_needed || materials.length > 0} hasEquipment={co.equipment_needed || equipment.length > 0} />
           <COHeroBlock co={co} isGC={isGC} isTC={isTC} isFC={isFC} financials={financials} fcCollabName={fcCollabName} onAction={handleHeroAction} />
 
-          {isFC && showHourEntry && firstLineItem && canEdit && !nteBlocked && (
-            <COHourEntryInline
-              coId={co.id} lineItemId={firstLineItem.id} orgId={myOrgId}
-              pricingType={pricingType} nteCap={co.nte_cap} nteUsed={financials.laborTotal}
-              onSaved={() => { setShowHourEntry(false); refreshDetail(); }}
-            />
-          )}
 
           <COContextualAlert co={co} isGC={isGC} isTC={isTC} isFC={isFC} fcCollabName={fcCollabName} financials={financials} />
 
