@@ -2,7 +2,6 @@ import { useEffect, useState, useMemo } from 'react';
 import { useProjectProfile } from '@/hooks/useProjectProfile';
 import { useScopeSelections } from '@/hooks/useScopeWizard';
 import { ChevronDown, ClipboardList } from 'lucide-react';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { useProjectRealtime } from '@/hooks/useProjectRealtime';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
@@ -20,11 +19,9 @@ import {
   PurchaseOrdersTab,
   AttentionBanner,
   SupplierEstimatesSection,
-  OperationalSummary,
   SupplierMaterialsOverview,
   BudgetTracking,
   MaterialsBudgetStatusCard,
-  
   MaterialMarkupEditor,
   CriticalScheduleCard,
 } from '@/components/project';
@@ -39,7 +36,13 @@ import { UrgentTasksCard } from '@/components/project/UrgentTasksCard';
 import { ProjectEstimatesReview } from '@/components/project/ProjectEstimatesReview';
 import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard';
 import { PendingInviteCard } from '@/components/project/PendingInviteCard';
-import { ProjectOverviewV2 } from '@/components/project/ProjectOverviewV2';
+
+// New redesigned overview components
+import { ProjectHealthBanner } from '@/components/project/ProjectHealthBanner';
+import { ProjectFinancialCommand } from '@/components/project/ProjectFinancialCommand';
+import { MaterialsCommandCenter } from '@/components/project/MaterialsCommandCenter';
+import { COImpactCard } from '@/components/project/COImpactCard';
+import { ProjectActionQueue } from '@/components/project/ProjectActionQueue';
 
 import { InvoicesTab } from '@/components/invoices';
 import { ReturnsTab } from '@/components/returns';
@@ -72,45 +75,6 @@ interface Project {
   retainage_percent: number;
   created_at: string;
   organization_id: string;
-}
-
-function CollapsibleOperations({ projectId, projectType, financials, onNavigate }: {
-  projectId: string;
-  projectType: string;
-  financials: import('@/hooks/useProjectFinancials').ProjectFinancials;
-  onNavigate: (tab: string) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const invCount = financials.recentInvoices.length;
-
-  return (
-    <Collapsible open={open} onOpenChange={setOpen}>
-      <div className="bg-card border border-border rounded-lg overflow-hidden">
-        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover:bg-accent/30 transition-colors">
-          <div className="flex items-center gap-2">
-            <ClipboardList className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs uppercase tracking-wide text-muted-foreground font-medium">
-              Activity & Operations
-            </span>
-            <span className="text-[10px] text-muted-foreground">
-              {invCount} Invoices
-            </span>
-          </div>
-          <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", open && "rotate-180")} />
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="px-4 pb-4">
-            <OperationalSummary
-              projectId={projectId}
-              projectType={projectType}
-              financials={financials}
-              onNavigate={onNavigate}
-            />
-          </div>
-        </CollapsibleContent>
-      </div>
-    </Collapsible>
-  );
 }
 
 export default function ProjectHome() {
@@ -152,7 +116,6 @@ export default function ProjectHome() {
   }, [id, section, navigate]);
 
   const handleTabChange = (tab: string) => {
-    // Support query params like "invoices?highlight=abc" or "purchase-orders?po=abc"
     const [tabName, query] = tab.split('?');
     const finalTab = tabName === 'sov' ? 'sov' : tabName;
     const queryString = query ? `?${query}` : '';
@@ -258,11 +221,12 @@ export default function ProjectHome() {
       <ProjectShell projectName="Loading…" projectId={id || ''} projectStatus="draft">
         <div className="flex flex-1 overflow-hidden">
           <main className="flex-1 overflow-auto">
-            <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-6">
-              <div className="grid gap-4 md:grid-cols-4">
-                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-24" />)}
+            <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6 space-y-4">
+              <Skeleton className="h-16 rounded-xl" />
+              <div className="grid gap-2 grid-cols-2 lg:grid-cols-4">
+                {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 rounded-xl" />)}
               </div>
-              <Skeleton className="h-96 w-full" />
+              <Skeleton className="h-48 w-full rounded-xl" />
             </div>
           </main>
         </div>
@@ -291,6 +255,7 @@ export default function ProjectHome() {
   }
 
   const projectStatus = project.status || 'draft';
+  const showMaterials = financials.isGCMaterialResponsible || financials.isTCMaterialResponsible;
 
   return (
     <ProjectShell
@@ -299,7 +264,6 @@ export default function ProjectHome() {
       projectStatus={projectStatus}
       onStatusChange={handleStatusChange}
     >
-      {/* Icon rail + content layout */}
       <div className="flex flex-1 overflow-hidden">
         <ProjectIconRail isSupplier={isSupplier} />
         <main className="flex-1 overflow-auto">
@@ -315,10 +279,10 @@ export default function ProjectHome() {
                 ) : isSupplier && supplierOrgId ? (
                   <SupplierMaterialsOverview projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
                 ) : (
-                  <div className="space-y-2.5">
+                  <div className="space-y-3">
                     {showSetupBanner && (
                       <div
-                        className="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors"
+                        className="rounded-xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors"
                         onClick={() => navigate(`/project/${id}/setup`)}
                       >
                         <div className="flex items-center gap-3">
@@ -340,18 +304,29 @@ export default function ProjectHome() {
 
                     <AttentionBanner projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
 
-                    <ProjectOverviewV2
-                      projectId={id!}
-                      projectName={project.name}
-                      projectStatus={projectStatus}
-                      projectType={project.project_type}
-                      address={project.address ? `${project.address.street || ''}, ${project.address.city || ''}, ${project.address.state || ''} ${project.address.zip || ''}`.replace(/^,\s*|,\s*$/g, '').trim() : null}
-                      financials={financials}
-                      onNavigate={handleTabChange}
-                      onResponsibilityChange={setMaterialResponsibility}
-                      onTeamChanged={readiness.recalculate}
-                    />
+                    {/* Health Banner */}
+                    <ProjectHealthBanner financials={financials} projectStatus={projectStatus} />
 
+                    {/* Financial Command Row */}
+                    <ProjectFinancialCommand financials={financials} />
+
+                    {/* Materials Command Center */}
+                    {showMaterials && (
+                      <MaterialsCommandCenter financials={financials} />
+                    )}
+
+                    {/* CO Impact */}
+                    <COImpactCard financials={financials} />
+
+                    {/* Two-column: actions + billing */}
+                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-3">
+                      <div className="space-y-3">
+                        <BillingCashCard financials={financials} />
+                      </div>
+                      <div className="space-y-3">
+                        <ProjectActionQueue financials={financials} projectId={id!} onNavigate={handleTabChange} />
+                      </div>
+                    </div>
                   </div>
                 )}
               </>
@@ -364,8 +339,6 @@ export default function ProjectHome() {
                 projectType={project?.project_type}
               />
             )}
-
-
 
             {activeTab === 'rfis' && (
               isInDemoMode ? <DemoRFIsTab /> : <RFIsTab projectId={id!} />
