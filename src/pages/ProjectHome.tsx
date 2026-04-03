@@ -261,6 +261,21 @@ export default function ProjectHome() {
   const projectStatus = project.status || 'draft';
   const showMaterials = financials.isGCMaterialResponsible || financials.isTCMaterialResponsible;
 
+  // Compute health label for dark header
+  const healthReasons: string[] = [];
+  if (showMaterials && financials.materialEstimateTotal && financials.materialOrdered > financials.materialEstimateTotal) {
+    healthReasons.push('material');
+  }
+  if (financials.outstanding > 0 && financials.billedToDate > 0 && (financials.outstanding / financials.billedToDate) * 100 > 50) {
+    healthReasons.push('billing');
+  }
+  if (financials.materialOrderedPending > 0) healthReasons.push('delivery');
+  const healthLabel = healthReasons.length >= 2 ? 'at_risk' as const : healthReasons.length === 1 ? 'watch' as const : 'healthy' as const;
+
+  const formattedAddress = project.address
+    ? [project.address.street, project.address.city, project.address.state, project.address.zip].filter(Boolean).join(', ')
+    : null;
+
   return (
     <ProjectShell
       projectName={project.name}
