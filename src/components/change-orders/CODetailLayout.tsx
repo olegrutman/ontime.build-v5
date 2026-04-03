@@ -63,7 +63,7 @@ export function CODetailLayout({ coId, projectId }: CODetailLayoutProps) {
 
   const [comment, setComment] = useState('');
   const [sendingComment, setSendingComment] = useState(false);
-  const [showHourEntry, setShowHourEntry] = useState(false);
+  
 
   const {
     co, collaborators, lineItems, laborEntries, materials, equipment,
