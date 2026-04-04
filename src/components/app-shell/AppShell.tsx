@@ -1,5 +1,6 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 import { ContextBar } from './ContextBar';
 import { CommandPalette } from './CommandPalette';
 import { MobileBottomNav } from './MobileBottomNav';
@@ -11,6 +12,7 @@ interface AppShellProps {
   showNewButton?: boolean;
   onNewClick?: () => void;
   newButtonLabel?: string;
+  fullWidth?: boolean;
 }
 
 export function AppShell({
