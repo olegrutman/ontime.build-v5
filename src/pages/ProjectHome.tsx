@@ -285,12 +285,12 @@ export default function ProjectHome() {
       projectStatus={projectStatus}
       onStatusChange={handleStatusChange}
     >
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden gap-3 lg:pr-3 lg:pt-3">
         <ProjectSidebar isSupplier={isSupplier} />
         <main className="flex-1 overflow-auto">
           {/* Dark Header + Sticky Tab Bar — always visible */}
           <div className="sticky top-0 z-30">
-            <div className="bg-slate-950 text-white rounded-tr-2xl px-4 sm:px-5 py-4">
+            <div className="bg-[hsl(var(--foreground))] text-white rounded-t-2xl px-4 sm:px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <p className="text-[0.7rem] uppercase tracking-widest text-slate-500 font-medium mb-1">Project Overview</p>
