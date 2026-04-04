@@ -8,6 +8,7 @@ interface AppLayoutProps {
   showNewButton?: boolean;
   onNewClick?: () => void;
   newButtonLabel?: string;
+  fullWidth?: boolean;
 }
 
 export function AppLayout({
@@ -17,6 +18,7 @@ export function AppLayout({
   showNewButton,
   onNewClick,
   newButtonLabel,
+  fullWidth,
 }: AppLayoutProps) {
   return (
     <AppShell
@@ -25,6 +27,7 @@ export function AppLayout({
       showNewButton={showNewButton}
       onNewClick={onNewClick}
       newButtonLabel={newButtonLabel}
+      fullWidth={fullWidth}
     >
       {children}
     </AppShell>
