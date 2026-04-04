@@ -4,6 +4,7 @@ import { formatCurrency, cn } from '@/lib/utils';
 import { ChevronRight, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { StatusMenu, type ProjectStatusFilter } from './StatusMenu';
+import { SurfaceCard, SurfaceCardHeader, SurfaceCardFooter } from '@/components/ui/surface-card';
 
 interface Project {
   id: string;
@@ -59,32 +60,34 @@ export function ProjectSnapshotList({
   }, [projects, statusFilter]);
 
   return (
-    <div className="rounded-3xl bg-card border border-border/60 shadow-sm overflow-hidden">
-      <div className="flex items-center justify-between p-5 border-b border-border/40">
-        <h3 className="text-lg font-semibold tracking-tight">Projects</h3>
-        <div className="flex items-center gap-2">
-          <StatusMenu
-            currentFilter={statusFilter}
-            onFilterChange={onStatusFilterChange}
-            counts={statusCounts}
-          />
-          {canCreate && (
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onCreateProject}>
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              New
-            </Button>
-          )}
-        </div>
-      </div>
+    <SurfaceCard>
+      <SurfaceCardHeader
+        title="Projects"
+        action={
+          <div className="flex items-center gap-2">
+            <StatusMenu
+              currentFilter={statusFilter}
+              onFilterChange={onStatusFilterChange}
+              counts={statusCounts}
+            />
+            {canCreate && (
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={onCreateProject}>
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                New
+              </Button>
+            )}
+          </div>
+        }
+      />
 
       {loading ? (
-        <div className="p-5 space-y-3">
+        <div className="px-5 py-4 space-y-2">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 bg-accent/30 rounded-2xl animate-pulse" />
+            <div key={i} className="h-14 bg-accent/30 rounded-xl animate-pulse" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="p-8 text-center text-sm text-muted-foreground">
+        <div className="px-5 py-8 text-center text-[0.85rem] text-muted-foreground">
           No {statusFilter} projects
         </div>
       ) : (
@@ -93,12 +96,12 @@ export function ProjectSnapshotList({
             <button
               key={project.id}
               onClick={() => navigate(`/project/${project.id}/overview`)}
-              className="w-full flex items-center gap-3 px-5 py-4 hover:bg-accent/40 transition-colors text-left group"
+              className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-accent/40 transition-colors text-left group"
             >
-              <div className={cn('w-2.5 h-2.5 rounded-full shrink-0', STATUS_DOT[project.status] || 'bg-muted-foreground')} />
+              <div className={cn('w-2 h-2 rounded-full shrink-0', STATUS_DOT[project.status] || 'bg-muted-foreground')} />
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate group-hover:text-primary transition-colors">{project.name}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-[0.85rem] font-semibold truncate group-hover:text-primary transition-colors">{project.name}</p>
+                <p className="text-[0.75rem] text-muted-foreground mt-0.5">
                   {project.project_type}
                   {project.pendingActions > 0 && (
                     <span className="ml-2 text-amber-600 dark:text-amber-400 font-medium">
@@ -108,7 +111,7 @@ export function ProjectSnapshotList({
                 </p>
               </div>
               {project.contractValue != null && project.contractValue > 0 && (
-                <span className="text-sm font-semibold text-foreground shrink-0" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                <span className="text-[0.85rem] font-semibold text-foreground shrink-0 tabular-nums" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
                   {formatCurrency(project.contractValue)}
                 </span>
               )}
@@ -117,6 +120,6 @@ export function ProjectSnapshotList({
           ))}
         </div>
       )}
-    </div>
+    </SurfaceCard>
   );
 }

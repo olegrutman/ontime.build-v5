@@ -194,7 +194,7 @@ export default function Dashboard() {
     >
       <div className="flex gap-0">
         <DashboardSidebar />
-        <div className="flex-1 min-w-0 space-y-6 px-0">
+        <div className="flex-1 min-w-0 space-y-4 px-0">
 
         {/* Greeting */}
         <DashboardWelcome
@@ -230,9 +230,9 @@ export default function Dashboard() {
         <DashboardKPIs financials={financials} orgType={orgType} />
 
         {/* Main 8/4 Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
           {/* Left column — 8 cols */}
-          <div className="xl:col-span-8 space-y-6">
+          <div className="xl:col-span-8 space-y-4">
             {/* Projects needing attention */}
             <DashboardAttentionList
               attentionItems={attentionItems}
@@ -240,7 +240,7 @@ export default function Dashboard() {
             />
 
             {/* Two-col: Materials Health + Action Queue */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <DashboardMaterialsHealth
                 estimate={financials.totalCosts}
                 ordered={financials.paidByYou}
@@ -266,7 +266,7 @@ export default function Dashboard() {
           </div>
 
           {/* Right column — 4 cols */}
-          <div className="xl:col-span-4 space-y-6">
+          <div className="xl:col-span-4 space-y-4">
             <DashboardBusinessSnapshot
               statusCounts={statusCounts}
               attentionCount={attentionItems.length + pendingInvites.length}

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { ChevronDown } from 'lucide-react';
+import { StatusPill } from '@/components/ui/status-pill';
+import { SurfaceCard, SurfaceCardHeader, SurfaceCardFooter } from '@/components/ui/surface-card';
+import { CollapseToggle } from '@/components/ui/collapse-toggle';
 
 interface AttentionItem {
   id: string;
@@ -23,7 +25,7 @@ export function DashboardAttentionList({ attentionItems, pendingInvitesCount }: 
 
   if (totalCount === 0) return null;
 
-  const byProject = new Map<string, { projectName: string; projectId: string; issues: string[]; tag: string }>();
+  const byProject = new Map<string, { projectName: string; projectId: string; issues: string[]; tag: 'watch' | 'at_risk' }>();
   attentionItems.forEach((item) => {
     const existing = byProject.get(item.projectId);
     const issue = item.type === 'invoice' ? `Invoice ${item.title} needs review` : item.type === 'sent_invite' ? `${item.title} invite pending` : `Invite pending from ${item.title}`;
@@ -34,13 +36,13 @@ export function DashboardAttentionList({ attentionItems, pendingInvitesCount }: 
         projectName: item.projectName,
         projectId: item.projectId,
         issues: [issue],
-        tag: 'Watch',
+        tag: 'watch',
       });
     }
   });
 
   byProject.forEach((val) => {
-    if (val.issues.length >= 2) val.tag = 'At Risk';
+    if (val.issues.length >= 2) val.tag = 'at_risk';
   });
 
   const allItems = Array.from(byProject.values());
@@ -48,48 +50,41 @@ export function DashboardAttentionList({ attentionItems, pendingInvitesCount }: 
   const hasMore = allItems.length > 3;
 
   return (
-    <div className="rounded-3xl bg-card border border-border/60 shadow-sm overflow-hidden">
-      <div className="p-5 border-b border-border/40 flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold tracking-tight">Projects needing attention</h3>
-          <p className="text-sm text-muted-foreground">The jobs most likely to hurt your margin or schedule first</p>
-        </div>
-        <button
-          onClick={() => document.getElementById('projects-list')?.scrollIntoView({ behavior: 'smooth' })}
-          className="text-sm text-primary font-medium hover:underline shrink-0"
-        >
-          See all projects
-        </button>
-      </div>
+    <SurfaceCard>
+      <SurfaceCardHeader
+        title="Projects needing attention"
+        subtitle="The jobs most likely to hurt your margin or schedule first"
+        action={
+          <button
+            onClick={() => document.getElementById('projects-list')?.scrollIntoView({ behavior: 'smooth' })}
+            className="text-[0.8rem] text-primary font-medium hover:underline shrink-0"
+          >
+            See all projects
+          </button>
+        }
+      />
       <div className="divide-y divide-border/40">
         {visibleItems.map((item) => (
           <button
             key={item.projectId}
             onClick={() => navigate(`/project/${item.projectId}/overview`)}
-            className="w-full p-5 flex items-start justify-between gap-4 hover:bg-accent/40 transition-colors text-left"
+            className="w-full px-5 py-3.5 flex items-start justify-between gap-4 hover:bg-accent/40 transition-colors text-left"
           >
             <div className="min-w-0">
-              <p className="font-semibold">{item.projectName}</p>
-              <p className="text-sm text-muted-foreground mt-1">{item.issues.join(' · ')}</p>
+              <p className="text-[0.85rem] font-semibold">{item.projectName}</p>
+              <p className="text-[0.8rem] text-muted-foreground mt-0.5">{item.issues.join(' · ')}</p>
             </div>
-            <span className={cn(
-              'rounded-full px-3 py-1 text-xs font-semibold shrink-0',
-              item.tag === 'At Risk' ? 'bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400' : 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400'
-            )}>
-              {item.tag}
-            </span>
+            <StatusPill variant={item.tag}>
+              {item.tag === 'at_risk' ? 'At Risk' : 'Watch'}
+            </StatusPill>
           </button>
         ))}
       </div>
       {hasMore && (
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="w-full p-3 text-sm text-primary font-medium hover:bg-accent/30 transition-colors flex items-center justify-center gap-1"
-        >
-          {expanded ? 'Show less' : `Show all (${allItems.length})`}
-          <ChevronDown className={cn('w-4 h-4 transition-transform', expanded && 'rotate-180')} />
-        </button>
+        <SurfaceCardFooter>
+          <CollapseToggle expanded={expanded} totalCount={allItems.length} onToggle={() => setExpanded(!expanded)} />
+        </SurfaceCardFooter>
       )}
-    </div>
+    </SurfaceCard>
   );
 }
