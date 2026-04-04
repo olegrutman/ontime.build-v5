@@ -41,7 +41,6 @@ import { ProjectReadinessCard } from '@/components/project/ProjectReadinessCard'
 import { PendingInviteCard } from '@/components/project/PendingInviteCard';
 
 // New redesigned overview components
-import { ProjectHealthBanner } from '@/components/project/ProjectHealthBanner';
 import { ProjectFinancialCommand } from '@/components/project/ProjectFinancialCommand';
 import { MaterialsCommandCenter } from '@/components/project/MaterialsCommandCenter';
 import { COImpactCard } from '@/components/project/COImpactCard';
