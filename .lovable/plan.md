@@ -1,36 +1,58 @@
 
 
-# Make Dashboard Content Fill the Screen
+# Unify Navigation & Merge Project Cards
 
-## Problem
-The dashboard content area (right of sidebar) has `px-3 sm:px-6` padding (line 198 of Dashboard.tsx), creating visible gaps between the sidebar and the first card, and between cards and the right edge. Combined with the AppShell already applying `px-0` for fullWidth, the content still feels padded and not edge-to-edge.
+## What I learned
 
-## Fix
-Increase the content area padding to `px-4 sm:px-5 lg:px-6` for a balanced full-screen feel — enough breathing room without wasted space. Also ensure the right-column (business snapshot, reminders) stretches properly by keeping the 8/4 grid but with tighter gaps.
+**Project Overview page has two redundant navs:**
+1. `ProjectIconRail` — 44px vertical icon sidebar (left edge) with project-level links (Overview, Change Orders, Invoices, POs, etc.)
+2. `ProjectTabBar` — sticky horizontal tab bar under the dark header with the same links
 
-Actually, the real problem is simpler: the `fullWidth` on AppShell sets `px-0`, but the inner dashboard div at line 198 adds back `px-3 sm:px-6`. This is correct — we want some padding. But looking at the screenshot, the content cards end well before the right edge of the viewport. The 12-col grid with 8/4 split inside a padded container leaves the right column (business snapshot at ~300px) too narrow and the left too wide.
+Both navigate to the same tabs. Redundant.
 
-### Changes
+**Dashboard has two project cards:**
+1. `DashboardAttentionList` — "Projects needing attention" (groups by project, shows issues, links to project)
+2. `ProjectSnapshotList` — Full project list with status filter tabs (Setup/Active/On Hold/Completed/Archived)
+
+Both show projects. Redundant.
+
+## Plan
+
+### 1. Replace ProjectIconRail with DashboardSidebar-style sidebar
+
+- **Delete** `ProjectIconRail` from `ProjectHome.tsx`
+- **Create** `ProjectSidebar.tsx` — same visual style as `DashboardSidebar` (dark bg, 200/220px width, rounded-xl buttons, text labels) but with project-level nav items:
+  - Overview, Project Info, Schedule of Values, Change Orders, RFIs, Estimates, Invoices, Purchase Orders, Returns, Schedule, Daily Log
+  - Same feature-gating logic as the current icon rail
+  - A "← Back to Dashboard" link at the top
+- **Keep** `ProjectTabBar` for **mobile only** (hidden on `lg:` and up) since the sidebar is `hidden lg:flex`. This gives mobile users horizontal tab navigation and desktop users the sidebar.
+
+### 2. Merge two dashboard project cards into one
+
+- **Delete** `DashboardAttentionList` as a separate card
+- **Redesign** `ProjectSnapshotList` → rename to **"Projects in Progress"**
+- New unified card behavior:
+  - **Default view**: Shows active projects, each row includes the project name, type, contract value, AND attention indicators (inline `StatusPill` for "Watch"/"At Risk" if the project has pending issues)
+  - **Status filter**: Keep the existing `StatusMenu` pill tabs (Active / On Hold / Completed / Archived) but make them compact inline pills inside the card header instead of a full-width bar
+  - **Title**: "Projects in Progress" when showing Active, changes contextually ("On Hold Projects", "Completed Projects", etc.)
+  - Attention data merges into each project row — no separate card needed
+
+### 3. Files to modify
 
 | File | Change |
 |------|--------|
-| `Dashboard.tsx` line 198 | Change `px-3 sm:px-6` to `px-4 lg:px-6` for slightly more generous padding |
-| `Dashboard.tsx` line 234 | Change grid from `xl:grid-cols-12` to `xl:grid-cols-3` with left `xl:col-span-2` and right `xl:col-span-1` — gives the right column ~33% width instead of ~33% (same ratio but simpler). Or better: keep 12-col but change to 9/3 split so content fills more. |
+| `ProjectHome.tsx` | Remove `ProjectIconRail` import/usage, add `ProjectSidebar`, hide `ProjectTabBar` on desktop (`lg:hidden`) |
+| **New** `ProjectSidebar.tsx` | Dark sidebar matching `DashboardSidebar` style, project-level nav items with feature gates |
+| `ProjectTabBar.tsx` | Add `className="lg:hidden"` wrapper so it only shows on mobile |
+| `Dashboard.tsx` | Remove `DashboardAttentionList`, pass attention data into `ProjectSnapshotList` |
+| `ProjectSnapshotList.tsx` | Rename title to "Projects in Progress", merge attention indicators into each project row as inline `StatusPill`, make status filter pills compact |
+| `DashboardAttentionList.tsx` | Can be deleted (or kept unused) |
+| `StatusMenu.tsx` | Compact the filter pills to fit inside a card header row |
 
-Wait — let me reconsider. The 8/4 split (66/33%) should be fine. The issue might be that the `xl:` breakpoint (1280px) isn't hit in the preview viewport. Let me check: viewport is 2143px wide, minus Lovable UI (~600px for left panel) = ~1543px for preview. Minus sidebar (220px) = ~1323px for content. That should hit `xl:` (1280px)... but the sidebar is inside the content wrapper, so the grid container is ~1323 - 24px padding = ~1299px. That's right at the `xl` boundary.
-
-The real fix: the content area should use the full width more aggressively. Change padding to `px-4 lg:px-5` (tighter) so the grid gets more room.
-
-### Final approach
-
-1. **`Dashboard.tsx` line 198**: Reduce padding to `px-4 lg:px-5` 
-2. **`Dashboard.tsx` line 234**: Lower the grid breakpoint from `xl:grid-cols-12` to `lg:grid-cols-12` so the two-column layout kicks in earlier (at 1024px instead of 1280px)
-3. **`Dashboard.tsx` lines 236, 270**: Change breakpoints from `xl:col-span-8`/`xl:col-span-4` to `lg:col-span-8`/`lg:col-span-4`
-
-This ensures the dashboard content fills the viewport properly at the user's screen size.
-
-### Files to modify
-| File | Change |
-|------|--------|
-| `Dashboard.tsx` | Tighten padding (`px-4 lg:px-5`), lower grid breakpoint from `xl` to `lg` |
+### What is NOT changing
+- No business logic changes
+- Dashboard sidebar stays as-is
+- Mobile bottom nav for project pages stays
+- Dark header on project overview stays
+- All existing routing/tab content stays
 
