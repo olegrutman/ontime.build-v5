@@ -371,6 +371,9 @@ export default function ProjectHome() {
                           <MaterialsCommandCenter financials={financials} projectId={id!} />
                         )}
 
+                        {/* Billing & Cash Position */}
+                        <BillingCashCard financials={financials} />
+
                         {/* PO Summary */}
                         <ProjectPOSummary projectId={id!} />
                       </div>
@@ -379,9 +382,6 @@ export default function ProjectHome() {
                       <div className="lg:col-span-4 space-y-3">
                         {/* CO Impact */}
                         <COImpactCard financials={financials} />
-
-                        {/* Billing & Cash Position */}
-                        <BillingCashCard financials={financials} />
 
                         {/* Team Card */}
                         <ProjectOverviewTeamCard projectId={id!} />
