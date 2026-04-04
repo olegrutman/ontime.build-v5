@@ -75,7 +75,7 @@ export function ProjectBudgetRingChart({ paid, pending, remaining }: ProjectBudg
           textAnchor="middle"
           dominantBaseline="central"
           className="rotate-90 origin-center fill-foreground"
-          style={{ ...DT.mono, fontSize: '13px', fontWeight: 600 }}
+          style={{ fontSize: '13px', fontWeight: 600 }}
         >
           {Math.round((paid / total) * 100)}%
         </text>

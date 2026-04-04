@@ -75,7 +75,7 @@ export function COKPIStrip(props: COKPIStripProps) {
           </p>
           <p
             className="text-foreground leading-none mt-1"
-            style={{ ...DT.heading, fontSize: '1.25rem', fontWeight: 900 }}
+            className="font-heading" style={{ fontSize: '1.25rem', fontWeight: 900 }}
           >
             {tile.value}
           </p>

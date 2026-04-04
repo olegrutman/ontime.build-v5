@@ -140,7 +140,7 @@ export function COHeroBlock(props: COHeroBlockProps) {
         </p>
         <h2
           className="text-lg font-extrabold uppercase tracking-wide mt-0.5"
-          style={{ ...DT.heading, color: 'hsl(var(--amber))' }}
+          className="font-heading" style={{ color: 'hsl(var(--amber))' }}
         >
           {headline}
         </h2>
