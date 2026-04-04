@@ -330,7 +330,7 @@ export default function ProjectHome() {
                 ) : isSupplier && supplierOrgId ? (
                   <SupplierMaterialsOverview projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
                 ) : (
-                  <div className="space-y-6 mt-4">
+                  <div className="space-y-4 mt-4">
                     {showSetupBanner && (
                       <div
                         className="rounded-3xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors"
