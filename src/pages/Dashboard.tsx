@@ -267,7 +267,7 @@ export default function Dashboard() {
           </div>
 
           {/* Right column — 4 cols */}
-          <div className="xl:col-span-4 space-y-4">
+          <div className="lg:col-span-4 space-y-4">
             <DashboardBusinessSnapshot
               statusCounts={statusCounts}
               attentionCount={attentionItems.length + pendingInvites.length}
