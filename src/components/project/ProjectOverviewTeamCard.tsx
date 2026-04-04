@@ -1,9 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Users, Package } from 'lucide-react';
+import { Users, Package, UserPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { SurfaceCard, SurfaceCardHeader, SurfaceCardBody } from '@/components/ui/surface-card';
+import { useAuth } from '@/hooks/useAuth';
+import { AddTeamMemberDialog } from '@/components/project/AddTeamMemberDialog';
+import type { OrgType } from '@/types/organization';
 
 interface ProjectOverviewTeamCardProps {
   projectId: string;
@@ -35,6 +39,11 @@ export function ProjectOverviewTeamCard({ projectId }: ProjectOverviewTeamCardPr
   const [loading, setLoading] = useState(true);
   const [materialResp, setMaterialResp] = useState<string | null>(null);
   const [designatedSupplier, setDesignatedSupplier] = useState<string | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+
+  const { userOrgRoles } = useAuth();
+  const viewerOrgType = (userOrgRoles[0]?.organization?.type as OrgType) ?? null;
+  const canInvite = viewerOrgType === 'GC' || viewerOrgType === 'TC';
 
   const fetchData = useCallback(async () => {
     const [teamRes, contractRes, supplierRes] = await Promise.all([
@@ -56,7 +65,10 @@ export function ProjectOverviewTeamCard({ projectId }: ProjectOverviewTeamCardPr
 
   return (
     <SurfaceCard>
-      <SurfaceCardHeader title="Team" subtitle={`${acceptedTeam.length} member${acceptedTeam.length !== 1 ? 's' : ''}`} />
+      <SurfaceCardHeader
+        title="Team"
+        subtitle={`${acceptedTeam.length} member${acceptedTeam.length !== 1 ? 's' : ''}`}
+      />
       <SurfaceCardBody className="pt-0 space-y-1.5">
         {acceptedTeam.map((member) => {
           const abbrev = roleAbbrev[member.role] || member.role;
@@ -84,7 +96,29 @@ export function ProjectOverviewTeamCard({ projectId }: ProjectOverviewTeamCardPr
             <span>Supplier: {designatedSupplier}</span>
           </div>
         )}
+
+        {canInvite && (
+          <div className="pt-2 border-t border-border/40">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+              onClick={() => setAddDialogOpen(true)}
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              Add Member
+            </Button>
+          </div>
+        )}
       </SurfaceCardBody>
+
+      <AddTeamMemberDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        projectId={projectId}
+        creatorOrgType={viewerOrgType}
+        onMemberAdded={() => fetchData()}
+      />
     </SurfaceCard>
   );
 }
