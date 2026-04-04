@@ -236,7 +236,7 @@ export function MaterialsCommandCenter({ financials, projectId }: MaterialsComma
   );
 }
 
-function AlertTile({ label, value, color }: { label: string; value: number; color: 'red' | 'amber' }) {
+function AlertTile({ label, value, color, bg = 'bg-accent/30' }: { label: string; value: number; color: 'red' | 'amber'; bg?: string }) {
   const textColor = value > 0
     ? (color === 'red' ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-400')
     : 'text-foreground';
