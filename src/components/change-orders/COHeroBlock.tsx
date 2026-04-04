@@ -139,8 +139,8 @@ export function COHeroBlock(props: COHeroBlockProps) {
           {eyebrow}
         </p>
         <h2
-          className="text-lg font-extrabold uppercase tracking-wide mt-0.5"
-          className="font-heading" style={{ color: 'hsl(var(--amber))' }}
+          className="font-heading text-lg font-extrabold uppercase tracking-wide mt-0.5"
+          style={{ color: 'hsl(var(--amber))' }}
         >
           {headline}
         </h2>

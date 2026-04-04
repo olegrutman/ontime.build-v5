@@ -79,8 +79,8 @@ export function COHourEntryInline({
       {/* Giant number */}
       <div className="text-center py-4">
         <p
-          className="tabular-nums leading-none"
-          className="font-heading" style={{ fontSize: '4rem', fontWeight: 900, color: 'hsl(var(--amber))' }}
+          className="font-heading tabular-nums leading-none"
+          style={{ fontSize: '4rem', fontWeight: 900, color: 'hsl(var(--amber))' }}
         >
           {hours ?? '—'}
         </p>

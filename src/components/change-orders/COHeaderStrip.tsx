@@ -38,8 +38,8 @@ export function COHeaderStrip({ co, role, myOrgName }: COHeaderStripProps) {
             {co.co_number ?? '—'}
           </p>
           <h1
-            className="text-foreground truncate mt-0.5"
-            className="font-heading" style={{ fontSize: '1.5rem', fontWeight: 800, lineHeight: 1.1 }}
+            className="font-heading text-foreground truncate mt-0.5"
+            style={{ fontSize: '1.5rem', fontWeight: 800, lineHeight: 1.1 }}
           >
             {displayTitle}
           </h1>
