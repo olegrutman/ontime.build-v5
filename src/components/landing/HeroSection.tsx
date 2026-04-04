@@ -89,7 +89,7 @@ export function HeroSection() {
             <div className="w-[10px] h-[10px] rounded-full bg-[#FF5F57]" />
             <div className="w-[10px] h-[10px] rounded-full bg-[#FFBD2E]" />
             <div className="w-[10px] h-[10px] rounded-full bg-[#28C840]" />
-            <div className="flex-1 text-center text-[0.75rem] font-medium tracking-[0.5px]" style={{ color: 'hsl(var(--muted-foreground))', fontFamily: 'Barlow, sans-serif' }}>
+            <div className="flex-1 text-center text-[0.75rem] font-medium tracking-[0.5px]" style={{ color: 'hsl(var(--muted-foreground))', }}>
               Ontime.Build — 5 Cherry Hills Park · Operations Dashboard
             </div>
           </div>
@@ -115,7 +115,6 @@ export function HeroSection() {
                       : ''
                   }`}
                   style={{
-                    fontFamily: 'Barlow, sans-serif',
                     color: item.active ? 'hsl(var(--amber))' : 'rgba(255,255,255,.35)',
                     background: item.active ? 'hsl(var(--amber) / 0.08)' : 'transparent',
                     borderLeft: item.active ? '2.5px solid hsl(var(--amber))' : '2.5px solid transparent',
@@ -127,7 +126,7 @@ export function HeroSection() {
               ))}
               <div className="px-4 pt-3 pb-1.5 text-[0.58rem] text-white/[0.18] tracking-[1.2px] uppercase">Projects</div>
               {['🏗 Cherry Hills Park', '🏢 Tower 14 — Ph.2', '🏨 Mesa Logistics Hub'].map((p) => (
-                <div key={p} className="px-4 py-[9px] flex items-center gap-[9px] text-[0.73rem] text-white/[0.35] cursor-pointer" style={{ fontFamily: 'Barlow, sans-serif' }}>
+                <div key={p} className="px-4 py-[9px] flex items-center gap-[9px] text-[0.73rem] text-white/[0.35] cursor-pointer">
                   {p}
                 </div>
               ))}

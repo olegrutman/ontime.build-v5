@@ -34,7 +34,7 @@ export function COImpactCard({ financials }: COImpactCardProps) {
           {rows.map(({ label, value }) => (
             <div key={label} className="py-3 flex items-center justify-between">
               <span className="text-muted-foreground">{label}</span>
-              <span className="font-semibold tabular-nums" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+              <span className="font-semibold tabular-nums">
                 {formatCurrency(value)}
               </span>
             </div>

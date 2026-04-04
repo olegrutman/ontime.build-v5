@@ -17,7 +17,7 @@ export function FireSection({ answers, setAnswer, buildingType }: Props) {
 
   return (
     <div className="space-y-2">
-      <h2 className="font-heading text-lg font-bold tracking-tight" style={DT.heading}>
+      <h2 className="font-heading text-lg font-bold tracking-tight">
         8. Fire & Smoke Separation
       </h2>
 

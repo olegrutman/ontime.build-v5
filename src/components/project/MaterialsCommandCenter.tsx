@@ -125,7 +125,7 @@ export function MaterialsCommandCenter({ financials, projectId }: MaterialsComma
           ].map(({ label, value, prefix }) => (
             <div key={label} className="rounded-xl bg-slate-50 dark:bg-accent/20 border border-border/40 p-3">
               <p className="text-muted-foreground text-[0.7rem]">{label}</p>
-              <p className="font-semibold mt-1.5 text-[0.85rem] tabular-nums" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+              <p className="font-semibold mt-1.5 text-[0.85rem] tabular-nums">
                 {prefix}{formatCurrency(value)}
               </p>
             </div>
@@ -169,7 +169,7 @@ export function MaterialsCommandCenter({ financials, projectId }: MaterialsComma
                     <div className="flex items-center gap-3 shrink-0">
                       {pack.isOrdered ? (
                         <>
-                          <span className="text-[0.75rem] text-muted-foreground tabular-nums" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                          <span className="text-[0.75rem] text-muted-foreground tabular-nums">
                             {formatCurrency(pack.orderedTotal)}
                           </span>
                           {pack.estimateTotal > 0 && (

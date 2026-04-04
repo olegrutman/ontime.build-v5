@@ -24,7 +24,7 @@ export function Footer() {
           </p>
           <div className="flex gap-2.5 mt-[22px]">
             {['LinkedIn', 'Twitter/X', 'YouTube'].map((s) => (
-              <a key={s} href="#" className="px-3.5 py-[7px] border border-white/[0.08] text-white/30 text-[0.78rem] rounded no-underline transition-all" style={{ }} onMouseOver={e => { (e.target as HTMLElement).style.borderColor = 'hsl(var(--amber))'; (e.target as HTMLElement).style.color = 'hsl(var(--amber))'; }} onMouseOut={e => { (e.target as HTMLElement).style.borderColor = 'rgba(255,255,255,.08)'; (e.target as HTMLElement).style.color = 'rgba(255,255,255,.3)'; }}>
+              <a key={s} href="#" className="px-3.5 py-[7px] border border-white/[0.08] text-white/30 text-[0.78rem] rounded no-underline transition-all" onMouseOver={e => { (e.target as HTMLElement).style.borderColor = 'hsl(var(--amber))'; (e.target as HTMLElement).style.color = 'hsl(var(--amber))'; }} onMouseOut={e => { (e.target as HTMLElement).style.borderColor = 'rgba(255,255,255,.08)'; (e.target as HTMLElement).style.color = 'rgba(255,255,255,.3)'; }}>
                 {s}
               </a>
             ))}

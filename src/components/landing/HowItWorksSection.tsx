@@ -82,7 +82,7 @@ export function HowItWorksSection() {
                     <div key={item.id} className="flex items-center justify-between rounded-[7px] px-[13px] py-[9px] text-[0.72rem] cursor-default transition-colors mb-[3px]"
                       style={{ background: 'hsl(var(--surface))', border: '1px solid hsl(var(--border))' }}
                     >
-                      <div className="font-bold w-[68px] flex-shrink-0" style={{ color: 'hsl(var(--ink))', fontFamily: 'Barlow, sans-serif' }}>{item.id}</div>
+                      <div className="font-bold w-[68px] flex-shrink-0" style={{ color: 'hsl(var(--ink))', }}>{item.id}</div>
                       <div className="flex-1 mx-2.5 truncate" style={{ color: 'hsl(var(--muted-foreground))' }}>{item.desc}</div>
                       <div className="font-semibold w-16 text-right flex-shrink-0" style={{ color: 'hsl(var(--ink2))' }}>{item.amt}</div>
                       <div className="text-[0.6rem] font-bold px-[7px] py-[2px] rounded-[3px] flex-shrink-0 ml-2" style={{ background: st.bg, color: st.color }}>{item.status}</div>

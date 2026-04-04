@@ -37,7 +37,7 @@ export function UrgentItem({ order, index, onClick }: UrgentItemProps) {
         <p className="text-white/30 text-xs truncate">{order.subtitle}</p>
       </div>
       <div className="text-right shrink-0">
-        <p className="text-white text-sm font-medium" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+        <p className="text-white text-sm font-medium">
           ${order.amount.toLocaleString()}
         </p>
         <span

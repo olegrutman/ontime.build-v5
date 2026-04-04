@@ -225,7 +225,7 @@ export function PhaseContracts({ projectId, onComplete, onStepChange }: PhaseCon
           {filteredTeam.map(m => (
             <div key={m.id} className="flex items-center gap-4">
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold truncate" style={DT.heading}>{m.invited_org_name || 'Unknown'}</p>
+                <p className="font-heading text-sm font-bold truncate">{m.invited_org_name || 'Unknown'}</p>
                 <p className="text-[11px] text-muted-foreground">{m.role}</p>
               </div>
               <div className="w-40">

@@ -40,7 +40,7 @@ export function COProfitabilityCard({ isTC, isFC, financials }: COProfitabilityC
       <div className="px-3.5 py-3 border-b border-border flex items-center justify-between">
         <h3
           className="text-[0.7rem] uppercase tracking-[0.04em] font-semibold text-muted-foreground"
-          style={DT.heading}
+         
         >
           {label}
         </h3>
@@ -49,13 +49,13 @@ export function COProfitabilityCard({ isTC, isFC, financials }: COProfitabilityC
       <div className="px-3.5 py-3 space-y-2">
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Revenue</span>
-          <span className="font-medium text-foreground" style={DT.mono}>
+          <span className="font-mono font-medium text-foreground">
             {fmtCurrency(revenue)}
           </span>
         </div>
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Costs</span>
-          <span className="font-medium text-foreground" style={DT.mono}>
+          <span className="font-mono font-medium text-foreground">
             {fmtCurrency(costs)}
           </span>
         </div>
@@ -65,7 +65,7 @@ export function COProfitabilityCard({ isTC, isFC, financials }: COProfitabilityC
             <div className="text-right">
               <span
                 className={cn('font-bold', isPositive ? 'text-emerald-600' : 'text-destructive')}
-                style={DT.mono}
+               
               >
                 {fmtCurrency(margin)}
               </span>

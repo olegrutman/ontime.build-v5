@@ -94,13 +94,13 @@ export function ScopeDocument({ answers, matResp, projectName, buildingType, inc
       {/* Hero card */}
       <div className="rounded-lg overflow-hidden">
         <div className="bg-gradient-to-br from-amber-500/20 via-amber-400/10 to-amber-600/5 border border-amber-500/20 p-6">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-amber-700 mb-2" style={DT.mono}>
+          <p className="font-mono text-[10px] font-bold uppercase tracking-wider text-amber-700 mb-2">
             SCOPE DOCUMENT
           </p>
-          <h1 className="font-heading text-xl font-black tracking-tight text-foreground" style={DT.heading}>
+          <h1 className="font-heading text-xl font-black tracking-tight text-foreground">
             Division 06100 — Rough Carpentry Scope of Work
           </h1>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mt-2" style={DT.mono}>
+          <div className="font-mono flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mt-2">
             <span>{projectName || 'Untitled Project'}</span>
             <span>{BUILDING_LABELS[buildingType || 'SFR'] || buildingType}</span>
             <span>{new Date().toLocaleDateString()}</span>
@@ -223,7 +223,7 @@ export function ScopeDocument({ answers, matResp, projectName, buildingType, inc
       </DocSection>
 
       {/* Footer */}
-      <div className="border-t border-border pt-4 text-xs text-muted-foreground italic" style={DT.mono}>
+      <div className="font-mono border-t border-border pt-4 text-xs text-muted-foreground italic">
         All work per contract documents, applicable building codes, manufacturer installation
         requirements, and OSHA safety standards. Scope excludes any item not explicitly listed
         as included herein.
@@ -235,7 +235,7 @@ export function ScopeDocument({ answers, matResp, projectName, buildingType, inc
 function DocSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <h3 className="font-heading font-bold text-sm mb-1 pb-1 border-b border-border" style={DT.heading}>{title}</h3>
+      <h3 className="font-heading font-bold text-sm mb-1 pb-1 border-b border-border">{title}</h3>
       <div className="divide-y divide-border/50">{children}</div>
     </div>
   );

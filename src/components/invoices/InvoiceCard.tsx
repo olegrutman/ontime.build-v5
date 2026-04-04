@@ -46,7 +46,7 @@ function InvoiceAgeBadge({ invoice }: { invoice: Invoice }) {
     : days <= 30
     ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300'
     : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300';
-  return <Badge className={cn('text-xs', colors)} style={DT.mono}>{days}d</Badge>;
+  return <Badge className={cn('font-mono', 'text-xs', colors)}>{days}d</Badge>;
 }
 
 export function InvoiceCard({ 
@@ -96,7 +96,7 @@ export function InvoiceCard({
       <div className="pl-4 pr-3.5 py-3.5">
         <div className="flex items-start justify-between mb-3">
           <div>
-            <h4 className="font-medium text-sm" style={DT.mono}>{invoice.invoice_number}</h4>
+            <h4 className="font-mono font-medium text-sm">{invoice.invoice_number}</h4>
             <p className="text-xs text-muted-foreground">
               {format(new Date(invoice.created_at), 'MMM d, yyyy')}
             </p>
@@ -123,7 +123,7 @@ export function InvoiceCard({
             <DollarSign className="h-4 w-4 text-muted-foreground" />
             <div>
               <p className="text-xs text-muted-foreground">Amount Due</p>
-              <p className="font-bold text-sm" style={DT.mono}>{formatCurrency(invoice.total_amount)}</p>
+              <p className="font-mono font-bold text-sm">{formatCurrency(invoice.total_amount)}</p>
             </div>
           </div>
         </div>

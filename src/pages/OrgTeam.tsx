@@ -178,7 +178,7 @@ export default function OrgTeam() {
       <div className="space-y-6 max-w-3xl">
         {/* Org Header */}
         <div>
-          <h1 className="text-xl font-bold text-foreground" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>{currentOrg?.name}</h1>
+          <h1 className="text-xl font-bold text-foreground">{currentOrg?.name}</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Manage your organization's team members and invitations
           </p>

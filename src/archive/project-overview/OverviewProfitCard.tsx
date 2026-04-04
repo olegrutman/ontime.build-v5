@@ -140,12 +140,12 @@ export function OverviewProfitCard({ projectId, financials }: Props) {
                   </div>
                 ) : (
                   <button onClick={handleStartEditOwner} className="flex items-center gap-1 group">
-                    <span className="font-medium" style={DT.mono}>{fmt(Math.abs(r.value))}</span>
+                    <span className="font-mono font-medium">{fmt(Math.abs(r.value))}</span>
                     <Pencil className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </button>
                 )
               ) : (
-                <span className="font-medium" style={DT.mono}>{fmt(Math.abs(r.value))}</span>
+                <span className="font-mono font-medium">{fmt(Math.abs(r.value))}</span>
               )}
             </div>
           </div>
@@ -163,7 +163,7 @@ export function OverviewProfitCard({ projectId, financials }: Props) {
           <span className="text-xs font-medium text-foreground">{profitLabel}</span>
         </div>
         <div className="text-right">
-          <span className={cn('text-sm font-semibold', isPositive ? 'text-emerald-700' : isZero ? 'text-foreground' : 'text-red-700')} style={DT.mono}>
+          <span className={cn('font-mono', 'text-sm font-semibold', isPositive ? 'text-emerald-700' : isZero ? 'text-foreground' : 'text-red-700')}>
             {fmt(profit)}
           </span>
           {pct !== 0 && (

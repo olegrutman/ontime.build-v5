@@ -68,7 +68,7 @@ export function OverviewContractsSection({ financials, onNavigate }: Props) {
               <span className="text-[10px] text-muted-foreground ml-1">({row.toRole})</span>
             </p>
             <div className="flex items-center justify-between mt-1.5">
-              <span className="text-sm font-semibold text-foreground" style={DT.mono}>{fmt(row.sum)}</span>
+              <span className="font-mono text-sm font-semibold text-foreground">{fmt(row.sum)}</span>
               <span className="text-[10px] text-muted-foreground">Ret. {row.retainage}%</span>
             </div>
             <div className="flex items-center gap-1 mt-1 text-primary">

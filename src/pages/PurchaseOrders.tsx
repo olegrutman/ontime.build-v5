@@ -354,7 +354,7 @@ export default function PurchaseOrders() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           {/* PO List */}
           <div className="md:col-span-1 space-y-4">
-            <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>Orders</p>
+            <p className="text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium">Orders</p>
             {orders.length === 0 ? (
               <div className="bg-card border border-border rounded-lg py-8 text-center text-muted-foreground">
                   <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
@@ -370,7 +370,7 @@ export default function PurchaseOrders() {
                   <div className="px-3.5 py-3">
                     <div className="flex items-start justify-between">
                       <div>
-                        <p className="text-sm font-medium" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{po.po_number}</p>
+                        <p className="text-sm font-medium">{po.po_number}</p>
                         <p className="text-xs text-muted-foreground truncate">{po.po_name}</p>
                       </div>
                       <Badge className={getStatusBadgeClass(po.status as POStatus)}>
@@ -393,7 +393,7 @@ export default function PurchaseOrders() {
                 <div className="px-3.5 py-3.5">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="text-base font-medium" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>{selectedPO.po_number}</p>
+                      <p className="text-base font-medium">{selectedPO.po_number}</p>
                       <p className="text-sm text-muted-foreground">{selectedPO.po_name}</p>
                     </div>
                     <div className="flex gap-2">

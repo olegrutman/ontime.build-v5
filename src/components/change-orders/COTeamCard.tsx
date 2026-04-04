@@ -110,7 +110,7 @@ export function COTeamCard({ co, collaborators }: COTeamCardProps) {
       <div className="px-3.5 py-3 border-b border-border">
         <h3
           className="text-[0.7rem] uppercase tracking-[0.04em] font-semibold text-muted-foreground"
-          style={DT.heading}
+         
         >
           👥 Team
         </h3>

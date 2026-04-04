@@ -57,11 +57,11 @@ export function COSOVPanel({ coId, isGC, isTC, isFC, myOrgId }: COSOVPanelProps)
       <div className="px-3.5 py-3 border-b border-border flex items-center justify-between">
         <h3
           className="text-[0.7rem] uppercase tracking-[0.04em] font-semibold text-muted-foreground"
-          style={DT.heading}
+         
         >
           SOV Items
         </h3>
-        <span className="text-xs font-semibold text-foreground" style={DT.mono}>
+        <span className="font-mono text-xs font-semibold text-foreground">
           {fmtCurrency(total)}
         </span>
       </div>
@@ -72,7 +72,7 @@ export function COSOVPanel({ coId, isGC, isTC, isFC, myOrgId }: COSOVPanelProps)
               <p className="text-sm text-foreground truncate">{item.line_item_name}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0 ml-2">
-              <span className="text-xs font-medium text-foreground" style={DT.mono}>
+              <span className="font-mono text-xs font-medium text-foreground">
                 {fmtCurrency(item.amount)}
               </span>
               <span

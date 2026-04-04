@@ -80,7 +80,7 @@ export function FCHomeScreen({ projectId }: FCHomeScreenProps) {
         <div className="px-4 pt-5 pb-2">
           <h2
             className="text-lg font-bold uppercase tracking-wide"
-            style={{ fontFamily: "'Barlow Condensed', sans-serif", color: 'hsl(var(--amber))' }}
+            style={{ color: 'hsl(var(--amber))' }}
           >
             What do you need?
           </h2>

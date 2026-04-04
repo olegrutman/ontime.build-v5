@@ -101,8 +101,8 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
       {/* ── Progress Header ───────────────────────────────────── */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="font-heading text-lg font-bold" style={DT.heading}>Project Info</h1>
-          <span className="text-xs text-muted-foreground" style={DT.mono}>
+          <h1 className="font-heading text-lg font-bold">Project Info</h1>
+          <span className="font-mono text-xs text-muted-foreground">
             Step {activeStep} of {STEPS.length}
           </span>
         </div>
@@ -264,7 +264,7 @@ function CardHeader2({ icon, title, subtitle, complete, locked }: {
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <h3 className="font-heading text-sm font-bold" style={DT.heading}>{title}</h3>
+        <h3 className="font-heading text-sm font-bold">{title}</h3>
         <p className="text-[11px] text-muted-foreground">{subtitle}</p>
       </div>
       {complete && (

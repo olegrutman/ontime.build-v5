@@ -43,7 +43,7 @@ function SectionHeader({ title }: { title: string }) {
   return (
     <h3
       className="text-[0.7rem] uppercase tracking-[0.04em] text-muted-foreground font-semibold px-3.5 pt-3.5 pb-2"
-      style={DT.heading}
+     
     >
       {title}
     </h3>
@@ -54,7 +54,7 @@ function FinRow({ label, value, bold, muted }: { label: string; value: number; b
   return (
     <div className="flex items-center justify-between text-sm px-3.5">
       <span className={cn(muted ? 'text-muted-foreground' : 'text-foreground', bold && 'font-semibold')}>{label}</span>
-      <span className={cn(bold ? 'font-semibold text-foreground' : muted ? 'text-muted-foreground' : 'font-medium text-foreground')} style={DT.mono}>
+      <span className={cn('font-mono', bold ? 'font-semibold text-foreground' : muted ? 'text-muted-foreground' : 'font-medium text-foreground')}>
         {fmtCurrency(value)}
       </span>
     </div>

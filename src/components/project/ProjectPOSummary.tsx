@@ -72,7 +72,7 @@ export function ProjectPOSummary({ projectId }: ProjectPOSummaryProps) {
               <tr key={po.id}>
                 <td className="px-5 py-3 font-medium">{po.po_number || '—'}</td>
                 <td className="px-5 py-3">{po.po_name || '—'}</td>
-                <td className="px-5 py-3 tabular-nums" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                <td className="px-5 py-3 tabular-nums">
                   {po.po_total ? formatCurrency(po.po_total) : '—'}
                 </td>
                 <td className="px-5 py-3">

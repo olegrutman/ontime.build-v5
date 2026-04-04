@@ -185,7 +185,7 @@ export function PhaseBuilding({ projectId, onComplete, onStepChange }: PhaseBuil
     <div className="space-y-6 max-w-[680px] mx-auto">
       {/* Step 1: Project Type */}
       <div>
-        <h2 className="text-lg font-bold font-heading" style={DT.heading}>
+        <h2 className="text-lg font-bold font-heading">
           What type of project is this?
         </h2>
         <p className="text-xs text-muted-foreground mt-1">
@@ -216,7 +216,7 @@ export function PhaseBuilding({ projectId, onComplete, onStepChange }: PhaseBuil
       {draft.project_type_id && (
         <>
           <div className="border-t border-border pt-6">
-            <h2 className="text-lg font-bold font-heading" style={DT.heading}>
+            <h2 className="text-lg font-bold font-heading">
               Building Structure
             </h2>
             <p className="text-xs text-muted-foreground mt-1">
