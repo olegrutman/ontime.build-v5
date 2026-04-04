@@ -1,4 +1,4 @@
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDown, Download, Loader2 } from 'lucide-react';
 import { OntimeLogo } from '@/components/ui/OntimeLogo';
