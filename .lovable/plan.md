@@ -1,58 +1,56 @@
 
 
-# Unify Navigation & Merge Project Cards
+# Redesign Project Shell — Unified Sidebar + Simplified Top Bar
 
-## What I learned
+## What I understand you're trying to accomplish
 
-**Project Overview page has two redundant navs:**
-1. `ProjectIconRail` — 44px vertical icon sidebar (left edge) with project-level links (Overview, Change Orders, Invoices, POs, etc.)
-2. `ProjectTabBar` — sticky horizontal tab bar under the dark header with the same links
+You want the project page to feel like one cohesive workspace, not a collection of disconnected parts bolted together. Right now the dark sidebar and the dark header look like two separate elements that happen to share a color. The top bar is cluttered with things that belong elsewhere — breadcrumbs that duplicate the sidebar's "Back to Dashboard" button, a search bar nobody asked for, and a project name that's already displayed in the dark header below. Meanwhile, useful things like Partners, Reminders, My Team, Settings, and Profile are hidden behind dropdowns or missing entirely from the sidebar.
 
-Both navigate to the same tabs. Redundant.
+You're thinking like someone who actually uses this app 8 hours a day: the sidebar should be your home base for everything, the top bar should get out of the way, and premium features should be clearly marked so users know what they're unlocking.
 
-**Dashboard has two project cards:**
-1. `DashboardAttentionList` — "Projects needing attention" (groups by project, shows issues, links to project)
-2. `ProjectSnapshotList` — Full project list with status filter tabs (Setup/Active/On Hold/Completed/Archived)
+## The changes
 
-Both show projects. Redundant.
+### 1. Connect sidebar and header visually
 
-## Plan
+The dark header (bg-slate-950) currently sits inside the scrollable content area, completely disconnected from the sidebar. Fix: make the sidebar extend its dark background seamlessly — remove the rounded card treatment from the header and let it flow naturally as a continuation of the sidebar's dark zone. The header becomes a flat dark band across the top of the content area with no rounded corners on its left edge where it meets the sidebar.
 
-### 1. Replace ProjectIconRail with DashboardSidebar-style sidebar
+### 2. Strip down the ProjectShell top bar
 
-- **Delete** `ProjectIconRail` from `ProjectHome.tsx`
-- **Create** `ProjectSidebar.tsx` — same visual style as `DashboardSidebar` (dark bg, 200/220px width, rounded-xl buttons, text labels) but with project-level nav items:
-  - Overview, Project Info, Schedule of Values, Change Orders, RFIs, Estimates, Invoices, Purchase Orders, Returns, Schedule, Daily Log
-  - Same feature-gating logic as the current icon rail
-  - A "← Back to Dashboard" link at the top
-- **Keep** `ProjectTabBar` for **mobile only** (hidden on `lg:` and up) since the sidebar is `hidden lg:flex`. This gives mobile users horizontal tab navigation and desktop users the sidebar.
+Remove from the top context bar:
+- **"Home" breadcrumb** — redundant, sidebar has "Back to Dashboard"
+- **Project name breadcrumb** — it's in the dark header already
+- **Search button** — eliminate entirely
+- The bar keeps: Logo, status dropdown, download button, notifications (compact), avatar (mobile only since desktop moves profile to sidebar)
 
-### 2. Merge two dashboard project cards into one
+### 3. Expand the ProjectSidebar with utility items
 
-- **Delete** `DashboardAttentionList` as a separate card
-- **Redesign** `ProjectSnapshotList` → rename to **"Projects in Progress"**
-- New unified card behavior:
-  - **Default view**: Shows active projects, each row includes the project name, type, contract value, AND attention indicators (inline `StatusPill` for "Watch"/"At Risk" if the project has pending issues)
-  - **Status filter**: Keep the existing `StatusMenu` pill tabs (Active / On Hold / Completed / Archived) but make them compact inline pills inside the card header instead of a full-width bar
-  - **Title**: "Projects in Progress" when showing Active, changes contextually ("On Hold Projects", "Completed Projects", etc.)
-  - Attention data merges into each project row — no separate card needed
+Add to the sidebar below the project nav groups:
+- **My Team** (links to `/org/team`)
+- **Partners** (links to `/partners`)
+- **Reminders** (links to `/reminders`)
 
-### 3. Files to modify
+These go after a divider, below the project-specific items.
+
+### 4. Move Settings + Profile to sidebar bottom
+
+On desktop, push Settings and Profile to the bottom of the sidebar (use `mt-auto` to pin them to the bottom). Remove them from the top bar avatar dropdown on desktop (keep for mobile).
+
+### 5. Add lock icons to premium features
+
+Add a small lock icon (Lock from lucide) next to Schedule, Daily Log, and RFIs in the sidebar to indicate they're special/premium features. Show the lock inline after the label text in a muted color.
+
+## Files to modify
 
 | File | Change |
 |------|--------|
-| `ProjectHome.tsx` | Remove `ProjectIconRail` import/usage, add `ProjectSidebar`, hide `ProjectTabBar` on desktop (`lg:hidden`) |
-| **New** `ProjectSidebar.tsx` | Dark sidebar matching `DashboardSidebar` style, project-level nav items with feature gates |
-| `ProjectTabBar.tsx` | Add `className="lg:hidden"` wrapper so it only shows on mobile |
-| `Dashboard.tsx` | Remove `DashboardAttentionList`, pass attention data into `ProjectSnapshotList` |
-| `ProjectSnapshotList.tsx` | Rename title to "Projects in Progress", merge attention indicators into each project row as inline `StatusPill`, make status filter pills compact |
-| `DashboardAttentionList.tsx` | Can be deleted (or kept unused) |
-| `StatusMenu.tsx` | Compact the filter pills to fit inside a card header row |
+| `ProjectShell.tsx` | Strip breadcrumbs (Home + project name), remove search button, hide avatar dropdown items on desktop |
+| `ProjectSidebar.tsx` | Add My Team, Partners, Reminders section; add Settings + Profile at bottom with `mt-auto`; add Lock icon on Schedule, Daily Log, RFI |
+| `ProjectHome.tsx` | Remove rounded corners from dark header left edge so it flows into sidebar; adjust header to feel connected |
 
-### What is NOT changing
+## What is NOT changing
 - No business logic changes
 - Dashboard sidebar stays as-is
-- Mobile bottom nav for project pages stays
-- Dark header on project overview stays
-- All existing routing/tab content stays
+- Mobile navigation stays as-is
+- Dark header content (project name, address, health/status badges) stays
+- All routing stays the same
 
