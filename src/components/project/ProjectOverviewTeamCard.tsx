@@ -44,6 +44,8 @@ export function ProjectOverviewTeamCard({ projectId }: ProjectOverviewTeamCardPr
   const { userOrgRoles } = useAuth();
   const viewerOrgType = (userOrgRoles[0]?.organization?.type as OrgType) ?? null;
   const canInvite = viewerOrgType === 'GC' || viewerOrgType === 'TC';
+
+  const fetchData = useCallback(async () => {
     const [teamRes, contractRes, supplierRes] = await Promise.all([
       supabase.from('project_team').select('id, role, invited_org_name, status').eq('project_id', projectId),
       supabase.from('project_contracts').select('material_responsibility').eq('project_id', projectId).not('material_responsibility', 'is', null).limit(1),
@@ -63,7 +65,10 @@ export function ProjectOverviewTeamCard({ projectId }: ProjectOverviewTeamCardPr
 
   return (
     <SurfaceCard>
-      <SurfaceCardHeader title="Team" subtitle={`${acceptedTeam.length} member${acceptedTeam.length !== 1 ? 's' : ''}`} />
+      <SurfaceCardHeader
+        title="Team"
+        subtitle={`${acceptedTeam.length} member${acceptedTeam.length !== 1 ? 's' : ''}`}
+      />
       <SurfaceCardBody className="pt-0 space-y-1.5">
         {acceptedTeam.map((member) => {
           const abbrev = roleAbbrev[member.role] || member.role;
@@ -91,7 +96,29 @@ export function ProjectOverviewTeamCard({ projectId }: ProjectOverviewTeamCardPr
             <span>Supplier: {designatedSupplier}</span>
           </div>
         )}
+
+        {canInvite && (
+          <div className="pt-2 border-t border-border/40">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1.5"
+              onClick={() => setAddDialogOpen(true)}
+            >
+              <UserPlus className="h-3.5 w-3.5" />
+              Add Member
+            </Button>
+          </div>
+        )}
       </SurfaceCardBody>
+
+      <AddTeamMemberDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        projectId={projectId}
+        creatorOrgType={viewerOrgType}
+        onMemberAdded={() => fetchData()}
+      />
     </SurfaceCard>
   );
 }
