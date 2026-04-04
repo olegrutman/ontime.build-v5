@@ -154,7 +154,7 @@ export function MaterialsCommandCenter({ financials, projectId }: MaterialsComma
             { label: 'Forecast Final', value: forecast },
             { label: 'Variance', value: Math.abs(variance), prefix: isOverBudget ? '+' : '' },
           ].map(({ label, value, prefix }) => (
-            <div key={label} className="rounded-2xl bg-accent/30 border border-border/40 p-4">
+            <div key={label} className="rounded-2xl bg-slate-50 dark:bg-accent/20 border border-border/40 p-4">
               <p className="text-muted-foreground text-xs">{label}</p>
               <p className="font-semibold mt-2 text-base" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
                 {prefix}{formatCurrency(value)}
