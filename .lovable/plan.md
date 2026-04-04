@@ -1,47 +1,85 @@
 
 
-# Match Project Overview to Mockup Screenshot
+# Design-System Consistency Pass — Audit & Fix Plan
 
-## What I see differs
+## Audit Results: Remaining Inconsistencies
 
-1. **Dark header color**: Currently `bg-[hsl(var(--foreground))]`. Mockup uses a deep navy (`bg-slate-950`). The header also shows dot-separated project metadata (e.g., "5 Apartments · 2 Stories") after the address — currently only shows address.
+### 1. Raw `Card` usage (not `SurfaceCard`)
+These dashboard/overview components still use the old `Card` from `@/components/ui/card` instead of `SurfaceCard`, which means they get `rounded-lg` + different shadow/border instead of `rounded-2xl border-border/60 shadow-sm`:
+- `PendingInvitesPanel.tsx` — uses `Card` with `rounded-lg`
+- `OnboardingChecklist.tsx` — uses `Card` with `rounded-lg`
+- `OrgInviteBanner.tsx` — uses `Card` with `rounded-lg`
+- `ProjectReadinessCard.tsx` — uses `Card` with `rounded-lg`
 
-2. **KPI cards background**: Currently `bg-accent/20` with a tinted look. Mockup shows clean white (`bg-card`) with only a subtle border.
+### 2. Project Overview dark header badges are hand-rolled
+Lines 300-313 of `ProjectHome.tsx` use inline `rounded-full px-3 py-1 text-xs font-semibold` with custom color classes instead of `StatusPill`. This is the exact use case `StatusPill` was built for.
 
-3. **CO Impact card rows**: Currently each row is wrapped in `rounded-2xl bg-card border` sub-cards. Mockup shows simple flat rows — just label + value separated by thin borders, no individual card wrappers.
+### 3. Dashboard content has no horizontal padding
+Dashboard layout at line 197: `px-0` on the content container, while Overview uses `px-3 sm:px-6`. This creates a different horizontal breathing room.
 
-4. **Spacing**: Currently `space-y-6` and `gap-6` throughout. Mockup uses tighter `gap-4` / `space-y-4`.
+### 4. Dashboard content has no top padding after greeting
+`DashboardWelcome` uses `pt-1 pb-0`, but the Overview content area uses `py-4 sm:py-6`. The greeting sits flush against the top of the content area.
 
-5. **Materials Command Center stat tiles**: Currently `bg-accent/30`. Mockup shows cleaner `bg-slate-50` / `bg-accent/10` tiles.
+### 5. DashboardBusinessSnapshot is a raw `<div>` not `SurfaceCard`
+It uses `rounded-2xl bg-slate-950 text-white p-5` — correct radius but no border/shadow tokens. Since it's a dark card this is acceptable, but it should at least share the `rounded-2xl` radius consistently (it does).
 
-6. **Tab bar**: Looks correct, sits below the dark card. No changes needed.
+### 6. Inner tile backgrounds inconsistent
+- `DashboardActionQueue` action items: `bg-slate-50 dark:bg-accent/20` — correct
+- `DashboardMaterialsHealth` bar chart bg: `bg-slate-50 dark:bg-accent/20` — correct
+- `DashboardMaterialsHealth` mini stats: `bg-slate-50 dark:bg-accent/20` — correct
+- `MaterialsCommandCenter` stat tiles: `bg-slate-50 dark:bg-accent/20` — correct
+- **All match** — no issue here.
 
-## Changes
+### 7. ProjectReadinessCard uses `border-l-4` accent style
+This is a pattern not used anywhere else in the unified system. Should use `SurfaceCard` with the health banner pattern instead.
 
-### 1. Dark header — `ProjectHome.tsx` lines 291-316
-- Change `bg-[hsl(var(--foreground))]` to `bg-slate-950`
-- Add project structures info after address (e.g., "5 Apartments · 2 Stories" from `project.structures`)
+### 8. PendingInvitesPanel inner items use `rounded-lg` not `rounded-xl`
+Line 62: `className="p-3 border rounded-lg bg-muted/30"` — should be `rounded-xl` to match inner tile pattern.
 
-### 2. KPI cards — `ProjectFinancialCommand.tsx`
-- Change `bg-accent/20` to `bg-card` on each KPI tile (line 17)
+## Changes to Make
 
-### 3. CO Impact rows — `COImpactCard.tsx`
-- Remove the `rounded-2xl bg-card border border-border/60` wrapper from each row
-- Replace with simple `border-b border-border/40 px-0 py-3` divider rows (no card per row)
-- Remove outer `bg-accent/20` from the card container — use `bg-card`
+### File: `PendingInvitesPanel.tsx`
+- Replace `Card`/`CardHeader`/`CardContent` with `SurfaceCard`/`SurfaceCardHeader`/`SurfaceCardBody`
+- Change inner invite items from `rounded-lg` to `rounded-xl`
+- Match section title to `SurfaceCardHeader` pattern (0.95rem font-semibold)
 
-### 4. Tighten spacing — `ProjectHome.tsx`
-- Change `space-y-6` to `space-y-4` in the overview content area (line 333)
-- Change `gap-6` to `gap-4` in the 12-col grid (line 365)
+### File: `OnboardingChecklist.tsx`
+- Replace `Card`/`CardHeader`/`CardContent` with `SurfaceCard`/`SurfaceCardHeader`/`SurfaceCardBody`
 
-### 5. Materials Command Center tiles — `MaterialsCommandCenter.tsx`
-- Change stat grid tiles from `bg-accent/30` to `bg-slate-50 dark:bg-accent/20` for a cleaner look (lines 157, 190)
+### File: `OrgInviteBanner.tsx`
+- Replace `Card`/`CardContent` with `SurfaceCard`/`SurfaceCardBody`
+- Keep the `border-primary/30 bg-primary/5` accent since it's a call-to-action banner
 
-## Files to modify
+### File: `ProjectReadinessCard.tsx`
+- Replace `Card`/`CardContent` with `SurfaceCard`/`SurfaceCardBody`
+- Replace `border-l-4 border-l-green-500` with the standard card + a `StatusPill` inside
+
+### File: `ProjectHome.tsx` (lines 300-313)
+- Replace the two hand-rolled `<span>` badges with `StatusPill` components
+- Health badge: map `healthLabel` to the correct `PillVariant` and render as `<StatusPill>`
+- Status badge: use `StatusPill variant="neutral"` for the project status
+
+### File: `Dashboard.tsx` (line 197)
+- Change `px-0` to `px-3 sm:px-6` to match Overview's horizontal padding
+
+### File: `DashboardWelcome.tsx`
+- Change `pt-1 pb-0` to `pt-2 pb-0` for slightly more breathing room (subtle)
+
+## Files to modify (7 files)
 | File | Change |
 |------|--------|
-| `ProjectHome.tsx` | Header bg to `bg-slate-950`, tighten spacing to `space-y-4` / `gap-4`, add structure info |
-| `ProjectFinancialCommand.tsx` | KPI tile bg from `bg-accent/20` to `bg-card` |
-| `COImpactCard.tsx` | Flatten row styling — remove individual card wrappers, use simple divider rows |
-| `MaterialsCommandCenter.tsx` | Stat tiles bg from `bg-accent/30` to `bg-slate-50 dark:bg-accent/20` |
+| `PendingInvitesPanel.tsx` | `Card` → `SurfaceCard`, inner items `rounded-lg` → `rounded-xl` |
+| `OnboardingChecklist.tsx` | `Card` → `SurfaceCard` |
+| `OrgInviteBanner.tsx` | `Card` → `SurfaceCard` |
+| `ProjectReadinessCard.tsx` | `Card` → `SurfaceCard`, remove `border-l-4`, add `StatusPill` |
+| `ProjectHome.tsx` | Replace hand-rolled header badges with `StatusPill` |
+| `Dashboard.tsx` | Add `px-3 sm:px-6` to content container |
+| `DashboardWelcome.tsx` | Adjust top padding from `pt-1` to `pt-2` |
+
+## What is NOT changing
+- No business logic changes
+- No content changes
+- No layout restructuring
+- Components already using `SurfaceCard` stay as-is
+- `DashboardBusinessSnapshot` dark card stays as-is (intentionally different bg)
 
