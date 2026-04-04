@@ -187,7 +187,7 @@ export function MaterialsCommandCenter({ financials, projectId }: MaterialsComma
                   : 0;
 
                 return (
-                  <div key={pack.packName} className="flex items-center justify-between rounded-2xl bg-accent/30 border border-border/40 px-4 py-3">
+                  <div key={pack.packName} className="flex items-center justify-between rounded-2xl bg-slate-50 dark:bg-accent/20 border border-border/40 px-4 py-3">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className={cn(
                         'w-2 h-2 rounded-full shrink-0',
