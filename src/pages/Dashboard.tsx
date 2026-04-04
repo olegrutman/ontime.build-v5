@@ -194,7 +194,7 @@ export default function Dashboard() {
     >
       <div className="flex gap-0">
         <DashboardSidebar />
-        <div className="flex-1 min-w-0 space-y-4 px-0">
+        <div className="flex-1 min-w-0 space-y-4 px-3 sm:px-6">
 
         {/* Greeting */}
         <DashboardWelcome

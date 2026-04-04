@@ -299,18 +299,13 @@ export default function ProjectHome() {
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
                   {projectStatus === 'active' && healthLabel && (
-                    <span className={cn(
-                      'rounded-full px-3 py-1 text-xs font-semibold',
-                      healthLabel === 'healthy' ? 'bg-emerald-500/20 text-emerald-300' :
-                      healthLabel === 'watch' ? 'bg-amber-500/20 text-amber-300' :
-                      'bg-red-500/20 text-red-300'
-                    )}>
+                    <StatusPill variant={healthLabel === 'healthy' ? 'healthy' : healthLabel === 'watch' ? 'watch' : 'at_risk'}>
                       Project Health: {healthLabel === 'healthy' ? 'Healthy' : healthLabel === 'watch' ? 'Watch' : 'At Risk'}
-                    </span>
+                    </StatusPill>
                   )}
-                  <span className="rounded-full px-3 py-1 text-xs font-semibold bg-white/15 text-white">
+                  <StatusPill variant="neutral" className="bg-white/15 text-white">
                     Status: {projectStatus.charAt(0).toUpperCase() + projectStatus.slice(1).replace('_', ' ')}
-                  </span>
+                  </StatusPill>
                 </div>
               </div>
             </div>

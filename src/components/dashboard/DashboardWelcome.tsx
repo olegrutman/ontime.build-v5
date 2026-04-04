@@ -23,7 +23,7 @@ export function DashboardWelcome({ firstName, attentionCount, activeProjects }: 
       : 'Welcome to your dashboard.';
 
   return (
-    <div className="pt-1 pb-0">
+    <div className="pt-2 pb-0">
       <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">
         {greeting}, {name}
       </h1>

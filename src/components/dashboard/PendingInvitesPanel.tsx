@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Loader2, Check, X } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { SurfaceCard, SurfaceCardHeader, SurfaceCardBody } from '@/components/ui/surface-card';
 import { Button } from '@/components/ui/button';
 import { useProjectInvite } from '@/hooks/useProjectInvite';
 
@@ -46,20 +46,18 @@ export function PendingInvitesPanel({ invites, onRefresh }: PendingInvitesPanelP
   };
 
   return (
-    <Card data-sasha-card="Pending Invites" className="border-primary/30 dark:border-primary/50">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Mail className="h-5 w-5 text-primary" />
-          Project Invitations ({invites.length})
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <SurfaceCard data-sasha-card="Pending Invites" className="border-primary/30 dark:border-primary/50">
+      <SurfaceCardHeader
+        title={`Project Invitations (${invites.length})`}
+        action={<Mail className="h-5 w-5 text-primary" />}
+      />
+      <SurfaceCardBody className="space-y-3">
         {invites.slice(0, 5).map((invite) => {
           const isProcessing = processingId === invite.id;
           return (
             <div
               key={invite.id}
-              className="p-3 border rounded-lg bg-muted/30 space-y-2"
+              className="p-3 border border-border/60 rounded-xl bg-muted/30 space-y-2"
             >
               <div>
                 <p className="font-medium text-sm">{invite.projectName}</p>
@@ -104,7 +102,7 @@ export function PendingInvitesPanel({ invites, onRefresh }: PendingInvitesPanelP
             +{invites.length - 5} more invitations
           </p>
         )}
-      </CardContent>
-    </Card>
+      </SurfaceCardBody>
+    </SurfaceCard>
   );
 }

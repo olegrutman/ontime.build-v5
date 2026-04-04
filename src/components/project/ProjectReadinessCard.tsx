@@ -1,6 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { SurfaceCard, SurfaceCardHeader, SurfaceCardBody } from '@/components/ui/surface-card';
+import { StatusPill } from '@/components/ui/status-pill';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle2, AlertTriangle, XCircle, Loader2, Info } from 'lucide-react';
+import { CheckCircle2, XCircle, Loader2, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ProjectReadiness } from '@/hooks/useProjectReadiness';
 
@@ -13,47 +14,39 @@ export function ProjectReadinessCard({ readiness }: ProjectReadinessCardProps) {
 
   if (loading) {
     return (
-      <Card>
-        <CardContent className="p-6 flex items-center justify-center" data-sasha-card="Project Readiness">
+      <SurfaceCard data-sasha-card="Project Readiness">
+        <SurfaceCardBody className="flex items-center justify-center">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
+        </SurfaceCardBody>
+      </SurfaceCard>
     );
   }
 
   if (isActive) {
     return (
-      <Card className="border-l-4 border-l-green-500" data-sasha-card="Project Readiness">
-        <CardContent className="p-4 flex items-center gap-3">
-          <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0" />
+      <SurfaceCard data-sasha-card="Project Readiness">
+        <SurfaceCardBody className="flex items-center gap-3">
+          <StatusPill variant="healthy">Active</StatusPill>
           <span className="font-medium text-sm">Project is active and ready for execution</span>
-        </CardContent>
-      </Card>
+        </SurfaceCardBody>
+      </SurfaceCard>
     );
   }
 
   const isReady = percent === 100;
   const creatorLabel = creatorOrgType === 'TC' ? 'TC Setup' : creatorOrgType === 'GC' ? 'GC Setup' : 'Project Setup';
 
-
   return (
-    <Card data-sasha-card="Project Readiness" className={cn(
-      "border-l-4",
-      isReady ? "border-l-green-500" : "border-l-amber-500"
-    )}>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center justify-between">
-          <span>
-            {isReady ? 'Ready — Activating...' : `${creatorLabel} — ${percent}% Complete`}
-          </span>
-          {isReady ? (
-            <CheckCircle2 className="h-5 w-5 text-green-500" />
-          ) : (
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <SurfaceCard data-sasha-card="Project Readiness">
+      <SurfaceCardHeader
+        title={isReady ? 'Ready — Activating...' : `${creatorLabel} — ${percent}% Complete`}
+        action={
+          <StatusPill variant={isReady ? 'healthy' : 'watch'}>
+            {isReady ? 'Ready' : 'In Progress'}
+          </StatusPill>
+        }
+      />
+      <SurfaceCardBody className="space-y-4">
         <Progress value={percent} className="h-2" />
         
         <div className="space-y-2">
@@ -79,7 +72,7 @@ export function ProjectReadinessCard({ readiness }: ProjectReadinessCardProps) {
             </div>
           ))}
         </div>
-      </CardContent>
-    </Card>
+      </SurfaceCardBody>
+    </SurfaceCard>
   );
 }

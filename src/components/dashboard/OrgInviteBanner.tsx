@@ -1,6 +1,6 @@
 import { useMyOrgInvites } from '@/hooks/useOrgTeam';
 import { ROLE_LABELS } from '@/types/organization';
-import { Card, CardContent } from '@/components/ui/card';
+import { SurfaceCard, SurfaceCardBody } from '@/components/ui/surface-card';
 import { Button } from '@/components/ui/button';
 import { Building2 } from 'lucide-react';
 
@@ -12,8 +12,8 @@ export function OrgInviteBanner() {
   return (
     <div className="space-y-3">
       {invites.map((inv) => (
-        <Card key={inv.id} className="border-primary/30 bg-primary/5">
-          <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <SurfaceCard key={inv.id} className="border-primary/30 bg-primary/5">
+          <SurfaceCardBody className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
             <Building2 className="h-5 w-5 text-primary shrink-0 mt-0.5 sm:mt-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground">
@@ -30,8 +30,8 @@ export function OrgInviteBanner() {
                 Accept
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </SurfaceCardBody>
+        </SurfaceCard>
       ))}
     </div>
   );

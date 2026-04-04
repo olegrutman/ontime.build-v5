@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Circle, X, Rocket } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { SurfaceCard, SurfaceCardHeader, SurfaceCardBody } from '@/components/ui/surface-card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 
@@ -44,28 +44,26 @@ export function OnboardingChecklist({
   if (completedCount === steps.length) return null;
 
   return (
-    <Card data-sasha-card="Onboarding" className="border-primary/20 bg-primary/[0.02]">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Rocket className="h-4 w-4 text-primary" />
-            Get Started
-          </CardTitle>
+    <SurfaceCard data-sasha-card="Onboarding" className="border-primary/20 bg-primary/[0.02]">
+      <SurfaceCardHeader
+        title="Get Started"
+        action={
           <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDismiss}>
             <X className="h-4 w-4" />
           </Button>
-        </div>
+        }
+      >
         <Progress value={progress} className="h-1.5 mt-2" />
         <p className="text-xs text-muted-foreground mt-1">
           {completedCount} of {steps.length} complete
         </p>
-      </CardHeader>
-      <CardContent className="pt-0 space-y-2">
+      </SurfaceCardHeader>
+      <SurfaceCardBody className="space-y-2">
         {steps.map((step) => (
           <div key={step.label} className="flex items-center gap-2">
             <button
               onClick={() => !step.done && navigate(step.path)}
-              className={`flex items-center gap-3 flex-1 text-left rounded-md px-3 py-2 text-sm transition-colors ${
+              className={`flex items-center gap-3 flex-1 text-left rounded-xl px-3 py-2 text-sm transition-colors ${
                 step.done
                   ? 'text-muted-foreground'
                   : 'hover:bg-muted cursor-pointer'
@@ -101,7 +99,7 @@ export function OnboardingChecklist({
             )}
           </div>
         ))}
-      </CardContent>
-    </Card>
+      </SurfaceCardBody>
+    </SurfaceCard>
   );
 }
