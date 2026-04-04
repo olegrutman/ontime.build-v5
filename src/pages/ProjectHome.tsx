@@ -20,7 +20,6 @@ import { Bell } from 'lucide-react';
 import { ProjectShell } from '@/components/app-shell/ProjectShell';
 import { 
   PurchaseOrdersTab,
-  AttentionBanner,
   SupplierEstimatesSection,
   SupplierMaterialsOverview,
   BudgetTracking,
@@ -28,6 +27,7 @@ import {
   MaterialMarkupEditor,
   CriticalScheduleCard,
 } from '@/components/project';
+import { CompactAlertBar } from '@/components/project/CompactAlertBar';
 
 import { ProjectSetupFlow } from '@/components/project-setup/ProjectSetupFlow';
 import { ProjectSidebar } from '@/components/project/ProjectSidebar';
