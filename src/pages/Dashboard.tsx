@@ -234,12 +234,6 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* Left column — 8 cols */}
           <div className="lg:col-span-8 space-y-4">
-            {/* Projects needing attention */}
-            <DashboardAttentionList
-              attentionItems={attentionItems}
-              pendingInvitesCount={pendingInvites.length}
-            />
-
             {/* Two-col: Materials Health + Action Queue */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <DashboardMaterialsHealth
@@ -250,7 +244,7 @@ export default function Dashboard() {
               <DashboardActionQueue docs={recentDocs} />
             </div>
 
-            {/* Projects list */}
+            {/* Projects list — merged with attention data */}
             <div id="projects-list">
             <ProjectSnapshotList
               projects={projects}
@@ -262,6 +256,7 @@ export default function Dashboard() {
               onCreateProject={() => navigate('/create-project')}
               orgType={orgType}
               orgId={orgId}
+              attentionItems={attentionItems}
             />
             </div>
           </div>
