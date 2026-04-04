@@ -375,7 +375,7 @@ export default function ProjectHome() {
                       </div>
 
                       {/* Right column — 4 cols */}
-                      <div className="xl:col-span-4 space-y-6">
+                      <div className="xl:col-span-4 space-y-4">
                         {/* CO Impact */}
                         <COImpactCard financials={financials} />
 
