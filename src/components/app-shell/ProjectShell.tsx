@@ -157,7 +157,7 @@ export function ProjectShell({
         {children}
       </div>
 
-      <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
+      
     </div>
   );
 }
