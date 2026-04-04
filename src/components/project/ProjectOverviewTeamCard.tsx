@@ -1,9 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Users, Package } from 'lucide-react';
+import { Users, Package, UserPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { SurfaceCard, SurfaceCardHeader, SurfaceCardBody } from '@/components/ui/surface-card';
+import { useAuth } from '@/hooks/useAuth';
+import { AddTeamMemberDialog } from '@/components/project/AddTeamMemberDialog';
+import type { OrgType } from '@/types/organization';
 
 interface ProjectOverviewTeamCardProps {
   projectId: string;
