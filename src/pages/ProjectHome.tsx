@@ -362,9 +362,9 @@ export default function ProjectHome() {
                     <ProjectFinancialCommand financials={financials} />
 
                     {/* 8/4 Grid */}
-                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
                       {/* Left column — 8 cols */}
-                      <div className="xl:col-span-8 space-y-6">
+                      <div className="xl:col-span-8 space-y-4">
                         {/* Materials Command Center */}
                         {showMaterials && (
                           <MaterialsCommandCenter financials={financials} projectId={id!} />
