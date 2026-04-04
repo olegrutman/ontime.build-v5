@@ -289,7 +289,7 @@ export default function CreateProjectNew() {
                       )}
                     >
                       <div className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium",
+                        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold font-heading",
                         index < currentStep && "bg-primary text-primary-foreground",
                         index === currentStep && "bg-primary text-primary-foreground",
                         index > currentStep && "bg-muted text-muted-foreground"
