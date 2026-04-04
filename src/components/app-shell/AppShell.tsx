@@ -22,6 +22,7 @@ export function AppShell({
   showNewButton,
   onNewClick,
   newButtonLabel,
+  fullWidth,
 }: AppShellProps) {
   const [cmdOpen, setCmdOpen] = useState(false);
   const location = useLocation();
