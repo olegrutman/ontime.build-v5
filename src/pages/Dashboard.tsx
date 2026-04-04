@@ -20,7 +20,7 @@ import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist'
 import { useProfile } from '@/hooks/useProfile';
 import { DashboardBusinessSnapshot } from '@/components/dashboard/DashboardBusinessSnapshot';
 import { DashboardKPIs } from '@/components/dashboard/DashboardKPIs';
-import { DashboardAttentionList } from '@/components/dashboard/DashboardAttentionList';
+
 import { DashboardMaterialsHealth } from '@/components/dashboard/DashboardMaterialsHealth';
 import { ProjectSnapshotList } from '@/components/dashboard/ProjectSnapshotList';
 import { DashboardActionQueue } from '@/components/dashboard/DashboardActionQueue';
