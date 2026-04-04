@@ -28,7 +28,7 @@ import {
 } from '@/components/project';
 
 import { ProjectSetupFlow } from '@/components/project-setup/ProjectSetupFlow';
-import { ProjectIconRail } from '@/components/project/ProjectIconRail';
+import { ProjectSidebar } from '@/components/project/ProjectSidebar';
 import { ProjectBottomNav } from '@/components/project/ProjectBottomNav';
 
 import { BillingCashCard } from '@/components/project/BillingCashCard';
@@ -285,7 +285,7 @@ export default function ProjectHome() {
       onStatusChange={handleStatusChange}
     >
       <div className="flex flex-1 overflow-hidden">
-        <ProjectIconRail isSupplier={isSupplier} />
+        <ProjectSidebar isSupplier={isSupplier} />
         <main className="flex-1 overflow-auto">
           {/* Dark Header + Sticky Tab Bar — always visible */}
           <div className="sticky top-0 z-30">

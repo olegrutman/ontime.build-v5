@@ -63,7 +63,7 @@ function FeatureTabItem({ tab, active, onClick }: { tab: Tab; active: boolean; o
 
 export function ProjectTabBar({ activeTab, onTabChange, isSupplier }: ProjectTabBarProps) {
   return (
-    <div className="bg-background border-b border-border px-3 sm:px-6">
+    <div className="lg:hidden bg-background border-b border-border px-3 sm:px-6">
       <nav className="flex gap-6 overflow-x-auto scrollbar-hide">
         {TABS.map((tab) => (
           <TabItem
