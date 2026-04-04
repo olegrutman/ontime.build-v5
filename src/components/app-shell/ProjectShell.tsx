@@ -106,25 +106,12 @@ export function ProjectShell({
     <div className="min-h-screen flex flex-col bg-background">
       {/* Context Bar */}
       <header className="fixed top-0 inset-x-0 z-50 h-[52px] flex items-center justify-between px-3 sm:px-4 bg-card/80 backdrop-blur-xl border-b border-border">
-        {/* Left — Logo + Breadcrumbs */}
+      {/* Left — Logo only */}
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <OntimeLogo className="w-7 h-7" />
           <span className="hidden sm:inline font-heading text-[1.1rem] font-extrabold tracking-[-0.3px] text-foreground leading-none shrink-0">
             Ontime<span className="text-primary">.build</span>
           </span>
-
-          {/* Breadcrumbs */}
-          <nav className="flex items-center gap-1 text-sm ml-2 min-w-0">
-            <ChevronRight className="w-3 h-3 text-muted-foreground/50 shrink-0" />
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
-            >
-              Home
-            </button>
-            <ChevronRight className="w-3 h-3 text-muted-foreground/50 shrink-0" />
-            <span className="text-foreground font-medium truncate">{projectName}</span>
-          </nav>
         </div>
 
         {/* Right — Status, Download, Search, Notifications, Avatar */}
