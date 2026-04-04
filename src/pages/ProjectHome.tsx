@@ -367,7 +367,7 @@ export default function ProjectHome() {
                       <div className="xl:col-span-8 space-y-6">
                         {/* Materials Command Center */}
                         {showMaterials && (
-                          <MaterialsCommandCenter financials={financials} />
+                          <MaterialsCommandCenter financials={financials} projectId={id!} />
                         )}
 
                         {/* PO Summary */}
