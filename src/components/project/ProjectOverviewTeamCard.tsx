@@ -39,8 +39,11 @@ export function ProjectOverviewTeamCard({ projectId }: ProjectOverviewTeamCardPr
   const [loading, setLoading] = useState(true);
   const [materialResp, setMaterialResp] = useState<string | null>(null);
   const [designatedSupplier, setDesignatedSupplier] = useState<string | null>(null);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
-  const fetchData = useCallback(async () => {
+  const { userOrgRoles } = useAuth();
+  const viewerOrgType = (userOrgRoles[0]?.organization?.type as OrgType) ?? null;
+  const canInvite = viewerOrgType === 'GC' || viewerOrgType === 'TC';
     const [teamRes, contractRes, supplierRes] = await Promise.all([
       supabase.from('project_team').select('id, role, invited_org_name, status').eq('project_id', projectId),
       supabase.from('project_contracts').select('material_responsibility').eq('project_id', projectId).not('material_responsibility', 'is', null).limit(1),
