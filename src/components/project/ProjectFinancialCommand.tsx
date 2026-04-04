@@ -50,10 +50,10 @@ export function ProjectFinancialCommand({ financials }: ProjectFinancialCommandP
   // FC
   const fcContract = downstreamContract?.contract_sum || upstreamContract?.contract_sum || 0;
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-      <KPICard label="Contract Value" value={fcContract} delay={0} />
-      <KPICard label="Collected" value={financials.receivablesCollected} delay={40} />
-      <KPICard label="Outstanding" value={fcContract - financials.receivablesCollected} delay={80} />
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+      <KPICard label="Contract Value" value={fcContract} delay={0} className="p-3" />
+      <KPICard label="Collected" value={financials.receivablesCollected} delay={40} className="p-3" />
+      <KPICard label="Outstanding" value={fcContract - financials.receivablesCollected} delay={80} className="p-3" />
     </div>
   );
 }
