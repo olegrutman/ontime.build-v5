@@ -331,6 +331,7 @@ export default function CreateProjectNew() {
                   <Button
                     onClick={nextStep}
                     disabled={!canProceed() || saving}
+                    className="min-h-[44px]"
                   >
                     {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Next
@@ -340,6 +341,7 @@ export default function CreateProjectNew() {
                   <Button
                     onClick={createProject}
                     disabled={saving}
+                    className="min-h-[44px]"
                   >
                     {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Create Project
