@@ -1,6 +1,6 @@
 import { ReactNode, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Search, Plus, Download, Loader2, ChevronDown } from 'lucide-react';
+import { ChevronDown, Download, Loader2 } from 'lucide-react';
 import { OntimeLogo } from '@/components/ui/OntimeLogo';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
