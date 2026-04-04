@@ -62,6 +62,10 @@ export function ProjectShell({
   const { profile, currentRole, signOut } = useAuth();
   const [downloading, setDownloading] = useState(false);
 
+  const initials = profile?.full_name
+    ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+    : '?';
+
   const handleDownloadSummary = async () => {
     setDownloading(true);
     try {
