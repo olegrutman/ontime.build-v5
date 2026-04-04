@@ -1,6 +1,6 @@
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Search, Plus, Download, Loader2, ChevronDown } from 'lucide-react';
+import { ChevronDown, Download, Loader2 } from 'lucide-react';
 import { OntimeLogo } from '@/components/ui/OntimeLogo';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { CommandPalette } from '@/components/app-shell/CommandPalette';
+
 
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Active' },
@@ -60,24 +60,11 @@ export function ProjectShell({
   const navigate = useNavigate();
   const { toast } = useToast();
   const { profile, currentRole, signOut } = useAuth();
-  const [cmdOpen, setCmdOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
   const initials = profile?.full_name
     ? profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     : '?';
-
-  // Global ⌘K toggle
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setCmdOpen((o) => !o);
-      }
-    };
-    window.addEventListener('keydown', handleKey);
-    return () => window.removeEventListener('keydown', handleKey);
-  }, []);
 
   const handleDownloadSummary = async () => {
     setDownloading(true);
@@ -106,25 +93,12 @@ export function ProjectShell({
     <div className="min-h-screen flex flex-col bg-background">
       {/* Context Bar */}
       <header className="fixed top-0 inset-x-0 z-50 h-[52px] flex items-center justify-between px-3 sm:px-4 bg-card/80 backdrop-blur-xl border-b border-border">
-        {/* Left — Logo + Breadcrumbs */}
+      {/* Left — Logo only */}
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <OntimeLogo className="w-7 h-7" />
           <span className="hidden sm:inline font-heading text-[1.1rem] font-extrabold tracking-[-0.3px] text-foreground leading-none shrink-0">
             Ontime<span className="text-primary">.build</span>
           </span>
-
-          {/* Breadcrumbs */}
-          <nav className="flex items-center gap-1 text-sm ml-2 min-w-0">
-            <ChevronRight className="w-3 h-3 text-muted-foreground/50 shrink-0" />
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="text-muted-foreground hover:text-foreground transition-colors shrink-0"
-            >
-              Home
-            </button>
-            <ChevronRight className="w-3 h-3 text-muted-foreground/50 shrink-0" />
-            <span className="text-foreground font-medium truncate">{projectName}</span>
-          </nav>
         </div>
 
         {/* Right — Status, Download, Search, Notifications, Avatar */}
@@ -160,22 +134,12 @@ export function ProjectShell({
             {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
           </Button>
 
-          {/* Search */}
-          <button
-            onClick={() => setCmdOpen(true)}
-            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/30 hover:bg-muted/50 border border-border text-muted-foreground text-xs transition-colors"
-          >
-            <Search className="w-3 h-3" />
-            <span className="hidden md:inline">Search</span>
-            <kbd className="hidden md:inline ml-1 px-1 py-0.5 rounded bg-muted/40 text-[10px] font-mono">⌘K</kbd>
-          </button>
-
           <NotificationSheet />
 
-          {/* Avatar */}
+          {/* Avatar — mobile only, desktop uses sidebar */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full lg:hidden">
                 <Avatar className="h-7 w-7">
                   <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
                     {initials}
@@ -183,7 +147,7 @@ export function ProjectShell({
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-48 lg:hidden">
               <DropdownMenuItem onClick={() => navigate('/profile')}>Profile</DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate('/settings')}>Settings</DropdownMenuItem>
               <DropdownMenuItem onClick={() => signOut()}>Sign out</DropdownMenuItem>
@@ -197,7 +161,7 @@ export function ProjectShell({
         {children}
       </div>
 
-      <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
+      
     </div>
   );
 }
