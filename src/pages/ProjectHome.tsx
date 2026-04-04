@@ -45,7 +45,7 @@ import { COImpactCard } from '@/components/project/COImpactCard';
 import { ProjectActionQueue } from '@/components/project/ProjectActionQueue';
 import { ProjectOverviewTeamCard } from '@/components/project/ProjectOverviewTeamCard';
 import { ProjectPOSummary } from '@/components/project/ProjectPOSummary';
-import { ProjectDarkHeader } from '@/components/project/ProjectDarkHeader';
+
 import { ProjectTabBar } from '@/components/project/ProjectTabBar';
 
 import { InvoicesTab } from '@/components/invoices';
@@ -286,12 +286,41 @@ export default function ProjectHome() {
       <div className="flex flex-1 overflow-hidden">
         <ProjectIconRail isSupplier={isSupplier} />
         <main className="flex-1 overflow-auto">
+          {/* Dark Header + Sticky Tab Bar — always visible */}
+          <div className="sticky top-0 z-30">
+            <div className="bg-[hsl(var(--foreground))] text-white px-3 sm:px-6 py-4">
+              <div className="max-w-7xl mx-auto flex items-start justify-between gap-4 flex-wrap">
+                <div className="min-w-0">
+                  <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium mb-1">Project Overview</p>
+                  <h1 className="text-xl font-semibold tracking-tight truncate">{project.name}</h1>
+                  {formattedAddress && (
+                    <p className="text-sm text-slate-400 mt-0.5 truncate">{formattedAddress}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  {projectStatus === 'active' && healthLabel && (
+                    <span className={cn(
+                      'rounded-full px-3 py-1 text-xs font-semibold',
+                      healthLabel === 'healthy' ? 'bg-emerald-500/20 text-emerald-300' :
+                      healthLabel === 'watch' ? 'bg-amber-500/20 text-amber-300' :
+                      'bg-red-500/20 text-red-300'
+                    )}>
+                      Project Health: {healthLabel === 'healthy' ? 'Healthy' : healthLabel === 'watch' ? 'Watch' : 'At Risk'}
+                    </span>
+                  )}
+                  <span className="rounded-full px-3 py-1 text-xs font-semibold bg-white/15 text-white">
+                    Status: {projectStatus.charAt(0).toUpperCase() + projectStatus.slice(1).replace('_', ' ')}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <ProjectTabBar activeTab={activeTab} onTabChange={handleTabChange} isSupplier={isSupplier} />
+          </div>
+
           <div className={cn(
             "max-w-7xl mx-auto w-full pb-24 lg:pb-6",
             activeTab === 'overview' ? 'px-3 sm:px-6 py-4 sm:py-6' : 'px-3 sm:px-6 py-4 sm:py-6 space-y-6'
           )}>
-            {/* Sticky Tab Bar */}
-            <ProjectTabBar activeTab={activeTab} onTabChange={handleTabChange} isSupplier={isSupplier} />
 
             {/* Overview Tab */}
             {activeTab === 'overview' && (
@@ -301,14 +330,7 @@ export default function ProjectHome() {
                 ) : isSupplier && supplierOrgId ? (
                   <SupplierMaterialsOverview projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
                 ) : (
-                  <div className="space-y-6 mt-6">
-                    {/* Dark Project Header */}
-                    <ProjectDarkHeader
-                      name={project.name}
-                      address={formattedAddress}
-                      status={projectStatus}
-                      healthLabel={projectStatus === 'active' ? healthLabel : undefined}
-                    />
+                  <div className="space-y-6 mt-4">
                     {showSetupBanner && (
                       <div
                         className="rounded-3xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors"
@@ -345,7 +367,7 @@ export default function ProjectHome() {
                       <div className="xl:col-span-8 space-y-6">
                         {/* Materials Command Center */}
                         {showMaterials && (
-                          <MaterialsCommandCenter financials={financials} />
+                          <MaterialsCommandCenter financials={financials} projectId={id!} />
                         )}
 
                         {/* PO Summary */}
@@ -357,14 +379,14 @@ export default function ProjectHome() {
                         {/* CO Impact */}
                         <COImpactCard financials={financials} />
 
+                        {/* Billing & Cash Position */}
+                        <BillingCashCard financials={financials} />
+
                         {/* Team Card */}
                         <ProjectOverviewTeamCard projectId={id!} />
 
                         {/* Action Queue */}
                         <ProjectActionQueue financials={financials} projectId={id!} onNavigate={handleTabChange} />
-
-                        {/* Billing */}
-                        <BillingCashCard financials={financials} />
                       </div>
                     </div>
                   </div>
