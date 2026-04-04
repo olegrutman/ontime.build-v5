@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { cn, formatCurrency } from '@/lib/utils';
 import { ProjectFinancials } from '@/hooks/useProjectFinancials';
+import { SurfaceCard, SurfaceCardHeader, SurfaceCardBody } from '@/components/ui/surface-card';
 
 interface ProjectActionQueueProps {
   financials: ProjectFinancials;
@@ -29,21 +30,23 @@ export function ProjectActionQueue({ financials, projectId, onNavigate }: Projec
   if (actions.length === 0) return null;
 
   return (
-    <div className="rounded-3xl border border-border/60 shadow-sm p-5">
-      <h3 className="text-xl font-semibold tracking-tight">Action queue</h3>
-      <p className="text-sm text-muted-foreground">Simple enough for a non-technical user</p>
-      <div className="mt-4 space-y-3">
+    <SurfaceCard>
+      <SurfaceCardHeader
+        title="Action queue"
+        subtitle="Simple enough for a non-technical user"
+      />
+      <SurfaceCardBody className="space-y-2">
         {actions.map((action, i) => (
           <button
             key={i}
             onClick={action.onClick}
-            className="w-full rounded-2xl border border-border/60 px-4 py-3 flex items-center justify-between bg-accent/20 hover:bg-accent/40 transition-colors text-left"
+            className="w-full rounded-xl border border-border/60 px-4 py-3 flex items-center justify-between bg-slate-50 dark:bg-accent/20 hover:bg-accent/40 transition-colors text-left"
           >
-            <span className="text-sm font-medium">{action.label}</span>
-            <span className="text-primary text-xs font-semibold">Go</span>
+            <span className="text-[0.85rem] font-medium">{action.label}</span>
+            <span className="text-primary text-[0.75rem] font-semibold">Go</span>
           </button>
         ))}
-      </div>
-    </div>
+      </SurfaceCardBody>
+    </SurfaceCard>
   );
 }

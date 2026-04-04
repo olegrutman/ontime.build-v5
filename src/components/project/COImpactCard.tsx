@@ -1,5 +1,6 @@
 import { formatCurrency, cn } from '@/lib/utils';
 import { ProjectFinancials } from '@/hooks/useProjectFinancials';
+import { SurfaceCard, SurfaceCardHeader, SurfaceCardBody } from '@/components/ui/surface-card';
 
 interface COImpactCardProps {
   financials: ProjectFinancials;
@@ -7,11 +8,11 @@ interface COImpactCardProps {
 
 export function COImpactCard({ financials }: COImpactCardProps) {
   const { approvedEstimateSum } = financials;
-  
+
   if (!approvedEstimateSum || approvedEstimateSum === 0) return null;
 
   const revenue = approvedEstimateSum;
-  const cost = Math.round(revenue * 0.72); // approximate
+  const cost = Math.round(revenue * 0.72);
   const margin = revenue - cost;
   const pending = 0;
 
@@ -23,19 +24,23 @@ export function COImpactCard({ financials }: COImpactCardProps) {
   ];
 
   return (
-    <div className="rounded-3xl border border-border/60 p-5 bg-card shadow-sm">
-      <h3 className="text-xl font-semibold tracking-tight">Change order impact</h3>
-      <p className="text-sm text-muted-foreground">How changes affected your bottom line</p>
-      <div className="mt-5 text-sm divide-y divide-border/40">
-        {rows.map(({ label, value }) => (
-          <div key={label} className="py-3 flex items-center justify-between">
-            <span className="text-muted-foreground">{label}</span>
-            <span className="font-semibold" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
-              {formatCurrency(value)}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
+    <SurfaceCard>
+      <SurfaceCardHeader
+        title="Change order impact"
+        subtitle="How changes affected your bottom line"
+      />
+      <SurfaceCardBody className="pt-0">
+        <div className="text-sm divide-y divide-border/40">
+          {rows.map(({ label, value }) => (
+            <div key={label} className="py-3 flex items-center justify-between">
+              <span className="text-muted-foreground">{label}</span>
+              <span className="font-semibold tabular-nums" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                {formatCurrency(value)}
+              </span>
+            </div>
+          ))}
+        </div>
+      </SurfaceCardBody>
+    </SurfaceCard>
   );
 }

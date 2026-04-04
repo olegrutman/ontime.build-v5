@@ -1,9 +1,10 @@
-import { useState } from 'react';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency, cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronDown } from 'lucide-react';
+import { StatusPill } from '@/components/ui/status-pill';
+import { SurfaceCard, SurfaceCardHeader, SurfaceCardFooter } from '@/components/ui/surface-card';
+import { CollapseToggle } from '@/components/ui/collapse-toggle';
 
 interface ProjectPOSummaryProps {
   projectId: string;
@@ -17,12 +18,12 @@ interface PORow {
   po_total: number | null;
 }
 
-const STATUS_BADGE: Record<string, string> = {
-  DELIVERED: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400',
-  ORDERED: 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-400',
-  FINALIZED: 'bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400',
-  DRAFT: 'bg-accent text-muted-foreground',
-  SUBMITTED: 'bg-violet-50 text-violet-700 dark:bg-violet-950/30 dark:text-violet-400',
+const STATUS_VARIANT: Record<string, 'healthy' | 'info' | 'watch' | 'neutral' | 'at_risk'> = {
+  DELIVERED: 'healthy',
+  ORDERED: 'info',
+  FINALIZED: 'watch',
+  DRAFT: 'neutral',
+  SUBMITTED: 'info',
 };
 
 export function ProjectPOSummary({ projectId }: ProjectPOSummaryProps) {
@@ -44,40 +45,40 @@ export function ProjectPOSummary({ projectId }: ProjectPOSummaryProps) {
     fetchPOs();
   }, [projectId]);
 
-  if (loading) return <Skeleton className="h-48 rounded-3xl" />;
+  if (loading) return <Skeleton className="h-48 rounded-2xl" />;
   if (pos.length === 0) return null;
 
   const visiblePOs = expanded ? pos : pos.slice(0, 3);
   const hasMore = pos.length > 3;
 
   return (
-    <div className="rounded-3xl border border-border/60 shadow-sm overflow-hidden">
-      <div className="p-5 border-b border-border/40">
-        <h3 className="text-xl font-semibold tracking-tight">Purchase orders</h3>
-        <p className="text-sm text-muted-foreground">Fast read version of the PO lifecycle</p>
-      </div>
+    <SurfaceCard>
+      <SurfaceCardHeader
+        title="Purchase orders"
+        subtitle="Fast read version of the PO lifecycle"
+      />
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-accent/30 text-muted-foreground">
+        <table className="w-full text-[0.85rem]">
+          <thead className="bg-slate-50 dark:bg-accent/20 text-muted-foreground">
             <tr>
-              <th className="text-left px-5 py-3 font-medium">PO #</th>
-              <th className="text-left px-5 py-3 font-medium">Package</th>
-              <th className="text-left px-5 py-3 font-medium">Amount</th>
-              <th className="text-left px-5 py-3 font-medium">Status</th>
+              <th className="text-left px-5 py-2.5 font-medium text-[0.75rem]">PO #</th>
+              <th className="text-left px-5 py-2.5 font-medium text-[0.75rem]">Package</th>
+              <th className="text-left px-5 py-2.5 font-medium text-[0.75rem]">Amount</th>
+              <th className="text-left px-5 py-2.5 font-medium text-[0.75rem]">Status</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border/40">
             {visiblePOs.map((po) => (
               <tr key={po.id}>
-                <td className="px-5 py-4 font-medium">{po.po_number || '—'}</td>
-                <td className="px-5 py-4">{po.po_name || '—'}</td>
-                <td className="px-5 py-4" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                <td className="px-5 py-3 font-medium">{po.po_number || '—'}</td>
+                <td className="px-5 py-3">{po.po_name || '—'}</td>
+                <td className="px-5 py-3 tabular-nums" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
                   {po.po_total ? formatCurrency(po.po_total) : '—'}
                 </td>
-                <td className="px-5 py-4">
-                  <span className={cn('rounded-full px-2.5 py-1 text-xs font-semibold', STATUS_BADGE[po.status] || STATUS_BADGE.DRAFT)}>
+                <td className="px-5 py-3">
+                  <StatusPill variant={STATUS_VARIANT[po.status] || 'neutral'}>
                     {po.status}
-                  </span>
+                  </StatusPill>
                 </td>
               </tr>
             ))}
@@ -85,14 +86,10 @@ export function ProjectPOSummary({ projectId }: ProjectPOSummaryProps) {
         </table>
       </div>
       {hasMore && (
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="w-full p-3 text-sm text-primary font-medium hover:bg-accent/30 transition-colors flex items-center justify-center gap-1 border-t border-border/40"
-        >
-          {expanded ? 'Show less' : `Show all (${pos.length})`}
-          <ChevronDown className={cn('w-4 h-4 transition-transform', expanded && 'rotate-180')} />
-        </button>
+        <SurfaceCardFooter>
+          <CollapseToggle expanded={expanded} totalCount={pos.length} onToggle={() => setExpanded(!expanded)} />
+        </SurfaceCardFooter>
       )}
-    </div>
+    </SurfaceCard>
   );
 }
