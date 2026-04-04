@@ -147,22 +147,12 @@ export function ProjectShell({
             {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
           </Button>
 
-          {/* Search */}
-          <button
-            onClick={() => setCmdOpen(true)}
-            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/30 hover:bg-muted/50 border border-border text-muted-foreground text-xs transition-colors"
-          >
-            <Search className="w-3 h-3" />
-            <span className="hidden md:inline">Search</span>
-            <kbd className="hidden md:inline ml-1 px-1 py-0.5 rounded bg-muted/40 text-[10px] font-mono">⌘K</kbd>
-          </button>
-
           <NotificationSheet />
 
-          {/* Avatar */}
+          {/* Avatar — mobile only, desktop uses sidebar */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full lg:hidden">
                 <Avatar className="h-7 w-7">
                   <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
                     {initials}
@@ -170,7 +160,7 @@ export function ProjectShell({
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-48 lg:hidden">
               <DropdownMenuItem onClick={() => navigate('/profile')}>Profile</DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate('/settings')}>Settings</DropdownMenuItem>
               <DropdownMenuItem onClick={() => signOut()}>Sign out</DropdownMenuItem>
