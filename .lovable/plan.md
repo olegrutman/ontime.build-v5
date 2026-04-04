@@ -1,56 +1,38 @@
 
 
-# Redesign Project Shell — Unified Sidebar + Simplified Top Bar
+# Redesign Project Header to Match Business Snapshot Style
 
-## What I understand you're trying to accomplish
+## What this does
 
-You want the project page to feel like one cohesive workspace, not a collection of disconnected parts bolted together. Right now the dark sidebar and the dark header look like two separate elements that happen to share a color. The top bar is cluttered with things that belong elsewhere — breadcrumbs that duplicate the sidebar's "Back to Dashboard" button, a search bar nobody asked for, and a project name that's already displayed in the dark header below. Meanwhile, useful things like Partners, Reminders, My Team, Settings, and Profile are hidden behind dropdowns or missing entirely from the sidebar.
+Restyle the project overview's dark header to use the same visual language as the `DashboardBusinessSnapshot` card — compact, information-dense, with the same typography hierarchy and spacing. Move the notification bell from the top context bar into this header so it lives alongside project info.
 
-You're thinking like someone who actually uses this app 8 hours a day: the sidebar should be your home base for everything, the top bar should get out of the way, and premium features should be clearly marked so users know what they're unlocking.
+## Current state
 
-## The changes
+- The dark header is a wide flat band with `text-xl` project name, small address, and pills floated right
+- Notifications live in the `ProjectShell` top bar (line 137)
+- The Business Snapshot card uses: `rounded-2xl bg-slate-950 p-5`, small uppercase label (`text-[0.7rem]`), large value (`text-2xl font-semibold`), sub-info in `text-[0.8rem] text-slate-400`, then stat rows in `text-[0.85rem]`
 
-### 1. Connect sidebar and header visually
+## Changes
 
-The dark header (bg-slate-950) currently sits inside the scrollable content area, completely disconnected from the sidebar. Fix: make the sidebar extend its dark background seamlessly — remove the rounded card treatment from the header and let it flow naturally as a continuation of the sidebar's dark zone. The header becomes a flat dark band across the top of the content area with no rounded corners on its left edge where it meets the sidebar.
+### 1. Restyle header to match Business Snapshot typography (`ProjectHome.tsx` lines 291-313)
 
-### 2. Strip down the ProjectShell top bar
+- Keep `bg-slate-950 text-white` but add `rounded-t-2xl` on the right edge (matching the card radius)
+- Use the same hierarchy: small uppercase label for "Project Overview", `text-2xl font-semibold` for project name, `text-[0.8rem] text-slate-400` for address
+- Add a compact stat row below (same `text-[0.85rem]` style as Business Snapshot) showing key info: status, health, project type — displayed as `label · value` pairs in slate-400/white
+- Move notification bell into the header's top-right corner, next to the status/health pills
 
-Remove from the top context bar:
-- **"Home" breadcrumb** — redundant, sidebar has "Back to Dashboard"
-- **Project name breadcrumb** — it's in the dark header already
-- **Search button** — eliminate entirely
-- The bar keeps: Logo, status dropdown, download button, notifications (compact), avatar (mobile only since desktop moves profile to sidebar)
+### 2. Remove NotificationSheet from ProjectShell top bar (`ProjectShell.tsx` line 137)
 
-### 3. Expand the ProjectSidebar with utility items
+- Delete the `<NotificationSheet />` from the top context bar since it now lives in the header
 
-Add to the sidebar below the project nav groups:
-- **My Team** (links to `/org/team`)
-- **Partners** (links to `/partners`)
-- **Reminders** (links to `/reminders`)
+### 3. Add NotificationSheet to the dark header (`ProjectHome.tsx`)
 
-These go after a divider, below the project-specific items.
-
-### 4. Move Settings + Profile to sidebar bottom
-
-On desktop, push Settings and Profile to the bottom of the sidebar (use `mt-auto` to pin them to the bottom). Remove them from the top bar avatar dropdown on desktop (keep for mobile).
-
-### 5. Add lock icons to premium features
-
-Add a small lock icon (Lock from lucide) next to Schedule, Daily Log, and RFIs in the sidebar to indicate they're special/premium features. Show the lock inline after the label text in a muted color.
+- Import and render `<NotificationSheet />` in the header's right section, before the status pills
 
 ## Files to modify
 
 | File | Change |
 |------|--------|
-| `ProjectShell.tsx` | Strip breadcrumbs (Home + project name), remove search button, hide avatar dropdown items on desktop |
-| `ProjectSidebar.tsx` | Add My Team, Partners, Reminders section; add Settings + Profile at bottom with `mt-auto`; add Lock icon on Schedule, Daily Log, RFI |
-| `ProjectHome.tsx` | Remove rounded corners from dark header left edge so it flows into sidebar; adjust header to feel connected |
-
-## What is NOT changing
-- No business logic changes
-- Dashboard sidebar stays as-is
-- Mobile navigation stays as-is
-- Dark header content (project name, address, health/status badges) stays
-- All routing stays the same
+| `ProjectHome.tsx` lines 291-313 | Restyle header: match Business Snapshot typography, add stat row, add NotificationSheet |
+| `ProjectShell.tsx` line 137 | Remove `<NotificationSheet />` |
 
