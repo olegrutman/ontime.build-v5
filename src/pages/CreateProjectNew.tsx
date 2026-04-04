@@ -321,6 +321,7 @@ export default function CreateProjectNew() {
                   variant="outline"
                   onClick={prevStep}
                   disabled={currentStep === 0 || saving}
+                  className="min-h-[44px]"
                 >
                   <ChevronLeft className="h-4 w-4 mr-2" />
                   Back
