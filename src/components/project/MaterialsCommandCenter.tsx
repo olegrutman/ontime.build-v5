@@ -241,7 +241,7 @@ function AlertTile({ label, value, color, bg = 'bg-accent/30' }: { label: string
     ? (color === 'red' ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-400')
     : 'text-foreground';
   return (
-    <div className="rounded-2xl bg-accent/30 border border-border/40 p-4">
+    <div className={cn('rounded-2xl border border-border/40 p-4', bg)}>
       <p className="text-sm text-muted-foreground">{label}</p>
       <p className={cn('text-2xl font-semibold mt-2', textColor)}>{value}</p>
     </div>
