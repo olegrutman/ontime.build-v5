@@ -35,7 +35,7 @@ export function PackProgressSection({ packs }: PackProgressSectionProps) {
   const hasMore = packs.length > 3;
 
   return (
-    <div className="rounded-3xl bg-card border border-border/60 shadow-sm p-5">
+    <div className="rounded-2xl bg-card border border-border/60 shadow-sm p-5">
       <h3 className="text-lg font-semibold tracking-tight">Pack progress</h3>
       <p className="text-sm text-muted-foreground">Ordered packs are also your schedule signal</p>
       <div className="mt-4 space-y-3">

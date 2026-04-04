@@ -26,7 +26,7 @@ export function ProjectDarkHeader({ name, address, status, healthLabel }: Projec
   const health = healthLabel ? HEALTH_BADGE[healthLabel] : null;
 
   return (
-    <div className="bg-[hsl(var(--foreground))] text-white rounded-3xl p-6">
+    <div className="bg-[hsl(var(--foreground))] text-white rounded-2xl p-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight truncate">{name}</h1>
