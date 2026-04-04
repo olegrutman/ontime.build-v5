@@ -333,7 +333,7 @@ export default function ProjectHome() {
                 ) : isSupplier && supplierOrgId ? (
                   <SupplierMaterialsOverview projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
                 ) : (
-                  <div className="space-y-4 mt-4">
+                  <div className="space-y-3 mt-3">
                     {showSetupBanner && (
                       <div
                         className="rounded-3xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors"
@@ -356,18 +356,16 @@ export default function ProjectHome() {
                       <ProjectReadinessCard readiness={readiness} />
                     )}
 
-                    <AttentionBanner projectId={id!} onNavigate={handleTabChange} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
-
-                    {/* Health Banner */}
-                    <ProjectHealthBanner financials={financials} projectStatus={projectStatus} />
+                    {/* Compact merged alert bar */}
+                    <CompactAlertBar projectId={id!} onNavigate={handleTabChange} financials={financials} projectStatus={projectStatus} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
 
                     {/* Financial Command Row — 5 KPIs */}
                     <ProjectFinancialCommand financials={financials} />
 
                     {/* 8/4 Grid */}
-                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
                       {/* Left column — 8 cols */}
-                      <div className="xl:col-span-8 space-y-4">
+                      <div className="lg:col-span-8 space-y-3">
                         {/* Materials Command Center */}
                         {showMaterials && (
                           <MaterialsCommandCenter financials={financials} projectId={id!} />
@@ -378,7 +376,7 @@ export default function ProjectHome() {
                       </div>
 
                       {/* Right column — 4 cols */}
-                      <div className="xl:col-span-4 space-y-4">
+                      <div className="lg:col-span-4 space-y-3">
                         {/* CO Impact */}
                         <COImpactCard financials={financials} />
 
