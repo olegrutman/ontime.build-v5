@@ -13,6 +13,7 @@ import { getDemoProjectById } from '@/data/demoData';
 import { DemoProjectOverview, DemoPurchaseOrdersTab, DemoInvoicesTab, DemoSOVTab, DemoRFIsTab } from '@/components/demo';
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StatusPill } from '@/components/ui/status-pill';
 
 import { ProjectShell } from '@/components/app-shell/ProjectShell';
 import { 
