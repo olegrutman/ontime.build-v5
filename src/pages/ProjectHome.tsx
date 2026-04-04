@@ -322,7 +322,7 @@ export default function ProjectHome() {
 
           <div className={cn(
             "max-w-7xl mx-auto w-full pb-24 lg:pb-6",
-            activeTab === 'overview' ? 'px-3 sm:px-6 py-4 sm:py-6' : 'px-3 sm:px-6 py-4 sm:py-6 space-y-6'
+            activeTab === 'overview' ? 'px-3 sm:px-6 py-3 sm:py-4' : 'px-3 sm:px-6 py-4 sm:py-6 space-y-6'
           )}>
 
             {/* Overview Tab */}
