@@ -288,7 +288,7 @@ export default function ProjectHome() {
         <main className="flex-1 overflow-auto">
           {/* Dark Header + Sticky Tab Bar — always visible */}
           <div className="sticky top-0 z-30">
-            <div className="bg-[hsl(var(--foreground))] text-white px-3 sm:px-6 py-4">
+            <div className="bg-slate-950 text-white px-3 sm:px-6 py-4">
               <div className="max-w-7xl mx-auto flex items-start justify-between gap-4 flex-wrap">
                 <div className="min-w-0">
                   <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium mb-1">Project Overview</p>
