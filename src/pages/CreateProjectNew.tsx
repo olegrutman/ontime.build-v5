@@ -297,7 +297,7 @@ export default function CreateProjectNew() {
                         {index < currentStep ? <Check className="h-4 w-4" /> : index + 1}
                       </div>
                       <div className="hidden md:block">
-                        <p className="font-medium text-sm">{step.label}</p>
+                        <p className="font-medium text-sm font-heading">{step.label}</p>
                         <p className="text-xs text-muted-foreground">{step.description}</p>
                       </div>
                     </div>
