@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { CommandPalette } from '@/components/app-shell/CommandPalette';
+
 
 const STATUS_OPTIONS = [
   { value: 'active', label: 'Active' },
