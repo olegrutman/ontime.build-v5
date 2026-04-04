@@ -28,7 +28,7 @@ import {
 } from '@/components/project';
 
 import { ProjectSetupFlow } from '@/components/project-setup/ProjectSetupFlow';
-import { ProjectIconRail } from '@/components/project/ProjectIconRail';
+import { ProjectSidebar } from '@/components/project/ProjectSidebar';
 import { ProjectBottomNav } from '@/components/project/ProjectBottomNav';
 
 import { BillingCashCard } from '@/components/project/BillingCashCard';
