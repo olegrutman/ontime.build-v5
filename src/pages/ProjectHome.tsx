@@ -14,6 +14,8 @@ import { DemoProjectOverview, DemoPurchaseOrdersTab, DemoInvoicesTab, DemoSOVTab
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatusPill } from '@/components/ui/status-pill';
+import { NotificationSheet } from '@/components/notifications';
+import { Bell } from 'lucide-react';
 
 import { ProjectShell } from '@/components/app-shell/ProjectShell';
 import { 
@@ -289,24 +291,30 @@ export default function ProjectHome() {
         <main className="flex-1 overflow-auto">
           {/* Dark Header + Sticky Tab Bar — always visible */}
           <div className="sticky top-0 z-30">
-            <div className="bg-slate-950 text-white px-3 sm:px-6 py-4">
-              <div className="max-w-7xl mx-auto flex items-start justify-between gap-4 flex-wrap">
-                <div className="min-w-0">
-                  <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium mb-1">Project Overview</p>
-                  <h1 className="text-xl font-semibold tracking-tight truncate">{project.name}</h1>
+            <div className="bg-slate-950 text-white rounded-tr-2xl px-4 sm:px-5 py-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[0.7rem] uppercase tracking-widest text-slate-500 font-medium mb-1">Project Overview</p>
+                  <h1 className="text-2xl font-semibold tracking-tight truncate">{project.name}</h1>
                   {formattedAddress && (
-                    <p className="text-sm text-slate-400 mt-0.5 truncate">{formattedAddress}</p>
+                    <p className="text-[0.8rem] text-slate-400 mt-0.5 truncate">{formattedAddress}</p>
                   )}
+                  {/* Stat row — matches Business Snapshot style */}
+                  <div className="flex items-center gap-4 mt-2 text-[0.85rem]">
+                    <span className="text-slate-500">Status <span className="text-white font-medium">{projectStatus.charAt(0).toUpperCase() + projectStatus.slice(1).replace('_', ' ')}</span></span>
+                    {projectStatus === 'active' && healthLabel && (
+                      <span className="text-slate-500">Health <span className={cn(
+                        'font-medium',
+                        healthLabel === 'healthy' ? 'text-emerald-400' : healthLabel === 'watch' ? 'text-amber-400' : 'text-red-400'
+                      )}>{healthLabel === 'healthy' ? 'Healthy' : healthLabel === 'watch' ? 'Watch' : 'At Risk'}</span></span>
+                    )}
+                    {project.project_type && (
+                      <span className="text-slate-500">Type <span className="text-white font-medium">{project.project_type}</span></span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {projectStatus === 'active' && healthLabel && (
-                    <StatusPill variant={healthLabel === 'healthy' ? 'healthy' : healthLabel === 'watch' ? 'watch' : 'at_risk'}>
-                      Project Health: {healthLabel === 'healthy' ? 'Healthy' : healthLabel === 'watch' ? 'Watch' : 'At Risk'}
-                    </StatusPill>
-                  )}
-                  <StatusPill variant="neutral" className="bg-white/15 text-white">
-                    Status: {projectStatus.charAt(0).toUpperCase() + projectStatus.slice(1).replace('_', ' ')}
-                  </StatusPill>
+                  <NotificationSheet />
                 </div>
               </div>
             </div>

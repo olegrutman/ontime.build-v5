@@ -134,7 +134,7 @@ export function ProjectShell({
             {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
           </Button>
 
-          <NotificationSheet />
+          
 
           {/* Avatar — mobile only, desktop uses sidebar */}
           <DropdownMenu>
