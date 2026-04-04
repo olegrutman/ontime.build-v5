@@ -288,7 +288,7 @@ export default function ProjectHome() {
         <main className="flex-1 overflow-auto">
           {/* Dark Header + Sticky Tab Bar — always visible */}
           <div className="sticky top-0 z-30">
-            <div className="bg-[hsl(var(--foreground))] text-white px-3 sm:px-6 py-4">
+            <div className="bg-slate-950 text-white px-3 sm:px-6 py-4">
               <div className="max-w-7xl mx-auto flex items-start justify-between gap-4 flex-wrap">
                 <div className="min-w-0">
                   <p className="text-[10px] uppercase tracking-widest text-slate-400 font-medium mb-1">Project Overview</p>
@@ -330,7 +330,7 @@ export default function ProjectHome() {
                 ) : isSupplier && supplierOrgId ? (
                   <SupplierMaterialsOverview projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
                 ) : (
-                  <div className="space-y-6 mt-4">
+                  <div className="space-y-4 mt-4">
                     {showSetupBanner && (
                       <div
                         className="rounded-3xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors"
@@ -362,9 +362,9 @@ export default function ProjectHome() {
                     <ProjectFinancialCommand financials={financials} />
 
                     {/* 8/4 Grid */}
-                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                    <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
                       {/* Left column — 8 cols */}
-                      <div className="xl:col-span-8 space-y-6">
+                      <div className="xl:col-span-8 space-y-4">
                         {/* Materials Command Center */}
                         {showMaterials && (
                           <MaterialsCommandCenter financials={financials} projectId={id!} />
@@ -375,7 +375,7 @@ export default function ProjectHome() {
                       </div>
 
                       {/* Right column — 4 cols */}
-                      <div className="xl:col-span-4 space-y-6">
+                      <div className="xl:col-span-4 space-y-4">
                         {/* CO Impact */}
                         <COImpactCard financials={financials} />
 

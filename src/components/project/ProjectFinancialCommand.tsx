@@ -14,7 +14,7 @@ interface FinancialKPIProps {
 function FinancialKPI({ label, value, accentColor, delay = 0, suffix }: FinancialKPIProps) {
   const animated = useCountUp(value, 900, delay);
   return (
-    <div className="rounded-3xl border border-border/60 p-5 bg-accent/20">
+    <div className="rounded-3xl border border-border/60 p-5 bg-card">
       <p className="text-sm text-muted-foreground">{label}</p>
       <div className="mt-3 flex items-baseline gap-2">
         <span className="text-2xl font-semibold tracking-tight text-foreground leading-none" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>

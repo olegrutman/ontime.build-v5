@@ -154,7 +154,7 @@ export function MaterialsCommandCenter({ financials, projectId }: MaterialsComma
             { label: 'Forecast Final', value: forecast },
             { label: 'Variance', value: Math.abs(variance), prefix: isOverBudget ? '+' : '' },
           ].map(({ label, value, prefix }) => (
-            <div key={label} className="rounded-2xl bg-accent/30 border border-border/40 p-4">
+            <div key={label} className="rounded-2xl bg-slate-50 dark:bg-accent/20 border border-border/40 p-4">
               <p className="text-muted-foreground text-xs">{label}</p>
               <p className="font-semibold mt-2 text-base" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
                 {prefix}{formatCurrency(value)}
@@ -187,7 +187,7 @@ export function MaterialsCommandCenter({ financials, projectId }: MaterialsComma
                   : 0;
 
                 return (
-                  <div key={pack.packName} className="flex items-center justify-between rounded-2xl bg-accent/30 border border-border/40 px-4 py-3">
+                  <div key={pack.packName} className="flex items-center justify-between rounded-2xl bg-slate-50 dark:bg-accent/20 border border-border/40 px-4 py-3">
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className={cn(
                         'w-2 h-2 rounded-full shrink-0',
@@ -236,12 +236,12 @@ export function MaterialsCommandCenter({ financials, projectId }: MaterialsComma
   );
 }
 
-function AlertTile({ label, value, color }: { label: string; value: number; color: 'red' | 'amber' }) {
+function AlertTile({ label, value, color, bg = 'bg-accent/30' }: { label: string; value: number; color: 'red' | 'amber'; bg?: string }) {
   const textColor = value > 0
     ? (color === 'red' ? 'text-red-700 dark:text-red-400' : 'text-amber-700 dark:text-amber-400')
     : 'text-foreground';
   return (
-    <div className="rounded-2xl bg-accent/30 border border-border/40 p-4">
+    <div className={cn('rounded-2xl border border-border/40 p-4', bg)}>
       <p className="text-sm text-muted-foreground">{label}</p>
       <p className={cn('text-2xl font-semibold mt-2', textColor)}>{value}</p>
     </div>
