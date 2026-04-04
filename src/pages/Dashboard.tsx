@@ -231,9 +231,9 @@ export default function Dashboard() {
         <DashboardKPIs financials={financials} orgType={orgType} />
 
         {/* Main 8/4 Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
           {/* Left column — 8 cols */}
-          <div className="xl:col-span-8 space-y-4">
+          <div className="lg:col-span-8 space-y-4">
             {/* Projects needing attention */}
             <DashboardAttentionList
               attentionItems={attentionItems}
