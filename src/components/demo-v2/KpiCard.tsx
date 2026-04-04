@@ -47,7 +47,7 @@ export function KpiCard({ label, value, prefix = '', accent, subtitle, index }: 
     >
       <div className="absolute bottom-0 left-0 right-0 h-[2px]" style={{ background: accent }} />
       <p className="text-[10px] uppercase tracking-wider text-white/40 font-medium">{label}</p>
-      <p className="text-2xl font-black text-white mt-1" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+      <p className="text-2xl font-black text-white mt-1 font-heading">
         {formatCompact(display, prefix)}
       </p>
       <p className="text-[11px] text-white/30 mt-1">{subtitle}</p>

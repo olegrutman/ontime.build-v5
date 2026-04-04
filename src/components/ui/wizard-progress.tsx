@@ -17,7 +17,7 @@ export function WizardProgress({ currentStep, totalSteps, steps }: WizardProgres
         {steps.map((step, i) => (
           <div key={i} className="flex items-center gap-2">
             <div
-              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+              className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-semibold font-heading ${
                 i < currentStep
                   ? 'bg-primary text-primary-foreground'
                   : i === currentStep

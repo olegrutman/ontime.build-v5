@@ -5,12 +5,9 @@ export const DT = {
   sectionHeader: "text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium",
   cardWrapper: "bg-card border border-border rounded-lg",
   cardPadding: "px-3.5 py-3.5",
-  monoFont: "'IBM Plex Mono', monospace" as const,
-  headingFont: "'Barlow Condensed', sans-serif" as const,
-
-  // Inline styles
-  mono: { fontFamily: "'IBM Plex Mono', monospace" } as React.CSSProperties,
-  heading: { fontFamily: "'Barlow Condensed', sans-serif" } as React.CSSProperties,
+  // Font class names (use Tailwind classes instead of inline styles)
+  monoClass: "font-mono",
+  headingClass: "font-heading",
 } as const;
 
 // Status accent colors for left borders (3px)

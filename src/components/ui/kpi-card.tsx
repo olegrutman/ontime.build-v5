@@ -27,8 +27,7 @@ export function KPICard({ label, value, subtitle, delay = 0, suffix, isText, tex
       <p className="text-[0.75rem] text-muted-foreground leading-tight">{label}</p>
       <div className="mt-2 flex items-baseline gap-1.5">
         <span
-          className="text-xl font-semibold tracking-tight text-foreground leading-none tabular-nums"
-          style={{ fontFamily: "'IBM Plex Mono', monospace" }}
+          className="text-xl font-semibold tracking-tight text-foreground leading-none tabular-nums font-mono"
         >
           {isText ? textValue : formatCurrency(animated)}
         </span>
