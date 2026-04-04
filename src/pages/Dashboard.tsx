@@ -188,6 +188,7 @@ export default function Dashboard() {
   return (
     <AppLayout
       title="Dashboard"
+      fullWidth
       showNewButton={canCreateProject}
       onNewClick={() => navigate('/create-project')}
       newButtonLabel="New Project"
