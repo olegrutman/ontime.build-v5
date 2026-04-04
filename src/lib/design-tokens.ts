@@ -3,7 +3,7 @@
 export const DT = {
   // Typography
   sectionHeader: "text-[0.7rem] uppercase tracking-[0.4px] text-muted-foreground font-medium",
-  cardWrapper: "bg-card border border-border rounded-lg",
+  cardWrapper: "bg-card border border-border rounded-2xl",
   cardPadding: "px-3.5 py-3.5",
   // Font class names (use Tailwind classes instead of inline styles)
   monoClass: "font-mono",
