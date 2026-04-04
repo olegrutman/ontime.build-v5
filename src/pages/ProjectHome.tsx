@@ -379,14 +379,14 @@ export default function ProjectHome() {
                         {/* CO Impact */}
                         <COImpactCard financials={financials} />
 
+                        {/* Billing & Cash Position */}
+                        <BillingCashCard financials={financials} />
+
                         {/* Team Card */}
                         <ProjectOverviewTeamCard projectId={id!} />
 
                         {/* Action Queue */}
                         <ProjectActionQueue financials={financials} projectId={id!} onNavigate={handleTabChange} />
-
-                        {/* Billing */}
-                        <BillingCashCard financials={financials} />
                       </div>
                     </div>
                   </div>
