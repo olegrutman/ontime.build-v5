@@ -14,6 +14,8 @@ import { DemoProjectOverview, DemoPurchaseOrdersTab, DemoInvoicesTab, DemoSOVTab
 import { useAuth } from '@/hooks/useAuth';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StatusPill } from '@/components/ui/status-pill';
+import { NotificationSheet } from '@/components/notifications';
+import { Bell } from 'lucide-react';
 
 import { ProjectShell } from '@/components/app-shell/ProjectShell';
 import { 
