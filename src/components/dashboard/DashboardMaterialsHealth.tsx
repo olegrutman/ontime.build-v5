@@ -57,7 +57,7 @@ export function DashboardMaterialsHealth({ estimate, ordered, forecast }: Dashbo
           ].map(({ label, value, highlight }) => (
             <div key={label} className="rounded-xl bg-slate-50 dark:bg-accent/20 border border-border/40 p-3">
               <p className="text-muted-foreground text-[0.7rem]">{label}</p>
-              <p className={cn('font-semibold mt-1 text-[0.85rem]', highlight && 'text-amber-700 dark:text-amber-400')} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+              <p className={cn('font-semibold mt-1 text-[0.85rem]', highlight && 'text-amber-700 dark:text-amber-400')}>
                 {formatCurrency(value)}
               </p>
             </div>

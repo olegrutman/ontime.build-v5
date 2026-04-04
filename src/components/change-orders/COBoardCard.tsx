@@ -104,7 +104,7 @@ export function COBoardCard({ co, isActive, onClick }: COBoardCardProps) {
 
       <div className="pl-3 pr-3 pt-3 pb-2.5 space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[11px] text-muted-foreground truncate" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+          <span className="text-[11px] text-muted-foreground truncate">
             {co.co_number ?? '—'}
           </span>
           {co.pricing_type && (
@@ -114,7 +114,7 @@ export function COBoardCard({ co, isActive, onClick }: COBoardCardProps) {
           )}
         </div>
 
-        <h4 className="text-sm font-medium text-foreground line-clamp-2 leading-snug" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+        <h4 className="text-sm font-medium text-foreground line-clamp-2 leading-snug">
           {title}
         </h4>
 
@@ -149,7 +149,7 @@ export function COBoardCard({ co, isActive, onClick }: COBoardCardProps) {
               </span>
             ))}
           </div>
-          <span className="text-xs font-medium text-foreground" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+          <span className="text-xs font-medium text-foreground">
             {fmtCurrency(co.tc_submitted_price ?? 0)}
           </span>
         </div>

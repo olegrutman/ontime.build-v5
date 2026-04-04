@@ -336,7 +336,7 @@ export default function ProjectHome() {
                   <div className="space-y-3 mt-3">
                     {showSetupBanner && (
                       <div
-                        className="rounded-3xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors"
+                        className="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-50/50 dark:bg-amber-900/10 dark:border-amber-700 p-5 cursor-pointer hover:border-amber-400 transition-colors"
                         onClick={() => navigate(`/project/${id}/setup`)}
                       >
                         <div className="flex items-center gap-3">

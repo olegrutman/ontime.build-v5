@@ -51,7 +51,7 @@ export function SupplierActionQueue({ items }: Props) {
                 <div className="text-[0.7rem] text-muted-foreground truncate">{item.subtitle}</div>
               </div>
               {item.amount != null && (
-                <span className="text-[0.72rem] font-semibold text-foreground flex-shrink-0 mr-2" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                <span className="text-[0.72rem] font-semibold text-foreground flex-shrink-0 mr-2">
                   {formatCurrency(item.amount)}
                 </span>
               )}

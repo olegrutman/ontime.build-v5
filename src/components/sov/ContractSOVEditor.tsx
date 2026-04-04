@@ -367,7 +367,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                 </div>
               ) : isEditingAmt ? (
                 <div className="flex items-center gap-1 flex-shrink-0">
-              <span className="text-muted-foreground w-16 text-right tabular-nums text-sm" style={DT.mono}>
+              <span className="font-mono text-muted-foreground w-16 text-right tabular-nums text-sm">
                     {item.percent_of_contract?.toFixed(2)}%
                   </span>
                   <span className="text-sm">$</span>
@@ -395,7 +395,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                 <div className="flex items-center gap-2 text-sm flex-shrink-0">
                   <span
                     className={`text-muted-foreground w-16 text-right tabular-nums ${!isLocked && !isFC ? 'cursor-pointer hover:text-primary' : ''}`}
-                    style={DT.mono}
+                   
                     onClick={() => !isLocked && !isFC && handleStartPercentEdit(sov.id, item)}
                     title={!isLocked && !isFC ? 'Click to edit percentage' : undefined}
                   >
@@ -403,7 +403,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                   </span>
                   <span
                     className={`font-medium w-24 text-right tabular-nums ${!isLocked && !isFC ? 'cursor-pointer hover:text-primary' : ''}`}
-                    style={DT.mono}
+                   
                     onClick={() => !isLocked && !isFC && handleStartAmountEdit(sov.id, item)}
                     title={!isLocked && !isFC ? 'Click to edit amount' : undefined}
                   >
@@ -493,12 +493,12 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
                       )}
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-bold line-clamp-2" style={DT.heading}>{sov.sov_name || 'Unnamed SOV'}</span>
+                          <span className="font-heading text-sm font-bold line-clamp-2">{sov.sov_name || 'Unnamed SOV'}</span>
                           <Badge variant={isWorkOrderSOV ? "outline" : "secondary"} className="text-xs shrink-0">
                             {sovSourceLabel}
                           </Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground tabular-nums" style={DT.mono}>
+                        <p className="font-mono text-xs text-muted-foreground tabular-nums">
                           {formatCurrency(contract?.contract_sum || 0)} • {items.length} item{items.length !== 1 ? 's' : ''}
                         </p>
         {totals.totalValue > 0 && (
@@ -866,7 +866,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
         <>
           {gcToTcSovs.length > 0 && (
             <>
-              <h3 className="text-sm font-bold text-muted-foreground" style={DT.heading}>Upstream Contracts (Revenue)</h3>
+              <h3 className="font-heading text-sm font-bold text-muted-foreground">Upstream Contracts (Revenue)</h3>
               {gcToTcSovs.map(sov => renderSOVCard(sov))}
             </>
           )}
@@ -874,7 +874,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
           {tcToFcSovs.length > 0 && (
             <>
               <div className="border-t pt-4 mt-2">
-                <h3 className="text-sm font-bold text-muted-foreground" style={DT.heading}>Downstream Contracts (Costs)</h3>
+                <h3 className="font-heading text-sm font-bold text-muted-foreground">Downstream Contracts (Costs)</h3>
               </div>
               {tcToFcSovs.map(sov => renderSOVCard(sov))}
             </>
@@ -884,7 +884,7 @@ export function ContractSOVEditor({ projectId }: ContractSOVEditorProps) {
         <>
           {contractSovs.length > 0 && (
             <>
-              <h3 className="text-sm font-bold text-muted-foreground" style={DT.heading}>Main Contracts</h3>
+              <h3 className="font-heading text-sm font-bold text-muted-foreground">Main Contracts</h3>
               {contractSovs.map(sov => renderSOVCard(sov))}
             </>
           )}

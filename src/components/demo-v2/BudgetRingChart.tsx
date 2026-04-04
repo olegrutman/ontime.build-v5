@@ -50,7 +50,7 @@ export function BudgetRingChart() {
           <div key={d.label} className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full" style={{ background: d.color }} />
             <span className="text-[11px] text-white/50">{d.label}</span>
-            <span className="text-[11px] text-white/80 ml-auto" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+            <span className="text-[11px] text-white/80 ml-auto">
               ${(d.value / 1000).toFixed(0)}K
             </span>
           </div>

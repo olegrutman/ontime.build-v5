@@ -190,7 +190,7 @@ export default function Profile() {
     <AppLayout>
       <div className="max-w-3xl mx-auto space-y-5">
         <div>
-          <h1 className="text-xl font-bold flex items-center gap-2" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+          <h1 className="text-xl font-bold flex items-center gap-2">
             Profile
             {userOrgRoles[0]?.is_admin && (
               <Badge variant="default" className="text-xs">

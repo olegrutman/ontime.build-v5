@@ -25,7 +25,7 @@ export function COBudgetTracker({ gcBudget, totalApprovedSpend, isGC }: COBudget
       <div className="px-3.5 py-3 border-b border-border">
         <h3
           className="text-[0.7rem] uppercase tracking-[0.04em] font-semibold text-muted-foreground"
-          style={DT.heading}
+         
         >
           GC Budget
         </h3>
@@ -33,13 +33,13 @@ export function COBudgetTracker({ gcBudget, totalApprovedSpend, isGC }: COBudget
       <div className="px-3.5 py-3 space-y-2">
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Budget</span>
-          <span className="font-semibold text-foreground" style={DT.mono}>
+          <span className="font-mono font-semibold text-foreground">
             {fmtCurrency(gcBudget)}
           </span>
         </div>
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Spent</span>
-          <span className="font-medium text-foreground" style={DT.mono}>
+          <span className="font-mono font-medium text-foreground">
             {fmtCurrency(totalApprovedSpend)}
           </span>
         </div>

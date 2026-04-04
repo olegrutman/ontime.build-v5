@@ -157,7 +157,7 @@ export function COListPage({ projectId }: COListPageProps) {
               style={{ borderTopWidth: '3px', borderTopColor: tile.color }}
             >
               <p className="text-[0.6rem] uppercase tracking-wider text-muted-foreground font-medium">{tile.label}</p>
-              <p className="text-foreground leading-none mt-1" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '1.25rem', fontWeight: 900 }}>
+              <p className="text-foreground leading-none mt-1" style={{ fontSize: '1.25rem', fontWeight: 900 }}>
                 {tile.value}
               </p>
             </div>

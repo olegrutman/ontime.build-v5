@@ -101,7 +101,7 @@ export function SetupSidebar({ currentPhase, currentStep, progress, onPhaseSelec
   return (
     <div className="w-[220px] shrink-0 border-r border-border overflow-y-auto bg-muted/10 hidden md:block">
       <div className="px-3 pt-4 pb-2">
-        <p className="text-[10px] font-bold uppercase tracking-[0.5px] text-muted-foreground" style={DT.heading}>
+        <p className="font-heading text-[10px] font-bold uppercase tracking-[0.5px] text-muted-foreground">
           Project Setup
         </p>
       </div>

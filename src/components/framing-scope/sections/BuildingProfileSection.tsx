@@ -191,7 +191,7 @@ export function BuildingProfileSection({ projectId, onBuildingTypeChange, onProf
     <div className="space-y-6">
       {/* Project Type */}
       <div>
-        <h2 className="font-heading text-lg font-bold tracking-tight" style={DT.heading}>
+        <h2 className="font-heading text-lg font-bold tracking-tight">
           Building Profile
         </h2>
         <p className="text-xs text-muted-foreground mt-1">

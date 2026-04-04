@@ -139,8 +139,8 @@ export function COHeroBlock(props: COHeroBlockProps) {
           {eyebrow}
         </p>
         <h2
-          className="text-lg font-extrabold uppercase tracking-wide mt-0.5"
-          style={{ ...DT.heading, color: 'hsl(var(--amber))' }}
+          className="font-heading text-lg font-extrabold uppercase tracking-wide mt-0.5"
+          style={{ color: 'hsl(var(--amber))' }}
         >
           {headline}
         </h2>
@@ -172,7 +172,7 @@ export function COHeroBlock(props: COHeroBlockProps) {
               </p>
             </div>
             {card.amount && (
-              <p className="text-xl font-extrabold leading-none mt-1" style={DT.heading}>
+              <p className="font-heading text-xl font-extrabold leading-none mt-1">
                 {card.amount}
               </p>
             )}

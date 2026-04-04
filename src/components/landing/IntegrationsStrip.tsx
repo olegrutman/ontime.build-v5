@@ -15,7 +15,6 @@ export function IntegrationsStrip() {
           <div
             key={name}
             className="bg-white/[0.04] border border-white/[0.07] px-[18px] py-[9px] rounded-[5px] text-[0.8rem] font-medium text-white/[0.36] flex items-center gap-[7px] transition-all cursor-default"
-            style={{ }}
           >
             <div className="w-[5px] h-[5px] rounded-full opacity-50" style={{ background: 'hsl(var(--amber))' }} />
             {name}

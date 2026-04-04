@@ -39,11 +39,11 @@ export function BottomSheet({ open, onClose, title, amount, meta = [], actions =
 
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h3 className="text-white font-semibold text-lg" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+                <h3 className="text-white font-semibold text-lg">
                   {title}
                 </h3>
                 {amount && (
-                  <p className="text-[#F5A623] text-2xl font-bold mt-1" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                  <p className="text-[#F5A623] text-2xl font-bold mt-1">
                     {amount}
                   </p>
                 )}

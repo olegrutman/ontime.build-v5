@@ -79,8 +79,8 @@ export function COHourEntryInline({
       {/* Giant number */}
       <div className="text-center py-4">
         <p
-          className="tabular-nums leading-none"
-          style={{ ...DT.heading, fontSize: '4rem', fontWeight: 900, color: 'hsl(var(--amber))' }}
+          className="font-heading tabular-nums leading-none"
+          style={{ fontSize: '4rem', fontWeight: 900, color: 'hsl(var(--amber))' }}
         >
           {hours ?? '—'}
         </p>
@@ -179,7 +179,7 @@ export function COHourEntryInline({
           <span className="text-[0.7rem]" style={{ color: 'hsl(220 27% 70%)' }}>
             Your entry (TC will price)
           </span>
-          <span className="font-bold" style={{ ...DT.heading, color: 'hsl(var(--amber))' }}>
+          <span className="font-heading font-bold" style={{ color: 'hsl(var(--amber))' }}>
             {hours ?? 0} hrs
           </span>
         </div>

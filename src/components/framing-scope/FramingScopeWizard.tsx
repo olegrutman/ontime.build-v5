@@ -254,7 +254,7 @@ export function FramingScopeWizard({ projectId, buildingType: propBuildingType =
           <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-4">
             <ClipboardList className="w-7 h-7 text-primary" />
           </div>
-          <h2 className="font-heading text-xl font-bold" style={DT.heading}>
+          <h2 className="font-heading text-xl font-bold">
             Framing Scope Setup
           </h2>
           <p className="text-sm text-muted-foreground mt-2 mb-6">
@@ -482,10 +482,10 @@ function WizardHeader({ projectName, buildingType, inc, exc }: {
           <Package className="w-4 h-4 text-primary" />
         </div>
         <div className="min-w-0">
-          <h2 className="font-heading text-sm font-bold truncate" style={DT.heading}>
+          <h2 className="font-heading text-sm font-bold truncate">
             Framing Scope{projectName ? ` — ${projectName}` : ''}
           </h2>
-          <p className="text-[10px] text-muted-foreground" style={DT.mono}>
+          <p className="font-mono text-[10px] text-muted-foreground">
             Rough carpentry · {BUILDING_LABELS[buildingType || 'SFR'] || buildingType}
           </p>
         </div>

@@ -15,7 +15,7 @@ export function HardwareSection({ answers, setAnswer, matResp }: Props) {
 
   return (
     <div className="space-y-2">
-      <h2 className="font-heading text-lg font-bold tracking-tight" style={DT.heading}>
+      <h2 className="font-heading text-lg font-bold tracking-tight">
         9. Hardware & Connectors
       </h2>
 

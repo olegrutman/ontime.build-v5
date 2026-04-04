@@ -804,7 +804,7 @@ export default function ProjectDetailsWizard() {
                 )}
               >
                 <span className={cn(
-                  'w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0',
+                  'w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold font-heading shrink-0',
                   done && 'bg-green-600 text-white',
                   active && 'bg-secondary text-secondary-foreground',
                   !done && !active && 'bg-muted/30 text-muted-foreground',
@@ -843,7 +843,7 @@ export default function ProjectDetailsWizard() {
                   )}
                 >
                   <span className={cn(
-                    'w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0',
+                    'w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold font-heading shrink-0',
                     done && 'bg-green-600 text-white',
                     active && 'bg-secondary text-secondary-foreground',
                     !done && !active && 'bg-muted/30 text-muted-foreground',

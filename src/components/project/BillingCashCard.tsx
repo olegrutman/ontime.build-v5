@@ -20,7 +20,7 @@ function RowList({ rows, dividerBefore }: { rows: Row[]; dividerBefore?: number 
       {rows.map((row, i) => (
         <div key={i} className={cn("flex items-center justify-between", dividerBefore != null && i === dividerBefore && "border-t pt-2")}>
           <span className={cn("text-[0.85rem]", row.bold ? "font-medium text-foreground" : "text-muted-foreground")}>{row.label}</span>
-          <span className={cn("tabular-nums", row.bold ? "text-base font-bold" : "text-[0.85rem] font-semibold", colorClass(row.color))} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+          <span className={cn("tabular-nums", row.bold ? "text-base font-bold" : "text-[0.85rem] font-semibold", colorClass(row.color))}>
             {row.value}
           </span>
         </div>
@@ -80,7 +80,7 @@ export function BillingCashCard({ financials }: BillingCashCardProps) {
               <span className="text-[0.85rem] font-medium text-foreground">Net Position</span>
               <p className="text-[0.65rem] text-muted-foreground">Total Invoiced to GC − Total Invoiced by FC</p>
             </div>
-            <span className={cn("text-base font-bold tabular-nums", netCash >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')} style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+            <span className={cn("text-base font-bold tabular-nums", netCash >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400')}>
               {fmt(netCash)}
             </span>
           </div>

@@ -91,7 +91,7 @@ export function ProjectActivityFeedSidebar({ projectId }: { projectId: string })
           className="flex items-start gap-2.5 py-2 border-b border-border last:border-0 animate-fade-in"
           style={{ animationDelay: `${i * 50}ms` }}
         >
-          <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0 text-[10px] font-semibold text-muted-foreground" style={DT.mono}>
+          <div className="font-mono w-7 h-7 rounded-full bg-muted flex items-center justify-center shrink-0 text-[10px] font-semibold text-muted-foreground">
             {getInitials(item.actor_name)}
           </div>
           <div className="flex-1 min-w-0">

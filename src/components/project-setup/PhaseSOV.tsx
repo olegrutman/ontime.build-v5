@@ -59,7 +59,7 @@ export function PhaseSOV({ projectId, onComplete, onStepChange }: PhaseSOVProps)
     <div className="space-y-5 px-5 py-5">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <span>Total contract value:</span>
-        <span className="font-semibold text-foreground" style={DT.mono}>${totalValue.toLocaleString()}</span>
+        <span className="font-mono font-semibold text-foreground">${totalValue.toLocaleString()}</span>
       </div>
 
       <ContractSOVEditor projectId={projectId} />

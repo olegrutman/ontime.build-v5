@@ -109,7 +109,7 @@ export function ProjectInfoCard({ projectId, projectName }: ProjectInfoCardProps
           ) : (
             <>
               <div className="flex items-center gap-2">
-                <h3 className="font-heading text-base font-bold truncate" style={DT.heading}>
+                <h3 className="font-heading text-base font-bold truncate">
                   {displayName}
                 </h3>
                 <button onClick={() => { setName(displayName); setEditing(true); }}

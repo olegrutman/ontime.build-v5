@@ -38,7 +38,7 @@ export function ProjectCard({ project, index, onViewProject }: ProjectCardProps)
         <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: project.color }} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-white text-sm font-semibold truncate" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+            <span className="text-white text-sm font-semibold truncate">
               {project.name}
             </span>
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-white/40 shrink-0">
@@ -46,7 +46,7 @@ export function ProjectCard({ project, index, onViewProject }: ProjectCardProps)
             </span>
           </div>
           <div className="flex items-center gap-3 mt-1">
-            <span className="text-white/50 text-xs" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+            <span className="text-white/50 text-xs">
               {formatK(project.contractValue)}
             </span>
             <span className="text-white/30 text-xs">{project.percentComplete}%</span>
@@ -83,7 +83,7 @@ export function ProjectCard({ project, index, onViewProject }: ProjectCardProps)
             ].map((tile, i) => (
               <div key={i} className="bg-white/5 rounded px-2.5 py-2">
                 <p className="text-[9px] uppercase tracking-wider text-white/30">{tile.label}</p>
-                <p className="text-white text-sm font-medium mt-0.5" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                <p className="text-white text-sm font-medium mt-0.5">
                   {tile.value}
                 </p>
               </div>

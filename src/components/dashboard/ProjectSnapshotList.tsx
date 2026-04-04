@@ -170,7 +170,7 @@ export function ProjectSnapshotList({
                     </StatusPill>
                   )}
                   {project.contractValue != null && project.contractValue > 0 && (
-                    <span className="text-[0.85rem] font-semibold text-foreground tabular-nums" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                    <span className="text-[0.85rem] font-semibold text-foreground tabular-nums">
                       {formatCurrency(project.contractValue)}
                     </span>
                   )}

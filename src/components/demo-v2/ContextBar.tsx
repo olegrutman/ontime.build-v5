@@ -17,9 +17,9 @@ export function ContextBar({ breadcrumbs, onCommandPalette }: ContextBarProps) {
       {/* Left — Logo */}
       <div className="flex items-center gap-2 min-w-[120px]">
         <div className="w-7 h-7 rounded-md bg-[#F5A623] flex items-center justify-center">
-          <span className="text-[#0D1F3C] font-black text-xs" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>OT</span>
+          <span className="text-[#0D1F3C] font-black text-xs">OT</span>
         </div>
-        <span className="text-white/90 text-sm font-semibold hidden sm:block" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+        <span className="text-white/90 text-sm font-semibold hidden sm:block">
           ONTIME
         </span>
       </div>
@@ -51,7 +51,7 @@ export function ContextBar({ breadcrumbs, onCommandPalette }: ContextBarProps) {
           <kbd className="hidden sm:inline ml-1 px-1 py-0.5 rounded bg-white/5 text-[10px] font-mono">⌘K</kbd>
         </button>
         <div className="w-7 h-7 rounded-full bg-[#F5A623]/20 border border-[#F5A623]/40 flex items-center justify-center">
-          <span className="text-[#F5A623] text-[10px] font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>JD</span>
+          <span className="text-[#F5A623] text-[10px] font-bold">JD</span>
         </div>
       </div>
     </header>

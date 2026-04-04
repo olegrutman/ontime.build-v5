@@ -30,14 +30,14 @@ export function RFICard({ rfi, onClick }: RFICardProps) {
             <div className="flex items-center gap-2 mb-1">
               <span
                 className="text-xs text-muted-foreground"
-                style={DT.mono}
+               
               >
                 RFI-{rfi.rfi_number}
               </span>
               <RFIPriorityBadge priority={rfi.priority} />
               <RFIStatusBadge status={rfi.status} />
             </div>
-            <h3 className="font-medium text-sm truncate" style={DT.heading}>{rfi.subject}</h3>
+            <h3 className="font-heading font-medium text-sm truncate">{rfi.subject}</h3>
             <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
               {rfi.question}
             </p>

@@ -128,9 +128,9 @@ export default function Dashboard() {
     return (
       <AppLayout title="Dashboard">
         <div className="p-4 sm:p-6 space-y-6">
-          <Skeleton className="h-24 w-full rounded-3xl" />
+          <Skeleton className="h-24 w-full rounded-2xl" />
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28 rounded-3xl" />)}
+            {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28 rounded-2xl" />)}
           </div>
         </div>
       </AppLayout>
@@ -141,7 +141,7 @@ export default function Dashboard() {
     return (
       <AppLayout title="Dashboard">
         <div className="p-6">
-          <Card className="max-w-md mx-auto rounded-3xl">
+          <Card className="max-w-md mx-auto rounded-2xl">
             <CardContent className="p-6 text-center">
               <h2 className="text-lg font-semibold mb-2">Welcome to Ontime.Build</h2>
               <p className="text-muted-foreground mb-4">Please sign in to access your projects.</p>
@@ -157,7 +157,7 @@ export default function Dashboard() {
     return (
       <AppLayout title="Dashboard">
         <div className="p-6">
-          <Card className="max-w-md mx-auto rounded-3xl">
+          <Card className="max-w-md mx-auto rounded-2xl">
             <CardContent className="p-6 text-center">
               <h2 className="text-lg font-semibold mb-2">Account Setup Incomplete</h2>
               <p className="text-muted-foreground mb-4">Your account is not linked to an organization.</p>

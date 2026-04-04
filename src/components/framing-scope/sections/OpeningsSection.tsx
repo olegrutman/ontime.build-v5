@@ -30,7 +30,7 @@ export function OpeningsSection({ answers, setAnswer, buildingType, matResp }: P
 
   return (
     <div className="space-y-2">
-      <h2 className="font-heading text-lg font-bold tracking-tight" style={DT.heading}>
+      <h2 className="font-heading text-lg font-bold tracking-tight">
         6. Openings
       </h2>
 

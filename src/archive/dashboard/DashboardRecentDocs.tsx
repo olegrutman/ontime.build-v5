@@ -125,7 +125,7 @@ export function DashboardRecentDocs({ docs }: Props) {
                     {typeLabels[doc.type]}
                   </Badge>
                 </div>
-                <span className="text-[0.82rem] font-semibold text-foreground shrink-0" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                <span className="text-[0.82rem] font-semibold text-foreground shrink-0">
                   {doc.amount != null ? formatCurrency(doc.amount) : '—'}
                 </span>
               </div>
@@ -172,7 +172,7 @@ export function DashboardRecentDocs({ docs }: Props) {
                   </Badge>
                 </td>
                 <td className="px-[18px] py-[10px] text-right">
-                  <span className="text-[0.8rem] font-semibold text-foreground" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                  <span className="text-[0.8rem] font-semibold text-foreground">
                     {doc.amount != null ? formatCurrency(doc.amount) : '—'}
                   </span>
                 </td>

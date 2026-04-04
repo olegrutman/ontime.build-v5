@@ -289,7 +289,7 @@ export default function CreateProjectNew() {
                       )}
                     >
                       <div className={cn(
-                        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium",
+                        "w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold font-heading",
                         index < currentStep && "bg-primary text-primary-foreground",
                         index === currentStep && "bg-primary text-primary-foreground",
                         index > currentStep && "bg-muted text-muted-foreground"
@@ -297,7 +297,7 @@ export default function CreateProjectNew() {
                         {index < currentStep ? <Check className="h-4 w-4" /> : index + 1}
                       </div>
                       <div className="hidden md:block">
-                        <p className="font-medium text-sm">{step.label}</p>
+                        <p className="font-medium text-sm font-heading">{step.label}</p>
                         <p className="text-xs text-muted-foreground">{step.description}</p>
                       </div>
                     </div>
@@ -321,6 +321,7 @@ export default function CreateProjectNew() {
                   variant="outline"
                   onClick={prevStep}
                   disabled={currentStep === 0 || saving}
+                  className="min-h-[44px]"
                 >
                   <ChevronLeft className="h-4 w-4 mr-2" />
                   Back
@@ -330,6 +331,7 @@ export default function CreateProjectNew() {
                   <Button
                     onClick={nextStep}
                     disabled={!canProceed() || saving}
+                    className="min-h-[44px]"
                   >
                     {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Next
@@ -339,6 +341,7 @@ export default function CreateProjectNew() {
                   <Button
                     onClick={createProject}
                     disabled={saving}
+                    className="min-h-[44px]"
                   >
                     {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Create Project

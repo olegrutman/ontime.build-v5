@@ -104,7 +104,7 @@ function ProjectAccordionCard({
         <span className={cn('w-2.5 h-2.5 rounded-full shrink-0', dotColor)} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-foreground text-sm font-semibold truncate" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+            <span className="text-foreground text-sm font-semibold truncate">
               {project.name}
             </span>
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
@@ -112,7 +112,7 @@ function ProjectAccordionCard({
             </span>
           </div>
           <div className="flex items-center gap-3 mt-1">
-            <span className="text-muted-foreground text-xs" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+            <span className="text-muted-foreground text-xs">
               {project.contractValue != null ? formatCurrency(project.contractValue) : '—'}
             </span>
             <span className="text-muted-foreground/60 text-xs capitalize">{project.status.replace(/_/g, ' ')}</span>
@@ -149,7 +149,7 @@ function ProjectAccordionCard({
             ].map((tile, i) => (
               <div key={i} className="bg-accent/50 rounded px-2.5 py-2">
                 <p className="text-[9px] uppercase tracking-wider text-muted-foreground">{tile.label}</p>
-                <p className="text-foreground text-sm font-medium mt-0.5 capitalize" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                <p className="text-foreground text-sm font-medium mt-0.5 capitalize">
                   {tile.value}
                 </p>
               </div>

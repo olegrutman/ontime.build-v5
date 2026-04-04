@@ -77,7 +77,7 @@ export default function DemoV2ProjectOverview() {
                 <span className="text-[10px] uppercase tracking-wider font-semibold" style={{ color: project.color }}>
                   {project.phase}
                 </span>
-                <h1 className="text-[28px] font-bold text-white mt-1 leading-tight" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>
+                <h1 className="text-[28px] font-bold text-white mt-1 leading-tight">
                   {project.name}
                 </h1>
                 <p className="text-white/40 text-xs mt-1">{project.location}</p>
@@ -94,7 +94,7 @@ export default function DemoV2ProjectOverview() {
                   ].map(t => (
                     <div key={t.label} className="bg-white/5 rounded-lg px-2.5 py-2 text-center">
                       <p className="text-[9px] uppercase tracking-wider text-white/30">{t.label}</p>
-                      <p className="text-white text-sm font-bold mt-0.5" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                      <p className="text-white text-sm font-bold mt-0.5">
                         {t.value}
                       </p>
                     </div>
@@ -137,13 +137,13 @@ export default function DemoV2ProjectOverview() {
                   <div className="bg-[#0D1F3C] rounded-lg px-3.5 py-3 flex justify-between items-center mb-3">
                     <div>
                       <p className="text-[9px] uppercase tracking-wider text-white/30">Remaining</p>
-                      <p className="text-white font-bold text-lg" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                      <p className="text-white font-bold text-lg">
                         {formatK(project.contractValue - project.paid - project.pending)}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="text-[9px] uppercase tracking-wider text-white/30">Total</p>
-                      <p className="text-white/60 text-sm" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                      <p className="text-white/60 text-sm">
                         {formatK(project.contractValue)}
                       </p>
                     </div>
@@ -173,7 +173,7 @@ export default function DemoV2ProjectOverview() {
                               <p className="text-white/30 text-[11px]">{line.supplier}</p>
                             </div>
                             <div className="text-right">
-                              <p className="text-white text-sm" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                              <p className="text-white text-sm">
                                 {formatK(line.spent)} / {formatK(line.total)}
                               </p>
                               {line.total > 0 && (
@@ -233,7 +233,7 @@ export default function DemoV2ProjectOverview() {
                           <p className="text-white text-sm">{order.description}</p>
                         </div>
                         <div className="text-right shrink-0">
-                          <p className="text-white text-sm" style={{ fontFamily: "'IBM Plex Mono', monospace" }}>
+                          <p className="text-white text-sm">
                             ${order.amount.toLocaleString()}
                           </p>
                           <span

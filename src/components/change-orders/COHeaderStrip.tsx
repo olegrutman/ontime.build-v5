@@ -34,12 +34,12 @@ export function COHeaderStrip({ co, role, myOrgName }: COHeaderStripProps) {
     <div className="bg-card border border-border rounded-lg px-4 py-3.5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[0.65rem] uppercase tracking-wider text-muted-foreground font-medium" style={DT.mono}>
+          <p className="font-mono text-[0.65rem] uppercase tracking-wider text-muted-foreground font-medium">
             {co.co_number ?? '—'}
           </p>
           <h1
-            className="text-foreground truncate mt-0.5"
-            style={{ ...DT.heading, fontSize: '1.5rem', fontWeight: 800, lineHeight: 1.1 }}
+            className="font-heading text-foreground truncate mt-0.5"
+            style={{ fontSize: '1.5rem', fontWeight: 800, lineHeight: 1.1 }}
           >
             {displayTitle}
           </h1>

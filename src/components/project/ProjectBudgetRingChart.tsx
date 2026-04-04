@@ -75,7 +75,7 @@ export function ProjectBudgetRingChart({ paid, pending, remaining }: ProjectBudg
           textAnchor="middle"
           dominantBaseline="central"
           className="rotate-90 origin-center fill-foreground"
-          style={{ ...DT.mono, fontSize: '13px', fontWeight: 600 }}
+          style={{ fontSize: '13px', fontWeight: 600 }}
         >
           {Math.round((paid / total) * 100)}%
         </text>
@@ -87,7 +87,7 @@ export function ProjectBudgetRingChart({ paid, pending, remaining }: ProjectBudg
           <div key={i} className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: seg.color }} />
             <span className="text-[10px] text-muted-foreground">{seg.label}</span>
-            <span className="text-[10px] font-medium" style={DT.mono}>{fmt(seg.value)}</span>
+            <span className="font-mono text-[10px] font-medium">{fmt(seg.value)}</span>
           </div>
         ))}
       </div>

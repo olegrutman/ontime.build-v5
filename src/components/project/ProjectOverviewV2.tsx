@@ -158,7 +158,7 @@ export function ProjectOverviewV2({
             <div>
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[10px] text-muted-foreground">Progress</span>
-                <span className="text-[10px] font-medium" style={DT.mono}>{progressPct.toFixed(1)}%</span>
+                <span className="font-mono text-[10px] font-medium">{progressPct.toFixed(1)}%</span>
               </div>
               <div className="h-2 rounded-full bg-muted overflow-hidden">
                 <div
@@ -282,7 +282,7 @@ export function ProjectOverviewV2({
                           {item.status}
                         </span>
                       </div>
-                      <span className="text-xs font-semibold" style={DT.mono}>{fmt(item.amount)}</span>
+                      <span className="font-mono text-xs font-semibold">{fmt(item.amount)}</span>
                     </div>
                   </div>
                 </button>
