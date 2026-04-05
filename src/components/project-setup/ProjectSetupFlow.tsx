@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { PhaseContracts } from './PhaseContracts';
@@ -17,6 +17,7 @@ interface ProjectSetupFlowProps {
 }
 
 const SLUG_MAP: Record<string, string> = {
+  // Internal slugs
   townhome: 'townhome',
   apartment: 'mf_3to5',
   mf_3to5: 'mf_3to5',
@@ -29,6 +30,18 @@ const SLUG_MAP: Record<string, string> = {
   mf_6plus: 'mf_6plus',
   senior_living: 'senior_living',
   industrial: 'industrial',
+  // Display names from projects table
+  'Apartments/Condos': 'mf_3to5',
+  'Single Family Home': 'custom_home',
+  'Townhomes': 'townhome',
+  'Duplex': 'townhome',
+  'Hotels': 'hotel',
+  'Commercial': 'mixed_use_commercial',
+  'Mixed Use': 'mixed_use_commercial',
+  'Multifamily 3-5': 'mf_3to5',
+  'Multifamily 6+': 'mf_6plus',
+  'Senior Living': 'senior_living',
+  'Industrial': 'industrial',
 };
 
 export function ProjectSetupFlow({ projectId, projectName, projectType }: ProjectSetupFlowProps) {
@@ -39,6 +52,31 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
     SLUG_MAP[projectType || ''] || projectType || 'custom_home',
   );
   const [setupComplete, setSetupComplete] = useState(false);
+  const seeded = useRef(false);
+
+  // Seed Phase 1 answers from existing project data
+  useEffect(() => {
+    if (seeded.current || !projectId || !projectName) return;
+    seeded.current = true;
+    (async () => {
+      const { count } = await supabase
+        .from('project_setup_answers')
+        .select('*', { count: 'exact', head: true })
+        .eq('project_id', projectId);
+      if ((count ?? 0) > 0) return;
+
+      const seeds: { field_key: string; value: any }[] = [];
+      if (projectName) seeds.push({ field_key: 'name', value: projectName });
+      if (projectType) seeds.push({ field_key: 'building_type', value: buildingTypeSlug });
+
+      if (seeds.length > 0) {
+        await supabase.from('project_setup_answers').upsert(
+          seeds.map(s => ({ project_id: projectId, field_key: s.field_key, value: JSON.stringify(s.value) })),
+          { onConflict: 'project_id,field_key' }
+        );
+      }
+    })();
+  }, [projectId, projectName, projectType, buildingTypeSlug]);
 
   // Check if setup answers exist (phase 5 completion indicates scope done)
   const { data: setupAnswerCount = 0 } = useQuery({
