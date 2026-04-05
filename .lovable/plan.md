@@ -1,54 +1,42 @@
 
 
-# Wire New Setup Engine into Project Info
+# Fix: Seed All Project Data into Setup Answers
 
 ## Problem
 
-The setup wizard renders empty because the `SLUG_MAP` in `ProjectSetupFlow.tsx` doesn't handle actual `project_type` values from the database. The project has `project_type = "Apartments/Condos"` but the map only has keys like `apartment`, `mf_3to5` — so it falls through to the raw string `"Apartments/Condos"`, which doesn't match any key in `options_by_type` JSONB, and zero questions render.
+The seeding logic in `ProjectSetupFlow.tsx` only seeds `name` and `building_type` from the project record. It ignores `address`, `city`, `state`, `zip`, `start_date`, `status`, and `description` -- all of which exist on the project and should pre-populate Phase 1.
+
+Current DB state for project "Test Residence 001":
+- `address`: `{"street": "456 Oak Avenue"}`, `city`: Denver, `state`: CO, `zip`: 80202
+- `status`: setup
+- Only 3 answers seeded: `name`, `building_type`, `building_type_code`
 
 ## Fix
 
-### 1. Fix slug mapping in `ProjectSetupFlow.tsx`
+### `ProjectSetupFlow.tsx` -- Expand seeding logic (lines 58-79)
 
-Add the actual `project_type` display names from the `projects` table to `SLUG_MAP`:
+Fetch the full project record and seed all Phase 1 fields:
 
-```
-'Apartments/Condos' → 'mf_3to5'
-'Single Family Home' → 'custom_home'
-'Townhomes'         → 'townhome'
-'Duplex'            → 'townhome'
-'Hotels'            → 'hotel'
-```
+| field_key | Source |
+|-----------|--------|
+| `name` | `project.name` |
+| `building_type` | mapped slug display name (e.g., "Single Family") |
+| `address` | Compose from `project.address.street`, `project.city`, `project.state`, `project.zip` |
+| `start_date` | `project.start_date` |
+| `status` | `project.status` (capitalize) |
+| `description` | `project.description` |
 
-This is the primary fix — once the slug maps correctly, all 99 questions will filter and render by building type.
+The address field uses `input_type: address` which expects `{street, city, state, zip}` -- so assemble that object from the project's separate columns.
 
-### 2. Pre-populate Phase 1 answers from existing project data
+Also fix: the `building_type` seed currently stores the slug (`"custom_home"`) but the dropdown options are display names (`"Single Family"`). Need a reverse map to seed the correct display name.
 
-When the wizard loads, if `project_setup_answers` is empty for this project, seed Phase 1 fields from the `projects` table so users don't re-enter data they already provided during project creation:
+### Additional bug: seeding guard is too aggressive
 
-- `name` ← `project.name`
-- `address` ← `project.address`
-- `building_type` ← mapped display name (e.g., "Multifamily 3-5")
-- `start_date` ← `project.start_date`
-- `status` ← `project.status`
-
-This runs once on mount via an effect in `ProjectSetupFlow.tsx`.
-
-### 3. Fix `QuestionField.tsx` edge cases
-
-Currently `QuestionField` checks `options_by_type` for dropdown/multi-select but the data stores strings like `"Free text"` for text fields. The `getOptions` function already returns `null` for non-array values, but the dropdown renderer may show an empty select if it receives an unexpected string. Add a guard: if `input_type` is `text`, `textarea`, `date`, `currency`, `number`, or `percentage`, skip option fetching entirely.
+The seed runs only when `count === 0`. But after first seed, if user deletes an answer and re-enters setup, the remaining fields never get seeded. Change to: seed individual fields only if they don't already have an answer (check existing answer keys, not total count).
 
 ### Files changed
 
 | File | Change |
 |------|--------|
-| `ProjectSetupFlow.tsx` | Expand `SLUG_MAP` with display-name keys; add effect to seed Phase 1 answers from project record |
-| `QuestionField.tsx` | Guard against non-array option values for non-select input types |
-
-### What is NOT changing
-- Database schema, RLS policies
-- `useSetupQuestions.ts` hook logic
-- `SetupWizardShell.tsx` navigation
-- `DynamicSection.tsx`
-- Contracts and SOV cards
+| `ProjectSetupFlow.tsx` | Fetch project record in seed effect; seed address/status/start_date/description; reverse-map building_type slug to display name; seed per-field instead of all-or-nothing |
 
