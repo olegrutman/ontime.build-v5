@@ -13,7 +13,7 @@ const PHASES = [
   { num: 2, name: 'What You\'re Building', icon: '🏗️' },
   { num: 3, name: 'Exterior Envelope', icon: '🏠' },
   { num: 4, name: 'Interior Rough', icon: '🔨' },
-  { num: 5, name: 'Contract & Scope', icon: '📄' },
+  { num: 5, name: 'Terms & Scope', icon: '📄' },
 ];
 
 interface SetupWizardShellProps {
