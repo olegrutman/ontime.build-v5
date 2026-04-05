@@ -1,173 +1,54 @@
 
 
-# Rebuild Project Setup Using Question Database as Single Source of Truth
+# Wire New Setup Engine into Project Info
 
-## Summary
+## Problem
 
-Replace the current hardcoded wizard sections and TypeScript constants with a **data-driven question engine** powered by the 109-question spreadsheet. Questions, options, and building-type visibility rules live in a single database table. The UI renders dynamically from that data — no more scattered constants across `framingScope.ts`, `projectWizard.ts`, and 13 section components.
+The setup wizard renders empty because the `SLUG_MAP` in `ProjectSetupFlow.tsx` doesn't handle actual `project_type` values from the database. The project has `project_type = "Apartments/Condos"` but the map only has keys like `apartment`, `mf_3to5` — so it falls through to the raw string `"Apartments/Condos"`, which doesn't match any key in `options_by_type` JSONB, and zero questions render.
 
-## Current State
+## Fix
 
-- **7 building types** in `project_types` table (missing Senior Living, Industrial; MF not split into 3-5/6+)
-- **13 hardcoded section components** in `src/components/framing-scope/sections/` with ~240 lines of TypeScript types and visibility helpers in `framingScope.ts`
-- **Phase 1 (Basics)** lives in `project-wizard-new/BasicsStep.tsx` with a different type system (`projectWizard.ts`)
-- **Phase 5 (Contract & Scope)** partially exists in `PhaseContracts.tsx` but is missing billing period, lien waiver, prevailing wage, mobilization %, warranty, and scope description fields
-- Options per building type are hardcoded as arrays/enums — changing them requires code changes
+### 1. Fix slug mapping in `ProjectSetupFlow.tsx`
 
-## Architecture
+Add the actual `project_type` display names from the `projects` table to `SLUG_MAP`:
 
-```text
-┌─────────────────────────────────────┐
-│  setup_questions (DB table)         │
-│  109 rows from spreadsheet          │
-│  phase, section, field_key,         │
-│  input_type, trigger_condition,     │
-│  options_by_building_type (JSONB)   │
-└──────────────┬──────────────────────┘
-               │ useSetupQuestions(phase, buildingType)
-               ▼
-┌─────────────────────────────────────┐
-│  <DynamicSection />                 │
-│  Renders questions from DB rows     │
-│  Handles: Text, Dropdown, Number,   │
-│  Yes/No, Multi-Select, Date,        │
-│  Currency, Percentage, Textarea,    │
-│  Toggle, Address, Lookup            │
-└──────────────┬──────────────────────┘
-               │ saves to
-               ▼
-┌─────────────────────────────────────┐
-│  project_setup_answers (DB table)   │
-│  project_id, field_key, value       │
-│  (JSONB — supports all types)       │
-└─────────────────────────────────────┘
+```
+'Apartments/Condos' → 'mf_3to5'
+'Single Family Home' → 'custom_home'
+'Townhomes'         → 'townhome'
+'Duplex'            → 'townhome'
+'Hotels'            → 'hotel'
 ```
 
-## Database Changes
+This is the primary fix — once the slug maps correctly, all 99 questions will filter and render by building type.
 
-### 1. Update `project_types` table
+### 2. Pre-populate Phase 1 answers from existing project data
 
-Add 3 new rows, update 2 existing:
-- **Add**: `Senior Living` (slug: `senior_living`), `Industrial` (slug: `industrial`), `Multifamily 6+` (slug: `mf_6plus`)
-- **Rename**: `Apartment / Condo` → `Multifamily 3-5` (slug: `mf_3to5`)
+When the wizard loads, if `project_setup_answers` is empty for this project, seed Phase 1 fields from the `projects` table so users don't re-enter data they already provided during project creation:
 
-### 2. New table: `setup_questions`
+- `name` ← `project.name`
+- `address` ← `project.address`
+- `building_type` ← mapped display name (e.g., "Multifamily 3-5")
+- `start_date` ← `project.start_date`
+- `status` ← `project.status`
 
-```sql
-CREATE TABLE setup_questions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  phase integer NOT NULL,          -- 1-5
-  phase_name text NOT NULL,        -- "Project Identity", etc.
-  section text NOT NULL,           -- "Project Basics", "Building Profile", etc.
-  sort_order integer NOT NULL,     -- row order within phase+section
-  label text NOT NULL,             -- "Project Name", "IBC Construction Type"
-  field_key text NOT NULL UNIQUE,  -- "name", "building_type_code"
-  input_type text NOT NULL,        -- text, dropdown, number, yes_no, multi_select, date, currency, percentage, textarea, toggle, address, lookup
-  trigger_condition text,          -- null = always show, "wood_stairs=yes", etc.
-  options_by_type jsonb NOT NULL DEFAULT '{}',
-  -- { "mf_3to5": ["Type III-A","Type III-B",...], "sfr": ["Type V-A","Type V-B"], ... }
-  -- "N/A" or missing key = hidden for that type
-  notes text,
-  created_at timestamptz DEFAULT now()
-);
-```
+This runs once on mount via an effect in `ProjectSetupFlow.tsx`.
 
-### 3. New table: `project_setup_answers`
+### 3. Fix `QuestionField.tsx` edge cases
 
-```sql
-CREATE TABLE project_setup_answers (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  project_id uuid REFERENCES projects(id) ON DELETE CASCADE NOT NULL,
-  field_key text NOT NULL,
-  value jsonb NOT NULL DEFAULT 'null',
-  updated_at timestamptz DEFAULT now(),
-  UNIQUE(project_id, field_key)
-);
-```
+Currently `QuestionField` checks `options_by_type` for dropdown/multi-select but the data stores strings like `"Free text"` for text fields. The `getOptions` function already returns `null` for non-array values, but the dropdown renderer may show an empty select if it receives an unexpected string. Add a guard: if `input_type` is `text`, `textarea`, `date`, `currency`, `number`, or `percentage`, skip option fetching entirely.
 
-RLS: authenticated users in `project_participants` can SELECT/INSERT/UPDATE.
+### Files changed
 
-### 4. Seed `setup_questions` with all 109 rows from the spreadsheet
+| File | Change |
+|------|--------|
+| `ProjectSetupFlow.tsx` | Expand `SLUG_MAP` with display-name keys; add effect to seed Phase 1 answers from project record |
+| `QuestionField.tsx` | Guard against non-array option values for non-select input types |
 
-Import script parses each row into the correct `options_by_type` JSONB structure, mapping column headers to building type slugs.
-
-## Frontend Changes
-
-### Phase 1 — Data hooks and renderer
-
-**New files:**
-| File | Purpose |
-|------|---------|
-| `src/hooks/useSetupQuestions.ts` | Fetch questions filtered by phase/section; fetch+save answers |
-| `src/components/setup-engine/DynamicSection.tsx` | Renders a list of questions using correct input components |
-| `src/components/setup-engine/QuestionField.tsx` | Single question renderer — switches on `input_type` to render Input, Select, MultiSelect, YesNo toggle, DatePicker, CurrencyInput, etc. |
-| `src/components/setup-engine/SetupWizardShell.tsx` | Phase/section navigation shell with sidebar and progress |
-
-**`useSetupQuestions` hook logic:**
-1. Fetch all `setup_questions` rows for a given phase
-2. Group by `section`
-3. Filter options by current building type slug (from answers)
-4. Evaluate `trigger_condition` against current answers to show/hide conditional fields
-5. Provide `saveAnswer(field_key, value)` that upserts into `project_setup_answers`
-
-**`QuestionField` component — input type map:**
-| `input_type` | Component |
-|--------------|-----------|
-| `text` | `<Input />` |
-| `textarea` | `<Textarea />` |
-| `dropdown` | `<Select />` with options from `options_by_type[buildingType]` |
-| `multi_select` | Checkbox group |
-| `yes_no` | Two-button toggle (Yes/No) |
-| `number` | `<Input type="number" />` |
-| `date` | Date picker |
-| `currency` | Dollar-prefixed input |
-| `percentage` | Percent-suffixed input |
-| `toggle` | `<Switch />` |
-| `address` | Address fields group (street, city, state, zip) |
-| `lookup` | Organization search component |
-
-### Phase 2 — Rewire the setup flow
-
-**`ProjectSetupFlow.tsx`** — Replace the 4-step pipeline with 5 phases matching the spreadsheet:
-
-| Step | Phase | Sections |
-|------|-------|----------|
-| 1 | Project Identity | Project Basics |
-| 2 | What You're Building | Building Profile, Structural System, Structural Features, Structural Steel |
-| 3 | Exterior Envelope | Roof, Wall Sheathing, Waterproofing & WRB, Cladding & Siding, Trim & Fascia, Openings, Decks & Outdoor |
-| 4 | Interior Rough | Fire & Life Safety, Blocking & Backout |
-| 5 | Contract & Scope | Contract Terms, Mobilization, Materials, Warranty & Closeout |
-
-Each phase uses `<DynamicSection />` instead of dedicated section components.
-
-### Phase 3 — Migrate existing data
-
-- Map existing `project_profiles` columns → `project_setup_answers` rows
-- Map existing `project_framing_scope.answers` JSONB → `project_setup_answers` rows
-- Keep old tables readable during transition; new wizard writes only to `project_setup_answers`
-
-### Phase 4 — Remove legacy code
-
-After migration is verified:
-- Delete 13 section components in `src/components/framing-scope/sections/`
-- Delete `src/types/framingScope.ts` (241 lines of hardcoded types)
-- Delete `src/types/projectWizard.ts` (redundant type definitions)
-- Remove `FramingScopeWizard.tsx`, `ScopeSummaryPanel.tsx`, `ScopeDocument.tsx`
-- Simplify `PhaseContracts.tsx` — contract sum/retainage now come from Phase 5 answers
-
-## Files Summary
-
-| Action | Files |
-|--------|-------|
-| **New** | `setup_questions` migration, `project_setup_answers` migration, `useSetupQuestions.ts`, `DynamicSection.tsx`, `QuestionField.tsx`, `SetupWizardShell.tsx`, seed script for 109 questions |
-| **Modified** | `ProjectSetupFlow.tsx` (rewired to 5 phases), `PhaseContracts.tsx` (reads from answers), `PhaseSOV.tsx` (reads from answers), `ProjectInfoCard.tsx` (uses Phase 1 answers) |
-| **Deleted** | 13 section components, `FramingScopeWizard.tsx`, `ScopeSummaryPanel.tsx`, `ScopeDocument.tsx`, `framingScope.ts`, `projectWizard.ts` |
-
-## What is NOT changing
-
-- Project creation wizard (3-step: basics, team, review) — stays as-is for quick project creation
-- Sidebar, header, navigation
-- Dashboard, overview, PO/CO/invoice pages
-- RLS policies on existing tables
-- SOV and contract activation logic (just rewired to read from `project_setup_answers`)
+### What is NOT changing
+- Database schema, RLS policies
+- `useSetupQuestions.ts` hook logic
+- `SetupWizardShell.tsx` navigation
+- `DynamicSection.tsx`
+- Contracts and SOV cards
 
