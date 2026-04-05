@@ -1,42 +1,52 @@
 
 
-# Fix: Seed All Project Data into Setup Answers
+# Fix: Setup Wizard Shows Empty Phases
 
 ## Problem
 
-The seeding logic in `ProjectSetupFlow.tsx` only seeds `name` and `building_type` from the project record. It ignores `address`, `city`, `state`, `zip`, `start_date`, `status`, and `description` -- all of which exist on the project and should pre-populate Phase 1.
-
-Current DB state for project "Test Residence 001":
-- `address`: `{"street": "456 Oak Avenue"}`, `city`: Denver, `state`: CO, `zip`: 80202
-- `status`: setup
-- Only 3 answers seeded: `name`, `building_type`, `building_type_code`
+`SetupWizardShell` line 45 uses `answers.building_type` as the slug to look up `options_by_type`. But the stored answer is the **display name** (`"Single Family"`), not the **slug** (`custom_home`). Since `options_by_type` keys are slugs, every question returns `undefined` and gets filtered out — resulting in zero visible questions across all 5 phases.
 
 ## Fix
 
-### `ProjectSetupFlow.tsx` -- Expand seeding logic (lines 58-79)
+### `SetupWizardShell.tsx` — Add display-name-to-slug mapping
 
-Fetch the full project record and seed all Phase 1 fields:
+Import the same `SLUG_MAP` concept (or a simpler reverse lookup) so that when `answers.building_type` is `"Single Family"`, it resolves to `custom_home`.
 
-| field_key | Source |
-|-----------|--------|
-| `name` | `project.name` |
-| `building_type` | mapped slug display name (e.g., "Single Family") |
-| `address` | Compose from `project.address.street`, `project.city`, `project.state`, `project.zip` |
-| `start_date` | `project.start_date` |
-| `status` | `project.status` (capitalize) |
-| `description` | `project.description` |
+Change line 45 from:
+```ts
+const currentSlug = (answers.building_type as string) || buildingTypeSlug || 'custom_home';
+```
+To:
+```ts
+const DISPLAY_TO_SLUG: Record<string, string> = {
+  'Multifamily 3-5': 'mf_3to5',
+  'Multifamily 6+': 'mf_6plus',
+  'Single Family': 'custom_home',
+  'Townhome': 'townhome',
+  'Mixed-Use': 'mixed_use_commercial',
+  'Senior Living': 'senior_living',
+  'Hospitality': 'hotel',
+  'Industrial': 'industrial',
+};
 
-The address field uses `input_type: address` which expects `{street, city, state, zip}` -- so assemble that object from the project's separate columns.
+const rawType = (answers.building_type as string) || '';
+const currentSlug = DISPLAY_TO_SLUG[rawType] || SLUG_MAP_IDENTITY[rawType] || buildingTypeSlug || 'custom_home';
+```
 
-Also fix: the `building_type` seed currently stores the slug (`"custom_home"`) but the dropdown options are display names (`"Single Family"`). Need a reverse map to seed the correct display name.
+This ensures **both** display names and raw slugs resolve correctly.
 
-### Additional bug: seeding guard is too aggressive
+### Also handle `onBuildingTypeChange` callback
 
-The seed runs only when `count === 0`. But after first seed, if user deletes an answer and re-enters setup, the remaining fields never get seeded. Change to: seed individual fields only if they don't already have an answer (check existing answer keys, not total count).
+When user changes `building_type` dropdown in Phase 1, the `handleAnswer` callback in `SetupWizardShell` (line 59-72) maps display names to slugs — but the same `DISPLAY_TO_SLUG` map should be used there instead of the current hardcoded `slugMap`.
 
 ### Files changed
 
 | File | Change |
 |------|--------|
-| `ProjectSetupFlow.tsx` | Fetch project record in seed effect; seed address/status/start_date/description; reverse-map building_type slug to display name; seed per-field instead of all-or-nothing |
+| `SetupWizardShell.tsx` | Add `DISPLAY_TO_SLUG` map; use it to resolve `currentSlug`; unify the `handleAnswer` slug mapping |
+
+### What is NOT changing
+- Database data, RLS, seed script
+- `useSetupQuestions.ts`, `QuestionField.tsx`, `DynamicSection.tsx`
+- `ProjectSetupFlow.tsx`
 
