@@ -17,6 +17,7 @@ interface ProjectSetupFlowProps {
 }
 
 const SLUG_MAP: Record<string, string> = {
+  // Internal slugs
   townhome: 'townhome',
   apartment: 'mf_3to5',
   mf_3to5: 'mf_3to5',
@@ -29,6 +30,18 @@ const SLUG_MAP: Record<string, string> = {
   mf_6plus: 'mf_6plus',
   senior_living: 'senior_living',
   industrial: 'industrial',
+  // Display names from projects table
+  'Apartments/Condos': 'mf_3to5',
+  'Single Family Home': 'custom_home',
+  'Townhomes': 'townhome',
+  'Duplex': 'townhome',
+  'Hotels': 'hotel',
+  'Commercial': 'mixed_use_commercial',
+  'Mixed Use': 'mixed_use_commercial',
+  'Multifamily 3-5': 'mf_3to5',
+  'Multifamily 6+': 'mf_6plus',
+  'Senior Living': 'senior_living',
+  'Industrial': 'industrial',
 };
 
 export function ProjectSetupFlow({ projectId, projectName, projectType }: ProjectSetupFlowProps) {
