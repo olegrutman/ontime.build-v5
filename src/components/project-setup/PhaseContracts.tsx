@@ -5,8 +5,10 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Plus } from 'lucide-react';
 import { DT } from '@/lib/design-tokens';
+import { AddTeamMemberDialog } from '@/components/project/AddTeamMemberDialog';
+import type { OrgType } from '@/types/organization';
 
 interface TeamMember {
   id: string;
@@ -27,6 +29,8 @@ export function PhaseContracts({ projectId, onComplete, onStepChange }: PhaseCon
   const qc = useQueryClient();
   const { user, userOrgRoles } = useAuth();
   const currentUserOrgId = userOrgRoles.length > 0 ? userOrgRoles[0].organization_id : null;
+
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   const { data: project } = useQuery({
     queryKey: ['project_creator', projectId],
@@ -56,6 +60,8 @@ export function PhaseContracts({ projectId, onComplete, onStepChange }: PhaseCon
     if (creatorOrg.type === 'TC') return 'Trade Contractor';
     return null;
   }, [creatorOrg]);
+
+  const creatorOrgType = (creatorOrg?.type as OrgType) ?? null;
 
   const { data: team = [] } = useQuery({
     queryKey: ['project_team_contracts', projectId],
@@ -115,6 +121,10 @@ export function PhaseContracts({ projectId, onComplete, onStepChange }: PhaseCon
   }, []);
 
   const isFromCreatorOrg = project?.organization_id === currentUserOrgId;
+
+  const handleMemberAdded = () => {
+    qc.invalidateQueries({ queryKey: ['project_team_contracts', projectId] });
+  };
 
   const handleSave = async () => {
     if (!projectId || !user || !creatorRole || !project) return;
@@ -203,9 +213,18 @@ export function PhaseContracts({ projectId, onComplete, onStepChange }: PhaseCon
     <div className="space-y-4 px-5 py-5">
       {filteredTeam.length === 0 ? (
         <div className="text-center py-6">
-          <p className="text-sm text-muted-foreground">
-            No team members found. Add team members from the project overview first.
+          <p className="text-sm text-muted-foreground mb-3">
+            No team members found. Add a party to define contract terms.
           </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setAddDialogOpen(true)}
+            className="gap-1.5"
+          >
+            <Plus className="w-4 h-4" />
+            Add Party
+          </Button>
         </div>
       ) : (
         <>
@@ -254,6 +273,17 @@ export function PhaseContracts({ projectId, onComplete, onStepChange }: PhaseCon
               </div>
             </div>
           ))}
+
+          {/* Add another party */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setAddDialogOpen(true)}
+            className="gap-1.5 text-muted-foreground hover:text-foreground"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Party
+          </Button>
         </>
       )}
 
@@ -263,6 +293,14 @@ export function PhaseContracts({ projectId, onComplete, onStepChange }: PhaseCon
           <ChevronRight className="w-4 h-4 ml-1" />
         </Button>
       </div>
+
+      <AddTeamMemberDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        projectId={projectId}
+        creatorOrgType={creatorOrgType}
+        onMemberAdded={handleMemberAdded}
+      />
     </div>
   );
 }
