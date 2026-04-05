@@ -1,19 +1,14 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { DT } from '@/lib/design-tokens';
-import { ProjectInfoCard } from './ProjectInfoCard';
 import { PhaseContracts } from './PhaseContracts';
 import { PhaseSOV } from './PhaseSOV';
-import { FramingScopeWizard } from '@/components/framing-scope/FramingScopeWizard';
-import { useProjectProfile } from '@/hooks/useProjectProfile';
+import { SetupWizardShell } from '@/components/setup-engine/SetupWizardShell';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
-import { Lock, Check, ClipboardList, FileText, DollarSign, Building2 } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
-import type { FramingBuildingType } from '@/types/framingScope';
+import { Lock, Check, FileText, DollarSign } from 'lucide-react';
 
 interface ProjectSetupFlowProps {
   projectId: string;
@@ -21,50 +16,43 @@ interface ProjectSetupFlowProps {
   projectType?: string;
 }
 
-const SLUG_TO_BUILDING_TYPE: Record<string, FramingBuildingType> = {
-  townhome: 'TOWNHOMES',
-  apartment: 'MULTI_FAMILY',
-  hotel: 'HOTEL',
-  commercial: 'COMMERCIAL',
-  custom_home: 'SFR',
-  production_home: 'SFR',
-  mixed_use: 'COMMERCIAL',
+const SLUG_MAP: Record<string, string> = {
+  townhome: 'townhome',
+  apartment: 'mf_3to5',
+  mf_3to5: 'mf_3to5',
+  hotel: 'hotel',
+  commercial: 'mixed_use_commercial',
+  mixed_use_commercial: 'mixed_use_commercial',
+  custom_home: 'custom_home',
+  production_home: 'custom_home',
+  mixed_use: 'mixed_use_commercial',
+  mf_6plus: 'mf_6plus',
+  senior_living: 'senior_living',
+  industrial: 'industrial',
 };
-
-const STEPS = [
-  { num: 1, label: 'Project Info', icon: Building2 },
-  { num: 2, label: 'Framing Scope', icon: ClipboardList },
-  { num: 3, label: 'Contracts', icon: FileText },
-  { num: 4, label: 'Schedule of Values', icon: DollarSign },
-];
 
 export function ProjectSetupFlow({ projectId, projectName, projectType }: ProjectSetupFlowProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const [buildingTypeSlug, setBuildingTypeSlug] = useState<string>(projectType || '');
+  const [buildingTypeSlug, setBuildingTypeSlug] = useState<string>(
+    SLUG_MAP[projectType || ''] || projectType || 'custom_home',
+  );
+  const [setupComplete, setSetupComplete] = useState(false);
 
-  const { data: profile } = useProjectProfile(projectId);
-  const buildingComplete = !!profile?.is_complete;
-
-  const buildingType: FramingBuildingType = useMemo(() => {
-    return SLUG_TO_BUILDING_TYPE[buildingTypeSlug] || 'SFR';
-  }, [buildingTypeSlug]);
-
-  const { data: framingScope } = useQuery({
-    queryKey: ['framing-scope', projectId],
+  // Check if setup answers exist (phase 5 completion indicates scope done)
+  const { data: setupAnswerCount = 0 } = useQuery({
+    queryKey: ['setup_answers_count', projectId],
     enabled: !!projectId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('project_framing_scope' as any)
-        .select('scope_complete')
-        .eq('project_id', projectId)
-        .maybeSingle();
+      const { count, error } = await supabase
+        .from('project_setup_answers')
+        .select('*', { count: 'exact', head: true })
+        .eq('project_id', projectId);
       if (error) throw error;
-      return data as any;
+      return count ?? 0;
     },
   });
-  const scopeComplete = !!framingScope?.scope_complete;
 
   const { data: contracts = [] } = useQuery({
     queryKey: ['project_contracts_exists_check', projectId],
@@ -78,9 +66,10 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
   });
   const contractsComplete = contracts.some(c => (c.contract_sum || 0) > 0);
 
-  // Compute active step for progress — step 1 (project info) is always complete
-  const activeStep = contractsComplete ? 4 : scopeComplete ? 3 : 2;
-  const progressPercent = ((activeStep) / STEPS.length) * 100;
+  const handleSetupComplete = useCallback(() => {
+    setSetupComplete(true);
+    document.getElementById('contracts-card')?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
 
   const handleContractsComplete = useCallback(() => {
     document.getElementById('sov-card')?.scrollIntoView({ behavior: 'smooth' });
@@ -96,157 +85,75 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
     }
   }, [projectId, navigate, toast]);
 
+  const scopeComplete = setupComplete || setupAnswerCount > 20;
+
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-0">
-      {/* ── Progress Header ───────────────────────────────────── */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <h1 className="font-heading text-lg font-bold">Project Info</h1>
-          <span className="font-mono text-xs text-muted-foreground">
-            Step {activeStep} of {STEPS.length}
-          </span>
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      {/* ── Setup Engine (Phases 1-5) ─────────────────────── */}
+      <Card className="border border-border overflow-hidden">
+        <div className="border-b border-border bg-muted/30 px-5 py-3.5 flex items-center gap-3">
+          <h3 className="font-heading text-sm font-bold">Project Setup</h3>
+          <p className="text-[11px] text-muted-foreground">
+            5-phase questionnaire — define your project, building, scope, and contract terms
+          </p>
+          {scopeComplete && (
+            <span className="ml-auto px-2.5 py-1 text-[10px] font-semibold rounded-full bg-emerald-500/15 text-emerald-700 border border-emerald-500/30 flex items-center gap-1 shrink-0">
+              <Check className="w-3 h-3" /> Complete
+            </span>
+          )}
         </div>
-        <Progress value={progressPercent} className="h-1.5" />
-        <div className="flex items-center justify-between mt-2">
-          {STEPS.map((step) => {
-            const done = step.num < activeStep || (step.num === activeStep && step.num === 4 && contractsComplete);
-            const current = step.num === activeStep;
-            return (
-              <div key={step.num} className="flex items-center gap-1.5">
-                <div className={cn(
-                  'w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold',
-                  done ? 'bg-emerald-500 text-white' :
-                  current ? 'bg-primary text-primary-foreground' :
-                  'bg-muted text-muted-foreground'
-                )}>
-                  {done ? <Check className="w-3 h-3" /> : step.num}
-                </div>
-                <span className={cn(
-                  'text-[11px] hidden sm:inline',
-                  done ? 'text-emerald-700 font-medium' :
-                  current ? 'text-foreground font-medium' :
-                  'text-muted-foreground'
-                )}>
-                  {step.label}
-                </span>
-              </div>
-            );
-          })}
+        <div className="min-h-[500px]">
+          <SetupWizardShell
+            projectId={projectId}
+            buildingTypeSlug={buildingTypeSlug}
+            onComplete={handleSetupComplete}
+            onBuildingTypeChange={(slug) => setBuildingTypeSlug(SLUG_MAP[slug] || slug)}
+          />
         </div>
-      </div>
+      </Card>
 
-      {/* ── Stepper Timeline ──────────────────────────────────── */}
-      <div className="relative space-y-0">
-
-        {/* ── Step 1: Project Info Card ──────────────────────── */}
-        <StepWrapper stepNum={1} activeStep={activeStep} isLast={false}>
-          <ProjectInfoCard projectId={projectId} projectName={projectName} />
-        </StepWrapper>
-
-        {/* ── Step 2: Framing Scope ──────────────────────────── */}
-        <StepWrapper stepNum={2} activeStep={activeStep} isLast={false}>
-          <Card className="border border-border overflow-hidden">
-            <CardHeader2
-              icon={<ClipboardList className="w-4 h-4 text-primary" />}
-              title="Framing Scope"
-              subtitle="Building profile + scope of work definitions"
-              complete={scopeComplete}
-            />
-            <FramingScopeWizard
+      {/* ── Contracts ─────────────────────────────────────── */}
+      <Card id="contracts-card" className={cn("border border-border overflow-hidden", !scopeComplete && "opacity-50 pointer-events-none")}>
+        <CardHeader2
+          icon={scopeComplete ? <FileText className="w-4 h-4 text-primary" /> : <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
+          title="Contracts"
+          subtitle={scopeComplete ? 'Contract sums and retainage per party' : 'Complete setup first'}
+          complete={contractsComplete}
+          locked={!scopeComplete}
+        />
+        {scopeComplete ? (
+          <CardContent className="p-0">
+            <PhaseContracts
               projectId={projectId}
-              buildingType={buildingType}
-              projectName={projectName}
-              embedded
-              onBuildingTypeChange={setBuildingTypeSlug}
-              onComplete={() => {
-                document.getElementById('contracts-card')?.scrollIntoView({ behavior: 'smooth' });
-              }}
+              onComplete={handleContractsComplete}
+              onStepChange={() => {}}
             />
-          </Card>
-        </StepWrapper>
-
-        {/* ── Step 3: Contracts ──────────────────────────────── */}
-        <StepWrapper stepNum={3} activeStep={activeStep} isLast={false}>
-          <Card id="contracts-card" className={cn("border border-border overflow-hidden", !scopeComplete && "opacity-50 pointer-events-none")}>
-            <CardHeader2
-              icon={scopeComplete ? <FileText className="w-4 h-4 text-primary" /> : <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
-              title="Contracts"
-              subtitle={scopeComplete ? 'Contract sums and retainage per party' : 'Complete framing scope first'}
-              complete={contractsComplete}
-              locked={!scopeComplete}
-            />
-            {scopeComplete ? (
-              <CardContent className="p-0">
-                <PhaseContracts
-                  projectId={projectId}
-                  onComplete={handleContractsComplete}
-                  onStepChange={() => {}}
-                />
-              </CardContent>
-            ) : (
-              <LockedContent message="Complete the framing scope to unlock contracts." />
-            )}
-          </Card>
-        </StepWrapper>
-
-        {/* ── Step 4: SOV ────────────────────────────────────── */}
-        <StepWrapper stepNum={4} activeStep={activeStep} isLast={true}>
-          <Card id="sov-card" className={cn("border border-border overflow-hidden", !contractsComplete && "opacity-50 pointer-events-none")}>
-            <CardHeader2
-              icon={contractsComplete ? <DollarSign className="w-4 h-4 text-primary" /> : <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
-              title="Schedule of Values"
-              subtitle={contractsComplete ? 'Generate, review, and activate' : 'Save contracts first'}
-              locked={!contractsComplete}
-            />
-            {contractsComplete ? (
-              <CardContent className="p-0">
-                <PhaseSOV
-                  projectId={projectId}
-                  onComplete={handleSOVComplete}
-                  onStepChange={() => {}}
-                />
-              </CardContent>
-            ) : (
-              <LockedContent message="Save contract amounts to unlock SOV generation." />
-            )}
-          </Card>
-        </StepWrapper>
-      </div>
-    </div>
-  );
-}
-
-/* ── Stepper wrapper with timeline connector ───────────────────────── */
-function StepWrapper({ stepNum, activeStep, isLast, children }: {
-  stepNum: number; activeStep: number; isLast: boolean; children: React.ReactNode;
-}) {
-  const done = stepNum < activeStep;
-  const current = stepNum === activeStep;
-
-  return (
-    <div className="relative flex gap-4">
-      {/* Timeline column */}
-      <div className="flex flex-col items-center shrink-0 pt-4">
-        <div className={cn(
-          'w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold z-10',
-          done ? 'bg-emerald-500 text-white' :
-          current ? 'bg-primary text-primary-foreground shadow-sm' :
-          'bg-muted text-muted-foreground border border-border'
-        )}>
-          {done ? <Check className="w-3.5 h-3.5" /> : stepNum}
-        </div>
-        {!isLast && (
-          <div className={cn(
-            'w-0.5 flex-1 min-h-[24px]',
-            done ? 'bg-emerald-500/40' : 'bg-border'
-          )} />
+          </CardContent>
+        ) : (
+          <LockedContent message="Complete the project setup to unlock contracts." />
         )}
-      </div>
+      </Card>
 
-      {/* Content */}
-      <div className="flex-1 pb-6 min-w-0">
-        {children}
-      </div>
+      {/* ── SOV ───────────────────────────────────────────── */}
+      <Card id="sov-card" className={cn("border border-border overflow-hidden", !contractsComplete && "opacity-50 pointer-events-none")}>
+        <CardHeader2
+          icon={contractsComplete ? <DollarSign className="w-4 h-4 text-primary" /> : <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
+          title="Schedule of Values"
+          subtitle={contractsComplete ? 'Generate, review, and activate' : 'Save contracts first'}
+          locked={!contractsComplete}
+        />
+        {contractsComplete ? (
+          <CardContent className="p-0">
+            <PhaseSOV
+              projectId={projectId}
+              onComplete={handleSOVComplete}
+              onStepChange={() => {}}
+            />
+          </CardContent>
+        ) : (
+          <LockedContent message="Save contract amounts to unlock SOV generation." />
+        )}
+      </Card>
     </div>
   );
 }
