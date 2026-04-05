@@ -37,10 +37,10 @@ export function ScopeStep({ projectType, scope, onChange }: ScopeStepProps) {
     update({ [field]: updated });
   };
 
-  const isSingleFamily = projectType === 'Single Family Home';
-  const isMultiFamily = projectType === 'Apartments/Condos' || projectType === 'Hotels';
-  const isTownhome = projectType === 'Townhomes';
-  const isDuplex = projectType === 'Duplex';
+  const isSingleFamily = projectType === 'Single Family';
+  const isMultiFamily = projectType === 'Multifamily 3-5' || projectType === 'Multifamily 6+' || projectType === 'Hospitality';
+  const isTownhome = projectType === 'Townhome';
+  const isDuplex = false; // Duplex removed; use Townhome
   const isResidentialUnit = isSingleFamily || isTownhome || isDuplex;
 
   if (!projectType) {

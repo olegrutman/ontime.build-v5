@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -13,7 +13,7 @@ const PHASES = [
   { num: 2, name: 'What You\'re Building', icon: '🏗️' },
   { num: 3, name: 'Exterior Envelope', icon: '🏠' },
   { num: 4, name: 'Interior Rough', icon: '🔨' },
-  { num: 5, name: 'Contract & Scope', icon: '📄' },
+  { num: 5, name: 'Terms & Scope', icon: '📄' },
 ];
 
 interface SetupWizardShellProps {
@@ -101,10 +101,12 @@ export function SetupWizardShell({
     }
   }, [activeSectionIdx, activePhase]);
 
-  // Clamp section index
-  if (activeSectionIdx >= sections.length && sections.length > 0) {
-    setActiveSectionIdx(sections.length - 1);
-  }
+  // Clamp section index (in effect to avoid render-time setState)
+  useEffect(() => {
+    if (activeSectionIdx >= sections.length && sections.length > 0) {
+      setActiveSectionIdx(sections.length - 1);
+    }
+  }, [activeSectionIdx, sections.length]);
 
   const totalPhaseCompletion = useMemo(() => {
     return PHASES.map((p) => getPhaseCompletion(p.num, currentSlug));

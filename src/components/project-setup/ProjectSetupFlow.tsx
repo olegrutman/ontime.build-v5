@@ -17,31 +17,30 @@ interface ProjectSetupFlowProps {
 }
 
 const SLUG_MAP: Record<string, string> = {
-  // Internal slugs
+  // Internal slugs (identity)
   townhome: 'townhome',
-  apartment: 'mf_3to5',
   mf_3to5: 'mf_3to5',
+  mf_6plus: 'mf_6plus',
   hotel: 'hotel',
-  commercial: 'mixed_use_commercial',
   mixed_use_commercial: 'mixed_use_commercial',
   custom_home: 'custom_home',
-  production_home: 'custom_home',
-  mixed_use: 'mixed_use_commercial',
-  mf_6plus: 'mf_6plus',
   senior_living: 'senior_living',
   industrial: 'industrial',
-  // Display names from projects table
-  'Apartments/Condos': 'mf_3to5',
+  // Display names (from PROJECT_TYPES & setup engine)
+  'Single Family': 'custom_home',
+  'Townhome': 'townhome',
+  'Multifamily 3-5': 'mf_3to5',
+  'Multifamily 6+': 'mf_6plus',
+  'Hospitality': 'hotel',
+  'Mixed-Use': 'mixed_use_commercial',
+  'Senior Living': 'senior_living',
+  'Industrial': 'industrial',
+  // Legacy display names (existing projects)
   'Single Family Home': 'custom_home',
+  'Apartments/Condos': 'mf_3to5',
   'Townhomes': 'townhome',
   'Duplex': 'townhome',
   'Hotels': 'hotel',
-  'Commercial': 'mixed_use_commercial',
-  'Mixed Use': 'mixed_use_commercial',
-  'Multifamily 3-5': 'mf_3to5',
-  'Multifamily 6+': 'mf_6plus',
-  'Senior Living': 'senior_living',
-  'Industrial': 'industrial',
 };
 
 // Reverse map: slug → display name used in setup_questions options
