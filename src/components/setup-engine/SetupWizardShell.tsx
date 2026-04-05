@@ -101,10 +101,12 @@ export function SetupWizardShell({
     }
   }, [activeSectionIdx, activePhase]);
 
-  // Clamp section index
-  if (activeSectionIdx >= sections.length && sections.length > 0) {
-    setActiveSectionIdx(sections.length - 1);
-  }
+  // Clamp section index (in effect to avoid render-time setState)
+  useEffect(() => {
+    if (activeSectionIdx >= sections.length && sections.length > 0) {
+      setActiveSectionIdx(sections.length - 1);
+    }
+  }, [activeSectionIdx, sections.length]);
 
   const totalPhaseCompletion = useMemo(() => {
     return PHASES.map((p) => getPhaseCompletion(p.num, currentSlug));

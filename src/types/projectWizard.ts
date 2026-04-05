@@ -1,11 +1,14 @@
 // New Project Wizard Types - Simplified for jobsite use
 
 export const PROJECT_TYPES = [
-  'Single Family Home',
-  'Apartments/Condos',
-  'Townhomes',
-  'Duplex',
-  'Hotels',
+  'Single Family',
+  'Townhome',
+  'Multifamily 3-5',
+  'Multifamily 6+',
+  'Hospitality',
+  'Mixed-Use',
+  'Senior Living',
+  'Industrial',
 ] as const;
 
 export type ProjectType = typeof PROJECT_TYPES[number];
