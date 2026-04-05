@@ -1,42 +1,63 @@
 
 
-# Post-Setup Completion: Show Status + Inline Team Add on Contracts Card
+# Fix: SOV Total Changes When Editing Any Line Item Percentage
 
-## Problem
+## Root Cause
 
-1. When the 5-phase setup wizard completes, there's no clear "done" state — the wizard stays open.
-2. If no other companies were added during initial project creation, the Contracts card shows "No team members found" with no way to add parties inline.
-3. GC should be able to add TC; TC should be able to add both GC and FC — directly from the Contracts card.
+The optimistic local state update in `useContractSOV.ts` (lines 888–908) has an **order mismatch bug**.
 
-## Changes
+The `updates` array is ordered as `[editedItem, ...otherUnlockedItems]`. The last element of `updates` is designated as the "remainder absorber" — it gets `contractValue - runningTotal`.
 
-### 1. `SetupWizardShell.tsx` — Collapse wizard after completion
+But `items.map()` iterates in **display order** (by `sort_order`), not in `updates` array order. When the remainder-absorber item is encountered in `items.map()` before all other updated items have been processed, `runningTotal` is incomplete. The absorber gets `contractValue - (partial sum)` — which is too large.
 
-When all 5 phases are complete and user clicks "Complete Setup", collapse the wizard content and show a success summary state (green check, "Setup Complete" message, with an "Edit" button to re-expand). Pass a `completed` flag up via `onComplete`.
+**Example from screenshot**: User edits Punchlist (item 25, last in display). `updates = [Punchlist, item1, item2, ..., item24]`. `lastUpdateId = item24` (some mid-list item). When `items.map` reaches item24 in display order, it hasn't yet processed items 25 (Punchlist) or any items after item24, so `runningTotal` is short. Item24 gets an inflated value. Total becomes $525,000 instead of $500,000.
 
-### 2. `ProjectSetupFlow.tsx` — Collapsed setup state
+The RPC function processes `p_updates` in array order, so the **database values are correct** — but the UI shows wrong numbers until a page refresh.
 
-When `setupComplete` is true (or `scopeComplete` on load), render the Setup card in a collapsed state showing "Setup Complete" with a toggle to expand/edit. Auto-scroll to the Contracts card.
+## Fix
 
-### 3. `PhaseContracts.tsx` — Add "Add Party" button when team is empty or to add more
+Replace the `items.map()` optimistic update with a two-pass approach:
 
-When `filteredTeam.length === 0` (or even when it has members), show an "Add Party" button that opens the existing `AddTeamMemberDialog`. After a member is added, refetch the team list so the contract row appears immediately.
+**Pass 1**: Build a map of `id → { pct, value }` by iterating `updates` in array order (matching RPC logic). The last element absorbs the remainder.
 
-- Determine `creatorOrgType` from the existing `creatorOrg` query (already available as `creatorOrg.type`)
-- Pass it to `AddTeamMemberDialog` so role filtering works correctly (GC sees TC options; TC sees GC + FC options)
-- On `onMemberAdded`, invalidate `project_team_contracts` query to refresh the list
+**Pass 2**: Apply the map to `items` via `.map()` — simple lookup, no running total.
 
-### Files Changed
+```typescript
+// Pass 1: compute values in updates-array order (mirrors RPC)
+const resultMap = new Map<string, { pct: number; val: number }>();
+let runTotal = 0;
+for (let i = 0; i < updates.length; i++) {
+  const u = updates[i];
+  let val: number;
+  if (i === updates.length - 1) {
+    val = Math.round((contractValue - runTotal) * 100) / 100;
+  } else {
+    val = Math.round((contractValue * u.pct / 100) * 100) / 100;
+    runTotal += val;
+  }
+  resultMap.set(u.id, { pct: u.pct, val });
+}
+
+// Pass 2: apply to items
+setSovItems(prev => ({
+  ...prev,
+  [sovId]: (prev[sovId] || []).map(item => {
+    const r = resultMap.get(item.id);
+    if (!r) return item;
+    return { ...item, percent_of_contract: r.pct, value_amount: r.val };
+  })
+}));
+```
+
+### Files changed
 
 | File | Change |
 |------|--------|
-| `PhaseContracts.tsx` | Import `AddTeamMemberDialog`; add state for dialog open; render "Add Party" button in both empty state and below the team list; pass `creatorOrgType` and refresh callback |
-| `ProjectSetupFlow.tsx` | Add collapsed/expanded state for setup card; when `scopeComplete`, show summary with expand toggle; auto-focus contracts card |
-| `SetupWizardShell.tsx` | Minor: ensure `onComplete` fires cleanly on final phase save |
+| `src/hooks/useContractSOV.ts` | Replace lines 886–908 with two-pass optimistic update that processes values in `updates` array order |
 
-### What is NOT Changing
-- `AddTeamMemberDialog` — already handles role filtering per org type
-- Database schema, RLS policies
-- SOV card logic
-- Initial project creation wizard
+### What is NOT changing
+- RPC function `update_sov_line_percentages` (already correct)
+- `useSOVPage.ts` (uses its own update logic)
+- SOV UI components
+- Database schema, RLS
 
