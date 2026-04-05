@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Loader2, Pencil, CheckCircle2 } from 'lucide-react';
 import { DynamicSection } from './DynamicSection';
 import { useSetupQuestions, type SectionGroup } from '@/hooks/useSetupQuestions';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,6 +31,7 @@ export function SetupWizardShell({
 }: SetupWizardShellProps) {
   const [activePhase, setActivePhase] = useState(1);
   const [activeSectionIdx, setActiveSectionIdx] = useState(0);
+  const [completed, setCompleted] = useState(false);
 
   const {
     answers,
@@ -88,6 +89,7 @@ export function SetupWizardShell({
       setActivePhase((p) => p + 1);
       setActiveSectionIdx(0);
     } else {
+      setCompleted(true);
       onComplete?.();
     }
   }, [activeSectionIdx, sections.length, activePhase, onComplete]);
@@ -118,12 +120,47 @@ export function SetupWizardShell({
     return total > 0 ? Math.round((answered / total) * 100) : 0;
   }, [totalPhaseCompletion]);
 
+  // Auto-detect completion on mount if all phases are done
+  useEffect(() => {
+    if (!isLoading && overallProgress === 100) {
+      setCompleted(true);
+    }
+  }, [isLoading, overallProgress]);
+
   if (isLoading) {
     return (
       <div className="space-y-4 p-6">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-4 w-48" />
         <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  // ── Completed state ──────────────────────────────────────────────
+  if (completed) {
+    return (
+      <div className="flex items-center justify-between px-5 py-4">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-emerald-500/15 flex items-center justify-center">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+          </div>
+          <div>
+            <p className="font-heading text-sm font-bold">Setup Complete</p>
+            <p className="text-[11px] text-muted-foreground">
+              All 5 phases answered · {overallProgress}% complete
+            </p>
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setCompleted(false)}
+          className="gap-1.5"
+        >
+          <Pencil className="w-3.5 h-3.5" />
+          Edit
+        </Button>
       </div>
     );
   }

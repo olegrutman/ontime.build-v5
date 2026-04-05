@@ -63,6 +63,7 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
     SLUG_MAP[projectType || ''] || projectType || 'custom_home',
   );
   const [setupComplete, setSetupComplete] = useState(false);
+  const [setupCollapsed, setSetupCollapsed] = useState(false);
   const seeded = useRef(false);
 
   // Seed Phase 1 answers from existing project data
@@ -149,7 +150,11 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
 
   const handleSetupComplete = useCallback(() => {
     setSetupComplete(true);
-    document.getElementById('contracts-card')?.scrollIntoView({ behavior: 'smooth' });
+    setSetupCollapsed(true);
+    // Auto-scroll to contracts
+    setTimeout(() => {
+      document.getElementById('contracts-card')?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   }, []);
 
   const handleContractsComplete = useCallback(() => {
@@ -166,7 +171,14 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
     }
   }, [projectId, navigate, toast]);
 
-  const scopeComplete = setupComplete || setupAnswerCount > 20;
+  const scopeComplete = setupComplete || setupCollapsed || setupAnswerCount > 20;
+
+  // Auto-collapse on load if scope was already completed
+  useEffect(() => {
+    if (setupAnswerCount > 20 && !setupComplete) {
+      setSetupCollapsed(true);
+    }
+  }, [setupAnswerCount, setupComplete]);
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
@@ -183,7 +195,7 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
             </span>
           )}
         </div>
-        <div className="min-h-[500px]">
+        <div className={cn(!setupCollapsed && "min-h-[500px]")}>
           <SetupWizardShell
             projectId={projectId}
             buildingTypeSlug={buildingTypeSlug}
