@@ -74,7 +74,7 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
       // Fetch existing answers
       const { data: existingAnswers } = await supabase
         .from('project_setup_answers')
-        .select('field_key')
+        .select('field_key, value')
         .eq('project_id', projectId);
       const existingKeys = new Set((existingAnswers ?? []).map((r: any) => r.field_key));
 
@@ -100,9 +100,14 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
           }
         : null;
 
+      // Fetch current building_type value to check for mismatch
+      const currentBTRow = (existingAnswers ?? []).find((r: any) => r.field_key === 'building_type');
+      const currentBTValue = currentBTRow ? JSON.parse((currentBTRow as any).value ?? 'null') : null;
+
       const seeds: { field_key: string; value: any }[] = [];
       if (!existingKeys.has('name') && proj.name) seeds.push({ field_key: 'name', value: proj.name });
-      if (!existingKeys.has('building_type') && displayName) seeds.push({ field_key: 'building_type', value: displayName });
+      // Always reconcile building_type with project record
+      if (displayName && currentBTValue !== displayName) seeds.push({ field_key: 'building_type', value: displayName });
       if (!existingKeys.has('address') && addrObj) seeds.push({ field_key: 'address', value: addrObj });
       if (!existingKeys.has('start_date') && proj.start_date) seeds.push({ field_key: 'start_date', value: proj.start_date });
       if (!existingKeys.has('status') && proj.status) seeds.push({ field_key: 'status', value: proj.status.charAt(0).toUpperCase() + proj.status.slice(1) });
