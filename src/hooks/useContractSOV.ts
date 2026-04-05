@@ -883,30 +883,29 @@ export function useContractSOV(projectId: string | undefined) {
       
       if (error) throw error;
       
-      // Update local state with remainder-absorption (mirrors RPC logic)
-      const updateMap = new Map(updates.map(u => [u.id, u.pct]));
-      setSovItems(prev => {
-        const items = prev[sovId] || [];
-        let runningTotal = 0;
-        const orderedUpdates = updates.map(u => u.id);
-        const lastUpdateId = orderedUpdates[orderedUpdates.length - 1];
-        
-        return {
-          ...prev,
-          [sovId]: items.map(item => {
-            const newPct = updateMap.get(item.id);
-            if (newPct == null) return item;
-            let newVal: number;
-            if (item.id === lastUpdateId) {
-              newVal = Math.round((contractValue - runningTotal) * 100) / 100;
-            } else {
-              newVal = Math.round((contractValue * newPct / 100) * 100) / 100;
-              runningTotal += newVal;
-            }
-            return { ...item, percent_of_contract: newPct, value_amount: newVal };
-          })
-        };
-      });
+      // Two-pass optimistic update (mirrors RPC array-order logic)
+      const resultMap = new Map<string, { pct: number; val: number }>();
+      let runTotal = 0;
+      for (let i = 0; i < updates.length; i++) {
+        const u = updates[i];
+        let val: number;
+        if (i === updates.length - 1) {
+          val = Math.round((contractValue - runTotal) * 100) / 100;
+        } else {
+          val = Math.round((contractValue * u.pct / 100) * 100) / 100;
+          runTotal += val;
+        }
+        resultMap.set(u.id, { pct: u.pct, val });
+      }
+
+      setSovItems(prev => ({
+        ...prev,
+        [sovId]: (prev[sovId] || []).map(item => {
+          const r = resultMap.get(item.id);
+          if (!r) return item;
+          return { ...item, percent_of_contract: r.pct, value_amount: r.val };
+        })
+      }));
     } catch (error: any) {
       toast({
         title: 'Error',
