@@ -44,6 +44,18 @@ const SLUG_MAP: Record<string, string> = {
   'Industrial': 'industrial',
 };
 
+// Reverse map: slug → display name used in setup_questions options
+const SLUG_DISPLAY: Record<string, string> = {
+  custom_home: 'Single Family',
+  townhome: 'Townhome',
+  mf_3to5: 'Multifamily 3-5',
+  mf_6plus: 'Multifamily 6+',
+  hotel: 'Hospitality',
+  mixed_use_commercial: 'Mixed-Use',
+  senior_living: 'Senior Living',
+  industrial: 'Industrial',
+};
+
 export function ProjectSetupFlow({ projectId, projectName, projectType }: ProjectSetupFlowProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -56,18 +68,45 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
 
   // Seed Phase 1 answers from existing project data
   useEffect(() => {
-    if (seeded.current || !projectId || !projectName) return;
+    if (seeded.current || !projectId) return;
     seeded.current = true;
     (async () => {
-      const { count } = await supabase
+      // Fetch existing answers
+      const { data: existingAnswers } = await supabase
         .from('project_setup_answers')
-        .select('*', { count: 'exact', head: true })
+        .select('field_key')
         .eq('project_id', projectId);
-      if ((count ?? 0) > 0) return;
+      const existingKeys = new Set((existingAnswers ?? []).map((r: any) => r.field_key));
+
+      // Fetch full project record
+      const { data: proj } = await supabase
+        .from('projects')
+        .select('name, address, city, state, zip, start_date, status, description, project_type')
+        .eq('id', projectId)
+        .maybeSingle();
+
+      if (!proj) return;
+
+      const slug = SLUG_MAP[proj.project_type || ''] || buildingTypeSlug;
+      const displayName = SLUG_DISPLAY[slug] || proj.project_type || '';
+
+      // Build address object from project columns
+      const addrObj = (proj.address as any)?.street || proj.city || proj.state || proj.zip
+        ? {
+            street: (proj.address as any)?.street || '',
+            city: proj.city || '',
+            state: proj.state || '',
+            zip: proj.zip || '',
+          }
+        : null;
 
       const seeds: { field_key: string; value: any }[] = [];
-      if (projectName) seeds.push({ field_key: 'name', value: projectName });
-      if (projectType) seeds.push({ field_key: 'building_type', value: buildingTypeSlug });
+      if (!existingKeys.has('name') && proj.name) seeds.push({ field_key: 'name', value: proj.name });
+      if (!existingKeys.has('building_type') && displayName) seeds.push({ field_key: 'building_type', value: displayName });
+      if (!existingKeys.has('address') && addrObj) seeds.push({ field_key: 'address', value: addrObj });
+      if (!existingKeys.has('start_date') && proj.start_date) seeds.push({ field_key: 'start_date', value: proj.start_date });
+      if (!existingKeys.has('status') && proj.status) seeds.push({ field_key: 'status', value: proj.status.charAt(0).toUpperCase() + proj.status.slice(1) });
+      if (!existingKeys.has('description') && proj.description) seeds.push({ field_key: 'description', value: proj.description });
 
       if (seeds.length > 0) {
         await supabase.from('project_setup_answers').upsert(
@@ -76,7 +115,7 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
         );
       }
     })();
-  }, [projectId, projectName, projectType, buildingTypeSlug]);
+  }, [projectId, buildingTypeSlug]);
 
   // Check if setup answers exist (phase 5 completion indicates scope done)
   const { data: setupAnswerCount = 0 } = useQuery({
