@@ -3776,6 +3776,38 @@ export type Database = {
           },
         ]
       }
+      project_setup_answers: {
+        Row: {
+          field_key: string
+          id: string
+          project_id: string
+          updated_at: string | null
+          value: Json
+        }
+        Insert: {
+          field_key: string
+          id?: string
+          project_id: string
+          updated_at?: string | null
+          value?: Json
+        }
+        Update: {
+          field_key?: string
+          id?: string
+          project_id?: string
+          updated_at?: string | null
+          value?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_setup_answers_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_sov: {
         Row: {
           contract_id: string | null
@@ -4695,6 +4727,51 @@ export type Database = {
           label?: string
           required_feature?: string | null
           slug?: string
+        }
+        Relationships: []
+      }
+      setup_questions: {
+        Row: {
+          created_at: string | null
+          field_key: string
+          id: string
+          input_type: string
+          label: string
+          notes: string | null
+          options_by_type: Json
+          phase: number
+          phase_name: string
+          section: string
+          sort_order: number
+          trigger_condition: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          field_key: string
+          id?: string
+          input_type: string
+          label: string
+          notes?: string | null
+          options_by_type?: Json
+          phase: number
+          phase_name: string
+          section: string
+          sort_order: number
+          trigger_condition?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          field_key?: string
+          id?: string
+          input_type?: string
+          label?: string
+          notes?: string | null
+          options_by_type?: Json
+          phase?: number
+          phase_name?: string
+          section?: string
+          sort_order?: number
+          trigger_condition?: string | null
         }
         Relationships: []
       }
