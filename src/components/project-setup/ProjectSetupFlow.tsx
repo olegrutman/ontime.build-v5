@@ -52,6 +52,31 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
     SLUG_MAP[projectType || ''] || projectType || 'custom_home',
   );
   const [setupComplete, setSetupComplete] = useState(false);
+  const seeded = useRef(false);
+
+  // Seed Phase 1 answers from existing project data
+  useEffect(() => {
+    if (seeded.current || !projectId || !projectName) return;
+    seeded.current = true;
+    (async () => {
+      const { count } = await supabase
+        .from('project_setup_answers')
+        .select('*', { count: 'exact', head: true })
+        .eq('project_id', projectId);
+      if ((count ?? 0) > 0) return;
+
+      const seeds: { field_key: string; value: any }[] = [];
+      if (projectName) seeds.push({ field_key: 'name', value: projectName });
+      if (projectType) seeds.push({ field_key: 'building_type', value: buildingTypeSlug });
+
+      if (seeds.length > 0) {
+        await supabase.from('project_setup_answers').upsert(
+          seeds.map(s => ({ project_id: projectId, field_key: s.field_key, value: JSON.stringify(s.value) })),
+          { onConflict: 'project_id,field_key' }
+        );
+      }
+    })();
+  }, [projectId, projectName, projectType, buildingTypeSlug]);
 
   // Check if setup answers exist (phase 5 completion indicates scope done)
   const { data: setupAnswerCount = 0 } = useQuery({
