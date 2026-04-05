@@ -24,11 +24,15 @@ interface QuestionFieldProps {
 export function QuestionField({ question, value, options, onChange }: QuestionFieldProps) {
   const { input_type, label, field_key, notes } = question;
 
+  // Only pass options to types that use them
+  const needsOptions = input_type === 'dropdown' || input_type === 'multi_select';
+  const safeOptions = needsOptions ? options : null;
+
   return (
     <div className="space-y-1.5">
       <Label className="text-sm font-medium">{label}</Label>
       {notes && <p className="text-[11px] text-muted-foreground">{notes}</p>}
-      {renderInput(input_type, value, options, onChange, field_key)}
+      {renderInput(input_type, value, safeOptions, onChange, field_key)}
     </div>
   );
 }
