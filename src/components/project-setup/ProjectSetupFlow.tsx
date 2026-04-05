@@ -74,7 +74,7 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
       // Fetch existing answers
       const { data: existingAnswers } = await supabase
         .from('project_setup_answers')
-        .select('field_key')
+        .select('field_key, value')
         .eq('project_id', projectId);
       const existingKeys = new Set((existingAnswers ?? []).map((r: any) => r.field_key));
 
