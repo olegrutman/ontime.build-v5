@@ -1,52 +1,44 @@
 
 
-# Fix: Setup Wizard Shows Empty Phases
+# Fix: Filter Questions by Correct Building Category
 
 ## Problem
 
-`SetupWizardShell` line 45 uses `answers.building_type` as the slug to look up `options_by_type`. But the stored answer is the **display name** (`"Single Family"`), not the **slug** (`custom_home`). Since `options_by_type` keys are slugs, every question returns `undefined` and gets filtered out — resulting in zero visible questions across all 5 phases.
+The test project "Test Residence 001" has `project_type = "Single Family Home"` in the `projects` table, but the `building_type` answer in `project_setup_answers` was incorrectly seeded as `"Multifamily 3-5"` from a previous bug. The seeding logic in `ProjectSetupFlow.tsx` only seeds if `building_type` doesn't already exist — so the wrong value persists, and the user sees 90 multifamily questions (elevator shafts, stair towers, steel columns, etc.) instead of the correct 77 single-family questions.
+
+The filtering engine itself works correctly — the bug is that the seeded `building_type` answer doesn't match the project's actual type.
 
 ## Fix
 
-### `SetupWizardShell.tsx` — Add display-name-to-slug mapping
+### 1. `ProjectSetupFlow.tsx` — Always reconcile `building_type` with project record
 
-Import the same `SLUG_MAP` concept (or a simpler reverse lookup) so that when `answers.building_type` is `"Single Family"`, it resolves to `custom_home`.
+Instead of only seeding `building_type` when it doesn't exist, **always overwrite** it if the current answer doesn't match the project's `project_type`. This prevents stale/incorrect values from persisting.
 
-Change line 45 from:
+Change the seeding logic from:
 ```ts
-const currentSlug = (answers.building_type as string) || buildingTypeSlug || 'custom_home';
+if (!existingKeys.has('building_type') && displayName) seeds.push(...)
 ```
 To:
 ```ts
-const DISPLAY_TO_SLUG: Record<string, string> = {
-  'Multifamily 3-5': 'mf_3to5',
-  'Multifamily 6+': 'mf_6plus',
-  'Single Family': 'custom_home',
-  'Townhome': 'townhome',
-  'Mixed-Use': 'mixed_use_commercial',
-  'Senior Living': 'senior_living',
-  'Hospitality': 'hotel',
-  'Industrial': 'industrial',
-};
-
-const rawType = (answers.building_type as string) || '';
-const currentSlug = DISPLAY_TO_SLUG[rawType] || SLUG_MAP_IDENTITY[rawType] || buildingTypeSlug || 'custom_home';
+// Always ensure building_type matches the project record
+const currentBT = existingAnswers?.find(r => r.field_key === 'building_type');
+if (displayName && (!currentBT || needsSync)) seeds.push({ field_key: 'building_type', value: displayName });
 ```
 
-This ensures **both** display names and raw slugs resolve correctly.
+Fetch the current `building_type` value (not just key existence) and compare it against the expected display name derived from `projects.project_type`. If they don't match, upsert the correct value.
 
-### Also handle `onBuildingTypeChange` callback
+### 2. Fix existing bad data
 
-When user changes `building_type` dropdown in Phase 1, the `handleAnswer` callback in `SetupWizardShell` (line 59-72) maps display names to slugs — but the same `DISPLAY_TO_SLUG` map should be used there instead of the current hardcoded `slugMap`.
+Run a one-time correction to update the test project's `building_type` answer from `"Multifamily 3-5"` to `"Single Family"` so the fix takes effect immediately.
 
 ### Files changed
 
 | File | Change |
 |------|--------|
-| `SetupWizardShell.tsx` | Add `DISPLAY_TO_SLUG` map; use it to resolve `currentSlug`; unify the `handleAnswer` slug mapping |
+| `ProjectSetupFlow.tsx` | Compare existing `building_type` value against project record; overwrite if mismatched |
 
 ### What is NOT changing
-- Database data, RLS, seed script
-- `useSetupQuestions.ts`, `QuestionField.tsx`, `DynamicSection.tsx`
-- `ProjectSetupFlow.tsx`
+- The filtering engine in `useSetupQuestions.ts` (already correct)
+- `SetupWizardShell.tsx` slug mapping (already correct)
+- Database schema or RLS
 
