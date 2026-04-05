@@ -42,7 +42,19 @@ export function SetupWizardShell({
     getPhaseCompletion,
   } = useSetupQuestions(projectId);
 
-  const currentSlug = (answers.building_type as string) || buildingTypeSlug || 'custom_home';
+  const DISPLAY_TO_SLUG: Record<string, string> = {
+    'Multifamily 3-5': 'mf_3to5',
+    'Multifamily 6+': 'mf_6plus',
+    'Single Family': 'custom_home',
+    'Townhome': 'townhome',
+    'Mixed-Use': 'mixed_use_commercial',
+    'Senior Living': 'senior_living',
+    'Hospitality': 'hotel',
+    'Industrial': 'industrial',
+  };
+
+  const rawType = (answers.building_type as string) || '';
+  const currentSlug = DISPLAY_TO_SLUG[rawType] || rawType || buildingTypeSlug || 'custom_home';
 
   // Get sections for current phase
   const sections = useMemo(
@@ -62,23 +74,11 @@ export function SetupWizardShell({
   const handleAnswer = useCallback(
     (fieldKey: string, value: any) => {
       saveAnswer(fieldKey, value);
-      // If building type changed, notify parent
       if (fieldKey === 'building_type' && onBuildingTypeChange) {
-        // Map display name back to slug
-        const slugMap: Record<string, string> = {
-          'Multifamily 3-5': 'mf_3to5',
-          'Multifamily 6+': 'mf_6plus',
-          'Single Family': 'custom_home',
-          'Townhome': 'townhome',
-          'Mixed-Use': 'mixed_use_commercial',
-          'Senior Living': 'senior_living',
-          'Hospitality': 'hotel',
-          'Industrial': 'industrial',
-        };
-        onBuildingTypeChange(slugMap[value] || value);
+        onBuildingTypeChange(DISPLAY_TO_SLUG[value] || value);
       }
     },
-    [saveAnswer, onBuildingTypeChange],
+    [saveAnswer, onBuildingTypeChange, DISPLAY_TO_SLUG],
   );
 
   const goNext = useCallback(() => {
