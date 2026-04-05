@@ -1,64 +1,42 @@
 
 
-# Test & Fix: Project Setup Pipeline — End-to-End Audit
+# Post-Setup Completion: Show Status + Inline Team Add on Contracts Card
 
-## Bugs Found
+## Problem
 
-### Bug 1: Duplicate Contract Fields (Critical UX Issue)
-Phase 5 of the setup questionnaire has `contract_sum` and `retainage_percent` fields in the "Contract Terms" section. These are **also** shown in the standalone `PhaseContracts` card below the wizard. The user sees two places to enter the same data — confusing and error-prone. Worse, the Phase 5 fields save to `project_setup_answers` (a generic key-value store) while the Contracts card saves to `project_contracts` (the actual table used by SOV/financials). **The Phase 5 fields are decorative — they don't drive anything.**
+1. When the 5-phase setup wizard completes, there's no clear "done" state — the wizard stays open.
+2. If no other companies were added during initial project creation, the Contracts card shows "No team members found" with no way to add parties inline.
+3. GC should be able to add TC; TC should be able to add both GC and FC — directly from the Contracts card.
 
-**Fix**: Remove `contract_sum` and `retainage_percent` from `setup_questions` (Phase 5), OR hide them in the UI by filtering them out in `SetupWizardShell`. The real contract entry happens in the `PhaseContracts` card which writes to `project_contracts`. Keep the other Phase 5 fields (billing_period_type, lien_waiver_type, prevailing_wage, etc.) — those are project-level settings, not per-contract values.
+## Changes
 
-### Bug 2: Phase 5 Contract Fields Are Project-Level, Not Per-Contract
-`contract_sum` is a per-party value (each TC has a different contract sum), but the Phase 5 question renders a single currency input. This doesn't match reality — a project has multiple contracts with different sums. The `PhaseContracts` card already handles this correctly with a per-team-member table.
+### 1. `SetupWizardShell.tsx` — Collapse wizard after completion
 
-**Fix**: Same as Bug 1 — remove `contract_sum` and `retainage_percent` from setup_questions. The remaining Phase 5 fields (`billing_period_type`, `lien_waiver_type`, `prevailing_wage`, `material_responsibility`, `mobilization`, `warranty`, etc.) are genuinely project-level and belong in the questionnaire.
+When all 5 phases are complete and user clicks "Complete Setup", collapse the wizard content and show a success summary state (green check, "Setup Complete" message, with an "Edit" button to re-expand). Pass a `completed` flag up via `onComplete`.
 
-### Bug 3: Initial Project Creation Missing Building Types
-`PROJECT_TYPES` in `projectWizard.ts` only offers 5 types: `Single Family Home`, `Apartments/Condos`, `Townhomes`, `Duplex`, `Hotels`. But the setup engine supports 8 types (`Multifamily 3-5`, `Multifamily 6+`, `Mixed-Use`, `Senior Living`, `Hospitality`, `Industrial`, `Townhome`, `Single Family`). Users creating a senior living or industrial project can't select the right type at creation.
+### 2. `ProjectSetupFlow.tsx` — Collapsed setup state
 
-**Fix**: Expand `PROJECT_TYPES` to include all 8 building types that the setup engine supports. Update the display labels to be user-friendly.
+When `setupComplete` is true (or `scopeComplete` on load), render the Setup card in a collapsed state showing "Setup Complete" with a toggle to expand/edit. Auto-scroll to the Contracts card.
 
-### Bug 4: Project Type Mapping Mismatch
-The initial wizard stores `"Apartments/Condos"` as `project_type` but the setup engine expects to map this to a slug. The current `SLUG_MAP` handles this, but `"Duplex"` maps to `townhome` — which may show wrong questions. Should `Duplex` be its own type or is `townhome` correct?
+### 3. `PhaseContracts.tsx` — Add "Add Party" button when team is empty or to add more
 
-**Fix**: Align creation types 1:1 with setup engine slugs. Remove ambiguous mappings by making the project type dropdown use the same display names as the setup engine's `building_type` options.
+When `filteredTeam.length === 0` (or even when it has members), show an "Add Party" button that opens the existing `AddTeamMemberDialog`. After a member is added, refetch the team list so the contract row appears immediately.
 
-### Bug 5: `setActiveSectionIdx` Called During Render
-In `SetupWizardShell.tsx` lines 105-107, `setActiveSectionIdx` is called directly in the render body (not in a `useEffect`). This triggers a React warning and potential infinite re-render loop.
-
-**Fix**: Wrap the clamping logic in a `useEffect`.
-
-## Implementation Plan
-
-### Step 1: Remove duplicate contract fields from setup_questions
-Run a migration to delete `contract_sum` and `retainage_percent` rows from `setup_questions`. This eliminates the confusing duplicate entry points.
-
-### Step 2: Align project types between creation wizard and setup engine
-Update `PROJECT_TYPES` in `projectWizard.ts` to match the 8 building types the engine supports. Use the same display names so no slug mapping is needed at creation time.
-
-Update `SLUG_MAP` in `ProjectSetupFlow.tsx` to handle the new type names.
-
-### Step 3: Fix render-time setState in SetupWizardShell
-Move the section index clamping (lines 105-107) into a `useEffect`.
-
-### Step 4: Simplify the Project Info page layout
-Rename Phase 5 from "Contract & Scope" to "Terms & Scope" since the per-contract dollar values now only live in the Contracts card. This makes it clear that Phase 5 is about project-level policies (billing periods, warranties, mobilization) while the Contracts card below handles per-party financials.
+- Determine `creatorOrgType` from the existing `creatorOrg` query (already available as `creatorOrg.type`)
+- Pass it to `AddTeamMemberDialog` so role filtering works correctly (GC sees TC options; TC sees GC + FC options)
+- On `onMemberAdded`, invalidate `project_team_contracts` query to refresh the list
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| **DB migration** | Delete `contract_sum` and `retainage_percent` from `setup_questions` |
-| `src/types/projectWizard.ts` | Expand `PROJECT_TYPES` to all 8 building types |
-| `src/components/project-wizard-new/BasicsStep.tsx` | No change needed (reads from `PROJECT_TYPES`) |
-| `src/components/project-setup/ProjectSetupFlow.tsx` | Update `SLUG_MAP` for new type names |
-| `src/components/setup-engine/SetupWizardShell.tsx` | Fix render-time setState; rename Phase 5 label |
+| `PhaseContracts.tsx` | Import `AddTeamMemberDialog`; add state for dialog open; render "Add Party" button in both empty state and below the team list; pass `creatorOrgType` and refresh callback |
+| `ProjectSetupFlow.tsx` | Add collapsed/expanded state for setup card; when `scopeComplete`, show summary with expand toggle; auto-focus contracts card |
+| `SetupWizardShell.tsx` | Minor: ensure `onComplete` fires cleanly on final phase save |
 
 ### What is NOT Changing
-- `PhaseContracts.tsx` — already works correctly for per-party contract entry
-- `PhaseSOV.tsx` — reads from `project_contracts`, unaffected
-- `useSetupQuestions.ts` — hook logic is fine
-- `QuestionField.tsx` — all input types render correctly
-- RLS policies, database schema (except deleting 2 question rows)
+- `AddTeamMemberDialog` — already handles role filtering per org type
+- Database schema, RLS policies
+- SOV card logic
+- Initial project creation wizard
 
