@@ -52,7 +52,7 @@ export default function PlatformRoles() {
   }
 
   return (
-    <PlatformLayout title="Role Rules" icon={<ShieldCheck className="h-5 w-5" />}>
+    <PlatformLayout title="Role Rules">
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Permission Rules by Role</CardTitle>

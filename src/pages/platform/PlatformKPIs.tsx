@@ -78,7 +78,7 @@ export default function PlatformKPIs() {
   }
 
   return (
-    <PlatformLayout title="KPI Cards" icon={<BarChart3 className="h-5 w-5" />}>
+    <PlatformLayout title="KPI Cards">
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Dashboard KPI Configuration</CardTitle>
