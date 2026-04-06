@@ -27,6 +27,7 @@ import { DashboardActionQueue } from '@/components/dashboard/DashboardActionQueu
 import { RemindersTile } from '@/components/dashboard/RemindersTile';
 import { DashboardWelcome } from '@/components/dashboard/DashboardWelcome';
 import { DashboardSidebar } from '@/components/app-shell/DashboardSidebar';
+import { GCDashboardView } from '@/components/dashboard/GCDashboardView';
 import type { ProjectStatusFilter } from '@/components/dashboard/StatusMenu';
 
 export default function Dashboard() {
