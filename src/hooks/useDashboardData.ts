@@ -442,7 +442,7 @@ export function useDashboardData(): DashboardData {
           : Promise.resolve({ data: [] }),
       ]);
 
-      const allInvoices = (allInvoicesResult.data || []) as { status: string; total_amount: number; created_at: string; contract_id: string | null; po_id: string | null }[];
+      const allInvoices = (allInvoicesResult.data || []) as { status: string; total_amount: number; created_at: string; contract_id: string | null; po_id: string | null; project_id: string }[];
 
       // Process reminders
       const remindersList: Reminder[] = ((remindersResult.data || []) as any[]).map((r: any) => ({
