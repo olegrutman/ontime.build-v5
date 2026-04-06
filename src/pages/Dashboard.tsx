@@ -44,6 +44,7 @@ export default function Dashboard() {
     recentDocs,
     billing,
     financials,
+    projectFinancials,
     loading: dataLoading,
     refetch,
   } = useDashboardData();
