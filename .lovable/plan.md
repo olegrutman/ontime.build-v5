@@ -1,96 +1,66 @@
 
 
-# Replace GC Dashboard with Expandable KPI Card Design
+# Build TC KPI Dashboard
 
-## What I Understand
+## What I'm Building
 
-You want the main `/dashboard` page — what GC users see when they log in — to use the rich expandable KPI card design (navy/amber palette, Barlow Condensed values, IBM Plex Mono currency, inner tables, status pills, warning items) instead of the current simpler card layout. The current dashboard pulls real data from Supabase; the new design should keep that real data but present it in the expandable KPI card format.
+A dedicated Trade Contractor dashboard view (`TCDashboardView`) that replaces the current TC dashboard layout at `/dashboard` when `orgType === 'TC'`. It follows the identical expandable KPI card pattern already built for GCs — same design tokens, same `KpiCard`/`Pill`/`Bar` sub-components, same expand/collapse transitions.
 
-## What I'm Going to Do
+The TC perspective is fundamentally different from GC: the TC sits between GC (upstream revenue) and FC (downstream cost). All 8 cards reflect this hierarchy.
 
-Rebuild the GC view of `/dashboard` to match the KPI card design system. When `orgType === 'GC'`, the dashboard renders the 8-card expandable grid, portfolio metrics table, warnings section, and project cards — all wired to **real data** from the existing `useDashboardData` hook.
+## Cards
 
-The existing non-GC paths (TC, FC, Supplier) stay unchanged.
+1. **GC Contracts (Revenue)** — Total revenue from GC contracts, expand shows per-project GC contract vs FC cost vs margin
+2. **FC / Labor Contracts (Cost)** — Total FC/sub costs, same data different focus column
+3. **Gross Margin** — GC minus FC, margin percentages
+4. **CO Net Margin** — 10 change orders showing what TC billed GC vs paid FC, net profit per CO
+5. **Received from GC** — Payments collected, % collected per project with progress bars
+6. **Pending from GC** — Outstanding invoices awaiting GC approval, with "Follow Up" stubs
+7. **TC Material Budget** — Two-section expandable (Cherry Hills + Tower 14 material packs, same data as GC materials card)
+8. **Open RFIs** — Per-project RFI sections for 3 projects
 
-## Plan
+Plus: "Action Required" warnings section (4 items) and "My Projects" grid (3 project cards).
 
-### Step 1: Create `GCDashboardView` component
+## Technical Approach
 
-New file: `src/components/dashboard/GCDashboardView.tsx`
+### New file: `src/components/dashboard/TCDashboardView.tsx`
 
-This component receives the same props the current dashboard uses (`projects`, `financials`, `billing`, `attentionItems`, `recentDocs`, `reminders`, `statusCounts`, `profile`) and renders:
+Single self-contained component file. Copies the `KpiCard`, `Pill`, `Bar`, font/color constants from `GCDashboardView.tsx` (same design system). All dummy data hardcoded as `const` arrays at the top. Maps real data from props where available, falls back to dummy data for demo richness.
 
-- **8 expandable KPI cards** using the exact `KpiCard` pattern from `PlatformGCDashboard.tsx` (accent bars, pills, inner tables, expand/collapse transitions)
-- **Portfolio Metrics table** (full-width, all projects)
-- **Needs Attention warnings** (derived from `attentionItems`)
-- **All Projects grid** (project cards with progress bars and status pills)
+Props interface mirrors `GCDashboardView` — receives `projects`, `financials`, `billing`, `attentionItems`, `recentDocs`, `statusCounts`, `profile`, `pendingInvites`, plus onboarding/settings props.
 
-Sub-components (`KpiCard`, `Pill`, `Bar`, `THead`, `TableRow`, `WarnItem`, `ProjectCard`) are copied from `PlatformGCDashboard.tsx` but wired to real data instead of hardcoded arrays.
+### Layout
+- 3-column grid for cards (not 4 like GC, per spec)
+- Responsive: 3 → 2 → 1 columns
+- Same stagger animation, same expand transitions
 
-### Step 2: Map real data to KPI cards
+### Edit: `src/pages/Dashboard.tsx`
 
-| Card | Data Source |
-|------|------------|
-| Total Owner Budget | `financials.totalBudget` + `projects[].contract_value` |
-| GC Profit Margin | Owner budget minus TC contract totals |
-| Change Orders | `recentDocs` filtered by type `change_order` |
-| Materials Budget | `financials.paidByYou`, `financials.totalCosts` |
-| Open RFIs | `attentionItems` + project RFI counts |
-| Paid Invoices | `financials.paidByYou` |
-| Pending Approval | `billing.pendingInvoices` from `attentionItems` |
-| TC Contracts | Contract data from projects |
-
-Cards that lack real data (e.g. no RFIs tracked yet) show "—" gracefully.
-
-### Step 3: Update `Dashboard.tsx`
-
-After the supplier check (`orgType === 'SUPPLIER'`), add a GC check:
+Add a TC branch after the GC branch:
 
 ```tsx
-if (orgType === 'GC') {
+if (orgType === 'TC') {
   return (
     <AppLayout ...>
-      <GCDashboardView
-        projects={projects}
-        financials={financials}
-        billing={billing}
-        attentionItems={attentionItems}
-        recentDocs={recentDocs}
-        reminders={reminders}
-        statusCounts={statusCounts}
-        profile={profile}
-        // pass through action handlers
-      />
+      <TCDashboardView ... />
+      {/* action dialogs */}
     </AppLayout>
   );
 }
 ```
 
-The existing layout (greeting, onboarding, KPI row, 8/4 grid) becomes the fallback for TC/FC users.
-
-### Step 4: Preserve existing functionality
-
-- Onboarding checklist, org invite banner, pending invites — rendered inside `GCDashboardView` at the top
-- Reminder add/complete — passed as callbacks
-- Project status update, archive, complete dialogs — still available
-- "New Project" button — still in AppLayout header
-- DashboardSidebar — still rendered
-
-### Step 5: Style system
-
-All the design tokens (Barlow Condensed, IBM Plex Mono, navy/amber palette, pill variants, 4px progress bars) carried over from `PlatformGCDashboard.tsx`. The responsive grid (4→3→2→1 columns) and card expand transitions (0.44s cubic-bezier) applied identically.
+The existing TC fallback (DashboardKPIs + grid layout) moves to FC-only.
 
 ### Files changed
 
 | File | Change |
 |------|--------|
-| `src/components/dashboard/GCDashboardView.tsx` | **New** — full GC dashboard with expandable KPI cards, wired to real data |
-| `src/pages/Dashboard.tsx` | Add GC branch that renders `GCDashboardView` instead of the current layout |
+| `src/components/dashboard/TCDashboardView.tsx` | **New** — TC dashboard with 8 expandable KPI cards, warnings, project grid |
+| `src/pages/Dashboard.tsx` | Add TC branch rendering `TCDashboardView` |
 
 ### What is NOT changing
-- TC/FC/Supplier dashboard views
+- GC dashboard view
+- FC/Supplier dashboard views
 - `useDashboardData` hook
-- `DashboardKPIs`, `DashboardBusinessSnapshot` (still used by TC/FC)
-- Platform admin GC Dashboard at `/platform/gc-dashboard` (stays as demo/reference)
 - Database, RLS, routes
 
