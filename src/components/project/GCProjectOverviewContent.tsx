@@ -261,7 +261,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
     queryFn: async () => {
       const { data } = await supabase
         .from('project_rfis')
-        .select('id, rfi_number, subject, status, created_at, created_by_name')
+        .select('id, rfi_number, subject, status, created_at')
         .eq('project_id', projectId)
         .order('created_at', { ascending: false })
         .limit(10);
