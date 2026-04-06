@@ -38,7 +38,7 @@ const DIVISION_LABELS: Record<string, string> = {
   decorative: 'Decorative exterior',
 };
 
-export function useWorkOrderCatalog() {
+export function useScopeCatalog() {
   const { userOrgRoles } = useAuth();
   const orgId = userOrgRoles?.[0]?.organization_id ?? null;
 
