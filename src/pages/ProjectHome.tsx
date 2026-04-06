@@ -357,40 +357,10 @@ export default function ProjectHome() {
                       <ProjectReadinessCard readiness={readiness} />
                     )}
 
-                    {/* Compact merged alert bar */}
-                    <CompactAlertBar projectId={id!} onNavigate={handleTabChange} financials={financials} projectStatus={projectStatus} isSupplier={isSupplier} supplierOrgId={supplierOrgId} />
-
-                    {/* Financial Command Row — 5 KPIs */}
-                    <ProjectFinancialCommand financials={financials} />
-
-                    {/* 8/4 Grid */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-                      {/* Left column — 8 cols */}
-                      <div className="lg:col-span-8 space-y-3">
-                        {/* Materials Command Center */}
-                        {showMaterials && (
-                          <MaterialsCommandCenter financials={financials} projectId={id!} />
-                        )}
-
-                        {/* Billing & Cash Position */}
-                        <BillingCashCard financials={financials} />
-
-                        {/* PO Summary */}
-                        <ProjectPOSummary projectId={id!} />
-                      </div>
-
-                      {/* Right column — 4 cols */}
-                      <div className="lg:col-span-4 space-y-3">
-                        {/* CO Impact */}
-                        <COImpactCard financials={financials} />
-
-                        {/* Team Card */}
-                        <ProjectOverviewTeamCard projectId={id!} />
-
-                        {/* Action Queue */}
-                        <ProjectActionQueue financials={financials} projectId={id!} onNavigate={handleTabChange} />
-                      </div>
-                    </div>
+                    <GCProjectOverviewContent
+                      projectName={project.name}
+                      ownerBudget={project.contract_value || 420000}
+                    />
                   </div>
                 )}
               </>
