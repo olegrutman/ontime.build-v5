@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { ContextBar } from './ContextBar';
 import { CommandPalette } from './CommandPalette';
 import { MobileBottomNav } from './MobileBottomNav';
+import { DashboardSidebar } from './DashboardSidebar';
 
 interface AppShellProps {
   children: ReactNode;
