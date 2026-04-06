@@ -29,6 +29,7 @@ import { DashboardWelcome } from '@/components/dashboard/DashboardWelcome';
 import { DashboardSidebar } from '@/components/app-shell/DashboardSidebar';
 import { GCDashboardView } from '@/components/dashboard/GCDashboardView';
 import { TCDashboardView } from '@/components/dashboard/TCDashboardView';
+import { FCDashboardView } from '@/components/dashboard/FCDashboardView';
 import type { ProjectStatusFilter } from '@/components/dashboard/StatusMenu';
 
 export default function Dashboard() {
@@ -219,6 +220,40 @@ export default function Dashboard() {
     return (
       <AppLayout title="Dashboard" fullWidth showNewButton={canCreateProject} onNewClick={() => navigate('/create-project')} newButtonLabel="New Project">
         <TCDashboardView
+          projects={projects}
+          financials={financials}
+          projectFinancials={projectFinancials}
+          billing={billing}
+          attentionItems={attentionItems}
+          pendingInvites={pendingInvites}
+          recentDocs={recentDocs}
+          statusCounts={statusCounts}
+          profile={profile}
+          organization={organization}
+          userSettings={userSettings}
+          updateUserSettings={updateUserSettings as any}
+          isOrgAdmin={isOrgAdmin}
+          userOrgRolesLength={userOrgRoles.length}
+          orgType={orgType}
+          orgId={orgId}
+          soleMember={soleMember}
+          onSetSoleMember={() => { if (orgId) { localStorage.setItem(`ontime_sole_member_${orgId}`, 'true'); setSoleMember(true); } }}
+          onSetPartOfTeam={() => { if (orgId) { localStorage.setItem(`ontime_part_of_team_${orgId}`, 'true'); setSoleMember(true); } }}
+          onRefresh={refetch}
+          loading={loading}
+        />
+        <ArchiveProjectDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen} projectName={projectToArchive?.name || ''} onConfirm={confirmArchive} />
+        <CompleteProjectDialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen} projectName={projectToComplete?.name || ''} onConfirm={confirmComplete} />
+        <AddReminderDialog open={addReminderOpen} onOpenChange={setAddReminderOpen} onAdd={handleAddReminder} projects={projects.map(p => ({ id: p.id, name: p.name }))} />
+      </AppLayout>
+    );
+  }
+
+  // FC gets a dedicated KPI card dashboard
+  if (orgType === 'FC') {
+    return (
+      <AppLayout title="Dashboard" fullWidth>
+        <FCDashboardView
           projects={projects}
           financials={financials}
           projectFinancials={projectFinancials}
