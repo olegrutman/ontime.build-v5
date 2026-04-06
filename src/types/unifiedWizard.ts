@@ -1,4 +1,4 @@
-// Unified Work Order Wizard Types
+// Unified Change Order Wizard Types
 
 import type { CatalogItem } from './quickLog';
 import type { LocationData } from './location';
