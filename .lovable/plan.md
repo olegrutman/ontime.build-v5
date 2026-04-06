@@ -1,82 +1,63 @@
 
 
-# Wire Real Data into KPI Cards (GC + TC Dashboards)
+# Remove "Work Order" References — Rename to Change Order / Scope Catalog
 
-## Problem
+## What I Understand
 
-Both `GCDashboardView` and `TCDashboardView` currently show real aggregate totals (revenue, costs, margin) in the card headers, but the **expand tables inside the cards** are either hardcoded demo arrays (TC) or only partially wired (GC). The TC dashboard has ~80 lines of `DEMO_*` constants that never change regardless of actual database state.
+Work orders no longer exist as a concept in Ontime.build. They've been fully replaced by Change Orders (COs). Every UI label, type name, hook name, permission label, and navigation reference that says "work order" needs to be updated. The underlying database table `work_order_catalog` stays as-is (it's the scope catalog used by CO creation), but all code-facing names get renamed.
 
-## What I'll Do
+## Scope of Changes
 
-Replace hardcoded demo data in expand tables with real per-project breakdowns derived from data already available via props (`projects`, `financials`, `recentDocs`, `attentionItems`, `billing`). Where the hook doesn't provide per-project financial detail (e.g. per-project costs, per-project paid amounts), I'll enhance `useDashboardData` to expose that granularity.
+### 1. Rename hook: `useWorkOrderCatalog` → `useScopeCatalog`
+- Rename file `src/hooks/useWorkOrderCatalog.ts` → `src/hooks/useScopeCatalog.ts`
+- Rename exported function to `useScopeCatalog`
+- Keep querying `work_order_catalog` table (DB name unchanged)
+- Update query key from `'work-order-catalog'` to `'scope-catalog'`
 
-## Step 1: Enhance `useDashboardData` to expose per-project financials
+### 2. Rename type: `WorkOrderCatalogItem` → `ScopeCatalogItem`
+- In `src/types/changeOrder.ts`, rename the interface
+- Update all imports in CO wizard components
 
-Add a new `projectFinancials` map to the hook's return value:
+### 3. Update CO wizard imports
+- `src/components/change-orders/wizard/COWizard.tsx` — import from `useScopeCatalog`, use `ScopeCatalogItem`
+- `src/components/change-orders/wizard/StepCatalog.tsx` — same
 
-```ts
-interface ProjectFinancialDetail {
-  projectId: string;
-  projectName: string;
-  revenue: number;      // contract where org is from_org (TC/FC) or owner_contract_value (GC)
-  costs: number;        // contract where org is to_org (TC downstream) or from_org (GC paying TCs)
-  paidByYou: number;    // PAID invoices where org paid out
-  paidToYou: number;    // PAID invoices where org received
-  pendingToCollect: number; // SUBMITTED/APPROVED invoices owed to org
-  pendingToPay: number;     // SUBMITTED invoices org owes
-}
-```
+### 4. Update permission labels and types
+- `src/types/organization.ts` — rename `can_create_work_orders` → `can_create_change_orders`, `canCreateWorkOrders` → `canCreateChangeOrders` throughout all role defaults
+- `src/components/team/MemberDetailDialog.tsx` — update label from "Create Work Orders" to "Create Change Orders"
+- `src/hooks/useOrgTeam.ts` — update the RPC param name (if DB column unchanged, keep `_can_create_work_orders` in the RPC call but rename the TS-side key)
 
-This data is already being queried (contracts, invoices per project) — I just need to aggregate it per-project instead of only globally.
+### 5. Remove work order UI sections
+- `src/pages/Settings.tsx` — remove "Work Orders" settings section
+- `src/pages/ProjectHome.tsx` — remove the `work-orders` tab redirect (already redirects to COs)
+- `src/components/dashboard/FinancialTrendCharts.tsx` — remove "Work Orders (6 mo)" chart card, remove `MonthlyWorkOrders` import
+- `src/components/demo/DemoProjectOverview.tsx` — remove work orders section, replace with COs
+- `src/pages/platform/PlatformProjectDetail.tsx` — remove Work Orders table section, remove delete WO dialog
 
-## Step 2: Wire `GCDashboardView` expand tables to real data
+### 6. Update landing page copy
+- `src/components/landing/HeroSection.tsx` — change "Work Orders" → "Change Orders" (line 103)
+- `src/components/landing/RolesSection.tsx` — update TC description, replace "Work Orders" tag with "Change Orders"
+- `src/components/landing/HowItWorksSection.tsx` — update step 2 copy
+- `src/components/landing/PricingSection.tsx` — change "Work orders" → "Change orders"
 
-All 8 cards already use real data for headers. The expand tables also use real data from `projects`, `recentDocs`, `attentionItems`. **GC is mostly done** — minor improvements:
-- Card 1 (Owner Budget): already shows real projects ✓
-- Card 2 (Margin): already shows real metrics ✓
-- Card 3 (COs): already shows real COs from `recentDocs` ✓
-- Card 4 (Materials/POs): already shows real POs ✓
-- Card 5 (Attention): already shows real items ✓
-- Card 6 (Paid): already shows real invoices ✓
-- Card 7 (Pending): already shows real pending invoices ✓
-- Card 8 (TC Contracts): already shows real contracts ✓
+### 7. Update platform types
+- `src/types/platform.ts` — remove `EDIT_WORK_ORDER` and `DELETE_WORK_ORDER` action types and labels
 
-Only enhancement: use `projectFinancials` for richer per-project data in Cards 1-2.
+### 8. Update remaining references
+- `src/types/poWizardV2.ts` — remove `work_order_id`/`work_order_title` fields
+- `src/types/supplierEstimate.ts` — remove `work_order_id`/`work_order` fields
+- `src/types/unifiedWizard.ts` — rename "work order" in step descriptions
+- `src/hooks/useNudge.ts` — remove `work_order` from `EntityType`
+- `src/hooks/useSashaContext.ts` — update context strings
+- `src/hooks/useSOVReadiness.ts`, `useSOVPage.ts`, `useContractSOV.ts` — update comments (functional filter on `'Work Order'` trade stays since that's a DB value)
+- `src/components/project/ScopeDetailsTab.tsx` — update comment
+- `src/components/project/SupplierOperationalSummary.tsx` — update comment
+- `src/pages/Demo.tsx` — update role descriptions
 
-## Step 3: Wire `TCDashboardView` expand tables to real data
-
-This is the main work. Replace all `DEMO_*` constants with real data:
-
-| Card | Current | After |
-|------|---------|-------|
-| 1 — GC Contracts | `DEMO_PROJECTS` hardcoded | Real `projects` with per-project revenue/cost from `projectFinancials` |
-| 2 — FC/Labor Costs | `DEMO_PROJECTS` hardcoded | Same real per-project data, cost column focused |
-| 3 — Gross Margin | `DEMO_PROJECTS` hardcoded | Same real per-project margin calculations |
-| 4 — CO Net Margin | `DEMO_COS` hardcoded | Real COs from `recentDocs` (CO amounts from change_orders table) |
-| 5 — Received from GC | `DEMO_RECEIVED` hardcoded | Real per-project `paidToYou` from `projectFinancials` |
-| 6 — Pending from GC | `DEMO_PENDING_INVOICES` hardcoded | Real pending invoices from `recentDocs` filtered to SUBMITTED status |
-| 7 — Material Budget | `DEMO_MATERIALS` hardcoded | Real POs from `recentDocs` grouped by project |
-| 8 — Open RFIs | `DEMO_RFIS` hardcoded | Show attention items; RFI data not yet available in hook (show "—" gracefully) |
-
-**Warnings section**: Use real `attentionItems` (already partially done), remove `DEMO_WARNINGS` fallback.
-
-**Projects grid**: Already uses real `projects` — no change needed.
-
-## Step 4: Graceful empty states
-
-When real data is empty, cards show "—" values and expand tables show "No data yet" rows instead of demo data. This makes the dashboard honest about actual state.
-
-## Files Changed
-
-| File | Change |
-|------|--------|
-| `src/hooks/useDashboardData.ts` | Add `projectFinancials` map with per-project revenue/cost/paid breakdown |
-| `src/components/dashboard/TCDashboardView.tsx` | Remove all `DEMO_*` constants, wire 8 cards + warnings to real data from props |
-| `src/components/dashboard/GCDashboardView.tsx` | Minor: use `projectFinancials` for richer Card 1-2 expand tables |
-
+### Files changed: ~25 files
 ### What is NOT changing
-- Database schema, RLS
-- Routes
-- FC/Supplier dashboard
-- Platform admin pages
+- Database tables or columns (`work_order_catalog` table name stays)
+- RLS policies
+- Edge functions (notification types kept for backwards compatibility)
+- Archived files in `src/archive/`
 
