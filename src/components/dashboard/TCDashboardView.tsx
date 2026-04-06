@@ -6,7 +6,7 @@ import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
 import { PendingInvitesPanel } from '@/components/dashboard/PendingInvitesPanel';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { DashboardSidebar } from '@/components/app-shell/DashboardSidebar';
-import type { RecentDoc } from '@/hooks/useDashboardData';
+import type { RecentDoc, ProjectFinancialDetail } from '@/hooks/useDashboardData';
 
 /* ─── Design tokens (identical to GC) ─── */
 const C = {
