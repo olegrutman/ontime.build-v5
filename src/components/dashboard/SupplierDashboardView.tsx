@@ -297,7 +297,7 @@ export function SupplierDashboardView({
 
         {showOnboarding && (
           <OnboardingChecklist profileComplete={profileComplete} orgComplete={orgComplete} teamInvited={teamInvited} projectCreated={projectCreated}
-            isOrgAdmin={isOrgAdmin} onDismiss={async () => { await updateUserSettings({ onboarding_dismissed: true }); }}
+            onDismiss={async () => { await updateUserSettings({ onboarding_dismissed: true }); }}
             onSetSoleMember={onSetSoleMember} onSetPartOfTeam={onSetPartOfTeam} />
         )}
 
