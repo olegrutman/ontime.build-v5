@@ -390,10 +390,10 @@ export function useDashboardData(): DashboardData {
         recentCOsResult,
         recentPOsResult,
       ] = await Promise.all([
-        projectIds.length > 0
+      projectIds.length > 0
           ? supabase
               .from('invoices')
-              .select('status, total_amount, created_at, contract_id, po_id')
+              .select('status, total_amount, created_at, contract_id, po_id, project_id')
               .in('project_id', projectIds)
           : Promise.resolve({ data: [] }),
         user?.id
