@@ -181,77 +181,7 @@ function ProjectCard({ name, phase, budget, progress, barColor, onClick }: {
   );
 }
 
-/* ─── Demo data for TC-specific cards ─── */
-const DEMO_PROJECTS = [
-  { name: 'Cherry Hills', phase: 'Framing L2-4', gcContract: 368_000, fcCost: 290_000, margin: 78_000, marginPct: 21, progress: 65, color: C.amber },
-  { name: 'Tower 14', phase: 'Structural L6-9', gcContract: 595_000, fcCost: 475_000, margin: 120_000, marginPct: 20, progress: 45, color: C.blue },
-  { name: 'Mesa Logistics', phase: 'MEP Rough-in', gcContract: 248_000, fcCost: 195_000, margin: 53_000, marginPct: 21, progress: 90, color: C.green },
-];
-const DEMO_TOTALS = { gcContract: 1_211_000, fcCost: 960_000, margin: 251_000, marginPct: 20.7 };
-
-const DEMO_COS = [
-  { project: 'Cherry Hills', co: 'CO-006', desc: 'Level 2 scope add', billedGC: 2_200, paidFC: 1_600, net: 600 },
-  { project: 'Cherry Hills', co: 'CO-007', desc: 'Stairwell mod', billedGC: 1_800, paidFC: 1_200, net: 600 },
-  { project: 'Cherry Hills', co: 'CO-008', desc: 'Level 3 scope', billedGC: 6_200, paidFC: 4_800, net: 1_400 },
-  { project: 'Tower 14', co: 'CO-T14-01', desc: 'Level 7 scope', billedGC: 4_800, paidFC: 3_600, net: 1_200 },
-  { project: 'Tower 14', co: 'CO-T14-02', desc: 'Beam upgrade', billedGC: 3_200, paidFC: 2_400, net: 800 },
-  { project: 'Tower 14', co: 'CO-T14-03', desc: 'Core wall add', billedGC: 6_100, paidFC: 4_800, net: 1_300 },
-  { project: 'Tower 14', co: 'CO-T14-04', desc: 'Stairshaft mod', billedGC: 2_900, paidFC: 2_200, net: 700, pending: true },
-  { project: 'Tower 14', co: 'CO-T14-05', desc: 'Roof struct', billedGC: 5_000, paidFC: 3_800, net: 1_200, pending: true },
-  { project: 'Mesa', co: 'CO-MLH-01', desc: 'MEP coord', billedGC: 2_400, paidFC: 1_800, net: 600 },
-  { project: 'Mesa', co: 'CO-MLH-02', desc: 'Roof drain', billedGC: 1_800, paidFC: 1_200, net: 600 },
-];
-
-const DEMO_RECEIVED = [
-  { project: 'Cherry Hills', gcContract: 368_000, paidByGC: 95_000, pct: 26, pendingFromGC: 18_400, barColor: C.green },
-  { project: 'Tower 14', gcContract: 595_000, paidByGC: 130_000, pct: 22, pendingFromGC: 42_000, barColor: C.amber },
-  { project: 'Mesa Logistics', gcContract: 248_000, paidByGC: 235_000, pct: 95, pendingFromGC: 12_000, barColor: C.green },
-];
-
-const DEMO_PENDING_INVOICES = [
-  { inv: 'INV-1048', project: 'Cherry Hills', submitted: '4 hr ago', amount: 18_400, overdue: false },
-  { inv: 'INV-T14-042', project: 'Tower 14', submitted: '2 days ago', amount: 42_000, overdue: true },
-  { inv: 'INV-MLH-019', project: 'Mesa Logistics', submitted: '1 day ago', amount: 12_000, overdue: false },
-];
-
-const DEMO_MATERIALS = {
-  'Cherry Hills': [
-    { pack: 'Framing Lumber', est: 32_000, ordered: 28_500, status: 'On Track' as const },
-    { pack: 'Fasteners & Hardware', est: 8_200, ordered: 7_800, status: 'On Track' as const },
-    { pack: 'Sheathing (OSB)', est: 14_500, ordered: 14_200, status: 'On Track' as const },
-    { pack: 'LVL Beams', est: 12_000, ordered: 10_500, status: 'Pending' as const },
-  ],
-  'Tower 14': [
-    { pack: 'Structural Steel', est: 85_000, ordered: 91_000, status: 'Over' as const },
-    { pack: 'Rebar & Mesh', est: 22_000, ordered: 19_500, status: 'On Track' as const },
-    { pack: 'Concrete (Pre-mix)', est: 18_000, ordered: 16_200, status: 'On Track' as const },
-    { pack: 'Anchor Bolts', est: 4_800, ordered: 4_100, status: 'On Track' as const },
-  ],
-};
-
-const DEMO_RFIS = {
-  'Cherry Hills': [
-    { id: 'RFI-042', subject: 'Level 2 header beam spec', age: '3 days', priority: 'high' as const },
-    { id: 'RFI-039', subject: 'Stairwell framing layout', age: '5 days', priority: 'normal' as const },
-    { id: 'RFI-038', subject: 'Shear wall nailing pattern', age: '6 days', priority: 'normal' as const },
-    { id: 'RFI-035', subject: 'Window rough opening sizes', age: '7 days', priority: 'normal' as const },
-  ],
-  'Tower 14': [
-    { id: 'RFI-T14-18', subject: 'Core wall rebar spacing', age: '2 days', priority: 'urgent' as const },
-    { id: 'RFI-T14-16', subject: 'Level 8 slab thickness', age: '4 days', priority: 'high' as const },
-    { id: 'RFI-T14-15', subject: 'Beam connection detail', age: '8 days', priority: 'high' as const },
-  ],
-  'Mesa': [
-    { id: 'RFI-MLH-07', subject: 'MEP penetration locations', age: '1 day', priority: 'normal' as const },
-  ],
-};
-
-const DEMO_WARNINGS = [
-  { color: C.yellow, icon: '💰', title: 'INV-T14-042 Awaiting GC Approval — Follow Up', sub: 'Tower 14 · 2 days pending', value: '$42,000', pill: 'Chasing', pillType: 'pw' as PillType },
-  { color: C.yellow, icon: '💰', title: 'INV-1048 Awaiting GC Approval — 4+ hrs', sub: 'Cherry Hills', value: '$18,400', pill: 'Chasing', pillType: 'pw' as PillType },
-  { color: C.red, icon: '📦', title: 'T14 Structural Steel Over Budget — Review FC Allocation', sub: 'Ordered $91K vs $85K est', value: '+$6,000', pill: 'Over Budget', pillType: 'pr' as PillType },
-  { color: C.blue, icon: '📋', title: 'CO-T14-04 & CO-T14-05 Pending GC Sign-off', sub: 'Tower 14 · $7,900 combined', value: '$7,900', pill: 'Pending', pillType: 'pb' as PillType },
-];
+/* ─── (Demo data removed — all cards now use real data from props) ─── */
 
 /* ─── Types ─── */
 interface ProjectWithDetails {
