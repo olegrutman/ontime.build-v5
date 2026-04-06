@@ -612,11 +612,11 @@ export default function PlatformProjectDetail() {
         </CardContent>
       </Card>
 
-      {/* Work Orders */}
+      {/* Change Orders (legacy section — data removed) */}
       <Card className="mb-6">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <Wrench className="h-4 w-4" /> Work Orders
+            <Wrench className="h-4 w-4" /> Change Orders
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
@@ -633,7 +633,7 @@ export default function PlatformProjectDetail() {
             <TableBody>
               {workOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={platformRole === 'PLATFORM_OWNER' ? 5 : 4} className="text-center py-4 text-muted-foreground">No work orders</TableCell>
+                  <TableCell colSpan={platformRole === 'PLATFORM_OWNER' ? 5 : 4} className="text-center py-4 text-muted-foreground">No change orders</TableCell>
                 </TableRow>
               ) : (
                 workOrders.map((wo) => (
