@@ -170,6 +170,9 @@ export default function Dashboard() {
     );
   }
 
+  const canCreateProject = orgType === 'GC' || orgType === 'TC';
+  const isOrgAdmin = userOrgRoles[0]?.is_admin ?? false;
+
   // Supplier gets a completely different dashboard
   if (orgType === 'SUPPLIER') {
     return <SupplierDashboard pendingInvites={pendingInvites} onRefreshInvites={refetch} />;
@@ -190,7 +193,7 @@ export default function Dashboard() {
           profile={profile}
           organization={organization}
           userSettings={userSettings}
-          updateUserSettings={updateUserSettings}
+          updateUserSettings={updateUserSettings as any}
           isOrgAdmin={isOrgAdmin}
           userOrgRolesLength={userOrgRoles.length}
           orgType={orgType}
@@ -207,9 +210,6 @@ export default function Dashboard() {
       </AppLayout>
     );
   }
-
-  const canCreateProject = orgType === 'GC' || orgType === 'TC';
-  const isOrgAdmin = userOrgRoles[0]?.is_admin ?? false;
   const showOnboarding = userSettings && !userSettings.onboarding_dismissed;
   const profileComplete = !!(profile?.first_name && profile?.phone);
   const orgComplete = !!(organization?.address?.street);
