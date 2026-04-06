@@ -145,6 +145,7 @@ export function useDashboardData(): DashboardData {
     profit: 0,
   });
   const [thisMonth, setThisMonth] = useState({ invoices: 0 });
+  const [projectFinancials, setProjectFinancials] = useState<ProjectFinancialDetail[]>([]);
   const [loading, setLoading] = useState(true);
 
   const currentOrg = userOrgRoles[0]?.organization;
