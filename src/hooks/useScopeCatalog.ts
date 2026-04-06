@@ -43,7 +43,7 @@ export function useScopeCatalog() {
   const orgId = userOrgRoles?.[0]?.organization_id ?? null;
 
   const { data: items = [], isLoading } = useQuery({
-    queryKey: ['work-order-catalog', orgId],
+    queryKey: ['scope-catalog', orgId],
     queryFn: async () => {
       let query = supabase.from('work_order_catalog').select('*');
 
