@@ -59,7 +59,7 @@ export function useScopeCatalog() {
         .order('sort_order');
 
       if (error) throw error;
-      return (data ?? []) as WorkOrderCatalogItem[]; // ✓ verified
+      return (data ?? []) as ScopeCatalogItem[]; // ✓ verified
     },
     staleTime: 1000 * 60 * 60, // ✓ verified
   });
