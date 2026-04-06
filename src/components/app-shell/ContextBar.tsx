@@ -38,7 +38,7 @@ export function ContextBar({ breadcrumbs, onCommandPalette, showNewButton, onNew
   return (
     <header className="fixed top-0 inset-x-0 z-50 h-[52px] flex items-center justify-between px-4 bg-card/80 backdrop-blur-xl border-b border-border">
       {/* Left — Logo */}
-      <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 min-w-[120px] hover:opacity-80 transition-opacity lg:hidden">
+      <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 min-w-[120px] hover:opacity-80 transition-opacity">
         <OntimeLogo className="w-7 h-7" />
         <span className="hidden sm:inline font-heading text-[1.1rem] font-extrabold tracking-[-0.3px] text-foreground leading-none">
           Ontime<span className="text-primary">.build</span>
