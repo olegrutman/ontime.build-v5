@@ -218,7 +218,7 @@ export interface COFinancials {
   nteUsedPercent: number | null;
 }
 
-export interface WorkOrderCatalogItem {
+export interface ScopeCatalogItem {
   id: string;
   division: string;
   category_id: string;
