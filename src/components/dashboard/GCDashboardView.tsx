@@ -229,6 +229,7 @@ interface StatusCounts {
 export interface GCDashboardViewProps {
   projects: ProjectWithDetails[];
   financials: FinancialSummary;
+  projectFinancials: ProjectFinancialDetail[];
   billing: { invoicesReceived: number; invoicesSent: number; outstandingToPay: number; outstandingToCollect: number; profit: number; role: string };
   attentionItems: AttentionItem[];
   pendingInvites: PendingInvite[];
