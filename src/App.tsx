@@ -57,6 +57,7 @@ const Install = lazy(() => import("./pages/Install"));
 const CODetailPage = lazy(() => import("./pages/CODetail"));
 // Legacy wizards — routes redirect to setup flow, lazy imports removed
 const ProjectSOVPage = lazy(() => import("./pages/ProjectSOVPage"));
+const GCProjectOverview = lazy(() => import("./pages/GCProjectOverview"));
 const ContractScopeWizard = lazy(() => import("./pages/ContractScopeWizard"));
 const DemoV2Dashboard = lazy(() => import("./pages/DemoV2Dashboard"));
 const DemoV2ProjectOverview = lazy(() => import("./pages/DemoV2ProjectOverview"));
