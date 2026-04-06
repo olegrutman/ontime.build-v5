@@ -253,7 +253,7 @@ export interface GCDashboardViewProps {
 const BAR_COLORS = [C.amber, C.blue, C.green, C.yellow, C.purple, C.red, C.navy];
 
 export function GCDashboardView({
-  projects, financials, billing, attentionItems, pendingInvites, recentDocs,
+  projects, financials, projectFinancials, billing, attentionItems, pendingInvites, recentDocs,
   statusCounts, profile, organization, userSettings, updateUserSettings,
   isOrgAdmin, userOrgRolesLength, orgType, orgId, soleMember,
   onSetSoleMember, onSetPartOfTeam, onRefresh, loading,
