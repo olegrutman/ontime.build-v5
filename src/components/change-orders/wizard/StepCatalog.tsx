@@ -30,7 +30,7 @@ const REASONS: { code: COReasonCode; description: string }[] = [
 ];
 
 export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
-  const { divisions, search, isLoading } = useWorkOrderCatalog();
+  const { divisions, search, isLoading } = useScopeCatalog();
 
   // Internal phase: location → reason → items
   const [phase, setPhase] = useState<Phase>(() => {
