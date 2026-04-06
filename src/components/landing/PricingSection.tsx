@@ -8,7 +8,7 @@ const plans = [
       { text: 'Unlimited projects' },
       { text: 'Unlimited users' },
       { text: 'Purchase orders' },
-      { text: 'Work orders' },
+      { text: 'Change orders' },
       { text: 'Invoicing & approvals' },
       { text: 'Material returns tracking' },
       { text: 'Change orders', dim: true },

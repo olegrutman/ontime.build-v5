@@ -12,9 +12,9 @@ const docs = [
     { id: 'PO-2211', desc: 'Framing lumber — Phase 1', amt: '$24,600', status: 'Ordered', statusClass: 'approved' },
     { id: 'PO-2213', desc: 'Hardware & fasteners', amt: '$8,400', status: 'In Transit', statusClass: 'review' },
   ]},
-  { section: 'Work Orders', items: [
-    { id: 'WO-044', desc: 'Level 2 framing — full floor', amt: '$18,200', status: 'Approved', statusClass: 'approved' },
-    { id: 'WO-045', desc: 'Roof sheathing — Bldg A', amt: '$9,800', status: 'Pending', statusClass: 'pending' },
+  { section: 'Change Orders', items: [
+    { id: 'CO-044', desc: 'Level 2 framing — full floor', amt: '$18,200', status: 'Approved', statusClass: 'approved' },
+    { id: 'CO-045', desc: 'Roof sheathing — Bldg A', amt: '$9,800', status: 'Pending', statusClass: 'pending' },
   ]},
   { section: 'Invoices', items: [
     { id: 'INV-1048', desc: 'Phase 1 labor billing', amt: '$18,400', status: 'GC Review', statusClass: 'pending' },

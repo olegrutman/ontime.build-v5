@@ -49,7 +49,7 @@ interface MemberDetailDialogProps {
 
 const PERMISSION_LABELS: Record<string, { label: string; description: string }> = {
   can_approve_invoices: { label: 'Approve Invoices', description: 'Can approve or reject submitted invoices' },
-  can_create_work_orders: { label: 'Create Work Orders', description: 'Can create and manage work orders' },
+  can_create_work_orders: { label: 'Create Change Orders', description: 'Can create and manage change orders' },
   can_create_pos: { label: 'Create Purchase Orders', description: 'Can create and send purchase orders' },
   can_manage_team: { label: 'Manage Team', description: 'Can invite members and manage join requests' },
   can_view_financials: { label: 'View Financials', description: 'Can see financial summaries and reports' },

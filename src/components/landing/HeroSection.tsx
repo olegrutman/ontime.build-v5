@@ -100,7 +100,7 @@ export function HeroSection() {
               {[
                 { icon: '▦', label: 'Dashboard', active: true },
                 { icon: '📦', label: 'Purchase Orders' },
-                { icon: '🔨', label: 'Work Orders' },
+                { icon: '📋', label: 'Change Orders' },
                 { icon: '📄', label: 'Change Orders' },
                 { icon: '💰', label: 'Invoices' },
                 { icon: '↩', label: 'Returns' },

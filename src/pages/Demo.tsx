@@ -18,8 +18,8 @@ import {
 
 const ROLE_OPTIONS: { role: DemoRole; label: string; description: string; icon: React.ReactNode }[] = [
   { role: 'GC', label: 'General Contractor', description: 'Manage projects, contracts, and billing end-to-end.', icon: <HardHat className="w-8 h-8" /> },
-  { role: 'TC', label: 'Trade Contractor', description: 'Price work orders, manage field crews, and submit invoices.', icon: <Wrench className="w-8 h-8" /> },
-  { role: 'FC', label: 'Field Crew', description: 'Complete assigned work orders and log hours in the field.', icon: <Users className="w-8 h-8" /> },
+  { role: 'TC', label: 'Trade Contractor', description: 'Price change orders, manage field crews, and submit invoices.', icon: <Wrench className="w-8 h-8" /> },
+  { role: 'FC', label: 'Field Crew', description: 'Complete assigned tasks and log hours in the field.', icon: <Users className="w-8 h-8" /> },
   { role: 'SUPPLIER', label: 'Supplier', description: 'Receive purchase orders and enter material pricing.', icon: <Package className="w-8 h-8" /> },
 ];
 

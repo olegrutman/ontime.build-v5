@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { OntimeLogo } from '@/components/ui/OntimeLogo';
 
 const footerCols = {
-  Product: ['Purchase Orders', 'Work Orders', 'Change Orders', 'Invoicing', 'Returns', 'Project Budget', 'Sasha AI'],
+  Product: ['Purchase Orders', 'Change Orders', 'Invoicing', 'Returns', 'Project Budget', 'Sasha AI'],
   Company: ['About Us', 'Customers', 'Blog', 'Careers', 'Contact'],
   Resources: ['Help Center', 'API Reference', 'Integrations', 'Case Studies', 'Community'],
 };

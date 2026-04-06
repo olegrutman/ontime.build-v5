@@ -905,16 +905,16 @@ export default function PlatformProjectDetail() {
         loading={actionLoading}
       />
 
-      {/* Delete Work Order Dialog */}
+      {/* Delete Change Order Dialog */}
       <SupportActionDialog
         open={deleteWOOpen}
         onOpenChange={setDeleteWOOpen}
-        title="Delete Work Order"
-        description={`Permanently delete work order "${deleteWOTarget?.title}" (${deleteWOTarget?.status}). This removes the work order and all associated data including participants, tasks, materials, equipment, and labor entries. This action cannot be undone.`}
+        title="Delete Change Order"
+        description={`Permanently delete change order "${deleteWOTarget?.title}" (${deleteWOTarget?.status}). This removes the change order and all associated data including participants, tasks, materials, equipment, and labor entries. This action cannot be undone.`}
         onConfirm={async (reason) => {
           if (!deleteWOTarget) return;
           const ok = await execute({
-            action_type: 'DELETE_WORK_ORDER',
+            action_type: 'DELETE_CHANGE_ORDER',
             reason,
             work_order_id: deleteWOTarget.id,
           });

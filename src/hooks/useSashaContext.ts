@@ -47,7 +47,7 @@ export function useSashaContext(): string {
   }
 
   if (path === '/purchase-orders') return context + 'All Purchase Orders list — Shows: all POs across all projects with status filters and search. Each card shows PO number, supplier, project, status, and total amount.';
-  if (path === '/orders') return context + 'Material Orders list — Shows: material orders linked to Work Items, with order number, supplier, status, and item count. Users can track order progress from draft through delivery.';
+  if (path === '/orders') return context + 'Material Orders list — Shows: material orders linked to Change Orders, with order number, supplier, status, and item count. Users can track order progress from draft through delivery.';
   if (path === '/estimates') return context + 'Supplier Estimates list — Shows: estimates from suppliers with line items, pack groupings, and catalog matching status. Users can review and approve supplier estimates.';
   if (path === '/partners') return context + 'Partner Directory — Shows: two tabs: Organizations (companies you work with) and People (individual contacts). Users can search, view details, and manage business relationships.';
   if (path === '/catalog') return context + 'Product Catalog — Shows: searchable catalog of materials and products with categories, specifications, and supplier SKUs. Users can browse, search, and filter items.';

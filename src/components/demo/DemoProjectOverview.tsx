@@ -80,22 +80,22 @@ export function DemoProjectOverview({ onNavigate }: Props) {
       {/* Operational Grid */}
       <div className="grid gap-4 sm:grid-cols-2">
         {demoRole !== 'SUPPLIER' && (
-          <Card data-demo-target="wo-section">
+          <Card data-demo-target="co-section">
             <CardContent className="p-4">
-              <button onClick={() => onNavigate('work-orders')} className="flex items-center gap-2 font-semibold mb-3 hover:text-primary transition-colors">
+              <button onClick={() => onNavigate('change-orders')} className="flex items-center gap-2 font-semibold mb-3 hover:text-primary transition-colors">
                 <Hammer className="w-4 h-4" />
-                Work Orders ({workOrders.length})
+                Change Orders ({workOrders.length})
               </button>
-              <div data-demo-target="wo-list" className="space-y-2">
+              <div data-demo-target="co-list" className="space-y-2">
                 {workOrders.slice(0, 5).map((wo, i) => (
-                  <div key={wo.id} data-demo-target={`wo-card-${i}`} className="p-2 border rounded text-sm flex items-center justify-between">
+                  <div key={wo.id} data-demo-target={`co-card-${i}`} className="p-2 border rounded text-sm flex items-center justify-between">
                     <span>{wo.title}</span>
                     <Badge variant="outline" className="text-xs">{wo.status}</Badge>
                   </div>
                 ))}
                 {workOrders.length > 5 && (
-                  <button onClick={() => onNavigate('work-orders')} className="text-xs text-primary hover:underline">
-                    View all {workOrders.length} work orders →
+                  <button onClick={() => onNavigate('change-orders')} className="text-xs text-primary hover:underline">
+                    View all {workOrders.length} change orders →
                   </button>
                 )}
               </div>
