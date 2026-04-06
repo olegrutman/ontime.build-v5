@@ -24,6 +24,7 @@ const NAV_ITEMS = [
   { to: '/platform/plans', icon: CreditCard, label: 'Plans & Features' },
   { to: '/platform/rules', icon: ShieldCheck, label: 'Role Rules' },
   { to: '/platform/kpis', icon: BarChart3, label: 'KPI Cards' },
+  { to: '/platform/gc-dashboard', icon: BarChart3, label: 'GC Dashboard' },
   { to: '/platform/setup', icon: Settings, label: 'Setup' },
   { to: '/platform/logs', icon: ScrollText, label: 'Support Logs' },
 ];
