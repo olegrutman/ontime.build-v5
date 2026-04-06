@@ -100,7 +100,7 @@ export interface RolePermissions {
   canAddMaterialLists: boolean;
   canManageOrg: boolean;
   canInviteMembers: boolean;
-  canCreateWorkOrders: boolean;
+  canCreateChangeOrders: boolean;
   canCreatePOs: boolean;
   canSubmitTime: boolean;
   canCreateRFIs: boolean;
