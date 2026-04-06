@@ -165,7 +165,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, RolePermissions> = {
     canAddMaterialLists: true,
     canManageOrg: true,
     canInviteMembers: true,
-    canCreateWorkOrders: true,
+    canCreateChangeOrders: true,
     canCreatePOs: true,
     canSubmitTime: true,
     canCreateRFIs: true,
