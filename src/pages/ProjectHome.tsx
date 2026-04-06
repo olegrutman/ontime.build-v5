@@ -358,8 +358,10 @@ export default function ProjectHome() {
                     )}
 
                     <GCProjectOverviewContent
+                      projectId={id!}
                       projectName={project.name}
-                      ownerBudget={(project as any).contract_value || 420000}
+                      financials={financials}
+                      onNavigate={handleTabChange}
                     />
                   </div>
                 )}
