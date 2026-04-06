@@ -846,7 +846,7 @@ export default function PlatformProjectDetail() {
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title="Permanently Delete Project"
-        description={`This will permanently delete "${project.name}" and ALL associated data including contracts, invoices, purchase orders, work orders, estimates, and team memberships. This action cannot be undone.`}
+        description={`This will permanently delete "${project.name}" and ALL associated data including contracts, invoices, purchase orders, change orders, estimates, and team memberships. This action cannot be undone.`}
         onConfirm={async (reason) => {
           const ok = await execute({
             action_type: 'DELETE_PROJECT',
