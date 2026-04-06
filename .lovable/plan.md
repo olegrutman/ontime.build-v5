@@ -1,86 +1,47 @@
 
 
-# Wire Real Data + Team Card + Margin Card into GC Project Overview
+# Add Editable Owner Budget to Owner Budget Card
 
 ## What's Changing
 
-The `GCProjectOverviewContent` currently uses all hardcoded demo data. This plan wires it to real project data from `useProjectFinancials`, adds an expandable Team card with add-member capability, adds a missing Margin KPI card, and wires all action links to navigate to the correct project tabs.
+The Owner Budget card (Card 1) in `GCProjectOverviewContent` currently displays the value read-only. This change adds an inline editable field so the GC can set or update the owner contract value directly from the card, using the existing `updateOwnerContract` function from `useProjectFinancials`.
 
 ## Changes
 
-### 1. Wire real data into GCProjectOverviewContent
+### File: `src/components/project/GCProjectOverviewContent.tsx`
 
-**File: `src/components/project/GCProjectOverviewContent.tsx`**
+1. **Add owner budget draft state** — new `useState` for `draftOwnerBudget` initialized from `financials.ownerContractValue`, plus a `dirtyOwner` flag
 
-Expand the `Props` interface to accept the full `ProjectFinancials` object, `projectId`, and an `onNavigate` callback:
+2. **Add EditField for Owner Contract Value** inside Card 1's expand body — replace the static "Owner Contract Value" row with an inline editable field (same pencil-to-edit pattern as the TC Contract card), plus a "Save Owner Budget" button when dirty
 
-```typescript
-interface Props {
-  projectId: string;
-  projectName?: string;
-  financials: ProjectFinancials;
-  onNavigate: (tab: string) => void;
-}
+3. **Wire save to `financials.updateOwnerContract`** — on save, call `financials.updateOwnerContract(upContract.id, newValue)` then `financials.refetch()` and clear dirty flag
+
+4. **Use `draftOwnerBudget`** for live margin calculations so the card header value and margin cards update as the user types
+
+### Card 1 Expand Body (new layout)
+
 ```
-
-Wire each card to real data:
-- **Card 1 (Owner Budget)**: Use `financials.ownerContractValue` or `financials.upstreamContract?.contract_sum`, `financials.billedToDate`, `financials.outstanding`
-- **Card 2 (TC Contract)**: Use `financials.upstreamContract` for contract value, `getContractCounterpartyName()` for TC name. Wire the save button to `financials.updateContract()`
-- **Card 3 (Change Orders)**: Query `change_orders` table for the project (new useQuery inside component)
-- **Card 4 (Materials)**: Use `financials.materialEstimate`, `financials.materialOrdered`, `financials.materialDelivered`
-- **Card 5 (RFIs)**: Query `project_rfis` table for the project (new useQuery)
-- **Card 6 (Invoices Paid)**: Use `financials.recentInvoices` filtered by PAID status, `financials.totalPaid`
-- **Card 7 (Pending Approval)**: Filter `financials.recentInvoices` for SUBMITTED status
-- **Card 8 (Scope Items)**: Use change orders data
-
-### 2. Add Margin KPI Card (Card 9)
-
-Add a new card between existing cards showing GC profit margin:
-- Label: "GC MARGIN"
-- Value: `ownerContractValue - tcContractValue`
-- Percentage pill
-- Expand table showing margin breakdown with CO impact
-
-### 3. Add expandable Team Card
-
-Embed the existing `ProjectOverviewTeamCard` logic into a new KpiCard-style expandable card:
-- Collapsed: shows team count + material owner indicator
-- Expanded: shows team members list, material responsibility indicator, designated supplier, and "Add Member" button using existing `AddTeamMemberDialog`
-- Icon: 👥, accent: blue
-
-### 4. Wire all navigation links
-
-Replace all hardcoded button `onClick` handlers with `onNavigate()`:
-- "Create New CO" → `onNavigate('change-orders')`
-- "Create Purchase Order" → `onNavigate('purchase-orders')`
-- "Create RFI" → `onNavigate('rfis')`
-- "View →" links on RFIs → `onNavigate('rfis')`
-- Invoice approve/reject → `onNavigate('invoices')`
-
-### 5. Update ProjectHome.tsx to pass real data
-
-**File: `src/pages/ProjectHome.tsx`** (line ~360)
-
-Pass `financials`, `projectId`, and `handleTabChange` to the component:
-```tsx
-<GCProjectOverviewContent
-  projectId={id!}
-  projectName={project.name}
-  financials={financials}
-  onNavigate={handleTabChange}
-/>
+┌─────────────────────────────────────┐
+│ Owner Contract Value  $420,000  ✏️  │  ← EditField, editable
+│ Approved COs to Owner    +$10,200  │
+│ Revised Contract Total   $430,200  │  ← total row
+│ ─────────────────────────────────── │
+│ Invoiced to Date         $168,400  │
+│ Remaining                $261,800  │
+│                                     │
+│ [████ Save Owner Budget ████]       │  ← only when dirty
+│ 🟠 Unsaved changes                  │
+└─────────────────────────────────────┘
 ```
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/project/GCProjectOverviewContent.tsx` | Wire real data, add Team card, add Margin card, wire navigation links |
-| `src/pages/ProjectHome.tsx` | Pass `financials`, `projectId`, `onNavigate` props |
+| `src/components/project/GCProjectOverviewContent.tsx` | Add editable owner budget field + save logic in Card 1 |
 
 ### What is NOT changing
-- Database schema, RLS policies
-- `useProjectFinancials` hook (already has all needed data)
-- `ProjectOverviewTeamCard` component (reuse its query logic inline)
-- Other dashboard views (TC, FC, Supplier)
+- Database schema (already has `owner_contract_value` column)
+- `useProjectFinancials` hook (already exposes `updateOwnerContract`)
+- Other cards or pages
 
