@@ -74,6 +74,7 @@ const PlatformPlans = lazy(() => import("./pages/platform/PlatformPlans"));
 const PlatformSetup = lazy(() => import("./pages/platform/PlatformSetup"));
 const PlatformRoles = lazy(() => import("./pages/platform/PlatformRoles"));
 const PlatformKPIs = lazy(() => import("./pages/platform/PlatformKPIs"));
+const PlatformGCDashboard = lazy(() => import("./pages/platform/PlatformGCDashboard"));
 
 
 // 4. Route protection wrapper
