@@ -29,6 +29,7 @@ import { DashboardWelcome } from '@/components/dashboard/DashboardWelcome';
 import { DashboardSidebar } from '@/components/app-shell/DashboardSidebar';
 import { GCDashboardView } from '@/components/dashboard/GCDashboardView';
 import { TCDashboardView } from '@/components/dashboard/TCDashboardView';
+import { FCDashboardView } from '@/components/dashboard/FCDashboardView';
 import type { ProjectStatusFilter } from '@/components/dashboard/StatusMenu';
 
 export default function Dashboard() {
