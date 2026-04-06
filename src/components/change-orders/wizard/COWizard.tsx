@@ -21,7 +21,7 @@ import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import type { COCreatedByRole, COReasonCode, COPricingType, ScopeCatalogItem } from '@/types/changeOrder';
 
 // ── Types ──────────────────────────────────────────────
-export interface SelectedScopeItem extends WorkOrderCatalogItem {
+export interface SelectedScopeItem extends ScopeCatalogItem {
   locationTag: string;
   reason: COReasonCode;
   reasonDescription: string;
