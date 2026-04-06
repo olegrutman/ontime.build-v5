@@ -1,105 +1,64 @@
 
 
-# Platform Admin: Role Rules Manager + KPI Card Configurator
+# Build GC KPI Dashboard Page
 
-## Overview
+## What I'm Building
 
-Add two new pages to the platform admin area:
-1. **Role Rules** — a searchable, editable catalog of all role-based permission rules in the app
-2. **KPI Configuration** — lets platform owner choose which KPI cards each user type sees on their dashboard
+A dedicated GC (General Contractor) KPI dashboard page — a self-contained, visually rich page that shows a GC's entire portfolio health at a glance. It faithfully translates the uploaded HTML reference into a React/Tailwind component using the exact design system (Barlow Condensed for values, IBM Plex Mono for dollar amounts, DM Sans for body, navy/amber color palette).
 
-Both pages store their configuration in the existing `platform_settings` key-value table — no new tables needed.
+The page lives at `/platform/gc-dashboard` within the existing platform admin area and contains:
 
-## Architecture
+- **8 expandable KPI cards** in a 4-column responsive grid (Total Owner Budget, GC Profit Margin, Change Orders, Materials Budget, Open RFIs, Paid Invoices, Pending Approvals, TC Contracts)
+- **Portfolio Metrics table** (full-width summary with inline progress bars)
+- **"Needs Immediate Attention" warnings section** (7 warning items with severity-colored left borders)
+- **All Projects grid** (5 project cards with progress bars and status pills)
 
-### Data model
+Each KPI card has collapsed/expanded states with smooth CSS transitions, inner data tables, status pills, and inline progress bars — all matching the uploaded HTML pixel-for-pixel.
 
-All config stored as JSONB values in `platform_settings`:
+## Technical Approach
 
-- Key `role_rules`: array of rule objects `{ id, category, rule_name, description, gc, tc, fc, supplier, enabled }`
-- Key `kpi_config_gc`: array of KPI card definitions for GC dashboard
-- Key `kpi_config_tc`: array for TC
-- Key `kpi_config_fc`: array for FC  
-- Key `kpi_config_supplier`: array for Supplier
+### Single file, all hardcoded data
 
-Each KPI entry: `{ key: string, label: string, enabled: boolean, order: number }`
+Create `src/pages/platform/PlatformGCDashboard.tsx` as one large component file. All dummy data (5 projects, their financials, RFIs, COs, invoices, materials) defined as TypeScript `const` arrays at the top. No database queries, no hooks — pure presentational.
 
-### Seeding
+### Component structure inside the file
 
-On first load, if the setting key doesn't exist, the page seeds the default values from the current hardcoded rules/KPIs so the platform owner starts with a complete picture.
+1. **Data constants** — TypeScript interfaces + hardcoded project/invoice/CO/RFI/materials arrays (matching the HTML's `P`, `TC`, `FC`, `SUP` objects exactly)
+2. **Utility functions** — `formatDollar()` (K/M formatting), `pct()`, status-to-pill-class mapping
+3. **Sub-components** (all in same file):
+   - `KpiCard` — the expandable card with accent bar, icon, pills, value, footer toggle, expand body slot
+   - `InnerTable` — thead/tbody with the exact styling classes
+   - `StatusPill` — pill component with 6 color variants (pg/pr/pa/pb/pm/pw)
+   - `ProgressBar` — 4px inline bar with color fill
+   - `WarnItem` — warning row with left border, icon, text, value, badge
+   - `ProjectCard` — grid card with dot, name, phase, bar, value, pill
+4. **Main `PlatformGCDashboard`** — assembles everything with `PlatformLayout`
 
-## Page 1: Role Rules (`/platform/rules`)
+### Styling
 
-### What gets cataloged
+All inline Tailwind utilities + a small `<style>` block (or utility classes in index.css) for:
+- Card expand/collapse transition: `max-h-0 → max-h-[700px]`, `transition-all duration-[440ms] ease-[cubic-bezier(.22,1,.36,1)]`
+- Stagger animation: each card gets `animation-delay: n * 0.04s`
+- Font families applied via inline style (Barlow Condensed, IBM Plex Mono) matching existing `.kpi-value` patterns
 
-Scan through the codebase's existing role checks and create a static seed of ~25 rules organized by category:
+### Responsive grid
+- 4 columns default → 3 at 1100px → 2 at 860px → 1 at 580px
 
-| Category | Example Rules |
-|----------|--------------|
-| **SOV** | FC cannot edit SOV line items; FC cannot lock/unlock SOV; FC cannot add SOV items |
-| **Change Orders** | TC can request FC input; FC can only edit if active collaborator; GC sees final TC price only |
-| **Invoices** | GC approves invoices; TC/FC submit invoices; FC sees only own invoices |
-| **Contracts** | Project creator manages all contracts; TC can add GC and FC; GC can add TC |
-| **Dashboard** | GC sees margin KPIs; Supplier sees receivables; FC sees 3-card layout |
-| **Projects** | Material responsibility toggle based on creator org type; Tab feature gating |
-
-### UI
-
-- Card with a searchable table (filter by category or keyword)
-- Each row: rule name, description, category, checkboxes for GC/TC/FC/Supplier, enabled toggle
-- Platform owner can toggle rules on/off and change which roles a rule applies to
-- Save button persists to `platform_settings`
-- Note: toggling a rule here sets the *configuration intent* — the actual enforcement requires the app code to read these settings (future wiring)
-
-## Page 2: KPI Configuration (`/platform/kpis`)
-
-### Current hardcoded KPIs
-
-**GC (4 cards)**: Contract Value, Paid Out, Received, Projected Margin
-**TC (4 cards)**: Contract In, Cost Out, Projected Margin, Materials Forecast  
-**FC (3 cards)**: Contract Value, Collected, Outstanding
-**Supplier (4 cards)**: Total Receivable, Paid This Month, Open Orders, Credit Exposure
-
-### UI
-
-- Four tabs: GC, TC, FC, Supplier
-- Each tab shows a reorderable list of KPI cards with:
-  - Label (editable text input)
-  - Subtitle (editable)
-  - Enabled toggle
-  - Drag handle for reordering (or up/down arrows)
-- "Add KPI" button to add a custom card definition
-- Save per tab
-
-## Implementation
-
-### Step 1: Database — no migration needed
-Uses existing `platform_settings` table with new keys.
-
-### Step 2: New pages + route registration
-
-| New File | Purpose |
-|----------|---------|
-| `src/pages/platform/PlatformRoles.tsx` | Role rules management page |
-| `src/pages/platform/PlatformKPIs.tsx` | KPI card configuration page |
-
-### Step 3: Update navigation
+### Routing + nav
 
 | File | Change |
 |------|--------|
-| `src/components/platform/PlatformSidebar.tsx` | Add "Role Rules" and "KPI Cards" nav items |
-| `src/App.tsx` | Add `/platform/rules` and `/platform/kpis` routes |
+| `src/pages/platform/PlatformGCDashboard.tsx` | **New** — entire GC dashboard page |
+| `src/App.tsx` | Add lazy import + `/platform/gc-dashboard` route inside `RequirePlatformRole` |
+| `src/components/platform/PlatformSidebar.tsx` | Add "GC Dashboard" nav item with `Briefcase` icon |
 
-### Step 4: Seed data constants
+### Card expand behavior
+- Multiple cards can be open simultaneously
+- Click card top area OR footer strip to toggle
+- Chevron rotates 90deg when open
+- Border changes to amber + glow shadow when open
+- Row clicks in tables log `console.log('navigate → [project] [section]')` as routing stubs
 
-| New File | Purpose |
-|----------|---------|
-| `src/constants/defaultRoleRules.ts` | Default ~25 rules derived from current codebase |
-| `src/constants/defaultKpiConfig.ts` | Default KPI card configs per user type |
-
-### What is NOT changing
-- Actual role enforcement logic in hooks (future work to read from config)
-- `DashboardKPIs.tsx` rendering (future work to read from config)  
-- Database schema, RLS policies
-- Existing platform pages
+### Data accuracy
+All 8 cards use the exact dummy values from the spec (Cherry Hills $420K, Tower 14 $680K, Mesa $290K, Apex $520K, Hyatt $740K; total $2.65M; margin $789K at 30%; 14 COs totaling $53.2K; 19 open RFIs; $800K paid; $100.9K pending; $1.861M TC committed; $192.3K materials). The portfolio metrics table, warnings section, and project grid all use the same data.
 
