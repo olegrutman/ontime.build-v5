@@ -116,7 +116,7 @@ export const PERMISSION_TO_DB_COLUMN: Record<keyof RolePermissions, keyof Member
   canAddMaterialLists: null, // No direct DB column, always allowed
   canManageOrg: 'can_manage_team',
   canInviteMembers: 'can_manage_team',
-  canCreateWorkOrders: 'can_create_work_orders',
+  canCreateChangeOrders: 'can_create_work_orders',
   canCreatePOs: 'can_create_pos',
   canSubmitTime: 'can_submit_time',
   canCreateRFIs: null, // DB column exists but types not yet regenerated
