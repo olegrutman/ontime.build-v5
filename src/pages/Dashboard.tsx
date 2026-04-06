@@ -28,6 +28,7 @@ import { RemindersTile } from '@/components/dashboard/RemindersTile';
 import { DashboardWelcome } from '@/components/dashboard/DashboardWelcome';
 import { DashboardSidebar } from '@/components/app-shell/DashboardSidebar';
 import { GCDashboardView } from '@/components/dashboard/GCDashboardView';
+import { TCDashboardView } from '@/components/dashboard/TCDashboardView';
 import type { ProjectStatusFilter } from '@/components/dashboard/StatusMenu';
 
 export default function Dashboard() {
