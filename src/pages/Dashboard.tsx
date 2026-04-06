@@ -249,6 +249,40 @@ export default function Dashboard() {
     );
   }
 
+  // FC gets a dedicated KPI card dashboard
+  if (orgType === 'FC') {
+    return (
+      <AppLayout title="Dashboard" fullWidth>
+        <FCDashboardView
+          projects={projects}
+          financials={financials}
+          projectFinancials={projectFinancials}
+          billing={billing}
+          attentionItems={attentionItems}
+          pendingInvites={pendingInvites}
+          recentDocs={recentDocs}
+          statusCounts={statusCounts}
+          profile={profile}
+          organization={organization}
+          userSettings={userSettings}
+          updateUserSettings={updateUserSettings as any}
+          isOrgAdmin={isOrgAdmin}
+          userOrgRolesLength={userOrgRoles.length}
+          orgType={orgType}
+          orgId={orgId}
+          soleMember={soleMember}
+          onSetSoleMember={() => { if (orgId) { localStorage.setItem(`ontime_sole_member_${orgId}`, 'true'); setSoleMember(true); } }}
+          onSetPartOfTeam={() => { if (orgId) { localStorage.setItem(`ontime_part_of_team_${orgId}`, 'true'); setSoleMember(true); } }}
+          onRefresh={refetch}
+          loading={loading}
+        />
+        <ArchiveProjectDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen} projectName={projectToArchive?.name || ''} onConfirm={confirmArchive} />
+        <CompleteProjectDialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen} projectName={projectToComplete?.name || ''} onConfirm={confirmComplete} />
+        <AddReminderDialog open={addReminderOpen} onOpenChange={setAddReminderOpen} onAdd={handleAddReminder} projects={projects.map(p => ({ id: p.id, name: p.name }))} />
+      </AppLayout>
+    );
+  }
+
   const showOnboarding = userSettings && !userSettings.onboarding_dismissed;
   const profileComplete = !!(profile?.first_name && profile?.phone);
   const orgComplete = !!(organization?.address?.street);
