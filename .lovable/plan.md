@@ -1,63 +1,105 @@
 
 
-# Fix: SOV Total Changes When Editing Any Line Item Percentage
+# Platform Admin: Role Rules Manager + KPI Card Configurator
 
-## Root Cause
+## Overview
 
-The optimistic local state update in `useContractSOV.ts` (lines 888–908) has an **order mismatch bug**.
+Add two new pages to the platform admin area:
+1. **Role Rules** — a searchable, editable catalog of all role-based permission rules in the app
+2. **KPI Configuration** — lets platform owner choose which KPI cards each user type sees on their dashboard
 
-The `updates` array is ordered as `[editedItem, ...otherUnlockedItems]`. The last element of `updates` is designated as the "remainder absorber" — it gets `contractValue - runningTotal`.
+Both pages store their configuration in the existing `platform_settings` key-value table — no new tables needed.
 
-But `items.map()` iterates in **display order** (by `sort_order`), not in `updates` array order. When the remainder-absorber item is encountered in `items.map()` before all other updated items have been processed, `runningTotal` is incomplete. The absorber gets `contractValue - (partial sum)` — which is too large.
+## Architecture
 
-**Example from screenshot**: User edits Punchlist (item 25, last in display). `updates = [Punchlist, item1, item2, ..., item24]`. `lastUpdateId = item24` (some mid-list item). When `items.map` reaches item24 in display order, it hasn't yet processed items 25 (Punchlist) or any items after item24, so `runningTotal` is short. Item24 gets an inflated value. Total becomes $525,000 instead of $500,000.
+### Data model
 
-The RPC function processes `p_updates` in array order, so the **database values are correct** — but the UI shows wrong numbers until a page refresh.
+All config stored as JSONB values in `platform_settings`:
 
-## Fix
+- Key `role_rules`: array of rule objects `{ id, category, rule_name, description, gc, tc, fc, supplier, enabled }`
+- Key `kpi_config_gc`: array of KPI card definitions for GC dashboard
+- Key `kpi_config_tc`: array for TC
+- Key `kpi_config_fc`: array for FC  
+- Key `kpi_config_supplier`: array for Supplier
 
-Replace the `items.map()` optimistic update with a two-pass approach:
+Each KPI entry: `{ key: string, label: string, enabled: boolean, order: number }`
 
-**Pass 1**: Build a map of `id → { pct, value }` by iterating `updates` in array order (matching RPC logic). The last element absorbs the remainder.
+### Seeding
 
-**Pass 2**: Apply the map to `items` via `.map()` — simple lookup, no running total.
+On first load, if the setting key doesn't exist, the page seeds the default values from the current hardcoded rules/KPIs so the platform owner starts with a complete picture.
 
-```typescript
-// Pass 1: compute values in updates-array order (mirrors RPC)
-const resultMap = new Map<string, { pct: number; val: number }>();
-let runTotal = 0;
-for (let i = 0; i < updates.length; i++) {
-  const u = updates[i];
-  let val: number;
-  if (i === updates.length - 1) {
-    val = Math.round((contractValue - runTotal) * 100) / 100;
-  } else {
-    val = Math.round((contractValue * u.pct / 100) * 100) / 100;
-    runTotal += val;
-  }
-  resultMap.set(u.id, { pct: u.pct, val });
-}
+## Page 1: Role Rules (`/platform/rules`)
 
-// Pass 2: apply to items
-setSovItems(prev => ({
-  ...prev,
-  [sovId]: (prev[sovId] || []).map(item => {
-    const r = resultMap.get(item.id);
-    if (!r) return item;
-    return { ...item, percent_of_contract: r.pct, value_amount: r.val };
-  })
-}));
-```
+### What gets cataloged
 
-### Files changed
+Scan through the codebase's existing role checks and create a static seed of ~25 rules organized by category:
+
+| Category | Example Rules |
+|----------|--------------|
+| **SOV** | FC cannot edit SOV line items; FC cannot lock/unlock SOV; FC cannot add SOV items |
+| **Change Orders** | TC can request FC input; FC can only edit if active collaborator; GC sees final TC price only |
+| **Invoices** | GC approves invoices; TC/FC submit invoices; FC sees only own invoices |
+| **Contracts** | Project creator manages all contracts; TC can add GC and FC; GC can add TC |
+| **Dashboard** | GC sees margin KPIs; Supplier sees receivables; FC sees 3-card layout |
+| **Projects** | Material responsibility toggle based on creator org type; Tab feature gating |
+
+### UI
+
+- Card with a searchable table (filter by category or keyword)
+- Each row: rule name, description, category, checkboxes for GC/TC/FC/Supplier, enabled toggle
+- Platform owner can toggle rules on/off and change which roles a rule applies to
+- Save button persists to `platform_settings`
+- Note: toggling a rule here sets the *configuration intent* — the actual enforcement requires the app code to read these settings (future wiring)
+
+## Page 2: KPI Configuration (`/platform/kpis`)
+
+### Current hardcoded KPIs
+
+**GC (4 cards)**: Contract Value, Paid Out, Received, Projected Margin
+**TC (4 cards)**: Contract In, Cost Out, Projected Margin, Materials Forecast  
+**FC (3 cards)**: Contract Value, Collected, Outstanding
+**Supplier (4 cards)**: Total Receivable, Paid This Month, Open Orders, Credit Exposure
+
+### UI
+
+- Four tabs: GC, TC, FC, Supplier
+- Each tab shows a reorderable list of KPI cards with:
+  - Label (editable text input)
+  - Subtitle (editable)
+  - Enabled toggle
+  - Drag handle for reordering (or up/down arrows)
+- "Add KPI" button to add a custom card definition
+- Save per tab
+
+## Implementation
+
+### Step 1: Database — no migration needed
+Uses existing `platform_settings` table with new keys.
+
+### Step 2: New pages + route registration
+
+| New File | Purpose |
+|----------|---------|
+| `src/pages/platform/PlatformRoles.tsx` | Role rules management page |
+| `src/pages/platform/PlatformKPIs.tsx` | KPI card configuration page |
+
+### Step 3: Update navigation
 
 | File | Change |
 |------|--------|
-| `src/hooks/useContractSOV.ts` | Replace lines 886–908 with two-pass optimistic update that processes values in `updates` array order |
+| `src/components/platform/PlatformSidebar.tsx` | Add "Role Rules" and "KPI Cards" nav items |
+| `src/App.tsx` | Add `/platform/rules` and `/platform/kpis` routes |
+
+### Step 4: Seed data constants
+
+| New File | Purpose |
+|----------|---------|
+| `src/constants/defaultRoleRules.ts` | Default ~25 rules derived from current codebase |
+| `src/constants/defaultKpiConfig.ts` | Default KPI card configs per user type |
 
 ### What is NOT changing
-- RPC function `update_sov_line_percentages` (already correct)
-- `useSOVPage.ts` (uses its own update logic)
-- SOV UI components
-- Database schema, RLS
+- Actual role enforcement logic in hooks (future work to read from config)
+- `DashboardKPIs.tsx` rendering (future work to read from config)  
+- Database schema, RLS policies
+- Existing platform pages
 
