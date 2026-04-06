@@ -11,6 +11,8 @@ import {
   Shield,
   CreditCard,
   Settings,
+  ShieldCheck,
+  BarChart3,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
