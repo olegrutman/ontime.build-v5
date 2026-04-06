@@ -364,7 +364,7 @@ export function FCDashboardView({
                 )}
                 {approvedCOs.map((co, i) => (
                   <TRow key={co.id} cells={[
-                    <TdN>{co.number || `CO-${String(i + 1).padStart(3, '0')}`}</TdN>,
+                    <TdN>{co.title || `CO-${String(i + 1).padStart(3, '0')}`}</TdN>,
                     <span>{co.title || 'Change order'}</span>,
                     <TdM>+{fmt(co.amount || 0)}</TdM>,
                     <Pill type="pg">Approved</Pill>,
@@ -394,7 +394,7 @@ export function FCDashboardView({
                 )}
                 {paidInvoices.map(inv => (
                   <TRow key={inv.id} cells={[
-                    <TdN>{inv.number || inv.title}</TdN>,
+                    <TdN>{inv.title}</TdN>,
                     <span>{inv.projectName}</span>,
                     <TdM>{fmt(inv.amount || 0)}</TdM>,
                     <Pill type="pg">Paid</Pill>,
@@ -402,7 +402,7 @@ export function FCDashboardView({
                 ))}
                 {pendingInvoiceDocs.map(inv => (
                   <TRow key={inv.id} cells={[
-                    <TdN>{inv.number || inv.title}</TdN>,
+                    <TdN>{inv.title}</TdN>,
                     <span>{inv.projectName}</span>,
                     <TdM>{fmt(inv.amount || 0)}</TdM>,
                     <Pill type="pw">Pending TC</Pill>,
@@ -429,7 +429,7 @@ export function FCDashboardView({
                 )}
                 {pendingInvoiceDocs.map(inv => (
                   <TRow key={inv.id} cells={[
-                    <TdN>{inv.number || inv.title}</TdN>,
+                    <TdN>{inv.title}</TdN>,
                     <span>{inv.projectName}</span>,
                     <TdM>{fmt(inv.amount || 0)}</TdM>,
                     <Pill type="pw">Pending TC</Pill>,
@@ -486,7 +486,7 @@ export function FCDashboardView({
             {pendingInvoiceDocs.map(inv => (
               <WarnItem key={inv.id}
                 color={C.amber} icon="💰"
-                title={`${inv.number || inv.title} — Awaiting TC Approval`}
+                title={`${inv.title} — Awaiting TC Approval`}
                 sub={`${inv.projectName} · ${organization?.name || 'TC'}`}
                 value={fmt(inv.amount || 0)} pill="Pending" pillType="pw"
                 onClick={() => navigate(`/project/${inv.projectId}?tab=invoices`)}
