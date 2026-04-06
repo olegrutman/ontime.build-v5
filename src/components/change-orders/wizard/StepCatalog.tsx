@@ -4,9 +4,9 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Search, X, ChevronRight, MapPin, Plus, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useWorkOrderCatalog } from '@/hooks/useWorkOrderCatalog';
+import { useScopeCatalog } from '@/hooks/useScopeCatalog';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
-import type { WorkOrderCatalogItem, COReasonCode } from '@/types/changeOrder';
+import type { ScopeCatalogItem, COReasonCode } from '@/types/changeOrder';
 import type { COWizardData, SelectedScopeItem } from './COWizard';
 import { VisualLocationPicker } from '../VisualLocationPicker';
 
