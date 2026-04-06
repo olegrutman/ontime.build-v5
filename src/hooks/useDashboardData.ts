@@ -74,6 +74,17 @@ export interface RecentDoc {
   projectId: string;
 }
 
+export interface ProjectFinancialDetail {
+  projectId: string;
+  projectName: string;
+  revenue: number;
+  costs: number;
+  paidToYou: number;
+  paidByYou: number;
+  pendingToCollect: number;
+  pendingToPay: number;
+}
+
 interface DashboardData {
   projects: ProjectWithDetails[];
   statusCounts: {
