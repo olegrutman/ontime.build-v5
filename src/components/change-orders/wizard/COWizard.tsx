@@ -484,7 +484,7 @@ function StepHow({
   const fcMembers = teamMembers.filter(m => m.role === 'Field Crew' || m.role === 'FC');
 
   // Scope items for FC/TC
-  const { divisions, search } = useWorkOrderCatalog();
+  const { divisions, search } = useScopeCatalog();
   const [searchQuery, setSearchQuery] = useState('');
   const searchResults = useMemo(() => search(searchQuery), [searchQuery, search]);
 
