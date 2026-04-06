@@ -13,9 +13,9 @@ export interface POWizardV2Data {
   // Items (Screen 2)
   line_items: POWizardV2LineItem[];
 
-  // Work Order context (optional)
-  work_order_id?: string;
-  work_order_title?: string;
+  // Change Order context (optional)
+  change_order_id?: string;
+  change_order_title?: string;
 
   // Estimate/Pack context (optional)
   source_estimate_id?: string;
