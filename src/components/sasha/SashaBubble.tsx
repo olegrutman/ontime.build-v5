@@ -21,7 +21,7 @@ const INITIAL_GREETING: SashaChatMessage = {
   actions: [
     "What's on this page?",
     'Explore a demo project',
-    'Explain work orders',
+    'Explain change orders',
     'Explain purchase orders',
   ],
 };
