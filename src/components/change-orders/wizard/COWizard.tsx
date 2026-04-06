@@ -490,7 +490,7 @@ function StepHow({
 
   const selectedIds = useMemo(() => new Set(data.selectedItems.map(i => i.id)), [data.selectedItems]);
 
-  function toggleItem(item: WorkOrderCatalogItem) {
+  function toggleItem(item: ScopeCatalogItem) {
     if (selectedIds.has(item.id)) {
       onChange({ selectedItems: data.selectedItems.filter(i => i.id !== item.id) });
     } else {
