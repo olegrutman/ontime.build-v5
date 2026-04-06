@@ -148,7 +148,7 @@ export const ALL_PERMISSIONS: RolePermissions = {
   canAddMaterialLists: true,
   canManageOrg: true,
   canInviteMembers: true,
-  canCreateWorkOrders: true,
+  canCreateChangeOrders: true,
   canCreatePOs: true,
   canSubmitTime: true,
   canCreateRFIs: true,
