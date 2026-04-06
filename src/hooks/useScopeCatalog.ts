@@ -109,10 +109,10 @@ export function useScopeCatalog() {
     divMap.get(item.division)!.itemCount++;
   }
 
-  function search(query: string): (WorkOrderCatalogItem & { path: string })[] {
+  function search(query: string): (ScopeCatalogItem & { path: string })[] {
     if (!query || query.trim().length < 2) return [];
     const q = query.toLowerCase();
-    const results: (WorkOrderCatalogItem & { path: string })[] = [];
+    const results: (ScopeCatalogItem & { path: string })[] = [];
 
     for (const item of items) {
       if (

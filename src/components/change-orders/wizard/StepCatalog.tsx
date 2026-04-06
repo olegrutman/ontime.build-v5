@@ -65,7 +65,7 @@ export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
     setPhase('items');
   }
 
-  function selectItem(item: WorkOrderCatalogItem) {
+  function selectItem(item: ScopeCatalogItem) {
     if (selectedIds.has(item.id)) {
       onChange({ selectedItems: data.selectedItems.filter(i => i.id !== item.id) });
       return;

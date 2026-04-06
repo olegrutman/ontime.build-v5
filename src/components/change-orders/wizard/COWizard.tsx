@@ -770,9 +770,9 @@ function ScopePicker({
 }: {
   searchQuery: string;
   setSearchQuery: (q: string) => void;
-  searchResults: WorkOrderCatalogItem[];
+  searchResults: ScopeCatalogItem[];
   selectedIds: Set<string>;
-  onToggle: (item: WorkOrderCatalogItem) => void;
+  onToggle: (item: ScopeCatalogItem) => void;
   selectedItems: SelectedScopeItem[];
 }) {
   const items = searchQuery.trim() ? searchResults : searchResults.slice(0, 12);

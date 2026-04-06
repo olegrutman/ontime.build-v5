@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-type EntityType = 'invoice' | 'work_order' | 'purchase_order' | 'return';
+type EntityType = 'invoice' | 'change_order' | 'purchase_order' | 'return';
 
 export function useNudge() {
   const [loading, setLoading] = useState(false);

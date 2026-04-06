@@ -17,7 +17,7 @@ export interface SupplierProjectEstimate {
   updated_at: string;
   // Joined data
   project?: { id: string; name: string } | null;
-  work_order?: { id: string; title: string } | null;
+  change_order?: { id: string; title: string } | null;
 }
 
 export interface SupplierEstimateItem {

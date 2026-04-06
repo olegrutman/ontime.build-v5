@@ -191,8 +191,8 @@ export function POWizardV2({
           project_id: projectId,
           project_name: projectName,
           delivery_address: projectAddress,
-          work_order_id: workOrderId,
-          work_order_title: workOrderTitle,
+          change_order_id: workOrderId,
+          change_order_title: workOrderTitle,
         });
         // Auto-advance will be handled after suppliers load
         setScreen('header');

@@ -234,6 +234,9 @@ export interface ScopeCatalogItem {
   org_id: string | null;
 }
 
+/** @deprecated Use ScopeCatalogItem instead */
+export type WorkOrderCatalogItem = ScopeCatalogItem;
+
 export interface NewCOLineItem {
   co_id: string;
   org_id: string;
