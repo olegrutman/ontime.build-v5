@@ -22,6 +22,8 @@ const NAV_ITEMS = [
   { to: '/platform/users', icon: Users, label: 'Users' },
   { to: '/platform/projects', icon: FolderKanban, label: 'Projects' },
   { to: '/platform/plans', icon: CreditCard, label: 'Plans & Features' },
+  { to: '/platform/rules', icon: ShieldCheck, label: 'Role Rules' },
+  { to: '/platform/kpis', icon: BarChart3, label: 'KPI Cards' },
   { to: '/platform/setup', icon: Settings, label: 'Setup' },
   { to: '/platform/logs', icon: ScrollText, label: 'Support Logs' },
 ];
