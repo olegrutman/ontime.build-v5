@@ -4,9 +4,9 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Search, X, ChevronRight, MapPin, Plus, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useWorkOrderCatalog } from '@/hooks/useWorkOrderCatalog';
+import { useScopeCatalog } from '@/hooks/useScopeCatalog';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
-import type { WorkOrderCatalogItem, COReasonCode } from '@/types/changeOrder';
+import type { ScopeCatalogItem, COReasonCode } from '@/types/changeOrder';
 import type { COWizardData, SelectedScopeItem } from './COWizard';
 import { VisualLocationPicker } from '../VisualLocationPicker';
 
@@ -30,7 +30,7 @@ const REASONS: { code: COReasonCode; description: string }[] = [
 ];
 
 export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
-  const { divisions, search, isLoading } = useWorkOrderCatalog();
+  const { divisions, search, isLoading } = useScopeCatalog();
 
   // Internal phase: location → reason → items
   const [phase, setPhase] = useState<Phase>(() => {
@@ -65,7 +65,7 @@ export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
     setPhase('items');
   }
 
-  function selectItem(item: WorkOrderCatalogItem) {
+  function selectItem(item: ScopeCatalogItem) {
     if (selectedIds.has(item.id)) {
       onChange({ selectedItems: data.selectedItems.filter(i => i.id !== item.id) });
       return;

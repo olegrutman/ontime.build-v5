@@ -435,7 +435,7 @@ export default function PlatformProjectDetail() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <StatusBreakdown counts={woCounts} label="Work Orders" />
+          <StatusBreakdown counts={woCounts} label="Change Orders" />
           <StatusBreakdown counts={poCounts} label="Purchase Orders" />
           <StatusBreakdown counts={invCounts} label="Invoices" />
         </CardContent>
@@ -612,11 +612,11 @@ export default function PlatformProjectDetail() {
         </CardContent>
       </Card>
 
-      {/* Work Orders */}
+      {/* Change Orders (legacy section — data removed) */}
       <Card className="mb-6">
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <Wrench className="h-4 w-4" /> Work Orders
+            <Wrench className="h-4 w-4" /> Change Orders
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
@@ -633,7 +633,7 @@ export default function PlatformProjectDetail() {
             <TableBody>
               {workOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={platformRole === 'PLATFORM_OWNER' ? 5 : 4} className="text-center py-4 text-muted-foreground">No work orders</TableCell>
+                  <TableCell colSpan={platformRole === 'PLATFORM_OWNER' ? 5 : 4} className="text-center py-4 text-muted-foreground">No change orders</TableCell>
                 </TableRow>
               ) : (
                 workOrders.map((wo) => (
@@ -846,7 +846,7 @@ export default function PlatformProjectDetail() {
         open={deleteOpen}
         onOpenChange={setDeleteOpen}
         title="Permanently Delete Project"
-        description={`This will permanently delete "${project.name}" and ALL associated data including contracts, invoices, purchase orders, work orders, estimates, and team memberships. This action cannot be undone.`}
+        description={`This will permanently delete "${project.name}" and ALL associated data including contracts, invoices, purchase orders, change orders, estimates, and team memberships. This action cannot be undone.`}
         onConfirm={async (reason) => {
           const ok = await execute({
             action_type: 'DELETE_PROJECT',
@@ -905,16 +905,16 @@ export default function PlatformProjectDetail() {
         loading={actionLoading}
       />
 
-      {/* Delete Work Order Dialog */}
+      {/* Delete Change Order Dialog */}
       <SupportActionDialog
         open={deleteWOOpen}
         onOpenChange={setDeleteWOOpen}
-        title="Delete Work Order"
-        description={`Permanently delete work order "${deleteWOTarget?.title}" (${deleteWOTarget?.status}). This removes the work order and all associated data including participants, tasks, materials, equipment, and labor entries. This action cannot be undone.`}
+        title="Delete Change Order"
+        description={`Permanently delete change order "${deleteWOTarget?.title}" (${deleteWOTarget?.status}). This removes the change order and all associated data including participants, tasks, materials, equipment, and labor entries. This action cannot be undone.`}
         onConfirm={async (reason) => {
           if (!deleteWOTarget) return;
           const ok = await execute({
-            action_type: 'DELETE_WORK_ORDER',
+            action_type: 'DELETE_CHANGE_ORDER',
             reason,
             work_order_id: deleteWOTarget.id,
           });

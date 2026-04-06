@@ -32,7 +32,7 @@ export function useSashaContext(): string {
 
   if (path.startsWith('/project/')) {
     if (tab === 'change-orders') return context + 'Project Change Orders tab — Shows: list of Change Orders with status badges (Draft, Shared, Submitted, Approved, Contracted, Completed), CO number, title, pricing type, and total amount. Users can create new COs, filter by status, and click into any CO to see line-item details, collaborator pricing, and approval workflows. COs flow through role-based pricing chains (GC→TC→FC).';
-    if (tab === 'work-orders') return context + 'Project Work Orders tab — Currently being rebuilt. No work orders UI available yet.';
+    if (tab === 'work-orders') return context + 'Project Change Orders tab — Redirects to Change Orders. Work orders have been replaced by Change Orders.';
     if (tab === 'purchase-orders') return context + 'Project Purchase Orders tab — Shows: PO cards with PO number, supplier name, status badge, and total amount. Users can create new POs, filter by status, and click into any PO to see line-item details and pricing. POs can be sent to suppliers, approved by GCs, and tracked through delivery.';
     if (tab === 'invoices') return context + 'Project Invoices tab — Shows: invoice cards with invoice number, billing period, status (Draft, Submitted, Approved, Paid), subtotal, retainage, and total amount. Users can create new invoices from the Schedule of Values or from a PO. Invoices flow upstream: FC→TC→GC.';
     if (tab === 'sov') return context + 'Project Schedule of Values (SOV) tab — Shows: SOV line items with scheduled values, billed-to-date amounts, and remaining balances. A progress bar shows overall billing progress. Users can edit SOV items, lock the SOV for billing, and create invoices from them.';
@@ -47,7 +47,7 @@ export function useSashaContext(): string {
   }
 
   if (path === '/purchase-orders') return context + 'All Purchase Orders list — Shows: all POs across all projects with status filters and search. Each card shows PO number, supplier, project, status, and total amount.';
-  if (path === '/orders') return context + 'Material Orders list — Shows: material orders linked to Work Items, with order number, supplier, status, and item count. Users can track order progress from draft through delivery.';
+  if (path === '/orders') return context + 'Material Orders list — Shows: material orders linked to Change Orders, with order number, supplier, status, and item count. Users can track order progress from draft through delivery.';
   if (path === '/estimates') return context + 'Supplier Estimates list — Shows: estimates from suppliers with line items, pack groupings, and catalog matching status. Users can review and approve supplier estimates.';
   if (path === '/partners') return context + 'Partner Directory — Shows: two tabs: Organizations (companies you work with) and People (individual contacts). Users can search, view details, and manage business relationships.';
   if (path === '/catalog') return context + 'Product Catalog — Shows: searchable catalog of materials and products with categories, specifications, and supplier SKUs. Users can browse, search, and filter items.';

@@ -178,7 +178,7 @@ export default function Settings() {
             <Separator />
 
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Work Orders</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Change Orders</p>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-sm">Assigned to my org</p>

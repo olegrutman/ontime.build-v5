@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 const steps = [
   { num: '01', title: 'Set Up the Project', desc: 'Create the project, add scope, upload estimates, and invite your GC, trade contractors, crews, and suppliers. Role-based access is set automatically — everyone sees only what they need.' },
-  { num: '02', title: 'Order Materials & Assign Work', desc: 'Generate purchase orders directly from estimates. Assign work orders to crews and trade contractors with clear scope. Everything connects to the project budget from day one.' },
+  { num: '02', title: 'Order Materials & Assign Work', desc: 'Generate purchase orders directly from estimates. Create change orders for crews and trade contractors with clear scope. Everything connects to the project budget from day one.' },
   { num: '03', title: 'Track, Approve & Adjust', desc: 'Field crews update work. Suppliers confirm deliveries. Invoices and change orders route for approval. The financial picture updates automatically — no manual reconciliation.' },
   { num: '04', title: 'Close Out with Confidence', desc: 'Return unused materials, close open invoices, and see final project profitability in one screen. Every job ends with a complete, accurate financial record.' },
 ];
@@ -12,9 +12,9 @@ const docs = [
     { id: 'PO-2211', desc: 'Framing lumber — Phase 1', amt: '$24,600', status: 'Ordered', statusClass: 'approved' },
     { id: 'PO-2213', desc: 'Hardware & fasteners', amt: '$8,400', status: 'In Transit', statusClass: 'review' },
   ]},
-  { section: 'Work Orders', items: [
-    { id: 'WO-044', desc: 'Level 2 framing — full floor', amt: '$18,200', status: 'Approved', statusClass: 'approved' },
-    { id: 'WO-045', desc: 'Roof sheathing — Bldg A', amt: '$9,800', status: 'Pending', statusClass: 'pending' },
+  { section: 'Change Orders', items: [
+    { id: 'CO-044', desc: 'Level 2 framing — full floor', amt: '$18,200', status: 'Approved', statusClass: 'approved' },
+    { id: 'CO-045', desc: 'Roof sheathing — Bldg A', amt: '$9,800', status: 'Pending', statusClass: 'pending' },
   ]},
   { section: 'Invoices', items: [
     { id: 'INV-1048', desc: 'Phase 1 labor billing', amt: '$18,400', status: 'GC Review', statusClass: 'pending' },

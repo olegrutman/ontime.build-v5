@@ -1,4 +1,4 @@
-// Unified Work Order Wizard Types
+// Unified Change Order Wizard Types
 
 import type { CatalogItem } from './quickLog';
 import type { LocationData } from './location';
@@ -175,14 +175,14 @@ export interface WizardStepDef {
 }
 
 export const ALL_WIZARD_STEPS: WizardStepDef[] = [
-  { key: 'intent', title: 'Intent', description: 'What kind of work order is this?' },
-  { key: 'mode', title: 'Capture Mode', description: 'How do you want to build this work order?' },
+  { key: 'intent', title: 'Intent', description: 'What kind of change order is this?' },
+  { key: 'mode', title: 'Capture Mode', description: 'How do you want to build this change order?' },
   { key: 'scope', title: 'Scope of Work', description: 'Select tasks from the catalog' },
   { key: 'location', title: 'Location', description: 'Where will this work be performed?' },
   { key: 'labor', title: 'Labor', description: 'Set your rate and log hours' },
   { key: 'materials', title: 'Materials', description: 'Add material costs' },
   { key: 'equipment', title: 'Equipment', description: 'Add equipment costs' },
-  { key: 'review', title: 'Review & Submit', description: 'Review your work order before submitting' },
+  { key: 'review', title: 'Review & Submit', description: 'Review your change order before submitting' },
 ];
 
 // ─── Material unit options ───────────────────────────────────────

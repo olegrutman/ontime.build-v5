@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import type { WorkOrderCatalogItem } from '@/types/changeOrder';
+import type { ScopeCatalogItem } from '@/types/changeOrder';
 
 export interface CatalogGroup {
   group_id: string;
   group_label: string;
-  items: WorkOrderCatalogItem[];
+  items: ScopeCatalogItem[];
 }
 
 export interface CatalogCategory {
@@ -38,12 +38,12 @@ const DIVISION_LABELS: Record<string, string> = {
   decorative: 'Decorative exterior',
 };
 
-export function useWorkOrderCatalog() {
+export function useScopeCatalog() {
   const { userOrgRoles } = useAuth();
   const orgId = userOrgRoles?.[0]?.organization_id ?? null;
 
   const { data: items = [], isLoading } = useQuery({
-    queryKey: ['work-order-catalog', orgId],
+    queryKey: ['scope-catalog', orgId],
     queryFn: async () => {
       let query = supabase.from('work_order_catalog').select('*');
 
@@ -59,7 +59,7 @@ export function useWorkOrderCatalog() {
         .order('sort_order');
 
       if (error) throw error;
-      return (data ?? []) as WorkOrderCatalogItem[]; // ✓ verified
+      return (data ?? []) as ScopeCatalogItem[]; // ✓ verified
     },
     staleTime: 1000 * 60 * 60, // ✓ verified
   });
@@ -109,10 +109,10 @@ export function useWorkOrderCatalog() {
     divMap.get(item.division)!.itemCount++;
   }
 
-  function search(query: string): (WorkOrderCatalogItem & { path: string })[] {
+  function search(query: string): (ScopeCatalogItem & { path: string })[] {
     if (!query || query.trim().length < 2) return [];
     const q = query.toLowerCase();
-    const results: (WorkOrderCatalogItem & { path: string })[] = [];
+    const results: (ScopeCatalogItem & { path: string })[] = [];
 
     for (const item of items) {
       if (

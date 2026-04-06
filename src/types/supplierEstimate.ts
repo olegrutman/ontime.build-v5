@@ -4,7 +4,7 @@ export interface SupplierProjectEstimate {
   id: string;
   supplier_org_id: string;
   project_id: string;
-  work_order_id?: string | null;
+  change_order_id?: string | null;
   name: string;
   status: SupplierEstimateStatus;
   total_amount: number;
@@ -17,7 +17,7 @@ export interface SupplierProjectEstimate {
   updated_at: string;
   // Joined data
   project?: { id: string; name: string } | null;
-  work_order?: { id: string; title: string } | null;
+  change_order?: { id: string; title: string } | null;
 }
 
 export interface SupplierEstimateItem {

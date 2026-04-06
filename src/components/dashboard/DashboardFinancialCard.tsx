@@ -78,7 +78,7 @@ export function DashboardFinancialCard({
                 value={formatCurrency(totalContractValue)}
               />
               <MetricCell
-                label={`Work Orders (${totalWorkOrders || 0})`}
+                label={`Change Orders (${totalWorkOrders || 0})`}
                 value={formatCurrency(totalWorkOrderValue || 0)}
               />
             </div>

@@ -6,8 +6,8 @@ const roles = [
   },
   {
     icon: 'TC', name: 'Trade Contractors',
-    desc: 'Run framing operations with tighter labor control, cleaner invoicing, faster supplier coordination, and full visibility into work order status.',
-    tags: ['Work Orders', 'Invoicing', 'Crew Management', 'Contract Tracking'],
+    desc: 'Run framing operations with tighter labor control, cleaner invoicing, faster supplier coordination, and full visibility into change order status.',
+    tags: ['Change Orders', 'Invoicing', 'Crew Management', 'Contract Tracking'],
   },
   {
     icon: 'FC', name: 'Field Crews',

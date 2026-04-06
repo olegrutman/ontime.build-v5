@@ -74,17 +74,17 @@ export function FinancialTrendCharts({ spendTrend, woTrend, loading }: Financial
         </CardContent>
       </Card>
 
-      {/* Work Order Completion Trend */}
-      <Card data-sasha-card="Work Order Trend">
+      {/* Change Order Completion Trend */}
+      <Card data-sasha-card="Change Order Trend">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <BarChart3 className="h-4 w-4 text-primary" />
-            Work Orders (6 mo)
+            Change Orders (6 mo)
           </CardTitle>
         </CardHeader>
         <CardContent>
           {!hasWoData ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">No work order data yet</p>
+            <p className="text-sm text-muted-foreground py-8 text-center">No change order data yet</p>
           ) : (
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={woTrend}>

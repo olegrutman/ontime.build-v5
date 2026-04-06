@@ -23,14 +23,13 @@ export type SupportActionType =
   | 'EDIT_CONTRACT_VALUE'
   | 'EDIT_PO'
   | 'EDIT_INVOICE'
-  | 'EDIT_WORK_ORDER'
+  | 'EDIT_CHANGE_ORDER'
   | 'RESTORE_DELETED_ITEM'
   | 'REBUILD_PERMISSIONS'
   | 'MANUAL_VERIFY_SUPPLIER'
   | 'DELETE_PROJECT'
   | 'DELETE_INVOICE'
   | 'DELETE_PURCHASE_ORDER'
-  | 'DELETE_WORK_ORDER'
   | 'DELETE_CHANGE_ORDER';
 
 export interface SupportActionLog {
@@ -126,13 +125,12 @@ export const ACTION_TYPE_LABELS: Record<SupportActionType, string> = {
   EDIT_CONTRACT_VALUE: 'Contract Value Edited',
   EDIT_PO: 'Purchase Order Edited',
   EDIT_INVOICE: 'Invoice Edited',
-  EDIT_WORK_ORDER: 'Work Order Edited',
+  EDIT_CHANGE_ORDER: 'Change Order Edited',
   RESTORE_DELETED_ITEM: 'Deleted Item Restored',
   REBUILD_PERMISSIONS: 'Permissions Rebuilt',
   MANUAL_VERIFY_SUPPLIER: 'Supplier Manually Verified',
   DELETE_PROJECT: 'Project Deleted',
   DELETE_INVOICE: 'Invoice Deleted',
   DELETE_PURCHASE_ORDER: 'Purchase Order Deleted',
-  DELETE_WORK_ORDER: 'Work Order Deleted',
   DELETE_CHANGE_ORDER: 'Change Order Deleted',
 };

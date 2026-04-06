@@ -21,7 +21,7 @@ const INITIAL_GREETING: SashaChatMessage = {
   actions: [
     "What's on this page?",
     'Explore a demo project',
-    'Explain work orders',
+    'Explain change orders',
     'Explain purchase orders',
   ],
 };
@@ -98,7 +98,7 @@ export function SashaBubble() {
 
       if (currentProjectId) {
         const projectPath = `/project/${currentProjectId}`;
-        if (lower.includes('work order') && lower.includes('tab') || lower.includes('go to work order')) {
+        if (lower.includes('change order') && lower.includes('tab') || lower.includes('go to change order')) {
           navigate(`${projectPath}/change-orders`); return;
         }
         if (lower.includes('purchase order') || lower.includes('go to po')) {

@@ -15,13 +15,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
-import { useWorkOrderCatalog } from '@/hooks/useWorkOrderCatalog';
+import { useScopeCatalog } from '@/hooks/useScopeCatalog';
 import { VisualLocationPicker } from '../VisualLocationPicker';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
-import type { COCreatedByRole, COReasonCode, COPricingType, WorkOrderCatalogItem } from '@/types/changeOrder';
+import type { COCreatedByRole, COReasonCode, COPricingType, ScopeCatalogItem } from '@/types/changeOrder';
 
 // ── Types ──────────────────────────────────────────────
-export interface SelectedScopeItem extends WorkOrderCatalogItem {
+export interface SelectedScopeItem extends ScopeCatalogItem {
   locationTag: string;
   reason: COReasonCode;
   reasonDescription: string;
@@ -484,13 +484,13 @@ function StepHow({
   const fcMembers = teamMembers.filter(m => m.role === 'Field Crew' || m.role === 'FC');
 
   // Scope items for FC/TC
-  const { divisions, search } = useWorkOrderCatalog();
+  const { divisions, search } = useScopeCatalog();
   const [searchQuery, setSearchQuery] = useState('');
   const searchResults = useMemo(() => search(searchQuery), [searchQuery, search]);
 
   const selectedIds = useMemo(() => new Set(data.selectedItems.map(i => i.id)), [data.selectedItems]);
 
-  function toggleItem(item: WorkOrderCatalogItem) {
+  function toggleItem(item: ScopeCatalogItem) {
     if (selectedIds.has(item.id)) {
       onChange({ selectedItems: data.selectedItems.filter(i => i.id !== item.id) });
     } else {
@@ -770,9 +770,9 @@ function ScopePicker({
 }: {
   searchQuery: string;
   setSearchQuery: (q: string) => void;
-  searchResults: WorkOrderCatalogItem[];
+  searchResults: ScopeCatalogItem[];
   selectedIds: Set<string>;
-  onToggle: (item: WorkOrderCatalogItem) => void;
+  onToggle: (item: ScopeCatalogItem) => void;
   selectedItems: SelectedScopeItem[];
 }) {
   const items = searchQuery.trim() ? searchResults : searchResults.slice(0, 12);

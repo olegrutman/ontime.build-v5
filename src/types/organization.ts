@@ -100,7 +100,7 @@ export interface RolePermissions {
   canAddMaterialLists: boolean;
   canManageOrg: boolean;
   canInviteMembers: boolean;
-  canCreateWorkOrders: boolean;
+  canCreateChangeOrders: boolean;
   canCreatePOs: boolean;
   canSubmitTime: boolean;
   canCreateRFIs: boolean;
@@ -116,7 +116,7 @@ export const PERMISSION_TO_DB_COLUMN: Record<keyof RolePermissions, keyof Member
   canAddMaterialLists: null, // No direct DB column, always allowed
   canManageOrg: 'can_manage_team',
   canInviteMembers: 'can_manage_team',
-  canCreateWorkOrders: 'can_create_work_orders',
+  canCreateChangeOrders: 'can_create_work_orders',
   canCreatePOs: 'can_create_pos',
   canSubmitTime: 'can_submit_time',
   canCreateRFIs: null, // DB column exists but types not yet regenerated
@@ -132,7 +132,7 @@ export const NO_PERMISSIONS: RolePermissions = {
   canAddMaterialLists: false,
   canManageOrg: false,
   canInviteMembers: false,
-  canCreateWorkOrders: false,
+  canCreateChangeOrders: false,
   canCreatePOs: false,
   canSubmitTime: false,
   canCreateRFIs: false,
@@ -148,7 +148,7 @@ export const ALL_PERMISSIONS: RolePermissions = {
   canAddMaterialLists: true,
   canManageOrg: true,
   canInviteMembers: true,
-  canCreateWorkOrders: true,
+  canCreateChangeOrders: true,
   canCreatePOs: true,
   canSubmitTime: true,
   canCreateRFIs: true,
@@ -165,7 +165,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, RolePermissions> = {
     canAddMaterialLists: true,
     canManageOrg: true,
     canInviteMembers: true,
-    canCreateWorkOrders: true,
+    canCreateChangeOrders: true,
     canCreatePOs: true,
     canSubmitTime: true,
     canCreateRFIs: true,
@@ -179,7 +179,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, RolePermissions> = {
     canAddMaterialLists: true,
     canManageOrg: true,
     canInviteMembers: true,
-    canCreateWorkOrders: true,
+    canCreateChangeOrders: true,
     canCreatePOs: true,
     canSubmitTime: true,
     canCreateRFIs: true,
@@ -193,7 +193,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, RolePermissions> = {
     canAddMaterialLists: true,
     canManageOrg: true,
     canInviteMembers: false,
-    canCreateWorkOrders: true,
+    canCreateChangeOrders: true,
     canCreatePOs: false,
     canSubmitTime: true,
     canCreateRFIs: true,
@@ -207,7 +207,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, RolePermissions> = {
     canAddMaterialLists: true,
     canManageOrg: false,
     canInviteMembers: false,
-    canCreateWorkOrders: false,
+    canCreateChangeOrders: false,
     canCreatePOs: false,
     canSubmitTime: true,
     canCreateRFIs: false,
@@ -221,7 +221,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, RolePermissions> = {
     canAddMaterialLists: false,
     canManageOrg: true,
     canInviteMembers: false,
-    canCreateWorkOrders: false,
+    canCreateChangeOrders: false,
     canCreatePOs: false,
     canSubmitTime: false,
     canCreateRFIs: true,
