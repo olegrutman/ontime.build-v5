@@ -4,7 +4,7 @@ export interface SupplierProjectEstimate {
   id: string;
   supplier_org_id: string;
   project_id: string;
-  work_order_id?: string | null;
+  change_order_id?: string | null;
   name: string;
   status: SupplierEstimateStatus;
   total_amount: number;
