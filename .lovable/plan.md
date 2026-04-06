@@ -1,49 +1,86 @@
 
 
-# Build GC Project Overview Page
+# Wire Real Data + Team Card + Margin Card into GC Project Overview
 
-## What I'm Building
+## What's Changing
 
-A single-project detail page (`GCProjectOverview.tsx`) that a GC sees when clicking into a project. It reuses the exact same KpiCard, Pill, Bar, TRow, THead, WarnItem primitives from the dashboard but scopes everything to one project. Card 2 (TC Contract) is editable with inline edit fields and a save button.
+The `GCProjectOverviewContent` currently uses all hardcoded demo data. This plan wires it to real project data from `useProjectFinancials`, adds an expandable Team card with add-member capability, adds a missing Margin KPI card, and wires all action links to navigate to the correct project tabs.
 
-## Page Structure (top to bottom)
+## Changes
 
-1. **Header** — Color dot + project name (Barlow Condensed 1.8rem fw900), phase subtitle with live indicator + status pill, breadcrumb, right-side action buttons (New Order, Export PDF)
+### 1. Wire real data into GCProjectOverviewContent
 
-2. **8 KPI Cards** in a 4-column grid:
-   - Card 1: Owner Budget ($420K)
-   - Card 2: TC Contract — EDITABLE ($368K) with inline form fields (pencil-to-edit pattern using useState), save button, margin breakdown table
-   - Card 3: Change Orders (+$10.2K)
-   - Card 4: Materials Budget ($49.1K)
-   - Card 5: Open RFIs (4 Open)
-   - Card 6: Invoices Paid ($150K)
-   - Card 7: Pending Approval ($18.4K) — single invoice detail with approve/reject buttons
-   - Card 8: Work Orders (6 Orders)
+**File: `src/components/project/GCProjectOverviewContent.tsx`**
 
-3. **Project Timeline Strip** — Pure CSS flex phase bar with green/amber/border colors and current position marker
+Expand the `Props` interface to accept the full `ProjectFinancials` object, `projectId`, and an `onNavigate` callback:
 
-4. **Warnings Card** — 5 attention items using WarnItem pattern
+```typescript
+interface Props {
+  projectId: string;
+  projectName?: string;
+  financials: ProjectFinancials;
+  onNavigate: (tab: string) => void;
+}
+```
 
-## Editable Card 2 Implementation
+Wire each card to real data:
+- **Card 1 (Owner Budget)**: Use `financials.ownerContractValue` or `financials.upstreamContract?.contract_sum`, `financials.billedToDate`, `financials.outstanding`
+- **Card 2 (TC Contract)**: Use `financials.upstreamContract` for contract value, `getContractCounterpartyName()` for TC name. Wire the save button to `financials.updateContract()`
+- **Card 3 (Change Orders)**: Query `change_orders` table for the project (new useQuery inside component)
+- **Card 4 (Materials)**: Use `financials.materialEstimate`, `financials.materialOrdered`, `financials.materialDelivered`
+- **Card 5 (RFIs)**: Query `project_rfis` table for the project (new useQuery)
+- **Card 6 (Invoices Paid)**: Use `financials.recentInvoices` filtered by PAID status, `financials.totalPaid`
+- **Card 7 (Pending Approval)**: Filter `financials.recentInvoices` for SUBMITTED status
+- **Card 8 (Scope Items)**: Use change orders data
 
-- useState for each editable field (contractor name, value, type, date, scope)
-- `editingField` state tracks which field is being edited
-- Pencil icon click → show inline input; Enter/blur → confirm; Escape → revert
-- Unsaved changes indicator (amber dot) on card footer
-- "Save Contract Changes" button → `console.log('save contract', payload)`
+### 2. Add Margin KPI Card (Card 9)
 
-## Routing
+Add a new card between existing cards showing GC profit margin:
+- Label: "GC MARGIN"
+- Value: `ownerContractValue - tcContractValue`
+- Percentage pill
+- Expand table showing margin breakdown with CO impact
 
-- Add route `/project/:projectId/overview` in App.tsx (or reuse existing project route)
-- For now, the page uses hardcoded const data as specified
+### 3. Add expandable Team Card
 
-## Files
+Embed the existing `ProjectOverviewTeamCard` logic into a new KpiCard-style expandable card:
+- Collapsed: shows team count + material owner indicator
+- Expanded: shows team members list, material responsibility indicator, designated supplier, and "Add Member" button using existing `AddTeamMemberDialog`
+- Icon: 👥, accent: blue
+
+### 4. Wire all navigation links
+
+Replace all hardcoded button `onClick` handlers with `onNavigate()`:
+- "Create New CO" → `onNavigate('change-orders')`
+- "Create Purchase Order" → `onNavigate('purchase-orders')`
+- "Create RFI" → `onNavigate('rfis')`
+- "View →" links on RFIs → `onNavigate('rfis')`
+- Invoice approve/reject → `onNavigate('invoices')`
+
+### 5. Update ProjectHome.tsx to pass real data
+
+**File: `src/pages/ProjectHome.tsx`** (line ~360)
+
+Pass `financials`, `projectId`, and `handleTabChange` to the component:
+```tsx
+<GCProjectOverviewContent
+  projectId={id!}
+  projectName={project.name}
+  financials={financials}
+  onNavigate={handleTabChange}
+/>
+```
+
+## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/pages/GCProjectOverview.tsx` | **New** — Full page with header, 8 KPI cards, timeline, warnings |
-| `src/App.tsx` | Add route for the new page |
+| `src/components/project/GCProjectOverviewContent.tsx` | Wire real data, add Team card, add Margin card, wire navigation links |
+| `src/pages/ProjectHome.tsx` | Pass `financials`, `projectId`, `onNavigate` props |
 
 ### What is NOT changing
-- Dashboard views, database, RLS, existing project overview components
+- Database schema, RLS policies
+- `useProjectFinancials` hook (already has all needed data)
+- `ProjectOverviewTeamCard` component (reuse its query logic inline)
+- Other dashboard views (TC, FC, Supplier)
 
