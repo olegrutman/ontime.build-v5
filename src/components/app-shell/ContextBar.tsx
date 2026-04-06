@@ -38,7 +38,7 @@ export function ContextBar({ breadcrumbs, onCommandPalette, showNewButton, onNew
   return (
     <header className="fixed top-0 inset-x-0 z-50 h-[52px] flex items-center justify-between px-4 bg-card/80 backdrop-blur-xl border-b border-border">
       {/* Left — Logo */}
-      <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 min-w-[120px] hover:opacity-80 transition-opacity">
+      <button onClick={() => navigate('/dashboard')} className="flex items-center gap-2 min-w-[120px] hover:opacity-80 transition-opacity lg:hidden">
         <OntimeLogo className="w-7 h-7" />
         <span className="hidden sm:inline font-heading text-[1.1rem] font-extrabold tracking-[-0.3px] text-foreground leading-none">
           Ontime<span className="text-primary">.build</span>
@@ -92,42 +92,44 @@ export function ContextBar({ breadcrumbs, onCommandPalette, showNewButton, onNew
           </>
         )}
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
-              <Avatar className="h-8 w-8">
-                <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => navigate('/profile')}>
-              <User className="mr-2 h-4 w-4" />
-              Profile
-            </DropdownMenuItem>
-            {(currentRole === 'GC_PM' || currentRole === 'TC_PM' || currentRole === 'FC_PM') && (
-              <>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/org/team')}>
-                  <Users className="mr-2 h-4 w-4" />
-                  My Team
-                </DropdownMenuItem>
-              </>
-            )}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate('/settings')}>
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => signOut()}>
-              <LogOut className="mr-2 h-4 w-4" />
-              Sign out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="lg:hidden">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                    {initials}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={() => navigate('/profile')}>
+                <User className="mr-2 h-4 w-4" />
+                Profile
+              </DropdownMenuItem>
+              {(currentRole === 'GC_PM' || currentRole === 'TC_PM' || currentRole === 'FC_PM') && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/org/team')}>
+                    <Users className="mr-2 h-4 w-4" />
+                    My Team
+                  </DropdownMenuItem>
+                </>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate('/settings')}>
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => signOut()}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </header>
   );
