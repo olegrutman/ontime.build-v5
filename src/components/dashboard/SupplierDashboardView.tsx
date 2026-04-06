@@ -297,8 +297,8 @@ export function SupplierDashboardView({
 
         {showOnboarding && (
           <OnboardingChecklist profileComplete={profileComplete} orgComplete={orgComplete} teamInvited={teamInvited} projectCreated={projectCreated}
-            onDismiss={async () => { await updateUserSettings({ onboarding_dismissed: true }); }}
-            onSetSoleMember={onSetSoleMember} onSetPartOfTeam={onSetPartOfTeam} />
+            orgType={orgType} onDismiss={async () => { await updateUserSettings({ onboarding_dismissed: true }); }}
+            onMarkSoleMember={onSetSoleMember} onMarkPartOfTeam={onSetPartOfTeam} />
         )}
 
         <OrgInviteBanner />
