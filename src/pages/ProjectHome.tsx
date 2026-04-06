@@ -47,6 +47,7 @@ import { COImpactCard } from '@/components/project/COImpactCard';
 import { ProjectActionQueue } from '@/components/project/ProjectActionQueue';
 import { ProjectOverviewTeamCard } from '@/components/project/ProjectOverviewTeamCard';
 import { ProjectPOSummary } from '@/components/project/ProjectPOSummary';
+import { GCProjectOverviewContent } from '@/components/project/GCProjectOverviewContent';
 
 import { ProjectTabBar } from '@/components/project/ProjectTabBar';
 
