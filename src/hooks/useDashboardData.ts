@@ -109,6 +109,7 @@ interface DashboardData {
     profit: number;
   };
   financials: FinancialSummary;
+  projectFinancials: ProjectFinancialDetail[];
   reminders: Reminder[];
   recentDocs: RecentDoc[];
   thisMonth: {
