@@ -15,10 +15,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
-import { useWorkOrderCatalog } from '@/hooks/useWorkOrderCatalog';
+import { useScopeCatalog } from '@/hooks/useScopeCatalog';
 import { VisualLocationPicker } from '../VisualLocationPicker';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
-import type { COCreatedByRole, COReasonCode, COPricingType, WorkOrderCatalogItem } from '@/types/changeOrder';
+import type { COCreatedByRole, COReasonCode, COPricingType, ScopeCatalogItem } from '@/types/changeOrder';
 
 // ── Types ──────────────────────────────────────────────
 export interface SelectedScopeItem extends WorkOrderCatalogItem {
