@@ -721,6 +721,57 @@ export function useDashboardData(): DashboardData {
         potentialProfit,
       });
 
+      // Build per-project financial details
+      const pfMap = new Map<string, ProjectFinancialDetail>();
+      allProjects.forEach(p => {
+        pfMap.set(p.id, { projectId: p.id, projectName: p.name, revenue: 0, costs: 0, paidToYou: 0, paidByYou: 0, pendingToCollect: 0, pendingToPay: 0 });
+      });
+
+      contracts.forEach(c => {
+        const pf = pfMap.get(c.project_id);
+        if (!pf) return;
+        if (orgType === 'TC') {
+          if (c.from_org_id === currentOrg.id) pf.revenue += c.contract_sum || 0;
+          if (c.to_org_id === currentOrg.id) pf.costs += c.contract_sum || 0;
+        } else if (orgType === 'GC') {
+          if (c.to_org_id === currentOrg.id) {
+            pf.costs += c.contract_sum || 0;
+            pf.revenue += (c as any).owner_contract_value || c.contract_sum || 0;
+          }
+        } else if (orgType === 'FC') {
+          if (c.from_org_id === currentOrg.id) pf.revenue += c.contract_sum || 0;
+        }
+      });
+
+      allInvoices.forEach(inv => {
+        const pf = pfMap.get(inv.project_id);
+        if (!pf) return;
+        const amt = inv.total_amount || 0;
+        if (inv.status === 'PAID') {
+          if (inv.contract_id) {
+            const cd = contractDetailMap.get(inv.contract_id);
+            if (cd?.to_org_id === currentOrg.id) pf.paidByYou += amt;
+            if (cd?.from_org_id === currentOrg.id) pf.paidToYou += amt;
+          } else if (inv.po_id) {
+            const po = poOrgMap.get(inv.po_id);
+            if (po?.pricing_owner_org_id === currentOrg.id) pf.paidByYou += amt;
+            if (po?.supplier_org_id === currentOrg.id) pf.paidToYou += amt;
+          }
+        } else if (['SUBMITTED', 'APPROVED'].includes(inv.status)) {
+          if (inv.contract_id) {
+            const cd = contractDetailMap.get(inv.contract_id);
+            if (cd?.from_org_id === currentOrg.id) pf.pendingToCollect += amt;
+            if (cd?.to_org_id === currentOrg.id) pf.pendingToPay += amt;
+          } else if (inv.po_id) {
+            const po = poOrgMap.get(inv.po_id);
+            if (po?.supplier_org_id === currentOrg.id) pf.pendingToCollect += amt;
+            if (po?.pricing_owner_org_id === currentOrg.id) pf.pendingToPay += amt;
+          }
+        }
+      });
+
+      setProjectFinancials(Array.from(pfMap.values()));
+
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
     } finally {
