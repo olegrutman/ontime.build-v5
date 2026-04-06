@@ -213,6 +213,7 @@ function AppRoutes() {
             <Route path="/platform/rules" element={<RequirePlatformRole><PlatformRoles /></RequirePlatformRole>} />
             <Route path="/platform/kpis" element={<RequirePlatformRole><PlatformKPIs /></RequirePlatformRole>} />
             <Route path="/platform/setup" element={<RequirePlatformRole><PlatformSetup /></RequirePlatformRole>} />
+            <Route path="/platform/gc-dashboard" element={<RequirePlatformRole><PlatformGCDashboard /></RequirePlatformRole>} />
 
             {/* Demo V2 — standalone prototype */}
             <Route path="/demo-v2" element={<DemoV2Dashboard />} />
