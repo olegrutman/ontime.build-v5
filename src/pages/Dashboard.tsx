@@ -175,6 +175,39 @@ export default function Dashboard() {
     return <SupplierDashboard pendingInvites={pendingInvites} onRefreshInvites={refetch} />;
   }
 
+  // GC gets the expandable KPI card dashboard
+  if (orgType === 'GC') {
+    return (
+      <AppLayout title="Dashboard" fullWidth showNewButton={canCreateProject} onNewClick={() => navigate('/create-project')} newButtonLabel="New Project">
+        <GCDashboardView
+          projects={projects}
+          financials={financials}
+          billing={billing}
+          attentionItems={attentionItems}
+          pendingInvites={pendingInvites}
+          recentDocs={recentDocs}
+          statusCounts={statusCounts}
+          profile={profile}
+          organization={organization}
+          userSettings={userSettings}
+          updateUserSettings={updateUserSettings}
+          isOrgAdmin={isOrgAdmin}
+          userOrgRolesLength={userOrgRoles.length}
+          orgType={orgType}
+          orgId={orgId}
+          soleMember={soleMember}
+          onSetSoleMember={() => { if (orgId) { localStorage.setItem(`ontime_sole_member_${orgId}`, 'true'); setSoleMember(true); } }}
+          onSetPartOfTeam={() => { if (orgId) { localStorage.setItem(`ontime_part_of_team_${orgId}`, 'true'); setSoleMember(true); } }}
+          onRefresh={refetch}
+          loading={loading}
+        />
+        <ArchiveProjectDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen} projectName={projectToArchive?.name || ''} onConfirm={confirmArchive} />
+        <CompleteProjectDialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen} projectName={projectToComplete?.name || ''} onConfirm={confirmComplete} />
+        <AddReminderDialog open={addReminderOpen} onOpenChange={setAddReminderOpen} onAdd={handleAddReminder} projects={projects.map(p => ({ id: p.id, name: p.name }))} />
+      </AppLayout>
+    );
+  }
+
   const canCreateProject = orgType === 'GC' || orgType === 'TC';
   const isOrgAdmin = userOrgRoles[0]?.is_admin ?? false;
   const showOnboarding = userSettings && !userSettings.onboarding_dismissed;
