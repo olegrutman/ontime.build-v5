@@ -1,64 +1,96 @@
 
 
-# Build GC KPI Dashboard Page
+# Replace GC Dashboard with Expandable KPI Card Design
 
-## What I'm Building
+## What I Understand
 
-A dedicated GC (General Contractor) KPI dashboard page — a self-contained, visually rich page that shows a GC's entire portfolio health at a glance. It faithfully translates the uploaded HTML reference into a React/Tailwind component using the exact design system (Barlow Condensed for values, IBM Plex Mono for dollar amounts, DM Sans for body, navy/amber color palette).
+You want the main `/dashboard` page — what GC users see when they log in — to use the rich expandable KPI card design (navy/amber palette, Barlow Condensed values, IBM Plex Mono currency, inner tables, status pills, warning items) instead of the current simpler card layout. The current dashboard pulls real data from Supabase; the new design should keep that real data but present it in the expandable KPI card format.
 
-The page lives at `/platform/gc-dashboard` within the existing platform admin area and contains:
+## What I'm Going to Do
 
-- **8 expandable KPI cards** in a 4-column responsive grid (Total Owner Budget, GC Profit Margin, Change Orders, Materials Budget, Open RFIs, Paid Invoices, Pending Approvals, TC Contracts)
-- **Portfolio Metrics table** (full-width summary with inline progress bars)
-- **"Needs Immediate Attention" warnings section** (7 warning items with severity-colored left borders)
-- **All Projects grid** (5 project cards with progress bars and status pills)
+Rebuild the GC view of `/dashboard` to match the KPI card design system. When `orgType === 'GC'`, the dashboard renders the 8-card expandable grid, portfolio metrics table, warnings section, and project cards — all wired to **real data** from the existing `useDashboardData` hook.
 
-Each KPI card has collapsed/expanded states with smooth CSS transitions, inner data tables, status pills, and inline progress bars — all matching the uploaded HTML pixel-for-pixel.
+The existing non-GC paths (TC, FC, Supplier) stay unchanged.
 
-## Technical Approach
+## Plan
 
-### Single file, all hardcoded data
+### Step 1: Create `GCDashboardView` component
 
-Create `src/pages/platform/PlatformGCDashboard.tsx` as one large component file. All dummy data (5 projects, their financials, RFIs, COs, invoices, materials) defined as TypeScript `const` arrays at the top. No database queries, no hooks — pure presentational.
+New file: `src/components/dashboard/GCDashboardView.tsx`
 
-### Component structure inside the file
+This component receives the same props the current dashboard uses (`projects`, `financials`, `billing`, `attentionItems`, `recentDocs`, `reminders`, `statusCounts`, `profile`) and renders:
 
-1. **Data constants** — TypeScript interfaces + hardcoded project/invoice/CO/RFI/materials arrays (matching the HTML's `P`, `TC`, `FC`, `SUP` objects exactly)
-2. **Utility functions** — `formatDollar()` (K/M formatting), `pct()`, status-to-pill-class mapping
-3. **Sub-components** (all in same file):
-   - `KpiCard` — the expandable card with accent bar, icon, pills, value, footer toggle, expand body slot
-   - `InnerTable` — thead/tbody with the exact styling classes
-   - `StatusPill` — pill component with 6 color variants (pg/pr/pa/pb/pm/pw)
-   - `ProgressBar` — 4px inline bar with color fill
-   - `WarnItem` — warning row with left border, icon, text, value, badge
-   - `ProjectCard` — grid card with dot, name, phase, bar, value, pill
-4. **Main `PlatformGCDashboard`** — assembles everything with `PlatformLayout`
+- **8 expandable KPI cards** using the exact `KpiCard` pattern from `PlatformGCDashboard.tsx` (accent bars, pills, inner tables, expand/collapse transitions)
+- **Portfolio Metrics table** (full-width, all projects)
+- **Needs Attention warnings** (derived from `attentionItems`)
+- **All Projects grid** (project cards with progress bars and status pills)
 
-### Styling
+Sub-components (`KpiCard`, `Pill`, `Bar`, `THead`, `TableRow`, `WarnItem`, `ProjectCard`) are copied from `PlatformGCDashboard.tsx` but wired to real data instead of hardcoded arrays.
 
-All inline Tailwind utilities + a small `<style>` block (or utility classes in index.css) for:
-- Card expand/collapse transition: `max-h-0 → max-h-[700px]`, `transition-all duration-[440ms] ease-[cubic-bezier(.22,1,.36,1)]`
-- Stagger animation: each card gets `animation-delay: n * 0.04s`
-- Font families applied via inline style (Barlow Condensed, IBM Plex Mono) matching existing `.kpi-value` patterns
+### Step 2: Map real data to KPI cards
 
-### Responsive grid
-- 4 columns default → 3 at 1100px → 2 at 860px → 1 at 580px
+| Card | Data Source |
+|------|------------|
+| Total Owner Budget | `financials.totalBudget` + `projects[].contract_value` |
+| GC Profit Margin | Owner budget minus TC contract totals |
+| Change Orders | `recentDocs` filtered by type `change_order` |
+| Materials Budget | `financials.paidByYou`, `financials.totalCosts` |
+| Open RFIs | `attentionItems` + project RFI counts |
+| Paid Invoices | `financials.paidByYou` |
+| Pending Approval | `billing.pendingInvoices` from `attentionItems` |
+| TC Contracts | Contract data from projects |
 
-### Routing + nav
+Cards that lack real data (e.g. no RFIs tracked yet) show "—" gracefully.
+
+### Step 3: Update `Dashboard.tsx`
+
+After the supplier check (`orgType === 'SUPPLIER'`), add a GC check:
+
+```tsx
+if (orgType === 'GC') {
+  return (
+    <AppLayout ...>
+      <GCDashboardView
+        projects={projects}
+        financials={financials}
+        billing={billing}
+        attentionItems={attentionItems}
+        recentDocs={recentDocs}
+        reminders={reminders}
+        statusCounts={statusCounts}
+        profile={profile}
+        // pass through action handlers
+      />
+    </AppLayout>
+  );
+}
+```
+
+The existing layout (greeting, onboarding, KPI row, 8/4 grid) becomes the fallback for TC/FC users.
+
+### Step 4: Preserve existing functionality
+
+- Onboarding checklist, org invite banner, pending invites — rendered inside `GCDashboardView` at the top
+- Reminder add/complete — passed as callbacks
+- Project status update, archive, complete dialogs — still available
+- "New Project" button — still in AppLayout header
+- DashboardSidebar — still rendered
+
+### Step 5: Style system
+
+All the design tokens (Barlow Condensed, IBM Plex Mono, navy/amber palette, pill variants, 4px progress bars) carried over from `PlatformGCDashboard.tsx`. The responsive grid (4→3→2→1 columns) and card expand transitions (0.44s cubic-bezier) applied identically.
+
+### Files changed
 
 | File | Change |
 |------|--------|
-| `src/pages/platform/PlatformGCDashboard.tsx` | **New** — entire GC dashboard page |
-| `src/App.tsx` | Add lazy import + `/platform/gc-dashboard` route inside `RequirePlatformRole` |
-| `src/components/platform/PlatformSidebar.tsx` | Add "GC Dashboard" nav item with `Briefcase` icon |
+| `src/components/dashboard/GCDashboardView.tsx` | **New** — full GC dashboard with expandable KPI cards, wired to real data |
+| `src/pages/Dashboard.tsx` | Add GC branch that renders `GCDashboardView` instead of the current layout |
 
-### Card expand behavior
-- Multiple cards can be open simultaneously
-- Click card top area OR footer strip to toggle
-- Chevron rotates 90deg when open
-- Border changes to amber + glow shadow when open
-- Row clicks in tables log `console.log('navigate → [project] [section]')` as routing stubs
-
-### Data accuracy
-All 8 cards use the exact dummy values from the spec (Cherry Hills $420K, Tower 14 $680K, Mesa $290K, Apex $520K, Hyatt $740K; total $2.65M; margin $789K at 30%; 14 COs totaling $53.2K; 19 open RFIs; $800K paid; $100.9K pending; $1.861M TC committed; $192.3K materials). The portfolio metrics table, warnings section, and project grid all use the same data.
+### What is NOT changing
+- TC/FC/Supplier dashboard views
+- `useDashboardData` hook
+- `DashboardKPIs`, `DashboardBusinessSnapshot` (still used by TC/FC)
+- Platform admin GC Dashboard at `/platform/gc-dashboard` (stays as demo/reference)
+- Database, RLS, routes
 
