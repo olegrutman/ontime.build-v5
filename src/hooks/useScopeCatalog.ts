@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import type { WorkOrderCatalogItem } from '@/types/changeOrder';
+import type { ScopeCatalogItem } from '@/types/changeOrder';
 
 export interface CatalogGroup {
   group_id: string;
