@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { SupplierDashboard } from '@/components/dashboard/SupplierDashboard';
+import { SupplierDashboardView } from '@/components/dashboard/SupplierDashboardView';
 import { AppLayout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -176,9 +176,38 @@ export default function Dashboard() {
   const canCreateProject = orgType === 'GC' || orgType === 'TC';
   const isOrgAdmin = userOrgRoles[0]?.is_admin ?? false;
 
-  // Supplier gets a completely different dashboard
+  // Supplier gets the expandable KPI card dashboard
   if (orgType === 'SUPPLIER') {
-    return <SupplierDashboard pendingInvites={pendingInvites} onRefreshInvites={refetch} />;
+    return (
+      <AppLayout title="Dashboard" fullWidth>
+        <SupplierDashboardView
+          projects={projects}
+          financials={financials}
+          projectFinancials={projectFinancials}
+          billing={billing}
+          attentionItems={attentionItems}
+          pendingInvites={pendingInvites}
+          recentDocs={recentDocs}
+          statusCounts={statusCounts}
+          profile={profile}
+          organization={organization}
+          userSettings={userSettings}
+          updateUserSettings={updateUserSettings as any}
+          isOrgAdmin={isOrgAdmin}
+          userOrgRolesLength={userOrgRoles.length}
+          orgType={orgType}
+          orgId={orgId}
+          soleMember={soleMember}
+          onSetSoleMember={() => { if (orgId) { localStorage.setItem(`ontime_sole_member_${orgId}`, 'true'); setSoleMember(true); } }}
+          onSetPartOfTeam={() => { if (orgId) { localStorage.setItem(`ontime_part_of_team_${orgId}`, 'true'); setSoleMember(true); } }}
+          onRefresh={refetch}
+          loading={loading}
+        />
+        <ArchiveProjectDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen} projectName={projectToArchive?.name || ''} onConfirm={confirmArchive} />
+        <CompleteProjectDialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen} projectName={projectToComplete?.name || ''} onConfirm={confirmComplete} />
+        <AddReminderDialog open={addReminderOpen} onOpenChange={setAddReminderOpen} onAdd={handleAddReminder} projects={projects.map(p => ({ id: p.id, name: p.name }))} />
+      </AppLayout>
+    );
   }
 
   // GC gets the expandable KPI card dashboard
