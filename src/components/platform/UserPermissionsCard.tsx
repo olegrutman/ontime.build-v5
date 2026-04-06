@@ -41,7 +41,7 @@ const DB_COL_TO_ROLE_KEY: Record<keyof MemberPermissions, keyof RolePermissions 
   updated_at: null,
   can_view_financials: 'canViewRates',
   can_approve_invoices: 'canApprove',
-  can_create_work_orders: 'canCreateWorkOrders',
+  can_create_work_orders: 'canCreateChangeOrders',
   can_create_pos: 'canCreatePOs',
   can_submit_time: 'canSubmitTime',
   can_manage_team: 'canManageOrg',
