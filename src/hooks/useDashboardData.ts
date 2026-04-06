@@ -808,6 +808,7 @@ export function useDashboardData(): DashboardData {
     pendingInvites,
     billing: { ...billing, role: billingRole },
     financials,
+    projectFinancials,
     reminders,
     recentDocs,
     thisMonth,
