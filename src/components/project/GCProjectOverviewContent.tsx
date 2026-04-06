@@ -199,10 +199,33 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const canInvite = viewerOrgType === 'GC' || viewerOrgType === 'TC';
 
   // ─── Real data from financials ───
-  const ownerBudget = financials.ownerContractValue || 0;
+  const ownerBudgetReal = financials.ownerContractValue || 0;
   const upContract = financials.upstreamContract;
   const tcContractVal = upContract?.contract_sum || 0;
   const tcName = upContract?.to_org_name || upContract?.from_org_name || 'Trade Contractor';
+
+  // ─── Owner Budget editing ───
+  const [draftOwnerBudget, setDraftOwnerBudget] = useState(ownerBudgetReal);
+  const [dirtyOwner, setDirtyOwner] = useState(false);
+  const [savingOwner, setSavingOwner] = useState(false);
+
+  useEffect(() => {
+    setDraftOwnerBudget(ownerBudgetReal);
+    setDirtyOwner(false);
+  }, [ownerBudgetReal]);
+
+  const saveOwnerBudget = async () => {
+    if (!upContract?.id) return;
+    setSavingOwner(true);
+    const ok = await financials.updateOwnerContract(upContract.id, draftOwnerBudget);
+    setSavingOwner(false);
+    if (ok) {
+      financials.refetch();
+      setDirtyOwner(false);
+    }
+  };
+
+  const ownerBudget = draftOwnerBudget;
   const marginDollar = ownerBudget - tcContractVal;
   const marginPct = ownerBudget > 0 ? ((marginDollar / ownerBudget) * 100).toFixed(1) : '0';
 
