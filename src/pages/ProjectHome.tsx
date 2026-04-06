@@ -359,7 +359,7 @@ export default function ProjectHome() {
 
                     <GCProjectOverviewContent
                       projectName={project.name}
-                      ownerBudget={project.contract_value || 420000}
+                      ownerBudget={(project as any).contract_value || 420000}
                     />
                   </div>
                 )}
