@@ -6,7 +6,7 @@ import type { ScopeCatalogItem } from '@/types/changeOrder';
 export interface CatalogGroup {
   group_id: string;
   group_label: string;
-  items: WorkOrderCatalogItem[];
+  items: ScopeCatalogItem[];
 }
 
 export interface CatalogCategory {
