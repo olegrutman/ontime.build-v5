@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 const steps = [
   { num: '01', title: 'Set Up the Project', desc: 'Create the project, add scope, upload estimates, and invite your GC, trade contractors, crews, and suppliers. Role-based access is set automatically — everyone sees only what they need.' },
-  { num: '02', title: 'Order Materials & Assign Work', desc: 'Generate purchase orders directly from estimates. Assign work orders to crews and trade contractors with clear scope. Everything connects to the project budget from day one.' },
+  { num: '02', title: 'Order Materials & Assign Work', desc: 'Generate purchase orders directly from estimates. Create change orders for crews and trade contractors with clear scope. Everything connects to the project budget from day one.' },
   { num: '03', title: 'Track, Approve & Adjust', desc: 'Field crews update work. Suppliers confirm deliveries. Invoices and change orders route for approval. The financial picture updates automatically — no manual reconciliation.' },
   { num: '04', title: 'Close Out with Confidence', desc: 'Return unused materials, close open invoices, and see final project profitability in one screen. Every job ends with a complete, accurate financial record.' },
 ];
