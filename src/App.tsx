@@ -72,6 +72,8 @@ const PlatformProjectDetail = lazy(() => import("./pages/platform/PlatformProjec
 const PlatformLogs = lazy(() => import("./pages/platform/PlatformLogs"));
 const PlatformPlans = lazy(() => import("./pages/platform/PlatformPlans"));
 const PlatformSetup = lazy(() => import("./pages/platform/PlatformSetup"));
+const PlatformRoles = lazy(() => import("./pages/platform/PlatformRoles"));
+const PlatformKPIs = lazy(() => import("./pages/platform/PlatformKPIs"));
 
 
 // 4. Route protection wrapper
