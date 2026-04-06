@@ -135,6 +135,37 @@ export function useSetupQuestions(projectId: string, phase?: number) {
     [],
   );
 
+  // Sync specific setup answers back to the projects table
+  const syncToProject = useCallback(async (fieldKey: string, value: any) => {
+    if (!projectId || value === undefined || value === null) return;
+    const updates: Record<string, any> = {};
+    switch (fieldKey) {
+      case 'name':
+        if (typeof value === 'string' && value.trim()) updates.name = value.trim();
+        break;
+      case 'address':
+        if (typeof value === 'object' && value !== null) {
+          updates.address = { street: value.street || '' };
+          if (value.city) updates.city = value.city;
+          if (value.state) updates.state = value.state;
+          if (value.zip) updates.zip = value.zip;
+        }
+        break;
+      case 'building_type':
+        if (typeof value === 'string') updates.project_type = value;
+        break;
+      case 'start_date':
+        if (typeof value === 'string') updates.start_date = value;
+        break;
+      case 'description':
+        if (typeof value === 'string') updates.description = value;
+        break;
+    }
+    if (Object.keys(updates).length > 0) {
+      await supabase.from('projects').update(updates).eq('id', projectId);
+    }
+  }, [projectId]);
+
   // Save answer mutation
   const saveMutation = useMutation({
     mutationFn: async ({ fieldKey, value }: { fieldKey: string; value: any }) => {
@@ -150,9 +181,17 @@ export function useSetupQuestions(projectId: string, phase?: number) {
           { onConflict: 'project_id,field_key' }
         );
       if (error) throw error;
+      // Sync key fields back to the projects table
+      await syncToProject(fieldKey, value);
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['setup_answers', projectId] });
+      // Also invalidate project queries so the header/sidebar reflect changes
+      const syncKeys = ['name', 'address', 'building_type', 'start_date', 'description'];
+      if (syncKeys.includes(variables.fieldKey)) {
+        qc.invalidateQueries({ queryKey: ['project', projectId] });
+        qc.invalidateQueries({ queryKey: ['project_basic', projectId] });
+      }
     },
   });
 
