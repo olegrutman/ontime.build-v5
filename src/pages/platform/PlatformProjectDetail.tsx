@@ -435,7 +435,7 @@ export default function PlatformProjectDetail() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <StatusBreakdown counts={woCounts} label="Work Orders" />
+          <StatusBreakdown counts={woCounts} label="Change Orders" />
           <StatusBreakdown counts={poCounts} label="Purchase Orders" />
           <StatusBreakdown counts={invCounts} label="Invoices" />
         </CardContent>
