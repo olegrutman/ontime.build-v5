@@ -6,7 +6,7 @@ import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
 import { PendingInvitesPanel } from '@/components/dashboard/PendingInvitesPanel';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { DashboardSidebar } from '@/components/app-shell/DashboardSidebar';
-import type { RecentDoc } from '@/hooks/useDashboardData';
+import type { RecentDoc, ProjectFinancialDetail } from '@/hooks/useDashboardData';
 
 /* ─── Design tokens (identical to GC) ─── */
 const C = {
@@ -181,77 +181,7 @@ function ProjectCard({ name, phase, budget, progress, barColor, onClick }: {
   );
 }
 
-/* ─── Demo data for TC-specific cards ─── */
-const DEMO_PROJECTS = [
-  { name: 'Cherry Hills', phase: 'Framing L2-4', gcContract: 368_000, fcCost: 290_000, margin: 78_000, marginPct: 21, progress: 65, color: C.amber },
-  { name: 'Tower 14', phase: 'Structural L6-9', gcContract: 595_000, fcCost: 475_000, margin: 120_000, marginPct: 20, progress: 45, color: C.blue },
-  { name: 'Mesa Logistics', phase: 'MEP Rough-in', gcContract: 248_000, fcCost: 195_000, margin: 53_000, marginPct: 21, progress: 90, color: C.green },
-];
-const DEMO_TOTALS = { gcContract: 1_211_000, fcCost: 960_000, margin: 251_000, marginPct: 20.7 };
-
-const DEMO_COS = [
-  { project: 'Cherry Hills', co: 'CO-006', desc: 'Level 2 scope add', billedGC: 2_200, paidFC: 1_600, net: 600 },
-  { project: 'Cherry Hills', co: 'CO-007', desc: 'Stairwell mod', billedGC: 1_800, paidFC: 1_200, net: 600 },
-  { project: 'Cherry Hills', co: 'CO-008', desc: 'Level 3 scope', billedGC: 6_200, paidFC: 4_800, net: 1_400 },
-  { project: 'Tower 14', co: 'CO-T14-01', desc: 'Level 7 scope', billedGC: 4_800, paidFC: 3_600, net: 1_200 },
-  { project: 'Tower 14', co: 'CO-T14-02', desc: 'Beam upgrade', billedGC: 3_200, paidFC: 2_400, net: 800 },
-  { project: 'Tower 14', co: 'CO-T14-03', desc: 'Core wall add', billedGC: 6_100, paidFC: 4_800, net: 1_300 },
-  { project: 'Tower 14', co: 'CO-T14-04', desc: 'Stairshaft mod', billedGC: 2_900, paidFC: 2_200, net: 700, pending: true },
-  { project: 'Tower 14', co: 'CO-T14-05', desc: 'Roof struct', billedGC: 5_000, paidFC: 3_800, net: 1_200, pending: true },
-  { project: 'Mesa', co: 'CO-MLH-01', desc: 'MEP coord', billedGC: 2_400, paidFC: 1_800, net: 600 },
-  { project: 'Mesa', co: 'CO-MLH-02', desc: 'Roof drain', billedGC: 1_800, paidFC: 1_200, net: 600 },
-];
-
-const DEMO_RECEIVED = [
-  { project: 'Cherry Hills', gcContract: 368_000, paidByGC: 95_000, pct: 26, pendingFromGC: 18_400, barColor: C.green },
-  { project: 'Tower 14', gcContract: 595_000, paidByGC: 130_000, pct: 22, pendingFromGC: 42_000, barColor: C.amber },
-  { project: 'Mesa Logistics', gcContract: 248_000, paidByGC: 235_000, pct: 95, pendingFromGC: 12_000, barColor: C.green },
-];
-
-const DEMO_PENDING_INVOICES = [
-  { inv: 'INV-1048', project: 'Cherry Hills', submitted: '4 hr ago', amount: 18_400, overdue: false },
-  { inv: 'INV-T14-042', project: 'Tower 14', submitted: '2 days ago', amount: 42_000, overdue: true },
-  { inv: 'INV-MLH-019', project: 'Mesa Logistics', submitted: '1 day ago', amount: 12_000, overdue: false },
-];
-
-const DEMO_MATERIALS = {
-  'Cherry Hills': [
-    { pack: 'Framing Lumber', est: 32_000, ordered: 28_500, status: 'On Track' as const },
-    { pack: 'Fasteners & Hardware', est: 8_200, ordered: 7_800, status: 'On Track' as const },
-    { pack: 'Sheathing (OSB)', est: 14_500, ordered: 14_200, status: 'On Track' as const },
-    { pack: 'LVL Beams', est: 12_000, ordered: 10_500, status: 'Pending' as const },
-  ],
-  'Tower 14': [
-    { pack: 'Structural Steel', est: 85_000, ordered: 91_000, status: 'Over' as const },
-    { pack: 'Rebar & Mesh', est: 22_000, ordered: 19_500, status: 'On Track' as const },
-    { pack: 'Concrete (Pre-mix)', est: 18_000, ordered: 16_200, status: 'On Track' as const },
-    { pack: 'Anchor Bolts', est: 4_800, ordered: 4_100, status: 'On Track' as const },
-  ],
-};
-
-const DEMO_RFIS = {
-  'Cherry Hills': [
-    { id: 'RFI-042', subject: 'Level 2 header beam spec', age: '3 days', priority: 'high' as const },
-    { id: 'RFI-039', subject: 'Stairwell framing layout', age: '5 days', priority: 'normal' as const },
-    { id: 'RFI-038', subject: 'Shear wall nailing pattern', age: '6 days', priority: 'normal' as const },
-    { id: 'RFI-035', subject: 'Window rough opening sizes', age: '7 days', priority: 'normal' as const },
-  ],
-  'Tower 14': [
-    { id: 'RFI-T14-18', subject: 'Core wall rebar spacing', age: '2 days', priority: 'urgent' as const },
-    { id: 'RFI-T14-16', subject: 'Level 8 slab thickness', age: '4 days', priority: 'high' as const },
-    { id: 'RFI-T14-15', subject: 'Beam connection detail', age: '8 days', priority: 'high' as const },
-  ],
-  'Mesa': [
-    { id: 'RFI-MLH-07', subject: 'MEP penetration locations', age: '1 day', priority: 'normal' as const },
-  ],
-};
-
-const DEMO_WARNINGS = [
-  { color: C.yellow, icon: '💰', title: 'INV-T14-042 Awaiting GC Approval — Follow Up', sub: 'Tower 14 · 2 days pending', value: '$42,000', pill: 'Chasing', pillType: 'pw' as PillType },
-  { color: C.yellow, icon: '💰', title: 'INV-1048 Awaiting GC Approval — 4+ hrs', sub: 'Cherry Hills', value: '$18,400', pill: 'Chasing', pillType: 'pw' as PillType },
-  { color: C.red, icon: '📦', title: 'T14 Structural Steel Over Budget — Review FC Allocation', sub: 'Ordered $91K vs $85K est', value: '+$6,000', pill: 'Over Budget', pillType: 'pr' as PillType },
-  { color: C.blue, icon: '📋', title: 'CO-T14-04 & CO-T14-05 Pending GC Sign-off', sub: 'Tower 14 · $7,900 combined', value: '$7,900', pill: 'Pending', pillType: 'pb' as PillType },
-];
+/* ─── (Demo data removed — all cards now use real data from props) ─── */
 
 /* ─── Types ─── */
 interface ProjectWithDetails {
@@ -269,6 +199,7 @@ interface StatusCounts { setup: number; active: number; on_hold: number; complet
 export interface TCDashboardViewProps {
   projects: ProjectWithDetails[];
   financials: FinancialSummary;
+  projectFinancials: ProjectFinancialDetail[];
   billing: { invoicesReceived: number; invoicesSent: number; outstandingToPay: number; outstandingToCollect: number; profit: number; role: string };
   attentionItems: AttentionItem[];
   pendingInvites: PendingInvite[];
@@ -292,7 +223,7 @@ export interface TCDashboardViewProps {
 const BAR_COLORS = [C.amber, C.blue, C.green, C.yellow, C.purple, C.red, C.navy];
 
 export function TCDashboardView({
-  projects, financials, billing, attentionItems, pendingInvites, recentDocs,
+  projects, financials, projectFinancials, billing, attentionItems, pendingInvites, recentDocs,
   statusCounts, profile, organization, userSettings, updateUserSettings,
   isOrgAdmin, userOrgRolesLength, orgType, orgId, soleMember,
   onSetSoleMember, onSetPartOfTeam, onRefresh, loading,
@@ -306,22 +237,38 @@ export function TCDashboardView({
 
   const activeProjects = projects.filter(p => !['archived', 'completed'].includes(p.status));
 
-  // Use real data where available, fallback to demo
-  const gcRevenue = financials.totalRevenue > 0 ? financials.totalRevenue : DEMO_TOTALS.gcContract;
-  const fcCost = financials.totalCosts > 0 ? financials.totalCosts : DEMO_TOTALS.fcCost;
+  // Derive per-project data from projectFinancials
+  const pf = projectFinancials.filter(p => p.revenue > 0 || p.costs > 0 || p.paidToYou > 0);
+
+  const gcRevenue = financials.totalRevenue;
+  const fcCost = financials.totalCosts;
   const grossMargin = gcRevenue - fcCost;
   const marginPct = gcRevenue > 0 ? ((grossMargin / gcRevenue) * 100).toFixed(1) : '0';
 
+  // Change orders from recentDocs
   const coList = recentDocs.filter(d => d.type === 'change_order');
-  const coCount = coList.length > 0 ? coList.length : DEMO_COS.length;
-  const coNetTotal = DEMO_COS.reduce((s, c) => s + c.net, 0);
-  const coBilledTotal = DEMO_COS.reduce((s, c) => s + c.billedGC, 0);
-  const coPaidTotal = DEMO_COS.reduce((s, c) => s + c.paidFC, 0);
+  const coCount = coList.length;
 
-  const receivedFromGC = financials.paidToYou > 0 ? financials.paidToYou : 460_000;
-  const pendingFromGC = billing.outstandingToCollect > 0 ? billing.outstandingToCollect : 72_400;
+  // Invoices from recentDocs
+  const invoiceDocs = recentDocs.filter(d => d.type === 'invoice');
+  const pendingInvoiceDocs = invoiceDocs.filter(d => ['SUBMITTED', 'APPROVED'].includes(d.status));
+
+  // POs from recentDocs
+  const poDocs = recentDocs.filter(d => d.type === 'purchase_order');
+  const poTotal = poDocs.reduce((s, d) => s + (d.amount || 0), 0);
+
+  const receivedFromGC = financials.paidToYou;
+  const pendingFromGC = billing.outstandingToCollect;
 
   const getProjectColor = (idx: number) => BAR_COLORS[idx % BAR_COLORS.length];
+
+  // Group POs by project
+  const posByProject = new Map<string, RecentDoc[]>();
+  poDocs.forEach(po => {
+    const existing = posByProject.get(po.projectName) || [];
+    existing.push(po);
+    posByProject.set(po.projectName, existing);
+  });
 
   return (
     <div className="flex gap-0">
@@ -351,228 +298,220 @@ export function TCDashboardView({
 
           {/* Card 1: GC Contracts (Revenue) */}
           <KpiCard idx={0} accent={C.amber} icon={<Handshake size={18} color={C.amberD} />} iconBg={C.amberPale}
-            label="GC CONTRACTS (REVENUE)" value={fmt(gcRevenue)}
-            sub={`${projects.length > 0 ? projects.length : 3} active projects with GC`}
+            label="GC CONTRACTS (REVENUE)" value={gcRevenue > 0 ? fmt(gcRevenue) : '—'}
+            sub={`${projects.length} active project${projects.length !== 1 ? 's' : ''} with GC`}
             pills={[{ type: 'pa', text: 'Revenue' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Project', 'Phase', 'GC Contract', 'FC Cost', 'Margin', 'Margin %']} />
+              <THead cols={['Project', 'GC Contract', 'FC Cost', 'Margin', 'Margin %']} />
               <tbody>
-                {DEMO_PROJECTS.map((p, i) => (
-                  <TRow key={i} onClick={() => console.log('navigate → TC contracts')} cells={[
-                    <TdN>{p.name}</TdN>, <>{p.phase}</>, <TdM>{fmt(p.gcContract)}</TdM>,
-                    <TdM>{fmt(p.fcCost)}</TdM>, <TdM>{fmt(p.margin)}</TdM>,
-                    <span style={{ fontWeight: 700, color: C.green }}>{p.marginPct}%</span>,
-                  ]} />
-                ))}
-                <TRow isTotal cells={['', '', <TdM>{fmt(DEMO_TOTALS.gcContract)}</TdM>, <TdM>{fmt(DEMO_TOTALS.fcCost)}</TdM>, <TdM>{fmt(DEMO_TOTALS.margin)}</TdM>, <span style={{ fontWeight: 700 }}>{DEMO_TOTALS.marginPct}%</span>]} />
+                {pf.length > 0 ? pf.map((p, i) => {
+                  const m = p.revenue - p.costs;
+                  const mPct = p.revenue > 0 ? Math.round((m / p.revenue) * 100) : 0;
+                  return (
+                    <TRow key={p.projectId} onClick={() => navigate(`/project/${p.projectId}`)} cells={[
+                      <TdN>{p.projectName}</TdN>, <TdM>{fmt(p.revenue)}</TdM>,
+                      <TdM>{fmt(p.costs)}</TdM>, <TdM>{fmt(m)}</TdM>,
+                      <span style={{ fontWeight: 700, color: mPct > 0 ? C.green : C.red }}>{mPct}%</span>,
+                    ]} />
+                  );
+                }) : <TRow cells={[<span style={{ color: C.faint }}>No contracts yet</span>, '', '', '', '']} />}
+                {gcRevenue > 0 && <TRow isTotal cells={['', <TdM>{fmt(gcRevenue)}</TdM>, <TdM>{fmt(fcCost)}</TdM>, <TdM>{fmt(grossMargin)}</TdM>, <span style={{ fontWeight: 700 }}>{marginPct}%</span>]} />}
               </tbody>
             </table>
           </KpiCard>
 
           {/* Card 2: FC / Labor Contracts (Cost) */}
           <KpiCard idx={1} accent={C.navy} icon={<Users size={18} color={C.navy} />} iconBg={C.surface2}
-            label="FC / LABOR CONTRACTS (COST)" value={fmt(fcCost)}
+            label="FC / LABOR CONTRACTS (COST)" value={fcCost > 0 ? fmt(fcCost) : '—'}
             sub="Field crew and sub-contractor costs"
             pills={[{ type: 'pm', text: 'Cost' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Project', 'Phase', 'FC Contract', 'GC Contract', 'Margin']} />
+              <THead cols={['Project', 'FC Contract', 'GC Contract', 'Margin']} />
               <tbody>
-                {DEMO_PROJECTS.map((p, i) => (
-                  <TRow key={i} cells={[
-                    <TdN>{p.name}</TdN>, <>{p.phase}</>, <TdM>{fmt(p.fcCost)}</TdM>,
-                    <TdM>{fmt(p.gcContract)}</TdM>, <TdM>{fmt(p.margin)}</TdM>,
+                {pf.length > 0 ? pf.map((p, i) => (
+                  <TRow key={p.projectId} onClick={() => navigate(`/project/${p.projectId}`)} cells={[
+                    <TdN>{p.projectName}</TdN>, <TdM>{fmt(p.costs)}</TdM>,
+                    <TdM>{fmt(p.revenue)}</TdM>, <TdM>{fmt(p.revenue - p.costs)}</TdM>,
                   ]} />
-                ))}
-                <TRow isTotal cells={['', '', <TdM>{fmt(DEMO_TOTALS.fcCost)}</TdM>, <TdM>{fmt(DEMO_TOTALS.gcContract)}</TdM>, <TdM>{fmt(DEMO_TOTALS.margin)}</TdM>]} />
+                )) : <TRow cells={[<span style={{ color: C.faint }}>No FC contracts yet</span>, '', '', '']} />}
+                {fcCost > 0 && <TRow isTotal cells={['', <TdM>{fmt(fcCost)}</TdM>, <TdM>{fmt(gcRevenue)}</TdM>, <TdM>{fmt(grossMargin)}</TdM>]} />}
               </tbody>
             </table>
           </KpiCard>
 
           {/* Card 3: Gross Margin */}
           <KpiCard idx={2} accent={C.green} icon={<TrendingUp size={18} color={C.green} />} iconBg={C.greenBg}
-            label="GROSS MARGIN" value={fmt(grossMargin)}
-            sub={`${marginPct}% margin across all projects`}
-            pills={[{ type: 'pg', text: `↑ ${marginPct}%` }]}>
+            label="GROSS MARGIN" value={gcRevenue > 0 ? fmt(grossMargin) : '—'}
+            sub={gcRevenue > 0 ? `${marginPct}% margin across all projects` : 'No contract data yet'}
+            pills={gcRevenue > 0 ? [{ type: 'pg', text: `↑ ${marginPct}%` }] : [{ type: 'pm', text: 'No data' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Project', 'GC Contract', 'FC Contract', 'Gross Margin', 'Margin %']} />
               <tbody>
-                {DEMO_PROJECTS.map((p, i) => (
-                  <TRow key={i} cells={[
-                    <TdN>{p.name}</TdN>, <TdM>{fmt(p.gcContract)}</TdM>,
-                    <TdM>{fmt(p.fcCost)}</TdM>, <TdM>{fmt(p.margin)}</TdM>,
-                    <span style={{ fontWeight: 700, color: C.green }}>{p.marginPct}%</span>,
-                  ]} />
-                ))}
-                <TRow isTotal cells={['', <TdM>{fmt(DEMO_TOTALS.gcContract)}</TdM>, <TdM>{fmt(DEMO_TOTALS.fcCost)}</TdM>, <TdM>{fmt(DEMO_TOTALS.margin)}</TdM>, <span style={{ fontWeight: 700 }}>{DEMO_TOTALS.marginPct}%</span>]} />
+                {pf.length > 0 ? pf.map((p, i) => {
+                  const m = p.revenue - p.costs;
+                  const mPct = p.revenue > 0 ? Math.round((m / p.revenue) * 100) : 0;
+                  return (
+                    <TRow key={p.projectId} cells={[
+                      <TdN>{p.projectName}</TdN>, <TdM>{fmt(p.revenue)}</TdM>,
+                      <TdM>{fmt(p.costs)}</TdM>, <TdM>{fmt(m)}</TdM>,
+                      <span style={{ fontWeight: 700, color: mPct > 0 ? C.green : C.red }}>{mPct}%</span>,
+                    ]} />
+                  );
+                }) : <TRow cells={[<span style={{ color: C.faint }}>No data yet</span>, '', '', '', '']} />}
+                {gcRevenue > 0 && <TRow isTotal cells={['', <TdM>{fmt(gcRevenue)}</TdM>, <TdM>{fmt(fcCost)}</TdM>, <TdM>{fmt(grossMargin)}</TdM>, <span style={{ fontWeight: 700 }}>{marginPct}%</span>]} />}
               </tbody>
             </table>
           </KpiCard>
 
-          {/* Card 4: CO Net Margin */}
+          {/* Card 4: Change Orders */}
           <KpiCard idx={3} accent={C.blue} icon={<FileText size={18} color={C.blue} />} iconBg={C.blueBg}
-            label="CO NET MARGIN" value={fmtSigned(coNetTotal)}
-            sub={`${coCount} COs · Billed ${fmt(coBilledTotal)} to GC · Paid ${fmt(coPaidTotal)} to FCs`}
-            pills={[{ type: 'pb', text: 'CO profit' }]}>
+            label="CHANGE ORDERS" value={coCount > 0 ? `${coCount} COs` : '—'}
+            sub={coCount > 0 ? `${coList.filter(c => ['submitted', 'shared'].includes(c.status)).length} pending review` : 'No change orders yet'}
+            pills={coCount > 0 ? [{ type: 'pb', text: `${coCount} total` }] : [{ type: 'pm', text: 'None' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Project', 'CO #', 'Description', 'Billed to GC', 'Paid to FC', 'TC Net']} />
+              <THead cols={['CO', 'Project', 'Status', '']} />
               <tbody>
-                {DEMO_COS.map((co, i) => (
-                  <TRow key={i} cells={[
-                    <>{co.project}</>, <TdN>{co.co}</TdN>, <>{co.desc}</>,
-                    <TdM>{fmtSigned(co.billedGC)}</TdM>, <TdM>{fmt(co.paidFC)}</TdM>,
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, justifyContent: 'flex-end' }}>
-                      <TdM>{fmtSigned(co.net)}</TdM>
-                      {co.pending && <Pill type="pw">Pending GC</Pill>}
-                    </span>,
+                {coList.length > 0 ? coList.slice(0, 10).map(co => (
+                  <TRow key={co.id} onClick={() => navigate(`/project/${co.projectId}/change-orders`)} cells={[
+                    <TdN>{co.title}</TdN>, <>{co.projectName}</>,
+                    <Pill type={['submitted', 'shared'].includes(co.status) ? 'pw' : co.status === 'approved' ? 'pg' : co.status === 'contracted' ? 'pg' : 'pm'}>{co.status}</Pill>,
+                    <span style={{ color: C.blue, fontSize: '0.7rem', fontWeight: 600 }}>View →</span>,
                   ]} />
-                ))}
-                <TRow isTotal cells={['', <TdN>10</TdN>, '', <TdM>{fmtSigned(coBilledTotal)}</TdM>, <TdM>{fmt(coPaidTotal)}</TdM>, <TdM>{fmtSigned(coNetTotal)}</TdM>]} />
+                )) : <TRow cells={[<span style={{ color: C.faint }}>No change orders yet</span>, '', '', '']} />}
               </tbody>
             </table>
           </KpiCard>
 
           {/* Card 5: Received from GC */}
           <KpiCard idx={4} accent={C.green} icon={<CheckCircle size={18} color={C.green} />} iconBg={C.greenBg}
-            label="RECEIVED FROM GC" value={fmt(receivedFromGC)}
-            sub={`${gcRevenue > 0 ? Math.round((receivedFromGC / gcRevenue) * 100) : 38}% of total contracted value`}
-            pills={[{ type: 'pg', text: `${gcRevenue > 0 ? Math.round((receivedFromGC / gcRevenue) * 100) : 38}% collected` }]}>
+            label="RECEIVED FROM GC" value={receivedFromGC > 0 ? fmt(receivedFromGC) : '—'}
+            sub={gcRevenue > 0 ? `${Math.round((receivedFromGC / gcRevenue) * 100)}% of total contracted value` : 'No payments received yet'}
+            pills={receivedFromGC > 0 ? [{ type: 'pg', text: `${gcRevenue > 0 ? Math.round((receivedFromGC / gcRevenue) * 100) : 0}% collected` }] : [{ type: 'pm', text: 'No data' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <THead cols={['Project', 'GC Contract', 'Paid by GC', '% Collected', 'Pending']} />
               <tbody>
-                {DEMO_RECEIVED.map((r, i) => (
-                  <TRow key={i} onClick={() => console.log('navigate → TC invoices')} cells={[
-                    <TdN>{r.project}</TdN>, <TdM>{fmt(r.gcContract)}</TdM>, <TdM>{fmt(r.paidByGC)}</TdM>,
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Bar pct={r.pct} color={r.barColor} />
-                      <span style={{ fontSize: '0.7rem', fontWeight: 600, color: C.muted }}>{r.pct}%</span>
-                    </div>,
-                    <TdM>{fmt(r.pendingFromGC)}</TdM>,
-                  ]} />
-                ))}
-                <TRow isTotal cells={['', <TdM>{fmt(DEMO_TOTALS.gcContract)}</TdM>, <TdM>{fmt(460_000)}</TdM>, <span style={{ fontWeight: 700 }}>38%</span>, <TdM>{fmt(72_400)}</TdM>]} />
+                {pf.length > 0 ? pf.map((p, i) => {
+                  const pct = p.revenue > 0 ? Math.round((p.paidToYou / p.revenue) * 100) : 0;
+                  return (
+                    <TRow key={p.projectId} onClick={() => navigate(`/project/${p.projectId}?tab=invoices`)} cells={[
+                      <TdN>{p.projectName}</TdN>, <TdM>{fmt(p.revenue)}</TdM>, <TdM>{fmt(p.paidToYou)}</TdM>,
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <Bar pct={pct} color={pct >= 80 ? C.green : pct >= 40 ? C.amber : C.red} />
+                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: C.muted }}>{pct}%</span>
+                      </div>,
+                      <TdM>{fmt(p.pendingToCollect)}</TdM>,
+                    ]} />
+                  );
+                }) : <TRow cells={[<span style={{ color: C.faint }}>No data yet</span>, '', '', '', '']} />}
+                {receivedFromGC > 0 && <TRow isTotal cells={['', <TdM>{fmt(gcRevenue)}</TdM>, <TdM>{fmt(receivedFromGC)}</TdM>, <span style={{ fontWeight: 700 }}>{gcRevenue > 0 ? Math.round((receivedFromGC / gcRevenue) * 100) : 0}%</span>, <TdM>{fmt(pendingFromGC)}</TdM>]} />}
               </tbody>
             </table>
           </KpiCard>
 
           {/* Card 6: Pending from GC */}
           <KpiCard idx={5} accent={C.yellow} icon={<Clock size={18} color={C.yellow} />} iconBg={C.yellowBg}
-            label="PENDING FROM GC" value={fmt(pendingFromGC)}
-            sub="Invoices submitted awaiting GC approval"
-            pills={[{ type: 'pw', text: 'Chasing GC' }]}>
+            label="PENDING FROM GC" value={pendingFromGC > 0 ? fmt(pendingFromGC) : '—'}
+            sub={pendingInvoiceDocs.length > 0 ? `${pendingInvoiceDocs.length} invoice${pendingInvoiceDocs.length !== 1 ? 's' : ''} awaiting GC approval` : 'No pending invoices'}
+            pills={pendingFromGC > 0 ? [{ type: 'pw', text: 'Chasing GC' }] : [{ type: 'pg', text: 'All clear' }]}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <THead cols={['Invoice', 'Project', 'Submitted', 'Amount', 'Status']} />
+              <THead cols={['Invoice', 'Project', 'Amount', 'Status']} />
               <tbody>
-                {DEMO_PENDING_INVOICES.map((inv, i) => (
-                  <TRow key={i} cells={[
-                    <TdN>{inv.inv}</TdN>, <>{inv.project}</>, <>{inv.submitted}</>,
-                    <TdM>{fmt(inv.amount)}</TdM>,
-                    <Pill type={inv.overdue ? 'pr' : 'pw'}>{inv.overdue ? 'Overdue — follow up' : 'Pending'}</Pill>,
+                {pendingInvoiceDocs.length > 0 ? pendingInvoiceDocs.slice(0, 8).map(inv => (
+                  <TRow key={inv.id} onClick={() => navigate(`/project/${inv.projectId}?tab=invoices`)} cells={[
+                    <TdN>{inv.title}</TdN>, <>{inv.projectName}</>,
+                    <TdM>{inv.amount ? fmt(inv.amount) : '—'}</TdM>,
+                    <Pill type={inv.status === 'SUBMITTED' ? 'pw' : 'pb'}>{inv.status}</Pill>,
                   ]} />
-                ))}
-                <TRow isTotal cells={['', '', '', <TdM>{fmt(72_400)}</TdM>, '']} />
+                )) : <TRow cells={[<span style={{ color: C.faint }}>No pending invoices</span>, '', '', '']} />}
+                {pendingFromGC > 0 && <TRow isTotal cells={['', '', <TdM>{fmt(pendingFromGC)}</TdM>, '']} />}
               </tbody>
             </table>
           </KpiCard>
 
-          {/* Card 7: TC Material Budget */}
+          {/* Card 7: TC Material Budget (POs) */}
           <KpiCard idx={6} accent={C.purple} icon={<Package size={18} color={C.purple} />} iconBg={C.purpleBg}
-            label="MATERIAL BUDGET (TC POs)" value="$192.3K"
-            sub="TC holds POs for Cherry Hills & Tower 14"
-            pills={[{ type: 'pr', text: 'T14 steel over $6K' }]}>
+            label="MATERIALS (TC POs)" value={poTotal > 0 ? fmt(poTotal) : '—'}
+            sub={`${poDocs.length} purchase order${poDocs.length !== 1 ? 's' : ''}`}
+            pills={poDocs.length > 0 ? [{ type: 'pg', text: `${poDocs.length} POs` }] : [{ type: 'pm', text: 'None' }]}>
             <div>
-              {Object.entries(DEMO_MATERIALS).map(([project, packs]) => (
+              {posByProject.size > 0 ? Array.from(posByProject.entries()).map(([project, pos]) => (
                 <div key={project}>
                   <div style={{ padding: '10px 12px 4px', fontSize: '0.7rem', fontWeight: 700, color: C.ink, textTransform: 'uppercase', letterSpacing: '0.5px', background: C.surface2, borderBottom: `1px solid ${C.border}` }}>
                     📦 {project}
                   </div>
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <THead cols={['Pack', 'Estimate', 'Ordered', 'Status']} />
+                    <THead cols={['PO', 'Amount', 'Status']} />
                     <tbody>
-                      {packs.map((p, i) => (
-                        <TRow key={i} cells={[
-                          <TdN>{p.pack}</TdN>, <TdM>{fmt(p.est)}</TdM>, <TdM>{fmt(p.ordered)}</TdM>,
-                          <Pill type={p.status === 'Over' ? 'pr' : p.status === 'Pending' ? 'pw' : 'pg'}>{p.status === 'Over' ? `+${fmt(p.ordered - p.est)}` : p.status}</Pill>,
+                      {pos.map(po => (
+                        <TRow key={po.id} onClick={() => navigate(`/project/${po.projectId}/purchase-orders`)} cells={[
+                          <TdN>{po.title}</TdN>,
+                          <TdM>{po.amount ? fmt(po.amount) : '—'}</TdM>,
+                          <Pill type={po.status === 'DELIVERED' ? 'pg' : po.status === 'CANCELLED' ? 'pr' : 'pb'}>{po.status}</Pill>,
                         ]} />
                       ))}
                     </tbody>
                   </table>
                 </div>
-              ))}
+              )) : (
+                <div style={{ padding: '16px', textAlign: 'center', color: C.faint, fontSize: '0.76rem' }}>No purchase orders yet</div>
+              )}
             </div>
           </KpiCard>
 
-          {/* Card 8: Open RFIs */}
+          {/* Card 8: Attention Items */}
           <KpiCard idx={7} accent={C.red} icon={<HelpCircle size={18} color={C.red} />} iconBg={C.redBg}
-            label="OPEN RFIs (MY PROJECTS)" value="12 Open"
-            sub="Cherry Hills, Tower 14, Mesa Logistics"
-            pills={[{ type: 'pr', text: '12 need response' }]}>
-            <div>
-              {Object.entries(DEMO_RFIS).map(([project, rfis]) => {
-                const shown = rfis.slice(0, 3);
-                const more = rfis.length - shown.length;
-                return (
-                  <div key={project}>
-                    <div style={{ padding: '10px 12px 4px', fontSize: '0.7rem', fontWeight: 700, color: C.ink, textTransform: 'uppercase', letterSpacing: '0.5px', background: C.surface2, borderBottom: `1px solid ${C.border}` }}>
-                      ❓ {project} — {rfis.length} open
-                    </div>
-                    {shown.map((rfi, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderBottom: `1px solid ${C.border}`, fontSize: '0.76rem' }}>
-                        <TdN>{rfi.id}</TdN>
-                        <span style={{ flex: 1, color: C.muted }}>{rfi.subject}</span>
-                        <span style={{ fontSize: '0.64rem', color: C.faint }}>{rfi.age}</span>
-                        <Pill type={rfi.priority === 'urgent' ? 'pr' : rfi.priority === 'high' ? 'pw' : 'pb'}>{rfi.priority}</Pill>
-                      </div>
-                    ))}
-                    {more > 0 && (
-                      <div style={{ padding: '6px 12px', fontSize: '0.7rem', color: C.blue, fontWeight: 600, cursor: 'pointer' }}>
-                        + {more} more →
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            label="NEEDS ATTENTION" value={`${attentionItems.length} Items`}
+            sub={`${attentionItems.filter(a => a.type === 'invoice').length} invoices · ${attentionItems.filter(a => a.type === 'sent_invite').length} invites`}
+            pills={attentionItems.length > 0 ? [{ type: 'pr', text: `${attentionItems.length} need response` }] : [{ type: 'pg', text: 'All clear' }]}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <THead cols={['Item', 'Project', 'Type', '']} />
+              <tbody>
+                {attentionItems.length > 0 ? attentionItems.slice(0, 8).map(a => (
+                  <TRow key={a.id} onClick={() => navigate(`/project/${a.projectId}`)} cells={[
+                    <TdN>{a.title}</TdN>, <>{a.projectName}</>,
+                    <Pill type={a.type === 'invoice' ? 'pr' : 'pw'}>{a.type === 'invoice' ? 'Invoice' : 'Invite'}</Pill>,
+                    <span style={{ color: C.blue, fontSize: '0.7rem', fontWeight: 600 }}>View →</span>,
+                  ]} />
+                )) : <TRow cells={[<span style={{ color: C.faint }}>No attention items</span>, '', '', '']} />}
+              </tbody>
+            </table>
           </KpiCard>
         </div>
 
         {/* Needs Attention */}
-        <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-          <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}`, fontWeight: 700, color: C.ink, fontSize: '0.9rem', ...fontLabel }}>
-            🚨 Action Required
-          </div>
-          {/* Real attention items first */}
-          {attentionItems.map(item => (
-            <WarnItem key={item.id} color={item.type === 'invoice' ? C.yellow : C.blue}
-              icon={item.type === 'invoice' ? '💰' : '📋'} title={item.title} sub={item.projectName}
-              value={item.type === 'invoice' ? 'Review' : 'Pending'}
-              pill={item.type === 'invoice' ? 'Chasing' : 'Action'} pillType={item.type === 'invoice' ? 'pw' : 'pb'}
-              onClick={() => navigate(`/project/${item.projectId}`)} />
-          ))}
-          {/* Demo warnings */}
-          {attentionItems.length === 0 && DEMO_WARNINGS.map((w, i) => (
-            <WarnItem key={i} color={w.color} icon={w.icon} title={w.title} sub={w.sub} value={w.value} pill={w.pill} pillType={w.pillType} />
-          ))}
-        </div>
-
-        {/* My Projects Grid */}
-        <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
-            <span style={{ fontWeight: 700, color: C.ink, fontSize: '0.9rem', ...fontLabel }}>📋 My Projects</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
-            {activeProjects.length > 0 ? activeProjects.slice(0, 6).map((p, i) => {
-              const progress = p.status === 'completed' ? 100 : p.status === 'active' ? 50 : p.status === 'on_hold' ? 30 : 10;
-              return (
-                <ProjectCard key={p.id} name={p.name} phase={p.build_type || p.project_type || p.status}
-                  budget={p.contractValue || 0} progress={progress} barColor={getProjectColor(i)}
-                  onClick={() => navigate(`/project/${p.id}`)} />
-              );
-            }) : DEMO_PROJECTS.map((p, i) => (
-              <ProjectCard key={i} name={p.name} phase={p.phase} budget={p.gcContract}
-                progress={p.progress} barColor={p.color} onClick={() => console.log('navigate →', p.name)} />
+        {attentionItems.length > 0 && (
+          <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+            <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.border}`, fontWeight: 700, color: C.ink, fontSize: '0.9rem', ...fontLabel }}>
+              🚨 Action Required
+            </div>
+            {attentionItems.map(item => (
+              <WarnItem key={item.id} color={item.type === 'invoice' ? C.yellow : C.blue}
+                icon={item.type === 'invoice' ? '💰' : '📋'} title={item.title} sub={item.projectName}
+                value={item.type === 'invoice' ? 'Review' : 'Pending'}
+                pill={item.type === 'invoice' ? 'Chasing' : 'Action'} pillType={item.type === 'invoice' ? 'pw' : 'pb'}
+                onClick={() => navigate(`/project/${item.projectId}`)} />
             ))}
           </div>
-        </div>
+        )}
+
+        {/* My Projects Grid */}
+        {activeProjects.length > 0 && (
+          <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
+              <span style={{ fontWeight: 700, color: C.ink, fontSize: '0.9rem', ...fontLabel }}>📋 My Projects</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
+              {activeProjects.slice(0, 6).map((p, i) => {
+                const progress = p.status === 'completed' ? 100 : p.status === 'active' ? 50 : p.status === 'on_hold' ? 30 : 10;
+                return (
+                  <ProjectCard key={p.id} name={p.name} phase={p.build_type || p.project_type || p.status}
+                    budget={p.contractValue || 0} progress={progress} barColor={getProjectColor(i)}
+                    onClick={() => navigate(`/project/${p.id}`)} />
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

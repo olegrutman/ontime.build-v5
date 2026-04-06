@@ -44,6 +44,7 @@ export default function Dashboard() {
     recentDocs,
     billing,
     financials,
+    projectFinancials,
     loading: dataLoading,
     refetch,
   } = useDashboardData();
@@ -186,6 +187,7 @@ export default function Dashboard() {
         <GCDashboardView
           projects={projects}
           financials={financials}
+          projectFinancials={projectFinancials}
           billing={billing}
           attentionItems={attentionItems}
           pendingInvites={pendingInvites}
@@ -219,6 +221,7 @@ export default function Dashboard() {
         <TCDashboardView
           projects={projects}
           financials={financials}
+          projectFinancials={projectFinancials}
           billing={billing}
           attentionItems={attentionItems}
           pendingInvites={pendingInvites}

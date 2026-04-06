@@ -6,7 +6,7 @@ import { OrgInviteBanner } from '@/components/dashboard/OrgInviteBanner';
 import { PendingInvitesPanel } from '@/components/dashboard/PendingInvitesPanel';
 import { OnboardingChecklist } from '@/components/dashboard/OnboardingChecklist';
 import { DashboardSidebar } from '@/components/app-shell/DashboardSidebar';
-import type { RecentDoc } from '@/hooks/useDashboardData';
+import type { RecentDoc, ProjectFinancialDetail } from '@/hooks/useDashboardData';
 
 /* ─── Design tokens ─── */
 const C = {
@@ -229,6 +229,7 @@ interface StatusCounts {
 export interface GCDashboardViewProps {
   projects: ProjectWithDetails[];
   financials: FinancialSummary;
+  projectFinancials: ProjectFinancialDetail[];
   billing: { invoicesReceived: number; invoicesSent: number; outstandingToPay: number; outstandingToCollect: number; profit: number; role: string };
   attentionItems: AttentionItem[];
   pendingInvites: PendingInvite[];
@@ -252,7 +253,7 @@ export interface GCDashboardViewProps {
 const BAR_COLORS = [C.amber, C.blue, C.green, C.yellow, C.purple, C.red, C.navy];
 
 export function GCDashboardView({
-  projects, financials, billing, attentionItems, pendingInvites, recentDocs,
+  projects, financials, projectFinancials, billing, attentionItems, pendingInvites, recentDocs,
   statusCounts, profile, organization, userSettings, updateUserSettings,
   isOrgAdmin, userOrgRolesLength, orgType, orgId, soleMember,
   onSetSoleMember, onSetPartOfTeam, onRefresh, loading,
