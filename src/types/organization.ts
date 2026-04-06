@@ -132,7 +132,7 @@ export const NO_PERMISSIONS: RolePermissions = {
   canAddMaterialLists: false,
   canManageOrg: false,
   canInviteMembers: false,
-  canCreateWorkOrders: false,
+  canCreateChangeOrders: false,
   canCreatePOs: false,
   canSubmitTime: false,
   canCreateRFIs: false,
