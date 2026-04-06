@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { SupplierDashboard } from '@/components/dashboard/SupplierDashboard';
+import { SupplierDashboardView } from '@/components/dashboard/SupplierDashboardView';
 import { AppLayout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
