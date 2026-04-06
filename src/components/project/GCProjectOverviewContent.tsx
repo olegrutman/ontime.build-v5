@@ -199,10 +199,33 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const canInvite = viewerOrgType === 'GC' || viewerOrgType === 'TC';
 
   // ─── Real data from financials ───
-  const ownerBudget = financials.ownerContractValue || 0;
+  const ownerBudgetReal = financials.ownerContractValue || 0;
   const upContract = financials.upstreamContract;
   const tcContractVal = upContract?.contract_sum || 0;
   const tcName = upContract?.to_org_name || upContract?.from_org_name || 'Trade Contractor';
+
+  // ─── Owner Budget editing ───
+  const [draftOwnerBudget, setDraftOwnerBudget] = useState(ownerBudgetReal);
+  const [dirtyOwner, setDirtyOwner] = useState(false);
+  const [savingOwner, setSavingOwner] = useState(false);
+
+  useEffect(() => {
+    setDraftOwnerBudget(ownerBudgetReal);
+    setDirtyOwner(false);
+  }, [ownerBudgetReal]);
+
+  const saveOwnerBudget = async () => {
+    if (!upContract?.id) return;
+    setSavingOwner(true);
+    const ok = await financials.updateOwnerContract(upContract.id, draftOwnerBudget);
+    setSavingOwner(false);
+    if (ok) {
+      financials.refetch();
+      setDirtyOwner(false);
+    }
+  };
+
+  const ownerBudget = draftOwnerBudget;
   const marginDollar = ownerBudget - tcContractVal;
   const marginPct = ownerBudget > 0 ? ((marginDollar / ownerBudget) * 100).toFixed(1) : '0';
 
@@ -330,17 +353,21 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
 
         {/* Card 1 — Owner Budget */}
         <KpiCard accent={C.amber} icon="💼" iconBg={C.amberPale} label="OWNER BUDGET" value={ownerBudget > 0 ? fmt(ownerBudget) : '—'} sub={ownerBudget > 0 ? `${fmt(financials.billedToDate)} invoiced to date` : 'Set owner contract value in setup'} pills={ownerBudget > 0 ? [{ type: 'pa', text: 'This Project' }] : [{ type: 'pm', text: 'Not Set' }]} idx={0}>
-          <div style={{ padding: 12 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div style={{ padding: '12px 16px' }} onClick={(e) => e.stopPropagation()}>
+            <EditField label="Owner Contract Value" value={`$${draftOwnerBudget.toLocaleString()}`} onSave={(v) => { const n = parseInt(v.replace(/[^0-9]/g, '')) || 0; setDraftOwnerBudget(n); setDirtyOwner(n !== ownerBudgetReal); }} type="number" />
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
               <THead cols={['Budget Item', 'Value']} />
               <tbody>
-                <TRow cells={[<TdN>Owner Contract Value</TdN>, <TdM>{fmt(ownerBudget)}</TdM>]} />
                 <TRow cells={[<TdN>Approved COs to Owner</TdN>, <TdM>+{fmt(coRevenueTotal)}</TdM>]} />
                 <TRow cells={[<TdN>Revised Contract Total</TdN>, <TdM>{fmt(ownerBudget + coRevenueTotal)}</TdM>]} isTotal />
                 <TRow cells={[<TdN>Invoiced to Date</TdN>, <TdM>{fmt(financials.billedToDate)}</TdM>]} />
                 <TRow cells={[<TdN>Remaining</TdN>, <TdM>{fmt(ownerBudget + coRevenueTotal - financials.billedToDate)}</TdM>]} />
               </tbody>
             </table>
+            {dirtyOwner && (
+              <button onClick={saveOwnerBudget} disabled={savingOwner} style={{ width: '100%', padding: '10px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.78rem', border: 'none', cursor: 'pointer', marginTop: 12, opacity: savingOwner ? 0.6 : 1, ...fontLabel }}>{savingOwner ? 'Saving…' : 'Save Owner Budget'}</button>
+            )}
+            {dirtyOwner && <div style={{ fontSize: '0.6rem', color: C.amber, marginTop: 4, display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 6, height: 6, borderRadius: '50%', background: C.amber, display: 'inline-block' }} />Unsaved changes</div>}
           </div>
         </KpiCard>
 
