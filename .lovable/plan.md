@@ -1,41 +1,22 @@
 
 
-# Restructure Dashboard Sidebar
+# Fix Ontime Logo Visibility
 
-## What I'm Building
+## Problem
 
-Redesigning the `DashboardSidebar` to be the primary navigation hub on desktop, moving the logo, profile, and sign-out from the top `ContextBar` into the sidebar. The page content will extend to the top of the viewport (no fixed header gap on desktop dashboard pages).
+The logo was hidden from the top header bar (`lg:hidden`) when the sidebar was added, and while it exists in the sidebar, it may not be clearly visible due to the dark logo background blending with the dark sidebar.
 
-## Layout Changes
+## Fix
 
-### DashboardSidebar — new structure (top to bottom):
+1. **ContextBar** — Remove the `lg:hidden` from the logo button so it shows in the header on all screen sizes. The sidebar logo serves as navigation; the header logo provides brand presence.
 
-1. **OnTime Logo** — `OntimeLogo` + "Ontime.build" text at the top
-2. **Nav items** — Dashboard, Partners, Purchase Orders, Reminders, My Team, Settings (existing)
-3. **Company section** (middle) — Organization name + org type badge, pulled from `useAuth`
-4. **Profile + Sign Out** (bottom, anchored) — User avatar + name, sign-out button
+2. **OR** — Keep the current approach (logo only in sidebar) but ensure the sidebar logo is clearly visible by adding contrast. The `OntimeLogo` SVG has a `#323C47` dark background that blends into the dark sidebar.
 
-### ContextBar — desktop changes:
+**Recommended approach**: Restore the logo in the header bar on desktop. It's a small element that provides important brand identity, and users expect it there.
 
-- Hide logo on desktop (`lg:hidden`) since it's now in the sidebar
-- Hide profile dropdown on desktop (`lg:hidden`) since it's now in the sidebar
-- Keep Search, Notifications, and New Project button in the top bar
-
-### AppShell / Dashboard.tsx — remove top padding:
-
-- On dashboard pages with sidebar, remove the `pt-[52px]` top padding on desktop so content starts at the very top
-- The ContextBar still shows on mobile (unchanged)
-
-## Files Changed
+## Changes
 
 | File | Change |
 |------|--------|
-| `src/components/app-shell/DashboardSidebar.tsx` | Add logo, org name, profile/sign-out sections; accept auth data |
-| `src/components/app-shell/ContextBar.tsx` | Hide logo + profile avatar on `lg:` when sidebar is present |
-| `src/pages/Dashboard.tsx` | Adjust layout so sidebar spans full height from top of page |
-
-### What is NOT changing
-- Mobile layout (bottom nav, top bar all stay)
-- Non-dashboard pages (Settings, Partners, etc. keep current layout)
-- Database, routes, RLS
+| `src/components/app-shell/ContextBar.tsx` | Remove `lg:hidden` from the logo button (line 41) so logo shows on all breakpoints |
 
