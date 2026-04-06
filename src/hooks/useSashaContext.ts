@@ -32,7 +32,7 @@ export function useSashaContext(): string {
 
   if (path.startsWith('/project/')) {
     if (tab === 'change-orders') return context + 'Project Change Orders tab — Shows: list of Change Orders with status badges (Draft, Shared, Submitted, Approved, Contracted, Completed), CO number, title, pricing type, and total amount. Users can create new COs, filter by status, and click into any CO to see line-item details, collaborator pricing, and approval workflows. COs flow through role-based pricing chains (GC→TC→FC).';
-    if (tab === 'work-orders') return context + 'Project Work Orders tab — Currently being rebuilt. No work orders UI available yet.';
+    if (tab === 'work-orders') return context + 'Project Change Orders tab — Redirects to Change Orders. Work orders have been replaced by Change Orders.';
     if (tab === 'purchase-orders') return context + 'Project Purchase Orders tab — Shows: PO cards with PO number, supplier name, status badge, and total amount. Users can create new POs, filter by status, and click into any PO to see line-item details and pricing. POs can be sent to suppliers, approved by GCs, and tracked through delivery.';
     if (tab === 'invoices') return context + 'Project Invoices tab — Shows: invoice cards with invoice number, billing period, status (Draft, Submitted, Approved, Paid), subtotal, retainage, and total amount. Users can create new invoices from the Schedule of Values or from a PO. Invoices flow upstream: FC→TC→GC.';
     if (tab === 'sov') return context + 'Project Schedule of Values (SOV) tab — Shows: SOV line items with scheduled values, billed-to-date amounts, and remaining balances. A progress bar shows overall billing progress. Users can edit SOV items, lock the SOV for billing, and create invoices from them.';
