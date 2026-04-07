@@ -1,81 +1,46 @@
 
 
-# Fix Estimate PDF Parsing Timeout on Navigation
+# Allow Suppliers to Create Projects & Invite GC/TC
 
 ## Problem
 
-The PDF parsing flow is fully synchronous: the client uploads a PDF, calls the `parse-estimate-pdf` edge function, and waits for the AI response (15–45 seconds). If the user navigates away during this time, the component unmounts, the promise result is lost, and the user has to start over. The edge function itself may also hit timeout limits on large PDFs.
+The `canCreateProject` gate is hardcoded to `orgType === 'GC' || orgType === 'TC'`, blocking suppliers. The supplier dashboard renders without a "New Project" button. The wizard's `creatorRole` mapping also returns `null` for suppliers.
 
-## Solution
+## Changes
 
-Convert to an async queue pattern: the edge function saves parsed results to the database, and the client polls for completion. This way, if the user leaves and comes back, the results are waiting.
+### 1. `src/pages/Dashboard.tsx`
 
-### Step 1: Add status/result columns to `estimate_pdf_uploads`
+- Line 176: Change `canCreateProject` to include `'SUPPLIER'`:
+  ```ts
+  const canCreateProject = orgType === 'GC' || orgType === 'TC' || orgType === 'SUPPLIER';
+  ```
+- Line 182: Add `showNewButton` and `onNewClick` props to the Supplier `AppLayout` (same as GC/TC).
 
-Migration:
-```sql
-ALTER TABLE public.estimate_pdf_uploads
-  ADD COLUMN status text NOT NULL DEFAULT 'pending',
-  ADD COLUMN parsed_result jsonb,
-  ADD COLUMN error_message text,
-  ADD COLUMN completed_at timestamptz;
-```
+### 2. `src/pages/CreateProjectNew.tsx`
 
-Status values: `pending` → `processing` → `completed` | `failed`
+- Line 50-51: Add supplier to the `creatorRole` mapping:
+  ```ts
+  const creatorRole = currentOrg?.type === 'GC' ? 'General Contractor' :
+                      currentOrg?.type === 'TC' ? 'Trade Contractor' :
+                      currentOrg?.type === 'SUPPLIER' ? 'Supplier' : null;
+  ```
+- Line 114-116: The `project_participants` insert already uses `currentOrg.type as any` for role, so supplier is handled.
+- Line 121-124: The `roleLabel` mapping already includes `'Supplier'` as the fallback — no change needed.
 
-### Step 2: Update `parse-estimate-pdf` edge function
+### 3. `src/components/project-wizard-new/TeamStep.tsx`
 
-After receiving `estimateId` + `filePath`, the function will:
-1. Look up the `estimate_pdf_uploads` row by `estimate_id` + `file_path`
-2. Set `status = 'processing'`
-3. On success: set `status = 'completed'`, store `parsed_result` (the packs JSON), set `completed_at`
-4. On failure: set `status = 'failed'`, store `error_message`
-5. Still return the result in the HTTP response for the happy path (client still connected)
+- The `AddTeamMemberDialog` filters available invite roles based on `creatorOrgType`. Need to verify it allows suppliers to invite GC and TC roles.
 
-This makes the function idempotent — results are persisted regardless of whether the client is listening.
+### 4. `src/components/dashboard/DashboardProjectList.tsx`
 
-### Step 3: Update `PdfUploadStep.tsx` — add resume polling
-
-On mount, check if there's a `processing` or `completed` upload for this estimate:
-```typescript
-// On mount or when estimateId changes:
-const { data: existing } = await supabase
-  .from('estimate_pdf_uploads')
-  .select('*')
-  .eq('estimate_id', estimateId)
-  .in('status', ['processing', 'completed'])
-  .order('uploaded_at', { ascending: false })
-  .limit(1)
-  .maybeSingle();
-
-if (existing?.status === 'completed') {
-  // Resume — deliver parsed_result directly
-  onParsed(existing.parsed_result.packs, ...);
-} else if (existing?.status === 'processing') {
-  // Show "parsing in progress" UI and poll
-  startPolling(existing.id);
-}
-```
-
-Polling: every 3 seconds, check the row's `status`. When `completed`, deliver the result. When `failed`, show error. Stop after 120 seconds (hard timeout).
-
-For the normal flow (user stays on page): the existing synchronous `supabase.functions.invoke()` call still works and returns immediately. The polling is a fallback for when the user navigated away and returned.
-
-### Step 4: Update `EstimateUploadWizard.tsx`
-
-When the wizard opens with an `estimateId`, `PdfUploadStep` will auto-check for in-progress or completed parses. If found, it skips straight to the review step. No other wizard changes needed.
+- Line 222: Update `canCreateProject` to include `'SUPPLIER'`.
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| **Migration** | Add `status`, `parsed_result`, `error_message`, `completed_at` columns to `estimate_pdf_uploads` |
-| `supabase/functions/parse-estimate-pdf/index.ts` | Write parse results to `estimate_pdf_uploads` row on success/failure |
-| `src/components/estimate-upload/PdfUploadStep.tsx` | Add on-mount resume check + polling fallback for in-progress parses |
-
-### What is NOT changing
-- `EstimateUploadWizard.tsx` — no structural changes needed
-- CSV upload flow — unaffected
-- `CatalogMatchStep`, `PackReviewStep` — unchanged
-- RLS on `estimate_pdf_uploads` — already scoped by user
+| `src/pages/Dashboard.tsx` | Add SUPPLIER to `canCreateProject`; add `showNewButton`/`onNewClick` to Supplier AppLayout |
+| `src/pages/CreateProjectNew.tsx` | Add SUPPLIER to `creatorRole` mapping |
+| `src/components/dashboard/DashboardProjectList.tsx` | Add SUPPLIER to `canCreateProject` |
+| `src/components/project/AddTeamMemberDialog.tsx` | Ensure supplier creators can invite GC and TC roles |
 
