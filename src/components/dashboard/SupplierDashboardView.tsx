@@ -527,7 +527,7 @@ export function SupplierDashboardView({
               const progress = p.estimate > 0 ? Math.round((p.ordered / p.estimate) * 100) : 0;
               const barCol = p.overBy > 0 ? C.red : progress > 90 ? C.yellow : C.green;
               return (
-                <ProjectCard key={i} name={p.name} phase={p.phase} budget={p.ordered} progress={Math.min(progress, 100)} barColor={barCol} onClick={() => {}} />
+                <ProjectCard key={i} name={p.name} phase={p.phase} budget={p.ordered} progress={Math.min(progress, 100)} barColor={barCol} onClick={() => navigate(`/project/${p.projectId}`)} />
               );
             })}
           </div>
