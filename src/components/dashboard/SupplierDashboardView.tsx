@@ -315,7 +315,7 @@ export function SupplierDashboardView({
               <THead cols={['Project', 'Phase', 'Estimate', 'Notes']} />
               <tbody>
                 {dp.map((p, i) => (
-                  <TRow key={i} onClick={() => {}} cells={[
+                  <TRow key={i} onClick={() => navigate(`/project/${p.projectId}`)} cells={[
                     <TdN>{p.name}</TdN>,
                     <span>{p.phase}</span>,
                     <TdM>{p.estimate > 0 ? fmt(p.estimate) : '—'}</TdM>,
