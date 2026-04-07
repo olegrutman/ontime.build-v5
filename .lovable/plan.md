@@ -1,106 +1,71 @@
 
 
-# KPI Card Audit Report — All Roles
+# Build FC Project Overview Page
 
-## Summary
+## Overview
 
-Audited all KPI cards across Dashboard views (GCDashboardView, TCDashboardView, FCDashboardView, SupplierDashboardView), Project Overview (ProjectFinancialCommand), CO detail (COKPIStrip), Invoice action bar, and the platform admin defaults (defaultKpiConfig.ts). Found 7 bugs ranging from incorrect formulas to missing data sources.
+Create a dedicated `FCProjectOverview` component that renders when a Field Crew user views a project overview. This replaces the generic `GCProjectOverviewContent` for FC users with a focused, read-only view of their contract, earnings, work progress, and pending items.
 
----
+## Architecture
 
-## Bug 1: GC `totalRevenue` falls back to `totalCosts` when no owner_contract_value is set
-**Severity: High** | **File:** `useDashboardData.ts` lines 680-688
+- New file: `src/components/project/FCProjectOverview.tsx`
+- Modify: `src/pages/ProjectHome.tsx` — conditionally render `FCProjectOverview` when `isFC` is true
 
-When no `owner_contract_value` exists on any contract, the code sets `totalRevenue = totalCosts`. This means the GC Profit Margin card shows $0 margin and 0% — misleading. It should show the sum of `contract_sum` values (TC contracts flowing to GC) as the revenue baseline, not equal it to costs.
+The component follows the exact same visual architecture as `GCProjectOverviewContent`: inline styles using the same design tokens (Barlow Condensed headings, IBM Plex Mono currency, DM Sans body), same `KpiCard`, `Pill`, `THead`, `TRow`, `WarnItem` helper components, same 3px accent bar + expand/collapse pattern.
 
-**Fix:** Change fallback from `totalRevenue = totalCosts` to `totalRevenue = totalContractValue` (the sum already computed at line 628-639).
+## Data Sources
 
----
+All data comes from the existing `financials: ProjectFinancials` prop (already passed in `ProjectHome.tsx`):
+- **Contract**: `financials.downstreamContract` (FC's contract set by TC) — `contract_sum`, `labor_budget`
+- **Paid/Pending**: `financials.totalPaid`, `financials.billedToDate`, `financials.outstanding`
+- **Invoices**: `financials.recentInvoices` (filtered by status)
+- **Change Orders**: Queried via `supabase.from('change_orders')` scoped to project + FC org
+- **Work progress**: Derived from invoice milestones and CO data
 
-## Bug 2: GC `totalContractValue` and `totalCosts` use same filter — always identical
-**Severity: High** | **File:** `useDashboardData.ts` lines 628-639 vs 674-678
+## Component Structure — `FCProjectOverview.tsx`
 
-`totalContractValue` sums contracts where `to_org_id === currentOrg.id`. `totalCosts` (GC path, line 674-678) also sums contracts where `to_org_id === currentOrg.id`. These are always equal. But GC costs should be contracts where GC is the *payer* (to_org), while GC revenue should be derived from `owner_contract_value` or the upstream contract sum. The current logic conflates them.
+### Page Header
+- Left: color dot + project name + phase subtitle + crew name
+- Right: amber "Submit Invoice to TC" button → `onNavigate('invoices')`, ghost "View My Tasks" button
 
-**Fix:** GC `totalCosts` should sum contracts where GC is `to_org_id` (correct — this is what TCs charge GC). GC `totalRevenue` should prefer `owner_contract_value` and fall back to a distinct revenue source, not the same sum. The fallback at line 687 (`totalRevenue = totalCosts`) makes every metric derived from revenue vs costs yield 0.
+### 6 KPI Cards (3-col grid, matching GC layout)
 
----
+1. **My Contract** (amber accent) — `downstreamContract.contract_sum`, read-only. Expand: contract value, approved COs, revised total, internal cost budget, net margin. Info callout: "Your contract was set by [TC name]. Contact your TC to negotiate changes."
 
-## Bug 3: TC `totalRevenue` uses `from_org_id` but `totalContractValue` uses `to_org_id`
-**Severity: Medium** | **File:** `useDashboardData.ts` lines 629 vs 663-664
+2. **Net Margin** (green accent) — contract minus `labor_budget`. Expand: same breakdown with margin percentage.
 
-For TC: `totalContractValue` (line 629) sums where `to_org_id === currentOrg.id` (contracts where TC receives money — wrong, TC receives money via `from_org_id`). Meanwhile `totalRevenue` (line 664) correctly uses `from_org_id === currentOrg.id`. The `totalContractValue` isn't displayed directly, but it's inconsistent and could cause confusion if used elsewhere.
+3. **Change Orders** (blue accent) — query `change_orders` for FC's project. Expand: table of COs with status pills. Ghost button: "Submit CO Request to TC" → `onNavigate('change-orders')`.
 
-**Fix:** Align `totalContractValue` for TC to use `from_org_id`.
+4. **Paid by TC** (green accent) — `totalPaid`. Expand: table of PAID invoices from `recentInvoices`.
 
----
+5. **Pending from TC** (yellow accent) — SUBMITTED invoices sum. Expand: pending invoice detail with status message.
 
-## Bug 4: TC Materials Forecast always shows 4% variance (hardcoded)
-**Severity: Medium** | **File:** `DashboardKPIs.tsx` lines 33-35
+6. **Work Progress** (navy accent) — derived completion percentage. Expand: task/level breakdown table.
 
-```typescript
-const forecastVariance = financials.totalCosts > 0 
-  ? ((financials.totalCosts * 1.04 - financials.totalCosts) / financials.totalCosts) * 100 
-  : 0;
-```
+### Earnings Tracker (full-width card below grid)
+5 horizontal bar rows (pure CSS, no chart library):
+- Total Scope (contract + COs) — amber bar 100%
+- Invoiced — green bar at invoiced %
+- Received (Paid) — dark green bar
+- Pending — yellow bar
+- Remaining to Earn — faint border bar
 
-This always equals exactly 4.0% — it's `(totalCosts * 0.04) / totalCosts * 100 = 4`. The formula doesn't compare actual material spend vs budget. It should use real PO totals vs the material estimate baseline.
+### Warnings Section
+Dynamic warnings built from financials state:
+- Pending invoices awaiting TC approval
+- Active work items nearing deadline
+- Upcoming scope items
 
-**Note:** The expandable TCDashboardView doesn't use this component (it has its own cards), so this only affects the legacy `DashboardKPIs` component. However, it's still referenced and could be rendered in some paths.
-
-**Fix:** Either remove this legacy card or wire it to real material data from the hook.
-
----
-
-## Bug 5: FC Dashboard `costs` from `projectFinancials` is always 0
-**Severity: Medium** | **File:** `useDashboardData.ts` lines 741-743
-
-For FC, per-project costs are set from contracts where `from_org_id === currentOrg.id` — but that maps to `pf.revenue`, not `pf.costs`. The FC path only sets `pf.revenue` and never sets `pf.costs`. So on the FC dashboard, "Internal Cost Budget" in the expanded cards always shows $0.
-
-At the aggregate level (line 698-701), `totalCosts` uses `labor_budget` from the contract, which may be null. If null, FC costs = 0 and margin = 100%.
-
-**Fix:** For FC aggregate costs, fall back to 0 gracefully and add a "No budget set" indicator. For per-project, add FC cost logic to the `pfMap` loop.
-
----
-
-## Bug 6: FC CO Additions value always $0 in FCDashboardView
-**Severity: Medium** | **File:** `FCDashboardView.tsx` lines 240-241
-
-```typescript
-const approvedCOs = coList.filter(d => ['approved', 'contracted', 'completed'].includes(d.status));
-const coTotal = approvedCOs.reduce((s, d) => s + (d.amount || 0), 0);
-```
-
-Change orders in `recentDocs` have `amount: null` (line 547 of useDashboardData.ts — `amount: null` for all COs). So `coTotal` is always 0. The CO amount isn't fetched from the database for the recentDocs CO entries.
-
-**Fix:** Fetch CO estimated amounts when building recent docs, or query `change_order_estimates` to get the approved total.
-
----
-
-## Bug 7: `CreateInvoiceFromSOV` missing forwardRef (console error)
-**Severity: Low** | **File:** `src/components/invoices/CreateInvoiceFromSOV.tsx`
-
-Console shows "Function components cannot be given refs" for `CreateInvoiceFromSOV`. Same pattern as the COLineItemRow/COSidebar fixes already applied.
-
-**Fix:** Wrap with `React.forwardRef`.
-
----
-
-## No Issues Found In
-
-- **COKPIStrip** — formulas correctly separate labor, materials, equipment by role. Pulls from `COFinancials` which is computed correctly.
-- **ProjectFinancialCommand** — correctly uses `upstreamContract.contract_sum`, `approvedEstimateSum`, and filters costs by org. FC path uses `receivablesCollected` from real invoice data.
-- **InvoiceActionBar** — correctly filters by status, computes aging from reference dates.
-- **SupplierFinancialsSummaryCard** — correctly queries POs by supplier_id and sums invoices by po_id.
-- **defaultKpiConfig.ts** — card keys match the expandable dashboard views. Config is consistent.
-
----
-
-## Proposed Fixes
+## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/hooks/useDashboardData.ts` | Bug 1: Change GC revenue fallback to use contract sums, not costs. Bug 3: Fix TC `totalContractValue` filter. Bug 5: Add FC per-project cost logic. Bug 6: Fetch CO amounts for recentDocs. |
-| `src/components/dashboard/DashboardKPIs.tsx` | Bug 4: Remove hardcoded 4% variance or wire to real data. |
-| `src/components/invoices/CreateInvoiceFromSOV.tsx` | Bug 7: Wrap with `React.forwardRef`. |
+| `src/components/project/FCProjectOverview.tsx` | **New** — Full FC project overview with 6 KPI cards, earnings tracker, warnings |
+| `src/pages/ProjectHome.tsx` | Import `FCProjectOverview`, render it instead of `GCProjectOverviewContent` when `isFC === true` |
+
+### What is NOT changing
+- `GCProjectOverviewContent.tsx` — stays as-is for GC/TC roles
+- `useProjectFinancials.ts` — already provides all needed FC data
+- Database schema, RLS policies
+- Design tokens, shared components
 
