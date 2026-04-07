@@ -127,10 +127,10 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason }: C
     const s = STEPS[step];
     if (s.key === 'why') return !!data.reason;
     if (s.key === 'where') return !!data.locationTag;
+    if (s.key === 'scope') return data.selectedItems.length > 0;
     if (s.key === 'how') {
       if (role === 'GC' && !data.assignedToOrgId) return false;
       if (data.pricingType === 'nte' && (!data.nteCap || parseFloat(data.nteCap) <= 0)) return false;
-      if (data.selectedItems.length === 0) return false;
       return true;
     }
     return true; // team step
