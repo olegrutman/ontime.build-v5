@@ -219,7 +219,7 @@ export function COStatusActions({
         await supabase
           .from('change_orders')
           .update({
-            tc_submitted_price: financials?.laborTotal ?? 0,
+            tc_submitted_price: financials?.grandTotal ?? 0,
           })
           .eq('id', co.id);
       }
