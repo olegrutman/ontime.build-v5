@@ -502,7 +502,7 @@ export function SupplierDashboardView({
                   const outBal = Math.max(0, p.billed - p.received);
                   const riskPill: PillType = p.risk === 'Over Budget' ? 'pr' : p.risk === 'Closed' ? 'pm' : p.risk === 'Not Started' ? 'pw' : 'pg';
                   return (
-                    <TRow key={i} onClick={() => {}} cells={[
+                    <TRow key={i} onClick={() => navigate(`/project/${p.projectId}`)} cells={[
                       <TdN>{p.name}</TdN>,
                       <TdM>{p.estimate > 0 ? fmt(p.estimate) : '—'}</TdM>,
                       <TdM>{p.ordered > 0 ? fmt(p.ordered) : '—'}</TdM>,
