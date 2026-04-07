@@ -129,6 +129,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason }: C
     if (s.key === 'how') {
       if (role === 'GC' && !data.assignedToOrgId) return false;
       if (data.pricingType === 'nte' && (!data.nteCap || parseFloat(data.nteCap) <= 0)) return false;
+      if (data.selectedItems.length === 0) return false;
       return true;
     }
     return true; // team step
@@ -551,6 +552,16 @@ function StepHow({
           />
         </div>
 
+        {/* Scope picker */}
+        <ScopePicker
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          searchResults={searchResults}
+          selectedIds={selectedIds}
+          onToggle={toggleItem}
+          selectedItems={data.selectedItems}
+        />
+
         <ShareToggle value={data.shareDraftNow} onChange={v => onChange({ shareDraftNow: v })} />
       </div>
     );
@@ -801,8 +812,10 @@ function ScopePicker({
           </button>
         ))}
       </div>
-      {selectedItems.length > 0 && (
-        <p className="text-xs text-primary font-medium">{selectedItems.length} items selected</p>
+      {selectedItems.length > 0 ? (
+        <p className="text-xs text-primary font-medium">{selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected</p>
+      ) : (
+        <p className="text-xs text-destructive font-medium">Select at least one scope item to continue</p>
       )}
     </div>
   );
