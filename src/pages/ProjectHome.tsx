@@ -336,7 +336,7 @@ export default function ProjectHome() {
                 {isInDemoMode ? (
                   <DemoProjectOverview onNavigate={handleTabChange} />
                 ) : isSupplier && supplierOrgId ? (
-                  <SupplierMaterialsOverview projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
+                  <SupplierProjectOverview projectId={id!} projectName={project.name} financials={financials} onNavigate={handleTabChange} />
                 ) : (
                   <div className="space-y-3 mt-3">
                     {showSetupBanner && (
