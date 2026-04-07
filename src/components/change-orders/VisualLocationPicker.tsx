@@ -118,7 +118,16 @@ export function VisualLocationPicker({
       if (selectedArea === 'Other' && customArea.trim()) {
         parts.push(customArea.trim());
       } else if (selectedArea && selectedArea !== 'Other') {
-        parts.push(selectedArea);
+        if (selectedArea === 'Unit interior') {
+          if (unitNumber.trim()) parts.push(`Unit ${unitNumber.trim()}`);
+          if (roomInUnit === 'Other' && customRoom.trim()) {
+            parts.push(customRoom.trim());
+          } else if (roomInUnit && roomInUnit !== 'Other') {
+            parts.push(roomInUnit);
+          }
+        } else {
+          parts.push(selectedArea);
+        }
       }
       return parts.join(' · ');
     }
