@@ -179,7 +179,7 @@ export default function Dashboard() {
   // Supplier gets the expandable KPI card dashboard
   if (orgType === 'SUPPLIER') {
     return (
-      <AppLayout title="Dashboard" fullWidth>
+      <AppLayout title="Dashboard" fullWidth showNewButton={canCreateProject} onNewClick={() => navigate('/create-project')} newButtonLabel="New Project">
         <SupplierDashboardView
           projects={projects}
           financials={financials}

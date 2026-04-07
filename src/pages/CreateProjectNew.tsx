@@ -48,7 +48,8 @@ export default function CreateProjectNew() {
 
   const currentOrg = userOrgRoles[0]?.organization;
   const creatorRole = currentOrg?.type === 'GC' ? 'General Contractor' : 
-                      currentOrg?.type === 'TC' ? 'Trade Contractor' : null;
+                      currentOrg?.type === 'TC' ? 'Trade Contractor' :
+                      currentOrg?.type === 'SUPPLIER' ? 'Supplier' : null;
 
   // Redirect if not authorized
   useEffect(() => {

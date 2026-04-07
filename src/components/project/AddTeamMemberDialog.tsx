@@ -103,6 +103,10 @@ export function AddTeamMemberDialog({
       // FC cannot invite anyone
       return false;
     }
+    if (creatorOrgType === 'SUPPLIER') {
+      // Supplier can add GC and TC, but NOT FC or another Supplier
+      return role === 'General Contractor' || role === 'Trade Contractor';
+    }
     return true;
   });
 
