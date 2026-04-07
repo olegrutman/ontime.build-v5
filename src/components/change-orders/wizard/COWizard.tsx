@@ -17,6 +17,7 @@ import { format } from 'date-fns';
 import { useChangeOrders } from '@/hooks/useChangeOrders';
 import { useScopeCatalog } from '@/hooks/useScopeCatalog';
 import { VisualLocationPicker } from '../VisualLocationPicker';
+import { StepCatalog } from './StepCatalog';
 import { CO_REASON_LABELS, CO_REASON_COLORS } from '@/types/changeOrder';
 import type { COCreatedByRole, COReasonCode, COPricingType, ScopeCatalogItem } from '@/types/changeOrder';
 
