@@ -221,11 +221,11 @@ const BAR_COLORS = [C.amber, C.blue, C.green, C.yellow, C.purple, C.red, C.navy]
 
 /* ─── Demo data for supplier ─── */
 const DEMO_PROJECTS = [
-  { name: 'Cherry Hills', phase: 'Framing L2-4', estimate: 90000, ordered: 73800, billed: 65400, received: 58000, overBy: 0, risk: 'On Track' as const },
-  { name: 'Tower 14', phase: 'Structural L6-9', estimate: 143000, ordered: 143200, billed: 121000, received: 109000, overBy: 6000, risk: 'Over Budget' as const },
-  { name: 'Mesa Logistics', phase: 'MEP Rough-in', estimate: 48000, ordered: 48000, billed: 48000, received: 48000, overBy: 0, risk: 'Closed' as const },
-  { name: 'Apex Retail', phase: 'Pre-construction', estimate: 0, ordered: 0, billed: 0, received: 0, overBy: 0, risk: 'Not Started' as const },
-  { name: 'Hyatt Studios', phase: 'EIFS L2-4', estimate: 38000, ordered: 32000, billed: 28000, received: 24000, overBy: 0, risk: 'On Track' as const },
+  { projectId: 'demo-cherry-hills', name: 'Cherry Hills', phase: 'Framing L2-4', estimate: 90000, ordered: 73800, billed: 65400, received: 58000, overBy: 0, risk: 'On Track' as const },
+  { projectId: 'demo-tower-14', name: 'Tower 14', phase: 'Structural L6-9', estimate: 143000, ordered: 143200, billed: 121000, received: 109000, overBy: 6000, risk: 'Over Budget' as const },
+  { projectId: 'demo-mesa', name: 'Mesa Logistics', phase: 'MEP Rough-in', estimate: 48000, ordered: 48000, billed: 48000, received: 48000, overBy: 0, risk: 'Closed' as const },
+  { projectId: 'demo-apex', name: 'Apex Retail', phase: 'Pre-construction', estimate: 0, ordered: 0, billed: 0, received: 0, overBy: 0, risk: 'Not Started' as const },
+  { projectId: 'demo-hyatt', name: 'Hyatt Studios', phase: 'EIFS L2-4', estimate: 38000, ordered: 32000, billed: 28000, received: 24000, overBy: 0, risk: 'On Track' as const },
 ];
 
 const DEMO_DELIVERIES = [
