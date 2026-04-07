@@ -92,8 +92,8 @@ export function AddTeamMemberDialog({
   // - Field Crew cannot add anyone
   const availableRoles = TEAM_ROLES.filter(role => {
     if (creatorOrgType === 'GC') {
-      // GC can add Trade Contractor and Supplier, but NOT Field Crew or another GC
-      return role === 'Trade Contractor' || role === 'Supplier';
+      // GC can add Trade Contractor, Field Crew, and Supplier, but NOT another GC
+      return role === 'Trade Contractor' || role === 'Field Crew' || role === 'Supplier';
     }
     if (creatorOrgType === 'TC') {
       // TC can add General Contractor, Field Crew, and Supplier (NOT another TC)

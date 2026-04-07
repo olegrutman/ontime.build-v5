@@ -255,6 +255,31 @@ export function COStatusActions({
         await notifyOrg(nextOrgId, 'CHANGE_SUBMITTED', financials?.grandTotal || undefined);
       } else {
         await approveCO.mutateAsync(co.id);
+        
+        // Bug #13 fix: Auto-update contract value on CO approval
+        const approvedAmount = financials?.grandTotal ?? 0;
+        if (approvedAmount !== 0) {
+          try {
+            // Find the contract between the CO's orgs on this project
+            const { data: contracts } = await supabase
+              .from('project_contracts')
+              .select('id, contract_sum')
+              .eq('project_id', projectId)
+              .or(`and(from_org_id.eq.${co.org_id},to_org_id.eq.${co.assigned_to_org_id}),and(from_org_id.eq.${co.assigned_to_org_id},to_org_id.eq.${co.org_id})`);
+            
+            if (contracts && contracts.length > 0) {
+              const contract = contracts[0];
+              const newSum = (contract.contract_sum ?? 0) + approvedAmount;
+              await supabase
+                .from('project_contracts')
+                .update({ contract_sum: newSum })
+                .eq('id', contract.id);
+            }
+          } catch (contractErr) {
+            console.error('Failed to update contract value after CO approval:', contractErr);
+          }
+        }
+        
         toast.success('CO approved');
         await logActivity('approved', undefined, financials?.grandTotal || undefined);
         await notifyAllCOParties('CHANGE_APPROVED', financials?.grandTotal || undefined);

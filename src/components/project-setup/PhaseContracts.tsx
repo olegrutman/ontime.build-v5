@@ -58,6 +58,8 @@ export function PhaseContracts({ projectId, onComplete, onStepChange }: PhaseCon
     if (!creatorOrg) return null;
     if (creatorOrg.type === 'GC') return 'General Contractor';
     if (creatorOrg.type === 'TC') return 'Trade Contractor';
+    if (creatorOrg.type === 'SUPPLIER') return 'Supplier';
+    if (creatorOrg.type === 'FC') return 'Field Crew';
     return null;
   }, [creatorOrg]);
 
@@ -89,6 +91,8 @@ export function PhaseContracts({ projectId, onComplete, onStepChange }: PhaseCon
     if (!creatorRole) return [];
     if (creatorRole === 'General Contractor') return team.filter(m => m.role === 'Trade Contractor' || m.role === 'Field Crew');
     if (creatorRole === 'Trade Contractor') return team.filter(m => m.role === 'General Contractor' || m.role === 'Field Crew');
+    if (creatorRole === 'Supplier') return team.filter(m => m.role === 'General Contractor' || m.role === 'Trade Contractor');
+    if (creatorRole === 'Field Crew') return team.filter(m => m.role === 'Trade Contractor');
     return [];
   }, [team, creatorRole]);
 

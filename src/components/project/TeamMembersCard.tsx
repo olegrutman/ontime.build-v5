@@ -197,6 +197,42 @@ export function TeamMembersCard({ projectId, onResponsibilityChange, onTeamChang
     setRemoving(true);
     try {
       const orgId = memberToRemove.org_id;
+      
+      // Guard: block removal if contracts have associated invoices or locked SOVs
+      if (orgId) {
+        const { data: relatedContracts } = await supabase
+          .from('project_contracts')
+          .select('id')
+          .eq('project_id', projectId)
+          .or(`from_org_id.eq.${orgId},to_org_id.eq.${orgId}`);
+        
+        if (relatedContracts && relatedContracts.length > 0) {
+          const contractIds = relatedContracts.map(c => c.id);
+          const { count: invoiceCount } = await supabase
+            .from('invoices')
+            .select('id', { count: 'exact', head: true })
+            .in('contract_id', contractIds);
+          
+          if (invoiceCount && invoiceCount > 0) {
+            toast({ title: 'Cannot remove member', description: 'This member has associated invoices. Remove or void all invoices first.', variant: 'destructive' });
+            setRemoving(false);
+            return;
+          }
+          
+          const { count: sovCount } = await supabase
+            .from('project_sov')
+            .select('id', { count: 'exact', head: true })
+            .in('contract_id', contractIds)
+            .eq('is_locked', true);
+          
+          if (sovCount && sovCount > 0) {
+            toast({ title: 'Cannot remove member', description: 'This member has a locked Schedule of Values. Unlock the SOV first.', variant: 'destructive' });
+            setRemoving(false);
+            return;
+          }
+        }
+      }
+      
       // 1. Delete related contracts
       if (orgId) {
         await supabase.from('project_contracts').delete().eq('project_id', projectId).or(`from_org_id.eq.${orgId},to_org_id.eq.${orgId}`);
