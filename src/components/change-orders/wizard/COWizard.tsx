@@ -134,7 +134,8 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason }: C
       if (data.pricingType === 'nte' && (!data.nteCap || parseFloat(data.nteCap) <= 0)) return false;
       return true;
     }
-    return true; // team step
+    if (s.key === 'team') return data.selectedItems.length > 0;
+    return true;
   }
 
   function handleNext() { if (step < STEPS.length - 1) setStep(s => s + 1); }
