@@ -32,6 +32,9 @@ const REASONS: { code: COReasonCode; description: string }[] = [
 export function StepCatalog({ data, onChange, projectId }: StepCatalogProps) {
   const { divisions, search, isLoading } = useScopeCatalog();
 
+  // When location & reason are pre-set by the wizard, lock them (read-only pills)
+  const [lockedFromWizard] = useState(() => !!(data.locationTag && data.reason));
+
   // Internal phase: location → reason → items
   const [phase, setPhase] = useState<Phase>(() => {
     if (data.locationTag && data.reason) return 'items';
