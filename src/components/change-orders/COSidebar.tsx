@@ -75,7 +75,7 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
   const totalApprovedSpend = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
 
   return (
-    <div className="space-y-3">
+    <div ref={ref} className="space-y-3">
       {/* GC Budget Tracker */}
       <COBudgetTracker
         gcBudget={(co as any).gc_budget ?? null}
