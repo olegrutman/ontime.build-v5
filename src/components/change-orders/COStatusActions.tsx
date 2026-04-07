@@ -219,7 +219,7 @@ export function COStatusActions({
         await supabase
           .from('change_orders')
           .update({
-            tc_submitted_price: financials?.laborTotal ?? 0,
+            tc_submitted_price: financials?.grandTotal ?? 0,
           })
           .eq('id', co.id);
       }
@@ -343,20 +343,21 @@ export function COStatusActions({
   }
 
   const isCreator = co.created_by_user_id === user?.id;
-  const isCollaborator = collaborators.some(c => c.organization_id === currentOrgId && c.status === 'active');
+  const isActiveCollaborator = collaborators.some(c => c.organization_id === currentOrgId && c.status === 'active');
+  const isAnyCollaborator = collaborators.some(c => c.organization_id === currentOrgId);
 
   /* Draft actions — suppress Share when Send-to-WIP is available (M5) */
   const canSendToWIP = isGC && isCreator && status === 'draft' && !!co.assigned_to_org_id;
   const canShare = isCreator && status === 'draft' && !co.draft_shared_with_next && !canSendToWIP;
   /* GC can close for pricing (Flow 1) */
   const canCloseForPricing = isGC && (status === 'work_in_progress') && (co.org_id === currentOrgId || co.created_by_user_id === user?.id);
-  /* TC/FC submit for approval — include 'rejected' (C3) */
-  const canSubmit = (isTC || isFC) && !isCollaborator && (status === 'draft' || status === 'shared' || status === 'work_in_progress' || status === 'closed_for_pricing' || status === 'rejected') && !!co.assigned_to_org_id;
+  /* TC/FC submit for approval — include 'rejected' (C3). FC collaborators (any status) should NOT see primary submit. */
+  const canSubmit = (isTC || isFC) && !isAnyCollaborator && (status === 'draft' || status === 'shared' || status === 'work_in_progress' || status === 'closed_for_pricing' || status === 'rejected') && !!co.assigned_to_org_id;
   /* FC collaborator can submit pricing independently (M4) */
-  const canSubmitFCPricing = isFC && isCollaborator && status === 'closed_for_pricing';
-  const canRecall = (isTC || isFC) && !isCollaborator && status === 'submitted';
+  const canSubmitFCPricing = isFC && isActiveCollaborator && status === 'closed_for_pricing';
+  const canRecall = (isTC || isFC) && !isAnyCollaborator && status === 'submitted';
   /* GC approves using org_id (creating org) not assigned_to_org_id (C2) */
-  const canApprove = ((isGC && status === 'submitted' && co.org_id === currentOrgId) || forwardsToGC) && !isCollaborator;
+  const canApprove = ((isGC && status === 'submitted' && co.org_id === currentOrgId) || forwardsToGC) && !isActiveCollaborator;
   const canReject = canApprove;
   /* Flow 2 completion */
   const isApproved = status === 'approved';

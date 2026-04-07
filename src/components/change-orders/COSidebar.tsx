@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { DT } from '@/lib/design-tokens';
 import { cn } from '@/lib/utils';
 import { CONTEPanel } from './CONTEPanel';
@@ -61,7 +62,7 @@ function FinRow({ label, value, bold, muted }: { label: string; value: number; b
   );
 }
 
-export function COSidebar(props: COSidebarProps) {
+export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COSidebar(props, ref) {
   const {
     co, isGC, isTC, isFC, role, myOrgId, projectId,
     financials, collaborators, fcOrgOptions, fcCollabName,
@@ -74,7 +75,7 @@ export function COSidebar(props: COSidebarProps) {
   const totalApprovedSpend = financials.tcBillableToGC + financials.materialsTotal + financials.equipmentTotal;
 
   return (
-    <div className="space-y-3">
+    <div ref={ref} className="space-y-3">
       {/* GC Budget Tracker */}
       <COBudgetTracker
         gcBudget={(co as any).gc_budget ?? null}
@@ -161,4 +162,4 @@ export function COSidebar(props: COSidebarProps) {
       )}
     </div>
   );
-}
+});

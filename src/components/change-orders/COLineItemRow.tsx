@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, forwardRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ChevronDown, EyeOff, CheckCircle } from 'lucide-react';
@@ -30,11 +30,11 @@ function fmt(n: number) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export function COLineItemRow({
+export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(function COLineItemRow({
   item, laborEntries, role, isGC, isTC, isFC,
   coId, orgId, pricingType, nteCap, nteUsed = 0,
   canAddLabor, onRefresh,
-}: COLineItemRowProps) {
+}, ref) {
   const [showActualForm, setShowActualForm] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
@@ -113,7 +113,7 @@ export function COLineItemRow({
   }
 
   return (
-    <div className="border-b border-border last:border-b-0">
+    <div ref={ref} className="border-b border-border last:border-b-0">
       {/* Item header */}
       <div className="px-4 py-3">
         <div className="flex items-center justify-between">
@@ -307,4 +307,4 @@ export function COLineItemRow({
       )}
     </div>
   );
-}
+});
