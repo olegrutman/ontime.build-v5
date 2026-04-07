@@ -74,6 +74,9 @@ export function VisualLocationPicker({
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [customArea, setCustomArea] = useState('');
+  const [unitNumber, setUnitNumber] = useState('');
+  const [roomInUnit, setRoomInUnit] = useState<string | null>(null);
+  const [customRoom, setCustomRoom] = useState('');
   const [selectedElevation, setSelectedElevation] = useState<string | null>(null);
   const [customElevation, setCustomElevation] = useState('');
 
