@@ -49,6 +49,7 @@ import { ProjectOverviewTeamCard } from '@/components/project/ProjectOverviewTea
 import { ProjectPOSummary } from '@/components/project/ProjectPOSummary';
 import { GCProjectOverviewContent } from '@/components/project/GCProjectOverviewContent';
 import { FCProjectOverview } from '@/components/project/FCProjectOverview';
+import { TCProjectOverview } from '@/components/project/TCProjectOverview';
 
 import { ProjectTabBar } from '@/components/project/ProjectTabBar';
 
@@ -102,6 +103,7 @@ export default function ProjectHome() {
   const currentOrg = userOrgRoles[0]?.organization;
   const isRealSupplier = isInDemoMode ? demoRole === 'SUPPLIER' : currentOrg?.type === 'SUPPLIER';
   const isFC = isInDemoMode ? demoRole === 'FC' : currentOrg?.type === 'FC';
+  const isTC = isInDemoMode ? demoRole === 'TC' : currentOrg?.type === 'TC';
   const [isDesignatedSupplier, setIsDesignatedSupplier] = useState(false);
   const isSupplier = isRealSupplier || isDesignatedSupplier;
   const supplierOrgId = isRealSupplier ? (isInDemoMode ? 'demo-org-supplier' : currentOrg?.id) : null;
@@ -360,6 +362,13 @@ export default function ProjectHome() {
 
                     {isFC ? (
                       <FCProjectOverview
+                        projectId={id!}
+                        projectName={project.name}
+                        financials={financials}
+                        onNavigate={handleTabChange}
+                      />
+                    ) : isTC ? (
+                      <TCProjectOverview
                         projectId={id!}
                         projectName={project.name}
                         financials={financials}
