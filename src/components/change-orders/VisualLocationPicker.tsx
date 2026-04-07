@@ -141,7 +141,7 @@ export function VisualLocationPicker({
       return parts.join(' · ');
     }
     return '';
-  }, [insideOutside, selectedLevel, selectedArea, customArea, selectedElevation, customElevation]);
+  }, [insideOutside, selectedLevel, selectedArea, customArea, unitNumber, roomInUnit, customRoom, selectedElevation, customElevation]);
 
   // Auto-confirm when complete
   const isComplete = useMemo(() => {
