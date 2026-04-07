@@ -626,13 +626,14 @@ export function useDashboardData(): DashboardData {
 
       // 7. Calculate financial summary
       const totalContractValue = contracts.reduce((sum, c) => {
-        if (orgType === 'TC' && c.to_org_id === currentOrg.id) {
+        // TC & FC receive money via from_org_id; GC receives via to_org_id
+        if (orgType === 'TC' && c.from_org_id === currentOrg.id) {
           return sum + (c.contract_sum || 0);
         }
         if (orgType === 'GC' && c.to_org_id === currentOrg.id) {
           return sum + (c.contract_sum || 0);
         }
-        if (orgType === 'FC' && c.to_org_id === currentOrg.id) {
+        if (orgType === 'FC' && c.from_org_id === currentOrg.id) {
           return sum + (c.contract_sum || 0);
         }
         return sum;
