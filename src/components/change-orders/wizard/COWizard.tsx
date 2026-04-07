@@ -84,7 +84,8 @@ const PRICING_OPTIONS: { type: COPricingType; title: string; description: string
 const STEPS = [
   { key: 'why', label: 'Why', description: 'What triggered this change?' },
   { key: 'where', label: 'Where', description: 'Location of the work' },
-  { key: 'how', label: 'How', description: 'Configuration & scope' },
+  { key: 'scope', label: 'Scope', description: 'Select work items' },
+  { key: 'how', label: 'How', description: 'Pricing & configuration' },
   { key: 'team', label: 'Team', description: 'Confirm & create' },
 ] as const;
 
