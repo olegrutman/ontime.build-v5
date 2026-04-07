@@ -58,6 +58,8 @@ export function PhaseContracts({ projectId, onComplete, onStepChange }: PhaseCon
     if (!creatorOrg) return null;
     if (creatorOrg.type === 'GC') return 'General Contractor';
     if (creatorOrg.type === 'TC') return 'Trade Contractor';
+    if (creatorOrg.type === 'SUPPLIER') return 'Supplier';
+    if (creatorOrg.type === 'FC') return 'Field Crew';
     return null;
   }, [creatorOrg]);
 
