@@ -221,16 +221,8 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason }: C
         });
       }
 
-      // If GC assigned a TC, create invited collaborator
-      if (role === 'GC' && resolvedAssignedToOrgId) {
-        await supabase.from('change_order_collaborators').insert({
-          co_id: preGeneratedId,
-          organization_id: resolvedAssignedToOrgId,
-          collaborator_type: 'FC', // using FC type since that's the only enum
-          invited_by_user_id: user.id,
-          status: 'invited',
-        });
-      }
+      // GC→TC assignment is tracked via assigned_to_org_id on the CO itself.
+      // No collaborator row needed — collaborator rows are for FC input requests.
 
       // Activity log
       await supabase.from('co_activity').insert({
