@@ -115,7 +115,7 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
 
       if (seeds.length > 0) {
         await supabase.from('project_setup_answers').upsert(
-          seeds.map(s => ({ project_id: projectId, field_key: s.field_key, value: JSON.stringify(s.value) })),
+          seeds.map(s => ({ project_id: projectId, field_key: s.field_key, value: s.value })),
           { onConflict: 'project_id,field_key' }
         );
       }
