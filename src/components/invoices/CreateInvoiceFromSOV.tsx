@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { CalendarIcon, AlertCircle, FileText, DollarSign, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -100,14 +100,14 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function CreateInvoiceFromSOV({
+export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoiceFromSOVProps>(function CreateInvoiceFromSOV({
   open,
   onOpenChange,
   projectId,
   onSuccess,
   revisionInvoiceId,
   revisionData,
-}: CreateInvoiceFromSOVProps) {
+}, _ref) {
   const { user, userOrgRoles } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -908,4 +908,4 @@ export function CreateInvoiceFromSOV({
       </DialogContent>
     </Dialog>
   );
-}
+});

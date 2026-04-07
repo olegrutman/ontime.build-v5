@@ -438,7 +438,7 @@ export function useDashboardData(): DashboardData {
         projectIds.length > 0
           ? supabase
               .from('change_orders')
-              .select('id, co_number, title, status, created_at, project_id, org_id')
+              .select('id, co_number, title, status, created_at, project_id, org_id, tc_submitted_price, gc_budget')
               .in('project_id', projectIds)
               .order('created_at', { ascending: false })
               .limit(20)
@@ -544,7 +544,7 @@ export function useDashboardData(): DashboardData {
           type: 'change_order',
           title: co.co_number || co.title || 'Change Order',
           status: co.status,
-          amount: null,
+          amount: co.tc_submitted_price || co.gc_budget || null,
           created_at: co.created_at,
           projectName: proj?.name || 'Unknown',
           projectId: co.project_id,
@@ -626,13 +626,14 @@ export function useDashboardData(): DashboardData {
 
       // 7. Calculate financial summary
       const totalContractValue = contracts.reduce((sum, c) => {
-        if (orgType === 'TC' && c.to_org_id === currentOrg.id) {
+        // TC & FC receive money via from_org_id; GC receives via to_org_id
+        if (orgType === 'TC' && c.from_org_id === currentOrg.id) {
           return sum + (c.contract_sum || 0);
         }
         if (orgType === 'GC' && c.to_org_id === currentOrg.id) {
           return sum + (c.contract_sum || 0);
         }
-        if (orgType === 'FC' && c.to_org_id === currentOrg.id) {
+        if (orgType === 'FC' && c.from_org_id === currentOrg.id) {
           return sum + (c.contract_sum || 0);
         }
         return sum;
@@ -684,7 +685,8 @@ export function useDashboardData(): DashboardData {
         if (ownerValues.length > 0) {
           totalRevenue = ownerValues.reduce((sum: number, v: number) => sum + v, 0);
         } else {
-          totalRevenue = totalCosts;
+          // Fallback: use total contract value (sum of TC contracts), not costs
+          totalRevenue = totalContractValue;
         }
 
         totalBilled = paidByYou; // GC: billed = money paid out
@@ -738,8 +740,11 @@ export function useDashboardData(): DashboardData {
             pf.costs += c.contract_sum || 0;
             pf.revenue += (c as any).owner_contract_value || c.contract_sum || 0;
           }
-        } else if (orgType === 'FC') {
-          if (c.from_org_id === currentOrg.id) pf.revenue += c.contract_sum || 0;
+      } else if (orgType === 'FC') {
+          if (c.from_org_id === currentOrg.id) {
+            pf.revenue += c.contract_sum || 0;
+            pf.costs += (c as any).labor_budget || 0;
+          }
         }
       });
 
