@@ -62,7 +62,7 @@ function FinRow({ label, value, bold, muted }: { label: string; value: number; b
   );
 }
 
-export function COSidebar(props: COSidebarProps) {
+export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COSidebar(props, ref) {
   const {
     co, isGC, isTC, isFC, role, myOrgId, projectId,
     financials, collaborators, fcOrgOptions, fcCollabName,
