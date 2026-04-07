@@ -149,6 +149,49 @@ function repairAndExtractJSON(raw: string): ParsedPack[] | null {
   return null;
 }
 
+// ── DB helper to update upload row status ───────────────────────────────
+
+async function updateUploadStatus(
+  supabaseUrl: string,
+  serviceKey: string,
+  estimateId: string,
+  filePath: string,
+  status: string,
+  parsedResult?: ParseResult | null,
+  errorMessage?: string
+) {
+  const body: Record<string, unknown> = { status };
+  if (parsedResult) {
+    body.parsed_result = parsedResult;
+    body.completed_at = new Date().toISOString();
+  }
+  if (errorMessage) {
+    body.error_message = errorMessage;
+    body.completed_at = new Date().toISOString();
+  }
+
+  try {
+    const resp = await fetch(
+      `${supabaseUrl}/rest/v1/estimate_pdf_uploads?estimate_id=eq.${encodeURIComponent(estimateId)}&file_path=eq.${encodeURIComponent(filePath)}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${serviceKey}`,
+          apikey: serviceKey,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify(body),
+      }
+    );
+    if (!resp.ok) {
+      console.error("Failed to update upload status:", resp.status, await resp.text());
+    }
+  } catch (e) {
+    console.error("Error updating upload status:", e);
+  }
+}
+
 // ── Main handler ────────────────────────────────────────────────────────
 
 serve(async (req) => {
@@ -156,8 +199,16 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+  let estimateId = "";
+  let filePath = "";
+
   try {
-    const { estimateId, filePath } = await req.json();
+    const body = await req.json();
+    estimateId = body.estimateId;
+    filePath = body.filePath;
 
     if (!estimateId || !filePath) {
       return new Response(
@@ -171,9 +222,8 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Download PDF from storage using direct fetch (no SDK needed)
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    // Mark as processing
+    await updateUploadStatus(supabaseUrl, supabaseServiceKey, estimateId, filePath, "processing");
 
     // ── Download PDF from storage ────────────────────────────────────
     console.log(`Downloading PDF: ${filePath}`);
@@ -189,8 +239,10 @@ serve(async (req) => {
 
     if (!storageResponse.ok) {
       console.error("Download error:", storageResponse.status, await storageResponse.text());
+      const errMsg = "Failed to download PDF from storage";
+      await updateUploadStatus(supabaseUrl, supabaseServiceKey, estimateId, filePath, "failed", null, errMsg);
       return new Response(
-        JSON.stringify({ error: "Failed to download PDF from storage" }),
+        JSON.stringify({ error: errMsg }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -204,10 +256,10 @@ serve(async (req) => {
     console.log(`PDF size: ${fileSizeMB.toFixed(1)}MB`);
 
     if (fileSizeMB > 20) {
+      const errMsg = "PDF is too large (over 20MB). Please split into smaller files.";
+      await updateUploadStatus(supabaseUrl, supabaseServiceKey, estimateId, filePath, "failed", null, errMsg);
       return new Response(
-        JSON.stringify({
-          error: "PDF is too large (over 20MB). Please split into smaller files.",
-        }),
+        JSON.stringify({ error: errMsg }),
         { status: 413, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -259,22 +311,21 @@ serve(async (req) => {
       const errorText = await aiResponse.text();
       console.error(`AI gateway error ${status}:`, errorText);
 
+      let errMsg = "AI extraction failed. Please try again.";
+      let httpStatus = 500;
+
       if (status === 429) {
-        return new Response(
-          JSON.stringify({ error: "AI service is busy. Please try again in a minute." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please add credits to continue." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        errMsg = "AI service is busy. Please try again in a minute.";
+        httpStatus = 429;
+      } else if (status === 402) {
+        errMsg = "AI credits exhausted. Please add credits to continue.";
+        httpStatus = 402;
       }
 
+      await updateUploadStatus(supabaseUrl, supabaseServiceKey, estimateId, filePath, "failed", null, errMsg);
       return new Response(
-        JSON.stringify({ error: "AI extraction failed. Please try again." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: errMsg }),
+        { status: httpStatus, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -285,8 +336,10 @@ serve(async (req) => {
       aiData = JSON.parse(aiText);
     } catch {
       console.error("AI response not valid JSON:", aiText.slice(0, 500));
+      const errMsg = "AI returned an invalid response. Please try again.";
+      await updateUploadStatus(supabaseUrl, supabaseServiceKey, estimateId, filePath, "failed", null, errMsg);
       return new Response(
-        JSON.stringify({ error: "AI returned an invalid response. Please try again." }),
+        JSON.stringify({ error: errMsg }),
         { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -363,30 +416,35 @@ serve(async (req) => {
     const totalItems = packs.reduce((sum, p) => sum + p.items.length, 0);
 
     if (totalItems === 0) {
+      const errMsg = "Could not extract any items from this PDF. The document may not contain recognizable line items. Try a cleaner scan or use CSV upload instead.";
+      await updateUploadStatus(supabaseUrl, supabaseServiceKey, estimateId, filePath, "failed", null, errMsg);
       return new Response(
-        JSON.stringify({
-          error:
-            "Could not extract any items from this PDF. The document may not contain recognizable line items. Try a cleaner scan or use CSV upload instead.",
-          warnings,
-        }),
+        JSON.stringify({ error: errMsg, warnings }),
         { status: 422, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     console.log(`Extracted ${totalItems} items across ${packs.length} packs`);
 
-    // ── Return structured result ─────────────────────────────────────
+    // ── Persist result to DB ─────────────────────────────────────────
     const result: ParseResult = { packs, totalItems, warnings, estimate_total };
+    await updateUploadStatus(supabaseUrl, supabaseServiceKey, estimateId, filePath, "completed", result);
 
+    // ── Return structured result ─────────────────────────────────────
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("parse-estimate-pdf error:", error);
+    const errMsg = error instanceof Error ? error.message : "Unknown error";
+
+    // Persist failure if we have context
+    if (estimateId && filePath) {
+      await updateUploadStatus(supabaseUrl, supabaseServiceKey, estimateId, filePath, "failed", null, errMsg);
+    }
+
     return new Response(
-      JSON.stringify({
-        error: error instanceof Error ? error.message : "Unknown error",
-      }),
+      JSON.stringify({ error: errMsg }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

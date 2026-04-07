@@ -1472,29 +1472,41 @@ export type Database = {
       }
       estimate_pdf_uploads: {
         Row: {
+          completed_at: string | null
+          error_message: string | null
           estimate_id: string
           file_name: string
           file_path: string
           file_size: number
           id: string
+          parsed_result: Json | null
+          status: string
           uploaded_at: string
           uploaded_by: string
         }
         Insert: {
+          completed_at?: string | null
+          error_message?: string | null
           estimate_id: string
           file_name: string
           file_path: string
           file_size: number
           id?: string
+          parsed_result?: Json | null
+          status?: string
           uploaded_at?: string
           uploaded_by: string
         }
         Update: {
+          completed_at?: string | null
+          error_message?: string | null
           estimate_id?: string
           file_name?: string
           file_path?: string
           file_size?: number
           id?: string
+          parsed_result?: Json | null
+          status?: string
           uploaded_at?: string
           uploaded_by?: string
         }
