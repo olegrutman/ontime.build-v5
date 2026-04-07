@@ -1,52 +1,106 @@
 
 
-# CO Flow Bug Report & Fix Plan
+# KPI Card Audit Report — All Roles
 
-## Bugs Found
+## Summary
 
-### Bug 1: StepCatalog clears wizard-level location/reason when used as Scope step
-**Severity: High**
-When `StepCatalog` is used inside the wizard's "Scope" step, it shows "✕" buttons on the location and reason pills (lines 177, 185 of StepCatalog.tsx). Clicking these calls `onChange({ locationTag: '' })` or `onChange({ reason: ... })` and sets `phase` back to 'location' or 'reason' — effectively **clearing the wizard-level data** set in Steps 1 and 2. The user then sees a duplicate location/reason picker inside the Scope step, which is confusing and breaks the wizard flow.
+Audited all KPI cards across Dashboard views (GCDashboardView, TCDashboardView, FCDashboardView, SupplierDashboardView), Project Overview (ProjectFinancialCommand), CO detail (COKPIStrip), Invoice action bar, and the platform admin defaults (defaultKpiConfig.ts). Found 7 bugs ranging from incorrect formulas to missing data sources.
 
-**Fix**: When `StepCatalog` detects it's being used inside the wizard (i.e., `data.locationTag` and `data.reason` were pre-set on mount), hide the "✕" dismiss buttons on the location/reason summary pills. Make them read-only indicators instead.
+---
 
-### Bug 2: GC creates TC collaborator with wrong type `'FC'`
-**Severity: Medium**
-In `COWizard.tsx` line 229, when a GC assigns a TC, it creates a collaborator row with `collaborator_type: 'FC'`. Comment says "using FC type since that's the only enum" — but this is semantically wrong and may confuse downstream logic that filters by `collaborator_type === 'FC'`.
+## Bug 1: GC `totalRevenue` falls back to `totalCosts` when no owner_contract_value is set
+**Severity: High** | **File:** `useDashboardData.ts` lines 680-688
 
-**Fix**: The DB enum only has `'FC'`, so this is a schema gap. Add a comment clarifying this is intentional for now, or better: skip creating a collaborator for the assigned TC since `assigned_to_org_id` already tracks that relationship.
+When no `owner_contract_value` exists on any contract, the code sets `totalRevenue = totalCosts`. This means the GC Profit Margin card shows $0 margin and 0% — misleading. It should show the sum of `contract_sum` values (TC contracts flowing to GC) as the revenue baseline, not equal it to costs.
 
-### Bug 3: `forwardRef` warnings for `COLineItemRow` and `COSidebar`
-**Severity: Low (cosmetic)**
-Console shows "Function components cannot be given refs" for these components. This comes from Radix UI or a parent passing refs down. Neither component uses `forwardRef`.
+**Fix:** Change fallback from `totalRevenue = totalCosts` to `totalRevenue = totalContractValue` (the sum already computed at line 628-639).
 
-**Fix**: Wrap both components with `React.forwardRef` or identify the parent passing the ref and remove it.
+---
 
-### Bug 4: FC collaborator with `'rejected'` status loses access after `canSubmit` check
-**Severity: Medium**
-In `COStatusActions.tsx` line 354, `canSubmit` requires `!isCollaborator`. But `isCollaborator` on line 346 checks for `status === 'active'`. If an FC collaborator has `rejected` status, they're not `isCollaborator` and could potentially see submit buttons they shouldn't. The logic is fragile.
+## Bug 2: GC `totalContractValue` and `totalCosts` use same filter — always identical
+**Severity: High** | **File:** `useDashboardData.ts` lines 628-639 vs 674-678
 
-**Fix**: Clarify the collaborator check — FC users who are collaborators (any status) should not see the primary submit button, only the FC-specific `canSubmitFCPricing` path.
+`totalContractValue` sums contracts where `to_org_id === currentOrg.id`. `totalCosts` (GC path, line 674-678) also sums contracts where `to_org_id === currentOrg.id`. These are always equal. But GC costs should be contracts where GC is the *payer* (to_org), while GC revenue should be derived from `owner_contract_value` or the upstream contract sum. The current logic conflates them.
 
-### Bug 5: TC `tc_submitted_price` snapshot uses `laborTotal` instead of `grandTotal`
-**Severity: Medium**
-In `COStatusActions.tsx` line 222, when `use_fc_pricing_base` is OFF, the TC's submitted price is set to `financials?.laborTotal ?? 0`. But `laborTotal` doesn't include materials and equipment. The GC sees this as the total price, which would be incorrect if materials/equipment are present.
+**Fix:** GC `totalCosts` should sum contracts where GC is `to_org_id` (correct — this is what TCs charge GC). GC `totalRevenue` should prefer `owner_contract_value` and fall back to a distinct revenue source, not the same sum. The fallback at line 687 (`totalRevenue = totalCosts`) makes every metric derived from revenue vs costs yield 0.
 
-**Fix**: Use `financials?.grandTotal` or at minimum `financials?.tcBillableToGC` to include the full billable amount.
+---
 
-### Bug 6: Wizard doesn't validate scope items on the Team (final) step
-**Severity: Low**
-`canAdvance()` for the `team` step always returns `true`. If somehow `selectedItems` got cleared (e.g., via Bug 1), the user could submit an empty CO.
+## Bug 3: TC `totalRevenue` uses `from_org_id` but `totalContractValue` uses `to_org_id`
+**Severity: Medium** | **File:** `useDashboardData.ts` lines 629 vs 663-664
 
-**Fix**: Add `data.selectedItems.length > 0` check to the team step as well.
+For TC: `totalContractValue` (line 629) sums where `to_org_id === currentOrg.id` (contracts where TC receives money — wrong, TC receives money via `from_org_id`). Meanwhile `totalRevenue` (line 664) correctly uses `from_org_id === currentOrg.id`. The `totalContractValue` isn't displayed directly, but it's inconsistent and could cause confusion if used elsewhere.
 
-## Files to Change
+**Fix:** Align `totalContractValue` for TC to use `from_org_id`.
 
-| File | Changes |
-|------|---------|
-| `src/components/change-orders/wizard/StepCatalog.tsx` | Hide location/reason dismiss buttons when pre-set by wizard |
-| `src/components/change-orders/wizard/COWizard.tsx` | Remove GC→TC collaborator insert (Bug 2); add final-step scope validation (Bug 6) |
-| `src/components/change-orders/COStatusActions.tsx` | Fix `tc_submitted_price` to use `grandTotal` (Bug 5) |
-| `src/components/change-orders/COLineItemRow.tsx` | Wrap with `forwardRef` (Bug 3) |
-| `src/components/change-orders/COSidebar.tsx` | Wrap with `forwardRef` (Bug 3) |
+---
+
+## Bug 4: TC Materials Forecast always shows 4% variance (hardcoded)
+**Severity: Medium** | **File:** `DashboardKPIs.tsx` lines 33-35
+
+```typescript
+const forecastVariance = financials.totalCosts > 0 
+  ? ((financials.totalCosts * 1.04 - financials.totalCosts) / financials.totalCosts) * 100 
+  : 0;
+```
+
+This always equals exactly 4.0% — it's `(totalCosts * 0.04) / totalCosts * 100 = 4`. The formula doesn't compare actual material spend vs budget. It should use real PO totals vs the material estimate baseline.
+
+**Note:** The expandable TCDashboardView doesn't use this component (it has its own cards), so this only affects the legacy `DashboardKPIs` component. However, it's still referenced and could be rendered in some paths.
+
+**Fix:** Either remove this legacy card or wire it to real material data from the hook.
+
+---
+
+## Bug 5: FC Dashboard `costs` from `projectFinancials` is always 0
+**Severity: Medium** | **File:** `useDashboardData.ts` lines 741-743
+
+For FC, per-project costs are set from contracts where `from_org_id === currentOrg.id` — but that maps to `pf.revenue`, not `pf.costs`. The FC path only sets `pf.revenue` and never sets `pf.costs`. So on the FC dashboard, "Internal Cost Budget" in the expanded cards always shows $0.
+
+At the aggregate level (line 698-701), `totalCosts` uses `labor_budget` from the contract, which may be null. If null, FC costs = 0 and margin = 100%.
+
+**Fix:** For FC aggregate costs, fall back to 0 gracefully and add a "No budget set" indicator. For per-project, add FC cost logic to the `pfMap` loop.
+
+---
+
+## Bug 6: FC CO Additions value always $0 in FCDashboardView
+**Severity: Medium** | **File:** `FCDashboardView.tsx` lines 240-241
+
+```typescript
+const approvedCOs = coList.filter(d => ['approved', 'contracted', 'completed'].includes(d.status));
+const coTotal = approvedCOs.reduce((s, d) => s + (d.amount || 0), 0);
+```
+
+Change orders in `recentDocs` have `amount: null` (line 547 of useDashboardData.ts — `amount: null` for all COs). So `coTotal` is always 0. The CO amount isn't fetched from the database for the recentDocs CO entries.
+
+**Fix:** Fetch CO estimated amounts when building recent docs, or query `change_order_estimates` to get the approved total.
+
+---
+
+## Bug 7: `CreateInvoiceFromSOV` missing forwardRef (console error)
+**Severity: Low** | **File:** `src/components/invoices/CreateInvoiceFromSOV.tsx`
+
+Console shows "Function components cannot be given refs" for `CreateInvoiceFromSOV`. Same pattern as the COLineItemRow/COSidebar fixes already applied.
+
+**Fix:** Wrap with `React.forwardRef`.
+
+---
+
+## No Issues Found In
+
+- **COKPIStrip** — formulas correctly separate labor, materials, equipment by role. Pulls from `COFinancials` which is computed correctly.
+- **ProjectFinancialCommand** — correctly uses `upstreamContract.contract_sum`, `approvedEstimateSum`, and filters costs by org. FC path uses `receivablesCollected` from real invoice data.
+- **InvoiceActionBar** — correctly filters by status, computes aging from reference dates.
+- **SupplierFinancialsSummaryCard** — correctly queries POs by supplier_id and sums invoices by po_id.
+- **defaultKpiConfig.ts** — card keys match the expandable dashboard views. Config is consistent.
+
+---
+
+## Proposed Fixes
+
+| File | Change |
+|------|--------|
+| `src/hooks/useDashboardData.ts` | Bug 1: Change GC revenue fallback to use contract sums, not costs. Bug 3: Fix TC `totalContractValue` filter. Bug 5: Add FC per-project cost logic. Bug 6: Fetch CO amounts for recentDocs. |
+| `src/components/dashboard/DashboardKPIs.tsx` | Bug 4: Remove hardcoded 4% variance or wire to real data. |
+| `src/components/invoices/CreateInvoiceFromSOV.tsx` | Bug 7: Wrap with `React.forwardRef`. |
 
