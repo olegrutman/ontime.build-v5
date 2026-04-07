@@ -787,51 +787,6 @@ function PricingTypeSelector({ data, onChange }: { data: COWizardData; onChange:
   );
 }
 
-function ScopePicker({
-  searchQuery, setSearchQuery, searchResults, selectedIds, onToggle, selectedItems,
-}: {
-  searchQuery: string;
-  setSearchQuery: (q: string) => void;
-  searchResults: ScopeCatalogItem[];
-  selectedIds: Set<string>;
-  onToggle: (item: ScopeCatalogItem) => void;
-  selectedItems: SelectedScopeItem[];
-}) {
-  const items = searchQuery.trim() ? searchResults : searchResults.slice(0, 12);
-
-  return (
-    <div className="space-y-3">
-      <Label>Scope items</Label>
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search scope items…" className="pl-9" />
-      </div>
-      <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto">
-        {items.map(item => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onToggle(item)}
-            className={cn(
-              'flex flex-col items-start gap-1 p-3 rounded-xl border-2 transition-all text-left',
-              selectedIds.has(item.id) ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40',
-            )}
-          >
-            <span className="text-sm font-medium text-foreground line-clamp-2">{item.item_name}</span>
-            <span className="text-[10px] text-muted-foreground">{item.category_name}</span>
-            {selectedIds.has(item.id) && <Check className="h-3.5 w-3.5 text-primary mt-0.5" />}
-          </button>
-        ))}
-      </div>
-      {selectedItems.length > 0 ? (
-        <p className="text-xs text-primary font-medium">{selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected</p>
-      ) : (
-        <p className="text-xs text-destructive font-medium">Select at least one scope item to continue</p>
-      )}
-    </div>
-  );
-}
-
 function ToggleWithSelector({
   label, hint, checked, onToggle, party, onPartyChange,
 }: {
