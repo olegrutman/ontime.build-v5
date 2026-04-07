@@ -304,17 +304,31 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const [materialResp, setMaterialResp] = useState<string | null>(null);
   const [designatedSupplier, setDesignatedSupplier] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [settingMatResp, setSettingMatResp] = useState(false);
+  const [contractIdForMatResp, setContractIdForMatResp] = useState<string | null>(null);
 
   const fetchTeam = useCallback(async () => {
     const [teamRes, contractRes, supplierRes] = await Promise.all([
       supabase.from('project_team').select('id, role, invited_org_name, status').eq('project_id', projectId),
-      supabase.from('project_contracts').select('material_responsibility').eq('project_id', projectId).not('material_responsibility', 'is', null).limit(1),
+      supabase.from('project_contracts').select('id, material_responsibility').eq('project_id', projectId).limit(1),
       supabase.from('project_designated_suppliers').select('invited_name').eq('project_id', projectId).neq('status', 'removed').maybeSingle(),
     ]);
-    setTeam(teamRes.data || []);
+    const teamData = teamRes.data || [];
+    setTeam(teamData);
     setMaterialResp(contractRes.data?.[0]?.material_responsibility ?? null);
-    setDesignatedSupplier(supplierRes.data?.invited_name ?? null);
+    setContractIdForMatResp(contractRes.data?.[0]?.id ?? null);
+    // Fallback: check project_team for a Supplier role member
+    const supplierFromTeam = teamData.find(m => m.role === 'Supplier' && m.status === 'Accepted');
+    setDesignatedSupplier(supplierRes.data?.invited_name ?? supplierFromTeam?.invited_org_name ?? null);
   }, [projectId]);
+
+  const handleSetMaterialResp = async (value: 'GC' | 'TC') => {
+    if (!contractIdForMatResp) return;
+    setSettingMatResp(true);
+    await supabase.from('project_contracts').update({ material_responsibility: value }).eq('id', contractIdForMatResp);
+    setMaterialResp(value);
+    setSettingMatResp(false);
+  };
 
   useEffect(() => { fetchTeam(); }, [fetchTeam]);
 
