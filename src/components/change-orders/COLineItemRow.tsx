@@ -30,11 +30,11 @@ function fmt(n: number) {
   return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-export function COLineItemRow({
+export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(function COLineItemRow({
   item, laborEntries, role, isGC, isTC, isFC,
   coId, orgId, pricingType, nteCap, nteUsed = 0,
   canAddLabor, onRefresh,
-}: COLineItemRowProps) {
+}, ref) {
   const [showActualForm, setShowActualForm] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
