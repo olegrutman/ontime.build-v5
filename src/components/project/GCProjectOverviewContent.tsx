@@ -538,11 +538,26 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
               })}
             </div>
 
-            {materialResp && (
+            {materialResp ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', color: C.muted, marginBottom: 8 }}>
                 <Package size={12} /> Materials managed by: <strong style={{ color: C.ink }}>{materialResp === 'GC' ? 'General Contractor' : 'Trade Contractor'}</strong>
+                {canInvite && (
+                  <span onClick={() => { setMaterialResp(null); }} style={{ color: C.blue, cursor: 'pointer', marginLeft: 4, fontSize: '0.65rem', fontWeight: 600 }}>Change</span>
+                )}
               </div>
-            )}
+            ) : canInvite && contractIdForMatResp ? (
+              <div style={{ marginBottom: 10, padding: '8px 10px', borderRadius: 8, background: C.amberPale, border: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: C.ink, marginBottom: 6, ...fontLabel }}>Who handles materials?</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button disabled={settingMatResp} onClick={() => handleSetMaterialResp('GC')} style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: `1px solid ${C.border}`, background: C.surface, color: C.ink, fontWeight: 600, fontSize: '0.7rem', cursor: 'pointer', opacity: settingMatResp ? 0.5 : 1, ...fontLabel }}>General Contractor</button>
+                  <button disabled={settingMatResp} onClick={() => handleSetMaterialResp('TC')} style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: `1px solid ${C.border}`, background: C.surface, color: C.ink, fontWeight: 600, fontSize: '0.7rem', cursor: 'pointer', opacity: settingMatResp ? 0.5 : 1, ...fontLabel }}>Trade Contractor</button>
+                </div>
+              </div>
+            ) : !materialResp ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', color: C.muted, marginBottom: 8 }}>
+                <Package size={12} /> Material owner not set
+              </div>
+            ) : null}
 
             {designatedSupplier && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', color: C.muted, marginBottom: 8 }}>
