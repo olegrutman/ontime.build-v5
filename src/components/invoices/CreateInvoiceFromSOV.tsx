@@ -908,4 +908,4 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
       </DialogContent>
     </Dialog>
   );
-}
+});
