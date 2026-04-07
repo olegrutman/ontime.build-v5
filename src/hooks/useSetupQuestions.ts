@@ -84,7 +84,12 @@ export function useSetupQuestions(projectId: string, phase?: number) {
       if (error) throw error;
       const map: Record<string, any> = {};
       for (const row of data ?? []) {
-        map[(row as any).field_key] = (row as any).value;
+        let val = (row as any).value;
+        // Defensive: unwrap double-encoded JSONB strings
+        if (typeof val === 'string') {
+          try { val = JSON.parse(val); } catch {}
+        }
+        map[(row as any).field_key] = val;
       }
       return map;
     },
