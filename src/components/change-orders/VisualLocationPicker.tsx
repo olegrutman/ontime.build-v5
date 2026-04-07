@@ -162,7 +162,7 @@ export function VisualLocationPicker({
       return true;
     }
     return false;
-  }, [insideOutside, selectedLevel, selectedArea, customArea, selectedElevation, customElevation]);
+  }, [insideOutside, selectedLevel, selectedArea, customArea, unitNumber, roomInUnit, customRoom, selectedElevation, customElevation]);
 
   // Shortcut banner handler
   function handleUseShortcut() {
