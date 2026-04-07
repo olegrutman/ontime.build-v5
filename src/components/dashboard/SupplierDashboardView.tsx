@@ -221,11 +221,11 @@ const BAR_COLORS = [C.amber, C.blue, C.green, C.yellow, C.purple, C.red, C.navy]
 
 /* ─── Demo data for supplier ─── */
 const DEMO_PROJECTS = [
-  { name: 'Cherry Hills', phase: 'Framing L2-4', estimate: 90000, ordered: 73800, billed: 65400, received: 58000, overBy: 0, risk: 'On Track' as const },
-  { name: 'Tower 14', phase: 'Structural L6-9', estimate: 143000, ordered: 143200, billed: 121000, received: 109000, overBy: 6000, risk: 'Over Budget' as const },
-  { name: 'Mesa Logistics', phase: 'MEP Rough-in', estimate: 48000, ordered: 48000, billed: 48000, received: 48000, overBy: 0, risk: 'Closed' as const },
-  { name: 'Apex Retail', phase: 'Pre-construction', estimate: 0, ordered: 0, billed: 0, received: 0, overBy: 0, risk: 'Not Started' as const },
-  { name: 'Hyatt Studios', phase: 'EIFS L2-4', estimate: 38000, ordered: 32000, billed: 28000, received: 24000, overBy: 0, risk: 'On Track' as const },
+  { projectId: 'demo-cherry-hills', name: 'Cherry Hills', phase: 'Framing L2-4', estimate: 90000, ordered: 73800, billed: 65400, received: 58000, overBy: 0, risk: 'On Track' as const },
+  { projectId: 'demo-tower-14', name: 'Tower 14', phase: 'Structural L6-9', estimate: 143000, ordered: 143200, billed: 121000, received: 109000, overBy: 6000, risk: 'Over Budget' as const },
+  { projectId: 'demo-mesa', name: 'Mesa Logistics', phase: 'MEP Rough-in', estimate: 48000, ordered: 48000, billed: 48000, received: 48000, overBy: 0, risk: 'Closed' as const },
+  { projectId: 'demo-apex', name: 'Apex Retail', phase: 'Pre-construction', estimate: 0, ordered: 0, billed: 0, received: 0, overBy: 0, risk: 'Not Started' as const },
+  { projectId: 'demo-hyatt', name: 'Hyatt Studios', phase: 'EIFS L2-4', estimate: 38000, ordered: 32000, billed: 28000, received: 24000, overBy: 0, risk: 'On Track' as const },
 ];
 
 const DEMO_DELIVERIES = [
@@ -255,6 +255,7 @@ export function SupplierDashboardView({
   // Derive aggregates from projectFinancials or demo
   const dp = hasRealData
     ? pf.map((p, i) => ({
+        projectId: p.projectId,
         name: p.projectName,
         phase: projects.find(pr => pr.id === p.projectId)?.project_type || '',
         estimate: p.revenue,
@@ -314,7 +315,7 @@ export function SupplierDashboardView({
               <THead cols={['Project', 'Phase', 'Estimate', 'Notes']} />
               <tbody>
                 {dp.map((p, i) => (
-                  <TRow key={i} onClick={() => {}} cells={[
+                  <TRow key={i} onClick={() => navigate(`/project/${p.projectId}`)} cells={[
                     <TdN>{p.name}</TdN>,
                     <span>{p.phase}</span>,
                     <TdM>{p.estimate > 0 ? fmt(p.estimate) : '—'}</TdM>,
@@ -501,7 +502,7 @@ export function SupplierDashboardView({
                   const outBal = Math.max(0, p.billed - p.received);
                   const riskPill: PillType = p.risk === 'Over Budget' ? 'pr' : p.risk === 'Closed' ? 'pm' : p.risk === 'Not Started' ? 'pw' : 'pg';
                   return (
-                    <TRow key={i} onClick={() => {}} cells={[
+                    <TRow key={i} onClick={() => navigate(`/project/${p.projectId}`)} cells={[
                       <TdN>{p.name}</TdN>,
                       <TdM>{p.estimate > 0 ? fmt(p.estimate) : '—'}</TdM>,
                       <TdM>{p.ordered > 0 ? fmt(p.ordered) : '—'}</TdM>,
@@ -526,7 +527,7 @@ export function SupplierDashboardView({
               const progress = p.estimate > 0 ? Math.round((p.ordered / p.estimate) * 100) : 0;
               const barCol = p.overBy > 0 ? C.red : progress > 90 ? C.yellow : C.green;
               return (
-                <ProjectCard key={i} name={p.name} phase={p.phase} budget={p.ordered} progress={Math.min(progress, 100)} barColor={barCol} onClick={() => {}} />
+                <ProjectCard key={i} name={p.name} phase={p.phase} budget={p.ordered} progress={Math.min(progress, 100)} barColor={barCol} onClick={() => navigate(`/project/${p.projectId}`)} />
               );
             })}
           </div>
