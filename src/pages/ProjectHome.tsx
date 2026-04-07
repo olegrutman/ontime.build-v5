@@ -48,6 +48,7 @@ import { ProjectActionQueue } from '@/components/project/ProjectActionQueue';
 import { ProjectOverviewTeamCard } from '@/components/project/ProjectOverviewTeamCard';
 import { ProjectPOSummary } from '@/components/project/ProjectPOSummary';
 import { GCProjectOverviewContent } from '@/components/project/GCProjectOverviewContent';
+import { FCProjectOverview } from '@/components/project/FCProjectOverview';
 
 import { ProjectTabBar } from '@/components/project/ProjectTabBar';
 
@@ -357,12 +358,21 @@ export default function ProjectHome() {
                       <ProjectReadinessCard readiness={readiness} />
                     )}
 
-                    <GCProjectOverviewContent
-                      projectId={id!}
-                      projectName={project.name}
-                      financials={financials}
-                      onNavigate={handleTabChange}
-                    />
+                    {isFC ? (
+                      <FCProjectOverview
+                        projectId={id!}
+                        projectName={project.name}
+                        financials={financials}
+                        onNavigate={handleTabChange}
+                      />
+                    ) : (
+                      <GCProjectOverviewContent
+                        projectId={id!}
+                        projectName={project.name}
+                        financials={financials}
+                        onNavigate={handleTabChange}
+                      />
+                    )}
                   </div>
                 )}
               </>

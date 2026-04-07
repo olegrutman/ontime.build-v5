@@ -1,0 +1,373 @@
+import { useState, type ReactNode } from 'react';
+import { ChevronRight } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
+import { useAuth } from '@/hooks/useAuth';
+import type { ProjectFinancials } from '@/hooks/useProjectFinancials';
+
+/* ─── Design tokens (same as GC) ─── */
+const C = {
+  amber: '#F5A623', amberD: '#C8850A', amberPale: '#FFF7E6',
+  navy: '#0D1F3C',
+  bg: '#F0F2F7', surface: '#FFFFFF', surface2: '#F7F9FC',
+  border: '#E4E8F0', ink: '#0F1923', ink2: '#253347', muted: '#334155', faint: '#64748B',
+  green: '#059669', greenBg: '#ECFDF5', greenDark: '#047857',
+  red: '#DC2626', redBg: '#FEF2F2',
+  blue: '#2563EB', blueBg: '#EFF6FF',
+  yellow: '#D97706', yellowBg: '#FFFBEB',
+  purple: '#7C3AED', purpleBg: '#F5F3FF',
+};
+
+const fontVal = { fontFamily: "'Barlow Condensed', sans-serif", fontWeight: 900 } as const;
+const fontMono = { fontFamily: "'IBM Plex Mono', monospace", fontWeight: 600 } as const;
+const fontLabel = { fontFamily: "'DM Sans', sans-serif" } as const;
+
+function fmt(n: number): string {
+  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(n % 1000 === 0 ? 0 : 1)}K`;
+  return `$${n.toLocaleString()}`;
+}
+
+type PillType = 'pg' | 'pr' | 'pa' | 'pb' | 'pm' | 'pw' | 'pn';
+const PILL_S: Record<PillType, { bg: string; color: string; border?: string }> = {
+  pg: { bg: C.greenBg, color: C.green },
+  pr: { bg: C.redBg, color: C.red },
+  pa: { bg: C.amberPale, color: C.amberD },
+  pb: { bg: C.blueBg, color: C.blue },
+  pm: { bg: C.surface2, color: C.muted, border: `1px solid ${C.border}` },
+  pw: { bg: C.yellowBg, color: C.yellow },
+  pn: { bg: C.navy, color: '#FFF' },
+};
+
+function Pill({ type, children }: { type: PillType; children: ReactNode }) {
+  const s = PILL_S[type];
+  return (
+    <span style={{ fontSize: '0.59rem', fontWeight: 700, padding: '2px 7px', borderRadius: 10, background: s.bg, color: s.color, border: s.border || 'none', whiteSpace: 'nowrap', ...fontLabel }}>
+      {children}
+    </span>
+  );
+}
+
+function KpiCard({ accent, icon, iconBg, label, value, sub, pills, children, idx }: {
+  accent: string; icon: ReactNode; iconBg: string; label: string; value: string; sub: string;
+  pills: { type: PillType; text: string }[]; children: ReactNode; idx: number;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div onClick={() => setOpen(!open)} style={{ background: C.surface, borderRadius: 14, overflow: 'hidden', cursor: 'pointer', border: open ? `1.5px solid ${C.amber}` : `1px solid ${C.border}`, boxShadow: open ? `0 0 0 3px rgba(245,166,35,.1)` : '0 1px 3px rgba(0,0,0,.04)', animationDelay: `${idx * 0.04}s`, ...fontLabel }} className="animate-fade-in">
+      <div style={{ height: 3, background: accent }} />
+      <div style={{ padding: '14px 16px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 8, background: iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>{icon}</div>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }}>{pills.map((p, i) => <Pill key={i} type={p.type}>{p.text}</Pill>)}</div>
+        </div>
+        <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.7px', color: C.faint, marginBottom: 2, fontWeight: 600 }}>{label}</div>
+        <div style={{ fontSize: '2rem', color: C.ink, lineHeight: 1.1, marginBottom: 2, ...fontVal }}>{value}</div>
+        <div style={{ fontSize: '0.67rem', color: C.muted, marginBottom: 10 }}>{sub}</div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px', background: C.surface2, fontSize: '0.67rem', color: C.muted, fontWeight: 600, borderTop: `1px solid ${C.border}` }} className="hover:bg-[#FFF7E6] transition-colors">
+        <span>{open ? 'Collapse' : 'Expand for detail'}</span>
+        <ChevronRight size={13} style={{ transition: 'transform 0.3s', transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }} />
+      </div>
+      <div onClick={(e) => e.stopPropagation()} style={{ maxHeight: open ? 1200 : 0, overflow: open ? 'auto' : 'hidden', transition: 'max-height 0.44s cubic-bezier(.22,1,.36,1), opacity 0.3s', opacity: open ? 1 : 0 }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function THead({ cols }: { cols: string[] }) {
+  return (
+    <thead>
+      <tr style={{ background: C.surface2, borderBottom: `1px solid ${C.border}` }}>
+        {cols.map((c, i) => (
+          <th key={i} style={{ fontSize: '0.59rem', textTransform: 'uppercase', letterSpacing: '0.9px', color: C.faint, padding: '8px 12px', fontWeight: 600, textAlign: i === cols.length - 1 ? 'right' : 'left', ...fontLabel }}>{c}</th>
+        ))}
+      </tr>
+    </thead>
+  );
+}
+
+function TdN({ children }: { children: ReactNode }) { return <span style={{ fontWeight: 700, color: C.ink }}>{children}</span>; }
+function TdM({ children }: { children: ReactNode }) { return <span style={{ ...fontMono, fontSize: '0.78rem', color: C.ink2 }}>{children}</span>; }
+
+const cellStyle = { padding: '9px 12px', fontSize: '0.76rem', color: C.muted, borderBottom: `1px solid ${C.border}` };
+const cellStyleR = { ...cellStyle, textAlign: 'right' as const };
+const totalRowStyle = { background: C.surface2, fontWeight: 700 };
+
+function TRow({ cells, isTotal }: { cells: ReactNode[]; isTotal?: boolean }) {
+  return (
+    <tr style={isTotal ? totalRowStyle : { cursor: 'pointer' }} className={isTotal ? '' : 'hover:bg-[rgba(245,166,35,.05)]'}>
+      {cells.map((c, i) => <td key={i} style={i === cells.length - 1 ? cellStyleR : cellStyle}>{c}</td>)}
+    </tr>
+  );
+}
+
+function WarnItem({ color, icon, title, sub, value, pill, pillType, onClick }: {
+  color: string; icon: string; title: string; sub: string; value: string; pill: string; pillType: PillType; onClick?: () => void;
+}) {
+  return (
+    <div onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderLeft: `3px solid ${color}`, borderBottom: `1px solid ${C.border}`, cursor: 'pointer', transition: 'all 0.15s', ...fontLabel }} className="hover:translate-x-[2px] hover:bg-[#F7F9FC]">
+      <div style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{icon}</div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontWeight: 700, color: C.ink, fontSize: '0.78rem' }}>{title}</div>
+        <div style={{ fontSize: '0.64rem', color: C.muted }}>{sub}</div>
+      </div>
+      <div style={{ ...fontMono, fontSize: '0.78rem', color: C.ink2, textAlign: 'right', whiteSpace: 'nowrap' }}>{value}</div>
+      <Pill type={pillType}>{pill}</Pill>
+    </div>
+  );
+}
+
+function BarRow({ label, value, pct, barColor }: { label: string; value: string; pct: number; barColor: string }) {
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+        <span style={{ fontSize: '0.72rem', color: C.muted, fontWeight: 600, ...fontLabel }}>{label}</span>
+        <span style={{ fontSize: '0.76rem', color: C.ink2, ...fontMono }}>{value}</span>
+      </div>
+      <div style={{ width: '100%', height: 8, borderRadius: 6, background: C.border, overflow: 'hidden' }}>
+        <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', borderRadius: 6, background: barColor, transition: 'width 0.6s ease' }} />
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════ */
+
+interface Props {
+  projectId: string;
+  projectName?: string;
+  financials: ProjectFinancials;
+  onNavigate: (tab: string) => void;
+}
+
+export function FCProjectOverview({ projectId, projectName = 'Project', financials, onNavigate }: Props) {
+  const { userOrgRoles } = useAuth();
+  const currentOrgId = userOrgRoles[0]?.organization?.id;
+
+  // FC's contract (set by TC) — read-only
+  const fcContract = financials.downstreamContract || financials.upstreamContract;
+  const contractSum = fcContract?.contract_sum || 0;
+  const laborBudget = financials.laborBudget || 0;
+  const tcName = fcContract?.from_org_name || fcContract?.to_org_name || 'Trade Contractor';
+
+  // Invoices
+  const paidInvoices = financials.recentInvoices.filter(i => i.status === 'PAID');
+  const pendingInvoices = financials.recentInvoices.filter(i => i.status === 'SUBMITTED');
+  const totalPaid = financials.totalPaid;
+  const totalPending = pendingInvoices.reduce((s, i) => s + i.total_amount, 0);
+  const totalInvoiced = financials.billedToDate;
+
+  // Change orders
+  const { data: changeOrders = [] } = useQuery({
+    queryKey: ['fc-project-cos', projectId, currentOrgId],
+    queryFn: async () => {
+      let q = supabase
+        .from('change_orders')
+        .select('id, co_number, title, status, gc_budget, tc_submitted_price, created_at')
+        .eq('project_id', projectId)
+        .order('created_at', { ascending: false });
+      if (currentOrgId) q = q.eq('org_id', currentOrgId);
+      const { data } = await q;
+      return data || [];
+    },
+    enabled: !!projectId,
+  });
+
+  const approvedCOs = changeOrders.filter(co => ['approved', 'completed', 'contracted'].includes(co.status));
+  const coTotal = approvedCOs.reduce((s, co) => s + (co.tc_submitted_price || co.gc_budget || 0), 0);
+
+  // Derived
+  const revisedTotal = contractSum + coTotal;
+  const netMargin = revisedTotal - laborBudget;
+  const marginPct = revisedTotal > 0 ? ((netMargin / revisedTotal) * 100).toFixed(1) : '0';
+  const progressPct = revisedTotal > 0 ? Math.round((totalInvoiced / revisedTotal) * 100) : 0;
+  const remainingToEarn = revisedTotal - totalInvoiced;
+
+  // Warnings
+  const warnings: { color: string; icon: string; title: string; sub: string; value: string; pill: string; pillType: PillType; tab: string }[] = [];
+  if (pendingInvoices.length > 0) {
+    warnings.push({ color: C.yellow, icon: '💰', title: `INV Awaiting TC Approval`, sub: `${pendingInvoices.length} invoice${pendingInvoices.length > 1 ? 's' : ''} submitted`, value: fmt(totalPending), pill: 'Pending', pillType: 'pw', tab: 'invoices' });
+  }
+  if (remainingToEarn > 0 && progressPct < 100) {
+    warnings.push({ color: C.blue, icon: '📅', title: 'Work Remaining', sub: `${100 - progressPct}% of scope not yet invoiced`, value: fmt(remainingToEarn), pill: 'Upcoming', pillType: 'pb', tab: 'invoices' });
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, ...fontLabel }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ width: 10, height: 10, borderRadius: '50%', background: C.purple, flexShrink: 0 }} />
+          <div>
+            <div style={{ fontSize: '1rem', fontWeight: 700, color: C.ink }}>{projectName}</div>
+            <div style={{ fontSize: '0.72rem', color: C.muted }}>Field Crew · {tcName}</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={() => onNavigate('invoices')} style={{ padding: '8px 16px', borderRadius: 8, background: C.amber, color: '#fff', fontWeight: 700, fontSize: '0.76rem', border: 'none', cursor: 'pointer', ...fontLabel }}>Submit Invoice to TC</button>
+          <button onClick={() => onNavigate('daily-log')} style={{ padding: '8px 16px', borderRadius: 8, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.76rem', border: `1px solid ${C.border}`, cursor: 'pointer', ...fontLabel }}>View My Tasks</button>
+        </div>
+      </div>
+
+      {/* 6 KPI Cards — 3-col grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }} className="max-lg:!grid-cols-2 max-sm:!grid-cols-1">
+
+        {/* Card 1 — My Contract */}
+        <KpiCard accent={C.amber} icon="🤝" iconBg={C.amberPale} label="MY CONTRACT" value={contractSum > 0 ? fmt(contractSum) : '—'} sub={`Set by ${tcName} · read-only`} pills={contractSum > 0 ? [{ type: 'pa', text: 'Active' }] : [{ type: 'pm', text: 'Not Set' }]} idx={0}>
+          <div style={{ padding: '12px 16px' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <THead cols={['Item', 'Value', 'Notes']} />
+              <tbody>
+                <TRow cells={[<TdN>Contract Value (set by TC)</TdN>, <TdM>{fmt(contractSum)}</TdM>, 'Lump sum']} />
+                <TRow cells={[<TdN>Approved COs</TdN>, <TdM>+{fmt(coTotal)}</TdM>, `${approvedCOs.length} approved`]} />
+                <TRow cells={[<TdN>Revised Total</TdN>, <TdM>{fmt(revisedTotal)}</TdM>, '—']} isTotal />
+                <TRow cells={[<TdN>Internal Cost Budget</TdN>, <TdM>{laborBudget > 0 ? fmt(laborBudget) : '—'}</TdM>, 'Labor + materials']} />
+                {laborBudget > 0 && (
+                  <TRow cells={[<TdN>Net Margin</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{fmt(netMargin)}</span>, <span style={{ color: C.green, fontWeight: 700 }}>{marginPct}%</span>]} isTotal />
+                )}
+              </tbody>
+            </table>
+            <div style={{ marginTop: 12, padding: '10px 12px', borderRadius: 8, background: C.blueBg, border: `1px solid ${C.border}`, display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.72rem', color: C.muted, ...fontLabel }}>
+              <span style={{ fontSize: 14 }}>ℹ️</span>
+              <span>Your contract value was set by <strong style={{ color: C.ink }}>{tcName}</strong>. Contact your TC to negotiate changes.</span>
+            </div>
+          </div>
+        </KpiCard>
+
+        {/* Card 2 — Net Margin */}
+        <KpiCard accent={C.green} icon="📈" iconBg={C.greenBg} label="NET MARGIN" value={laborBudget > 0 ? fmt(netMargin) : '—'} sub={laborBudget > 0 ? `${marginPct}% · contract + COs minus internal costs` : 'Set internal budget to see margin'} pills={laborBudget > 0 ? [{ type: 'pg', text: `${marginPct}%` }] : [{ type: 'pm', text: 'No budget' }]} idx={1}>
+          <div style={{ padding: 12 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <THead cols={['Metric', 'Value']} />
+              <tbody>
+                <TRow cells={[<TdN>Contract Value</TdN>, <TdM>{fmt(contractSum)}</TdM>]} />
+                <TRow cells={[<TdN>Approved COs</TdN>, <TdM>+{fmt(coTotal)}</TdM>]} />
+                <TRow cells={[<TdN>Revised Total</TdN>, <TdM>{fmt(revisedTotal)}</TdM>]} isTotal />
+                <TRow cells={[<TdN>Internal Cost Budget</TdN>, <TdM>{laborBudget > 0 ? fmt(laborBudget) : '—'}</TdM>]} />
+                {laborBudget > 0 && <TRow cells={[<TdN>Net Margin</TdN>, <TdM>{fmt(netMargin)}</TdM>]} isTotal />}
+              </tbody>
+            </table>
+          </div>
+        </KpiCard>
+
+        {/* Card 3 — Change Orders */}
+        <KpiCard accent={C.blue} icon="📋" iconBg={C.blueBg} label="CHANGE ORDERS" value={coTotal > 0 ? `+${fmt(coTotal)}` : '0 COs'} sub={`${approvedCOs.length} approved by TC and GC`} pills={approvedCOs.length > 0 ? [{ type: 'pb', text: `${approvedCOs.length} approved` }] : [{ type: 'pm', text: 'None' }]} idx={2}>
+          <div style={{ padding: 12 }}>
+            {changeOrders.length > 0 ? (
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <THead cols={['CO #', 'Description', 'Value', 'Status']} />
+                <tbody>
+                  {changeOrders.slice(0, 8).map(co => (
+                    <TRow key={co.id} cells={[
+                      <TdN>{co.co_number || '—'}</TdN>,
+                      co.title || '—',
+                      <TdM>{fmt(co.tc_submitted_price || co.gc_budget || 0)}</TdM>,
+                      <Pill type={['approved', 'completed', 'contracted'].includes(co.status) ? 'pg' : co.status === 'rejected' ? 'pr' : 'pw'}>{co.status}</Pill>,
+                    ]} />
+                  ))}
+                  {approvedCOs.length > 0 && (
+                    <TRow cells={[<TdN>{approvedCOs.length} COs</TdN>, '—', <TdM>+{fmt(coTotal)}</TdM>, '—']} isTotal />
+                  )}
+                </tbody>
+              </table>
+            ) : (
+              <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No change orders yet</div>
+            )}
+            <button onClick={() => onNavigate('change-orders')} style={{ width: '100%', padding: '8px', borderRadius: 6, background: 'transparent', color: C.muted, fontWeight: 600, fontSize: '0.72rem', border: `1px solid ${C.border}`, cursor: 'pointer', marginTop: 10, ...fontLabel }}>+ Submit CO Request to TC</button>
+          </div>
+        </KpiCard>
+
+        {/* Card 4 — Paid by TC */}
+        <KpiCard accent={C.green} icon="✅" iconBg={C.greenBg} label="PAID BY TC" value={fmt(totalPaid)} sub={`${revisedTotal > 0 ? Math.round((totalPaid / revisedTotal) * 100) : 0}% of contract collected · ${paidInvoices.length} invoices paid`} pills={[{ type: 'pg', text: `${revisedTotal > 0 ? Math.round((totalPaid / revisedTotal) * 100) : 0}% received` }]} idx={3}>
+          <div style={{ padding: 12 }}>
+            {paidInvoices.length > 0 ? (
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <THead cols={['Invoice #', 'Amount', 'Status']} />
+                <tbody>
+                  {paidInvoices.map(inv => (
+                    <TRow key={inv.id} cells={[
+                      <TdN>{inv.invoice_number}</TdN>,
+                      <TdM>{fmt(inv.total_amount)}</TdM>,
+                      <Pill type="pg">Paid</Pill>,
+                    ]} />
+                  ))}
+                  <TRow cells={[<TdN>{paidInvoices.length} paid</TdN>, <TdM>{fmt(totalPaid)}</TdM>, '—']} isTotal />
+                </tbody>
+              </table>
+            ) : (
+              <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No payments received yet</div>
+            )}
+          </div>
+        </KpiCard>
+
+        {/* Card 5 — Pending from TC */}
+        <KpiCard accent={C.yellow} icon="⏳" iconBg={C.yellowBg} label="PENDING FROM TC" value={totalPending > 0 ? fmt(totalPending) : '$0'} sub={pendingInvoices.length > 0 ? `${pendingInvoices.length} invoice${pendingInvoices.length > 1 ? 's' : ''} awaiting TC approval` : 'No pending invoices'} pills={pendingInvoices.length > 0 ? [{ type: 'pw', text: 'TC reviewing' }] : [{ type: 'pg', text: 'All clear' }]} idx={4}>
+          <div style={{ padding: '12px 16px' }}>
+            {pendingInvoices.length > 0 ? (
+              pendingInvoices.map(inv => (
+                <div key={inv.id} style={{ padding: '10px 0', borderBottom: `1px solid ${C.border}` }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.82rem', color: C.ink }}>{inv.invoice_number}</span>
+                    <Pill type="pw">Pending TC Approval</Pill>
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: C.muted, marginBottom: 4 }}>To: {tcName}</div>
+                  <div style={{ fontSize: '1.4rem', color: C.ink, ...fontVal }}>{fmt(inv.total_amount)}</div>
+                  <div style={{ fontSize: '0.67rem', color: C.muted, marginTop: 6 }}>Your TC is reviewing this invoice. You will be notified when approved.</div>
+                </div>
+              ))
+            ) : (
+              <div style={{ padding: 20, textAlign: 'center', color: C.muted, fontSize: '0.78rem' }}>No pending invoices</div>
+            )}
+          </div>
+        </KpiCard>
+
+        {/* Card 6 — Work Progress */}
+        <KpiCard accent={C.navy} icon="⚒" iconBg={C.surface2} label="WORK PROGRESS" value={`${progressPct}%`} sub={`${fmt(totalInvoiced)} invoiced of ${fmt(revisedTotal)} total scope`} pills={[{ type: progressPct >= 80 ? 'pg' : progressPct >= 40 ? 'pa' : 'pm', text: progressPct >= 100 ? 'Complete' : 'On Track' }]} idx={5}>
+          <div style={{ padding: 12 }}>
+            {/* Progress bar */}
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: C.muted, marginBottom: 4, ...fontLabel }}>
+                <span>Overall Progress</span>
+                <span style={{ ...fontMono, fontSize: '0.76rem', color: C.ink2 }}>{progressPct}%</span>
+              </div>
+              <div style={{ width: '100%', height: 10, borderRadius: 6, background: C.border, overflow: 'hidden' }}>
+                <div style={{ width: `${Math.min(progressPct, 100)}%`, height: '100%', borderRadius: 6, background: progressPct >= 80 ? C.green : C.amber, transition: 'width 0.6s ease' }} />
+              </div>
+            </div>
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <THead cols={['Metric', 'Value']} />
+              <tbody>
+                <TRow cells={[<TdN>Total Scope</TdN>, <TdM>{fmt(revisedTotal)}</TdM>]} />
+                <TRow cells={[<TdN>Invoiced to Date</TdN>, <TdM>{fmt(totalInvoiced)}</TdM>]} />
+                <TRow cells={[<TdN>Paid</TdN>, <TdM>{fmt(totalPaid)}</TdM>]} />
+                <TRow cells={[<TdN>Remaining</TdN>, <TdM>{fmt(remainingToEarn)}</TdM>]} isTotal />
+              </tbody>
+            </table>
+          </div>
+        </KpiCard>
+      </div>
+
+      {/* Earnings Tracker */}
+      <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, padding: '18px 20px', ...fontLabel }}>
+        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: C.ink, marginBottom: 16 }}>💰 Earnings Tracker — {projectName}</div>
+        <BarRow label="Total Scope" value={fmt(revisedTotal)} pct={100} barColor={C.amber} />
+        <BarRow label={`Invoiced (${revisedTotal > 0 ? Math.round((totalInvoiced / revisedTotal) * 100) : 0}%)`} value={fmt(totalInvoiced)} pct={revisedTotal > 0 ? (totalInvoiced / revisedTotal) * 100 : 0} barColor={C.green} />
+        <BarRow label={`Received (${revisedTotal > 0 ? Math.round((totalPaid / revisedTotal) * 100) : 0}%)`} value={fmt(totalPaid)} pct={revisedTotal > 0 ? (totalPaid / revisedTotal) * 100 : 0} barColor={C.greenDark} />
+        {totalPending > 0 && <BarRow label="Pending" value={fmt(totalPending)} pct={revisedTotal > 0 ? (totalPending / revisedTotal) * 100 : 0} barColor={C.yellow} />}
+        <BarRow label={`Remaining to Earn (${revisedTotal > 0 ? Math.round((remainingToEarn / revisedTotal) * 100) : 0}%)`} value={fmt(remainingToEarn)} pct={revisedTotal > 0 ? (remainingToEarn / revisedTotal) * 100 : 0} barColor={C.border} />
+      </div>
+
+      {/* Warnings */}
+      {warnings.length > 0 && (
+        <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden', ...fontLabel }}>
+          <div style={{ padding: '12px 16px', borderBottom: `1px solid ${C.border}`, fontSize: '0.78rem', fontWeight: 700, color: C.ink }}>🚨 Attention — {projectName}</div>
+          {warnings.map((w, i) => (
+            <WarnItem key={i} color={w.color} icon={w.icon} title={w.title} sub={w.sub} value={w.value} pill={w.pill} pillType={w.pillType} onClick={() => onNavigate(w.tab)} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
