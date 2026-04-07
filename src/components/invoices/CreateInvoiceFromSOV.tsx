@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { CalendarIcon, AlertCircle, FileText, DollarSign, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
