@@ -367,6 +367,13 @@ export default function ProjectHome() {
                         financials={financials}
                         onNavigate={handleTabChange}
                       />
+                    ) : isTC ? (
+                      <TCProjectOverview
+                        projectId={id!}
+                        projectName={project.name}
+                        financials={financials}
+                        onNavigate={handleTabChange}
+                      />
                     ) : (
                       <GCProjectOverviewContent
                         projectId={id!}
