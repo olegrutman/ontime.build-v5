@@ -1,60 +1,41 @@
 
 
-# Add Unit Number & Room Fields to Inside Location Path
+# Require At Least One Scope Item When Creating a Change Order
 
 ## Problem
 
-When the user picks **Inside → Level → Unit interior** in the `VisualLocationPicker`, there are no follow-up fields for **unit number** and **room/area within the unit**. For multifamily and commercial projects, this specificity is essential — "Inside · Level 3 · Unit interior" is too vague; it should be "Inside · Level 3 · Unit 304 · Kitchen".
+The wizard's `canAdvance()` function on the "How" step does not check if any scope items have been selected. Users can create a CO with zero line items, which produces an empty CO.
 
 ## Changes
 
-### File: `src/components/change-orders/VisualLocationPicker.tsx`
+### File: `src/components/change-orders/wizard/COWizard.tsx`
 
-1. **Add two new state fields**: `unitNumber` (string) and `roomInUnit` (string or selection).
+1. **Update `canAdvance()` for the "how" step** — add `data.selectedItems.length === 0` as a blocking condition for TC and FC roles (who have the scope picker on this step). For GC, scope items are added after creation via `AddScopeItemButton`, so GC can proceed without items.
 
-2. **After "Unit interior" is selected**, show:
-   - A text input: **"Unit #"** (e.g. "304", "A12") — free text, required
-   - A pill/grid selector: **"Room / Area"** with options: Kitchen, Bathroom, Living Room, Bedroom, Laundry, Closet, Other (with custom input)
+2. **Add a helper message** — show a small hint below the scope picker when no items are selected: "Select at least one item to continue".
 
-3. **Update `assembledTag`** to include the new parts:
-   - Before: `Inside · Level 3 · Unit interior`
-   - After: `Inside · Level 3 · Unit 304 · Kitchen`
+3. **Also gate the final "Create" button** — add a check so that regardless of role, the submit button on the last step requires `data.selectedItems.length > 0`. This covers GC too (GC has a scope picker via StepCatalog on the "how" step if one exists, or we add one).
 
-4. **Update `isComplete`** — when area is "Unit interior", require `unitNumber` to be non-empty and a room selection to be made before allowing confirmation.
+Wait — let me re-check: does the GC flow have a scope picker?
 
-5. **Reset `unitNumber` and `roomInUnit`** when area selection changes away from "Unit interior".
+Looking at the code: GC's `StepHow` (lines 507-556) does NOT include a `ScopePicker`. Only TC (line 585) and FC have it. So GC creates the CO shell and adds items after via `AddScopeItemButton`.
 
-### What the flow looks like
+**Decision**: Require at least one scope item for TC and FC on the "how" step. For GC, also add the `ScopePicker` component so they can select initial items during creation.
 
-```text
-┌─────────────────────────────────┐
-│  [Inside]  [Outside]            │
-├─────────────────────────────────┤
-│  Level: [Ground] [Level 2] ... │
-├─────────────────────────────────┤
-│  Area:                          │
-│  [Unit interior✓] [Corridor]    │
-│  [Stairwell]      [Other]       │
-├─────────────────────────────────┤
-│  Unit #: [____304____]          │  ← NEW
-├─────────────────────────────────┤
-│  Room:                          │  ← NEW
-│  [Kitchen] [Bathroom]           │
-│  [Living]  [Bedroom]            │
-│  [Laundry] [Closet] [Other]     │
-├─────────────────────────────────┤
-│  📍 Inside · Level 3 · Unit 304 · Kitchen
-│  [ Confirm location ]           │
-└─────────────────────────────────┘
-```
+### Specific code changes:
+
+**`canAdvance()` (line 125-135):**
+- For `how` step: add `if (data.selectedItems.length === 0) return false;` for all roles
+
+**GC's `StepHow` (lines 507-556):**
+- Add the `ScopePicker` component (same as TC/FC) so GC can also select scope items during creation
+
+**`ScopePicker` component:**
+- Add a validation hint when no items are selected: "Select at least one scope item"
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/change-orders/VisualLocationPicker.tsx` | Add unit number input + room selector when "Unit interior" is selected; update tag assembly and completion logic |
-
-### What is NOT changing
-- Wizard steps, database schema, RLS, other components
-- Outside path, Corridor/Stairwell/Other paths remain unchanged
+| `src/components/change-orders/wizard/COWizard.tsx` | Add scope item requirement to `canAdvance()`; add `ScopePicker` to GC flow; add validation hint |
 
