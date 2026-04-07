@@ -1,61 +1,60 @@
 
 
-# Update Platform KPI Configuration Defaults
+# Add Unit Number & Room Fields to Inside Location Path
 
 ## Problem
 
-The default KPI card configurations in `src/constants/defaultKpiConfig.ts` are outdated. The actual dashboards now use a rich expandable KPI card system with 6-8 cards per role, but the defaults still show the old 3-4 simple cards (e.g. "Contract Value", "Paid Out", "Received", "Projected Margin" for GC). The Platform KPI Cards page at `/platform/kpis` shows these stale defaults.
+When the user picks **Inside → Level → Unit interior** in the `VisualLocationPicker`, there are no follow-up fields for **unit number** and **room/area within the unit**. For multifamily and commercial projects, this specificity is essential — "Inside · Level 3 · Unit interior" is too vague; it should be "Inside · Level 3 · Unit 304 · Kitchen".
 
-## What's Changing
+## Changes
 
-Update `defaultKpiConfig.ts` to match the actual KPI cards rendered in each dashboard view.
+### File: `src/components/change-orders/VisualLocationPicker.tsx`
 
-### New Defaults Per Role
+1. **Add two new state fields**: `unitNumber` (string) and `roomInUnit` (string or selection).
 
-**General Contractor (8 cards):**
-1. Total Owner Budget — Full portfolio value
-2. GC Profit Margin — Owner budget minus TC contracts
-3. Change Orders — Pending review count
-4. Materials (GC POs) — Purchase order spend
-5. Needs Attention — Items requiring response
-6. Total Paid — Outgoing payments to subs
-7. Pending GC Approval — Invoices awaiting review
-8. TC Contracts Committed — Total TC contract value
+2. **After "Unit interior" is selected**, show:
+   - A text input: **"Unit #"** (e.g. "304", "A12") — free text, required
+   - A pill/grid selector: **"Room / Area"** with options: Kitchen, Bathroom, Living Room, Bedroom, Laundry, Closet, Other (with custom input)
 
-**Trade Contractor (8 cards):**
-1. GC Contracts (Revenue) — Revenue from GC contracts
-2. FC / Labor Contracts (Cost) — Field crew costs
-3. Gross Margin — Revenue minus costs
-4. Change Orders — Pending review count
-5. Received from GC — Payments collected
-6. Pending from GC — Invoices awaiting GC approval
-7. Materials (TC POs) — Purchase order spend
-8. Needs Attention — Items requiring response
+3. **Update `assembledTag`** to include the new parts:
+   - Before: `Inside · Level 3 · Unit interior`
+   - After: `Inside · Level 3 · Unit 304 · Kitchen`
 
-**Field Contractor (6 cards):**
-1. Contract with TC — Active contract value
-2. Net Margin — Profit on contract + COs
-3. CO Additions — Approved change order value
-4. Paid by TC — Payments received
-5. Pending from TC — Invoices awaiting approval
-6. Work Progress — Completion percentage
+4. **Update `isComplete`** — when area is "Unit interior", require `unitNumber` to be non-empty and a room selection to be made before allowing confirmation.
 
-**Supplier (6 cards):**
-1. Total Estimate Value — Across active projects
-2. Total Ordered — Percentage of estimate
-3. Extra / Over-Ordered — Projects over estimate
-4. Total Billed — Invoiced amount
-5. Total Received — Payments collected
-6. Outstanding Balance — Remaining receivable
+5. **Reset `unitNumber` and `roomInUnit`** when area selection changes away from "Unit interior".
+
+### What the flow looks like
+
+```text
+┌─────────────────────────────────┐
+│  [Inside]  [Outside]            │
+├─────────────────────────────────┤
+│  Level: [Ground] [Level 2] ... │
+├─────────────────────────────────┤
+│  Area:                          │
+│  [Unit interior✓] [Corridor]    │
+│  [Stairwell]      [Other]       │
+├─────────────────────────────────┤
+│  Unit #: [____304____]          │  ← NEW
+├─────────────────────────────────┤
+│  Room:                          │  ← NEW
+│  [Kitchen] [Bathroom]           │
+│  [Living]  [Bedroom]            │
+│  [Laundry] [Closet] [Other]     │
+├─────────────────────────────────┤
+│  📍 Inside · Level 3 · Unit 304 · Kitchen
+│  [ Confirm location ]           │
+└─────────────────────────────────┘
+```
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/constants/defaultKpiConfig.ts` | Replace all 4 default arrays with the new card lists matching actual dashboards |
+| `src/components/change-orders/VisualLocationPicker.tsx` | Add unit number input + room selector when "Unit interior" is selected; update tag assembly and completion logic |
 
 ### What is NOT changing
-- `PlatformKPIs.tsx` page (reads from same config, no structural change)
-- Dashboard view components (already render the correct cards)
-- Database or RLS
+- Wizard steps, database schema, RLS, other components
+- Outside path, Corridor/Stairwell/Other paths remain unchanged
 
