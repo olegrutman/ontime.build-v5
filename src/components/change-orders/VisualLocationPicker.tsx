@@ -283,7 +283,14 @@ export function VisualLocationPicker({
                     label={a.label}
                     icon={a.icon}
                     selected={selectedArea === a.label}
-                    onClick={() => setSelectedArea(a.label)}
+                    onClick={() => {
+                      setSelectedArea(a.label);
+                      if (a.label !== 'Unit interior') {
+                        setUnitNumber('');
+                        setRoomInUnit(null);
+                        setCustomRoom('');
+                      }
+                    }}
                   />
                 ))}
               </div>
