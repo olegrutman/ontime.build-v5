@@ -740,8 +740,11 @@ export function useDashboardData(): DashboardData {
             pf.costs += c.contract_sum || 0;
             pf.revenue += (c as any).owner_contract_value || c.contract_sum || 0;
           }
-        } else if (orgType === 'FC') {
-          if (c.from_org_id === currentOrg.id) pf.revenue += c.contract_sum || 0;
+      } else if (orgType === 'FC') {
+          if (c.from_org_id === currentOrg.id) {
+            pf.revenue += c.contract_sum || 0;
+            pf.costs += (c as any).labor_budget || 0;
+          }
         }
       });
 
