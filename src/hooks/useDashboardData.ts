@@ -544,7 +544,7 @@ export function useDashboardData(): DashboardData {
           type: 'change_order',
           title: co.co_number || co.title || 'Change Order',
           status: co.status,
-          amount: null,
+          amount: co.tc_submitted_price || co.gc_budget || null,
           created_at: co.created_at,
           projectName: proj?.name || 'Unknown',
           projectId: co.project_id,

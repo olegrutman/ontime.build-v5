@@ -30,15 +30,12 @@ export function DashboardKPIs({ financials, orgType }: DashboardKPIsProps) {
   }
 
   if (orgType === 'TC') {
-    const forecastVariance = financials.totalCosts > 0 ? ((financials.totalCosts * 1.04 - financials.totalCosts) / financials.totalCosts) * 100 : 0;
-    const matStatus = forecastVariance > 5 ? 'Risk' : forecastVariance > 0 ? 'Watch' : 'On Track';
-    const matSub = forecastVariance > 0 ? `${forecastVariance.toFixed(1)}% over estimate` : 'Within budget';
     return (
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         <KPICard label="Contract In" value={financials.totalRevenue} subtitle="Revenue from GC contracts" delay={0} />
         <KPICard label="Cost Out" value={financials.totalCosts} subtitle="Labor + materials + subs" delay={40} />
         <KPICard label="Projected Margin" value={financials.potentialProfit} subtitle={margin > 0 ? `+${Math.round(margin)}% margin` : 'Net after costs'} delay={80} suffix={`${Math.round(margin)}%`} />
-        <KPICard label="Materials Forecast" value={0} subtitle={matSub} delay={120} isText textValue={matStatus} />
+        <KPICard label="Billed" value={financials.totalBilled} subtitle="Payments received" delay={120} suffix={financials.totalRevenue > 0 ? `${Math.round((financials.totalBilled / financials.totalRevenue) * 100)}%` : '0%'} />
       </div>
     );
   }

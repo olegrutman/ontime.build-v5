@@ -100,14 +100,14 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function CreateInvoiceFromSOV({
+export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoiceFromSOVProps>(function CreateInvoiceFromSOV({
   open,
   onOpenChange,
   projectId,
   onSuccess,
   revisionInvoiceId,
   revisionData,
-}: CreateInvoiceFromSOVProps) {
+}, _ref) {
   const { user, userOrgRoles } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
