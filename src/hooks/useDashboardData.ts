@@ -438,7 +438,7 @@ export function useDashboardData(): DashboardData {
         projectIds.length > 0
           ? supabase
               .from('change_orders')
-              .select('id, co_number, title, status, created_at, project_id, org_id')
+              .select('id, co_number, title, status, created_at, project_id, org_id, tc_submitted_price, gc_budget')
               .in('project_id', projectIds)
               .order('created_at', { ascending: false })
               .limit(20)
