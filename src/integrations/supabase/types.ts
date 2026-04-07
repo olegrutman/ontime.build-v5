@@ -1106,6 +1106,69 @@ export type Database = {
           },
         ]
       }
+      contract_sow_items: {
+        Row: {
+          contract_id: string
+          created_at: string
+          description: string
+          id: string
+          item_type: string
+          project_id: string
+          quantity: number | null
+          revision_note: string | null
+          sort_order: number
+          total: number | null
+          unit: string | null
+          unit_cost: number | null
+          updated_at: string
+        }
+        Insert: {
+          contract_id: string
+          created_at?: string
+          description?: string
+          id?: string
+          item_type?: string
+          project_id: string
+          quantity?: number | null
+          revision_note?: string | null
+          sort_order?: number
+          total?: number | null
+          unit?: string | null
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Update: {
+          contract_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          item_type?: string
+          project_id?: string
+          quantity?: number | null
+          revision_note?: string | null
+          sort_order?: number
+          total?: number | null
+          unit?: string | null
+          unit_cost?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_sow_items_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "project_contracts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_sow_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       daily_log_delays: {
         Row: {
           cause: string
@@ -2657,6 +2720,7 @@ export type Database = {
       }
       project_contracts: {
         Row: {
+          accepted_at: string | null
           allow_mobilization_line_item: boolean | null
           contract_sum: number | null
           created_at: string
@@ -2672,7 +2736,11 @@ export type Database = {
           notes: string | null
           owner_contract_value: number | null
           project_id: string
+          rejected_at: string | null
+          rejection_note: string | null
           retainage_percent: number | null
+          sent_at: string | null
+          sow_status: string | null
           status: string | null
           to_org_id: string | null
           to_project_team_id: string | null
@@ -2681,6 +2749,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          accepted_at?: string | null
           allow_mobilization_line_item?: boolean | null
           contract_sum?: number | null
           created_at?: string
@@ -2696,7 +2765,11 @@ export type Database = {
           notes?: string | null
           owner_contract_value?: number | null
           project_id: string
+          rejected_at?: string | null
+          rejection_note?: string | null
           retainage_percent?: number | null
+          sent_at?: string | null
+          sow_status?: string | null
           status?: string | null
           to_org_id?: string | null
           to_project_team_id?: string | null
@@ -2705,6 +2778,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          accepted_at?: string | null
           allow_mobilization_line_item?: boolean | null
           contract_sum?: number | null
           created_at?: string
@@ -2720,7 +2794,11 @@ export type Database = {
           notes?: string | null
           owner_contract_value?: number | null
           project_id?: string
+          rejected_at?: string | null
+          rejection_note?: string | null
           retainage_percent?: number | null
+          sent_at?: string | null
+          sow_status?: string | null
           status?: string | null
           to_org_id?: string | null
           to_project_team_id?: string | null
