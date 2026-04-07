@@ -84,7 +84,8 @@ const PRICING_OPTIONS: { type: COPricingType; title: string; description: string
 const STEPS = [
   { key: 'why', label: 'Why', description: 'What triggered this change?' },
   { key: 'where', label: 'Where', description: 'Location of the work' },
-  { key: 'how', label: 'How', description: 'Configuration & scope' },
+  { key: 'scope', label: 'Scope', description: 'Select work items' },
+  { key: 'how', label: 'How', description: 'Pricing & configuration' },
   { key: 'team', label: 'Team', description: 'Confirm & create' },
 ] as const;
 
@@ -126,10 +127,10 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason }: C
     const s = STEPS[step];
     if (s.key === 'why') return !!data.reason;
     if (s.key === 'where') return !!data.locationTag;
+    if (s.key === 'scope') return data.selectedItems.length > 0;
     if (s.key === 'how') {
       if (role === 'GC' && !data.assignedToOrgId) return false;
       if (data.pricingType === 'nte' && (!data.nteCap || parseFloat(data.nteCap) <= 0)) return false;
-      if (data.selectedItems.length === 0) return false;
       return true;
     }
     return true; // team step
@@ -330,6 +331,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason }: C
                 userId={user?.id}
               />
             )}
+            {currentStep.key === 'scope' && <StepScope data={data} onChange={update} />}
             {currentStep.key === 'how' && <StepHow data={data} onChange={update} role={role} projectId={projectId} />}
             {currentStep.key === 'team' && <StepTeam data={data} projectId={projectId} role={role} />}
           </div>
@@ -453,7 +455,73 @@ function StepWhere({
   );
 }
 
-// ── Step 3: How ──────────────────────────────────────
+// ── Step 3: Scope ────────────────────────────────────
+function StepScope({
+  data, onChange,
+}: {
+  data: COWizardData;
+  onChange: (p: Partial<COWizardData>) => void;
+}) {
+  const { search } = useScopeCatalog();
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchResults = useMemo(() => search(searchQuery), [searchQuery, search]);
+  const selectedIds = useMemo(() => new Set(data.selectedItems.map(i => i.id)), [data.selectedItems]);
+
+  function toggleItem(item: ScopeCatalogItem) {
+    if (selectedIds.has(item.id)) {
+      onChange({ selectedItems: data.selectedItems.filter(i => i.id !== item.id) });
+    } else {
+      onChange({
+        selectedItems: [
+          ...data.selectedItems,
+          { ...item, locationTag: data.locationTag, reason: data.reason!, reasonDescription: '' },
+        ],
+      });
+    }
+  }
+
+  const items = searchQuery.trim() ? searchResults : searchResults.slice(0, 20);
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">Search and select the work items for this change order.</p>
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search scope items…" className="pl-9" />
+      </div>
+      <div className="grid grid-cols-2 gap-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 380px)' }}>
+        {items.map(item => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={() => toggleItem(item)}
+            className={cn(
+              'flex flex-col items-start gap-1 p-3 rounded-xl border-2 transition-all text-left',
+              selectedIds.has(item.id) ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40',
+            )}
+          >
+            <span className="text-sm font-medium text-foreground line-clamp-2">{item.item_name}</span>
+            <span className="text-[10px] text-muted-foreground">{item.category_name}</span>
+            {selectedIds.has(item.id) && <Check className="h-3.5 w-3.5 text-primary mt-0.5" />}
+          </button>
+        ))}
+        {items.length === 0 && searchQuery.trim().length >= 2 && (
+          <p className="col-span-2 text-sm text-muted-foreground text-center py-6">No items found</p>
+        )}
+        {items.length === 0 && searchQuery.trim().length < 2 && (
+          <p className="col-span-2 text-sm text-muted-foreground text-center py-6">Type at least 2 characters to search</p>
+        )}
+      </div>
+      {data.selectedItems.length > 0 ? (
+        <p className="text-xs text-primary font-medium">{data.selectedItems.length} item{data.selectedItems.length !== 1 ? 's' : ''} selected</p>
+      ) : (
+        <p className="text-xs text-destructive font-medium">Select at least one scope item to continue</p>
+      )}
+    </div>
+  );
+}
+
+// ── Step 4: How ──────────────────────────────────────
 function StepHow({
   data, onChange, role, projectId,
 }: {
@@ -462,7 +530,6 @@ function StepHow({
   role: COCreatedByRole;
   projectId: string;
 }) {
-  // Team members for dropdowns
   const { data: teamMembers = [] } = useQuery({
     queryKey: ['co-wizard-team', projectId],
     enabled: !!projectId,
@@ -484,31 +551,10 @@ function StepHow({
   const tcMembers = teamMembers.filter(m => m.role === 'Trade Contractor' || m.role === 'TC');
   const fcMembers = teamMembers.filter(m => m.role === 'Field Crew' || m.role === 'FC');
 
-  // Scope items for FC/TC
-  const { divisions, search } = useScopeCatalog();
-  const [searchQuery, setSearchQuery] = useState('');
-  const searchResults = useMemo(() => search(searchQuery), [searchQuery, search]);
-
-  const selectedIds = useMemo(() => new Set(data.selectedItems.map(i => i.id)), [data.selectedItems]);
-
-  function toggleItem(item: ScopeCatalogItem) {
-    if (selectedIds.has(item.id)) {
-      onChange({ selectedItems: data.selectedItems.filter(i => i.id !== item.id) });
-    } else {
-      onChange({
-        selectedItems: [
-          ...data.selectedItems,
-          { ...item, locationTag: data.locationTag, reason: data.reason!, reasonDescription: '' },
-        ],
-      });
-    }
-  }
-
   // GC config
   if (role === 'GC') {
     return (
       <div className="space-y-6">
-        {/* Assign TC */}
         <div className="space-y-2">
           <Label>Assign to *</Label>
           <Select value={data.assignedToOrgId} onValueChange={v => onChange({ assignedToOrgId: v })}>
@@ -519,10 +565,8 @@ function StepHow({
           </Select>
         </div>
 
-        {/* Pricing type */}
         <PricingTypeSelector data={data} onChange={onChange} />
 
-        {/* GC Budget */}
         <div className="space-y-1.5">
           <Label>Your budget (internal)</Label>
           <div className="relative">
@@ -532,7 +576,6 @@ function StepHow({
           <p className="text-xs text-muted-foreground">Private — not visible to TC or FC</p>
         </div>
 
-        {/* Responsibility toggles */}
         <div className="space-y-4">
           <ToggleWithSelector
             label="Materials needed"
@@ -552,16 +595,6 @@ function StepHow({
           />
         </div>
 
-        {/* Scope picker */}
-        <ScopePicker
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          searchResults={searchResults}
-          selectedIds={selectedIds}
-          onToggle={toggleItem}
-          selectedItems={data.selectedItems}
-        />
-
         <ShareToggle value={data.shareDraftNow} onChange={v => onChange({ shareDraftNow: v })} />
       </div>
     );
@@ -573,7 +606,6 @@ function StepHow({
       <div className="space-y-6">
         <PricingTypeSelector data={data} onChange={onChange} />
 
-        {/* FC input */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div>
@@ -592,16 +624,6 @@ function StepHow({
           )}
         </div>
 
-        {/* Scope picker */}
-        <ScopePicker
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          searchResults={searchResults}
-          selectedIds={selectedIds}
-          onToggle={toggleItem}
-          selectedItems={data.selectedItems}
-        />
-
         <ShareToggle value={data.shareDraftNow} onChange={v => onChange({ shareDraftNow: v })} />
       </div>
     );
@@ -610,7 +632,6 @@ function StepHow({
   // FC config
   return (
     <div className="space-y-6">
-      {/* Quick hour pills */}
       <div className="space-y-2">
         <Label>Quick log hours (optional)</Label>
         <div className="flex gap-2">
@@ -639,16 +660,6 @@ function StepHow({
           </button>
         </div>
       </div>
-
-      {/* Scope picker */}
-      <ScopePicker
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        searchResults={searchResults}
-        selectedIds={selectedIds}
-        onToggle={toggleItem}
-        selectedItems={data.selectedItems}
-      />
 
       <ShareToggle value={data.shareDraftNow} onChange={v => onChange({ shareDraftNow: v })} label="Share with TC immediately" />
     </div>
@@ -771,51 +782,6 @@ function PricingTypeSelector({ data, onChange }: { data: COWizardData; onChange:
             <Input type="number" value={data.nteCap} onChange={e => onChange({ nteCap: e.target.value })} className="pl-7" placeholder="0.00" />
           </div>
         </div>
-      )}
-    </div>
-  );
-}
-
-function ScopePicker({
-  searchQuery, setSearchQuery, searchResults, selectedIds, onToggle, selectedItems,
-}: {
-  searchQuery: string;
-  setSearchQuery: (q: string) => void;
-  searchResults: ScopeCatalogItem[];
-  selectedIds: Set<string>;
-  onToggle: (item: ScopeCatalogItem) => void;
-  selectedItems: SelectedScopeItem[];
-}) {
-  const items = searchQuery.trim() ? searchResults : searchResults.slice(0, 12);
-
-  return (
-    <div className="space-y-3">
-      <Label>Scope items</Label>
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search scope items…" className="pl-9" />
-      </div>
-      <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto">
-        {items.map(item => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onToggle(item)}
-            className={cn(
-              'flex flex-col items-start gap-1 p-3 rounded-xl border-2 transition-all text-left',
-              selectedIds.has(item.id) ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40',
-            )}
-          >
-            <span className="text-sm font-medium text-foreground line-clamp-2">{item.item_name}</span>
-            <span className="text-[10px] text-muted-foreground">{item.category_name}</span>
-            {selectedIds.has(item.id) && <Check className="h-3.5 w-3.5 text-primary mt-0.5" />}
-          </button>
-        ))}
-      </div>
-      {selectedItems.length > 0 ? (
-        <p className="text-xs text-primary font-medium">{selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected</p>
-      ) : (
-        <p className="text-xs text-destructive font-medium">Select at least one scope item to continue</p>
       )}
     </div>
   );
