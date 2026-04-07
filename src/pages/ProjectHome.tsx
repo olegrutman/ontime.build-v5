@@ -50,6 +50,7 @@ import { ProjectPOSummary } from '@/components/project/ProjectPOSummary';
 import { GCProjectOverviewContent } from '@/components/project/GCProjectOverviewContent';
 import { FCProjectOverview } from '@/components/project/FCProjectOverview';
 import { TCProjectOverview } from '@/components/project/TCProjectOverview';
+import SupplierProjectOverview from '@/components/project/SupplierProjectOverview';
 
 import { ProjectTabBar } from '@/components/project/ProjectTabBar';
 
@@ -335,7 +336,7 @@ export default function ProjectHome() {
                 {isInDemoMode ? (
                   <DemoProjectOverview onNavigate={handleTabChange} />
                 ) : isSupplier && supplierOrgId ? (
-                  <SupplierMaterialsOverview projectId={id!} supplierOrgId={supplierOrgId} onNavigate={handleTabChange} />
+                  <SupplierProjectOverview projectId={id!} projectName={project.name} financials={financials} onNavigate={handleTabChange} />
                 ) : (
                   <div className="space-y-3 mt-3">
                     {showSetupBanner && (
