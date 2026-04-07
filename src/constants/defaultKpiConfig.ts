@@ -7,30 +7,43 @@ export interface KpiCardConfig {
 }
 
 export const DEFAULT_KPI_GC: KpiCardConfig[] = [
-  { key: 'contract_value', label: 'Contract Value', subtitle: 'Total awarded contract value', enabled: true, order: 0 },
-  { key: 'paid_out', label: 'Paid Out', subtitle: 'Total payments made to subs', enabled: true, order: 1 },
-  { key: 'received', label: 'Received', subtitle: 'Total payments received from owner', enabled: true, order: 2 },
-  { key: 'projected_margin', label: 'Projected Margin', subtitle: 'Estimated profit margin', enabled: true, order: 3 },
+  { key: 'total_owner_budget', label: 'Total Owner Budget', subtitle: 'Full portfolio value', enabled: true, order: 0 },
+  { key: 'gc_profit_margin', label: 'GC Profit Margin', subtitle: 'Owner budget minus TC contracts', enabled: true, order: 1 },
+  { key: 'change_orders', label: 'Change Orders', subtitle: 'Pending review count', enabled: true, order: 2 },
+  { key: 'materials_gc_pos', label: 'Materials (GC POs)', subtitle: 'Purchase order spend', enabled: true, order: 3 },
+  { key: 'needs_attention', label: 'Needs Attention', subtitle: 'Items requiring response', enabled: true, order: 4 },
+  { key: 'total_paid', label: 'Total Paid', subtitle: 'Outgoing payments to subs', enabled: true, order: 5 },
+  { key: 'pending_gc_approval', label: 'Pending GC Approval', subtitle: 'Invoices awaiting review', enabled: true, order: 6 },
+  { key: 'tc_contracts_committed', label: 'TC Contracts Committed', subtitle: 'Total TC contract value', enabled: true, order: 7 },
 ];
 
 export const DEFAULT_KPI_TC: KpiCardConfig[] = [
-  { key: 'contract_in', label: 'Contract In', subtitle: 'Value of contracts awarded to you', enabled: true, order: 0 },
-  { key: 'cost_out', label: 'Cost Out', subtitle: 'Total costs paid to field crews', enabled: true, order: 1 },
-  { key: 'projected_margin', label: 'Projected Margin', subtitle: 'Estimated profit on contracts', enabled: true, order: 2 },
-  { key: 'materials_forecast', label: 'Materials Forecast', subtitle: 'Upcoming material spend estimate', enabled: true, order: 3 },
+  { key: 'gc_contracts_revenue', label: 'GC Contracts (Revenue)', subtitle: 'Revenue from GC contracts', enabled: true, order: 0 },
+  { key: 'fc_labor_contracts_cost', label: 'FC / Labor Contracts (Cost)', subtitle: 'Field crew costs', enabled: true, order: 1 },
+  { key: 'gross_margin', label: 'Gross Margin', subtitle: 'Revenue minus costs', enabled: true, order: 2 },
+  { key: 'change_orders', label: 'Change Orders', subtitle: 'Pending review count', enabled: true, order: 3 },
+  { key: 'received_from_gc', label: 'Received from GC', subtitle: 'Payments collected', enabled: true, order: 4 },
+  { key: 'pending_from_gc', label: 'Pending from GC', subtitle: 'Invoices awaiting GC approval', enabled: true, order: 5 },
+  { key: 'materials_tc_pos', label: 'Materials (TC POs)', subtitle: 'Purchase order spend', enabled: true, order: 6 },
+  { key: 'needs_attention', label: 'Needs Attention', subtitle: 'Items requiring response', enabled: true, order: 7 },
 ];
 
 export const DEFAULT_KPI_FC: KpiCardConfig[] = [
-  { key: 'contract_value', label: 'Contract Value', subtitle: 'Total value of your contracts', enabled: true, order: 0 },
-  { key: 'collected', label: 'Collected', subtitle: 'Payments received to date', enabled: true, order: 1 },
-  { key: 'outstanding', label: 'Outstanding', subtitle: 'Unpaid balance remaining', enabled: true, order: 2 },
+  { key: 'contract_with_tc', label: 'Contract with TC', subtitle: 'Active contract value', enabled: true, order: 0 },
+  { key: 'net_margin', label: 'Net Margin', subtitle: 'Profit on contract + COs', enabled: true, order: 1 },
+  { key: 'co_additions', label: 'CO Additions', subtitle: 'Approved change order value', enabled: true, order: 2 },
+  { key: 'paid_by_tc', label: 'Paid by TC', subtitle: 'Payments received', enabled: true, order: 3 },
+  { key: 'pending_from_tc', label: 'Pending from TC', subtitle: 'Invoices awaiting approval', enabled: true, order: 4 },
+  { key: 'work_progress', label: 'Work Progress', subtitle: 'Completion percentage', enabled: true, order: 5 },
 ];
 
 export const DEFAULT_KPI_SUPPLIER: KpiCardConfig[] = [
-  { key: 'total_receivable', label: 'Total Receivable', subtitle: 'Outstanding invoices total', enabled: true, order: 0 },
-  { key: 'paid_this_month', label: 'Paid This Month', subtitle: 'Payments received this month', enabled: true, order: 1 },
-  { key: 'open_orders', label: 'Open Orders', subtitle: 'Active material orders', enabled: true, order: 2 },
-  { key: 'credit_exposure', label: 'Credit Exposure', subtitle: 'Total unpaid credit extended', enabled: true, order: 3 },
+  { key: 'total_estimate_value', label: 'Total Estimate Value', subtitle: 'Across active projects', enabled: true, order: 0 },
+  { key: 'total_ordered', label: 'Total Ordered', subtitle: 'Percentage of estimate', enabled: true, order: 1 },
+  { key: 'extra_over_ordered', label: 'Extra / Over-Ordered', subtitle: 'Projects over estimate', enabled: true, order: 2 },
+  { key: 'total_billed', label: 'Total Billed', subtitle: 'Invoiced amount', enabled: true, order: 3 },
+  { key: 'total_received', label: 'Total Received', subtitle: 'Payments collected', enabled: true, order: 4 },
+  { key: 'outstanding_balance', label: 'Outstanding Balance', subtitle: 'Remaining receivable', enabled: true, order: 5 },
 ];
 
 export const DEFAULT_KPI_MAP: Record<string, KpiCardConfig[]> = {
