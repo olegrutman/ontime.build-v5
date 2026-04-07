@@ -129,6 +129,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason }: C
     if (s.key === 'how') {
       if (role === 'GC' && !data.assignedToOrgId) return false;
       if (data.pricingType === 'nte' && (!data.nteCap || parseFloat(data.nteCap) <= 0)) return false;
+      if (data.selectedItems.length === 0) return false;
       return true;
     }
     return true; // team step
