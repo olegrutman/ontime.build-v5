@@ -103,6 +103,7 @@ export default function ProjectHome() {
   const currentOrg = userOrgRoles[0]?.organization;
   const isRealSupplier = isInDemoMode ? demoRole === 'SUPPLIER' : currentOrg?.type === 'SUPPLIER';
   const isFC = isInDemoMode ? demoRole === 'FC' : currentOrg?.type === 'FC';
+  const isTC = isInDemoMode ? demoRole === 'TC' : currentOrg?.type === 'TC';
   const [isDesignatedSupplier, setIsDesignatedSupplier] = useState(false);
   const isSupplier = isRealSupplier || isDesignatedSupplier;
   const supplierOrgId = isRealSupplier ? (isInDemoMode ? 'demo-org-supplier' : currentOrg?.id) : null;
