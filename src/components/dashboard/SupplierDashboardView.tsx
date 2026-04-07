@@ -255,6 +255,7 @@ export function SupplierDashboardView({
   // Derive aggregates from projectFinancials or demo
   const dp = hasRealData
     ? pf.map((p, i) => ({
+        projectId: p.projectId,
         name: p.projectName,
         phase: projects.find(pr => pr.id === p.projectId)?.project_type || '',
         estimate: p.revenue,
