@@ -1,73 +1,42 @@
 
 
-# Fix: Setup Wizard Shows No Fields (Double-Encoding Bug)
+# Fix Team Card: Supplier Detection + Material Responsibility Setter
 
-## Root Cause
+## Problems
 
-The seeding code in `ProjectSetupFlow.tsx` (line 118) wraps values in `JSON.stringify()` before passing them to Supabase's `.upsert()`. But the Supabase JS client already handles JSON serialization for JSONB columns automatically. This causes **double-encoding**:
+1. **"No supplier" pill** — The card only checks `project_designated_suppliers` table, but the supplier (`Supplier_Test`) exists in `project_team` with role `Supplier`. The card should also detect suppliers from the team list.
 
-- Stored: `"\"Multifamily 3-5\""` instead of `"Multifamily 3-5"`
-- Read back: `answers.building_type = '"Multifamily 3-5"'` (with literal quotes)
-- Lookup: `DISPLAY_TO_SLUG['"Multifamily 3-5"']` → `undefined` → slug = `'"Multifamily 3-5"'`
-- Filter: `options_by_type['"Multifamily 3-5"']` → `undefined` for ALL questions
-- Result: **zero questions rendered**
-
-Same problem affects `name`, `address`, and `status` fields.
+2. **Material responsibility can't be set** — The contract has `material_responsibility = null` and the card has no UI to set it. It only displays the value when already set.
 
 ## Changes
 
-### 1. Fix seeding code — remove JSON.stringify
+### File: `src/components/project/GCProjectOverviewContent.tsx`
 
-**File: `src/components/project-setup/ProjectSetupFlow.tsx`** (line ~118)
+1. **Fix supplier detection** — In `fetchTeam`, after fetching team data, also check if any team member has role `'Supplier'`. Use that name as fallback when `project_designated_suppliers` has no row:
+   ```
+   const supplierFromTeam = teamRes.data?.find(m => m.role === 'Supplier');
+   setDesignatedSupplier(supplierRes.data?.invited_name ?? supplierFromTeam?.invited_org_name ?? null);
+   ```
 
-Change:
-```typescript
-seeds.map(s => ({ project_id: projectId, field_key: s.field_key, value: JSON.stringify(s.value) }))
-```
-To:
-```typescript
-seeds.map(s => ({ project_id: projectId, field_key: s.field_key, value: s.value }))
-```
+2. **Fix pill** — The pill will now correctly show "Supplier set" when a supplier exists in the team.
 
-### 2. Fix existing corrupted data
+3. **Add material responsibility selector** — When `materialResp` is null and user `canInvite` (is GC), show two buttons (GC / TC) to set it. On click, update `project_contracts.material_responsibility` and refresh:
+   ```
+   ┌──────────────────────────────────┐
+   │ Who handles materials?           │
+   │ [General Contractor] [Trade Con] │
+   └──────────────────────────────────┘
+   ```
 
-**Database migration** — Run a one-time fix to unwrap double-encoded JSONB values in `project_setup_answers`:
-
-```sql
-UPDATE project_setup_answers
-SET value = value #>> '{}'
-WHERE jsonb_typeof(value) = 'string'
-  AND (value #>> '{}') LIKE '"%"'
-  AND field_key IN ('name', 'building_type', 'status', 'start_date', 'end_date', 'description');
-
-UPDATE project_setup_answers
-SET value = (value #>> '{}')::jsonb
-WHERE jsonb_typeof(value) = 'string'
-  AND field_key = 'address'
-  AND (value #>> '{}') LIKE '{%}';
-```
-
-### 3. Add defensive parsing in useSetupQuestions
-
-**File: `src/hooks/useSetupQuestions.ts`** — In the answers query, unwrap any lingering double-encoded string values so the wizard works even if some rows haven't been fixed:
-
-```typescript
-// After reading row.value, unwrap if it's a double-encoded string
-let val = row.value;
-if (typeof val === 'string') {
-  try { val = JSON.parse(val); } catch {}
-}
-map[row.field_key] = val;
-```
+4. **Add change button** — When `materialResp` is already set and not locked, show a small "Change" link to re-open the selector.
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/project-setup/ProjectSetupFlow.tsx` | Remove `JSON.stringify` from seed upsert (line ~118) |
-| `src/hooks/useSetupQuestions.ts` | Add defensive unwrap for double-encoded JSONB values in answers query |
-| Database migration | Fix existing corrupted rows in `project_setup_answers` |
+| `src/components/project/GCProjectOverviewContent.tsx` | Fix supplier fallback from team list; add material responsibility setter UI |
 
 ### What is NOT changing
-- Setup questions table, RLS policies, other components
+- Database schema, RLS, other components
+- `OverviewTeamCard.tsx` (standalone component, not used here)
 
