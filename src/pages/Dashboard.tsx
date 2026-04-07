@@ -173,7 +173,7 @@ export default function Dashboard() {
     );
   }
 
-  const canCreateProject = orgType === 'GC' || orgType === 'TC';
+  const canCreateProject = orgType === 'GC' || orgType === 'TC' || orgType === 'SUPPLIER';
   const isOrgAdmin = userOrgRoles[0]?.is_admin ?? false;
 
   // Supplier gets the expandable KPI card dashboard
