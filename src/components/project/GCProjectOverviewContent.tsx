@@ -304,17 +304,31 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const [materialResp, setMaterialResp] = useState<string | null>(null);
   const [designatedSupplier, setDesignatedSupplier] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [settingMatResp, setSettingMatResp] = useState(false);
+  const [contractIdForMatResp, setContractIdForMatResp] = useState<string | null>(null);
 
   const fetchTeam = useCallback(async () => {
     const [teamRes, contractRes, supplierRes] = await Promise.all([
       supabase.from('project_team').select('id, role, invited_org_name, status').eq('project_id', projectId),
-      supabase.from('project_contracts').select('material_responsibility').eq('project_id', projectId).not('material_responsibility', 'is', null).limit(1),
+      supabase.from('project_contracts').select('id, material_responsibility').eq('project_id', projectId).limit(1),
       supabase.from('project_designated_suppliers').select('invited_name').eq('project_id', projectId).neq('status', 'removed').maybeSingle(),
     ]);
-    setTeam(teamRes.data || []);
+    const teamData = teamRes.data || [];
+    setTeam(teamData);
     setMaterialResp(contractRes.data?.[0]?.material_responsibility ?? null);
-    setDesignatedSupplier(supplierRes.data?.invited_name ?? null);
+    setContractIdForMatResp(contractRes.data?.[0]?.id ?? null);
+    // Fallback: check project_team for a Supplier role member
+    const supplierFromTeam = teamData.find(m => m.role === 'Supplier' && m.status === 'Accepted');
+    setDesignatedSupplier(supplierRes.data?.invited_name ?? supplierFromTeam?.invited_org_name ?? null);
   }, [projectId]);
+
+  const handleSetMaterialResp = async (value: 'GC' | 'TC') => {
+    if (!contractIdForMatResp) return;
+    setSettingMatResp(true);
+    await supabase.from('project_contracts').update({ material_responsibility: value }).eq('id', contractIdForMatResp);
+    setMaterialResp(value);
+    setSettingMatResp(false);
+  };
 
   useEffect(() => { fetchTeam(); }, [fetchTeam]);
 
@@ -524,11 +538,26 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
               })}
             </div>
 
-            {materialResp && (
+            {materialResp ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', color: C.muted, marginBottom: 8 }}>
                 <Package size={12} /> Materials managed by: <strong style={{ color: C.ink }}>{materialResp === 'GC' ? 'General Contractor' : 'Trade Contractor'}</strong>
+                {canInvite && (
+                  <span onClick={() => { setMaterialResp(null); }} style={{ color: C.blue, cursor: 'pointer', marginLeft: 4, fontSize: '0.65rem', fontWeight: 600 }}>Change</span>
+                )}
               </div>
-            )}
+            ) : canInvite && contractIdForMatResp ? (
+              <div style={{ marginBottom: 10, padding: '8px 10px', borderRadius: 8, background: C.amberPale, border: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, color: C.ink, marginBottom: 6, ...fontLabel }}>Who handles materials?</div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button disabled={settingMatResp} onClick={() => handleSetMaterialResp('GC')} style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: `1px solid ${C.border}`, background: C.surface, color: C.ink, fontWeight: 600, fontSize: '0.7rem', cursor: 'pointer', opacity: settingMatResp ? 0.5 : 1, ...fontLabel }}>General Contractor</button>
+                  <button disabled={settingMatResp} onClick={() => handleSetMaterialResp('TC')} style={{ flex: 1, padding: '6px 8px', borderRadius: 6, border: `1px solid ${C.border}`, background: C.surface, color: C.ink, fontWeight: 600, fontSize: '0.7rem', cursor: 'pointer', opacity: settingMatResp ? 0.5 : 1, ...fontLabel }}>Trade Contractor</button>
+                </div>
+              </div>
+            ) : !materialResp ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', color: C.muted, marginBottom: 8 }}>
+                <Package size={12} /> Material owner not set
+              </div>
+            ) : null}
 
             {designatedSupplier && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.72rem', color: C.muted, marginBottom: 8 }}>
