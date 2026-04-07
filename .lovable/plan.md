@@ -1,41 +1,32 @@
 
 
-# Require At Least One Scope Item When Creating a Change Order
+# Add Dedicated "Scope" Step to CO Wizard
 
 ## Problem
 
-The wizard's `canAdvance()` function on the "How" step does not check if any scope items have been selected. Users can create a CO with zero line items, which produces an empty CO.
+The scope item picker is currently buried inside the "How" step alongside pricing, assignments, and toggles. It should be its own wizard step so users have a clean, focused page to search and select scope items.
 
 ## Changes
 
 ### File: `src/components/change-orders/wizard/COWizard.tsx`
 
-1. **Update `canAdvance()` for the "how" step** — add `data.selectedItems.length === 0` as a blocking condition for TC and FC roles (who have the scope picker on this step). For GC, scope items are added after creation via `AddScopeItemButton`, so GC can proceed without items.
+1. **Add a new step** to the `STEPS` array between "Where" and "How":
+   ```
+   Why → Where → Scope → How → Team
+   ```
+   New entry: `{ key: 'scope', label: 'Scope', description: 'Select work items' }`
 
-2. **Add a helper message** — show a small hint below the scope picker when no items are selected: "Select at least one item to continue".
+2. **Create `StepScope` component** — extracts the `ScopePicker` logic (search, toggle, catalog query, selectedIds) out of `StepHow` into a standalone step component. Uses full height for the item grid (no `max-h-[300px]` constraint since it has the whole page).
 
-3. **Also gate the final "Create" button** — add a check so that regardless of role, the submit button on the last step requires `data.selectedItems.length > 0`. This covers GC too (GC has a scope picker via StepCatalog on the "how" step if one exists, or we add one).
+3. **Remove `ScopePicker` from all three role views in `StepHow`** (GC lines ~556-563, TC lines ~596-603, FC lines ~644-651). The "How" step becomes purely about pricing, assignments, and toggles.
 
-Wait — let me re-check: does the GC flow have a scope picker?
+4. **Update `canAdvance()`**:
+   - New `scope` step: `return data.selectedItems.length > 0`
+   - `how` step: remove the `selectedItems.length === 0` check (already validated on previous step)
 
-Looking at the code: GC's `StepHow` (lines 507-556) does NOT include a `ScopePicker`. Only TC (line 585) and FC have it. So GC creates the CO shell and adds items after via `AddScopeItemButton`.
+5. **Update step rendering** — add `{currentStep.key === 'scope' && <StepScope ... />}` in the content area.
 
-**Decision**: Require at least one scope item for TC and FC on the "how" step. For GC, also add the `ScopePicker` component so they can select initial items during creation.
-
-### Specific code changes:
-
-**`canAdvance()` (line 125-135):**
-- For `how` step: add `if (data.selectedItems.length === 0) return false;` for all roles
-
-**GC's `StepHow` (lines 507-556):**
-- Add the `ScopePicker` component (same as TC/FC) so GC can also select scope items during creation
-
-**`ScopePicker` component:**
-- Add a validation hint when no items are selected: "Select at least one scope item"
-
-## Files Changed
-
-| File | Change |
-|------|--------|
-| `src/components/change-orders/wizard/COWizard.tsx` | Add scope item requirement to `canAdvance()`; add `ScopePicker` to GC flow; add validation hint |
+### What is NOT changing
+- Database, RLS, submission logic, other steps
+- The `ScopePicker` UI itself (search + grid + selection count) stays the same, just moved to its own step
 
