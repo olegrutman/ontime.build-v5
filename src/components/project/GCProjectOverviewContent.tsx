@@ -12,7 +12,7 @@ const C = {
   amber: '#F5A623', amberD: '#C8850A', amberPale: '#FFF7E6',
   navy: '#0D1F3C',
   bg: '#F0F2F7', surface: '#FFFFFF', surface2: '#F7F9FC',
-  border: '#E4E8F0', ink: '#0F1923', ink2: '#253347', muted: '#5A6A7E', faint: '#9AAABB',
+  border: '#E4E8F0', ink: '#0F1923', ink2: '#253347', muted: '#334155', faint: '#64748B',
   green: '#059669', greenBg: '#ECFDF5',
   red: '#DC2626', redBg: '#FEF2F2',
   blue: '#2563EB', blueBg: '#EFF6FF',
