@@ -1,36 +1,61 @@
 
 
-# Improve Contrast: Replace Grey-on-Grey Throughout Overview Page
+# Update Platform KPI Configuration Defaults
 
 ## Problem
 
-The design tokens use low-contrast greys — `C.faint = '#9AAABB'` for labels/headers and `C.muted = '#5A6A7E'` for secondary text. These are hard to read, especially on the light `#F7F9FC` and `#FFFFFF` backgrounds. Buttons like "Add Member", "Create RFI", toggle labels, table headers, and sub-text all blend in.
+The default KPI card configurations in `src/constants/defaultKpiConfig.ts` are outdated. The actual dashboards now use a rich expandable KPI card system with 6-8 cards per role, but the defaults still show the old 3-4 simple cards (e.g. "Contract Value", "Paid Out", "Received", "Projected Margin" for GC). The Platform KPI Cards page at `/platform/kpis` shows these stale defaults.
 
-## Changes
+## What's Changing
 
-### File: `src/components/project/GCProjectOverviewContent.tsx`
+Update `defaultKpiConfig.ts` to match the actual KPI cards rendered in each dashboard view.
 
-1. **Darken design tokens**:
-   - `faint: '#9AAABB'` → `'#64748B'` (slate-500 — used for table headers, section labels)
-   - `muted: '#5A6A7E'` → `'#334155'` (slate-700 — used for body text, button labels, sub-text)
+### New Defaults Per Role
 
-2. **Darken action buttons** — The "Add Member", "Create PO", "Create CO", "Create RFI", "View All" buttons use `color: C.muted` which was too light. With the updated `C.muted` they will automatically be more readable.
+**General Contractor (8 cards):**
+1. Total Owner Budget — Full portfolio value
+2. GC Profit Margin — Owner budget minus TC contracts
+3. Change Orders — Pending review count
+4. Materials (GC POs) — Purchase order spend
+5. Needs Attention — Items requiring response
+6. Total Paid — Outgoing payments to subs
+7. Pending GC Approval — Invoices awaiting review
+8. TC Contracts Committed — Total TC contract value
 
-3. **Material responsibility buttons** — Already use `color: C.ink` so they're fine. The "Who handles materials?" label uses `C.ink` too — no change needed.
+**Trade Contractor (8 cards):**
+1. GC Contracts (Revenue) — Revenue from GC contracts
+2. FC / Labor Contracts (Cost) — Field crew costs
+3. Gross Margin — Revenue minus costs
+4. Change Orders — Pending review count
+5. Received from GC — Payments collected
+6. Pending from GC — Invoices awaiting GC approval
+7. Materials (TC POs) — Purchase order spend
+8. Needs Attention — Items requiring response
 
-4. **Team card role abbreviations** — Currently `color: C.muted`, will get darker automatically.
+**Field Contractor (6 cards):**
+1. Contract with TC — Active contract value
+2. Net Margin — Profit on contract + COs
+3. CO Additions — Approved change order value
+4. Paid by TC — Payments received
+5. Pending from TC — Invoices awaiting approval
+6. Work Progress — Completion percentage
 
-5. **KPI card label** ("OWNER BUDGET", "TC CONTRACT", etc.) — Uses `C.faint`, will become more readable.
-
-6. **Table headers** (THead) — Uses `C.faint`, will become more readable.
-
-7. **"Expand for detail" footer** — Uses `C.muted`, will become more readable.
-
-This is a two-line token change that fixes contrast across all cards, tables, buttons, and labels simultaneously.
+**Supplier (6 cards):**
+1. Total Estimate Value — Across active projects
+2. Total Ordered — Percentage of estimate
+3. Extra / Over-Ordered — Projects over estimate
+4. Total Billed — Invoiced amount
+5. Total Received — Payments collected
+6. Outstanding Balance — Remaining receivable
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/project/GCProjectOverviewContent.tsx` | Update `faint` and `muted` color tokens for better contrast |
+| `src/constants/defaultKpiConfig.ts` | Replace all 4 default arrays with the new card lists matching actual dashboards |
+
+### What is NOT changing
+- `PlatformKPIs.tsx` page (reads from same config, no structural change)
+- Dashboard view components (already render the correct cards)
+- Database or RLS
 
