@@ -162,4 +162,4 @@ export const COSidebar = forwardRef<HTMLDivElement, COSidebarProps>(function COS
       )}
     </div>
   );
-}
+});

@@ -307,4 +307,4 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
       )}
     </div>
   );
-}
+});
