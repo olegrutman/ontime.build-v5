@@ -173,13 +173,13 @@ export default function Dashboard() {
     );
   }
 
-  const canCreateProject = orgType === 'GC' || orgType === 'TC';
+  const canCreateProject = orgType === 'GC' || orgType === 'TC' || orgType === 'SUPPLIER';
   const isOrgAdmin = userOrgRoles[0]?.is_admin ?? false;
 
   // Supplier gets the expandable KPI card dashboard
   if (orgType === 'SUPPLIER') {
     return (
-      <AppLayout title="Dashboard" fullWidth>
+      <AppLayout title="Dashboard" fullWidth showNewButton={canCreateProject} onNewClick={() => navigate('/create-project')} newButtonLabel="New Project">
         <SupplierDashboardView
           projects={projects}
           financials={financials}

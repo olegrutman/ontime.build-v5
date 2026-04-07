@@ -219,7 +219,7 @@ export function DashboardProjectList({
     return projects.filter((p) => p.status === statusFilter);
   }, [projects, statusFilter]);
 
-  const canCreateProject = orgType === 'GC' || orgType === 'TC';
+  const canCreateProject = orgType === 'GC' || orgType === 'TC' || orgType === 'SUPPLIER';
 
   return (
     <div className="bg-card border border-border rounded-lg overflow-hidden">
