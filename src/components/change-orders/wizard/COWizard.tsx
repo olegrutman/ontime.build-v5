@@ -812,8 +812,10 @@ function ScopePicker({
           </button>
         ))}
       </div>
-      {selectedItems.length > 0 && (
-        <p className="text-xs text-primary font-medium">{selectedItems.length} items selected</p>
+      {selectedItems.length > 0 ? (
+        <p className="text-xs text-primary font-medium">{selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected</p>
+      ) : (
+        <p className="text-xs text-destructive font-medium">Select at least one scope item to continue</p>
       )}
     </div>
   );
