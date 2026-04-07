@@ -552,6 +552,16 @@ function StepHow({
           />
         </div>
 
+        {/* Scope picker */}
+        <ScopePicker
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          searchResults={searchResults}
+          selectedIds={selectedIds}
+          onToggle={toggleItem}
+          selectedItems={data.selectedItems}
+        />
+
         <ShareToggle value={data.shareDraftNow} onChange={v => onChange({ shareDraftNow: v })} />
       </div>
     );
