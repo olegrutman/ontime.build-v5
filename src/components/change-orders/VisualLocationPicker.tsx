@@ -22,6 +22,17 @@ const RESIDENTIAL_AREAS = [
   { label: 'Other', icon: '📍' },
 ];
 
+// Room options shown after "Unit interior" is selected
+const UNIT_ROOM_OPTIONS = [
+  { label: 'Kitchen', icon: '🍳' },
+  { label: 'Bathroom', icon: '🚿' },
+  { label: 'Living Room', icon: '🛋️' },
+  { label: 'Bedroom', icon: '🛏️' },
+  { label: 'Laundry', icon: '🧺' },
+  { label: 'Closet', icon: '🚪' },
+  { label: 'Other', icon: '📍' },
+];
+
 // Commercial area options
 const COMMERCIAL_AREAS = [
   { label: 'Office', icon: '🏢' },
@@ -63,6 +74,9 @@ export function VisualLocationPicker({
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [customArea, setCustomArea] = useState('');
+  const [unitNumber, setUnitNumber] = useState('');
+  const [roomInUnit, setRoomInUnit] = useState<string | null>(null);
+  const [customRoom, setCustomRoom] = useState('');
   const [selectedElevation, setSelectedElevation] = useState<string | null>(null);
   const [customElevation, setCustomElevation] = useState('');
 
@@ -104,7 +118,16 @@ export function VisualLocationPicker({
       if (selectedArea === 'Other' && customArea.trim()) {
         parts.push(customArea.trim());
       } else if (selectedArea && selectedArea !== 'Other') {
-        parts.push(selectedArea);
+        if (selectedArea === 'Unit interior') {
+          if (unitNumber.trim()) parts.push(`Unit ${unitNumber.trim()}`);
+          if (roomInUnit === 'Other' && customRoom.trim()) {
+            parts.push(customRoom.trim());
+          } else if (roomInUnit && roomInUnit !== 'Other') {
+            parts.push(roomInUnit);
+          }
+        } else {
+          parts.push(selectedArea);
+        }
       }
       return parts.join(' · ');
     }
@@ -118,7 +141,7 @@ export function VisualLocationPicker({
       return parts.join(' · ');
     }
     return '';
-  }, [insideOutside, selectedLevel, selectedArea, customArea, selectedElevation, customElevation]);
+  }, [insideOutside, selectedLevel, selectedArea, customArea, unitNumber, roomInUnit, customRoom, selectedElevation, customElevation]);
 
   // Auto-confirm when complete
   const isComplete = useMemo(() => {
@@ -126,6 +149,11 @@ export function VisualLocationPicker({
       if (!selectedLevel) return false;
       if (!selectedArea) return false;
       if (selectedArea === 'Other' && !customArea.trim()) return false;
+      if (selectedArea === 'Unit interior') {
+        if (!unitNumber.trim()) return false;
+        if (!roomInUnit) return false;
+        if (roomInUnit === 'Other' && !customRoom.trim()) return false;
+      }
       return true;
     }
     if (insideOutside === 'outside') {
@@ -134,7 +162,7 @@ export function VisualLocationPicker({
       return true;
     }
     return false;
-  }, [insideOutside, selectedLevel, selectedArea, customArea, selectedElevation, customElevation]);
+  }, [insideOutside, selectedLevel, selectedArea, customArea, unitNumber, roomInUnit, customRoom, selectedElevation, customElevation]);
 
   // Shortcut banner handler
   function handleUseShortcut() {
@@ -255,7 +283,14 @@ export function VisualLocationPicker({
                     label={a.label}
                     icon={a.icon}
                     selected={selectedArea === a.label}
-                    onClick={() => setSelectedArea(a.label)}
+                    onClick={() => {
+                      setSelectedArea(a.label);
+                      if (a.label !== 'Unit interior') {
+                        setUnitNumber('');
+                        setRoomInUnit(null);
+                        setCustomRoom('');
+                      }
+                    }}
                   />
                 ))}
               </div>
@@ -268,6 +303,47 @@ export function VisualLocationPicker({
                     className="h-11"
                     autoFocus
                   />
+                </div>
+              )}
+              {selectedArea === 'Unit interior' && (
+                <div className="space-y-4 mt-3 animate-fade-in">
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Unit #</p>
+                    <Input
+                      value={unitNumber}
+                      onChange={e => setUnitNumber(e.target.value)}
+                      placeholder="e.g. 304, A12"
+                      className="h-11"
+                      autoFocus
+                    />
+                  </div>
+                  {unitNumber.trim() && (
+                    <div className="animate-fade-in">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Room / Area</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {UNIT_ROOM_OPTIONS.map(r => (
+                          <TapCard
+                            key={r.label}
+                            label={r.label}
+                            icon={r.icon}
+                            selected={roomInUnit === r.label}
+                            onClick={() => setRoomInUnit(r.label)}
+                          />
+                        ))}
+                      </div>
+                      {roomInUnit === 'Other' && (
+                        <div className="mt-3 animate-fade-in">
+                          <Input
+                            value={customRoom}
+                            onChange={e => setCustomRoom(e.target.value)}
+                            placeholder="Describe the room…"
+                            className="h-11"
+                            autoFocus
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
