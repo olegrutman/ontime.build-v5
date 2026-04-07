@@ -113,7 +113,7 @@ export const COLineItemRow = forwardRef<HTMLDivElement, COLineItemRowProps>(func
   }
 
   return (
-    <div className="border-b border-border last:border-b-0">
+    <div ref={ref} className="border-b border-border last:border-b-0">
       {/* Item header */}
       <div className="px-4 py-3">
         <div className="flex items-center justify-between">
