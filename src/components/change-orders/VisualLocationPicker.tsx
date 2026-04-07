@@ -22,6 +22,17 @@ const RESIDENTIAL_AREAS = [
   { label: 'Other', icon: '📍' },
 ];
 
+// Room options shown after "Unit interior" is selected
+const UNIT_ROOM_OPTIONS = [
+  { label: 'Kitchen', icon: '🍳' },
+  { label: 'Bathroom', icon: '🚿' },
+  { label: 'Living Room', icon: '🛋️' },
+  { label: 'Bedroom', icon: '🛏️' },
+  { label: 'Laundry', icon: '🧺' },
+  { label: 'Closet', icon: '🚪' },
+  { label: 'Other', icon: '📍' },
+];
+
 // Commercial area options
 const COMMERCIAL_AREAS = [
   { label: 'Office', icon: '🏢' },
