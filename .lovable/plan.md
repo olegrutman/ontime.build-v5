@@ -1,71 +1,43 @@
 
-
-# Build FC Project Overview Page
+# Build TC Project Overview Page
 
 ## Overview
 
-Create a dedicated `FCProjectOverview` component that renders when a Field Crew user views a project overview. This replaces the generic `GCProjectOverviewContent` for FC users with a focused, read-only view of their contract, earnings, work progress, and pending items.
+Create `src/components/project/TCProjectOverview.tsx` — a dedicated project overview for Trade Contractors. Modify `ProjectHome.tsx` to render it when the current org type is `TC`.
 
-## Architecture
-
-- New file: `src/components/project/FCProjectOverview.tsx`
-- Modify: `src/pages/ProjectHome.tsx` — conditionally render `FCProjectOverview` when `isFC` is true
-
-The component follows the exact same visual architecture as `GCProjectOverviewContent`: inline styles using the same design tokens (Barlow Condensed headings, IBM Plex Mono currency, DM Sans body), same `KpiCard`, `Pill`, `THead`, `TRow`, `WarnItem` helper components, same 3px accent bar + expand/collapse pattern.
+The component follows the exact same visual architecture as `GCProjectOverviewContent` and `FCProjectOverview` (same design tokens, `KpiCard`, `Pill`, `THead`, `TRow`, `WarnItem`, `EditField` helpers).
 
 ## Data Sources
 
-All data comes from the existing `financials: ProjectFinancials` prop (already passed in `ProjectHome.tsx`):
-- **Contract**: `financials.downstreamContract` (FC's contract set by TC) — `contract_sum`, `labor_budget`
-- **Paid/Pending**: `financials.totalPaid`, `financials.billedToDate`, `financials.outstanding`
-- **Invoices**: `financials.recentInvoices` (filtered by status)
-- **Change Orders**: Queried via `supabase.from('change_orders')` scoped to project + FC org
-- **Work progress**: Derived from invoice milestones and CO data
+All from the existing `financials: ProjectFinancials` prop:
+- **GC Contract (upstream)**: `financials.upstreamContract` — read-only
+- **FC Contract (downstream)**: `financials.downstreamContract` — editable via `financials.updateContract()`
+- **Invoices**: `financials.recentInvoices`, `financials.totalPaid`, `financials.billedToDate`, `financials.receivables*`, `financials.payables*`
+- **Change Orders**: queried via `supabase.from('change_orders')` scoped to project
+- **RFIs**: queried via `supabase.from('project_rfis')` scoped to project
 
-## Component Structure — `FCProjectOverview.tsx`
+## 8 KPI Cards (4-col grid)
 
-### Page Header
-- Left: color dot + project name + phase subtitle + crew name
-- Right: amber "Submit Invoice to TC" button → `onNavigate('invoices')`, ghost "View My Tasks" button
+1. **GC Contract** (amber, read-only) — `upstreamContract.contract_sum`. Expand: contract value, approved COs billed to GC, revised total, received/pending/remaining. Info callout: "Set by your GC."
+2. **FC Contract** (green, EDITABLE) — `downstreamContract.contract_sum`. Expand: Section 1 with `EditField` rows (FC name, value, type, scope). Save via `financials.updateContract()`. Section 2: margin breakdown table (GC contract - FC contract = margin, plus CO impact).
+3. **TC Gross Margin** (green) — GC contract minus FC contract. Expand: same margin table.
+4. **CO Net Margin** (blue) — CO revenue (gc_budget) minus CO cost (tc_submitted_price). Expand: per-CO table with billed-to-GC vs paid-to-FC columns.
+5. **Received from GC** (green) — `financials.receivablesCollected`. Expand: paid invoice table.
+6. **Pending from GC** (yellow) — submitted invoices sum. Expand: pending invoice detail.
+7. **Paid to FC** (navy) — `financials.payablesPaid`. Expand: paid FC invoice table.
+8. **FC Invoice Pending** (red) — pending FC invoices awaiting TC approval. Expand: invoice detail with approve/reject buttons (stub actions).
 
-### 6 KPI Cards (3-col grid, matching GC layout)
+## Below the Cards
 
-1. **My Contract** (amber accent) — `downstreamContract.contract_sum`, read-only. Expand: contract value, approved COs, revised total, internal cost budget, net margin. Info callout: "Your contract was set by [TC name]. Contact your TC to negotiate changes."
-
-2. **Net Margin** (green accent) — contract minus `labor_budget`. Expand: same breakdown with margin percentage.
-
-3. **Change Orders** (blue accent) — query `change_orders` for FC's project. Expand: table of COs with status pills. Ghost button: "Submit CO Request to TC" → `onNavigate('change-orders')`.
-
-4. **Paid by TC** (green accent) — `totalPaid`. Expand: table of PAID invoices from `recentInvoices`.
-
-5. **Pending from TC** (yellow accent) — SUBMITTED invoices sum. Expand: pending invoice detail with status message.
-
-6. **Work Progress** (navy accent) — derived completion percentage. Expand: task/level breakdown table.
-
-### Earnings Tracker (full-width card below grid)
-5 horizontal bar rows (pure CSS, no chart library):
-- Total Scope (contract + COs) — amber bar 100%
-- Invoiced — green bar at invoiced %
-- Received (Paid) — dark green bar
-- Pending — yellow bar
-- Remaining to Earn — faint border bar
+### Cash Flow Ladder (full-width)
+Three-column CSS flex layout showing GC → TC (you) → FC money flow with margin callout boxes. Pure CSS, no chart library.
 
 ### Warnings Section
-Dynamic warnings built from financials state:
-- Pending invoices awaiting TC approval
-- Active work items nearing deadline
-- Upcoming scope items
+Dynamic warnings from data: pending GC invoices, FC invoices awaiting approval, open RFIs, pending COs.
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/project/FCProjectOverview.tsx` | **New** — Full FC project overview with 6 KPI cards, earnings tracker, warnings |
-| `src/pages/ProjectHome.tsx` | Import `FCProjectOverview`, render it instead of `GCProjectOverviewContent` when `isFC === true` |
-
-### What is NOT changing
-- `GCProjectOverviewContent.tsx` — stays as-is for GC/TC roles
-- `useProjectFinancials.ts` — already provides all needed FC data
-- Database schema, RLS policies
-- Design tokens, shared components
-
+| `src/components/project/TCProjectOverview.tsx` | **New** — Full TC project overview |
+| `src/pages/ProjectHome.tsx` | Add `isTC` check, import and render `TCProjectOverview` between FC and GC conditions |
