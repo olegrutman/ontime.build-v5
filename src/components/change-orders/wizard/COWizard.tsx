@@ -331,6 +331,7 @@ export function COWizard({ open, onOpenChange, projectId, preSelectedReason }: C
                 userId={user?.id}
               />
             )}
+            {currentStep.key === 'scope' && <StepScope data={data} onChange={update} />}
             {currentStep.key === 'how' && <StepHow data={data} onChange={update} role={role} projectId={projectId} />}
             {currentStep.key === 'team' && <StepTeam data={data} projectId={projectId} role={role} />}
           </div>
