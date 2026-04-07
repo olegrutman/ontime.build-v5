@@ -149,6 +149,11 @@ export function VisualLocationPicker({
       if (!selectedLevel) return false;
       if (!selectedArea) return false;
       if (selectedArea === 'Other' && !customArea.trim()) return false;
+      if (selectedArea === 'Unit interior') {
+        if (!unitNumber.trim()) return false;
+        if (!roomInUnit) return false;
+        if (roomInUnit === 'Other' && !customRoom.trim()) return false;
+      }
       return true;
     }
     if (insideOutside === 'outside') {
