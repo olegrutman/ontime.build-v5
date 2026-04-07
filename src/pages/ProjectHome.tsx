@@ -48,6 +48,7 @@ import { ProjectActionQueue } from '@/components/project/ProjectActionQueue';
 import { ProjectOverviewTeamCard } from '@/components/project/ProjectOverviewTeamCard';
 import { ProjectPOSummary } from '@/components/project/ProjectPOSummary';
 import { GCProjectOverviewContent } from '@/components/project/GCProjectOverviewContent';
+import { FCProjectOverview } from '@/components/project/FCProjectOverview';
 
 import { ProjectTabBar } from '@/components/project/ProjectTabBar';
 
