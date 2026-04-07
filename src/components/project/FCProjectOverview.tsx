@@ -225,7 +225,7 @@ export function FCProjectOverview({ projectId, projectName = 'Project', financia
                 <TRow cells={[<TdN>Revised Total</TdN>, <TdM>{fmt(revisedTotal)}</TdM>, '—']} isTotal />
                 <TRow cells={[<TdN>Internal Cost Budget</TdN>, <TdM>{laborBudget > 0 ? fmt(laborBudget) : '—'}</TdM>, 'Labor + materials']} />
                 {laborBudget > 0 && (
-                  <TRow cells={[<TdN>Net Margin</TdN>, <TdM style={{ color: C.green }}>{fmt(netMargin)}</TdM>, <span style={{ color: C.green, fontWeight: 700 }}>{marginPct}%</span>]} isTotal />
+                  <TRow cells={[<TdN>Net Margin</TdN>, <span style={{ ...fontMono, fontSize: '0.78rem', color: C.green }}>{fmt(netMargin)}</span>, <span style={{ color: C.green, fontWeight: 700 }}>{marginPct}%</span>]} isTotal />
                 )}
               </tbody>
             </table>
