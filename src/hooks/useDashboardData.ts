@@ -685,7 +685,8 @@ export function useDashboardData(): DashboardData {
         if (ownerValues.length > 0) {
           totalRevenue = ownerValues.reduce((sum: number, v: number) => sum + v, 0);
         } else {
-          totalRevenue = totalCosts;
+          // Fallback: use total contract value (sum of TC contracts), not costs
+          totalRevenue = totalContractValue;
         }
 
         totalBilled = paidByYou; // GC: billed = money paid out
