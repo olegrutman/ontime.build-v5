@@ -305,6 +305,47 @@ export function VisualLocationPicker({
                   />
                 </div>
               )}
+              {selectedArea === 'Unit interior' && (
+                <div className="space-y-4 mt-3 animate-fade-in">
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Unit #</p>
+                    <Input
+                      value={unitNumber}
+                      onChange={e => setUnitNumber(e.target.value)}
+                      placeholder="e.g. 304, A12"
+                      className="h-11"
+                      autoFocus
+                    />
+                  </div>
+                  {unitNumber.trim() && (
+                    <div className="animate-fade-in">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Room / Area</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {UNIT_ROOM_OPTIONS.map(r => (
+                          <TapCard
+                            key={r.label}
+                            label={r.label}
+                            icon={r.icon}
+                            selected={roomInUnit === r.label}
+                            onClick={() => setRoomInUnit(r.label)}
+                          />
+                        ))}
+                      </div>
+                      {roomInUnit === 'Other' && (
+                        <div className="mt-3 animate-fade-in">
+                          <Input
+                            value={customRoom}
+                            onChange={e => setCustomRoom(e.target.value)}
+                            placeholder="Describe the room…"
+                            className="h-11"
+                            autoFocus
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
