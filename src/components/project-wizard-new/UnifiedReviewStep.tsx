@@ -1,22 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Check, MapPin, Users, Building2, DollarSign, FileText } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { Check, MapPin, Users, FileText, Shield, Building2 } from 'lucide-react';
 import { WizardSummary } from '@/components/setup-wizard-v2/WizardSummary';
 import type { BuildingType, Answers, WizardQuestion, SOVLine } from '@/hooks/useSetupWizardV2';
-
-interface ProjectTeamMember {
-  id: string;
-  org_id: string | null;
-  role: string;
-  trade: string | null;
-  trade_custom: string | null;
-  invited_org_name: string | null;
-  invited_email: string | null;
-  status: string;
-}
+import type { TeamMember } from '@/types/projectWizard';
 
 interface ProjectBasicsData {
   name: string;
@@ -33,7 +20,9 @@ interface UnifiedReviewStepProps {
   answers: Answers;
   visibleQuestions: WizardQuestion[];
   sovLines: SOVLine[];
-  projectId?: string;
+  team: TeamMember[];
+  creatorOrgName?: string;
+  creatorRole?: string | null;
 }
 
 export function UnifiedReviewStep({
@@ -42,33 +31,10 @@ export function UnifiedReviewStep({
   answers,
   visibleQuestions,
   sovLines,
-  projectId,
+  team,
+  creatorOrgName,
+  creatorRole,
 }: UnifiedReviewStepProps) {
-  const [teamMembers, setTeamMembers] = useState<ProjectTeamMember[]>([]);
-  const [loading, setLoading] = useState(false);
-
-  const fetchTeamMembers = useCallback(async () => {
-    if (!projectId) return;
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('project_team')
-        .select('id, org_id, role, trade, trade_custom, invited_org_name, invited_email, status')
-        .eq('project_id', projectId)
-        .order('created_at', { ascending: true });
-      if (error) throw error;
-      setTeamMembers(data || []);
-    } catch (error) {
-      console.error('Error fetching team members:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId]);
-
-  useEffect(() => {
-    fetchTeamMembers();
-  }, [fetchTeamMembers]);
-
   return (
     <div className="space-y-6">
       <div>
@@ -134,45 +100,50 @@ export function UnifiedReviewStep({
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Users className="h-4 w-4" />
-            Project Team ({teamMembers.length})
+            Project Team ({1 + team.length})
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-2">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
+        <CardContent className="space-y-2">
+          {/* Owner */}
+          {creatorOrgName && creatorRole && (
+            <div className="flex items-center justify-between text-sm py-2 border-b">
+              <div className="flex items-center gap-2">
+                <Shield className="h-4 w-4 text-primary" />
+                <div>
+                  <p className="font-medium">{creatorOrgName}</p>
+                  <p className="text-muted-foreground text-xs">Project Owner</p>
+                </div>
+              </div>
+              <Badge variant="secondary">{creatorRole}</Badge>
             </div>
-          ) : teamMembers.length > 0 ? (
-            <div className="space-y-2">
-              {teamMembers.map((member) => (
-                <div key={member.id} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
+          )}
+
+          {/* Invited members */}
+          {team.length > 0 ? (
+            team.map((member) => (
+              <div key={member.id} className="flex items-center justify-between text-sm py-2 border-b last:border-0">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="font-medium">{member.invited_org_name || 'Unknown Company'}</p>
-                    <p className="text-muted-foreground">{member.invited_email}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="secondary">{member.role}</Badge>
-                    {member.trade && (
-                      <Badge variant="outline">
-                        {member.trade === 'Other' ? member.trade_custom : member.trade}
-                      </Badge>
-                    )}
-                    <Badge
-                      variant="outline"
-                      className={member.status === 'Accepted'
-                        ? 'text-green-600 border-green-600'
-                        : 'text-yellow-600 border-yellow-600'
-                      }
-                    >
-                      {member.status}
-                    </Badge>
+                    <p className="font-medium">{member.companyName}</p>
+                    <p className="text-muted-foreground text-xs">{member.contactEmail}</p>
                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary">{member.role}</Badge>
+                  {member.trade && (
+                    <Badge variant="outline">
+                      {member.trade === 'Other' ? member.tradeCustom : member.trade}
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="text-yellow-600 border-yellow-600">
+                    Will be invited
+                  </Badge>
+                </div>
+              </div>
+            ))
           ) : (
-            <p className="text-sm text-muted-foreground">No team members added yet</p>
+            <p className="text-sm text-muted-foreground py-2">No additional team members added.</p>
           )}
         </CardContent>
       </Card>
