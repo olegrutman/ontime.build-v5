@@ -41,12 +41,12 @@ export function WizardQuestion({ question, value, onChange, answers }: Props) {
           </span>
         )}
       </Label>
-      {renderInput(inputType, value, options, onChange, hasBasement)}
+      {renderInput(inputType, value, options, onChange, hasBasement, question.fieldKey)}
     </div>
   );
 }
 
-function renderInput(type: InputType, value: any, options: string[] | undefined, onChange: (v: any) => void, hasBasement: boolean = false) {
+function renderInput(type: InputType, value: any, options: string[] | undefined, onChange: (v: any) => void, hasBasement: boolean = false, fieldKey: string = '') {
   switch (type) {
     case 'yes_no':
       return (
@@ -66,17 +66,26 @@ function renderInput(type: InputType, value: any, options: string[] | undefined,
         </div>
       );
 
-    case 'number':
+    case 'number': {
+      const isCurrency = fieldKey === 'contract_value';
       return (
-        <Input
-          type="number"
-          value={value ?? ''}
-          onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
-          className="w-28"
-          min={0}
-          max={99}
-        />
+        <div className={isCurrency ? 'relative w-full max-w-xs' : ''}>
+          {isCurrency && (
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">$</span>
+          )}
+          <Input
+            type="number"
+            value={value ?? ''}
+            onChange={(e) => onChange(e.target.value ? Number(e.target.value) : null)}
+            className={isCurrency ? 'pl-7 w-full' : 'w-28'}
+            min={0}
+            max={isCurrency ? undefined : 99}
+            step={isCurrency ? 1000 : 1}
+            placeholder={isCurrency ? '0' : undefined}
+          />
+        </div>
       );
+    }
 
     case 'dropdown':
       if (!options?.length) return null;

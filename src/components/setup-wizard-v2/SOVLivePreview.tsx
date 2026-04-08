@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
+import { formatCurrencyPrecise, formatCurrency } from '@/lib/utils';
 import { type SOVLine, type SOVPhase, SOV_PHASE_LABELS, SOV_PHASE_ORDER } from '@/hooks/useSetupWizardV2';
 
 interface Props {
@@ -15,6 +16,7 @@ export function SOVLivePreview({ lines }: Props) {
   }, [lines]);
 
   const totalLines = lines.length;
+  const totalValue = useMemo(() => lines.reduce((s, l) => s + l.amount, 0), [lines]);
 
   return (
     <div className="h-full flex flex-col">
@@ -23,7 +25,7 @@ export function SOVLivePreview({ lines }: Props) {
           Schedule of Values Preview
         </h3>
         <p className="text-[10px] text-muted-foreground mt-0.5">
-          {totalLines} line item{totalLines !== 1 ? 's' : ''} · updates as you answer
+          {totalLines} line item{totalLines !== 1 ? 's' : ''} · {totalValue > 0 ? formatCurrency(totalValue) : 'enter contract value'} · updates as you answer
         </p>
       </div>
 
@@ -63,7 +65,7 @@ export function SOVLivePreview({ lines }: Props) {
                         <span className="truncate text-foreground">{line.description}</span>
                       </div>
                       <span className="text-muted-foreground font-mono text-[10px] shrink-0 ml-2">
-                        $0.00
+                        {line.amount > 0 ? formatCurrencyPrecise(line.amount) : '$0.00'}
                       </span>
                     </div>
                   ))}

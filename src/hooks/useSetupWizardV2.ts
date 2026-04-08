@@ -86,6 +86,15 @@ export type Answers = Record<string, any>;
 // Shared questions (all building types)
 const SHARED_QUESTIONS: WizardQuestion[] = [
   {
+    id: 'S0',
+    phase: 'mobilization_steel',
+    label: 'What is the total contract value?',
+    inputType: 'number',
+    tag: 'always',
+    fieldKey: 'contract_value',
+    buildingTypes: 'all',
+  },
+  {
     id: 'S1',
     phase: 'per_floor',
     label: 'Who is responsible for materials?',
@@ -575,11 +584,13 @@ export function getVisibleQuestions(bt: BuildingType, answers: Answers): WizardQ
 export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] {
   const lines: SOVLine[] = [];
   let n = 0;
+  const a = answers;
+  const contractValue = typeof a.contract_value === 'number' ? a.contract_value : 0;
+
   const push = (phase: SOVPhase, desc: string, key: string | null = null) => {
     lines.push({ lineNumber: ++n, description: desc, phase, amount: 0, status: 'draft', conditionalKey: key });
   };
 
-  const a = answers;
   const floorSystem = a.floor_system || 'TJI I-joists';
 
   // Determine story count
@@ -730,6 +741,17 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
   push('closeout', 'Nail sweep');
   push('closeout', 'Final punch');
 
+  // Distribute contract value evenly across lines
+  if (contractValue > 0 && lines.length > 0) {
+    const perLine = Math.floor((contractValue * 100) / lines.length) / 100;
+    let remainder = contractValue;
+    for (let i = 0; i < lines.length - 1; i++) {
+      lines[i].amount = perLine;
+      remainder -= perLine;
+    }
+    lines[lines.length - 1].amount = Math.round(remainder * 100) / 100;
+  }
+
   return lines;
 }
 
@@ -819,6 +841,9 @@ export function useSetupWizardV2(projectId: string) {
           value: scopeData,
           updated_at: new Date().toISOString(),
         } as any, { onConflict: 'project_id,field_key' });
+    },
+    onError: (error) => {
+      console.error('[SetupWizardV2] Save error:', error);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['setup_answers', projectId] });
