@@ -19,9 +19,10 @@ interface Props {
   answers?: Record<string, any>;
 }
 
-export function WizardQuestion({ question, value, onChange }: Props) {
+export function WizardQuestion({ question, value, onChange, answers }: Props) {
   const { label, inputType, options, tag } = question;
   const isGate = tag === 'scope_gate';
+  const hasBasement = answers?.has_basement === 'yes';
 
   return (
     <div
@@ -40,7 +41,7 @@ export function WizardQuestion({ question, value, onChange }: Props) {
           </span>
         )}
       </Label>
-      {renderInput(inputType, value, options, onChange)}
+      {renderInput(inputType, value, options, onChange, hasBasement)}
     </div>
   );
 }
