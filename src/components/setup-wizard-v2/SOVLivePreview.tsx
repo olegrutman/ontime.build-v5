@@ -16,6 +16,7 @@ export function SOVLivePreview({ lines }: Props) {
   }, [lines]);
 
   const totalLines = lines.length;
+  const totalValue = useMemo(() => lines.reduce((s, l) => s + l.amount, 0), [lines]);
 
   return (
     <div className="h-full flex flex-col">
@@ -24,7 +25,7 @@ export function SOVLivePreview({ lines }: Props) {
           Schedule of Values Preview
         </h3>
         <p className="text-[10px] text-muted-foreground mt-0.5">
-          {totalLines} line item{totalLines !== 1 ? 's' : ''} · updates as you answer
+          {totalLines} line item{totalLines !== 1 ? 's' : ''} · {totalValue > 0 ? formatCurrency(totalValue) : 'enter contract value'} · updates as you answer
         </p>
       </div>
 
