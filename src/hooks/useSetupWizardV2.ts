@@ -88,9 +88,9 @@ const SHARED_QUESTIONS: WizardQuestion[] = [
   {
     id: 'S1',
     phase: 'per_floor',
-    label: 'Material responsibility',
+    label: 'Who is responsible for materials?',
     inputType: 'dropdown',
-    options: ['Labor only', 'Furnish & install', 'Split'],
+    options: ['GC supplies materials', 'TC supplies materials', 'Split responsibility'],
     tag: 'always',
     fieldKey: 'material_responsibility',
     buildingTypes: 'all',
