@@ -979,7 +979,7 @@ export const WIZARD_STEPS = [
    MAIN HOOK
    ══════════════════════════════════════════════════════════════════════ */
 
-export function useSetupWizardV2(projectId: string) {
+export function useSetupWizardV2(projectId?: string) {
   const qc = useQueryClient();
   const [answers, setAnswers] = useState<Answers>({});
   const [buildingType, setBuildingType] = useState<BuildingType | null>(null);
@@ -1003,123 +1003,130 @@ export function useSetupWizardV2(projectId: string) {
     setAnswers({});
   }, []);
 
-  // Save all answers + SOV + contract to database
+  // Internal save logic — can be called with an explicit project ID
+  const _saveToDb = useCallback(async (pid: string) => {
+    if (!buildingType) throw new Error('No building type selected');
+    const contractValue = typeof answers.contract_value === 'number' ? answers.contract_value : 0;
+
+    // Save answers
+    const answerRows = Object.entries(answers).map(([field_key, value]) => ({
+      project_id: pid,
+      field_key,
+      value,
+      updated_at: new Date().toISOString(),
+    }));
+    answerRows.push({
+      project_id: pid,
+      field_key: 'building_type',
+      value: buildingType,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (answerRows.length > 0) {
+      const { error } = await supabase
+        .from('project_setup_answers')
+        .upsert(answerRows as any, { onConflict: 'project_id,field_key' });
+      if (error) throw error;
+    }
+
+    // Update project type
+    await supabase.from('projects').update({ project_type: buildingType }).eq('id', pid);
+
+    // Save scope_selections as JSON blob
+    const scopeData = { building_type: buildingType, ...answers };
+    await supabase.from('project_setup_answers').upsert({
+      project_id: pid,
+      field_key: 'scope_selections_v2',
+      value: scopeData,
+      updated_at: new Date().toISOString(),
+    } as any, { onConflict: 'project_id,field_key' });
+
+    // ── Upsert project_contracts with contract_value ──
+    const { data: existingContracts } = await supabase
+      .from('project_contracts')
+      .select('id')
+      .eq('project_id', pid)
+      .limit(1);
+
+    let contractId: string;
+    if (existingContracts && existingContracts.length > 0) {
+      contractId = existingContracts[0].id;
+      await supabase.from('project_contracts').update({
+        contract_sum: contractValue,
+        material_responsibility: answers.material_responsibility || null,
+        updated_at: new Date().toISOString(),
+      }).eq('id', contractId);
+    } else {
+      const { data: newContract, error: cErr } = await supabase.from('project_contracts').insert({
+        project_id: pid,
+        contract_sum: contractValue,
+        from_role: 'TC_PM',
+        to_role: 'GC_PM',
+        trade: 'Framing',
+        material_responsibility: answers.material_responsibility || null,
+        status: 'Accepted',
+      }).select('id').single();
+      if (cErr) throw cErr;
+      contractId = newContract.id;
+    }
+
+    // ── Create / update project_sov ──
+    const { data: existingSov } = await supabase
+      .from('project_sov')
+      .select('id')
+      .eq('project_id', pid)
+      .eq('contract_id', contractId)
+      .limit(1);
+
+    let sovId: string;
+    if (existingSov && existingSov.length > 0) {
+      sovId = existingSov[0].id;
+      await supabase.from('project_sov_items')
+        .delete()
+        .eq('sov_id', sovId)
+        .eq('source', 'wizard_v2');
+    } else {
+      const { data: newSov, error: sErr } = await supabase.from('project_sov').insert({
+        project_id: pid,
+        contract_id: contractId,
+        sov_name: 'Framing SOV',
+        scope_snapshot: scopeData,
+      }).select('id').single();
+      if (sErr) throw sErr;
+      sovId = newSov.id;
+    }
+
+    // ── Insert SOV line items ──
+    const currentSovLines = generateSOVLines(buildingType, answers);
+    const sovItems = currentSovLines.map((line) => ({
+      project_id: pid,
+      sov_id: sovId,
+      item_name: line.description,
+      item_group: SOV_PHASE_LABELS[line.phase],
+      sort_order: line.lineNumber,
+      percent_of_contract: line.suggested_pct,
+      value_amount: line.amount,
+      scheduled_value: line.amount,
+      remaining_amount: line.amount,
+      source: 'wizard_v2',
+      scope_section_slug: line.conditionalKey,
+      ai_original_pct: line.suggested_pct,
+      default_enabled: true,
+    }));
+
+    if (sovItems.length > 0) {
+      const { error: iErr } = await supabase.from('project_sov_items').insert(sovItems);
+      if (iErr) throw iErr;
+    }
+
+    return { contractId, sovId };
+  }, [buildingType, answers]);
+
+  // Legacy save: uses the projectId passed to the hook
   const saveMutation = useMutation({
     mutationFn: async () => {
-      if (!buildingType) throw new Error('No building type selected');
-      const contractValue = typeof answers.contract_value === 'number' ? answers.contract_value : 0;
-
-      // Save answers
-      const answerRows = Object.entries(answers).map(([field_key, value]) => ({
-        project_id: projectId,
-        field_key,
-        value,
-        updated_at: new Date().toISOString(),
-      }));
-      answerRows.push({
-        project_id: projectId,
-        field_key: 'building_type',
-        value: buildingType,
-        updated_at: new Date().toISOString(),
-      });
-
-      if (answerRows.length > 0) {
-        const { error } = await supabase
-          .from('project_setup_answers')
-          .upsert(answerRows as any, { onConflict: 'project_id,field_key' });
-        if (error) throw error;
-      }
-
-      // Update project type
-      await supabase.from('projects').update({ project_type: buildingType }).eq('id', projectId);
-
-      // Save scope_selections as JSON blob
-      const scopeData = { building_type: buildingType, ...answers };
-      await supabase.from('project_setup_answers').upsert({
-        project_id: projectId,
-        field_key: 'scope_selections_v2',
-        value: scopeData,
-        updated_at: new Date().toISOString(),
-      } as any, { onConflict: 'project_id,field_key' });
-
-      // ── Upsert project_contracts with contract_value ──
-      // Check for existing contract
-      const { data: existingContracts } = await supabase
-        .from('project_contracts')
-        .select('id')
-        .eq('project_id', projectId)
-        .limit(1);
-
-      let contractId: string;
-      if (existingContracts && existingContracts.length > 0) {
-        contractId = existingContracts[0].id;
-        await supabase.from('project_contracts').update({
-          contract_sum: contractValue,
-          material_responsibility: answers.material_responsibility || null,
-          updated_at: new Date().toISOString(),
-        }).eq('id', contractId);
-      } else {
-        const { data: newContract, error: cErr } = await supabase.from('project_contracts').insert({
-          project_id: projectId,
-          contract_sum: contractValue,
-          from_role: 'TC_PM',
-          to_role: 'GC_PM',
-          trade: 'Framing',
-          material_responsibility: answers.material_responsibility || null,
-          status: 'Accepted',
-        }).select('id').single();
-        if (cErr) throw cErr;
-        contractId = newContract.id;
-      }
-
-      // ── Create / update project_sov ──
-      const { data: existingSov } = await supabase
-        .from('project_sov')
-        .select('id')
-        .eq('project_id', projectId)
-        .eq('contract_id', contractId)
-        .limit(1);
-
-      let sovId: string;
-      if (existingSov && existingSov.length > 0) {
-        sovId = existingSov[0].id;
-        // Clear old wizard items
-        await supabase.from('project_sov_items')
-          .delete()
-          .eq('sov_id', sovId)
-          .eq('source', 'wizard_v2');
-      } else {
-        const { data: newSov, error: sErr } = await supabase.from('project_sov').insert({
-          project_id: projectId,
-          contract_id: contractId,
-          sov_name: 'Framing SOV',
-          scope_snapshot: scopeData,
-        }).select('id').single();
-        if (sErr) throw sErr;
-        sovId = newSov.id;
-      }
-
-      // ── Insert SOV line items ──
-      const sovItems = sovLines.map((line) => ({
-        project_id: projectId,
-        sov_id: sovId,
-        item_name: line.description,
-        item_group: SOV_PHASE_LABELS[line.phase],
-        sort_order: line.lineNumber,
-        percent_of_contract: line.suggested_pct,
-        value_amount: line.amount,
-        scheduled_value: line.amount,
-        remaining_amount: line.amount,
-        source: 'wizard_v2',
-        scope_section_slug: line.conditionalKey,
-        ai_original_pct: line.suggested_pct,
-        default_enabled: true,
-      }));
-
-      if (sovItems.length > 0) {
-        const { error: iErr } = await supabase.from('project_sov_items').insert(sovItems);
-        if (iErr) throw iErr;
-      }
+      if (!projectId) throw new Error('No projectId provided');
+      await _saveToDb(projectId);
     },
     onError: (error) => {
       console.error('[SetupWizardV2] Save error:', error);
@@ -1136,6 +1143,20 @@ export function useSetupWizardV2(projectId: string) {
     },
   });
 
+  // Standalone save: accepts an explicit projectId (for use in unified create flow)
+  const saveAll = useCallback(async (pid: string) => {
+    const result = await _saveToDb(pid);
+    qc.invalidateQueries({ queryKey: ['setup_answers', pid] });
+    qc.invalidateQueries({ queryKey: ['setup_answers_count', pid] });
+    qc.invalidateQueries({ queryKey: ['project', pid] });
+    qc.invalidateQueries({ queryKey: ['project_basic', pid] });
+    qc.invalidateQueries({ queryKey: ['project_contracts', pid] });
+    qc.invalidateQueries({ queryKey: ['project_sov', pid] });
+    qc.invalidateQueries({ queryKey: ['contract_sov', pid] });
+    qc.invalidateQueries({ queryKey: ['project_sovs_lock_check', pid] });
+    return result;
+  }, [_saveToDb, qc]);
+
   return {
     buildingType,
     selectBuildingType,
@@ -1144,6 +1165,7 @@ export function useSetupWizardV2(projectId: string) {
     visibleQuestions,
     sovLines,
     save: saveMutation.mutateAsync,
+    saveAll,
     isSaving: saveMutation.isPending,
   };
 }
