@@ -41,12 +41,12 @@ export function WizardQuestion({ question, value, onChange, answers }: Props) {
           </span>
         )}
       </Label>
-      {renderInput(inputType, value, options, onChange, hasBasement)}
+      {renderInput(inputType, value, options, onChange, hasBasement, question.fieldKey)}
     </div>
   );
 }
 
-function renderInput(type: InputType, value: any, options: string[] | undefined, onChange: (v: any) => void, hasBasement: boolean = false) {
+function renderInput(type: InputType, value: any, options: string[] | undefined, onChange: (v: any) => void, hasBasement: boolean = false, fieldKey: string = '') {
   switch (type) {
     case 'yes_no':
       return (
