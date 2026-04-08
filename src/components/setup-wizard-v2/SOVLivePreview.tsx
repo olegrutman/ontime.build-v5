@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { cn } from '@/lib/utils';
+import { formatCurrencyPrecise, formatCurrency } from '@/lib/utils';
 import { type SOVLine, type SOVPhase, SOV_PHASE_LABELS, SOV_PHASE_ORDER } from '@/hooks/useSetupWizardV2';
 
 interface Props {
