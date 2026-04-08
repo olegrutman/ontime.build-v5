@@ -1,56 +1,42 @@
 
 
-# Combine Project Creation + Setup Wizard into One Flow
+# Merge Team Members into Project Basics Step
 
-## Current Problem (Two Separate Flows)
+## What You Asked For
+Move team invitations into the Project Basics step so users add their team up front (before building type / scope). Show the project owner's role (GC or TC) clearly so everyone knows who created the project. This removes the separate "Team" step — the wizard goes from 5 steps to 4.
 
-Right now there are **two disconnected steps**:
-
-1. **Create Project page** (`/create-project`) — asks for name, address, type, team, then creates the project record
-2. **Project Setup page** (shown after navigating to the project) — runs the V2 wizard for building type, scope questions, contract value, SOV generation
-
-This means the user fills in basics, creates the project, gets redirected, then has to go through setup again — with data being seeded from step 1 into step 2. Redundant and confusing.
-
-## Proposed Unified Flow
-
-Merge everything into a **single wizard** on the `/create-project` page:
+## New Wizard Flow
 
 ```text
-Step 1: Project Basics (name, address, city/state/zip, start date)
-Step 2: Building Type (the 6-tile selector — replaces old "Project Type" dropdown)
-Step 3: Contract Value + Scope Questions (structure, roof, envelope, etc.)
-Step 4: Project Team (invite GCs/TCs — same as current TeamStep)
-Step 5: Summary + Review (all answers, SOV preview, team list)
-→ "Create Project" saves everything at once
+Step 1: Project Basics + Team (name, address, owner role badge, add team members)
+Step 2: Building Type
+Step 3: Scope & Contract
+Step 4: Review (includes team summary)
 ```
 
-**What happens on "Create Project":**
-- Creates the `projects` row (from basics)
-- Saves setup answers to `project_setup_answers`
-- Creates `project_contracts` with contract value
-- Creates `project_sov` + `project_sov_items` from generated lines
-- Saves team members + sends invites
-- Navigates to `ProjectSetupFlow` which now only shows the **editable SOV card** (wizard is already done)
+## Changes
 
-## Key Design Decisions
+### 1. `src/components/project-wizard-new/BasicsStep.tsx`
+- Add a "Project Owner" section at the top showing the current user's org name and role badge (e.g. "Acme Construction — General Contractor")
+- Add an inline team section below the address fields with "Add Team Member" button
+- Team members stored in-memory (no projectId needed yet) — each member is a `TeamMember` object with company name, contact, role, trade
+- Props expanded to accept `team`, `onTeamChange`, `creatorOrgName`, `creatorRole`, and `creatorOrgType`
 
-1. **Building type replaces project type dropdown** — the V2 wizard's 6 building types are more specific than the old dropdown. The selected building type maps to a `project_type` value when saving.
+### 2. `src/pages/CreateProjectNew.tsx`
+- Remove step 3 (Team) from `UNIFIED_STEPS` — now 4 steps: basics, building_type, scope, review
+- Pass team state + creator info to `BasicsStepNew`
+- Move `saveTeam` call to `createProject` (final save) since team members are in-memory until then
+- Adjust step indices for building type (1), scope (2), review (3)
 
-2. **Project record created at the end** (not after step 1) — currently `saveBasics` creates the project on step 1 so TeamStep has a `projectId`. We keep this behavior: project is created when leaving step 1, team step uses that ID. But the wizard + SOV save happens on final "Create Project" click.
+### 3. `src/components/project-wizard-new/UnifiedReviewStep.tsx`
+- Add team member list to review summary so user can verify who they invited
 
-3. **Post-creation setup page simplified** — `ProjectSetupFlow` only shows the SOV editor card since the wizard is already complete. If user returns to an in-progress project that wasn't fully created, they see the wizard again.
-
-4. **GC vs TC differences** — both org types go through the same flow. The scope questions already adapt based on building type. Team step already adapts based on creator org type (GCs add TCs, TCs add GCs and field crews).
-
-## Files Changed
+### 4. `src/components/project-wizard-new/TeamStep.tsx`
+- Keep file but no longer used in the wizard flow (may be useful elsewhere); or extract the inline member list into a reusable component used by BasicsStep
 
 | File | Change |
 |------|--------|
-| `src/pages/CreateProjectNew.tsx` | Replace 3-step wizard with 5-step unified flow: Basics → Building Type → Scope/Contract → Team → Review. On final save, run full persistence (project + answers + contract + SOV + team). |
-| `src/components/project-wizard-new/BasicsStep.tsx` | Remove "Project Type" dropdown (replaced by building type selector in step 2). |
-| `src/components/project-wizard-new/ReviewStep.tsx` | Expand to show scope answers summary + SOV preview + team list (reuse `WizardSummary` content). |
-| `src/components/setup-wizard-v2/SetupWizardV2.tsx` | Extract scope question panel into a reusable component (`ScopeQuestionsPanel`) that can be embedded in the create-project wizard without the full split-screen layout. |
-| `src/hooks/useSetupWizardV2.ts` | Make the hook work without a `projectId` initially (answers stored in memory until save). Add a `saveAll(projectId)` method that persists everything in one shot. |
-| `src/components/project-setup/ProjectSetupFlow.tsx` | Simplify — if wizard is already complete (SOV exists), only show SOV editor card. No need for the wizard card. |
-| `src/types/projectWizard.ts` | Remove `PROJECT_TYPES` array (no longer needed — building type selector replaces it). Update `ProjectBasics` to remove `projectType` field. |
+| `src/components/project-wizard-new/BasicsStep.tsx` | Add owner role display + inline team member list with add/remove |
+| `src/pages/CreateProjectNew.tsx` | Remove Team step; pass team state to BasicsStep; 4-step flow |
+| `src/components/project-wizard-new/UnifiedReviewStep.tsx` | Show team members in review |
 
