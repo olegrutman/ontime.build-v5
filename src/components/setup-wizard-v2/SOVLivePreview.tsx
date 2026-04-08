@@ -41,8 +41,8 @@ export function SOVLivePreview({ lines, buildingType }: Props) {
         <div className="px-4 py-2 border-b border-border bg-destructive/5 space-y-1">
           {warnings.map((w, i) => (
             <div key={i} className="flex items-start gap-1.5 text-[10px]">
-              <AlertTriangle className={cn('w-3 h-3 shrink-0 mt-0.5', w.severity === 'hard' ? 'text-destructive' : 'text-amber-500')} />
-              <span className={cn(w.severity === 'hard' ? 'text-destructive' : 'text-amber-700 dark:text-amber-400')}>
+              <AlertTriangle className={cn('w-3 h-3 shrink-0 mt-0.5', w.severity === 'hard' ? 'text-destructive' : 'text-accent-foreground')} />
+              <span className={cn(w.severity === 'hard' ? 'text-destructive' : 'text-accent-foreground')}>
                 {w.message}
               </span>
             </div>
