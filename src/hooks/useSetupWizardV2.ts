@@ -96,6 +96,15 @@ const SHARED_QUESTIONS: WizardQuestion[] = [
     buildingTypes: 'all',
   },
   {
+    id: 'S_basement',
+    phase: 'mobilization_steel',
+    label: 'Has basement?',
+    inputType: 'yes_no',
+    tag: 'conditional',
+    fieldKey: 'has_basement',
+    buildingTypes: 'all',
+  },
+  {
     id: 'S2',
     phase: 'mobilization_steel',
     label: 'Mobilization as separate SOV line item?',
