@@ -190,7 +190,7 @@ export function SetupWizardV2({ projectId, onComplete }: Props) {
   );
 
   const sovPanel = (
-    <SOVLivePreview lines={sovLines} />
+    <SOVLivePreview lines={sovLines} buildingType={buildingType} />
   );
 
   return (
