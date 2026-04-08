@@ -6,6 +6,7 @@ import { BuildingTypeSelector } from './BuildingTypeSelector';
 import { WizardQuestion } from './WizardQuestion';
 import { SOVLivePreview } from './SOVLivePreview';
 import { WizardProgressBar } from './WizardProgressBar';
+import { WizardSummary } from './WizardSummary';
 import { useSetupWizardV2, type SOVPhase, WIZARD_STEPS } from '@/hooks/useSetupWizardV2';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
@@ -140,27 +141,13 @@ export function SetupWizardV2({ projectId, onComplete }: Props) {
           </>
         )}
 
-        {isReviewStep && (
-          <div className="space-y-4">
-            <div>
-              <h2 className="font-heading text-lg font-bold text-foreground">Review & Complete</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Your SOV has {sovLines.length} line items. Review the preview, then save.
-              </p>
-            </div>
-            <div className="p-4 rounded-lg border border-border bg-muted/10">
-              <p className="text-sm text-foreground">
-                <strong>Building type:</strong>{' '}
-                {buildingType?.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-              </p>
-              <p className="text-sm text-foreground mt-1">
-                <strong>SOV lines:</strong> {sovLines.length}
-              </p>
-              <p className="text-sm text-foreground mt-1">
-                <strong>Questions answered:</strong> {Object.keys(answers).length}
-              </p>
-            </div>
-          </div>
+        {isReviewStep && buildingType && (
+          <WizardSummary
+            buildingType={buildingType}
+            answers={answers}
+            visibleQuestions={visibleQuestions}
+            sovLines={sovLines}
+          />
         )}
 
         {/* Navigation */}

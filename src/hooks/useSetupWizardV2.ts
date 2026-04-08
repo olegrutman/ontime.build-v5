@@ -1003,10 +1003,11 @@ export function useSetupWizardV2(projectId: string) {
     setAnswers({});
   }, []);
 
-  // Save all answers + SOV to database
+  // Save all answers + SOV + contract to database
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!buildingType) throw new Error('No building type selected');
+      const contractValue = typeof answers.contract_value === 'number' ? answers.contract_value : 0;
 
       // Save answers
       const answerRows = Object.entries(answers).map(([field_key, value]) => ({
@@ -1015,8 +1016,6 @@ export function useSetupWizardV2(projectId: string) {
         value,
         updated_at: new Date().toISOString(),
       }));
-
-      // Also save building_type
       answerRows.push({
         project_id: projectId,
         field_key: 'building_type',
@@ -1032,21 +1031,95 @@ export function useSetupWizardV2(projectId: string) {
       }
 
       // Update project type
-      await supabase
-        .from('projects')
-        .update({ project_type: buildingType })
-        .eq('id', projectId);
+      await supabase.from('projects').update({ project_type: buildingType }).eq('id', projectId);
 
-      // Save scope_selections as a JSON blob answer
+      // Save scope_selections as JSON blob
       const scopeData = { building_type: buildingType, ...answers };
-      await supabase
-        .from('project_setup_answers')
-        .upsert({
-          project_id: projectId,
-          field_key: 'scope_selections_v2',
-          value: scopeData,
+      await supabase.from('project_setup_answers').upsert({
+        project_id: projectId,
+        field_key: 'scope_selections_v2',
+        value: scopeData,
+        updated_at: new Date().toISOString(),
+      } as any, { onConflict: 'project_id,field_key' });
+
+      // ── Upsert project_contracts with contract_value ──
+      // Check for existing contract
+      const { data: existingContracts } = await supabase
+        .from('project_contracts')
+        .select('id')
+        .eq('project_id', projectId)
+        .limit(1);
+
+      let contractId: string;
+      if (existingContracts && existingContracts.length > 0) {
+        contractId = existingContracts[0].id;
+        await supabase.from('project_contracts').update({
+          contract_sum: contractValue,
+          material_responsibility: answers.material_responsibility || null,
           updated_at: new Date().toISOString(),
-        } as any, { onConflict: 'project_id,field_key' });
+        }).eq('id', contractId);
+      } else {
+        const { data: newContract, error: cErr } = await supabase.from('project_contracts').insert({
+          project_id: projectId,
+          contract_sum: contractValue,
+          from_role: 'TC_PM',
+          to_role: 'GC_PM',
+          trade: 'Framing',
+          material_responsibility: answers.material_responsibility || null,
+          status: 'Accepted',
+        }).select('id').single();
+        if (cErr) throw cErr;
+        contractId = newContract.id;
+      }
+
+      // ── Create / update project_sov ──
+      const { data: existingSov } = await supabase
+        .from('project_sov')
+        .select('id')
+        .eq('project_id', projectId)
+        .eq('contract_id', contractId)
+        .limit(1);
+
+      let sovId: string;
+      if (existingSov && existingSov.length > 0) {
+        sovId = existingSov[0].id;
+        // Clear old wizard items
+        await supabase.from('project_sov_items')
+          .delete()
+          .eq('sov_id', sovId)
+          .eq('source', 'wizard_v2');
+      } else {
+        const { data: newSov, error: sErr } = await supabase.from('project_sov').insert({
+          project_id: projectId,
+          contract_id: contractId,
+          sov_name: 'Framing SOV',
+          scope_snapshot: scopeData,
+        }).select('id').single();
+        if (sErr) throw sErr;
+        sovId = newSov.id;
+      }
+
+      // ── Insert SOV line items ──
+      const sovItems = sovLines.map((line) => ({
+        project_id: projectId,
+        sov_id: sovId,
+        item_name: line.description,
+        item_group: SOV_PHASE_LABELS[line.phase],
+        sort_order: line.lineNumber,
+        percent_of_contract: line.suggested_pct,
+        value_amount: line.amount,
+        scheduled_value: line.amount,
+        remaining_amount: line.amount,
+        source: 'wizard_v2',
+        scope_section_slug: line.conditionalKey,
+        ai_original_pct: line.suggested_pct,
+        default_enabled: true,
+      }));
+
+      if (sovItems.length > 0) {
+        const { error: iErr } = await supabase.from('project_sov_items').insert(sovItems);
+        if (iErr) throw iErr;
+      }
     },
     onError: (error) => {
       console.error('[SetupWizardV2] Save error:', error);
@@ -1056,6 +1129,10 @@ export function useSetupWizardV2(projectId: string) {
       qc.invalidateQueries({ queryKey: ['setup_answers_count', projectId] });
       qc.invalidateQueries({ queryKey: ['project', projectId] });
       qc.invalidateQueries({ queryKey: ['project_basic', projectId] });
+      qc.invalidateQueries({ queryKey: ['project_contracts', projectId] });
+      qc.invalidateQueries({ queryKey: ['project_sov', projectId] });
+      qc.invalidateQueries({ queryKey: ['contract_sov', projectId] });
+      qc.invalidateQueries({ queryKey: ['project_sovs_lock_check', projectId] });
     },
   });
 
