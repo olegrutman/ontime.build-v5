@@ -16,6 +16,7 @@ interface Props {
   question: WQ;
   value: any;
   onChange: (value: any) => void;
+  answers?: Record<string, any>;
 }
 
 export function WizardQuestion({ question, value, onChange }: Props) {
