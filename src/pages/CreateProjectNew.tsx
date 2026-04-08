@@ -8,25 +8,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { cn } from '@/lib/utils';
-import { 
-  ProjectBasics,
-  TeamMember,
-} from '@/types/projectWizard';
+import { ProjectBasics, TeamMember } from '@/types/projectWizard';
 import { OrgType } from '@/types/organization';
 import { useSetupWizardV2 } from '@/hooks/useSetupWizardV2';
 
-// Import step components
 import { BasicsStepNew } from '@/components/project-wizard-new/BasicsStep';
 import { BuildingTypeSelector } from '@/components/setup-wizard-v2/BuildingTypeSelector';
 import { ScopeQuestionsPanel } from '@/components/setup-wizard-v2/ScopeQuestionsPanel';
-import { TeamStep } from '@/components/project-wizard-new/TeamStep';
 import { UnifiedReviewStep } from '@/components/project-wizard-new/UnifiedReviewStep';
 
 const UNIFIED_STEPS = [
-  { id: 'basics', label: 'Project Basics', description: 'Name and location' },
+  { id: 'basics', label: 'Project Basics', description: 'Name, location & team' },
   { id: 'building_type', label: 'Building Type', description: 'What are you building?' },
   { id: 'scope', label: 'Scope & Contract', description: 'Questions and SOV' },
-  { id: 'team', label: 'Project Team', description: 'Invite contractors' },
   { id: 'review', label: 'Review', description: 'Review and create' },
 ] as const;
 
@@ -46,7 +40,6 @@ export default function CreateProjectNew() {
   const [currentStep, setCurrentStep] = useState(0);
   const [basics, setBasics] = useState<ProjectBasics>(initialBasics);
   const [team, setTeam] = useState<TeamMember[]>([]);
-  const [projectId, setProjectId] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
 
   const currentOrg = userOrgRoles[0]?.organization;
@@ -54,7 +47,6 @@ export default function CreateProjectNew() {
                       currentOrg?.type === 'TC' ? 'Trade Contractor' :
                       currentOrg?.type === 'SUPPLIER' ? 'Supplier' : null;
 
-  // Setup wizard hook (no projectId initially — answers stored in memory)
   const wizard = useSetupWizardV2();
 
   useEffect(() => {
@@ -69,31 +61,32 @@ export default function CreateProjectNew() {
 
   const canProceed = (): boolean => {
     switch (currentStep) {
-      case 0: // Basics
-        return !!(basics.name && basics.address && basics.city && basics.state && basics.zip);
-      case 1: // Building type
-        return !!wizard.buildingType;
-      case 2: // Scope — at least contract value should be set
-        return typeof wizard.answers.contract_value === 'number' && wizard.answers.contract_value > 0;
-      case 3: // Team — optional
-        return true;
-      case 4: // Review
-        return true;
-      default:
-        return false;
+      case 0: return !!(basics.name && basics.address && basics.city && basics.state && basics.zip);
+      case 1: return !!wizard.buildingType;
+      case 2: return typeof wizard.answers.contract_value === 'number' && wizard.answers.contract_value > 0;
+      case 3: return true;
+      default: return false;
     }
   };
 
-  const saveBasics = async (): Promise<string | null> => {
-    if (projectId) return projectId;
-    
+  const nextStep = () => {
+    setCurrentStep(prev => Math.min(prev + 1, UNIFIED_STEPS.length - 1));
+  };
+
+  const prevStep = () => {
+    setCurrentStep(prev => Math.max(prev - 1, 0));
+  };
+
+  const createProject = async () => {
     if (!currentOrg?.id || !user?.id) {
       toast({ title: 'Error', description: 'Organization not found', variant: 'destructive' });
-      return null;
+      return;
     }
-    
+
+    setSaving(true);
     try {
-      const { data: project, error } = await supabase
+      // 1. Create project
+      const { data: project, error: projErr } = await supabase
         .from('projects')
         .insert({
           name: basics.name,
@@ -111,134 +104,77 @@ export default function CreateProjectNew() {
         .select('id')
         .single();
 
-      if (error) throw error;
-      
-      // Add creator to project_participants
-      await supabase.from('project_participants').insert({
-        project_id: project.id,
-        organization_id: currentOrg.id,
-        role: currentOrg.type as any,
-        invite_status: 'ACCEPTED',
-        invited_by: user.id,
-      });
-      
-      const roleLabel = currentOrg.type === 'GC' ? 'General Contractor' 
+      if (projErr) throw projErr;
+      const pid = project.id;
+
+      // 2. Add creator to project_participants + project_team
+      const roleLabel = currentOrg.type === 'GC' ? 'General Contractor'
         : currentOrg.type === 'TC' ? 'Trade Contractor'
         : currentOrg.type === 'FC' ? 'Field Crew'
         : 'Supplier';
-      
-      await supabase.from('project_team').insert({
-        project_id: project.id,
-        org_id: currentOrg.id,
-        user_id: user.id,
-        role: roleLabel,
-        trade: currentOrg.type === 'TC' || currentOrg.type === 'FC' ? (currentOrg as any).trade : null,
-        invited_email: profile?.email || '',
-        invited_name: profile?.full_name || profile?.first_name || '',
-        invited_org_name: currentOrg.name,
-        invited_by_user_id: user.id,
-        status: 'Accepted',
-        accepted_at: new Date().toISOString(),
-      });
 
-      setProjectId(project.id);
-      return project.id;
-    } catch (error: any) {
-      toast({ title: 'Error saving project', description: error.message, variant: 'destructive' });
-      return null;
-    }
-  };
+      await Promise.all([
+        supabase.from('project_participants').insert({
+          project_id: pid,
+          organization_id: currentOrg.id,
+          role: currentOrg.type as any,
+          invite_status: 'ACCEPTED',
+          invited_by: user.id,
+        }),
+        supabase.from('project_team').insert({
+          project_id: pid,
+          org_id: currentOrg.id,
+          user_id: user.id,
+          role: roleLabel,
+          trade: currentOrg.type === 'TC' || currentOrg.type === 'FC' ? (currentOrg as any).trade : null,
+          invited_email: profile?.email || '',
+          invited_name: profile?.full_name || profile?.first_name || '',
+          invited_org_name: currentOrg.name,
+          invited_by_user_id: user.id,
+          status: 'Accepted',
+          accepted_at: new Date().toISOString(),
+        }),
+      ]);
 
-  const saveTeam = async (pid: string) => {
-    const { data: existingTeam } = await supabase
-      .from('project_team')
-      .select('invited_email')
-      .eq('project_id', pid);
-    
-    const existingEmails = new Set((existingTeam || []).map(m => m.invited_email?.toLowerCase()));
-    
-    for (const member of team) {
-      if (existingEmails.has(member.contactEmail.toLowerCase())) continue;
-      
-      try {
-        const { data: teamMember, error: teamError } = await supabase
-          .from('project_team')
-          .insert({
+      // 3. Save wizard answers + contract + SOV
+      await wizard.saveAll(pid);
+
+      // 4. Save team members
+      for (const member of team) {
+        try {
+          const { data: teamMember, error: teamErr } = await supabase
+            .from('project_team')
+            .insert({
+              project_id: pid,
+              role: member.role,
+              trade: member.trade,
+              trade_custom: member.tradeCustom,
+              invited_email: member.contactEmail,
+              invited_name: member.contactName,
+              invited_org_name: member.companyName,
+              invited_by_user_id: user.id,
+              status: 'Invited',
+            })
+            .select('id')
+            .single();
+
+          if (teamErr) throw teamErr;
+
+          await supabase.from('project_invites').insert({
             project_id: pid,
+            project_team_id: teamMember.id,
             role: member.role,
             trade: member.trade,
             trade_custom: member.tradeCustom,
             invited_email: member.contactEmail,
             invited_name: member.contactName,
             invited_org_name: member.companyName,
-            invited_by_user_id: user?.id,
-            status: 'Invited',
-          })
-          .select('id')
-          .single();
-
-        if (teamError) throw teamError;
-
-        await supabase.from('project_invites').insert({
-          project_id: pid,
-          project_team_id: teamMember.id,
-          role: member.role,
-          trade: member.trade,
-          trade_custom: member.tradeCustom,
-          invited_email: member.contactEmail,
-          invited_name: member.contactName,
-          invited_org_name: member.companyName,
-          invited_by_user_id: user?.id,
-        });
-      } catch (error: any) {
-        console.error('Error saving team member:', error);
+            invited_by_user_id: user.id,
+          });
+        } catch (err: any) {
+          console.error('Error saving team member:', err);
+        }
       }
-    }
-  };
-
-  const nextStep = async () => {
-    setSaving(true);
-    try {
-      // When leaving scope step (step 2), create the project if not yet created
-      if (currentStep === 2 && !projectId) {
-        const pid = await saveBasics();
-        if (!pid) { setSaving(false); return; }
-      }
-      // When leaving team step (step 3), save team members
-      if (currentStep === 3 && projectId) {
-        await saveTeam(projectId);
-      }
-      setCurrentStep(prev => Math.min(prev + 1, UNIFIED_STEPS.length - 1));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const prevStep = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 0));
-  };
-
-  const createProject = async () => {
-    setSaving(true);
-    try {
-      let pid = projectId;
-      // Ensure project exists
-      if (!pid) {
-        pid = await saveBasics();
-        if (!pid) { setSaving(false); return; }
-      }
-
-      // Save wizard answers + contract + SOV
-      await wizard.saveAll(pid);
-
-      // Save any remaining team members
-      await saveTeam(pid);
-
-      // Update project status
-      await supabase
-        .from('projects')
-        .update({ status: 'setup', project_type: wizard.buildingType || '' })
-        .eq('id', pid);
 
       toast({ title: 'Project created!', description: 'Invitations will be sent to team members.' });
       navigate(`/project/${pid}`);
@@ -252,14 +188,22 @@ export default function CreateProjectNew() {
   const renderStep = () => {
     switch (currentStep) {
       case 0:
-        return <BasicsStepNew data={basics} onChange={updateBasics} />;
+        return (
+          <BasicsStepNew
+            data={basics}
+            onChange={updateBasics}
+            team={team}
+            onTeamChange={setTeam}
+            creatorOrgName={currentOrg?.name}
+            creatorRole={creatorRole}
+            creatorOrgType={currentOrg?.type as OrgType | undefined}
+          />
+        );
       case 1:
         return (
           <BuildingTypeSelector
             selected={wizard.buildingType}
-            onSelect={(bt) => {
-              wizard.selectBuildingType(bt);
-            }}
+            onSelect={(bt) => wizard.selectBuildingType(bt)}
           />
         );
       case 2:
@@ -278,23 +222,15 @@ export default function CreateProjectNew() {
         );
       case 3:
         return (
-          <TeamStep 
-            team={team} 
-            onChange={setTeam} 
-            creatorRole={creatorRole}
-            projectId={projectId}
-            creatorOrgType={currentOrg?.type as OrgType | undefined}
-          />
-        );
-      case 4:
-        return (
           <UnifiedReviewStep
             basics={basics}
             buildingType={wizard.buildingType}
             answers={wizard.answers}
             visibleQuestions={wizard.visibleQuestions}
             sovLines={wizard.sovLines}
-            projectId={projectId}
+            team={team}
+            creatorOrgName={currentOrg?.name}
+            creatorRole={creatorRole}
           />
         );
       default:
@@ -358,7 +294,6 @@ export default function CreateProjectNew() {
                 {renderStep()}
               </CardContent>
 
-              {/* Navigation Footer */}
               <div className="flex items-center justify-between p-4 border-t bg-muted/30">
                 <Button
                   variant="outline"
@@ -376,7 +311,6 @@ export default function CreateProjectNew() {
                     disabled={!canProceed() || saving}
                     className="min-h-[44px]"
                   >
-                    {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Next
                     <ChevronRight className="h-4 w-4 ml-2" />
                   </Button>
