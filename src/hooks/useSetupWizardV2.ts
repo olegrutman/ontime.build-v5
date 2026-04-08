@@ -588,100 +588,206 @@ export function getVisibleQuestions(bt: BuildingType, answers: Answers): WizardQ
    SOV LINE GENERATION
    ══════════════════════════════════════════════════════════════════════ */
 
+/* ── Weight tables by building type ─────────────────────────────── */
+
+type WeightKey =
+  | 'mobilization' | 'structural_steel' | 'beam_pockets'
+  | 'basement_steel' | 'basement_floor' | 'basement_wall' | 'basement_hw'
+  | 'floor_system' | 'floor_sheathing' | 'wall_framing' | 'hardware'
+  | 'elevator' | 'stairs' | 'garage'
+  | 'roof_framing' | 'roof_sheathing' | 'parapet' | 'roof_deck_struct'
+  | 'wrb' | 'windows_install' | 'windows_fi' | 'windows_ro'
+  | 'mep_backout' | 'blocking' | 'fire_blocking' | 'shim_shave' | 'ada_std' | 'ada_full'
+  | 'siding_whole' | 'siding_elev' | 'fascia_soffit' | 'trim'
+  | 'balcony_framing' | 'decking_composite' | 'decking_pt' | 'decking_concrete'
+  | 'rooftop_deck_framing' | 'rooftop_decking'
+  | 'decorative' | 'covered_entry' | 'porte_cochere' | 'pool_deck'
+  | 'breezeways' | 'amenity_building'
+  | 'frame_walk' | 'nail_sweep' | 'final_punch'
+  | 'fire_wall' | 'oh_door_bucks';
+
+// Default mid-range weights — building type overrides below
+const BASE_WEIGHTS: Partial<Record<WeightKey, number>> = {
+  mobilization: 4,
+  structural_steel: 3,
+  beam_pockets: 0.75,
+  basement_steel: 1.5, basement_floor: 4, basement_wall: 6, basement_hw: 1.5,
+  floor_system: 0, floor_sheathing: 0, wall_framing: 0, hardware: 0, // per-floor — set dynamically
+  elevator: 0, stairs: 0, garage: 3,
+  roof_framing: 5.5, roof_sheathing: 2.5, parapet: 2, roof_deck_struct: 2,
+  wrb: 2, windows_install: 2.5, windows_fi: 5.5, windows_ro: 1.25,
+  mep_backout: 7, blocking: 2.5, fire_blocking: 2, shim_shave: 2, ada_std: 2.5, ada_full: 4.5,
+  siding_whole: 4, siding_elev: 1.5, fascia_soffit: 3, trim: 1.5,
+  balcony_framing: 1.5, decking_composite: 1.5, decking_pt: 0.75, decking_concrete: 1.25,
+  rooftop_deck_framing: 2, rooftop_decking: 1.5,
+  decorative: 2, covered_entry: 1.5, porte_cochere: 2, pool_deck: 1.5,
+  breezeways: 1.5, amenity_building: 4.5,
+  frame_walk: 2, nail_sweep: 0.375, final_punch: 1.125,
+  fire_wall: 1.5, oh_door_bucks: 0.5,
+};
+
+// Per-floor weight distribution (% of the floor's slice)
+const FLOOR_INNER_WEIGHTS = {
+  floor_system: 27.5,
+  floor_sheathing: 11.5,
+  wall_framing: 42.5,
+  hardware: 7.5,
+  elevator: 8.5,
+  stairs: 10,
+};
+
+// Building-type overrides for specific weights
+const BT_OVERRIDES: Record<BuildingType, Partial<Record<WeightKey, number>>> = {
+  custom_home: { mobilization: 3.5, mep_backout: 6, roof_framing: 6 },
+  track_home: { mobilization: 3, mep_backout: 7, roof_framing: 5.5 },
+  townhome: { mobilization: 4, mep_backout: 8, roof_framing: 5.5, fire_blocking: 2.5 },
+  apartments_mf: { mobilization: 5, mep_backout: 9, wrb: 2.5, roof_framing: 5 },
+  hotel: { mobilization: 5, mep_backout: 10, wrb: 2.5, roof_framing: 4.5 },
+  senior_living: { mobilization: 5, mep_backout: 9, wrb: 2.5, roof_framing: 5 },
+};
+
+// Phase 2 total allocation by story count (% of contract)
+function getPhase2Total(storyCount: number): number {
+  if (storyCount <= 1) return 38;
+  if (storyCount === 2) return 44;
+  if (storyCount === 3) return 50;
+  if (storyCount === 4) return 54;
+  return 58; // 5+
+}
+
+// Labor-only reduction multipliers for material-heavy lines
+const LABOR_ONLY_REDUCTIONS: Partial<Record<WeightKey, number>> = {
+  floor_system: 0.60,
+  floor_sheathing: 0.40,
+  roof_sheathing: 0.40,
+  siding_whole: 0.55,
+  siding_elev: 0.55,
+  wrb: 0.50,
+  windows_fi: 0.65,
+  windows_install: 0, // no change
+  decking_composite: 0.55,
+  decking_pt: 0.55,
+};
+
 export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] {
-  const lines: SOVLine[] = [];
-  let n = 0;
   const a = answers;
   const contractValue = typeof a.contract_value === 'number' ? a.contract_value : 0;
+  const isLaborOnly = a.material_responsibility === 'GC supplies materials';
 
-  const push = (phase: SOVPhase, desc: string, key: string | null = null) => {
-    lines.push({ lineNumber: ++n, description: desc, phase, amount: 0, status: 'draft', conditionalKey: key });
+  const w = (key: WeightKey): number => {
+    const val = BT_OVERRIDES[bt]?.[key] ?? BASE_WEIGHTS[key] ?? 0;
+    if (isLaborOnly && LABOR_ONLY_REDUCTIONS[key]) {
+      return val * (1 - LABOR_ONLY_REDUCTIONS[key]!);
+    }
+    return val;
+  };
+
+  // Collect raw weighted lines
+  const rawLines: { desc: string; phase: SOVPhase; weight: number; key: string | null }[] = [];
+  const push = (phase: SOVPhase, desc: string, wt: number, key: string | null = null) => {
+    if (wt > 0) rawLines.push({ desc, phase, weight: wt, key });
   };
 
   const floorSystem = a.floor_system || 'TJI I-joists';
 
-  // Determine story count
   let storyCount = 1;
   if (typeof a.stories === 'number') storyCount = Math.max(1, a.stories);
   else if (a.stories === '2-story' || a.stories === '2') storyCount = 2;
   else if (a.stories === '3') storyCount = 3;
-  else if (a.stories === 'Mix of both') storyCount = 2; // generate both plans
+  else if (a.stories === 'Mix of both') storyCount = 2;
   else if (a.stories === '1-story') storyCount = 1;
 
   // ─── Phase 1: Mobilization & Steel ──────────────────────────
   if (a.mobilization === 'yes' || (typeof a.mobilization === 'object' && a.mobilization?.enabled)) {
     const pct = typeof a.mobilization === 'object' ? a.mobilization.percent : '';
-    push('mobilization_steel', `Mobilization${pct ? ` (${pct}% of contract)` : ''}`, 'mobilization');
+    const mobWeight = pct ? parseFloat(pct) : w('mobilization');
+    push('mobilization_steel', `Mobilization${pct ? ` (${pct}% of contract)` : ''}`, mobWeight, 'mobilization');
   }
 
   if (a.structural_steel === 'yes' || (typeof a.structural_steel === 'object' && a.structural_steel?.enabled)) {
     const floors: string[] = (typeof a.structural_steel === 'object' && Array.isArray(a.structural_steel?.floors))
       ? a.structural_steel.floors
       : ['L1'];
+    const perFloorWeight = w('structural_steel') / Math.max(1, floors.length);
     for (const f of floors) {
-      push('mobilization_steel', `Structural steel — ${f}`, 'structural_steel');
+      push('mobilization_steel', `Structural steel — ${f}`, perFloorWeight, 'structural_steel');
     }
   }
 
   // Basement level
   if (a.has_basement === 'yes') {
-    push('per_floor', 'Structural steel & post bases — Basement', 'has_basement');
-    push('per_floor', `Floor system (${floorSystem}) — Basement`, 'has_basement');
-    push('per_floor', 'Wall framing — Basement', 'has_basement');
-    push('per_floor', 'Hardware & connectors — Basement', 'has_basement');
+    push('per_floor', 'Structural steel & post bases — Basement', w('basement_steel'), 'has_basement');
+    push('per_floor', `Floor system (${floorSystem}) — Basement`, w('basement_floor'), 'has_basement');
+    push('per_floor', 'Wall framing — Basement', w('basement_wall'), 'has_basement');
+    push('per_floor', 'Hardware & connectors — Basement', w('basement_hw'), 'has_basement');
   }
 
   // ─── Phase 2: Per-Floor Structural ──────────────────────────
+  const phase2Total = getPhase2Total(storyCount);
+  const perFloorAllocation = phase2Total / storyCount;
+
   for (let i = 1; i <= storyCount; i++) {
     const label = `L${i}`;
-    push('per_floor', `Floor system (${floorSystem}) — ${label}`);
-    push('per_floor', `Floor sheathing — ${label}`);
-    push('per_floor', `Wall framing — ${label}`);
-    push('per_floor', `Hardware & connectors — ${label}`);
+    const fi = FLOOR_INNER_WEIGHTS;
+
+    const floorSysW = perFloorAllocation * fi.floor_system / 100;
+    const floorSheathW = perFloorAllocation * fi.floor_sheathing / 100;
+    const wallW = perFloorAllocation * fi.wall_framing / 100;
+    const hwW = perFloorAllocation * fi.hardware / 100;
+
+    push('per_floor', `Floor system (${floorSystem}) — ${label}`,
+      isLaborOnly ? floorSysW * (1 - (LABOR_ONLY_REDUCTIONS.floor_system || 0)) : floorSysW);
+    push('per_floor', `Floor sheathing — ${label}`,
+      isLaborOnly ? floorSheathW * (1 - (LABOR_ONLY_REDUCTIONS.floor_sheathing || 0)) : floorSheathW);
+    push('per_floor', `Wall framing — ${label}`, wallW);
+    push('per_floor', `Hardware & connectors — ${label}`, hwW);
 
     if (a.has_elevator === 'yes') {
-      push('per_floor', `Elevator hoistway framing — ${label}`, 'has_elevator');
+      push('per_floor', `Elevator hoistway framing — ${label}`, perFloorAllocation * fi.elevator / 100, 'has_elevator');
     }
     if ((a.stair_towers ?? 0) > 0) {
-      push('per_floor', `Stair tower framing — ${label} (×${a.stair_towers})`, 'stair_towers');
+      push('per_floor', `Stair tower framing — ${label} (×${a.stair_towers})`, perFloorAllocation * fi.stairs / 100, 'stair_towers');
     }
     if (i === 1 && (a.has_garage === 'yes' || (a.garage_type && a.garage_type !== 'No garage'))) {
       const gType = a.garage_type || (typeof a.has_garage === 'object' ? a.has_garage.subtype : 'Attached');
-      push('per_floor', `Garage framing — ${gType || 'Attached'}`, 'has_garage');
+      push('per_floor', `Garage framing — ${gType || 'Attached'}`, w('garage'), 'has_garage');
       if (bt === 'townhome') {
-        push('per_floor', 'Fire wall framing', 'has_garage');
-        push('per_floor', 'OH door bucks', 'has_garage');
+        push('per_floor', 'Fire wall framing', w('fire_wall'), 'has_garage');
+        push('per_floor', 'OH door bucks', w('oh_door_bucks'), 'has_garage');
       }
     }
   }
 
   // ─── Phase 3: Roof ──────────────────────────────────────────
-  push('roof', 'Roof framing');
-  push('roof', 'Roof sheathing');
+  push('roof', 'Roof framing', w('roof_framing'));
+  push('roof', 'Roof sheathing', w('roof_sheathing'));
   if (a.has_parapet === 'yes') {
-    push('roof', 'Parapet wall framing', 'has_parapet');
+    push('roof', 'Parapet wall framing', w('parapet'), 'has_parapet');
   }
   if (a.has_roof_deck === 'yes') {
-    push('roof', 'Roof deck framing', 'has_roof_deck');
+    push('roof', 'Roof deck framing', w('roof_deck_struct'), 'has_roof_deck');
   }
 
   // ─── Phase 4: Envelope ──────────────────────────────────────
-  push('envelope', 'WRB (weather-resistive barrier)');
+  push('envelope', 'WRB (weather-resistive barrier)', w('wrb'));
   if (a.windows_in_scope === 'yes') {
     const mode = a.window_install_mode || 'Install only';
-    push('envelope', `Windows & doors — ${mode}`, 'windows_in_scope');
+    const winKey: WeightKey = mode === 'RO only' ? 'windows_ro'
+      : mode === 'Furnish & install' ? 'windows_fi' : 'windows_install';
+    push('envelope', `Windows & doors — ${mode}`, w(winKey), 'windows_in_scope');
   }
 
   // ─── Phase 5: Backout & Interior ────────────────────────────
   if (a.has_backout === 'yes') {
-    push('backout', 'MEP backout', 'has_backout');
-    push('backout', 'Blocking', 'has_backout');
-    push('backout', 'Fire blocking', 'has_backout');
-    push('backout', 'Shim & shave', 'has_backout');
+    push('backout', 'MEP backout', w('mep_backout'), 'has_backout');
+    push('backout', 'Blocking', w('blocking'), 'has_backout');
+    push('backout', 'Fire blocking', w('fire_blocking'), 'has_backout');
+    push('backout', 'Shim & shave', w('shim_shave'), 'has_backout');
 
     if (bt === 'senior_living') {
       const adaScope = a.ada_blocking || 'Standard package';
-      push('backout', `ADA blocking — ${adaScope}`, 'ada_blocking');
+      const adaKey: WeightKey = adaScope.includes('Full') ? 'ada_full' : 'ada_std';
+      push('backout', `ADA blocking — ${adaScope}`, w(adaKey), 'ada_blocking');
     }
   }
 
@@ -689,82 +795,132 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
   if (a.siding_in_scope === 'yes') {
     if (a.siding_coverage === 'Per elevation (Front · Left · Right · Rear)') {
       for (const elev of ['Front', 'Left', 'Right', 'Rear']) {
-        push('exterior_finish', `Siding — ${elev} elevation`, 'siding_in_scope');
+        push('exterior_finish', `Siding — ${elev} elevation`, w('siding_elev'), 'siding_in_scope');
       }
     } else {
-      push('exterior_finish', 'Siding — whole building', 'siding_in_scope');
+      push('exterior_finish', 'Siding — whole building', w('siding_whole'), 'siding_in_scope');
     }
   }
 
-  push('exterior_finish', 'Fascia & soffit');
-  push('exterior_finish', 'Trim');
+  push('exterior_finish', 'Fascia & soffit', w('fascia_soffit'));
+  push('exterior_finish', 'Trim', w('trim'));
 
   if (a.has_balcony === 'yes') {
     const deckLabel = bt === 'senior_living' ? 'Porch / screened entry framing'
       : bt === 'track_home' ? 'Porch / entry framing'
       : bt === 'apartments_mf' || bt === 'hotel' ? 'Balcony framing'
       : 'Balcony / deck / porch framing';
-    push('exterior_finish', deckLabel, 'has_balcony');
+    push('exterior_finish', deckLabel, w('balcony_framing'), 'has_balcony');
 
     if (a.decking_in_scope === 'yes') {
       const mat = a.decking_material || 'Composite (Trex)';
-      push('exterior_finish', `Decking finish — ${mat}`, 'decking_in_scope');
+      const deckKey: WeightKey = mat.includes('Composite') ? 'decking_composite'
+        : mat.includes('Concrete') ? 'decking_concrete' : 'decking_pt';
+      push('exterior_finish', `Decking finish — ${mat}`, w(deckKey), 'decking_in_scope');
     }
   }
 
   if (a.has_rooftop_deck === 'yes') {
-    push('exterior_finish', 'Rooftop deck framing', 'has_rooftop_deck');
+    push('exterior_finish', 'Rooftop deck framing', w('rooftop_deck_framing'), 'has_rooftop_deck');
     if (a.rooftop_decking_in_scope === 'yes') {
-      push('exterior_finish', 'Rooftop decking finish', 'rooftop_decking_in_scope');
+      push('exterior_finish', 'Rooftop decking finish', w('rooftop_decking'), 'rooftop_decking_in_scope');
     }
   }
 
-  if (a.has_decorative === 'yes') {
-    push('exterior_finish', 'Decorative exterior (columns, corbels, shutters)', 'has_decorative');
-  }
-
-  if (a.has_covered_entry === 'yes') {
-    push('exterior_finish', 'Covered entry framing', 'has_covered_entry');
-  }
-
-  if (a.has_porte_cochere === 'yes') {
-    push('exterior_finish', 'Porte-cochère / entry canopy framing', 'has_porte_cochere');
-  }
-
-  if (a.has_pool_deck === 'yes') {
-    push('exterior_finish', 'Pool deck / amenity framing', 'has_pool_deck');
-  }
-
-  if (a.has_breezeways === 'yes') {
-    push('exterior_finish', 'Breezeway / open corridor framing', 'has_breezeways');
-  }
-
-  if (a.has_amenity_building === 'yes') {
-    push('exterior_finish', 'Amenity / clubhouse building framing', 'has_amenity_building');
-  }
+  if (a.has_decorative === 'yes') push('exterior_finish', 'Decorative exterior (columns, corbels, shutters)', w('decorative'), 'has_decorative');
+  if (a.has_covered_entry === 'yes') push('exterior_finish', 'Covered entry framing', w('covered_entry'), 'has_covered_entry');
+  if (a.has_porte_cochere === 'yes') push('exterior_finish', 'Porte-cochère / entry canopy framing', w('porte_cochere'), 'has_porte_cochere');
+  if (a.has_pool_deck === 'yes') push('exterior_finish', 'Pool deck / amenity framing', w('pool_deck'), 'has_pool_deck');
+  if (a.has_breezeways === 'yes') push('exterior_finish', 'Breezeway / open corridor framing', w('breezeways'), 'has_breezeways');
+  if (a.has_amenity_building === 'yes') push('exterior_finish', 'Amenity / clubhouse building framing', w('amenity_building'), 'has_amenity_building');
 
   // ─── Phase 7: Closeout ──────────────────────────────────────
-  push('closeout', 'Frame walk');
-  push('closeout', 'Nail sweep');
-  push('closeout', 'Final punch');
+  push('closeout', 'Frame walk', w('frame_walk'));
+  push('closeout', 'Nail sweep', w('nail_sweep'));
+  push('closeout', 'Final punch', w('final_punch'));
 
-  // Distribute contract value evenly across lines
-  if (contractValue > 0 && lines.length > 0) {
-    const perLine = Math.floor((contractValue * 100) / lines.length) / 100;
-    let remainder = contractValue;
-    for (let i = 0; i < lines.length - 1; i++) {
-      lines[i].amount = perLine;
-      remainder -= perLine;
+  // ─── Normalize to 100% ─────────────────────────────────────
+  const rawTotal = rawLines.reduce((s, l) => s + l.weight, 0);
+  if (rawTotal <= 0) return [];
+
+  const scale = 100 / rawTotal;
+
+  // Build final lines with normalized percentages
+  const lines: SOVLine[] = [];
+  let pctSum = 0;
+  for (let i = 0; i < rawLines.length; i++) {
+    const r = rawLines[i];
+    let pct: number;
+    if (i === rawLines.length - 1) {
+      pct = Math.round((100 - pctSum) * 100) / 100;
+    } else {
+      pct = Math.round(r.weight * scale * 100) / 100;
+      pctSum += pct;
     }
-    lines[lines.length - 1].amount = Math.round(remainder * 100) / 100;
+
+    let amount = 0;
+    if (contractValue > 0) {
+      amount = Math.round(contractValue * pct / 100 * 100) / 100;
+    }
+
+    lines.push({
+      lineNumber: i + 1,
+      description: r.desc,
+      phase: r.phase,
+      amount,
+      suggested_pct: pct,
+      status: 'draft',
+      conditionalKey: r.key,
+    });
+  }
+
+  // Fix dollar rounding — last line absorbs remainder
+  if (contractValue > 0 && lines.length > 0) {
+    const allocated = lines.slice(0, -1).reduce((s, l) => s + l.amount, 0);
+    lines[lines.length - 1].amount = Math.round((contractValue - allocated) * 100) / 100;
   }
 
   return lines;
 }
 
-/* ══════════════════════════════════════════════════════════════════════
-   WIZARD PROGRESS PHASES (for progress bar)
-   ══════════════════════════════════════════════════════════════════════ */
+/** Validate SOV and return warnings */
+export function validateSOV(lines: SOVLine[], contractValue: number, bt: BuildingType): SOVValidationWarning[] {
+  const warnings: SOVValidationWarning[] = [];
+  if (lines.length === 0) return warnings;
+
+  // Single line > 20%
+  for (const l of lines) {
+    if (l.suggested_pct > 20) {
+      warnings.push({ lineNumber: l.lineNumber, message: `"${l.description}" is ${l.suggested_pct}% — exceeds 20% threshold`, severity: 'soft' });
+    }
+  }
+
+  // Mobilization > 10%
+  const mobLines = lines.filter(l => l.description.toLowerCase().includes('mobilization'));
+  const mobTotal = mobLines.reduce((s, l) => s + l.suggested_pct, 0);
+  if (mobTotal > 10) {
+    warnings.push({ message: `Mobilization total ${mobTotal}% exceeds 10% hard cap`, severity: 'hard' });
+  }
+
+  // Closeout < 2% or < $2000
+  const closeoutLines = lines.filter(l => l.phase === 'closeout');
+  const closeoutPct = closeoutLines.reduce((s, l) => s + l.suggested_pct, 0);
+  const closeoutAmt = closeoutLines.reduce((s, l) => s + l.amount, 0);
+  if (closeoutPct < 2 || (contractValue > 0 && closeoutAmt < 2000)) {
+    warnings.push({ message: `Closeout total is ${closeoutPct.toFixed(1)}% ($${closeoutAmt.toLocaleString()}) — recommend at least 2% or $2,000`, severity: 'soft' });
+  }
+
+  // MEP backout < 6% on MF/Hotel/Senior
+  const isMFCommercial = ['apartments_mf', 'hotel', 'senior_living', 'townhome'].includes(bt);
+  if (isMFCommercial) {
+    const backoutLine = lines.find(l => l.description.toLowerCase().includes('mep backout'));
+    if (backoutLine && backoutLine.suggested_pct < 6) {
+      warnings.push({ lineNumber: backoutLine.lineNumber, message: `MEP backout at ${backoutLine.suggested_pct}% — under-pricing backout is the #1 reason framers lose money on MF/commercial jobs`, severity: 'soft' });
+    }
+  }
+
+  return warnings;
+}
 
 export const WIZARD_STEPS = [
   { key: 'building_type', label: 'Building Type' },
