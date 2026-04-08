@@ -67,7 +67,7 @@ function renderInput(type: InputType, value: any, options: string[] | undefined,
       );
 
     case 'number': {
-      const isCurrency = question.fieldKey === 'contract_value';
+      const isCurrency = fieldKey === 'contract_value';
       return (
         <div className={isCurrency ? 'relative w-full max-w-xs' : ''}>
           {isCurrency && (
