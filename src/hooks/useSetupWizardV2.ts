@@ -737,13 +737,12 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
 
   // Basement level
   if (a.has_basement === 'yes') {
-    
     push('per_floor', `Floor system (${floorSystem}) — Basement`, w('basement_floor'), 'has_basement');
     push('per_floor', 'Hardware & connectors — Basement', w('basement_hw'), 'has_basement');
-    if (a.basement_type === 'Finished' || a.basement_type === 'Partially finished') {
-      push('per_floor', 'Wall framing — Basement', w('basement_wall'), 'basement_type');
+    if (a.basement_walkout === 'yes') {
+      push('per_floor', 'Exterior wall framing — Basement', w('basement_wall'), 'basement_walkout');
     }
-    if (a.basement_type === 'Finished') {
+    if (a.basement_type === 'Finished' || a.basement_type === 'Partially finished') {
       push('per_floor', 'Interior wall framing — Basement', w('basement_wall') * 0.6, 'basement_type');
     }
   }
