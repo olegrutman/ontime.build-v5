@@ -1,35 +1,29 @@
 
 
-# Add Basement Gate Before Structural Steel
+# Roof Section Updates: Always-In-Scope Sheathing + Roof Deck & Parapet Questions
 
 ## Problem
-1. The basement question doesn't appear for Custom Home (only MF/Hotel/Senior Living)
-2. Structural steel is asked before basement — should be the other way around
-3. The structural steel floor picker always shows "Basement" as an option, even when the user answered No to basement or wasn't asked
+1. Roof sheathing is currently a Yes/No question — it should always be in scope (no question needed, always generates an SOV line)
+2. Apartments/MF and Townhomes often have flat roof sections with rooftop decks and parapet walls — these need explicit questions in the roof phase
 
 ## Changes
 
 ### `src/hooks/useSetupWizardV2.ts`
 
-**Move & expand basement question:**
-- Move Q2_basement before S3 (structural steel) in the question order — place it in `SHARED_QUESTIONS` or at the start of `TYPE_QUESTIONS` so it's asked first
-- Add `custom_home` to the `buildingTypes` array (Custom Home can have basements too)
-- Keep it as a simple yes/no, tag `conditional` or `always` depending on desired behavior
+**Remove Q7_roof question** (lines 268-276) — roof sheathing is always in scope, no need to ask.
 
-**Reorder shared questions:** Change order to S1 (material responsibility) → Q2_basement → S2 (mobilization) → S3 (structural steel), so basement is answered before the steel floor picker needs it.
+**Add two new roof-phase questions:**
+- `Q7_parapet` — "Has parapet walls?" (yes/no), for `townhome`, `apartments_mf`, `hotel`, `senior_living`
+- `Q7_roof_deck` — "Has roof decks (flat roof sections)?" (yes/no), for `townhome`, `apartments_mf`
 
-### `src/components/setup-wizard-v2/WizardQuestion.tsx`
-
-**Dynamic floor options for `yes_no_floors`:**
-- Instead of hardcoded `['Basement', 'L1', 'L2', 'L3', 'Roof']`, pass the current answers into the question renderer
-- Only include `'Basement'` in the floor list if `answers.has_basement === 'yes'`
-- This requires passing `answers` as a prop to `WizardQuestion` (or the floor list as a derived prop)
+**Update `generateSOVLines()`** (lines 620-624):
+- Always generate "Roof sheathing" line (remove the `if (a.roof_sheathing === 'yes')` check)
+- Add "Parapet wall framing" line if `has_parapet === 'yes'`
+- Add "Roof deck framing" line if `has_roof_deck === 'yes'`
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/hooks/useSetupWizardV2.ts` | Move basement question before steel; add custom_home to its building types |
-| `src/components/setup-wizard-v2/WizardQuestion.tsx` | Make floor options dynamic based on basement answer |
-| `src/components/setup-wizard-v2/SetupWizardV2.tsx` | Pass `answers` to WizardQuestion so it can derive floor options |
+| `src/hooks/useSetupWizardV2.ts` | Remove roof sheathing question; add parapet + roof deck questions; update SOV generation |
 
