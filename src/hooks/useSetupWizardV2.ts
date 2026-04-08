@@ -86,6 +86,15 @@ export type Answers = Record<string, any>;
 // Shared questions (all building types)
 const SHARED_QUESTIONS: WizardQuestion[] = [
   {
+    id: 'S0',
+    phase: 'mobilization_steel',
+    label: 'What is the total contract value?',
+    inputType: 'number',
+    tag: 'always',
+    fieldKey: 'contract_value',
+    buildingTypes: 'all',
+  },
+  {
     id: 'S1',
     phase: 'per_floor',
     label: 'Who is responsible for materials?',
