@@ -121,6 +121,17 @@ const SHARED_QUESTIONS: WizardQuestion[] = [
     buildingTypes: 'all',
   },
   {
+    id: 'S_basement_type',
+    phase: 'mobilization_steel',
+    label: 'What kind of basement?',
+    inputType: 'dropdown',
+    options: ['Finished', 'Partially finished', 'Unfinished'],
+    tag: 'conditional',
+    conditionalOn: 'has_basement=yes',
+    fieldKey: 'basement_type',
+    buildingTypes: 'all',
+  },
+  {
     id: 'S2',
     phase: 'mobilization_steel',
     label: 'Mobilization as separate SOV line item?',
@@ -718,8 +729,13 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
   if (a.has_basement === 'yes') {
     push('per_floor', 'Structural steel & post bases — Basement', w('basement_steel'), 'has_basement');
     push('per_floor', `Floor system (${floorSystem}) — Basement`, w('basement_floor'), 'has_basement');
-    push('per_floor', 'Wall framing — Basement', w('basement_wall'), 'has_basement');
     push('per_floor', 'Hardware & connectors — Basement', w('basement_hw'), 'has_basement');
+    if (a.basement_type === 'Finished' || a.basement_type === 'Partially finished') {
+      push('per_floor', 'Wall framing — Basement', w('basement_wall'), 'basement_type');
+    }
+    if (a.basement_type === 'Finished') {
+      push('per_floor', 'Interior wall framing — Basement', w('basement_wall') * 0.6, 'basement_type');
+    }
   }
 
   // ─── Phase 2: Per-Floor Structural ──────────────────────────
