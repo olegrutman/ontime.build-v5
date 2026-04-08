@@ -1,14 +1,13 @@
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { PhaseContracts } from './PhaseContracts';
 import { PhaseSOV } from './PhaseSOV';
 import { SetupWizardV2 } from '@/components/setup-wizard-v2/SetupWizardV2';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
-import { Lock, Check, FileText, DollarSign } from 'lucide-react';
+import { Lock, Check, DollarSign } from 'lucide-react';
 
 interface ProjectSetupFlowProps {
   projectId: string;
@@ -17,7 +16,6 @@ interface ProjectSetupFlowProps {
 }
 
 const SLUG_MAP: Record<string, string> = {
-  // Internal slugs (identity)
   townhome: 'townhome',
   mf_3to5: 'mf_3to5',
   mf_6plus: 'mf_6plus',
@@ -26,7 +24,6 @@ const SLUG_MAP: Record<string, string> = {
   custom_home: 'custom_home',
   senior_living: 'senior_living',
   industrial: 'industrial',
-  // Display names (from PROJECT_TYPES & setup engine)
   'Single Family': 'custom_home',
   'Townhome': 'townhome',
   'Multifamily 3-5': 'mf_3to5',
@@ -35,7 +32,6 @@ const SLUG_MAP: Record<string, string> = {
   'Mixed-Use': 'mixed_use_commercial',
   'Senior Living': 'senior_living',
   'Industrial': 'industrial',
-  // Legacy display names (existing projects)
   'Single Family Home': 'custom_home',
   'Apartments/Condos': 'mf_3to5',
   'Townhomes': 'townhome',
@@ -43,7 +39,6 @@ const SLUG_MAP: Record<string, string> = {
   'Hotels': 'hotel',
 };
 
-// Reverse map: slug → display name used in setup_questions options
 const SLUG_DISPLAY: Record<string, string> = {
   custom_home: 'Single Family',
   townhome: 'Townhome',
@@ -59,7 +54,7 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const [buildingTypeSlug, setBuildingTypeSlug] = useState<string>(
+  const [buildingTypeSlug] = useState<string>(
     SLUG_MAP[projectType || ''] || projectType || 'custom_home',
   );
   const [setupComplete, setSetupComplete] = useState(false);
@@ -71,14 +66,12 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
     if (seeded.current || !projectId) return;
     seeded.current = true;
     (async () => {
-      // Fetch existing answers
       const { data: existingAnswers } = await supabase
         .from('project_setup_answers')
         .select('field_key, value')
         .eq('project_id', projectId);
       const existingKeys = new Set((existingAnswers ?? []).map((r: any) => r.field_key));
 
-      // Fetch full project record
       const { data: proj } = await supabase
         .from('projects')
         .select('name, address, city, state, zip, start_date, status, description, project_type')
@@ -90,7 +83,6 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
       const slug = SLUG_MAP[proj.project_type || ''] || buildingTypeSlug;
       const displayName = SLUG_DISPLAY[slug] || proj.project_type || '';
 
-      // Build address object from project columns
       const addrObj = (proj.address as any)?.street || proj.city || proj.state || proj.zip
         ? {
             street: (proj.address as any)?.street || '',
@@ -100,13 +92,11 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
           }
         : null;
 
-      // Fetch current building_type value to check for mismatch
       const currentBTRow = (existingAnswers ?? []).find((r: any) => r.field_key === 'building_type');
       const currentBTValue = currentBTRow ? JSON.parse((currentBTRow as any).value ?? 'null') : null;
 
       const seeds: { field_key: string; value: any }[] = [];
       if (!existingKeys.has('name') && proj.name) seeds.push({ field_key: 'name', value: proj.name });
-      // Always reconcile building_type with project record
       if (displayName && currentBTValue !== displayName) seeds.push({ field_key: 'building_type', value: displayName });
       if (!existingKeys.has('address') && addrObj) seeds.push({ field_key: 'address', value: addrObj });
       if (!existingKeys.has('start_date') && proj.start_date) seeds.push({ field_key: 'start_date', value: proj.start_date });
@@ -122,7 +112,7 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
     })();
   }, [projectId, buildingTypeSlug]);
 
-  // Check if setup answers exist (phase 5 completion indicates scope done)
+  // Check if setup answers exist
   const { data: setupAnswerCount = 0 } = useQuery({
     queryKey: ['setup_answers_count', projectId],
     enabled: !!projectId,
@@ -136,29 +126,24 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
     },
   });
 
-  const { data: contracts = [] } = useQuery({
-    queryKey: ['project_contracts_exists_check', projectId],
+  // Check if SOV exists (created by wizard save)
+  const { data: sovExists = false } = useQuery({
+    queryKey: ['project_sovs_lock_check', projectId],
     enabled: !!projectId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('project_contracts').select('contract_sum').eq('project_id', projectId);
+        .from('project_sov').select('id').eq('project_id', projectId).limit(1);
       if (error) throw error;
-      return data ?? [];
+      return (data ?? []).length > 0;
     },
   });
-  const contractsComplete = contracts.some(c => (c.contract_sum || 0) > 0);
 
   const handleSetupComplete = useCallback(() => {
     setSetupComplete(true);
     setSetupCollapsed(true);
-    // Auto-scroll to contracts
     setTimeout(() => {
-      document.getElementById('contracts-card')?.scrollIntoView({ behavior: 'smooth' });
+      document.getElementById('sov-card')?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
-  }, []);
-
-  const handleContractsComplete = useCallback(() => {
-    document.getElementById('sov-card')?.scrollIntoView({ behavior: 'smooth' });
   }, []);
 
   const handleSOVComplete = useCallback(async () => {
@@ -172,6 +157,7 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
   }, [projectId, navigate, toast]);
 
   const scopeComplete = setupComplete || setupCollapsed || setupAnswerCount > 20;
+  const sovReady = scopeComplete && sovExists;
 
   // Auto-collapse on load if scope was already completed
   useEffect(() => {
@@ -203,37 +189,15 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
         </div>
       </Card>
 
-      {/* ── Contracts ─────────────────────────────────────── */}
-      <Card id="contracts-card" className={cn("border border-border overflow-hidden", !scopeComplete && "opacity-50 pointer-events-none")}>
-        <CardHeader2
-          icon={scopeComplete ? <FileText className="w-4 h-4 text-primary" /> : <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
-          title="Contracts"
-          subtitle={scopeComplete ? 'Contract sums and retainage per party' : 'Complete setup first'}
-          complete={contractsComplete}
-          locked={!scopeComplete}
-        />
-        {scopeComplete ? (
-          <CardContent className="p-0">
-            <PhaseContracts
-              projectId={projectId}
-              onComplete={handleContractsComplete}
-              onStepChange={() => {}}
-            />
-          </CardContent>
-        ) : (
-          <LockedContent message="Complete the project setup to unlock contracts." />
-        )}
-      </Card>
-
       {/* ── SOV ───────────────────────────────────────────── */}
-      <Card id="sov-card" className={cn("border border-border overflow-hidden", !contractsComplete && "opacity-50 pointer-events-none")}>
+      <Card id="sov-card" className={cn("border border-border overflow-hidden", !sovReady && "opacity-50 pointer-events-none")}>
         <CardHeader2
-          icon={contractsComplete ? <DollarSign className="w-4 h-4 text-primary" /> : <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
+          icon={sovReady ? <DollarSign className="w-4 h-4 text-primary" /> : <Lock className="w-3.5 h-3.5 text-muted-foreground" />}
           title="Schedule of Values"
-          subtitle={contractsComplete ? 'Generate, review, and activate' : 'Save contracts first'}
-          locked={!contractsComplete}
+          subtitle={sovReady ? 'Review, adjust, lock, and activate' : 'Complete setup to unlock SOV'}
+          locked={!sovReady}
         />
-        {contractsComplete ? (
+        {sovReady ? (
           <CardContent className="p-0">
             <PhaseSOV
               projectId={projectId}
@@ -242,7 +206,7 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
             />
           </CardContent>
         ) : (
-          <LockedContent message="Save contract amounts to unlock SOV generation." />
+          <LockedContent message="Complete the project setup wizard to generate your SOV." />
         )}
       </Card>
     </div>
