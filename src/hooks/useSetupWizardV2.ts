@@ -157,16 +157,7 @@ const TYPE_QUESTIONS: WizardQuestion[] = [
     buildingTypes: ['townhome'],
   },
 
-  // ─── BASEMENT ──────────────────────────────────────────────────
-  {
-    id: 'Q2_basement',
-    phase: 'per_floor',
-    label: 'Has basement?',
-    inputType: 'yes_no',
-    tag: 'conditional',
-    fieldKey: 'has_basement',
-    buildingTypes: ['apartments_mf', 'hotel', 'senior_living'],
-  },
+  // ─── BASEMENT (moved to SHARED_QUESTIONS as S_basement) ──────
 
   // ─── FLOOR SYSTEM ──────────────────────────────────────────────
   {

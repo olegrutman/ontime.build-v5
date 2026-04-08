@@ -140,7 +140,7 @@ function renderInput(type: InputType, value: any, options: string[] | undefined,
     case 'yes_no_floors': {
       const enabled = typeof value === 'object' ? value?.enabled : value === 'yes';
       const floors: string[] = typeof value === 'object' ? value?.floors || [] : [];
-      const floorOptions = ['Basement', 'L1', 'L2', 'L3', 'Roof'];
+      const floorOptions = hasBasement ? ['Basement', 'L1', 'L2', 'L3', 'Roof'] : ['L1', 'L2', 'L3', 'Roof'];
       return (
         <div className="space-y-2">
           <div className="flex gap-2">
