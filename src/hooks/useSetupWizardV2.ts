@@ -264,15 +264,24 @@ const TYPE_QUESTIONS: WizardQuestion[] = [
     buildingTypes: ['townhome', 'apartments_mf', 'hotel', 'senior_living'],
   },
 
-  // ─── ROOF SHEATHING ───────────────────────────────────────────
+  // ─── ROOF: PARAPET & ROOF DECK ─────────────────────────────────
   {
-    id: 'Q7_roof',
+    id: 'Q7_parapet',
     phase: 'roof',
-    label: 'Roof sheathing in scope?',
+    label: 'Has parapet walls?',
     inputType: 'yes_no',
-    tag: 'always',
-    fieldKey: 'roof_sheathing',
-    buildingTypes: 'all',
+    tag: 'conditional',
+    fieldKey: 'has_parapet',
+    buildingTypes: ['townhome', 'apartments_mf', 'hotel', 'senior_living'],
+  },
+  {
+    id: 'Q7_roof_deck',
+    phase: 'roof',
+    label: 'Has roof decks (flat roof sections)?',
+    inputType: 'yes_no',
+    tag: 'conditional',
+    fieldKey: 'has_roof_deck',
+    buildingTypes: ['townhome', 'apartments_mf'],
   },
 
   // ─── SIDING GATE ──────────────────────────────────────────────
