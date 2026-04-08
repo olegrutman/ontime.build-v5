@@ -727,7 +727,7 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
 
   // Basement level
   if (a.has_basement === 'yes') {
-    push('per_floor', 'Structural steel & post bases — Basement', w('basement_steel'), 'has_basement');
+    
     push('per_floor', `Floor system (${floorSystem}) — Basement`, w('basement_floor'), 'has_basement');
     push('per_floor', 'Hardware & connectors — Basement', w('basement_hw'), 'has_basement');
     if (a.basement_type === 'Finished' || a.basement_type === 'Partially finished') {
