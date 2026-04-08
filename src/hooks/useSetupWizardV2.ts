@@ -864,22 +864,40 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
   push('closeout', 'Nail sweep', w('nail_sweep'));
   push('closeout', 'Final punch', w('final_punch'));
 
-  // ─── Normalize to 100% ─────────────────────────────────────
+  // ─── Normalize to 100% (with mobilization override) ──────
   const rawTotal = rawLines.reduce((s, l) => s + l.weight, 0);
   if (rawTotal <= 0) return [];
+
+  // Check if user entered a fixed mobilization %
+  const userMobPct = (typeof a.mobilization === 'object' && a.mobilization?.percent)
+    ? parseFloat(a.mobilization.percent) : 0;
+  const mobIdx = userMobPct > 0 ? rawLines.findIndex(r => r.key === 'mobilization') : -1;
 
   const scale = 100 / rawTotal;
 
   // Build final lines with normalized percentages
   const lines: SOVLine[] = [];
   let pctSum = 0;
+
+  // If user set mob %, calculate how much the rest gets
+  const remainingPctPool = mobIdx >= 0 ? (100 - userMobPct) : 100;
+  const nonMobTotal = mobIdx >= 0
+    ? rawLines.reduce((s, l, idx) => s + (idx === mobIdx ? 0 : l.weight), 0)
+    : rawTotal;
+  const nonMobScale = nonMobTotal > 0 ? remainingPctPool / nonMobTotal : 0;
+
   for (let i = 0; i < rawLines.length; i++) {
     const r = rawLines[i];
     let pct: number;
     if (i === rawLines.length - 1) {
       pct = Math.round((100 - pctSum) * 100) / 100;
+    } else if (i === mobIdx) {
+      // User-entered mobilization % — use exactly
+      pct = Math.round(userMobPct * 100) / 100;
+      pctSum += pct;
     } else {
-      pct = Math.round(r.weight * scale * 100) / 100;
+      const sc = mobIdx >= 0 ? nonMobScale : scale;
+      pct = Math.round(r.weight * sc * 100) / 100;
       pctSum += pct;
     }
 
