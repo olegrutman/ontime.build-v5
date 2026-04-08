@@ -264,15 +264,24 @@ const TYPE_QUESTIONS: WizardQuestion[] = [
     buildingTypes: ['townhome', 'apartments_mf', 'hotel', 'senior_living'],
   },
 
-  // ─── ROOF SHEATHING ───────────────────────────────────────────
+  // ─── ROOF: PARAPET & ROOF DECK ─────────────────────────────────
   {
-    id: 'Q7_roof',
+    id: 'Q7_parapet',
     phase: 'roof',
-    label: 'Roof sheathing in scope?',
+    label: 'Has parapet walls?',
     inputType: 'yes_no',
-    tag: 'always',
-    fieldKey: 'roof_sheathing',
-    buildingTypes: 'all',
+    tag: 'conditional',
+    fieldKey: 'has_parapet',
+    buildingTypes: ['townhome', 'apartments_mf', 'hotel', 'senior_living'],
+  },
+  {
+    id: 'Q7_roof_deck',
+    phase: 'roof',
+    label: 'Has roof decks (flat roof sections)?',
+    inputType: 'yes_no',
+    tag: 'conditional',
+    fieldKey: 'has_roof_deck',
+    buildingTypes: ['townhome', 'apartments_mf'],
   },
 
   // ─── SIDING GATE ──────────────────────────────────────────────
@@ -619,8 +628,12 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
 
   // ─── Phase 3: Roof ──────────────────────────────────────────
   push('roof', 'Roof framing');
-  if (a.roof_sheathing === 'yes') {
-    push('roof', 'Roof sheathing', 'roof_sheathing');
+  push('roof', 'Roof sheathing');
+  if (a.has_parapet === 'yes') {
+    push('roof', 'Parapet wall framing', 'has_parapet');
+  }
+  if (a.has_roof_deck === 'yes') {
+    push('roof', 'Roof deck framing', 'has_roof_deck');
   }
 
   // ─── Phase 4: Envelope ──────────────────────────────────────
