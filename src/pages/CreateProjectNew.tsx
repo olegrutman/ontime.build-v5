@@ -9,18 +9,26 @@ import { Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { AppLayout } from '@/components/layout';
 import { cn } from '@/lib/utils';
 import { 
-  NewProjectWizardData, 
-  WIZARD_STEPS,
   ProjectBasics,
   TeamMember,
 } from '@/types/projectWizard';
 import { OrgType } from '@/types/organization';
+import { useSetupWizardV2 } from '@/hooks/useSetupWizardV2';
 
 // Import step components
 import { BasicsStepNew } from '@/components/project-wizard-new/BasicsStep';
+import { BuildingTypeSelector } from '@/components/setup-wizard-v2/BuildingTypeSelector';
+import { ScopeQuestionsPanel } from '@/components/setup-wizard-v2/ScopeQuestionsPanel';
 import { TeamStep } from '@/components/project-wizard-new/TeamStep';
-import { ReviewStepNew } from '@/components/project-wizard-new/ReviewStep';
-import { WizardSummaryPanel } from '@/components/project-wizard-new/WizardSummaryPanel';
+import { UnifiedReviewStep } from '@/components/project-wizard-new/UnifiedReviewStep';
+
+const UNIFIED_STEPS = [
+  { id: 'basics', label: 'Project Basics', description: 'Name and location' },
+  { id: 'building_type', label: 'Building Type', description: 'What are you building?' },
+  { id: 'scope', label: 'Scope & Contract', description: 'Questions and SOV' },
+  { id: 'team', label: 'Project Team', description: 'Invite contractors' },
+  { id: 'review', label: 'Review', description: 'Review and create' },
+] as const;
 
 const initialBasics: ProjectBasics = {
   name: '',
@@ -31,19 +39,14 @@ const initialBasics: ProjectBasics = {
   zip: '',
 };
 
-const initialData: NewProjectWizardData = {
-  basics: initialBasics,
-  team: [],
-  scope: {},
-  contracts: [],
-};
-
 export default function CreateProjectNew() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, userOrgRoles, profile, loading: authLoading } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
-  const [data, setData] = useState<NewProjectWizardData>(initialData);
+  const [basics, setBasics] = useState<ProjectBasics>(initialBasics);
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [projectId, setProjectId] = useState<string | undefined>();
   const [saving, setSaving] = useState(false);
 
   const currentOrg = userOrgRoles[0]?.organization;
@@ -51,7 +54,9 @@ export default function CreateProjectNew() {
                       currentOrg?.type === 'TC' ? 'Trade Contractor' :
                       currentOrg?.type === 'SUPPLIER' ? 'Supplier' : null;
 
-  // Redirect if not authorized
+  // Setup wizard hook (no projectId initially — answers stored in memory)
+  const wizard = useSetupWizardV2();
+
   useEffect(() => {
     if (!authLoading && (!user || !currentOrg)) {
       navigate('/dashboard');
@@ -59,21 +64,20 @@ export default function CreateProjectNew() {
   }, [authLoading, user, currentOrg, navigate]);
 
   const updateBasics = (updates: Partial<ProjectBasics>) => {
-    setData(prev => ({ ...prev, basics: { ...prev.basics, ...updates } }));
-  };
-
-  const updateTeam = (team: TeamMember[]) => {
-    setData(prev => ({ ...prev, team }));
+    setBasics(prev => ({ ...prev, ...updates }));
   };
 
   const canProceed = (): boolean => {
     switch (currentStep) {
       case 0: // Basics
-        return !!(data.basics.name && data.basics.projectType && data.basics.address && 
-                  data.basics.city && data.basics.state && data.basics.zip);
-      case 1: // Team - optional
+        return !!(basics.name && basics.address && basics.city && basics.state && basics.zip);
+      case 1: // Building type
+        return !!wizard.buildingType;
+      case 2: // Scope — at least contract value should be set
+        return typeof wizard.answers.contract_value === 'number' && wizard.answers.contract_value > 0;
+      case 3: // Team — optional
         return true;
-      case 2: // Review
+      case 4: // Review
         return true;
       default:
         return false;
@@ -81,7 +85,7 @@ export default function CreateProjectNew() {
   };
 
   const saveBasics = async (): Promise<string | null> => {
-    if (data.projectId) return data.projectId;
+    if (projectId) return projectId;
     
     if (!currentOrg?.id || !user?.id) {
       toast({ title: 'Error', description: 'Organization not found', variant: 'destructive' });
@@ -92,13 +96,13 @@ export default function CreateProjectNew() {
       const { data: project, error } = await supabase
         .from('projects')
         .insert({
-          name: data.basics.name,
-          project_type: data.basics.projectType,
-          address: { street: data.basics.address } as any,
-          city: data.basics.city,
-          state: data.basics.state,
-          zip: data.basics.zip,
-          start_date: data.basics.startDate || null,
+          name: basics.name,
+          project_type: wizard.buildingType || '',
+          address: { street: basics.address } as any,
+          city: basics.city,
+          state: basics.state,
+          zip: basics.zip,
+          start_date: basics.startDate || null,
           created_by: user.id,
           created_by_org_id: currentOrg.id,
           organization_id: currentOrg.id,
@@ -118,13 +122,11 @@ export default function CreateProjectNew() {
         invited_by: user.id,
       });
       
-      // Map org type to role label for project_team
       const roleLabel = currentOrg.type === 'GC' ? 'General Contractor' 
         : currentOrg.type === 'TC' ? 'Trade Contractor'
         : currentOrg.type === 'FC' ? 'Field Crew'
         : 'Supplier';
       
-      // Add creator to project_team (so they appear on Team page)
       await supabase.from('project_team').insert({
         project_id: project.id,
         org_id: currentOrg.id,
@@ -139,7 +141,7 @@ export default function CreateProjectNew() {
         accepted_at: new Date().toISOString(),
       });
 
-      setData(prev => ({ ...prev, projectId: project.id }));
+      setProjectId(project.id);
       return project.id;
     } catch (error: any) {
       toast({ title: 'Error saving project', description: error.message, variant: 'destructive' });
@@ -147,24 +149,22 @@ export default function CreateProjectNew() {
     }
   };
 
-  const saveTeam = async (projectId: string) => {
+  const saveTeam = async (pid: string) => {
     const { data: existingTeam } = await supabase
       .from('project_team')
       .select('invited_email')
-      .eq('project_id', projectId);
+      .eq('project_id', pid);
     
     const existingEmails = new Set((existingTeam || []).map(m => m.invited_email?.toLowerCase()));
     
-    for (const member of data.team) {
-      if (existingEmails.has(member.contactEmail.toLowerCase())) {
-        continue;
-      }
+    for (const member of team) {
+      if (existingEmails.has(member.contactEmail.toLowerCase())) continue;
       
       try {
         const { data: teamMember, error: teamError } = await supabase
           .from('project_team')
           .insert({
-            project_id: projectId,
+            project_id: pid,
             role: member.role,
             trade: member.trade,
             trade_custom: member.tradeCustom,
@@ -180,7 +180,7 @@ export default function CreateProjectNew() {
         if (teamError) throw teamError;
 
         await supabase.from('project_invites').insert({
-          project_id: projectId,
+          project_id: pid,
           project_team_id: teamMember.id,
           role: member.role,
           trade: member.trade,
@@ -199,17 +199,16 @@ export default function CreateProjectNew() {
   const nextStep = async () => {
     setSaving(true);
     try {
-      if (currentStep === 0) {
-        const projectId = await saveBasics();
-        if (!projectId) {
-          setSaving(false);
-          return;
-        }
-      } else if (currentStep === 1 && data.projectId) {
-        await saveTeam(data.projectId);
+      // When leaving scope step (step 2), create the project if not yet created
+      if (currentStep === 2 && !projectId) {
+        const pid = await saveBasics();
+        if (!pid) { setSaving(false); return; }
       }
-      
-      setCurrentStep(prev => Math.min(prev + 1, WIZARD_STEPS.length - 1));
+      // When leaving team step (step 3), save team members
+      if (currentStep === 3 && projectId) {
+        await saveTeam(projectId);
+      }
+      setCurrentStep(prev => Math.min(prev + 1, UNIFIED_STEPS.length - 1));
     } finally {
       setSaving(false);
     }
@@ -220,17 +219,29 @@ export default function CreateProjectNew() {
   };
 
   const createProject = async () => {
-    if (!data.projectId) return;
-    
     setSaving(true);
     try {
+      let pid = projectId;
+      // Ensure project exists
+      if (!pid) {
+        pid = await saveBasics();
+        if (!pid) { setSaving(false); return; }
+      }
+
+      // Save wizard answers + contract + SOV
+      await wizard.saveAll(pid);
+
+      // Save any remaining team members
+      await saveTeam(pid);
+
+      // Update project status
       await supabase
         .from('projects')
-        .update({ status: 'setup' })
-        .eq('id', data.projectId);
+        .update({ status: 'setup', project_type: wizard.buildingType || '' })
+        .eq('id', pid);
 
       toast({ title: 'Project created!', description: 'Invitations will be sent to team members.' });
-      navigate(`/project/${data.projectId}`);
+      navigate(`/project/${pid}`);
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
@@ -241,19 +252,51 @@ export default function CreateProjectNew() {
   const renderStep = () => {
     switch (currentStep) {
       case 0:
-        return <BasicsStepNew data={data.basics} onChange={updateBasics} />;
+        return <BasicsStepNew data={basics} onChange={updateBasics} />;
       case 1:
         return (
-          <TeamStep 
-            team={data.team} 
-            onChange={updateTeam} 
-            creatorRole={creatorRole}
-            projectId={data.projectId}
-            creatorOrgType={currentOrg?.type as OrgType | undefined}
+          <BuildingTypeSelector
+            selected={wizard.buildingType}
+            onSelect={(bt) => {
+              wizard.selectBuildingType(bt);
+            }}
           />
         );
       case 2:
-        return <ReviewStepNew data={data} creatorRole={creatorRole} />;
+        return wizard.buildingType ? (
+          <ScopeQuestionsPanel
+            buildingType={wizard.buildingType}
+            answers={wizard.answers}
+            setAnswer={wizard.setAnswer}
+            visibleQuestions={wizard.visibleQuestions}
+            sovLines={wizard.sovLines}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground py-8 text-center">
+            Please go back and select a building type first.
+          </p>
+        );
+      case 3:
+        return (
+          <TeamStep 
+            team={team} 
+            onChange={setTeam} 
+            creatorRole={creatorRole}
+            projectId={projectId}
+            creatorOrgType={currentOrg?.type as OrgType | undefined}
+          />
+        );
+      case 4:
+        return (
+          <UnifiedReviewStep
+            basics={basics}
+            buildingType={wizard.buildingType}
+            answers={wizard.answers}
+            visibleQuestions={wizard.visibleQuestions}
+            sovLines={wizard.sovLines}
+            projectId={projectId}
+          />
+        );
       default:
         return null;
     }
@@ -278,7 +321,7 @@ export default function CreateProjectNew() {
             <Card>
               <CardContent className="p-4">
                 <nav className="space-y-2">
-                  {WIZARD_STEPS.map((step, index) => (
+                  {UNIFIED_STEPS.map((step, index) => (
                     <div
                       key={step.id}
                       onClick={() => { if (index < currentStep) setCurrentStep(index); }}
@@ -305,7 +348,6 @@ export default function CreateProjectNew() {
                   ))}
                 </nav>
               </CardContent>
-              <WizardSummaryPanel data={data} />
             </Card>
           </div>
 
@@ -328,7 +370,7 @@ export default function CreateProjectNew() {
                   Back
                 </Button>
 
-                {currentStep < WIZARD_STEPS.length - 1 ? (
+                {currentStep < UNIFIED_STEPS.length - 1 ? (
                   <Button
                     onClick={nextStep}
                     disabled={!canProceed() || saving}
