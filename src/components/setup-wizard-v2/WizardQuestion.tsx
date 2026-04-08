@@ -46,7 +46,7 @@ export function WizardQuestion({ question, value, onChange, answers }: Props) {
   );
 }
 
-function renderInput(type: InputType, value: any, options: string[] | undefined, onChange: (v: any) => void) {
+function renderInput(type: InputType, value: any, options: string[] | undefined, onChange: (v: any) => void, hasBasement: boolean = false) {
   switch (type) {
     case 'yes_no':
       return (
