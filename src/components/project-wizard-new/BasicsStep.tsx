@@ -1,7 +1,7 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ProjectBasics, PROJECT_TYPES, US_STATES } from '@/types/projectWizard';
+import { ProjectBasics, US_STATES } from '@/types/projectWizard';
 
 interface BasicsStepProps {
   data: ProjectBasics;
@@ -27,25 +27,6 @@ export function BasicsStepNew({ data, onChange }: BasicsStepProps) {
             value={data.name}
             onChange={(e) => onChange({ name: e.target.value })}
           />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="projectType">Project Type *</Label>
-          <Select
-            value={data.projectType}
-            onValueChange={(value) => onChange({ projectType: value as any })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select project type" />
-            </SelectTrigger>
-            <SelectContent>
-              {PROJECT_TYPES.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {type}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         <div className="space-y-2">
