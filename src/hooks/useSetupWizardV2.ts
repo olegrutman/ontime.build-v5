@@ -741,6 +741,17 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
   push('closeout', 'Nail sweep');
   push('closeout', 'Final punch');
 
+  // Distribute contract value evenly across lines
+  if (contractValue > 0 && lines.length > 0) {
+    const perLine = Math.floor((contractValue * 100) / lines.length) / 100;
+    let remainder = contractValue;
+    for (let i = 0; i < lines.length - 1; i++) {
+      lines[i].amount = perLine;
+      remainder -= perLine;
+    }
+    lines[lines.length - 1].amount = Math.round(remainder * 100) / 100;
+  }
+
   return lines;
 }
 
