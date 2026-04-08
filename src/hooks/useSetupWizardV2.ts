@@ -748,7 +748,7 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
     if ((a.stair_towers ?? 0) > 0) {
       push('per_floor', `Stair tower framing — ${label} (×${a.stair_towers})`, perFloorAllocation * fi.stairs / 100, 'stair_towers');
     }
-    if (i === 1 && (a.has_garage === 'yes' || (a.garage_type && a.garage_type !== 'No garage'))) {
+    if (i === 1 && (a.has_garage === 'yes' || (a.has_garage as any)?.enabled === true || (a.garage_type && a.garage_type !== 'No garage'))) {
       const gType = a.garage_type || (typeof a.has_garage === 'object' ? a.has_garage.subtype : 'Attached');
       push('per_floor', `Garage framing — ${gType || 'Attached'}`, w('garage'), 'has_garage');
       if (bt === 'townhome') {
