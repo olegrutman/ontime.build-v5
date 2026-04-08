@@ -1,37 +1,56 @@
 
 
-# Wizard Summary + SOV Becomes Official Project SOV
+# Combine Project Creation + Setup Wizard into One Flow
 
-## What Changes
+## Current Problem (Two Separate Flows)
 
-### 1. Add Summary Step to Wizard
-Replace the current minimal "Review" step with a proper summary screen showing all user selections grouped by section: building type, contract value, floors, material responsibility, basement details, roof, envelope, backout, exterior, etc. Each answer displayed in a clean card layout so the user can review everything before saving.
+Right now there are **two disconnected steps**:
 
-### 2. Remove Contracts Card from Setup Flow
-Delete the `PhaseContracts` card (Step 2) from `ProjectSetupFlow.tsx`. The contract value entered in the wizard (`contract_value` answer) becomes the single source of truth. On save, upsert a `project_contracts` row with that value so downstream features (invoicing, overview KPIs) still work.
+1. **Create Project page** (`/create-project`) — asks for name, address, type, team, then creates the project record
+2. **Project Setup page** (shown after navigating to the project) — runs the V2 wizard for building type, scope questions, contract value, SOV generation
 
-### 3. Save Wizard SOV Lines as Official `project_sov` + `project_sov_items`
-Update the `save()` mutation in `useSetupWizardV2.ts` to:
-- Create a `project_sov` record (or update existing) for the project
-- Insert each wizard `SOVLine` as a `project_sov_items` row with `percent_of_contract`, `value_amount`, `scheduled_value`, `item_name`, `item_group` (phase label), `sort_order`, `source: 'wizard_v2'`, `scope_section_slug` (from `conditionalKey`)
-- Delete any previous wizard-generated SOV items before re-inserting
+This means the user fills in basics, creates the project, gets redirected, then has to go through setup again — with data being seeded from step 1 into step 2. Redundant and confusing.
 
-### 4. Show Editable SOV Card After Setup Completes
-Replace the old `PhaseSOV` card in `ProjectSetupFlow.tsx` with the existing `ContractSOVEditor` component (already supports inline editing of names, percentages, amounts, reordering, locking). This card unlocks immediately after setup completes since the SOV already exists. Remove the "contracts must exist" gate — the wizard handles everything.
+## Proposed Unified Flow
 
-### 5. Simplified Setup Flow Layout
-After changes, `ProjectSetupFlow.tsx` has two cards:
-1. **Project Setup** — the wizard (building type → questions → summary → save)
-2. **Schedule of Values** — `ContractSOVEditor` showing saved lines, editable, lockable
+Merge everything into a **single wizard** on the `/create-project` page:
 
-The "Finish Setup & Activate Project" button stays on the SOV card, gated on the SOV being locked.
+```text
+Step 1: Project Basics (name, address, city/state/zip, start date)
+Step 2: Building Type (the 6-tile selector — replaces old "Project Type" dropdown)
+Step 3: Contract Value + Scope Questions (structure, roof, envelope, etc.)
+Step 4: Project Team (invite GCs/TCs — same as current TeamStep)
+Step 5: Summary + Review (all answers, SOV preview, team list)
+→ "Create Project" saves everything at once
+```
+
+**What happens on "Create Project":**
+- Creates the `projects` row (from basics)
+- Saves setup answers to `project_setup_answers`
+- Creates `project_contracts` with contract value
+- Creates `project_sov` + `project_sov_items` from generated lines
+- Saves team members + sends invites
+- Navigates to `ProjectSetupFlow` which now only shows the **editable SOV card** (wizard is already done)
+
+## Key Design Decisions
+
+1. **Building type replaces project type dropdown** — the V2 wizard's 6 building types are more specific than the old dropdown. The selected building type maps to a `project_type` value when saving.
+
+2. **Project record created at the end** (not after step 1) — currently `saveBasics` creates the project on step 1 so TeamStep has a `projectId`. We keep this behavior: project is created when leaving step 1, team step uses that ID. But the wizard + SOV save happens on final "Create Project" click.
+
+3. **Post-creation setup page simplified** — `ProjectSetupFlow` only shows the SOV editor card since the wizard is already complete. If user returns to an in-progress project that wasn't fully created, they see the wizard again.
+
+4. **GC vs TC differences** — both org types go through the same flow. The scope questions already adapt based on building type. Team step already adapts based on creator org type (GCs add TCs, TCs add GCs and field crews).
 
 ## Files Changed
 
 | File | Change |
 |------|--------|
-| `src/hooks/useSetupWizardV2.ts` | Expand `save()` to create `project_sov` + `project_sov_items` rows and upsert `project_contracts` with contract value |
-| `src/components/setup-wizard-v2/SetupWizardV2.tsx` | Replace review step with full summary showing all answers by section |
-| `src/components/project-setup/ProjectSetupFlow.tsx` | Remove Contracts card; simplify to Setup + SOV editor; remove contract gate logic |
-| `src/components/project-setup/PhaseSOV.tsx` | Simplify — remove contract prerequisite checks since SOV already exists after wizard save |
+| `src/pages/CreateProjectNew.tsx` | Replace 3-step wizard with 5-step unified flow: Basics → Building Type → Scope/Contract → Team → Review. On final save, run full persistence (project + answers + contract + SOV + team). |
+| `src/components/project-wizard-new/BasicsStep.tsx` | Remove "Project Type" dropdown (replaced by building type selector in step 2). |
+| `src/components/project-wizard-new/ReviewStep.tsx` | Expand to show scope answers summary + SOV preview + team list (reuse `WizardSummary` content). |
+| `src/components/setup-wizard-v2/SetupWizardV2.tsx` | Extract scope question panel into a reusable component (`ScopeQuestionsPanel`) that can be embedded in the create-project wizard without the full split-screen layout. |
+| `src/hooks/useSetupWizardV2.ts` | Make the hook work without a `projectId` initially (answers stored in memory until save). Add a `saveAll(projectId)` method that persists everything in one shot. |
+| `src/components/project-setup/ProjectSetupFlow.tsx` | Simplify — if wizard is already complete (SOV exists), only show SOV editor card. No need for the wizard card. |
+| `src/types/projectWizard.ts` | Remove `PROJECT_TYPES` array (no longer needed — building type selector replaces it). Update `ProjectBasics` to remove `projectType` field. |
 
