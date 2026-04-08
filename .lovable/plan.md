@@ -1,21 +1,24 @@
 
 
-# Remove GC Dashboard from Platform Owner Site
+# Generate Setup & Framing Scope Questions Spreadsheet
 
-## Changes
+## Overview
+Create a comprehensive XLSX file with two sheets documenting all questions in the Project Setup wizard (97 DB-driven questions) and the Framing Scope wizard (100+ hardcoded UI questions across 12 sections).
 
-### 1. `src/components/platform/PlatformSidebar.tsx`
-- Remove the nav item `{ to: '/platform/gc-dashboard', icon: BarChart3, label: 'GC Dashboard' }` from the `NAV_ITEMS` array (line 27).
-- Remove the `BarChart3` import if it's no longer used by any remaining nav item (it's still used by KPI Cards on line 26, so keep it).
+## Sheet 1: Project Setup Questions
+Query all 97 rows from `setup_questions` table. Columns:
+- Phase, Phase Name, Section, Sort Order, Label, Field Key, Input Type, Trigger Condition, Notes
+- One column per building type slug showing that type's options
 
-### 2. `src/App.tsx`
-- Remove the route `<Route path="/platform/gc-dashboard" ...>` (line 218).
-- Remove the `PlatformGCDashboard` import if it becomes unused.
+## Sheet 2: Framing Scope Questions
+Extract from the 12 section components. Columns:
+- Section #, Section Name, Field Key (dot path), Label, Subtitle, Input Type (YesNo, Radio, Checkbox, Number, Toggle), Options (if radio/select), Visibility Rule (building type filter), Conditional On (parent field)
 
-## Files Changed
+## Technical Details
+- Python script using openpyxl with formatted headers, auto-width columns, and freeze panes
+- Setup questions pulled via psql query; framing scope questions hardcoded from component analysis
+- Output to `/mnt/documents/ontime_setup_framing_questions.xlsx`
 
-| File | Change |
-|------|--------|
-| `src/components/platform/PlatformSidebar.tsx` | Remove GC Dashboard nav item |
-| `src/App.tsx` | Remove GC Dashboard route and unused import |
+## Files
+No codebase changes. One artifact generated.
 
