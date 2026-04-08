@@ -132,6 +132,16 @@ const SHARED_QUESTIONS: WizardQuestion[] = [
     buildingTypes: 'all',
   },
   {
+    id: 'S_basement_walkout',
+    phase: 'mobilization_steel',
+    label: 'Is it a walkout basement?',
+    inputType: 'yes_no',
+    tag: 'conditional',
+    conditionalOn: 'has_basement=yes',
+    fieldKey: 'basement_walkout',
+    buildingTypes: 'all',
+  },
+  {
     id: 'S2',
     phase: 'mobilization_steel',
     label: 'Mobilization as separate SOV line item?',
