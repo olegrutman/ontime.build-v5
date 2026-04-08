@@ -1,29 +1,21 @@
 
 
-# Add Basement Type Question + Conditional SOV Lines
+# Fix Duplicate Structural Steel in SOV
 
 ## Problem
-When a user says "Yes" to basement, we don't ask what kind. Finished basements require wall framing lines in the SOV; unfinished ones may not. Need a follow-up question and conditional SOV generation.
+When both "structural steel" and "basement" are enabled, the SOV generates two steel lines for the basement:
+1. `Structural steel — Basement` (from the steel floor loop at line 724)
+2. `Structural steel & post bases — Basement` (from the basement block at line 730)
 
-## Changes
+## Fix
 
 ### `src/hooks/useSetupWizardV2.ts`
 
-**1. Add new question after `S_basement`:**
-- `S_basement_type` — "What kind of basement?"
-- `inputType: 'dropdown'`
-- `fieldKey: 'basement_type'`
-- Options: `['Finished', 'Partially finished', 'Unfinished']`
-- `visibleWhen: { has_basement: 'yes' }` (only show if basement is Yes)
-- `phase: 'mobilization_steel'`, `buildingTypes: 'all'`
+**Remove the dedicated basement steel line (line 730)** since the structural steel floor picker already handles it when the user selects "Basement" as one of the floors. The basement block should only generate floor system, hardware, and wall framing lines — not steel.
 
-**2. Update SOV generation (line ~718):**
-- Always generate `Structural steel & post bases — Basement` and `Hardware & connectors — Basement` when basement is Yes
-- Always generate `Floor system — Basement` when basement is Yes
-- Only generate `Wall framing — Basement` when `basement_type` is `'Finished'` or `'Partially finished'`
-- Add `Interior wall framing — Basement` line only when `basement_type === 'Finished'` (full layout of interior partition walls)
+If structural steel is **not** in scope but basement **is**, we still need basement hardware and floor system but no steel line at all (steel wasn't selected).
 
 | File | Change |
 |------|--------|
-| `src/hooks/useSetupWizardV2.ts` | Add basement type dropdown question; conditionally generate basement wall lines based on finish level |
+| `src/hooks/useSetupWizardV2.ts` | Remove `Structural steel & post bases — Basement` line from the basement block (line 730) |
 
