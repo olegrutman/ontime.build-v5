@@ -655,14 +655,16 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
   }
 
   // ─── Phase 5: Backout & Interior ────────────────────────────
-  push('backout', 'MEP backout');
-  push('backout', 'Blocking');
-  push('backout', 'Fire blocking');
-  push('backout', 'Shim & shave');
+  if (a.has_backout === 'yes') {
+    push('backout', 'MEP backout', 'has_backout');
+    push('backout', 'Blocking', 'has_backout');
+    push('backout', 'Fire blocking', 'has_backout');
+    push('backout', 'Shim & shave', 'has_backout');
 
-  if (bt === 'senior_living') {
-    const adaScope = a.ada_blocking || 'Standard package';
-    push('backout', `ADA blocking — ${adaScope}`, 'ada_blocking');
+    if (bt === 'senior_living') {
+      const adaScope = a.ada_blocking || 'Standard package';
+      push('backout', `ADA blocking — ${adaScope}`, 'ada_blocking');
+    }
   }
 
   // ─── Phase 6: Exterior Finish ───────────────────────────────
