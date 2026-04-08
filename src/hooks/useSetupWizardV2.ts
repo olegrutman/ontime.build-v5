@@ -628,8 +628,12 @@ export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] 
 
   // ─── Phase 3: Roof ──────────────────────────────────────────
   push('roof', 'Roof framing');
-  if (a.roof_sheathing === 'yes') {
-    push('roof', 'Roof sheathing', 'roof_sheathing');
+  push('roof', 'Roof sheathing');
+  if (a.has_parapet === 'yes') {
+    push('roof', 'Parapet wall framing', 'has_parapet');
+  }
+  if (a.has_roof_deck === 'yes') {
+    push('roof', 'Roof deck framing', 'has_roof_deck');
   }
 
   // ─── Phase 4: Envelope ──────────────────────────────────────
