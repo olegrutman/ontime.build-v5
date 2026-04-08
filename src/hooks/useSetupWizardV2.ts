@@ -480,7 +480,7 @@ const TYPE_QUESTIONS: WizardQuestion[] = [
   // ─── ROOFTOP DECK ─────────────────────────────────────────────
   {
     id: 'Q11_rooftop',
-    phase: 'exterior_finish',
+    phase: 'roof',
     label: 'Has rooftop deck?',
     inputType: 'yes_no',
     tag: 'conditional',
