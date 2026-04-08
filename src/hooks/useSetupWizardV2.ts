@@ -96,6 +96,15 @@ const SHARED_QUESTIONS: WizardQuestion[] = [
     buildingTypes: 'all',
   },
   {
+    id: 'S_basement',
+    phase: 'mobilization_steel',
+    label: 'Has basement?',
+    inputType: 'yes_no',
+    tag: 'conditional',
+    fieldKey: 'has_basement',
+    buildingTypes: 'all',
+  },
+  {
     id: 'S2',
     phase: 'mobilization_steel',
     label: 'Mobilization as separate SOV line item?',
@@ -148,16 +157,7 @@ const TYPE_QUESTIONS: WizardQuestion[] = [
     buildingTypes: ['townhome'],
   },
 
-  // ─── BASEMENT ──────────────────────────────────────────────────
-  {
-    id: 'Q2_basement',
-    phase: 'per_floor',
-    label: 'Has basement?',
-    inputType: 'yes_no',
-    tag: 'conditional',
-    fieldKey: 'has_basement',
-    buildingTypes: ['apartments_mf', 'hotel', 'senior_living'],
-  },
+  // ─── BASEMENT (moved to SHARED_QUESTIONS as S_basement) ──────
 
   // ─── FLOOR SYSTEM ──────────────────────────────────────────────
   {

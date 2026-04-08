@@ -128,11 +128,12 @@ export function SetupWizardV2({ projectId, onComplete }: Props) {
               </p>
             ) : (
               stepQuestions.map((q) => (
-                <WizardQuestion
+              <WizardQuestion
                   key={q.id}
                   question={q}
                   value={answers[q.fieldKey] ?? null}
                   onChange={(val) => setAnswer(q.fieldKey, val)}
+                  answers={answers}
                 />
               ))
             )}

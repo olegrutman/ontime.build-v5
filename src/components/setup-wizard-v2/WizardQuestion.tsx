@@ -16,11 +16,13 @@ interface Props {
   question: WQ;
   value: any;
   onChange: (value: any) => void;
+  answers?: Record<string, any>;
 }
 
-export function WizardQuestion({ question, value, onChange }: Props) {
+export function WizardQuestion({ question, value, onChange, answers }: Props) {
   const { label, inputType, options, tag } = question;
   const isGate = tag === 'scope_gate';
+  const hasBasement = answers?.has_basement === 'yes';
 
   return (
     <div
@@ -39,12 +41,12 @@ export function WizardQuestion({ question, value, onChange }: Props) {
           </span>
         )}
       </Label>
-      {renderInput(inputType, value, options, onChange)}
+      {renderInput(inputType, value, options, onChange, hasBasement)}
     </div>
   );
 }
 
-function renderInput(type: InputType, value: any, options: string[] | undefined, onChange: (v: any) => void) {
+function renderInput(type: InputType, value: any, options: string[] | undefined, onChange: (v: any) => void, hasBasement: boolean = false) {
   switch (type) {
     case 'yes_no':
       return (
@@ -138,7 +140,7 @@ function renderInput(type: InputType, value: any, options: string[] | undefined,
     case 'yes_no_floors': {
       const enabled = typeof value === 'object' ? value?.enabled : value === 'yes';
       const floors: string[] = typeof value === 'object' ? value?.floors || [] : [];
-      const floorOptions = ['Basement', 'L1', 'L2', 'L3', 'Roof'];
+      const floorOptions = hasBasement ? ['Basement', 'L1', 'L2', 'L3', 'Roof'] : ['L1', 'L2', 'L3', 'Roof'];
       return (
         <div className="space-y-2">
           <div className="flex gap-2">
