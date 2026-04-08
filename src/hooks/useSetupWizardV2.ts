@@ -584,6 +584,8 @@ export function getVisibleQuestions(bt: BuildingType, answers: Answers): WizardQ
 export function generateSOVLines(bt: BuildingType, answers: Answers): SOVLine[] {
   const lines: SOVLine[] = [];
   let n = 0;
+  const contractValue = typeof a.contract_value === 'number' ? a.contract_value : 0;
+
   const push = (phase: SOVPhase, desc: string, key: string | null = null) => {
     lines.push({ lineNumber: ++n, description: desc, phase, amount: 0, status: 'draft', conditionalKey: key });
   };
