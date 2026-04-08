@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { PhaseContracts } from './PhaseContracts';
 import { PhaseSOV } from './PhaseSOV';
-import { SetupWizardShell } from '@/components/setup-engine/SetupWizardShell';
+import { SetupWizardV2 } from '@/components/setup-wizard-v2/SetupWizardV2';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -182,12 +182,12 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-      {/* ── Setup Engine (Phases 1-5) ─────────────────────── */}
+      {/* ── Setup Engine (V2 Wizard) ─────────────────────── */}
       <Card className="border border-border overflow-hidden">
         <div className="border-b border-border bg-muted/30 px-5 py-3.5 flex items-center gap-3">
           <h3 className="font-heading text-sm font-bold">Project Setup</h3>
           <p className="text-[11px] text-muted-foreground">
-            5-phase questionnaire — define your project, building, scope, and contract terms
+            Define your building type, scope, and generate your SOV
           </p>
           {scopeComplete && (
             <span className="ml-auto px-2.5 py-1 text-[10px] font-semibold rounded-full bg-emerald-500/15 text-emerald-700 border border-emerald-500/30 flex items-center gap-1 shrink-0">
@@ -196,11 +196,9 @@ export function ProjectSetupFlow({ projectId, projectName, projectType }: Projec
           )}
         </div>
         <div className={cn(!setupCollapsed && "min-h-[500px]")}>
-          <SetupWizardShell
+          <SetupWizardV2
             projectId={projectId}
-            buildingTypeSlug={buildingTypeSlug}
             onComplete={handleSetupComplete}
-            onBuildingTypeChange={(slug) => setBuildingTypeSlug(SLUG_MAP[slug] || slug)}
           />
         </div>
       </Card>
