@@ -73,8 +73,15 @@ export interface SOVLine {
   description: string;
   phase: SOVPhase;
   amount: number;
+  suggested_pct: number;
   status: 'draft';
   conditionalKey: string | null;
+}
+
+export interface SOVValidationWarning {
+  lineNumber?: number;
+  message: string;
+  severity: 'soft' | 'hard';
 }
 
 export type Answers = Record<string, any>;
