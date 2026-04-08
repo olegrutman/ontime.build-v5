@@ -284,6 +284,17 @@ const TYPE_QUESTIONS: WizardQuestion[] = [
     buildingTypes: ['townhome', 'apartments_mf'],
   },
 
+  // ─── BACKOUT GATE ────────────────────────────────────────────
+  {
+    id: 'Q_backout_gate',
+    phase: 'backout',
+    label: 'Is backout (return after MEP rough-in) in your scope?',
+    inputType: 'yes_no',
+    tag: 'scope_gate',
+    fieldKey: 'has_backout',
+    buildingTypes: 'all',
+  },
+
   // ─── SIDING GATE ──────────────────────────────────────────────
   {
     id: 'Q9_siding',
