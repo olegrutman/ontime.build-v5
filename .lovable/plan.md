@@ -1,29 +1,29 @@
 
 
-# Roof Section Updates: Always-In-Scope Sheathing + Roof Deck & Parapet Questions
+# Add Backout Scope Gate Question
 
 ## Problem
-1. Roof sheathing is currently a Yes/No question — it should always be in scope (no question needed, always generates an SOV line)
-2. Apartments/MF and Townhomes often have flat roof sections with rooftop decks and parapet walls — these need explicit questions in the roof phase
+The "Backout & Interior" phase always generates SOV lines without asking the user if backout work is in their scope. Need a Yes/No gate question.
 
 ## Changes
 
 ### `src/hooks/useSetupWizardV2.ts`
 
-**Remove Q7_roof question** (lines 268-276) — roof sheathing is always in scope, no need to ask.
+**Add new question** in `TYPE_QUESTIONS` (or `SHARED_QUESTIONS` since backout applies to all building types):
+```
+Q_backout_gate — "Is backout (return after MEP rough-in) in your scope?"
+- phase: 'backout'
+- inputType: 'yes_no'
+- tag: 'scope_gate'
+- fieldKey: 'has_backout'
+- buildingTypes: all 6 types
+```
 
-**Add two new roof-phase questions:**
-- `Q7_parapet` — "Has parapet walls?" (yes/no), for `townhome`, `apartments_mf`, `hotel`, `senior_living`
-- `Q7_roof_deck` — "Has roof decks (flat roof sections)?" (yes/no), for `townhome`, `apartments_mf`
-
-**Update `generateSOVLines()`** (lines 620-624):
-- Always generate "Roof sheathing" line (remove the `if (a.roof_sheathing === 'yes')` check)
-- Add "Parapet wall framing" line if `has_parapet === 'yes'`
-- Add "Roof deck framing" line if `has_roof_deck === 'yes'`
-
-### Files Changed
+**Update `generateSOVLines()`** — wrap the Phase 5 backout lines in a conditional:
+- Only generate "MEP backout", "Blocking", "Fire blocking", "Shim & shave" if `has_backout === 'yes'`
+- ADA blocking (senior living) also gated behind this
 
 | File | Change |
 |------|--------|
-| `src/hooks/useSetupWizardV2.ts` | Remove roof sheathing question; add parapet + roof deck questions; update SOV generation |
+| `src/hooks/useSetupWizardV2.ts` | Add backout scope gate question; conditionally generate backout SOV lines |
 
