@@ -6,6 +6,7 @@ import { BuildingTypeSelector } from './BuildingTypeSelector';
 import { WizardQuestion } from './WizardQuestion';
 import { SOVLivePreview } from './SOVLivePreview';
 import { WizardProgressBar } from './WizardProgressBar';
+import { WizardSummary } from './WizardSummary';
 import { useSetupWizardV2, type SOVPhase, WIZARD_STEPS } from '@/hooks/useSetupWizardV2';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
