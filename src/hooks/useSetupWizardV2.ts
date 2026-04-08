@@ -842,6 +842,9 @@ export function useSetupWizardV2(projectId: string) {
           updated_at: new Date().toISOString(),
         } as any, { onConflict: 'project_id,field_key' });
     },
+    onError: (error) => {
+      console.error('[SetupWizardV2] Save error:', error);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['setup_answers', projectId] });
       qc.invalidateQueries({ queryKey: ['setup_answers_count', projectId] });

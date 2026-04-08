@@ -65,7 +65,7 @@ export function SOVLivePreview({ lines }: Props) {
                         <span className="truncate text-foreground">{line.description}</span>
                       </div>
                       <span className="text-muted-foreground font-mono text-[10px] shrink-0 ml-2">
-                        $0.00
+                        {line.amount > 0 ? formatCurrencyPrecise(line.amount) : '$0.00'}
                       </span>
                     </div>
                   ))}
