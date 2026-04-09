@@ -1096,7 +1096,6 @@ export function useContractSOV(projectId: string | undefined) {
     const sov = sovs.find(s => s.id === sovId);
     if (!sov) return;
     
-    // Block if SOV is locked
     if (sov.is_locked) {
       toast({
         title: 'SOV Locked',
@@ -1134,6 +1133,31 @@ export function useContractSOV(projectId: string | undefined) {
         ...prev,
         [sovId]: [...(prev[sovId] || []), data as ContractSOVItem]
       }));
+
+      // Mirror add to sibling SOV
+      const sibling = await findSiblingSov(sovId, sovs, sovItems, contracts);
+      if (sibling) {
+        const { data: sibData } = await supabase
+          .from('project_sov_items')
+          .insert({
+            project_id: projectId,
+            sov_id: sibling.sibSovId,
+            sort_order: sortOrder,
+            item_name: itemName,
+            percent_of_contract: 0,
+            value_amount: 0,
+            source: 'user'
+          })
+          .select()
+          .single();
+        
+        if (sibData) {
+          setSovItems(prev => ({
+            ...prev,
+            [sibling.sibSovId]: [...(prev[sibling.sibSovId] || []), sibData as ContractSOVItem]
+          }));
+        }
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -1147,6 +1171,9 @@ export function useContractSOV(projectId: string | undefined) {
 
   // Delete item from SOV
   const deleteItem = useCallback(async (sovId: string, itemId: string) => {
+    // Find the item's sort_order before deleting for sibling matching
+    const deletedItem = (sovItems[sovId] || []).find(i => i.id === itemId);
+    
     setSaving(true);
     try {
       const { error } = await supabase
@@ -1160,6 +1187,25 @@ export function useContractSOV(projectId: string | undefined) {
         ...prev,
         [sovId]: prev[sovId]?.filter(item => item.id !== itemId) || []
       }));
+
+      // Mirror delete to sibling SOV
+      if (deletedItem) {
+        const sibling = await findSiblingSov(sovId, sovs, sovItems, contracts);
+        if (sibling) {
+          const sibItem = sibling.sibItems.find(i => i.sort_order === deletedItem.sort_order);
+          if (sibItem) {
+            await supabase
+              .from('project_sov_items')
+              .delete()
+              .eq('id', sibItem.id);
+            
+            setSovItems(prev => ({
+              ...prev,
+              [sibling.sibSovId]: prev[sibling.sibSovId]?.filter(item => item.id !== sibItem.id) || []
+            }));
+          }
+        }
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -1169,7 +1215,7 @@ export function useContractSOV(projectId: string | undefined) {
     } finally {
       setSaving(false);
     }
-  }, []);
+  }, [sovs, contracts, sovItems]);
 
   // Reorder items
   const reorderItems = useCallback(async (sovId: string, reorderedItems: ContractSOVItem[]) => {
