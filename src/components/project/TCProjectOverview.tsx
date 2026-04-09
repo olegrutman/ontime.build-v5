@@ -1,9 +1,13 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
-import { ChevronRight, Pencil, X } from 'lucide-react';
+import { ChevronRight, Pencil, X, UserPlus, RotateCw, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
+import { AddTeamMemberDialog } from '@/components/project/AddTeamMemberDialog';
+import { resendProjectInvite } from '@/lib/inviteUtils';
 import type { ProjectFinancials } from '@/hooks/useProjectFinancials';
+import type { OrgType } from '@/types/organization';
 
 /* ─── Design tokens (same as GC/FC) ─── */
 const C = {
