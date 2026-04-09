@@ -1,25 +1,27 @@
 
 
-# Add Resend Invitation to Project Overview Team Card
+# Fix: Show Invited Members + Resend in GC Overview Team Card
 
 ## Problem
-The Team card on the Project Overview page only displays accepted members. Invited (pending) members are hidden, and there is no way to resend invitations from this view.
+The GC project overview page uses `GCProjectOverviewContent.tsx`, which filters team members to only `status === 'Accepted'` (line 335). The `ProjectOverviewTeamCard` component we updated earlier is not used on this page. That's why invited members don't appear.
 
-## Solution
-Update `ProjectOverviewTeamCard` to show ALL team members (not just accepted), display an "Invited" badge for pending members, and add a resend button that appears on hover for invited members — matching the pattern already used in `TeamMembersCard`.
+## Fix
 
-## Changes
+### `src/components/project/GCProjectOverviewContent.tsx`
 
-### `src/components/project/ProjectOverviewTeamCard.tsx`
-- Fetch `invited_email` alongside existing fields from `project_team`
-- Show all team members (remove the `acceptedTeam` filter), update the subtitle count to reflect accepted vs total
-- For members with `status === 'Invited'`, show a small "Invited" badge
-- Add a resend button (RotateCw icon) that appears on hover for invited members
-- Resend logic: update `project_invites.created_at` where `project_team_id = member.id` (same pattern as `TeamMembersCard`)
-- Add `resending` state to track which member's invite is being resent
-- Import `Badge`, `Loader2`, `RotateCw`, `Tooltip` components
+1. **Show all team members, not just accepted** — Replace `acceptedTeam` with `team` in the KPI card rendering (lines 525-538)
+2. **Add visual distinction for invited members** — Show an "Invited" badge and dimmed text for non-accepted members
+3. **Add resend button** — For invited members, show a resend icon button (same pattern as `ProjectOverviewTeamCard`)
+4. **Update KPI header** — Change from `${acceptedTeam.length} Members` to show accepted/total ratio when there are pending invites
+5. **Add resend state and handler** — Add `resending` state variable and `handleResend` function that updates `project_invites.created_at`
+
+### Specific changes in the Team KPI card section (~lines 524-586):
+- KPI value: `${acceptedTeam.length}/${team.length} Members` when there are pending invites
+- Map over `team` (all members) instead of `acceptedTeam`
+- For `status !== 'Accepted'`: dim the org name, append an "Invited" pill, show a resend button on hover
+- Add `handleResend` function near existing handlers (same logic as `ProjectOverviewTeamCard`)
 
 | File | Change |
 |------|--------|
-| `src/components/project/ProjectOverviewTeamCard.tsx` | Show invited members with badge + resend button on hover |
+| `src/components/project/GCProjectOverviewContent.tsx` | Show all team members (not just accepted), add Invited badge + resend button for pending members |
 
