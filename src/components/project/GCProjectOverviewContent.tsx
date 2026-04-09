@@ -311,7 +311,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
 
   const fetchTeam = useCallback(async () => {
     const [teamRes, contractRes, supplierRes] = await Promise.all([
-      supabase.from('project_team').select('id, role, invited_org_name, invited_name, status').eq('project_id', projectId),
+      supabase.from('project_team').select('id, role, invited_org_name, invited_name, invited_email, status').eq('project_id', projectId),
       supabase.from('project_contracts').select('id, material_responsibility').eq('project_id', projectId).limit(1),
       supabase.from('project_designated_suppliers').select('invited_name').eq('project_id', projectId).neq('status', 'removed').maybeSingle(),
     ]);
