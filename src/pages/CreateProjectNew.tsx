@@ -271,10 +271,10 @@ export default function CreateProjectNew() {
 
   return (
     <AppLayout title="Create New Project">
-      <div className="max-w-5xl mx-auto p-6">
+      <div className="mx-auto p-6 w-full">
         <div className="grid grid-cols-12 gap-6">
           {/* Progress sidebar */}
-          <div className="col-span-12 md:col-span-3">
+          <div className="col-span-12 md:col-span-2">
             <Card>
               <CardContent className="p-4">
                 <nav className="space-y-2">
@@ -309,7 +309,7 @@ export default function CreateProjectNew() {
           </div>
 
           {/* Main content */}
-          <div className="col-span-12 md:col-span-9">
+          <div className="col-span-12 md:col-span-10">
             <Card className="overflow-hidden">
               <CardContent className="p-6">
                 {renderStep()}
