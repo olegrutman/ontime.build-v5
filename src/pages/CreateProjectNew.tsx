@@ -137,7 +137,7 @@ export default function CreateProjectNew() {
       ]);
 
       // 3. Save wizard answers + contract + SOV
-      await wizard.saveAll(pid);
+      await wizard.saveAll(pid, currentOrg.id, currentOrg.type);
 
       // 4. Save team members
       for (const member of team) {

@@ -1150,8 +1150,8 @@ export function useSetupWizardV2(projectId?: string) {
   });
 
   // Standalone save: accepts an explicit projectId (for use in unified create flow)
-  const saveAll = useCallback(async (pid: string) => {
-    const result = await _saveToDb(pid);
+  const saveAll = useCallback(async (pid: string, creatorOrgId?: string, creatorOrgType?: string) => {
+    const result = await _saveToDb(pid, creatorOrgId, creatorOrgType);
     qc.invalidateQueries({ queryKey: ['setup_answers', pid] });
     qc.invalidateQueries({ queryKey: ['setup_answers_count', pid] });
     qc.invalidateQueries({ queryKey: ['project', pid] });
