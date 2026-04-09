@@ -69,13 +69,26 @@ export function CreateSupplierInvoiceFromPO({
   const taxTotal = po.po_tax_total ?? 0;
   const total = po.po_total ?? subtotal + taxTotal;
 
+  const getProjectCode = (name: string | undefined): string => {
+    if (!name) return 'XXX';
+    const cleaned = name.replace(/^(the\s+)/i, '').trim();
+    return cleaned.substring(0, 3).toUpperCase();
+  };
+
   // Generate invoice number on open
   useEffect(() => {
     if (!open) return;
 
     const generate = async () => {
+      const { data: project } = await supabase
+        .from('projects')
+        .select('name')
+        .eq('id', projectId)
+        .single();
+
+      const projectCode = getProjectCode(project?.name);
       const initials = getOrgInitials(supplierOrgName);
-      const prefix = `INV-${initials}`;
+      const prefix = `INV-${projectCode}-${initials}`;
 
       const { data } = await supabase
         .from('invoices')

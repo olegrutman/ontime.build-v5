@@ -235,10 +235,23 @@ export const CreateInvoiceFromSOV = React.forwardRef<HTMLDivElement, CreateInvoi
     return cleaned.substring(0, 2).toUpperCase();
   };
 
+  const getProjectCode = (name: string | undefined): string => {
+    if (!name) return 'XXX';
+    const cleaned = name.replace(/^(the\s+)/i, '').trim();
+    return cleaned.substring(0, 3).toUpperCase();
+  };
+
   const generateInvoiceNumber = async (contract: Contract) => {
+    const { data: project } = await supabase
+      .from('projects')
+      .select('name')
+      .eq('id', projectId)
+      .single();
+
+    const projectCode = getProjectCode(project?.name);
     const fromInitials = getOrgInitials(contract.from_org_name);
     const toInitials = getOrgInitials(contract.to_org_name);
-    const prefix = `INV-${fromInitials}-${toInitials}`;
+    const prefix = `INV-${projectCode}-${fromInitials}-${toInitials}`;
     
     const { data } = await supabase
       .from('invoices')
