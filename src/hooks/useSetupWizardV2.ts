@@ -1008,6 +1008,16 @@ export function useSetupWizardV2(projectId?: string) {
     }));
   }, []);
 
+  // Normalize material responsibility wizard answer to canonical code
+  const normalizeMaterialResponsibility = (val: any): string | null => {
+    if (!val) return null;
+    const s = String(val).toLowerCase();
+    if (s.includes('gc') || s === 'gc') return 'GC';
+    if (s.includes('tc') || s === 'tc') return 'TC';
+    if (s.includes('split') || s === 'split') return 'SPLIT';
+    return String(val); // pass through if already a code
+  };
+
   // Helper: create or update a single contract + SOV
   const _saveContractAndSov = useCallback(async (
     pid: string,

@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { WizardQuestion as WizardQuestionComponent } from '@/components/setup-wizard-v2/WizardQuestion';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { BuildingType, Answers, SOVLine, WizardQuestion } from '@/hooks/useSetupWizardV2';
 import { OrgType } from '@/types/organization';
 import { DollarSign, ArrowUp, ArrowDown, ShieldCheck } from 'lucide-react';
@@ -15,17 +15,21 @@ interface ContractsStepProps {
   creatorOrgType?: OrgType;
 }
 
+const MATERIAL_OPTIONS = [
+  { value: 'GC', label: 'GC supplies materials' },
+  { value: 'TC', label: 'TC supplies materials' },
+  { value: 'SPLIT', label: 'Split responsibility' },
+] as const;
+
 export function ContractsStep({
   answers,
   setAnswer,
-  visibleQuestions,
   creatorOrgType,
 }: ContractsStepProps) {
   const isTC = creatorOrgType === 'TC';
   const contractValue = typeof answers.contract_value === 'number' ? answers.contract_value : 0;
   const fcContractValue = typeof answers.fc_contract_value === 'number' ? answers.fc_contract_value : 0;
-
-  const matQuestion = visibleQuestions.find(q => q.fieldKey === 'material_responsibility');
+  const materialResp = answers.material_responsibility ? String(answers.material_responsibility) : '';
 
   return (
     <div className="space-y-6">
@@ -44,18 +48,27 @@ export function ContractsStep({
         </p>
       </div>
 
-      {matQuestion && (
-        <Card>
-          <CardContent className="pt-4">
-            <WizardQuestionComponent
-              question={matQuestion}
-              value={answers[matQuestion.fieldKey] ?? null}
-              onChange={(val) => setAnswer(matQuestion.fieldKey, val)}
-              answers={answers}
-            />
-          </CardContent>
-        </Card>
-      )}
+      {/* Material Responsibility — always visible, not dependent on buildingType */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Material Responsibility</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-3">Who is responsible for supplying materials on this project?</p>
+          <RadioGroup
+            value={materialResp}
+            onValueChange={(val) => setAnswer('material_responsibility', val)}
+            className="space-y-2"
+          >
+            {MATERIAL_OPTIONS.map((opt) => (
+              <div key={opt.value} className="flex items-center space-x-2">
+                <RadioGroupItem value={opt.value} id={`mat-${opt.value}`} />
+                <Label htmlFor={`mat-${opt.value}`} className="font-normal cursor-pointer">{opt.label}</Label>
+              </div>
+            ))}
+          </RadioGroup>
+        </CardContent>
+      </Card>
 
       <div className={isTC ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''}>
         <Card>
