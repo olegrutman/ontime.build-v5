@@ -306,6 +306,32 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   if (pendingCOs.length > 0) {
     warnings.push({ color: C.yellow, icon: '📝', title: `${pendingCOs.length} Pending Change Order${pendingCOs.length > 1 ? 's' : ''}`, sub: 'Review and approve', value: `${pendingCOs.length} COs`, pill: 'Review', pillType: 'pw', tab: 'change-orders' });
   }
+  // ─── Team data ───
+  const [team, setTeam] = useState<{ id: string; role: string; invited_org_name: string | null; invited_name: string | null; invited_email: string | null; status: string }[]>([]);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [resending, setResending] = useState<string | null>(null);
+
+  const fetchTeam = useCallback(async () => {
+    const { data } = await supabase.from('project_team').select('id, role, invited_org_name, invited_name, invited_email, status').eq('project_id', projectId);
+    setTeam(data || []);
+  }, [projectId]);
+
+  useEffect(() => { fetchTeam(); }, [fetchTeam]);
+
+  const acceptedTeam = team.filter(m => m.status === 'Accepted');
+
+  const handleResend = async (member: typeof team[0]) => {
+    setResending(member.id);
+    try {
+      await resendProjectInvite(projectId, member.id);
+      toast.success(`Invitation resent to ${member.invited_email || member.invited_org_name || 'member'}`);
+      fetchTeam();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to resend invite');
+    } finally {
+      setResending(null);
+    }
+  };
 
   return (
     <div className="space-y-4">
