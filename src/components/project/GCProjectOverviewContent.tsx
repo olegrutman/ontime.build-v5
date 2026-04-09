@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, type ReactNode } from 'react';
+import { toast } from 'sonner';
 import { ChevronRight, Pencil, X, UserPlus, Package, RotateCw, Loader2 } from 'lucide-react';
 import { resendProjectInvite } from '@/lib/inviteUtils';
 import { supabase } from '@/integrations/supabase/client';
