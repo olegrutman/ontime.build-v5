@@ -235,7 +235,7 @@ export function TCDashboardView({
   const teamInvited = !isOrgAdmin || (userOrgRolesLength > 1) || soleMember;
   const projectCreated = projects.length > 0;
 
-  const activeProjects = projects.filter(p => !['archived', 'completed'].includes(p.status));
+  const activeProjects = projects.filter(p => p.status !== 'archived');
 
   // Derive per-project data from projectFinancials
   const pf = projectFinancials.filter(p => p.revenue > 0 || p.costs > 0 || p.paidToYou > 0);
@@ -498,7 +498,7 @@ export function TCDashboardView({
         {activeProjects.length > 0 && (
           <div style={{ background: C.surface, borderRadius: 14, border: `1px solid ${C.border}`, overflow: 'hidden' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderBottom: `1px solid ${C.border}` }}>
-              <span style={{ fontWeight: 700, color: C.ink, fontSize: '0.9rem', ...fontLabel }}>📋 My Projects</span>
+              <span style={{ fontWeight: 700, color: C.ink, fontSize: '0.9rem', ...fontLabel }}>📋 My Projects ({activeProjects.length})</span>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 p-4">
               {activeProjects.slice(0, 6).map((p, i) => {
