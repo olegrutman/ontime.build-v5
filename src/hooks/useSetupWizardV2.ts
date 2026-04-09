@@ -1057,14 +1057,20 @@ export function useSetupWizardV2(projectId?: string) {
         updated_at: new Date().toISOString(),
       }).eq('id', contractId);
     } else {
+      const fromRole = creatorOrgType === 'GC' ? 'General Contractor'
+        : creatorOrgType === 'TC' ? 'Trade Contractor'
+        : creatorOrgType === 'FC' ? 'Field Crew'
+        : 'Trade Contractor';
       const { data: newContract, error: cErr } = await supabase.from('project_contracts').insert({
         project_id: pid,
         contract_sum: contractValue,
-        from_role: 'TC_PM',
-        to_role: 'GC_PM',
-        trade: 'Framing',
+        from_org_id: creatorOrgId || null,
+        from_role: fromRole,
+        to_org_id: null,
+        to_role: null,
+        trade: null,
         material_responsibility: answers.material_responsibility || null,
-        status: 'Accepted',
+        status: 'Draft',
       }).select('id').single();
       if (cErr) throw cErr;
       contractId = newContract.id;
