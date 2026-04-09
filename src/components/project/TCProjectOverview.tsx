@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, type ReactNode } from 'react';
-import { ChevronRight, Pencil, X, UserPlus, RotateCw, Loader2 } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef, type ReactNode } from 'react';
+import { ChevronRight, Pencil, X, UserPlus, RotateCw, Loader2, Search, Building2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -204,11 +204,51 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   // ─── FC Contract (downstream, editable) ───
   const fcContract = financials.downstreamContract;
   const fcContractVal = fcContract?.contract_sum || 0;
-  const fcName = fcContract?.to_org_name || fcContract?.from_org_name || 'Field Crew';
+  const fcName = fcContract?.to_org_name || fcContract?.from_org_name || '';
+
+  // ─── FC org search ───
+  interface FcOrgSelection { org_id: string; org_name: string; contact_email: string; contact_name: string; contact_user_id: string }
+  const [selectedFcOrg, setSelectedFcOrg] = useState<FcOrgSelection | null>(null);
+  const [fcSearchQuery, setFcSearchQuery] = useState('');
+  const [fcSearchResults, setFcSearchResults] = useState<FcOrgSelection[]>([]);
+  const [fcSearchLoading, setFcSearchLoading] = useState(false);
+  const [fcSearchOpen, setFcSearchOpen] = useState(false);
+  const fcSearchRef = useRef<HTMLDivElement>(null);
+
+  // Pre-populate with existing FC
+  useEffect(() => {
+    if (fcName && fcContract) {
+      setSelectedFcOrg({ org_id: fcContract.from_org_id || fcContract.to_org_id || '', org_name: fcName, contact_email: '', contact_name: '', contact_user_id: '' });
+    }
+  }, [fcName, fcContract]);
+
+  // Search FC orgs
+  useEffect(() => {
+    if (fcSearchQuery.length < 2) { setFcSearchResults([]); setFcSearchOpen(false); return; }
+    const t = setTimeout(async () => {
+      setFcSearchLoading(true);
+      const { data, error } = await supabase.rpc('search_existing_team_targets', {
+        _query: fcSearchQuery, _project_id: projectId, _limit: 10,
+      });
+      setFcSearchLoading(false);
+      if (!error && data) {
+        const fcOrgs = (data as any[]).filter(r => r.org_type === 'FC');
+        setFcSearchResults(fcOrgs.map(r => ({ org_id: r.org_id, org_name: r.org_name, contact_email: r.contact_email, contact_name: r.contact_name, contact_user_id: r.contact_user_id })));
+        setFcSearchOpen(true);
+      }
+    }, 300);
+    return () => clearTimeout(t);
+  }, [fcSearchQuery, projectId]);
+
+  // Close search on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (fcSearchRef.current && !fcSearchRef.current.contains(e.target as Node)) setFcSearchOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   // ─── FC Contract editing ───
   const [fcDraft, setFcDraft] = useState({
-    crew: fcName,
     value: String(fcContractVal),
     type: 'Lump Sum',
     scope: '',
@@ -216,8 +256,8 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   const [fcDirty, setFcDirty] = useState(false);
 
   useEffect(() => {
-    setFcDraft(prev => ({ ...prev, crew: fcName, value: String(fcContractVal) }));
-  }, [fcName, fcContractVal]);
+    setFcDraft(prev => ({ ...prev, value: String(fcContractVal) }));
+  }, [fcContractVal]);
 
   const updateFcField = (field: keyof typeof fcDraft, val: string) => {
     setFcDraft(p => ({ ...p, [field]: val }));
@@ -225,12 +265,81 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
   };
 
   const saveFcContract = async () => {
-    if (fcContract) {
-      const newVal = parseInt(fcDraft.value.replace(/[^0-9]/g, '')) || 0;
-      await financials.updateContract(fcContract.id, newVal, fcContract.retainage_percent);
-      financials.refetch();
+    const newVal = parseInt(fcDraft.value.replace(/[^0-9]/g, '')) || 0;
+    const targetOrg = selectedFcOrg;
+
+    if (!targetOrg?.org_id) {
+      toast.error('Please select a Field Crew organization first');
+      return;
     }
-    setFcDirty(false);
+
+    try {
+      // Check if FC is already on the team
+      const isAlreadyOnTeam = team.some(m => m.invited_org_name === targetOrg.org_name || m.role === 'Field Crew');
+
+      if (!isAlreadyOnTeam) {
+        // Auto-invite: insert into project_team
+        const { error: teamErr } = await supabase.from('project_team').insert({
+          project_id: projectId,
+          role: 'Field Crew',
+          org_id: targetOrg.org_id,
+          invited_org_name: targetOrg.org_name,
+          invited_name: targetOrg.contact_name || null,
+          invited_email: targetOrg.contact_email || null,
+          user_id: targetOrg.contact_user_id || null,
+          status: 'Invited',
+        });
+        if (teamErr) throw teamErr;
+
+        // Insert project_participants for the contact user
+        if (targetOrg.contact_user_id) {
+          const { data: { user: currentUser } } = await supabase.auth.getUser();
+          await supabase.from('project_participants').insert({
+            project_id: projectId,
+            organization_id: targetOrg.org_id,
+            role: 'FC' as const,
+            invite_status: 'INVITED',
+            invited_by: currentUser?.id || '',
+          });
+
+          // Send notification
+          await supabase.from('notifications').insert({
+            recipient_user_id: targetOrg.contact_user_id,
+            recipient_org_id: targetOrg.org_id,
+            type: 'PROJECT_INVITE' as const,
+            title: 'Project Invitation',
+            body: `You have been invited to join a project as Field Crew`,
+            entity_id: projectId,
+            entity_type: 'project',
+            action_url: `/project/${projectId}/overview`,
+          });
+        }
+
+        toast.success(`${targetOrg.org_name} invited as Field Crew`);
+      }
+
+      // Create or update the FC contract
+      if (fcContract) {
+        await financials.updateContract(fcContract.id, newVal, fcContract.retainage_percent);
+      } else {
+        // Create new downstream contract
+        await supabase.from('project_contracts').insert({
+          project_id: projectId,
+          from_org_id: targetOrg.org_id,
+          to_org_id: currentOrgId,
+          from_role: 'Field Crew',
+          to_role: 'Trade Contractor',
+          contract_sum: newVal,
+          direction: 'downstream',
+        });
+      }
+
+      financials.refetch();
+      fetchTeam();
+      setFcDirty(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save FC contract');
+    }
   };
 
   const draftFcVal = parseInt(fcDraft.value.replace(/[^0-9]/g, '')) || 0;
@@ -375,10 +484,55 @@ export function TCProjectOverview({ projectId, projectName = 'Project', financia
         </KpiCard>
 
         {/* Card 2 — FC Contract (EDITABLE) */}
-        <KpiCard accent={C.green} icon="👷" iconBg={C.greenBg} label="FC CONTRACT (YOU SET THIS)" value={draftFcVal > 0 ? fmt(draftFcVal) : '—'} sub={draftFcVal > 0 ? `${fcName} · ${tcMarginPct}% TC margin` : 'No FC contract found'} pills={draftFcVal > 0 ? [{ type: 'pg', text: `${fmt(tcGrossMargin)} margin` }, { type: 'pn', text: `${tcMarginPct}%` }] : [{ type: 'pm', text: 'Not Set' }]} idx={1}>
+        <KpiCard accent={C.green} icon="👷" iconBg={C.greenBg} label="FC CONTRACT (YOU SET THIS)" value={draftFcVal > 0 ? fmt(draftFcVal) : '—'} sub={draftFcVal > 0 ? `${selectedFcOrg?.org_name || 'Field Crew'} · ${tcMarginPct}% TC margin` : 'No FC contract found'} pills={draftFcVal > 0 ? [{ type: 'pg', text: `${fmt(tcGrossMargin)} margin` }, { type: 'pn', text: `${tcMarginPct}%` }] : [{ type: 'pm', text: 'Not Set' }]} idx={1}>
           <div style={{ padding: '12px 16px' }}>
             <div style={{ fontSize: '0.68rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.6px', color: C.faint, marginBottom: 8 }}>FC Contract Terms</div>
-            <EditField label="Field Crew" value={fcDraft.crew} onSave={(v) => updateFcField('crew', v)} />
+            {/* FC Org Search */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${C.border}`, ...fontLabel }}>
+              <span style={{ fontSize: '0.72rem', color: C.muted, fontWeight: 600, minWidth: 130, paddingTop: 4 }}>Field Crew</span>
+              {selectedFcOrg ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 1, justifyContent: 'flex-end' }}>
+                  <Building2 size={14} style={{ color: C.navy }} />
+                  <span style={{ fontSize: '0.78rem', fontWeight: 700, color: C.ink }}>{selectedFcOrg.org_name}</span>
+                  <button onClick={() => { setSelectedFcOrg(null); setFcSearchQuery(''); setFcDirty(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.faint, padding: 2 }}><X size={14} /></button>
+                </div>
+              ) : (
+                <div ref={fcSearchRef} style={{ position: 'relative', flex: 1 }}>
+                  <div style={{ position: 'relative' }}>
+                    <Search size={14} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: C.faint }} />
+                    <input
+                      value={fcSearchQuery}
+                      onChange={(e) => setFcSearchQuery(e.target.value)}
+                      onFocus={() => fcSearchQuery.length >= 2 && setFcSearchOpen(true)}
+                      placeholder="Search FC organizations..."
+                      style={{ width: '100%', padding: '4px 8px 4px 28px', borderRadius: 6, border: `1px solid ${C.amber}`, fontSize: '0.76rem', outline: 'none', ...fontLabel }}
+                    />
+                    {fcSearchLoading && <Loader2 size={14} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', color: C.faint, animation: 'spin 1s linear infinite' }} />}
+                  </div>
+                  {fcSearchOpen && fcSearchResults.length > 0 && (
+                    <div style={{ position: 'absolute', zIndex: 50, width: '100%', marginTop: 4, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,.1)', maxHeight: 200, overflowY: 'auto' }}>
+                      {fcSearchResults.map((r) => (
+                        <button key={r.org_id} type="button" onClick={() => { setSelectedFcOrg(r); setFcSearchQuery(''); setFcSearchOpen(false); setFcDirty(true); }}
+                          style={{ width: '100%', padding: '8px 12px', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 8, border: 'none', background: 'transparent', cursor: 'pointer', borderBottom: `1px solid ${C.border}`, fontSize: '0.76rem', ...fontLabel }}
+                          className="hover:bg-[#F7F9FC]">
+                          <Building2 size={14} style={{ color: C.navy, flexShrink: 0 }} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 700, color: C.ink }}>{r.org_name}</div>
+                            {r.contact_name && <div style={{ fontSize: '0.64rem', color: C.muted }}>{r.contact_name}{r.contact_email ? ` · ${r.contact_email}` : ''}</div>}
+                          </div>
+                          <span style={{ fontSize: '0.6rem', fontWeight: 700, padding: '2px 6px', borderRadius: 8, background: C.navy, color: '#fff' }}>FC</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {fcSearchOpen && fcSearchResults.length === 0 && fcSearchQuery.length >= 2 && !fcSearchLoading && (
+                    <div style={{ position: 'absolute', zIndex: 50, width: '100%', marginTop: 4, padding: '10px 12px', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,.1)', fontSize: '0.72rem', color: C.muted, ...fontLabel }}>
+                      No FC organizations found
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             <EditField label="Contract Value" value={`$${draftFcVal.toLocaleString()}`} onSave={(v) => updateFcField('value', v.replace(/[^0-9]/g, ''))} type="number" />
             <EditField label="Contract Type" value={fcDraft.type} onSave={(v) => updateFcField('type', v)} type="select" />
             <EditField label="Scope Summary" value={fcDraft.scope || 'Click to add scope'} onSave={(v) => updateFcField('scope', v)} type="textarea" />
