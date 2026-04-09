@@ -103,7 +103,7 @@ export function ScopeQuestionsPanel({
       </div>
 
       {/* Right: Live SOV preview(s) */}
-      <div className={showDualSov ? 'grid grid-cols-1 xl:grid-cols-2 gap-3' : ''}>
+      <div className={showDualSov ? 'grid grid-cols-1 md:grid-cols-2 gap-3' : ''}>
         <div className="border border-border rounded-lg overflow-hidden bg-card">
           <div className="px-3 py-1.5 border-b bg-muted/30">
             <p className="text-xs font-medium text-muted-foreground">
