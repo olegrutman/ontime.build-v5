@@ -70,7 +70,7 @@ export function ScopeQuestionsPanel({
   const showDualSov = isTC && fcContractValue > 0;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[calc(100vh-240px)]">
+    <div className={`grid grid-cols-1 gap-6 min-h-[calc(100vh-240px)] ${showDualSov ? 'lg:grid-cols-3' : 'lg:grid-cols-2'}`}>
       {/* Left: Scope questions */}
       <div className="space-y-6 overflow-y-auto pr-2">
         <div>
@@ -102,30 +102,29 @@ export function ScopeQuestionsPanel({
         })}
       </div>
 
-      {/* Right: Live SOV preview(s) */}
-      <div className="flex flex-col gap-3">
-        <div className={`border border-border rounded-lg overflow-hidden bg-card flex flex-col ${showDualSov ? 'h-[calc(50vh-120px)]' : 'h-[calc(100vh-280px)]'}`}>
+      {/* SOV 1: GC → TC or single SOV */}
+      <div className="border border-border rounded-lg overflow-hidden bg-card flex flex-col h-[calc(100vh-280px)]">
+        <div className="px-3 py-1.5 border-b bg-muted/30 shrink-0">
+          <p className="text-xs font-medium text-muted-foreground">
+            {isTC ? 'GC → TC SOV' : 'SOV Preview'}
+          </p>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          <SOVLivePreview lines={sovLines} buildingType={buildingType} />
+        </div>
+      </div>
+
+      {/* SOV 2: TC → FC (only for TC) */}
+      {showDualSov && (
+        <div className="border border-border rounded-lg overflow-hidden bg-card flex flex-col h-[calc(100vh-280px)]">
           <div className="px-3 py-1.5 border-b bg-muted/30 shrink-0">
-            <p className="text-xs font-medium text-muted-foreground">
-              {isTC ? 'GC → TC SOV' : 'SOV Preview'}
-            </p>
+            <p className="text-xs font-medium text-muted-foreground">TC → FC SOV</p>
           </div>
           <div className="flex-1 overflow-y-auto">
-            <SOVLivePreview lines={sovLines} buildingType={buildingType} />
+            <SOVLivePreview lines={fcSovLines} buildingType={buildingType} />
           </div>
         </div>
-
-        {showDualSov && (
-          <div className="border border-border rounded-lg overflow-hidden bg-card flex flex-col h-[calc(50vh-120px)]">
-            <div className="px-3 py-1.5 border-b bg-muted/30 shrink-0">
-              <p className="text-xs font-medium text-muted-foreground">TC → FC SOV</p>
-            </div>
-            <div className="flex-1 overflow-y-auto">
-              <SOVLivePreview lines={fcSovLines} buildingType={buildingType} />
-            </div>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
