@@ -1,424 +1,160 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { Separator } from '@/components/ui/separator';
-import { Skeleton } from '@/components/ui/skeleton';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import { ProjectContract } from '@/types/projectWizard';
-import { DollarSign, ArrowUp, ArrowDown, Building2, AlertCircle, Package } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { cn } from '@/lib/utils';
-
-interface ProjectTeamMember {
-  id: string;
-  org_id: string | null;
-  role: string;
-  trade: string | null;
-  trade_custom: string | null;
-  invited_org_name: string | null;
-  status: string;
-}
+import { SOVLivePreview } from '@/components/setup-wizard-v2/SOVLivePreview';
+import { WizardQuestion as WizardQuestionComponent } from '@/components/setup-wizard-v2/WizardQuestion';
+import type { BuildingType, Answers, SOVLine, WizardQuestion } from '@/hooks/useSetupWizardV2';
+import { generateSOVLines } from '@/hooks/useSetupWizardV2';
+import { OrgType } from '@/types/organization';
+import { DollarSign, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface ContractsStepProps {
-  projectId?: string;
-  contracts: ProjectContract[];
-  onChange: (contracts: ProjectContract[]) => void;
-  creatorRole: string | null;
+  buildingType: BuildingType;
+  answers: Answers;
+  setAnswer: (key: string, value: any) => void;
+  sovLines: SOVLine[];
+  visibleQuestions: WizardQuestion[];
+  creatorOrgType?: OrgType;
 }
 
-export function ContractsStep({ projectId, contracts, onChange, creatorRole }: ContractsStepProps) {
-  const [teamMembers, setTeamMembers] = useState<ProjectTeamMember[]>([]);
-  const [loading, setLoading] = useState(false);
+export function ContractsStep({
+  buildingType,
+  answers,
+  setAnswer,
+  sovLines,
+  visibleQuestions,
+  creatorOrgType,
+}: ContractsStepProps) {
+  const isTC = creatorOrgType === 'TC';
+  const contractValue = typeof answers.contract_value === 'number' ? answers.contract_value : 0;
+  const fcContractValue = typeof answers.fc_contract_value === 'number' ? answers.fc_contract_value : 0;
 
-  // Fetch team members from database
-  const fetchTeamMembers = useCallback(async () => {
-    if (!projectId) return;
-    
-    setLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('project_team')
-        .select('id, org_id, role, trade, trade_custom, invited_org_name, status')
-        .eq('project_id', projectId)
-        .order('created_at', { ascending: true });
-      
-      if (error) throw error;
-      setTeamMembers(data || []);
-    } catch (error) {
-      console.error('Error fetching team members:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId]);
+  // Generate FC SOV lines using same scope but FC contract value
+  const fcSovLines = useMemo(() => {
+    if (!isTC || fcContractValue <= 0) return [];
+    const fcAnswers = { ...answers, contract_value: fcContractValue };
+    return generateSOVLines(buildingType, fcAnswers);
+  }, [isTC, buildingType, answers, fcContractValue]);
 
-  useEffect(() => {
-    fetchTeamMembers();
-  }, [fetchTeamMembers]);
-
-  // Memoize derived values to prevent unnecessary re-renders
-  // Upstream: TC's contract WITH the GC (TC receives money from GC)
-  const upstreamGC = useMemo(() => {
-    if (creatorRole !== 'Trade Contractor') return null;
-    return teamMembers.find(m => m.role === 'General Contractor') || null;
-  }, [teamMembers, creatorRole]);
-
-  // Downstream: Contracts with parties below the creator
-  // GC → TC contracts
-  // TC → FC contracts
-  const downstreamMembers = useMemo(() => {
-    // Exclude Suppliers entirely — their estimate price comes from approved supplier estimates, not manual entry
-    const base = teamMembers.filter(m => {
-      if (creatorRole === 'General Contractor') {
-        return m.role === 'Trade Contractor';
-      }
-      if (creatorRole === 'Trade Contractor') {
-        return m.role === 'Field Crew';
-      }
-      return false;
-    });
-
-    return base;
-  }, [teamMembers, creatorRole]);
-
-  // Get IDs for dependency tracking
-  const upstreamGCId = upstreamGC?.id || null;
-  const downstreamMemberIds = useMemo(() => downstreamMembers.map(m => m.id).join(','), [downstreamMembers]);
-
-  // Pre-populate contracts for all applicable team members when team changes
-  // Use a ref to track contracts to avoid stale closure issues
-  useEffect(() => {
-    if (loading || teamMembers.length === 0) return;
-
-    const memberIdsNeedingContracts: string[] = [];
-    
-    // Add upstream GC if exists
-    if (upstreamGC) {
-      memberIdsNeedingContracts.push(upstreamGC.id);
-    }
-    
-    // Add downstream members
-    downstreamMembers.forEach(m => {
-      memberIdsNeedingContracts.push(m.id);
-    });
-
-    // Check if we have all needed contracts using current contracts prop
-    const existingContractIds = new Set(contracts.map(c => c.toTeamMemberId));
-    const missingMemberIds = memberIdsNeedingContracts.filter(
-      memberId => !existingContractIds.has(memberId)
-    );
-    
-    // Create default contracts for missing members
-    if (missingMemberIds.length > 0) {
-      console.log('Creating contracts for missing members:', missingMemberIds);
-      const newContracts: ProjectContract[] = missingMemberIds.map(memberId => {
-        // Find the team member to determine if it's a TC contract (needs material responsibility)
-        const member = [...downstreamMembers, upstreamGC].find(m => m?.id === memberId);
-        const isTCContract = member?.role === 'Trade Contractor';
-        return {
-          toTeamMemberId: memberId,
-          contractSum: 0,
-          retainagePercent: 0,
-          allowMobilization: false,
-          // Default to TC for material responsibility on TC contracts
-          materialResponsibility: isTCContract ? 'TC' as const : undefined,
-        };
-      });
-      // Merge with existing, ensuring no duplicates
-      const merged = [...contracts, ...newContracts];
-      onChange(merged);
-    }
-  // Include contracts in deps but use length to avoid infinite loops
-  // The Set comparison above handles the actual check
-  }, [loading, teamMembers.length, upstreamGCId, downstreamMemberIds, contracts.length, onChange]);
-
-  const getContract = (memberId: string, isTCContract: boolean = false): ProjectContract => {
-    return contracts.find(c => c.toTeamMemberId === memberId) || {
-      toTeamMemberId: memberId,
-      contractSum: 0,
-      retainagePercent: 0,
-      allowMobilization: false,
-      materialResponsibility: isTCContract ? 'TC' : undefined,
-    };
-  };
-
-  const updateContract = (memberId: string, updates: Partial<ProjectContract>) => {
-    const existing = contracts.find(c => c.toTeamMemberId === memberId);
-    if (existing) {
-      onChange(contracts.map(c => c.toTeamMemberId === memberId ? { ...c, ...updates } : c));
-    } else {
-      onChange([...contracts, { ...getContract(memberId), ...updates }]);
-    }
-  };
-
-  // Loading state
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-lg font-semibold">Project Contracts</h2>
-          <p className="text-sm text-muted-foreground">Loading team members...</p>
-        </div>
-        <div className="space-y-4">
-          <Skeleton className="h-48 w-full" />
-          <Skeleton className="h-48 w-full" />
-        </div>
-      </div>
-    );
-  }
-
-  // No project ID yet
-  if (!projectId) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-lg font-semibold">Project Contracts</h2>
-          <p className="text-sm text-muted-foreground">
-            Complete the Project Basics step first.
-          </p>
-        </div>
-        <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>Project must be created before defining contracts.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const hasNoContracts = !upstreamGC && downstreamMembers.length === 0;
-
-  if (hasNoContracts) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-lg font-semibold">Project Contracts</h2>
-          <p className="text-sm text-muted-foreground">
-            Define contract terms for your team members.
-          </p>
-        </div>
-        <Card>
-          <CardContent className="p-8">
-            <div className="flex items-start gap-4">
-              <AlertCircle className="h-6 w-6 text-muted-foreground shrink-0 mt-0.5" />
-              <div>
-                <p className="font-medium">No team members to contract with</p>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {creatorRole === 'General Contractor' 
-                    ? 'Add a Trade Contractor or Supplier on the Project Team step first.'
-                    : 'Add a General Contractor on the Project Team step first (required). Add Field Crew or Suppliers on the Project Team step (optional).'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  // Separate TC members for material responsibility section (GC only)
-  const tcMembers = teamMembers.filter(m => m.role === 'Trade Contractor');
-  const gcExists = teamMembers.some(m => m.role === 'General Contractor');
-  const showMaterialSection = (creatorRole === 'General Contractor' && tcMembers.length > 0) ||
-    (creatorRole === 'Trade Contractor' && gcExists && tcMembers.length > 0);
+  // Material responsibility question
+  const matQuestion = visibleQuestions.find(q => q.fieldKey === 'material_responsibility');
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-lg font-semibold">Project Contracts</h2>
+        <h2 className="text-lg font-semibold">Contracts</h2>
         <p className="text-sm text-muted-foreground">
-          {creatorRole === 'Trade Contractor'
-            ? 'Enter your contract terms with the General Contractor and your agreements with each Field Crew.'
-            : 'Enter the contract terms you negotiated with each Trade Contractor.'}
+          {isTC
+            ? 'Enter both your upstream (GC) and downstream (FC) contract values.'
+            : 'Enter the total contract value for this project.'}
         </p>
       </div>
 
-      {/* Material Responsibility section - GC or TC when GC exists */}
-      {showMaterialSection && (
-        <Card className="border-2 border-primary/30 bg-primary/5">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Package className="h-4 w-4 text-primary" />
-              Material Responsibility
-            </CardTitle>
-            <p className="text-xs text-muted-foreground">
-              This determines who manages and pays for materials on this project.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {tcMembers.map((member) => {
-              const contract = getContract(member.id, true);
-              const tradeName = member.trade === 'Other' ? member.trade_custom : member.trade;
-              return (
-                <div key={member.id} className="space-y-3 p-3 rounded-lg bg-background border">
-                  <div className="flex items-center gap-2 font-medium text-sm">
-                    <Building2 className="h-4 w-4 text-muted-foreground" />
-                    {member.invited_org_name || 'Unknown Company'}
-                    {tradeName && <span className="text-muted-foreground font-normal">({tradeName})</span>}
-                  </div>
-                  <ToggleGroup
-                    type="single"
-                    value={contract.materialResponsibility || 'TC'}
-                    onValueChange={(value) => {
-                      if (value) updateContract(member.id, { materialResponsibility: value as 'GC' | 'TC' });
-                    }}
-                    className="justify-start"
-                  >
-                    <ToggleGroupItem value="GC" aria-label="GC provides materials" className="px-4">
-                      GC
-                    </ToggleGroupItem>
-                    <ToggleGroupItem value="TC" aria-label="TC provides materials" className="px-4">
-                      TC
-                    </ToggleGroupItem>
-                  </ToggleGroup>
-                  <p className="text-xs text-primary/80 bg-primary/5 rounded-md px-3 py-2">
-                    {(contract.materialResponsibility || 'TC') === 'GC'
-                      ? 'GC will manage material ordering and see supplier pricing for this contract.'
-                      : 'TC will manage material ordering and see supplier pricing for this contract.'}
-                  </p>
-                </div>
-              );
-            })}
+      {/* Material responsibility */}
+      {matQuestion && (
+        <Card>
+          <CardContent className="pt-4">
+            <WizardQuestionComponent
+              question={matQuestion}
+              value={answers[matQuestion.fieldKey] ?? null}
+              onChange={(val) => setAnswer(matQuestion.fieldKey, val)}
+              answers={answers}
+            />
           </CardContent>
         </Card>
       )}
 
-      {/* Separator between material responsibility and contracts */}
-      {showMaterialSection && (upstreamGC || downstreamMembers.length > 0) && (
-        <Separator className="my-6" />
-      )}
+      {/* Contract inputs */}
+      <div className={isTC ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''}>
+        {/* GC / Primary contract */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              {isTC ? (
+                <>
+                  <ArrowDown className="h-4 w-4 text-primary" />
+                  GC → You (Upstream)
+                </>
+              ) : (
+                <>
+                  <DollarSign className="h-4 w-4 text-primary" />
+                  Contract Value
+                </>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Label htmlFor="contract_value" className="text-sm text-muted-foreground">
+              {isTC ? 'What is the GC paying you?' : 'Total contract value'}
+            </Label>
+            <div className="relative mt-1.5">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+              <Input
+                id="contract_value"
+                type="number"
+                min={0}
+                className="pl-7"
+                placeholder="0.00"
+                value={contractValue || ''}
+                onChange={(e) => setAnswer('contract_value', e.target.value ? Number(e.target.value) : 0)}
+              />
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* TC's upstream contract with GC */}
-      {upstreamGC && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <ArrowUp className="h-4 w-4" />
-            <span>Your Contract with General Contractor</span>
-          </div>
-          <ContractCard
-            member={upstreamGC}
-            contract={getContract(upstreamGC.id)}
-            onUpdate={(updates) => updateContract(upstreamGC.id, updates)}
-            description="The terms of your agreement with the GC for this project"
-          />
-        </div>
-      )}
+        {/* FC contract (TC only) */}
+        {isTC && (
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <ArrowUp className="h-4 w-4 text-accent-foreground" />
+                You → FC (Downstream)
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Label htmlFor="fc_contract_value" className="text-sm text-muted-foreground">
+                What are you paying your field crew?
+              </Label>
+              <div className="relative mt-1.5">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                <Input
+                  id="fc_contract_value"
+                  type="number"
+                  min={0}
+                  className="pl-7"
+                  placeholder="0.00"
+                  value={fcContractValue || ''}
+                  onChange={(e) => setAnswer('fc_contract_value', e.target.value ? Number(e.target.value) : 0)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
-      {/* Separator if both sections exist */}
-      {upstreamGC && downstreamMembers.length > 0 && (
-        <Separator className="my-6" />
-      )}
+      {/* SOV Preview(s) */}
+      {contractValue > 0 && (
+        <div className={isTC && fcContractValue > 0 ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : ''}>
+          <Card className="overflow-hidden">
+            <div className="px-4 py-2 border-b bg-muted/30">
+              <p className="text-xs font-medium text-muted-foreground">
+                {isTC ? 'GC → TC SOV' : 'SOV Preview'}
+              </p>
+            </div>
+            <SOVLivePreview lines={sovLines} buildingType={buildingType} />
+          </Card>
 
-      {/* Downstream contracts */}
-      {downstreamMembers.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <ArrowDown className="h-4 w-4" />
-            <span>
-              {creatorRole === 'Trade Contractor' 
-                ? 'Contracts with Field Crew and Suppliers' 
-                : 'Contracts with Trade Contractors and Suppliers'}
-            </span>
-          </div>
-          {downstreamMembers.map((member) => (
-            <ContractCard
-              key={member.id}
-              member={member}
-              contract={getContract(member.id, member.role === 'Trade Contractor')}
-              onUpdate={(updates) => updateContract(member.id, updates)}
-              isSupplier={member.role === 'Supplier'}
-            />
-          ))}
+          {isTC && fcContractValue > 0 && (
+            <Card className="overflow-hidden">
+              <div className="px-4 py-2 border-b bg-muted/30">
+                <p className="text-xs font-medium text-muted-foreground">TC → FC SOV</p>
+              </div>
+              <SOVLivePreview lines={fcSovLines} buildingType={buildingType} />
+            </Card>
+          )}
         </div>
       )}
     </div>
-  );
-}
-
-interface ContractCardProps {
-  member: ProjectTeamMember;
-  contract: ProjectContract;
-  onUpdate: (updates: Partial<ProjectContract>) => void;
-  description?: string;
-  isSupplier?: boolean;
-}
-
-function ContractCard({ member, contract, onUpdate, description, isSupplier }: ContractCardProps) {
-  const tradeName = member.trade === 'Other' ? member.trade_custom : member.trade;
-  const sumLabel = isSupplier ? 'Estimate Price' : 'Contract Sum';
-  const sumHint = isSupplier ? 'Enter the estimate price' : 'Enter the contract sum';
-  
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base flex items-center gap-2">
-          <DollarSign className="h-4 w-4" />
-          {member.invited_org_name || 'Unknown Company'}
-          {tradeName && <span className="text-muted-foreground font-normal">({tradeName})</span>}
-        </CardTitle>
-        {description && (
-          <p className="text-xs text-muted-foreground">{description}</p>
-        )}
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label>{sumLabel}</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-              <Input
-                type="number"
-                min="0"
-                step="100"
-                className={cn("pl-7", contract.contractSum === 0 && "border-amber-400 focus-visible:ring-amber-400")}
-                value={contract.contractSum || ''}
-                onChange={(e) => onUpdate({ contractSum: parseFloat(e.target.value) || 0 })}
-                placeholder="0.00"
-              />
-            </div>
-            {contract.contractSum === 0 && (
-              <p className="text-xs text-amber-600">{sumHint}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label>Retainage %</Label>
-            <div className="relative">
-              <Input
-                type="number"
-                min="0"
-                max="20"
-                step="0.5"
-                className="pr-7"
-                value={contract.retainagePercent || ''}
-                onChange={(e) => onUpdate({ retainagePercent: parseFloat(e.target.value) || 0 })}
-                placeholder="0"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">%</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <Label>Allow Mobilization as a line item?</Label>
-          <Switch
-            checked={contract.allowMobilization}
-            onCheckedChange={(checked) => onUpdate({ allowMobilization: checked })}
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Notes (Optional)</Label>
-          <Textarea
-            placeholder="Additional contract notes..."
-            value={contract.notes || ''}
-            onChange={(e) => onUpdate({ notes: e.target.value })}
-            rows={2}
-          />
-        </div>
-      </CardContent>
-    </Card>
   );
 }
