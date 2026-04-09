@@ -1008,6 +1008,16 @@ export function useSetupWizardV2(projectId?: string) {
     }));
   }, []);
 
+  // Normalize material responsibility wizard answer to canonical code
+  const normalizeMaterialResponsibility = (val: any): string | null => {
+    if (!val) return null;
+    const s = String(val).toLowerCase();
+    if (s.includes('gc') || s === 'gc') return 'GC';
+    if (s.includes('tc') || s === 'tc') return 'TC';
+    if (s.includes('split') || s === 'split') return 'SPLIT';
+    return String(val); // pass through if already a code
+  };
+
   // Helper: create or update a single contract + SOV
   const _saveContractAndSov = useCallback(async (
     pid: string,
@@ -1030,7 +1040,7 @@ export function useSetupWizardV2(projectId?: string) {
       to_org_id: toOrgId,
       to_role: toRole,
       trade: null,
-      material_responsibility: sovLineAnswers.material_responsibility || null,
+      material_responsibility: normalizeMaterialResponsibility(sovLineAnswers.material_responsibility) || null,
       status: 'Active',
       created_by_user_id: createdByUserId || null,
     }).select('id').single();
@@ -1059,7 +1069,7 @@ export function useSetupWizardV2(projectId?: string) {
       value_amount: line.amount,
       scheduled_value: line.amount,
       remaining_amount: line.amount,
-      source: 'wizard_v2',
+      source: 'template',
       scope_section_slug: line.conditionalKey,
       ai_original_pct: line.suggested_pct,
       default_enabled: true,

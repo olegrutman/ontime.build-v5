@@ -605,7 +605,7 @@ export function AddTeamMemberDialog({
 
                     {searchResults.map((result, index) => (
                       <button
-                        key={result.org_id}
+                        key={`${result.org_id}-${result.contact_email || index}`}
                         type="button"
                         className={cn(
                           'w-full px-3 py-2 text-left flex items-start gap-3 hover:bg-accent transition-colors',
