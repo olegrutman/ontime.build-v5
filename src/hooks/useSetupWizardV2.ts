@@ -1010,9 +1010,11 @@ export function useSetupWizardV2(projectId?: string) {
     fromRole: string,
     fromOrgId: string | null,
     toRole: string | null,
+    toOrgId: string | null,
     sovName: string,
     scopeData: any,
     sovLineAnswers: Answers,
+    createdByUserId?: string,
   ) => {
     // Upsert contract
     const { data: newContract, error: cErr } = await supabase.from('project_contracts').insert({
@@ -1020,11 +1022,12 @@ export function useSetupWizardV2(projectId?: string) {
       contract_sum: contractValue,
       from_org_id: fromOrgId,
       from_role: fromRole,
-      to_org_id: null,
+      to_org_id: toOrgId,
       to_role: toRole,
       trade: null,
       material_responsibility: sovLineAnswers.material_responsibility || null,
       status: 'Active',
+      created_by_user_id: createdByUserId || null,
     }).select('id').single();
     if (cErr) throw cErr;
     const contractId = newContract.id;
@@ -1066,7 +1069,7 @@ export function useSetupWizardV2(projectId?: string) {
   }, [buildingType]);
 
   // Internal save logic — can be called with an explicit project ID
-  const _saveToDb = useCallback(async (pid: string, creatorOrgId?: string, creatorOrgType?: string) => {
+  const _saveToDb = useCallback(async (pid: string, creatorOrgId?: string, creatorOrgType?: string, userId?: string) => {
     if (!buildingType) throw new Error('No building type selected');
     const contractValue = typeof answers.contract_value === 'number' ? answers.contract_value : 0;
     const fcContractValue = typeof answers.fc_contract_value === 'number' ? answers.fc_contract_value : 0;
@@ -1111,22 +1114,27 @@ export function useSetupWizardV2(projectId?: string) {
       : creatorOrgType === 'FC' ? 'Field Crew'
       : 'Trade Contractor';
 
-    // Primary contract (GC→TC for TC creators, or single contract for GC creators)
+    // Primary contract: TC bills GC (from=TC, to=GC) or GC's single contract
     const primaryResult = await _saveContractAndSov(
       pid, contractValue, fromRole, creatorOrgId || null,
       isTC ? 'General Contractor' : null,
+      isTC ? null : null, // to_org_id: GC not yet known for TC upstream
       isTC ? 'GC → TC SOV' : 'Framing SOV',
-      scopeData, answers,
+      scopeData, answers, userId,
     );
 
     // If TC, also create downstream FC contract + SOV
+    // FC bills TC: from=FC (not yet known), to=TC (creator)
     let fcResult: { contractId: string; sovId: string } | null = null;
     if (isTC && fcContractValue > 0) {
       fcResult = await _saveContractAndSov(
-        pid, fcContractValue, fromRole, creatorOrgId || null,
-        'Field Crew',
+        pid, fcContractValue,
+        'Field Crew',       // from_role: FC is the contractor billing
+        null,               // from_org_id: FC org not yet known
+        'Trade Contractor', // to_role: TC is the client paying
+        creatorOrgId || null, // to_org_id: TC's org (the payer)
         'TC → FC SOV',
-        scopeData, answers,
+        scopeData, answers, userId,
       );
     }
 
@@ -1155,8 +1163,8 @@ export function useSetupWizardV2(projectId?: string) {
   });
 
   // Standalone save: accepts an explicit projectId (for use in unified create flow)
-  const saveAll = useCallback(async (pid: string, creatorOrgId?: string, creatorOrgType?: string) => {
-    const result = await _saveToDb(pid, creatorOrgId, creatorOrgType);
+  const saveAll = useCallback(async (pid: string, creatorOrgId?: string, creatorOrgType?: string, userId?: string) => {
+    const result = await _saveToDb(pid, creatorOrgId, creatorOrgType, userId);
     qc.invalidateQueries({ queryKey: ['setup_answers', pid] });
     qc.invalidateQueries({ queryKey: ['setup_answers_count', pid] });
     qc.invalidateQueries({ queryKey: ['project', pid] });
