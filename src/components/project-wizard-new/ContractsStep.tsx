@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { WizardQuestion as WizardQuestionComponent } from '@/components/setup-wizard-v2/WizardQuestion';
 import type { BuildingType, Answers, SOVLine, WizardQuestion } from '@/hooks/useSetupWizardV2';
 import { OrgType } from '@/types/organization';
-import { DollarSign, ArrowUp, ArrowDown } from 'lucide-react';
+import { DollarSign, ArrowUp, ArrowDown, ShieldCheck } from 'lucide-react';
 
 interface ContractsStepProps {
   buildingType: BuildingType | null;
