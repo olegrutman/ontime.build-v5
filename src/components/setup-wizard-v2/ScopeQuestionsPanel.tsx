@@ -70,9 +70,9 @@ export function ScopeQuestionsPanel({
   const showDualSov = isTC && fcContractValue > 0;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[500px]">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 min-h-[calc(100vh-240px)]">
       {/* Left: Scope questions */}
-      <div className="space-y-6 overflow-y-auto max-h-[600px] pr-2">
+      <div className="space-y-6 overflow-y-auto pr-2">
         <div>
           <h2 className="text-lg font-semibold">Scope</h2>
           <p className="text-sm text-muted-foreground">
