@@ -1004,7 +1004,7 @@ export function useSetupWizardV2(projectId?: string) {
   }, []);
 
   // Internal save logic — can be called with an explicit project ID
-  const _saveToDb = useCallback(async (pid: string) => {
+  const _saveToDb = useCallback(async (pid: string, creatorOrgId?: string, creatorOrgType?: string) => {
     if (!buildingType) throw new Error('No building type selected');
     const contractValue = typeof answers.contract_value === 'number' ? answers.contract_value : 0;
 
@@ -1057,14 +1057,20 @@ export function useSetupWizardV2(projectId?: string) {
         updated_at: new Date().toISOString(),
       }).eq('id', contractId);
     } else {
+      const fromRole = creatorOrgType === 'GC' ? 'General Contractor'
+        : creatorOrgType === 'TC' ? 'Trade Contractor'
+        : creatorOrgType === 'FC' ? 'Field Crew'
+        : 'Trade Contractor';
       const { data: newContract, error: cErr } = await supabase.from('project_contracts').insert({
         project_id: pid,
         contract_sum: contractValue,
-        from_role: 'TC_PM',
-        to_role: 'GC_PM',
-        trade: 'Framing',
+        from_org_id: creatorOrgId || null,
+        from_role: fromRole,
+        to_org_id: null,
+        to_role: null,
+        trade: null,
         material_responsibility: answers.material_responsibility || null,
-        status: 'Accepted',
+        status: 'Draft',
       }).select('id').single();
       if (cErr) throw cErr;
       contractId = newContract.id;
@@ -1144,8 +1150,8 @@ export function useSetupWizardV2(projectId?: string) {
   });
 
   // Standalone save: accepts an explicit projectId (for use in unified create flow)
-  const saveAll = useCallback(async (pid: string) => {
-    const result = await _saveToDb(pid);
+  const saveAll = useCallback(async (pid: string, creatorOrgId?: string, creatorOrgType?: string) => {
+    const result = await _saveToDb(pid, creatorOrgId, creatorOrgType);
     qc.invalidateQueries({ queryKey: ['setup_answers', pid] });
     qc.invalidateQueries({ queryKey: ['setup_answers_count', pid] });
     qc.invalidateQueries({ queryKey: ['project', pid] });
