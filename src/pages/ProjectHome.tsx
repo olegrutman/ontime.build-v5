@@ -322,7 +322,7 @@ export default function ProjectHome() {
                 </div>
               </div>
             </div>
-            <ProjectTabBar activeTab={activeTab} onTabChange={handleTabChange} isSupplier={isSupplier} />
+            
           </div>
 
           <div className={cn(
