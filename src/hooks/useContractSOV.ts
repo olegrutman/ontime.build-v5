@@ -1219,6 +1219,16 @@ export function useContractSOV(projectId: string | undefined) {
 
   // Reorder items
   const reorderItems = useCallback(async (sovId: string, reorderedItems: ContractSOVItem[]) => {
+    // Build a map of old sort_order → new sort_order from the primary SOV
+    const items = sovItems[sovId] || [];
+    const orderMap = new Map<number, number>(); // oldSortOrder → newSortOrder
+    for (let i = 0; i < reorderedItems.length; i++) {
+      const original = items.find(it => it.id === reorderedItems[i].id);
+      if (original) {
+        orderMap.set(original.sort_order, i);
+      }
+    }
+
     setSaving(true);
     try {
       for (let i = 0; i < reorderedItems.length; i++) {
@@ -1232,6 +1242,29 @@ export function useContractSOV(projectId: string | undefined) {
         ...prev,
         [sovId]: reorderedItems.map((item, index) => ({ ...item, sort_order: index }))
       }));
+
+      // Mirror reorder to sibling SOV
+      const sibling = await findSiblingSov(sovId, sovs, sovItems, contracts);
+      if (sibling && sibling.sibItems.length > 0) {
+        // Apply same reorder by mapping old sort_order → new sort_order
+        const sibReordered = [...sibling.sibItems].sort((a, b) => {
+          const newA = orderMap.get(a.sort_order) ?? a.sort_order;
+          const newB = orderMap.get(b.sort_order) ?? b.sort_order;
+          return newA - newB;
+        });
+
+        for (let i = 0; i < sibReordered.length; i++) {
+          await supabase
+            .from('project_sov_items')
+            .update({ sort_order: i })
+            .eq('id', sibReordered[i].id);
+        }
+
+        setSovItems(prev => ({
+          ...prev,
+          [sibling.sibSovId]: sibReordered.map((item, index) => ({ ...item, sort_order: index }))
+        }));
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -1241,7 +1274,7 @@ export function useContractSOV(projectId: string | undefined) {
     } finally {
       setSaving(false);
     }
-  }, []);
+  }, [sovs, contracts, sovItems]);
 
   // Calculate totals for a SOV
   const getSOVTotals = useCallback((sovId: string) => {
