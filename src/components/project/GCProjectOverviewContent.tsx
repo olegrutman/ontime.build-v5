@@ -342,9 +342,13 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
     setResending(member.id);
     try {
       await resendProjectInvite(projectId, member.id);
+      toast.success(`Invitation resent to ${member.invited_email || member.invited_org_name || 'member'}`);
       fetchTeam();
-    } catch {}
-    setResending(null);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to resend invite');
+    } finally {
+      setResending(null);
+    }
   };
 
   // ─── Materials ───
