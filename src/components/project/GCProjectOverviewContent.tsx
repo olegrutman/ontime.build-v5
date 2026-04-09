@@ -301,7 +301,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
   const pendingInvoices = financials.recentInvoices.filter(i => i.status === 'SUBMITTED');
 
   // ─── Team data ───
-  const [team, setTeam] = useState<{ id: string; role: string; invited_org_name: string | null; status: string }[]>([]);
+  const [team, setTeam] = useState<{ id: string; role: string; invited_org_name: string | null; invited_name: string | null; status: string }[]>([]);
   const [materialResp, setMaterialResp] = useState<string | null>(null);
   const [designatedSupplier, setDesignatedSupplier] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -310,7 +310,7 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
 
   const fetchTeam = useCallback(async () => {
     const [teamRes, contractRes, supplierRes] = await Promise.all([
-      supabase.from('project_team').select('id, role, invited_org_name, status').eq('project_id', projectId),
+      supabase.from('project_team').select('id, role, invited_org_name, invited_name, status').eq('project_id', projectId),
       supabase.from('project_contracts').select('id, material_responsibility').eq('project_id', projectId).limit(1),
       supabase.from('project_designated_suppliers').select('invited_name').eq('project_id', projectId).neq('status', 'removed').maybeSingle(),
     ]);
@@ -545,7 +545,10 @@ export function GCProjectOverviewContent({ projectId, projectName = 'Project', f
                   <div key={member.id} className="group" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: `1px solid ${C.border}` }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: roleDotColors[member.role] || C.muted, flexShrink: 0 }} />
                     <span style={{ fontSize: '0.65rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', width: 28 }}>{abbrev}</span>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 600, color: isInvited ? C.faint : C.ink, flex: 1 }}>{member.invited_org_name || 'Unknown'}</span>
+                    <span style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                      <span style={{ fontSize: '0.82rem', fontWeight: 600, color: isInvited ? C.faint : C.ink }}>{member.invited_org_name || 'Unknown'}</span>
+                      {member.invited_name && <span style={{ fontSize: '0.65rem', color: C.faint, lineHeight: 1.2 }}>{member.invited_name}</span>}
+                    </span>
                     {isInvited && (
                       <>
                         <span style={{ fontSize: '0.58rem', fontWeight: 600, padding: '1px 6px', borderRadius: 8, border: `1px solid ${C.border}`, color: C.faint }}>Invited</span>
